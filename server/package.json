@@ -1,0 +1,26 @@
+{
+  "name": "miakapp-v3-server",
+  "version": "1.0.0",
+  "description": "Miakapp V3 server",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main",
+    "test": "node test"
+  },
+  "keywords": [
+    "Miakapp",
+    "V3",
+    "Server"
+  ],
+  "author": "Mathieu Colmon",
+  "license": "ISC",
+  "dependencies": {
+    "socket.io": "^4.0.1",
+    "socket.io-client": "^4.0.1"
+  },
+  "devDependencies": {
+    "eslint": "^7.23.0",
+    "eslint-config-airbnb-base": "^14.2.1",
+    "eslint-plugin-import": "^2.22.1"
+  }
+}
