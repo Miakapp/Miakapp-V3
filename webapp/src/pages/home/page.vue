@@ -1,6 +1,6 @@
 <template>
   <div class="home">
-    Test
+    Home: {{ $route.params.home }} / Page: {{ $route.params.page }}
   </div>
 </template>
 

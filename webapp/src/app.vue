@@ -6,8 +6,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Questrial&display=swap');
 
 :root {
-  --color1: #fff;
-  --color2: #000;
+  --color1: #dddddd;
+  --color2: #303030;
+
   --font: #e6e6e6;
 }
 
@@ -32,4 +33,10 @@ body * {
 }
 
 ::placeholder { color: #d0d0d0 }
+
+.container {
+  min-height: 500px;
+  padding: 20px;
+}
+
 </style>

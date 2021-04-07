@@ -1,4 +1,17 @@
-const io = require('socket.io')(process.env.PORT || 3000, {
+const firebase = require('firebase-admin');
+const SocketIO = require('socket.io');
+const firebaseCredentials = require('./firebaseCredentials.json');
+
+firebase.initializeApp({
+  credential: firebase.credential.cert(firebaseCredentials),
+  databaseURL: 'https://miakapp-v2.firebaseio.com',
+});
+
+const auth = firebase.auth();
+
+// auth.
+
+const io = SocketIO(process.env.PORT || 3000, {
   serveClient: false,
   cookie: false,
 });

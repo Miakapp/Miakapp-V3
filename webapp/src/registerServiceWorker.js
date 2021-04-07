@@ -1,17 +1,17 @@
+import { register } from 'register-service-worker';
+import 'firebase/messaging';
+
 /* eslint-disable no-console */
 
-import { register } from 'register-service-worker';
-
-if (process.env.NODE_ENV === 'production') {
-  register(`${process.env.BASE_URL}service-worker.js`, {
+export default function registerSW(firebase, callback = () => null) {
+  register(`${process.env.BASE_URL}sw.js`, {
     ready() {
-      console.log(
-        'App is being served from cache by a service worker.\n'
-        + 'For more details, visit https://goo.gl/AFskqB',
-      );
+      console.log('App is being served from cache by a service worker.');
     },
-    registered() {
-      console.log('Service worker has been registered.');
+    registered(registration) {
+      window.fcm = firebase.messaging();
+      window.fcm.useServiceWorker(registration);
+      callback();
     },
     cached() {
       console.log('Content has been cached for offline use.');
@@ -19,8 +19,9 @@ if (process.env.NODE_ENV === 'production') {
     updatefound() {
       console.log('New content is downloading.');
     },
-    updated() {
+    updated(rg) {
       console.log('New content is available; please refresh.');
+      rg.waiting.postMessage({ type: 'update' });
     },
     offline() {
       console.log('No internet connection found. App is running in offline mode.');

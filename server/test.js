@@ -1,4 +1,4 @@
-const socket = (require('socket.io-client'))(`http://localhost:${process.env.PORT || 3000}/`, {
+const socket = (require('socket.io-client'))('https://miakapi3.cloud.usp-3.fr/', {
   auth: {
     id: 'user1@test.com',
     token: '123',
