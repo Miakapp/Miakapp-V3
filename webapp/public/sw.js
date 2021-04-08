@@ -14,21 +14,19 @@ self.addEventListener('fetch', (e) => {
       || normalizedUrl.pathname.includes('/socket.io')
       || normalizedUrl.protocol === 'chrome-extension:'
     ) {
-      console.log(normalizedUrl, 'FETCHING');
+      console.log('FETCHING', e.request);
       return fetch(e.request);
-    } else console.log(normalizedUrl, 'CACHING');
+    } else console.log('CACHING', e.request);
 
-    if (!normalizedUrl.pathname.includes('.')) normalizedUrl.pathname = '';
-
-    const fetchResponseP = fetch(normalizedUrl);
+    const fetchResponseP = fetch(e.request);
     const fetchResponseCloneP = fetchResponseP.then(r => r.clone());
 
-    e.waitUntil(async function() {
+    e.waitUntil((async () => {
       const cache = await caches.open('app');
-      await cache.put(normalizedUrl, await fetchResponseCloneP);
-    }());
+      await cache.put(e.request, await fetchResponseCloneP);
+    })());
 
-    return (await caches.match(normalizedUrl)) || fetchResponseP;
+    return (await caches.match(e.request)) || fetchResponseP;
   }());
 });
 

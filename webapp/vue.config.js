@@ -1,6 +1,6 @@
 module.exports = {
   filenameHashing: false,
-  outputDir: '../dist',
+  outputDir: './dist',
   pwa: {
     name: 'Miakapp',
     themeColor: '#007cde',

@@ -12,7 +12,7 @@ import registerSW from './registerServiceWorker';
 
 window.toast = izitoast;
 window.toast.settings({
-  position: 'bottomRight',
+  position: 'topRight',
 });
 
 window.toast.confirm = (message, cb) => {
@@ -61,21 +61,11 @@ if (window.location.protocol === 'https:') {
   });
 }
 
+window.firebase = firebase;
 window.auth = firebase.auth();
-
-// const provider = new firebase.auth.GoogleAuthProvider();
-// window.auth
-//   .signInWithPopup(provider)
-//   .then((result) => {
-//     // /** @type {firebase.auth.OAuthCredential} */
-//     // const token = result.credential.accessToken;
-//     // const user = result.user;
-//     console.log(result);
-//   }).catch((error) => {
-//     console.error('Can\'t login', error);
-//   });
-
 window.api = api();
+
+window.auth.useDeviceLanguage();
 
 const router = createRouter({
   history: createWebHistory(process.env.BASE_URL),

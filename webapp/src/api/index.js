@@ -6,19 +6,28 @@ export default function () {
     if (rs.message) window.toast.success({ title: rs.message, onClosed });
   }
 
+  window.auth.onAuthStateChanged(async (fUser) => {
+    if (window.socket) window.socket.disconnect();
+    if (!fUser) return;
+
+    const token = fUser.za || await window.auth.currentUser.getIdToken(false);
+
+    window.socket = io('https://miakapi3.cloud.usp-3.fr/', {
+      auth: {
+        uid: fUser.uid,
+        token,
+      },
+    });
+
+    window.socket.once('logged', (rs) => {
+      toastIt(rs);
+    });
+
+    window.socket.once('error', (rs) => {
+      window.toast.error({ title: rs.message });
+    });
+  });
+
   return {
-    login(auth) {
-      if (window.socket) window.socket.disconnect();
-
-      window.socket = io('https://miakapi3.cloud.usp-3.fr/', { auth });
-
-      window.socket.once('logged', (rs) => {
-        toastIt(rs);
-      });
-
-      window.socket.once('error', (rs) => {
-        window.toast.error({ title: rs.message });
-      });
-    },
   };
 }
