@@ -206,6 +206,7 @@ input:focus, select:focus { border-radius: 20px }
   bottom: 0;
   left: 0;
   right: 0;
+  pointer-events: none;
 }
 
 .statusBar {
@@ -217,6 +218,7 @@ input:focus, select:focus { border-radius: 20px }
   grid-column-start: 1;
   grid-column-end: 3;
   z-index: 1000;
+  pointer-events: all;
 }
 
 .statusBar div {
@@ -244,6 +246,8 @@ input:focus, select:focus { border-radius: 20px }
   transition-duration: 500ms;
   transition-timing-function: cubic-bezier(0.7, -0.1, 0, 1.1);
   z-index: 200;
+  overflow-y: auto;
+  pointer-events: all;
 }
 
 .sideMenu.open {
@@ -273,13 +277,14 @@ input:focus, select:focus { border-radius: 20px }
   align-content: center;
   text-align: left;
   margin-left: 15px;
-  padding: 20px 0;
+  padding: 15px 0;
 }
 
 .rowButton.active { border-right: solid 4px var(--color7) }
 
 .blur {
   transition-duration: 500ms;
+  pointer-events: none;
   z-index: -1;
 }
 
@@ -304,8 +309,7 @@ input.hidden,
 
 @media screen and (max-width: 999px) {
   .sideMenu {
-    transform: translateX(calc(-100% + 7px));
-    border-right: solid 7px var(--color7);
+    transform: translateX(-100%);
   }
 
   .blur.active {

@@ -10,12 +10,10 @@ export default function () {
     if (window.socket) window.socket.disconnect();
     if (!fUser) return;
 
-    const token = fUser.za || await window.auth.currentUser.getIdToken(false);
-
     window.socket = io('https://miakapi3.cloud.usp-3.fr/', {
       auth: {
         uid: fUser.uid,
-        token,
+        token: await window.auth.currentUser.getIdToken(true),
       },
     });
 

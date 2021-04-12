@@ -1,0 +1,45 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /relations/{relation} {
+      allow list: if resource.data.user == request.auth.uid
+
+      allow create:
+        if request.auth.uid == request.resource.data.user
+          && request.resource.data.keys().hasOnly(['home', 'user', 'invitation'])
+          && relation == request.resource.data.home + '_' + request.resource.data.user
+          && get(/databases/$(database)/documents/homes/$(request.resource.data.home)/invitations/$(request.resource.data.invitation)).data.endsOn != null;
+
+      allow delete: if request.auth.uid == relation.split('_')[1];
+
+      allow update, delete:
+        if get(/databases/$(database)/documents/homes/$(relation.split('_')[0])).data.owner == request.auth.uid
+          || get(/databases/$(database)/documents/relations/$(relation.split('_')[0] + '_' + request.auth.uid)).data.isAdmin == true;
+    }
+
+    match /homes/{home} {
+      function relation() {
+        return get(/databases/$(database)/documents/relations/$(home + '_' + request.auth.uid)).data;
+      }
+
+      function isOwner() {
+        return resource.data.owner == request.auth.uid;
+      }
+
+      function isAdmin() {
+        return isOwner() || relation().isAdmin == true
+      }
+
+      allow read: if relation() != null;
+      allow write: if isOwner();
+      
+      match /groups/{group} {
+        allow read: if group in relation().groups;
+      }
+      
+      match /pages/{page} {
+        allow read: if page in get(/databases/$(database)/documents/homes/$(home)/groups/$(relation().groups[0])).data.pages;
+      }
+    }
+  }
+}

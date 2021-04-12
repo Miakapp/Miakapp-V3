@@ -88,6 +88,12 @@
 </template>
 
 <script>
+/** @type {import('firebase').default.auth.Auth} */
+const auth = window.auth;
+
+/** @type {import('izitoast').IziToast} */
+const toast = window.toast;
+
 export default {
   name: 'Home',
   components: {},
@@ -127,8 +133,8 @@ export default {
       this.loading = true;
       if (this.forgotPass) {
         console.log('Forgotpass');
-        window.auth.sendPasswordResetEmail(this.email).then(() => {
-          window.toast.success({ title: 'Password reset email sent !' });
+        auth.sendPasswordResetEmail(this.email).then(() => {
+          toast.success({ title: 'Password reset email sent !' });
           this.loading = false;
           this.forgotPass = false;
         }).catch((error) => {
@@ -140,13 +146,13 @@ export default {
       }
 
       if (this.newAccount) {
-        window.auth.createUserWithEmailAndPassword(this.email, this.password).then(() => {
+        auth.createUserWithEmailAndPassword(this.email, this.password).then(() => {
           this.loading = false;
-          window.toast.success({ title: 'Logged in !' });
-          window.auth.currentUser.sendEmailVerification().then(() => {
-            window.toast.success({ title: 'Confirmation email sent !' });
+          toast.success({ title: 'Logged in !' });
+          auth.currentUser.sendEmailVerification().then(() => {
+            toast.success({ title: 'Confirmation email sent !' });
           }).catch((error) => {
-            window.toast.error({ title: error.message });
+            toast.error({ title: error.message });
           });
         }).catch((error) => {
           this.loading = false;
@@ -154,9 +160,9 @@ export default {
           this.errmsg = error.message;
         });
       } else {
-        window.auth.signInWithEmailAndPassword(this.email, this.password).then(() => {
+        auth.signInWithEmailAndPassword(this.email, this.password).then(() => {
           this.loading = false;
-          window.toast.success({ title: 'Logged in !' });
+          toast.success({ title: 'Logged in !' });
         }).catch((error) => {
           this.loading = false;
           this.error = true;
@@ -170,7 +176,7 @@ export default {
     googleLogin() {
       this.loading = true;
       const provider = new window.firebase.auth.GoogleAuthProvider();
-      window.auth.signInWithPopup(provider).then((result) => {
+      auth.signInWithPopup(provider).then((result) => {
         this.loading = false;
         console.log(result);
       }).catch((error) => {
@@ -183,7 +189,7 @@ export default {
     githubLogin() {
       this.loading = true;
       const provider = new window.firebase.auth.GithubAuthProvider();
-      window.auth.signInWithPopup(provider).then((result) => {
+      auth.signInWithPopup(provider).then((result) => {
         this.loading = false;
         console.log(result);
       }).catch((error) => {
@@ -207,7 +213,7 @@ export default {
       window.recaptchaVerifier = new window.firebase.auth.RecaptchaVerifier('captcha', {
         callback: () => {
           this.loading = true;
-          window.auth.signInWithPhoneNumber(this.phone, window.recaptchaVerifier)
+          auth.signInWithPhoneNumber(this.phone, window.recaptchaVerifier)
             .then((confirmationResult) => {
               this.loading = false;
               this.phoneError = false;
@@ -222,7 +228,7 @@ export default {
         'expired-callback': () => {
           this.loading = false;
           this.phoneError = false;
-          window.toast.error({ title: 'Captcha expired, please retry' });
+          toast.error({ title: 'Captcha expired, please retry' });
         },
       });
 

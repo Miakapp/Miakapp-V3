@@ -1,8 +1,9 @@
 import { createApp } from 'vue';
 import { createRouter, createWebHistory } from 'vue-router';
 import firebase from 'firebase/app';
-import 'firebase/analytics';
 import 'firebase/auth';
+import 'firebase/analytics';
+import 'firebase/firestore';
 import izitoast from 'izitoast';
 import 'izitoast/dist/css/iziToast.min.css';
 import api from './api';
@@ -63,6 +64,7 @@ if (window.location.protocol === 'https:') {
 
 window.firebase = firebase;
 window.auth = firebase.auth();
+window.db = firebase.firestore();
 window.api = api();
 
 window.auth.useDeviceLanguage();

@@ -22,22 +22,28 @@
         </div>
       </div>
 
-      <router-view/>
+      <router-view :relations="relations"/>
     </div>
 
     <div class="controls">
       <div class="statusBar">
-        <div>Miakapp</div>
+        <div>{{ title }}</div>
         <menuBtn @click="menuOpen = !menuOpen" :active="menuOpen"/>
       </div>
 
       <div class="sideMenu" :class="{ open: menuOpen }" @click="menuOpen = true">
         <div class="menuItems">
-          <div class="rowButton" v-for="(home, id) in homes" :key="id" @click="selectHome(h)">
+          <div class="rowButton"
+            :class="{ active: $route.params.home === relation.home.id }"
+            v-for="relation in relations"
+            :key="relation.home.id"
+            @click="$router.push(`/h/${relation.home.id}`)"
+          >
             <!-- eslint-disable-next-line -->
-            <svg viewBox="0 0 200 200"><path d="M100 0c55,0 100,45 100,100 0,55 -45,100 -100,100 -55,0 -100,-45 -100,-100 0,-55 45,-100 100,-100zm0 37c-35,0 -63,28 -63,63 0,35 28,63 63,63 35,0 63,-28 63,-63 0,-35 -28,-63 -63,-63z"/></svg>
-            <div>Maison 1</div>
+            <svg viewBox="0 0 200 200"><path :fill="relation.home.color" d="M100 0c55,0 100,45 100,100 0,55 -45,100 -100,100 -55,0 -100,-45 -100,-100 0,-55 45,-100 100,-100zm0 37c-35,0 -63,28 -63,63 0,35 28,63 63,63 35,0 63,-28 63,-63 0,-35 -28,-63 -63,-63z"/></svg>
+            <div>{{relation.home.name}}</div>
           </div>
+
           <div class="rowButton" @click="fullscreen">
             <!-- eslint-disable-next-line -->
             <svg viewBox="0 0 200 200"><path d="M100 0c55,0 100,45 100,100 0,55 -45,100 -100,100 -55,0 -100,-45 -100,-100 0,-55 45,-100 100,-100zm0 37c-35,0 -63,28 -63,63 0,35 28,63 63,63 35,0 63,-28 63,-63 0,-35 -28,-63 -63,-63z"/></svg>
@@ -46,7 +52,7 @@
         </div>
 
         <div class="rowButton" @click="fullscreen">
-          <div>Fullscreen</div>
+          <div>Account</div>
         </div>
       </div>
 
@@ -63,24 +69,36 @@ import loader from '../components/loader.vue';
 import menuBtn from '../components/menuBtn.vue';
 import onSwipe from '../lib/onSwipe';
 
+/** @type {import('firebase').default.auth.Auth} */
+const auth = window.auth;
+
+/** @type {import('firebase').default.firestore.Firestore} */
+const db = window.db;
+
+/** @type {import('izitoast').IziToast} */
+const toast = window.toast;
+
 export default {
   name: 'Home',
   components: { login, loader, menuBtn },
+
   data: () => ({
     loading: true,
     fUser: null,
-
-    menuOpen: false,
+    relations: JSON.parse(localStorage.getItem('data')) || [],
 
     newDisplayName: '',
+
+    menuOpen: false,
+    selectedHome: null,
   }),
 
   created() {
-    window.auth.onAuthStateChanged((fUser) => {
+    auth.onAuthStateChanged((fUser) => {
       if (fUser) {
         console.log('Signed', fUser);
         this.fUser = fUser;
-        this.loading = false;
+        this.loadHomes();
       } else this.loading = false;
     });
 
@@ -91,31 +109,96 @@ export default {
   },
 
   methods: {
+    async loadHomes() {
+      this.relations = (await Promise.all((
+        await db.collection('relations').where('user', '==', this.fUser.uid).get()
+      ).docs.map(async (r) => {
+        const relation = { id: r.id, ...r.data() };
+
+        const fHome = db.collection('homes').doc(relation.home);
+        const fHomeData = await fHome.get();
+
+        if (!fHomeData.exists) {
+          r.ref.delete();
+          return null;
+        }
+
+        const home = fHomeData.data();
+
+        const pages = [];
+
+        await Promise.all(await relation.groups.map(async (group) => {
+          const fGroupData = await fHome.collection('groups').doc(group).get();
+          if (!fGroupData.exists) return null;
+
+          await Promise.all(await fGroupData.data().pages.map(async (page) => {
+            const fPageData = await fHome.collection('pages').doc(page).get();
+            if (!fPageData.exists) return null;
+            pages.push({ id: fPageData.id, ...fPageData.data() });
+            return true;
+          }));
+
+          return true;
+        }));
+
+        return {
+          id: relation.id,
+          home: {
+            id: relation.home,
+            name: home.name,
+            color: home.color,
+          },
+          user: {
+            admin: relation.isAdmin,
+            owner: home.owner === this.fUser.uid,
+          },
+          pages,
+        };
+      }))).filter((h) => h);
+
+      console.log(this.relations);
+      localStorage.setItem('data', JSON.stringify(this.relations));
+
+      this.loading = false;
+    },
+
     setDisplayName(e) {
       e.preventDefault();
 
-      window.auth.currentUser.updateProfile({
+      auth.currentUser.updateProfile({
         displayName: this.newDisplayName,
       }).then(() => {
         window.auth = window.firebase.auth();
         this.fUser = window.firebase.auth().currentUser;
         this.$forceUpdate();
-        window.toast.success({ title: 'Display name changed' });
+        toast.success({ title: 'Display name changed' });
       }).catch((error) => {
-        window.toast.error({ title: error.message });
+        toast.error({ title: error.message });
       });
     },
 
     sendConfirmEmail() {
-      window.auth.currentUser.sendEmailVerification().then(() => {
-        window.toast.success({ title: 'Confirmation email sent !' });
+      auth.currentUser.sendEmailVerification().then(() => {
+        toast.success({ title: 'Confirmation email sent !' });
       }).catch((error) => {
-        window.toast.error({ title: error.message });
+        toast.error({ title: error.message });
       });
     },
 
     fullscreen() {
       document.querySelector('html').requestFullscreen();
+    },
+  },
+
+  computed: {
+    title() {
+      const relation = this.relations.find((r) => r.home.id === this.$route.params.home);
+      if (!relation) return 'Miakapp';
+
+      const page = relation.pages.find((p) => p.id === this.$route.params.page);
+      if (page) return page.name;
+
+      return relation.home.name;
     },
   },
 };

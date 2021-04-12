@@ -6,8 +6,9 @@
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint",
-    "publish": "firebase deploy",
-    "deploy": "npm run build && npm run publish"
+    "publish": "firebase deploy --only hosting",
+    "deploy": "npm run build && npm run publish",
+    "deployRules": "firebase deploy --only firestore:rules"
   },
   "dependencies": {
     "core-js": "^3.6.5",
