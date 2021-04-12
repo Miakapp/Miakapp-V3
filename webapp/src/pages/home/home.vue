@@ -32,3 +32,11 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+@media screen and (min-width: 1000px) {
+  .container {
+    padding-left: 320px;
+  }
+}
+</style>
