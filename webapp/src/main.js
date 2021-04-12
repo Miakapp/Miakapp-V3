@@ -13,7 +13,7 @@ import registerSW from './registerServiceWorker';
 
 window.toast = izitoast;
 window.toast.settings({
-  position: 'topRight',
+  position: 'bottomRight',
 });
 
 window.toast.confirm = (message, cb) => {
