@@ -328,10 +328,6 @@ input.hidden,
   .sideMenu {
     transform: translateX(-100px);
   }
-
-  .container {
-    padding-left: 320px;
-  }
 }
 
 </style>
