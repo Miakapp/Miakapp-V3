@@ -1,7 +1,7 @@
 <template>
   <div class="home">
-    <div v-if="$route.params.page === 'settings'">
-      SETTINGS
+    <div v-if="$route.params.page === 'admin'">
+      ADMIN
     </div>
 
     <div v-if="page" v-html="page.content"/>
@@ -18,7 +18,7 @@ export default {
   },
 
   mounted() {
-    if (this.$route.params.page !== 'settings' && !this.page) {
+    if (this.$route.params.page !== 'admin' && !this.page) {
       this.$router.push(`/h/${this.$route.params.home}`);
     }
   },

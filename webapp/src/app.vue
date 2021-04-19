@@ -42,8 +42,10 @@ body * {
   -webkit-tap-highlight-color: transparent;
   -webkit-appearance: none;
   text-shadow: 0 0 2px #00000020;
-  user-select: none;
 }
+
+body *:not(input),
+body input[type=submit] { user-select: none }
 
 ::placeholder { color: #cacaca }
 
@@ -54,6 +56,7 @@ body * {
 }
 
 .container.withHead { margin-top: 60px }
+.container.full { width: auto }
 
 .title {
   font-size: 30px;
@@ -107,7 +110,7 @@ body * {
   background-color: var(--color3);
   margin: 0 auto;
   padding: 20px;
-  width: fit-content;
+  max-width: 1000px;
 }
 
 .block.small { max-width: 500px }
@@ -126,20 +129,22 @@ input, select, .button {
   font-size: 16px;
   outline: none;
   display: grid;
-  grid-template-columns: min-content auto;
   align-items: center;
 }
 
+.wIcon { grid-template-columns: min-content auto }
+
 input[type=submit], .button { cursor: pointer }
 
-:disabled {
+.disabled, :disabled {
   opacity: 0.7;
+  pointer-events: none;
 }
 
 .button:hover { background-color: var(--color4-s) }
 
-input[type=submit] { background-color: var(--color8) }
-input[type=submit]:hover { background-color: var(--color8-s) }
+input[type=submit], .button.green { background-color: var(--color8) }
+input[type=submit]:hover, .button.green:hover { background-color: var(--color8-s) }
 
 input:hover, select:hover { border-radius: 0 }
 input:focus, select:focus { border-radius: 20px }
@@ -148,6 +153,13 @@ input:focus, select:focus { border-radius: 20px }
   width: 30px;
   fill: var(--color1);
   margin-right: 15px;
+}
+
+.button.bigRed {
+  grid-template-columns: auto;
+  background-color: var(--error);
+  max-width: 400px;
+  margin: 20px auto 10px;
 }
 
 .minText {
@@ -211,26 +223,38 @@ input:focus, select:focus { border-radius: 20px }
 
 .statusBar {
   display: grid;
-  grid-template-columns: auto min-content;
+  grid-template-columns: min-content auto;
   align-content: center;
   background-color: var(--color7);
 
-  grid-column-start: 1;
-  grid-column-end: 3;
+  grid-column: 1 / 3;
   z-index: 1000;
   pointer-events: all;
 }
 
-.statusBar div {
-  color: var(--color2);
-  font-size: 24px;
-  display: grid;
-  align-content: center;
+.statusBar .path {
+  display: flex;
 }
 
-.statusBar svg {
+.statusBar .path .step {
+  color: var(--color2);
+  font-size: 18px;
+  display: grid;
+  grid-template-columns: auto auto;
+  align-content: center;
+  cursor: pointer;
+  transition-duration: 400ms;
+}
+
+.statusBar .path .step svg {
+  width: 6px;
+  height: 100%;
+  margin: 0 10px;
+}
+
+.statusBar > svg {
   stroke: var(--color2);
-  width: 60px;
+  height: 55px;
   padding: 7px 15px;
 }
 
@@ -239,7 +263,7 @@ input:focus, select:focus { border-radius: 20px }
   width: calc(100vw + 50px);
   display: grid;
   max-width: 400px;
-  grid-template-rows: auto 50px;
+  grid-template-rows: auto 60px;
   background-color: var(--color3);
   padding-left: 100px;
   box-shadow: var(--color2) 3px 1px 6px;
@@ -255,37 +279,84 @@ input:focus, select:focus { border-radius: 20px }
   border: none;
 }
 
-.rowButton {
+.sideMenu .noItems {
+  font-size: 20px;
+  height: 100%;
   display: grid;
-  margin-bottom: 2px;
-  padding: 0 15px;
-  grid-template-columns: min-content auto;
-  align-content: center;
-  background-color: var(--color4);
-  opacity: 0.8;
-  cursor: pointer;
+  align-items: center;
 }
 
-.rowButton > svg {
+.rowButton {
+  opacity: 0.8;
+  cursor: pointer;
+  margin-bottom: 2px;
+}
+
+.rowButton > div > svg {
   fill: var(--color1);
   height: 100%;
-  width: 15px;
+  width: 100%;
+  padding: 7px;
 }
 
 .rowButton > div {
   display: grid;
-  align-content: center;
+  grid-template-columns: 30px auto 21px;
   text-align: left;
-  margin-left: 15px;
-  padding: 15px 0;
+  line-height: 60px;
+  padding-left: 10px;
+  padding-right: 5px;
+  font-size: 18px;
+  background-color: var(--color4);
+  opacity: 0.9;
 }
 
-.rowButton.active { border-right: solid 4px var(--color7) }
+.rowButton > div:hover { opacity: 1 }
+
+.rowButton.active {
+  opacity: 0.9;
+  border-right: solid 2px var(--color8);
+}
+
+.rowItem {
+  margin: 2px 2px 0 20px;
+}
+
+.rowHome .name {
+  font-size: 20px;
+  line-height: 60px;
+  padding-left: 10px;
+}
+
+.rowSeparator {
+  height: 2px;
+  background-color: var(--color8) !important;
+  margin: 2px 2px 0 20px;
+}
+
+.rowItem > div {
+  display: grid;
+  align-content: end;
+  line-height: 40px;
+}
+
+.rowItem > .name { padding-left: 7px }
+.iconRow { text-align: center }
+.rowItem .iconRow { padding-bottom: 3px }
+
+.bottomButton {
+  grid-template-columns: 38px auto 23px !important;
+  padding-right: 10px !important;
+}
 
 .blur {
   transition-duration: 500ms;
   pointer-events: none;
   z-index: -1;
+}
+
+.line {
+  display: grid;
 }
 
 #captcha {
@@ -304,7 +375,36 @@ input.hidden,
   margin: 0;
   padding: 0;
   font-size: 0;
+  height: 0;
   pointer-events: none;
+}
+
+.separator { height: 25px }
+
+@media screen and (max-width: 350px) {
+  .statusBar .path *:not(.step:last-child) {
+    font-size: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    opacity: 0;
+    width: 0;
+  }
+
+  .statusBar .path .step:last-child {
+    font-size: 20px;
+  }
+}
+
+@media screen and (max-width: 500px) {
+  .statusBar .path .step:first-child {
+    font-size: 0 !important;
+    padding: 0;
+  }
+
+  .container.withHead { margin-top: 55px }
+  .container { padding: 10px }
+  .block { padding: 15px }
+  .separator { height: 15px }
 }
 
 @media screen and (max-width: 999px) {
@@ -313,15 +413,18 @@ input.hidden,
   }
 
   .blur.active {
-    backdrop-filter: blur(5px);
+    /* backdrop-filter: blur(5px); */
+    backdrop-filter: brightness(0.8);
     cursor: pointer;
     pointer-events: all;
   }
 }
 
 @media screen and (min-width: 1000px) {
-  .statusBar svg {
+  .statusBar > svg {
     opacity: 0;
+    width: 0;
+    padding: 10px;
     pointer-events: none;
   }
 

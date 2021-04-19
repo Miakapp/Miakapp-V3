@@ -16,7 +16,7 @@ window.toast.settings({
   position: 'bottomRight',
 });
 
-window.toast.confirm = (message, cb) => {
+window.toast.confirm = (message, cb, config = {}) => {
   window.toast.show({
     theme: 'dark',
     title: 'Confirm ?',
@@ -36,6 +36,7 @@ window.toast.confirm = (message, cb) => {
       }],
       ['<button>Abort</button>', (inst, toast) => inst.hide({ transitionOut: 'fadeOutDown' }, toast)],
     ],
+    ...config,
   });
 };
 
@@ -88,7 +89,7 @@ const router = createRouter({
     },
     {
       path: '/:path(.*)',
-      redirect: '/',
+      redirect: '/h',
     },
   ],
 });
