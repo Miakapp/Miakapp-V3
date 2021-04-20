@@ -55,10 +55,8 @@ window.api = api();
 
 window.auth.useDeviceLanguage();
 
-if (window.location.protocol === 'https:') {
-  const registerSW = import('./registerServiceWorker');
-  registerSW();
-}
+// eslint-disable-next-line
+if (window.location.protocol === 'https:') import('./registerServiceWorker');
 
 const router = createRouter({
   history: createWebHistory(process.env.BASE_URL),
