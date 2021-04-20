@@ -8,6 +8,7 @@ firebase.initializeApp({
 });
 
 const auth = firebase.auth();
+// const fcm = firebase.messaging();
 
 const io = SocketIO(process.env.PORT || 3000, {
   serveClient: false,

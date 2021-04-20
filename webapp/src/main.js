@@ -9,8 +9,6 @@ import 'izitoast/dist/css/iziToast.min.css';
 import api from './api';
 import app from './app.vue';
 
-import registerSW from './registerServiceWorker';
-
 window.toast = izitoast;
 window.toast.settings({
   position: 'bottomRight',
@@ -50,25 +48,17 @@ firebase.initializeApp({
   appId: '1:639119430041:web:09bb571a204d077ebd8308',
 });
 
-if (window.location.protocol === 'https:') {
-  registerSW(firebase, () => {
-    function getToken() {
-      window.fcm.getToken().then(window.api.addPushToken).catch(() => {
-        window.toast.warning({ title: 'Notifications disabled !' });
-      });
-    }
-
-    getToken();
-    window.fcm.onTokenRefresh(getToken);
-  });
-}
-
 window.firebase = firebase;
 window.auth = firebase.auth();
 window.db = firebase.firestore();
 window.api = api();
 
 window.auth.useDeviceLanguage();
+
+if (window.location.protocol === 'https:') {
+  const registerSW = import('./registerServiceWorker');
+  registerSW();
+}
 
 const router = createRouter({
   history: createWebHistory(process.env.BASE_URL),

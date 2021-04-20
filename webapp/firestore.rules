@@ -40,7 +40,7 @@ service cloud.firestore {
       allow delete: if request.auth.uid == relation.split('@')[1];
 
       // If user is owner/admin of relation's home
-      allow update, delete: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     match /homes/{home} {

@@ -2,16 +2,25 @@ import { register } from 'register-service-worker';
 import 'firebase/messaging';
 
 /* eslint-disable no-console */
+/** @type {import('firebase').default} */
+const firebase = window.firebase;
 
-export default function registerSW(firebase, callback = () => null) {
+/** @type {import('izitoast').default} */
+const toast = window.toast;
+
+export default function registerSW() {
   register(`${process.env.BASE_URL}sw.js`, {
     ready() {
       console.log('App is being served from cache by a service worker.');
     },
-    registered(registration) {
-      window.fcm = firebase.messaging();
-      window.fcm.useServiceWorker(registration);
-      callback();
+    registered(serviceWorkerRegistration) {
+      const fcm = firebase.messaging();
+
+      fcm.getToken({ serviceWorkerRegistration }).then((token) => {
+        console.log('PushToken', token);
+      }).catch(() => {
+        toast.warning({ title: 'Notifications disabled !' });
+      });
     },
     cached() {
       console.log('Content has been cached for offline use.');
