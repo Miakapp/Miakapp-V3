@@ -3,5 +3,9 @@
   "main": "server/main.js",
   "scripts": {
     "start": "cd server/ && npm start"
+  },
+  "dependencies": {
+    "firebase-admin": "^9.6.0",
+    "websocket": "^1.0.34"
   }
 }
