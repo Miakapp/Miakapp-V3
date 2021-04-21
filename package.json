@@ -1,0 +1,7 @@
+{
+  "name": "miakapp3",
+  "main": "server/main.js",
+  "scripts": {
+    "start": "cd server/ && npm start"
+  }
+}
