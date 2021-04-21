@@ -16,8 +16,7 @@
   "license": "ISC",
   "dependencies": {
     "firebase-admin": "^9.6.0",
-    "socket.io": "^4.0.1",
-    "socket.io-client": "^4.0.1"
+    "websocket": "^1.0.34"
   },
   "devDependencies": {
     "eslint": "^7.23.0",
