@@ -44,6 +44,8 @@ export default {
 
   data: () => ({
     socket: null,
+
+    variables: {},
   }),
 
   mounted() {
@@ -89,7 +91,6 @@ export default {
         const packet = await ev.data.text();
         const type = packet[0];
         const data = packet.substring(1);
-        console.log('Packet', type, data);
 
         switch (type) {
           case '\x10': // PING
@@ -98,11 +99,12 @@ export default {
             break;
 
           case '\x11': // DATA
-            console.log('GlobalData', data);
+            this.variables = miakode.object.decode(data);
+            console.log('GlobalData', this.variables);
             break;
 
           default:
-            console.log('Unknown packet');
+            console.log('Unknown packet', type, data);
             break;
         }
       };

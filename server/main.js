@@ -184,9 +184,11 @@ ws.on('connect', (socket) => {
 
   socket.on('message', async (packet) => {
     const msg = parsePacket(packet);
+    if (!msg.data) return;
     // If not authenticated and packet is not an authentication packet
     if (!client.type && ![P_TYPES.AUTH.COORD, P_TYPES.AUTH.USER].includes(msg.type)) return;
 
+    // USER AUTHENTICATION
     if (msg.type === P_TYPES.AUTH.USER && !client.type) {
       console.log('Auth user');
       const [homeID, userID, userToken] = miakode.array.decode(msg.data);
@@ -214,29 +216,26 @@ ws.on('connect', (socket) => {
           return;
         }
 
-        const userGroups = relationDoc.get('groups');
+        const uGroups = relationDoc.get('groups');
 
-        if (!userGroups || userGroups.length === 0) {
+        if (!uGroups || uGroups.length === 0) {
           socket.close(4004, 'NO_GROUP');
           return;
         }
-        console.log(userGroups);
 
         client.homeID = homeID;
         client.type = 'USER';
 
         function sendVariables() {
-          console.log(HOMES[homeID].variables);
           const userVariables = {};
-          const groupNames = userGroups.map((id) => HOMES[homeID].fGroups.find((g) => g.id === id));
+          const ugNames = uGroups.map((id) => HOMES[homeID].fGroups.find((g) => g.id === id).name);
 
           Object.keys(HOMES[homeID].variables).forEach((k) => {
             const namespace = k.split('.')[0];
-            if (['global', ...groupNames].includes(namespace)) {
+            if (['global', ...ugNames].includes(namespace)) {
               userVariables[k] = HOMES[homeID].variables[k];
             }
           });
-
           console.log('HomeVariables', HOMES[homeID].variables);
           console.log('UserVariables', userVariables);
           sendPacket(socket, P_TYPES.USER.DATA, miakode.object.encode(userVariables));
@@ -246,11 +245,10 @@ ws.on('connect', (socket) => {
         sendVariables();
 
         socket.on('close', () => {
-          HOMES[client.homeID].emit('onUserEvent', userID, '0');
+          HOMES[client.homeID].emit('onUserEvent', userID, client.socketID, '0');
         });
 
-        HOMES[client.homeID].emit('onUserEvent', userID, '1');
-        sendPacket(socket, P_TYPES.AUTH.OK);
+        HOMES[client.homeID].emit('onUserEvent', userID, client.socketID, '1');
         console.log('=>', client);
       }).catch((e) => {
         console.log(e);
@@ -260,6 +258,7 @@ ws.on('connect', (socket) => {
       return;
     }
 
+    // COORDINATOR AUTHENTICATION
     if (msg.type === P_TYPES.AUTH.COORD && !client.type) {
       console.log('Auth coord');
       const [homeID, coordID, coordSecret] = miakode.array.decode(msg.data);
@@ -289,13 +288,14 @@ ws.on('connect', (socket) => {
               return `${r.isAdmin ? '1' : '0'}${r.user}\x01${r.displayName}\x01${gNs.join('\x02')}\x00`;
             });
 
-            console.log('onHomeUpdate', users);
             sendPacket(socket, P_TYPES.COORD.USERLIST, users);
           });
 
-          HOMES[client.homeID].subscribe(client.socketID, 'onUserEvent', (userID, event) => {
-            console.log('onUserEvent', userID, event);
-            sendPacket(socket, P_TYPES.COORD.USER_CONNECT, miakode.string.encode(`${event}${userID}`));
+          HOMES[client.homeID].subscribe(client.socketID, 'onUserEvent', (userID, socketID, event) => {
+            console.log('onUserEvent', userID, socketID, event);
+            sendPacket(socket, P_TYPES.COORD.USER_CONNECT, miakode.string.encode(
+              `${event}${socketID}@${userID}`,
+            ));
           });
 
           HOMES[client.homeID].subscribe(client.socketID, 'onUserAction', (action) => {
@@ -303,6 +303,7 @@ ws.on('connect', (socket) => {
             sendPacket(socket, P_TYPES.COORD.USER_ACTION, miakode.object.encode(action));
           });
 
+          sendPacket(socket, P_TYPES.AUTH.OK);
           return;
         }
       }
@@ -311,8 +312,11 @@ ws.on('connect', (socket) => {
     }
 
     if (msg.type === P_TYPES.COORD.COMMIT && client.type === 'COORD') {
-      console.log('COMMIT DATA', msg.data);
-      
+      HOMES[client.homeID].variables = miakode.object.decode(msg.data);
+      HOMES[client.homeID].emit('onData');
+
+      console.log('COMMIT DATA', HOMES[client.homeID].variables);
+      return;
     }
 
     if (msg.type === P_TYPES[client.type].PONG) {
@@ -345,8 +349,9 @@ ws.on('connect', (socket) => {
     clearInterval(pingInterval);
 
     if (client.homeID && HOMES[client.homeID]) {
-      console.log('Remove listeners', HOMES, client.homeID);
+      console.log('Remove listeners', client.socketID, HOMES[client.homeID].listeners[client.socketID]);
       HOMES[client.homeID].removeListeners(client.socketID);
+      console.log(HOMES[client.homeID].listeners);
     }
   });
 });

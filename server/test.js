@@ -25,7 +25,7 @@ function getHome(homeID) {
 
 function sendPacket(socket, type, data) {
   socket.sendBytes(Buffer.from(`${type}${data}`));
-  console.log(type);
+  console.log(type, data.length);
 }
 
 function parsePacket(packet) {
@@ -45,6 +45,20 @@ const connect = async (credentials) => {
   const client = new WebSocketClient();
   function newSocket() {
     client.connect(`wss://${home.server}/${home.id}/`, null, '//coordinator.miakapp');
+  }
+
+  function sendData(s) {
+    console.log('Sending data');
+    sendPacket(s, '\x41', miakode.object.encode({
+      'group1.test1': 'val 1',
+      'group1.test2': 'val 2',
+      'group1.test.sub1': 'val 3',
+      'group2.test': 'val 4',
+      'unexistinggroup.group1': 'OOPS1',
+      'unexistinggroup.group1.test': 'OOPS2',
+      'global.glb1': 'global 1',
+      'global.glb2': 'global 2',
+    }));
   }
 
   client.on('connect', (s) => {
@@ -83,18 +97,26 @@ const connect = async (credentials) => {
 
       if (msg.type === '\x32') { // USER CONNECT
         const parsed = miakode.string.decode(msg.data);
+        const userClient = parsed.substring(1).split('@');
         console.log('User event', {
           event: [
             'DISCONNECT',
             'CONNECT',
           ][parsed[0]],
-          user: parsed.substring(1),
+          connectionID: userClient[0],
+          user: userClient[1],
         });
         return;
       }
 
       if (msg.type === '\x33') { // USER ACTION
         console.log('User action', msg.data);
+        return;
+      }
+
+      if (msg.type === '\x00') { // LOGGED
+        console.log('Logged');
+        sendData(s);
         return;
       }
 
@@ -106,17 +128,6 @@ const connect = async (credentials) => {
       credentials.id,
       credentials.secret,
     ]));
-
-    sendPacket(s, '\x41', miakode.object.encode({
-      'group1.test1': 'val 1',
-      'group1.test2': 'val 2',
-      'group1.test.sub1': 'val 3',
-      'group2.test': 'val 4',
-      'unexistinggroup.group1': 'OOPS1',
-      'unexistinggroup.group1.test': 'OOPS2',
-      glb1: 'global 1',
-      glb2: 'global 2',
-    }));
 
     s.on('close', (code, desc) => {
       console.log('CLOSE', code, desc);
