@@ -94,7 +94,6 @@ body input[type=submit] { user-select: none }
 .tab {
   padding: 10px 0;
   display: grid;
-  cursor: pointer;
   align-items: center;
   background-color: var(--color3);
   opacity: 0.6;
@@ -105,6 +104,8 @@ body input[type=submit] { user-select: none }
   opacity: 1;
   cursor: default;
 }
+
+.tab:not(.selected) { cursor: pointer }
 
 .block {
   background-color: var(--color3);
@@ -359,6 +360,24 @@ input:focus, select:focus { border-radius: 20px }
   display: grid;
 }
 
+table {
+  margin: 0 auto;
+  width: 100%;
+  min-width: 300px;
+  max-width: 800px;
+  border-spacing: 1px 2px;
+}
+
+tr {
+  height: 50px;
+  background-color: var(--color4);
+  opacity: 0.9;
+}
+
+tr:hover { opacity: 1 }
+
+td { padding: 0 10px }
+
 #captcha {
   display: flex;
   justify-content: center;
@@ -380,6 +399,7 @@ input.hidden,
 }
 
 .separator { height: 25px }
+.clickable { cursor: pointer }
 
 @media screen and (max-width: 350px) {
   .statusBar .path *:not(.step:last-child) {

@@ -6,7 +6,6 @@ import 'firebase/analytics';
 import 'firebase/firestore';
 import izitoast from 'izitoast';
 import 'izitoast/dist/css/iziToast.min.css';
-import api from './api';
 import app from './app.vue';
 
 window.toast = izitoast;
@@ -51,7 +50,6 @@ firebase.initializeApp({
 window.firebase = firebase;
 window.auth = firebase.auth();
 window.db = firebase.firestore();
-window.api = api();
 
 window.auth.useDeviceLanguage();
 

@@ -1,11 +1,19 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    match /SERVERS/{serv} {
+      allow list: if true;
+    }
+
     function check(inputs) {
       return (
         request.resource.data.keys().hasOnly(inputs)
         && request.resource.data.keys().hasAll(inputs)
       );
+    }
+
+		function same(key) {
+      return request.resource.data[key] == resource.data[key];
     }
 
     match /relations/{relation} {
@@ -23,17 +31,19 @@ service cloud.firestore {
         );
       }
 
-      function isValidInvitation() {
+      function hasValidInvitation() {
         return get(/databases/$(database)/documents/homes/$(request.resource.data.home)/invitations/$(request.resource.data.invitation)).data.endsOn != null;
       }
 
       allow create:
         if resource == null
-          && request.auth.uid == request.resource.data.user
+          && request.resource.data.user == request.auth.uid
+          && request.resource.data.isAdmin != false
+          && request.auth.token.email_verified
           && relation == request.resource.data.home + '@' + request.resource.data.user
           && (
-            (isOwner() && check(['home', 'user', 'isAdmin']))
-            || (isValidInvitation() && check(['home', 'user', 'invitation']))
+            (isOwner() && check(['home', 'user', 'displayName', 'isAdmin']))
+            || (hasValidInvitation() && check(['home', 'user', 'displayName', 'invitation']))
           );
 
       // It's user's relation
@@ -44,9 +54,11 @@ service cloud.firestore {
     }
 
     match /homes/{home} {
+      allow read: if true;
       allow create:
         if resource == null
           && check(['icon', 'name', 'owner'])
+          && request.auth.token.email_verified
           && request.resource.data.owner == request.auth.uid
           && home.matches('^([0-9]|[a-z])*$');
 
@@ -61,8 +73,10 @@ service cloud.firestore {
       function isAdmin() {
         return isOwner() || relation().isAdmin == true
       }
-
-      allow read: if relation() != null;
+      
+      allow update: if isAdmin()
+        && check(['icon', 'name', 'owner', 'server'])
+        && (same('owner'));
 
       match /groups/{group} {
         allow read: if group in relation().groups;

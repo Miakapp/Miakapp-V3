@@ -7,6 +7,7 @@
 
           <table v-if="relations.length > 0">
             <tr v-for="relation in relations"
+              class="clickable"
               :key="relation.home.id"
               @click="selectPage(relation.home.id)"
             >
@@ -229,6 +230,7 @@ export default {
             id: relation.home,
             name: home.name,
             icon: home.icon,
+            server: home.server || '',
           },
           user: {
             owner: home.owner === this.fUser.uid,
@@ -278,25 +280,6 @@ export default {
 </script>
 
 <style scoped>
-table {
-  margin: 0 auto;
-  width: 100%;
-  min-width: 300px;
-  max-width: 800px;
-  border-spacing: 1px 2px;
-}
-
-tr {
-  height: 50px;
-  background-color: var(--color4);
-  cursor: pointer;
-  opacity: 0.9;
-}
-
-tr:hover { opacity: 1 }
-
-td { padding: 0 10px }
-
 @media screen and (min-width: 1000px) {
   .container {
     padding-left: 320px;

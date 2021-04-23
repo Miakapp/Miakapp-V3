@@ -85,6 +85,7 @@ export default {
       relationDoc.set({
         home: this.newHomeForm.id,
         user: auth.currentUser.uid,
+        displayName: auth.currentUser.displayName || 'Unknown',
         isAdmin: true,
       }).then(() => {
         this.newHomeForm.active = false;

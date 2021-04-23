@@ -17,6 +17,17 @@
 </template>
 
 <script>
+import miakode from '../lib/miakode';
+
+/** @type {import('firebase').default.auth.Auth} */
+const auth = window.auth;
+
+/** @type {import('firebase').default.firestore.Firestore} */
+// const db = window.db;
+
+/** @type {import('izitoast').IziToast} */
+const toast = window.toast;
+// const toastErr = (err) => toast.error({ title: err.message });
 
 export default {
   name: 'Home',
@@ -25,13 +36,80 @@ export default {
     relations: Object,
   },
 
-  mounted() {
-    if (!this.relation) this.$router.push('/h');
-  },
-
   computed: {
     relation() {
       return this.relations.find((r) => r.home.id === this.$route.params.home);
+    },
+  },
+
+  data: () => ({
+    socket: null,
+  }),
+
+  mounted() {
+    if (!this.relation) this.$router.push('/h');
+    this.connect();
+  },
+
+  beforeUpdate() {
+    this.connect();
+  },
+
+  methods: {
+    connect() {
+      if (!this.relation.home.server) return;
+      if (this.socket && this.socket.close) this.socket.close();
+
+      this.socket = new WebSocket(`wss://${this.relation.home.server}/${this.relation.home.id}/`);
+
+      this.socket.onopen = async () => {
+        this.sendPacket('\x02', miakode.array.encode([
+          this.$route.params.home,
+          auth.currentUser.uid,
+          await auth.currentUser.getIdToken(),
+        ]));
+      };
+
+      this.socket.onerror = () => {};
+
+      this.socket.onclose = (ev) => {
+        if (ev.wasClean) {
+          if (ev.reason === 'NO_COORDINATOR') {
+            toast.error({ title: 'Coordinator is not available' });
+            return;
+          }
+
+          toast.error({ title: ev.reason });
+        } else setTimeout(this.connect, 300);
+
+        console.log('CLOSED', ev, ev.code, ev.wasClean);
+      };
+
+      this.socket.onmessage = async (ev) => {
+        const packet = await ev.data.text();
+        const type = packet[0];
+        const data = packet.substring(1);
+        console.log('Packet', type, data);
+
+        switch (type) {
+          case '\x10': // PING
+            console.log('Ping', data);
+            this.sendPacket('\x20', data);
+            break;
+
+          case '\x11': // DATA
+            console.log('GlobalData', data);
+            break;
+
+          default:
+            console.log('Unknown packet');
+            break;
+        }
+      };
+    },
+
+    sendPacket(...chunks) {
+      if (this.socket) this.socket.send(new Blob(chunks));
     },
   },
 };

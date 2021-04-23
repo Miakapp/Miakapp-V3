@@ -1,16 +1,139 @@
-const socket = (require('socket.io-client'))('https://miakapi3.cloud.usp-3.fr/', {
-  auth: {
-    id: 'user1@test.com',
-    token: '123',
-  },
-});
+const https = require('https');
+const WebSocketClient = require('websocket').client;
+const miakode = require('./miakode');
 
-console.log('Connecting...');
+function getHome(homeID) {
+  return new Promise((cb, err) => {
+    https.get(`https://firestore.googleapis.com/v1/projects
+/miakapp-v2/databases/(default)/documents/homes
+/${homeID}?key=AIzaSyBn1cfqRZw9UyEbz9fUb4-pbsqSwu5SxAE`, (res) => {
+      let data = '';
+      res.on('data', (c) => { data += c; });
+      res.on('close', () => {
+        data = JSON.parse(data);
+        if (data.fields && data.fields.name) {
+          cb({
+            id: homeID,
+            name: data.fields.name.stringValue,
+            server: data.fields.server.stringValue,
+          });
+        } else err(new Error('Wrong homeID'));
+      });
+    });
+  });
+}
 
-socket.on('connect', (...data) => {
-  console.log('Connected', data);
-});
+function sendPacket(socket, type, data) {
+  socket.sendBytes(Buffer.from(`${type}${data}`));
+  console.log(type);
+}
 
-socket.on('disconnect', (...data) => {
-  console.log('Disconnected', data);
+function parsePacket(packet) {
+  if (!packet.binaryData) return { type: 'unknown' };
+
+  const parsed = packet.binaryData.toString();
+  return {
+    type: parsed[0],
+    data: parsed.substring(1),
+  };
+}
+
+const connect = async (credentials) => {
+  const home = await getHome(credentials.home);
+  if (!home.server) throw new Error('There is no selected server for this home');
+
+  const client = new WebSocketClient();
+  function newSocket() {
+    client.connect(`wss://${home.server}/${home.id}/`, null, '//coordinator.miakapp');
+  }
+
+  client.on('connect', (s) => {
+    console.log('Coordinator connected');
+
+    s.on('message', (packet) => {
+      const msg = parsePacket(packet);
+
+      // PING: '\x30',
+      // HOME: '\x31',
+      // USER_CONNECT: '\x32',
+      // USER_ACTION: '\x33',
+
+      // PONG: '\x40',
+      // DATA: '\x41',
+      // NOTIF: '\x42',
+
+      if (msg.type === '\x30') { // PING
+        sendPacket(s, '\x40', msg.data);
+        return;
+      }
+
+      if (msg.type === '\x31') { // USERLIST
+        const users = msg.data.split('\x00').filter((u) => u).map((u) => {
+          const [id, displayName, groups] = u.split('\x01');
+          return {
+            id: id.substring(1),
+            displayName,
+            isAdmin: (id[0] !== '0'),
+            groups: groups.split('\x02'),
+          };
+        });
+        console.log('Users', users);
+        return;
+      }
+
+      if (msg.type === '\x32') { // USER CONNECT
+        const parsed = miakode.string.decode(msg.data);
+        console.log('User event', {
+          event: [
+            'DISCONNECT',
+            'CONNECT',
+          ][parsed[0]],
+          user: parsed.substring(1),
+        });
+        return;
+      }
+
+      if (msg.type === '\x33') { // USER ACTION
+        console.log('User action', msg.data);
+        return;
+      }
+
+      console.log('Unknown packet', msg);
+    });
+
+    sendPacket(s, '\x04', miakode.array.encode([
+      credentials.home,
+      credentials.id,
+      credentials.secret,
+    ]));
+
+    sendPacket(s, '\x41', miakode.object.encode({
+      'group1.test1': 'val 1',
+      'group1.test2': 'val 2',
+      'group1.test.sub1': 'val 3',
+      'group2.test': 'val 4',
+      'unexistinggroup.group1': 'OOPS1',
+      'unexistinggroup.group1.test': 'OOPS2',
+      glb1: 'global 1',
+      glb2: 'global 2',
+    }));
+
+    s.on('close', (code, desc) => {
+      console.log('CLOSE', code, desc);
+      setTimeout(newSocket, 200);
+    });
+  });
+
+  client.on('connectFailed', () => {
+    console.log('Coordinator failed connect');
+    setTimeout(newSocket, 200);
+  });
+
+  newSocket();
+};
+
+connect({
+  home: 'maison1',
+  id: 'coordinatorID',
+  secret: 'coordinatorSecret',
 });
