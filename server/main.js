@@ -332,7 +332,7 @@ ws.on('connect', (socket) => {
   let pingTime = null;
   const pingInterval = setInterval(() => {
     console.log('ping');
-    if (pingPayload !== pongPayload) {
+    if (!client.type || pingPayload !== pongPayload) {
       socket.close(4000, 'TIMEOUT');
       return;
     }

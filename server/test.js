@@ -5,8 +5,7 @@ const miakode = require('./miakode');
 function getHome(homeID) {
   return new Promise((cb, err) => {
     https.get(`https://firestore.googleapis.com/v1/projects
-/miakapp-v2/databases/(default)/documents/homes
-/${homeID}?key=AIzaSyBn1cfqRZw9UyEbz9fUb4-pbsqSwu5SxAE`, (res) => {
+/miakapp-v2/databases/(default)/documents/homes/${homeID}`, (res) => {
       let data = '';
       res.on('data', (c) => { data += c; });
       res.on('close', () => {

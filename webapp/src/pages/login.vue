@@ -95,7 +95,7 @@ const auth = window.auth;
 const toast = window.toast;
 
 export default {
-  name: 'Home',
+  name: 'Login',
   components: {},
 
   data: () => ({

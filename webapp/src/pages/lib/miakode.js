@@ -16,7 +16,7 @@ export default {
       const o = {};
       e.split('\x00').forEach((l) => {
         const p = l.split('\x01');
-        [o[p[0]]] = p;
+        [, o[p[0]]] = p;
       });
 
       return o;
