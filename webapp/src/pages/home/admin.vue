@@ -304,7 +304,7 @@ export default {
 
   watch: {
     async $route(from, to) {
-      if (from.params.home !== to.params.home) this.loadAll();
+      if (this.$route.params.page === 'admin' && from.params.home !== to.params.home) this.loadAll();
     },
   },
 
