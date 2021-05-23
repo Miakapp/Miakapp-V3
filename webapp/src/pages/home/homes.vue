@@ -231,6 +231,7 @@ export default {
             name: home.name,
             icon: home.icon,
             server: home.server || '',
+            owner: home.owner || '',
           },
           user: {
             owner: home.owner === this.fUser.uid,

@@ -112,6 +112,7 @@ body input[type=submit] { user-select: none }
   margin: 0 auto;
   padding: 20px;
   max-width: 1000px;
+  overflow: auto;
 }
 
 .block.small { max-width: 500px }
@@ -120,9 +121,21 @@ form {
   display: grid;
 }
 
+.simpleInput {
+  display: grid;
+  margin-bottom: 5px;
+}
+
+.simpleInput > div:first-child {
+  text-align: left;
+  font-size: 16px;
+  opacity: 0.7;
+}
+
 input, select, .button {
   background-color: var(--color4);
   border: none;
+  width: 100%;
   max-width: 800px;
   margin: 5px 0;
   padding: 10px 15px;
@@ -131,6 +144,13 @@ input, select, .button {
   outline: none;
   display: grid;
   align-items: center;
+}
+
+select {
+  margin-right: 5px;
+  padding: 0 20px;
+  height: 36px;
+  width: 100%;
 }
 
 .wIcon { grid-template-columns: min-content auto }
@@ -148,12 +168,19 @@ input[type=submit], .button.green { background-color: var(--color8) }
 input[type=submit]:hover, .button.green:hover { background-color: var(--color8-s) }
 
 input:hover, select:hover { border-radius: 0 }
-input:focus, select:focus { border-radius: 20px }
+
+:not(.gridForm) > input:focus,
+:not(.gridForm) > select:focus { border-radius: 20px }
 
 .button > svg {
   width: 30px;
   fill: var(--color1);
   margin-right: 15px;
+  pointer-events: none;
+}
+
+.button.red {
+  background-color: var(--error);
 }
 
 .button.bigRed {

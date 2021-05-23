@@ -5,6 +5,10 @@ service cloud.firestore {
       allow list: if true;
     }
 
+		function allowInputs(inputs) {
+      return request.resource.data.keys().hasOnly(inputs);
+    }
+
     function check(inputs) {
       return (
         request.resource.data.keys().hasOnly(inputs)
@@ -17,9 +21,6 @@ service cloud.firestore {
     }
 
     match /relations/{relation} {
-      // It's user's relation
-      allow list: if resource.data.user == request.auth.uid
-
       function isOwner() {
         return get(/databases/$(database)/documents/homes/$(relation.split('@')[0])).data.owner == request.auth.uid;
       }
@@ -34,6 +35,20 @@ service cloud.firestore {
       function hasValidInvitation() {
         return get(/databases/$(database)/documents/homes/$(request.resource.data.home)/invitations/$(request.resource.data.invitation)).data.endsOn != null;
       }
+      
+      function isAdminInHome(home) {
+        return (
+          get(/databases/$(database)/documents/homes/$(home)).data.owner == request.auth.uid
+          || get(/databases/$(database)/documents/relations/$(home + '@' + request.auth.uid)).data.isAdmin == true
+        );
+      }
+
+      // It's user's relation
+      // or user is admin in home
+      allow list: if (
+        resource.data.user == request.auth.uid
+        || isAdminInHome(resource.data.home)
+      );
 
       allow create:
         if resource == null
@@ -50,6 +65,16 @@ service cloud.firestore {
       allow delete: if request.auth.uid == relation.split('@')[1];
 
       // If user is owner/admin of relation's home
+      allow update: if (
+        isAdmin()
+        && allowInputs([
+          'home', 'user', 'displayName', 'groups',
+          'invitation', 'isAdmin', 'notifications'
+        ])
+        && same('home') && same('user')
+        && !('invitation' in resource.data) || same('invitation')
+      );
+
       allow delete: if isAdmin();
     }
 
@@ -79,11 +104,20 @@ service cloud.firestore {
         && (same('owner'));
 
       match /groups/{group} {
-        allow read: if group in relation().groups;
+        allow read: if (
+          group in relation().groups
+          || isAdmin()
+        );
       }
 
       match /pages/{page} {
         allow read: if page in get(/databases/$(database)/documents/homes/$(home)/groups/$(relation().groups[0])).data.pages;
+      }
+    }
+    
+    match /users/{userID} {
+      match /pushTokens/{tokenID} {
+        allow read, write: if request.auth.uid == userID;
       }
     }
   }

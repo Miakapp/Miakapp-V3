@@ -5,6 +5,7 @@
       <select v-model="newHomeForm.icon" required>
         <option v-for="e in homeEmojis" :key="e" :value="e">{{ e }}</option>
       </select>
+      <div/>
       <input type="text" v-model="newHomeForm.name" placeholder="Display Name" required>
     </div>
     <input type="submit" value="Create home">
@@ -119,12 +120,7 @@ export default {
 
 .iconNameSelect {
   display: grid;
-  grid-template-columns: min-content auto;
-}
-
-select {
-  margin-right: 5px;
-  padding: 0 20px;
+  grid-template-columns: 65px 5px auto;
 }
 
 .addButton:hover { opacity: 1 }
