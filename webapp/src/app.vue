@@ -126,7 +126,8 @@ form {
   margin-bottom: 5px;
 }
 
-.simpleInput > div:first-child {
+.simpleInput > div:first-child,
+.lightLabel {
   text-align: left;
   font-size: 16px;
   opacity: 0.7;

@@ -9,10 +9,10 @@
       <div class="separator"/>
 
       <div class="users">
-        <div class="user" v-for="user in admin.users" :key="user.id"
+        <div class="droppable" v-for="user in admin.users" :key="user.id"
           :class="{ open: user.open }"
         >
-          <div class="head" @click="user.open = !user.open">
+          <div class="head withIcon" @click="user.open = !user.open">
             <div class="name">{{ user.displayName || 'Unnamed user' }}</div>
             <svg viewBox="0 0 100 100"
               :style="{
@@ -80,12 +80,91 @@
             <div class="twoColumns">
               <div class="button red"
                 :class="{ disabled: user.isOwner }"
-                @click="deleteUser(user.id)"
-              >Delete</div>
+                @click="removeUser(user.id)"
+              >Remove</div>
               <div class="button green" @click="updateUser(user.id)">Save</div>
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <div class="separator"/>
+
+    <div class="block">
+      <div class="title">Groups</div>
+      <div>
+        Manage groups
+      </div>
+
+      <div class="separator"/>
+
+      <div class="groups">
+        <div class="droppable" v-for="group in admin.groups" :key="group.id"
+          :class="{ open: group.open }"
+        >
+          <div class="head withLabel" @click="group.open = !group.open">
+            <div>{{ group.displayName }}</div>
+            <div class="lightLabel">{{ group.name }}</div>
+          </div>
+
+          <div class="body">
+            <div class="simpleInput">
+              <div>Display name</div>
+              <input type="text" placeholder="Display name"
+                v-model="group.displayName">
+            </div>
+
+            <div class="simpleInput">
+              <div>Short name</div>
+              <input type="text" placeholder="Short name"
+                v-model="group.name">
+            </div>
+
+            <div class="lightLabel">Pages</div>
+            <div class="pageList">
+              <div class="pageLine" v-for="(page, i) in group.pages" :key="page">
+                <div class="btn clickable"
+                  :class="{ disabled: i === 0 }"
+                  @click="movePageInGroup(group.id, i, true)">▲</div>
+                <div class="btn clickable"
+                  :class="{ disabled: i === group.pages.length - 1 }"
+                  @click="movePageInGroup(group.id, i, false)">▼</div>
+                <div>{{ getPageName(page) }}</div>
+                <div class="clickable delBtn" @click="remPageFromGroup(group.id, page)">╳</div>
+              </div>
+            </div>
+
+            <div class="doubleInput">
+              <select v-model="group.selectedPage">
+                <option value="" disabled>Select page...</option>
+                <option v-for="page in admin.pages"
+                  :key="page.id"
+                  :value="page.id"
+                  :disabled="!page.id || group.pages.includes(page.id)"
+                >
+                  {{ page.icon }} {{ page.name }}
+                </option>
+              </select>
+              <div class="button green"
+                :class="{ disabled: !group.selectedPage }"
+                @click="addPageInGroup(group.id)">Add</div>
+            </div>
+
+            <div>
+              <div style="height:10px"/>
+            </div>
+
+            <div class="twoColumns">
+              <div class="button red"
+                @click="delGroup(group.id)"
+              >Delete</div>
+              <div class="button green" @click="updateGroup(group.id)">Save</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="newButton" @click="newGroup">+</div>
       </div>
     </div>
 
@@ -152,7 +231,7 @@ export default {
       users: [],
       // invitations: [],
       groups: [],
-      // pages: [],
+      pages: [],
       // coordinators: [],
       servers: [],
     },
@@ -189,7 +268,7 @@ export default {
       console.log('Update relation', `${this.relation.home.id}@${userID}`, userData);
     },
 
-    deleteUser(userID) {
+    removeUser(userID) {
       const userData = this.admin.users.find((u) => u.id === userID);
       if (!userData) {
         toast.error({ title: 'Error, please try again' });
@@ -200,14 +279,125 @@ export default {
         .doc(`${this.relation.home.id}@${userID}`)
         .delete()
         .then(() => {
-          toast.success({ title: 'User deleted !' });
+          toast.success({ title: 'User removed from home !' });
           this.loadUsers();
         })
         .catch(() => {
-          toast.error({ title: 'Can\'t delete this user' });
+          toast.error({ title: 'Can\'t remove this user' });
         });
+    },
 
-      console.log('Delete user', userID);
+    newGroup() {
+      db.collection('homes')
+        .doc(this.relation.home.id)
+        .collection('groups')
+        .add({
+          displayName: 'New group',
+          name: 'newGroup',
+          pages: [],
+        });
+      this.loadGroups();
+    },
+
+    updateGroup(groupID) {
+      const groupData = this.admin.groups.find((g) => g.id === groupID);
+      if (!groupData) {
+        toast.error({ title: 'Error, please try again' });
+        return;
+      }
+
+      if (!groupData.displayName) {
+        toast.error({ title: 'Please set a display name' });
+        return;
+      }
+
+      if (!groupData.name) {
+        toast.error({ title: 'Please set a name' });
+        return;
+      }
+
+      db.collection('homes')
+        .doc(this.relation.home.id)
+        .collection('groups')
+        .doc(groupID)
+        .update({
+          name: groupData.name,
+          displayName: groupData.displayName,
+          pages: groupData.pages,
+        })
+        .then(() => {
+          toast.success({ title: 'Group updated !' });
+          this.loadGroups();
+        })
+        .catch(() => {
+          toast.error({ title: 'Can\'t edit this group' });
+        });
+    },
+
+    delGroup(groupID) {
+      const groupData = this.admin.groups.find((g) => g.id === groupID);
+      if (!groupData) {
+        toast.error({ title: 'Error, please try again' });
+        return;
+      }
+
+      toast.confirm('Are you sure you want to delete this group ?', () => {
+        db.collection('homes')
+          .doc(this.relation.home.id)
+          .collection('groups')
+          .doc(groupID)
+          .delete()
+          .then(() => {
+            toast.success({ title: 'Group deleted from home !' });
+            this.loadGroups();
+          })
+          .catch((e) => {
+            console.log(e);
+            toast.error({ title: 'Can\'t delete this group' });
+          });
+      });
+    },
+
+    addPageInGroup(groupID) {
+      const group = this.admin.groups.find((g) => g.id === groupID);
+
+      if (!group.selectedPage) return;
+      if (!group) {
+        toast.error({ title: 'Error, please try again' });
+        return;
+      }
+
+      console.log(group);
+
+      group.pages.push(group.selectedPage);
+      group.selectedPage = '';
+    },
+
+    movePageInGroup(groupID, pos, up) {
+      const group = this.admin.groups.find((g) => g.id === groupID);
+      if (!group) {
+        toast.error({ title: 'Error, please try again' });
+        return;
+      }
+
+      const newPos = (up ? pos - 1 : pos + 1);
+      group.pages[pos] = group.pages.splice(newPos, 1, group.pages[pos])[0];
+    },
+
+    remPageFromGroup(groupID, pageID) {
+      const group = this.admin.groups.find((g) => g.id === groupID);
+      if (!group) {
+        toast.error({ title: 'Error, please try again' });
+        return;
+      }
+
+      group.pages = group.pages.filter((p) => p !== pageID);
+    },
+
+    getPageName(pageID) {
+      const page = this.admin.pages.find((p) => p.id === pageID);
+      if (!page) return 'Deleted page';
+      return `${page.icon} ${page.name}`;
     },
 
     selectServer(server) {
@@ -229,6 +419,22 @@ export default {
         displayName: d.get('displayName') || '',
         name: d.get('name') || '',
         pages: d.get('pages') || [],
+        selectedPage: '',
+      }));
+    },
+
+    async loadPages() {
+      this.admin.pages = (
+        await db
+          .collection('homes')
+          .doc(this.relation.home.id)
+          .collection('pages')
+          .get()
+      ).docs.map((d) => ({
+        id: d.id,
+        name: d.get('name') || '',
+        content: d.get('content') || '',
+        icon: d.get('icon') || '❔',
       }));
     },
 
@@ -250,11 +456,6 @@ export default {
           isOwner: d.get('user') === this.relation.home.owner,
         };
       });
-
-      this.admin.users.push({ ...this.admin.users[0] });
-      this.admin.users.push({ ...this.admin.users[0] });
-      this.admin.users.push({ ...this.admin.users[0] });
-      this.admin.users.push({ ...this.admin.users[0] });
     },
 
     async loadServers() {
@@ -298,6 +499,7 @@ export default {
     loadAll() {
       this.loadUsers();
       this.loadGroups();
+      this.loadPages();
       this.loadServers();
     },
   },
@@ -315,28 +517,36 @@ export default {
 </script>
 
 <style scoped>
-.user {
+.droppable {
   border: solid 1px var(--color4-s);
   border-radius: 10px;
-  padding: 15px;
   margin-bottom: 10px;
   max-width: 400px;
   margin: 0 auto 10px;
 }
 
-.user > .head {
+.droppable > .head {
   cursor: pointer;
   display: grid;
-  grid-template-columns: auto 30px;
   align-items: center;
   text-align: left;
+  justify-content: space-between;
+  padding: 15px;
 }
 
-.user.open > .body {
-  margin-top: 15px;
+.droppable > .head.withIcon {
+  grid-template-columns: auto 30px;
 }
 
-.user:not(.open) > .body * {
+.droppable > .head.withLabel {
+  grid-template-columns: auto auto;
+}
+
+.droppable.open > .body {
+  padding: 0 15px 15px;
+}
+
+.droppable:not(.open) > .body * {
   transform: scale(0.7);
   opacity: 0;
   height: 0;
@@ -348,5 +558,41 @@ export default {
   display: grid;
   grid-template-columns: 1fr 1fr;
   column-gap: 5px;
+}
+
+.pageLine {
+  display: grid;
+  margin: 5px 0;
+  grid-template-columns: 40px 40px auto 40px;
+  border: solid 1px var(--color4);
+  align-items: center;
+}
+
+.delBtn {
+  font-size: 12px;
+}
+
+.pageLine > * {
+  padding: 10px;
+}
+
+.btn.disabled { opacity: 0.3 }
+.btn:hover { background-color: var(--color4) }
+.delBtn:hover { background-color: var(--error) }
+
+.doubleInput {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  column-gap: 5px;
+}
+
+.newButton {
+  font-size: 30px;
+  height: 45px;
+  line-height: 40px;
+  background-color: var(--color8);
+  max-width: 400px;
+  margin: 20px auto 0;
+  cursor: pointer;
 }
 </style>
