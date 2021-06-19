@@ -569,6 +569,12 @@ export default {
         pages: d.get('pages') || [],
         selectedPage: '',
       }));
+
+      const groupIDS = this.admin.groups.map((g) => g.id);
+      this.admin.users.forEach((u, i) => {
+        this.admin.users[i].groups = u.groups.filter((g) => groupIDS.includes(g));
+        for (let gi = 0; gi < 3; gi += 1) if (!this.admin.users[i].groups[gi]) this.admin.users[i].groups[gi] = '';
+      });
     },
 
     async loadPages() {
