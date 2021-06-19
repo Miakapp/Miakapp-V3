@@ -65,13 +65,18 @@ const router = createRouter({
       component: () => import('./pages/main.vue'),
     },
     {
-      path: '/h/',
+      path: '/h',
       name: 'Miakapp',
       component: () => import('./pages/home/homes.vue'),
-      children: [
-        { path: ':home', component: () => import('./pages/home/home.vue') },
-        { path: ':home/:page', component: () => import('./pages/home/page.vue') },
-      ],
+      children: [{
+        name: 'Home',
+        path: ':home',
+        component: () => import('./pages/home/home.vue'),
+        children: [
+          { name: 'Admin', path: 'admin', component: () => import('./pages/home/admin.vue') },
+          { name: 'Page', path: ':page', component: () => import('./pages/home/page.vue') },
+        ],
+      }],
     },
     {
       path: '/:path(.*)',

@@ -5,7 +5,7 @@ service cloud.firestore {
       allow list: if true;
     }
 
-		function allowInputs(inputs) {
+    function allowInputs(inputs) {
       return request.resource.data.keys().hasOnly(inputs);
     }
 
@@ -16,7 +16,7 @@ service cloud.firestore {
       );
     }
 
-		function same(key) {
+    function same(key) {
       return request.resource.data[key] == resource.data[key];
     }
 
@@ -87,31 +87,53 @@ service cloud.firestore {
           && request.resource.data.owner == request.auth.uid
           && home.matches('^([0-9]|[a-z])*$');
 
+      function getHome() {
+        return get(/databases/$(database)/documents/homes/$(home)).data;
+      }
+
       function relation() {
         return get(/databases/$(database)/documents/relations/$(home + '@' + request.auth.uid)).data;
       }
 
       function isOwner() {
-        return resource.data.owner == request.auth.uid;
+        return getHome().owner == request.auth.uid;
       }
 
       function isAdmin() {
         return isOwner() || relation().isAdmin == true
       }
       
-      allow update: if isAdmin()
+      allow update: if (
+        isAdmin()
         && check(['icon', 'name', 'owner', 'server'])
-        && (same('owner'));
+        && same('owner')
+      );
 
       match /groups/{group} {
         allow read: if (
           group in relation().groups
           || isAdmin()
         );
+
+        allow read, write: if (
+          group.matches('^([0-9]|[a-z]|[A-Z])*$')
+          && isAdmin()
+          && (check(['name', 'displayName', 'pages']) || request.method == 'delete')
+        );
       }
 
       match /pages/{page} {
-        allow read: if page in get(/databases/$(database)/documents/homes/$(home)/groups/$(relation().groups[0])).data.pages;
+        allow read: if (
+          page in get(/databases/$(database)/documents/homes/$(home)/groups/$(relation().groups[0])).data.pages
+          || page in get(/databases/$(database)/documents/homes/$(home)/groups/$(relation().groups[1])).data.pages
+          || page in get(/databases/$(database)/documents/homes/$(home)/groups/$(relation().groups[2])).data.pages
+        );
+        allow list: if isAdmin();
+        allow write: if (
+          page.matches('^([0-9]|[a-z]|[A-Z])*$')
+          && isAdmin()
+          && (check(['icon', 'name', 'content']) || request.method == 'delete')
+        );
       }
     }
     

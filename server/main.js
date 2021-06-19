@@ -228,7 +228,7 @@ ws.on('connect', (socket) => {
 
         function sendVariables() {
           const userVariables = {};
-          const ugNames = uGroups.map((id) => HOMES[homeID].fGroups.find((g) => g.id === id).name);
+          const ugNames = uGroups.map((id) => (HOMES[homeID].fGroups.find((g) => g.id === id) || { name: 'NONE' }).name);
 
           Object.keys(HOMES[homeID].variables).forEach((k) => {
             const namespace = k.split('.')[0];

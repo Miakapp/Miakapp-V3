@@ -1,5 +1,5 @@
 <template>
-  <form class="block" :class="{ hidden: !newHomeForm.active }" @submit="createHome">
+  <form class="block small" :class="{ hidden: !newHomeForm.active }" @submit="createHome">
     <input type="text" v-model="newHomeForm.id" placeholder="Home ID" required>
     <div class="iconNameSelect">
       <select v-model="newHomeForm.icon" required>

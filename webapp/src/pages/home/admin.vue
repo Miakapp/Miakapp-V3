@@ -171,6 +171,58 @@
     <div class="separator"/>
 
     <div class="block">
+      <div class="title">Pages</div>
+      <div>
+        Manage pages
+      </div>
+
+      <div class="separator"/>
+
+      <div class="pages">
+        <div class="droppable" v-for="page in admin.pages" :key="page.id"
+          :class="{ open: page.open }"
+        >
+          <div class="head withLabel" @click="page.open = !page.open">
+            <div>{{ page.icon }} {{ page.name }}</div>
+            <!-- eslint-disable-next-line -->
+            <svg class="editBtn" viewBox="0 0 32 32" :class="{ grey: !hasAccessToPage(page.id) }" @click="editPageContent(page.id)"><path d="M10.09,11.71,6.06,16l4,4.29A1.5,1.5,0,0,1,9,22.82a1.47,1.47,0,0,1-1.09-.48L2.91,17a1.49,1.49,0,0,1,0-2.06l5-5.31a1.5,1.5,0,1,1,2.18,2.05Zm19,3.26-5-5.31a1.5,1.5,0,1,0-2.18,2.05l4,4.29-4,4.29A1.5,1.5,0,0,0,23,22.82a1.47,1.47,0,0,0,1.09-.48l5-5.31A1.49,1.49,0,0,0,29.09,15ZM18.71,8.65a1.5,1.5,0,0,0-1.93.88L12.4,21.43a1.49,1.49,0,0,0,.89,1.92,1.37,1.37,0,0,0,.52.1,1.52,1.52,0,0,0,1.41-1l4.38-11.9A1.49,1.49,0,0,0,18.71,8.65Z"/></svg>
+            <!-- <div class="lightLabel">Edit</div> -->
+          </div>
+
+          <div class="body">
+            <div class="simpleInput">
+              <div>Page icon</div>
+              <select v-model="page.icon">
+                <option v-for="e in pageEmojis" :key="e" :value="e">{{ e }}</option>
+              </select>
+            </div>
+
+            <div class="simpleInput">
+              <div>Page name</div>
+              <input type="text" placeholder="Display name"
+                v-model="page.name">
+            </div>
+
+            <div>
+              <div style="height:10px"/>
+            </div>
+
+            <div class="twoColumns">
+              <div class="button red"
+                @click="delPage(page.id)"
+              >Delete</div>
+              <div class="button green" @click="updatePage(page.id)">Save</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="newButton" @click="newPage">+</div>
+      </div>
+    </div>
+
+    <div class="separator"/>
+
+    <div class="block">
       <div class="title">Server</div>
       <div>
         Select the server you want to use
@@ -223,9 +275,6 @@ export default {
     relation: Object,
   },
 
-  computed: {
-  },
-
   data: () => ({
     admin: {
       users: [],
@@ -235,6 +284,9 @@ export default {
       // coordinators: [],
       servers: [],
     },
+
+    // eslint-disable-next-line
+    pageEmojis: ['👍','👎','😭','😕','😐','😊','😍','😄','😃','😀','😊','😉','😍','😘','😚','😗','😙','😜','😝','😛','😳','😁','😔','😌','😒','😞','😣','😢','😂','😭','😪','😥','😰','😅','😓','😩','😫','😨','😱','😠','😡','😤','😖','😆','😋','😷','😎','😴','😵','😲','😟','😦','😧','👿','😮','😬','😐','😕','😯','😏','😑','👲','👳','👮','👷','💂','👶','👦','👧','👨','👩','👴','👵','👱','👼','👸','😺','😸','😻','😽','😼','🙀','😿','😹','😾','👹','👺','🙈','🙉','🙊','💀','👽','💩','🔥','✨','🌟','💫','💥','💢','💦','💧','💤','💨','👂','👀','👃','👅','👄','👍','👎','👌','👊','✊','👋','✋','👐','👆','👇','👉','👈','🙌','🙏','👏','💪','🚶','🏃','💃','👫','👪','💏','💑','👯','🙆','🙅','💁','🙋','💆','💇','💅','👰','🙎','🙍','🙇','🎩','👑','👒','👟','👞','👡','👠','👢','👕','👔','👚','👗','🎽','👖','👘','👙','💼','👜','👝','👛','👓','🎀','🌂','💄','💛','💙','💜','💚','💔','💗','💓','💕','💖','💞','💘','💌','💋','💍','💎','👤','💬','👣', '🦊','🐶','🐺','🐱','🐭','🐹','🐰','🐸','🐯','🐨','🐻','🐷','🐽','🐮','🐗','🐵','🐒','🐴','🐑','🐘','🐼','🐧','🐦','🐤','🐥','🐣','🐔','🐍','🐢','🐛','🐝','🐜','🐞','🐌','🐙','🐚','🐠','🐟','🐬','🐳','🐎','🐲','🐡','🐫','🐩','🐾','💐','🌸','🌷','🍀','🌹','🌻','🌺','🍁','🍃','🍂','🌿','🌾','🍄','🌵','🌴','🌰','🌱','🌼','🌑','🌓','🌔','🌕','🌛','🌙','🌏','🌋','🌌','🌠','⛅','⛄','🌀','🌁','🌈','🌊','🎍','💝','🎎','🎒','🎓','🎏','🎆','🎇','🎐','🎑','🎃','👻','🎅','🎄','🎁','🎋','🎉','🎊','🎈','🎌','🔮','🎥','📷','📹','📼','💿','📀','💽','💾','💻','📱','📞','📟','📠','📡','📺','📻','🔊','🔔','📢','📣','⏳','⌛','⏰','⌚','🔓','🔒','🔏','🔐','🔑','🔎','💡','🔦','🔌','🔋','🔍','🛀','🚽','🔧','🔩','🔨','🚪','🚬','💣','🔫','🔪','💊','💉','💰','💴','💵','💳','💸','📲','📧','📥','📤','📩','📨','📫','📪','📮','📦','📝','📄','📃','📑','📊','📈','📉','📜','📋','📅','📆','📇','📁','📂','📌','📎','📏','📐','📕','📗','📘','📙','📓','📔','📒','📚','📖','🔖','📛','📰','🎨','🎬','🎤','🎧','🎼','🎵','🎶','🎹','🎻','🎺','🎷','🎸','👾','🎮','🃏','🎴','🀄','🎲','🎯','🏈','🏀','⚽','⚾','🎾','🎱','🎳','⛳','🏁','🏆','🎿','🏂','🏊','🏄','🎣','🍵','🍶','🍺','🍻','🍸','🍹','🍷','🍴','🍕','🍔','🍟','🍗','🍖','🍝','🍛','🍤','🍱','🍣','🍥','🍙','🍘','🍚','🍜','🍲','🍢','🍡','🍳','🍞','🍩','🍮','🍦','🍨','🍧','🎂','🍰','🍪','🍫','🍬','🍭','🍯','🍎','🍏','🍊','🍒','🍇','🍉','🍓','🍑','🍈','🍌','🍍','🍠','🍆','🍅','🌽','🏠','🏡','🏫','🏢','🏣','🏥','🏦','🏪','🏩','🏨','💒','⛪','🏬','🌇','🌆','🏯','🏰','⛺','🏭','🗼','🗾','🗻','🌄','🌅','🌃','🗽','🌉','🎠','🎡','⛲','🎢','🚢','⛵','🚤','🚀','💺','🚉','🚄','🚅','🚇','🚃','🚌','🚙','🚗','🚕','🚚','🚨','🚓','🚒','🚑','🚲','💈','🚏','🎫','🚥','🚧','🔰','⛽','🏮','🎰','🗿','🎪','🎭','📍','🚩','🔟','🔢','🔣','🔠','🔡','🔤','🔼','🔽','⏪','⏩','⏫','⏬','🆗','🆕','🆙','🆒','🆓','🆖','📶','🎦','🈁','🈯','🈳','🈵','🈴','🈲','🉐','🈹','🈺','🈶','🈚','🚻','🚹','🚺','🚼','🚾','🚭','🈸','🉑','🆑','🆘','🆔','🚫','🔞','⛔','❎','✅','💟','🆚','📳','📴','🆎','💠','⛎','🔯','🏧','💹','💲','💱','❌','❗','❓','❕','❔','⭕','🔝','🔚','🔙','🔛','🔜','🔃','🕛','🕐','🕑','🕒','🕓','🕔','🕕','🕖','🕗','🕘','🕙','🕚','➕','➖','➗','💮','💯','🔘','🔗','➰','🔱','🔺','🔲','🔳','🔴','🔵','🔻','⬜','⬛','🔶','🔷','🔸','🔹'],
   }),
 
   methods: {
@@ -259,13 +311,12 @@ export default {
           notifications: userData.notifications,
         }).then(() => {
           toast.success({ title: 'User updated !' });
+          auth.updateCurrentUser(auth.currentUser);
           this.loadUsers();
         })
         .catch(() => {
           toast.error({ title: 'Can\'t edit this user' });
         });
-
-      console.log('Update relation', `${this.relation.home.id}@${userID}`, userData);
     },
 
     removeUser(userID) {
@@ -327,6 +378,7 @@ export default {
         })
         .then(() => {
           toast.success({ title: 'Group updated !' });
+          auth.updateCurrentUser(auth.currentUser);
           this.loadGroups();
         })
         .catch(() => {
@@ -367,8 +419,6 @@ export default {
         return;
       }
 
-      console.log(group);
-
       group.pages.push(group.selectedPage);
       group.selectedPage = '';
     },
@@ -398,6 +448,96 @@ export default {
       const page = this.admin.pages.find((p) => p.id === pageID);
       if (!page) return 'Deleted page';
       return `${page.icon} ${page.name}`;
+    },
+
+    hasAccessToPage(pageID) {
+      return this.relation.pages.findIndex((p) => p.id === pageID) > -1;
+    },
+
+    editPageContent(pageID) {
+      if (!this.hasAccessToPage(pageID)) {
+        toast.error({ title: 'This account don\'t have access to this page. Please edit your own permissions.' });
+        return;
+      }
+
+      if (window.innerWidth < 1200) {
+        toast.error({ title: 'Your screen is too small to show the page editor' });
+        return;
+      }
+
+      localStorage.setItem('editorMode', true);
+      this.$router.push(`/h/${this.$route.params.home}/${pageID}`);
+    },
+
+    updatePage(pageID) {
+      const pageData = this.admin.pages.find((p) => p.id === pageID);
+      if (!pageData) {
+        toast.error({ title: 'Error, please try again' });
+        return;
+      }
+
+      if (!pageData.icon) {
+        toast.error({ title: 'Please set an icon' });
+        return;
+      }
+
+      if (!pageData.name) {
+        toast.error({ title: 'Please set a name' });
+        return;
+      }
+
+      db.collection('homes')
+        .doc(this.relation.home.id)
+        .collection('pages')
+        .doc(pageID)
+        .update({
+          icon: pageData.icon,
+          name: pageData.name,
+        })
+        .then(() => {
+          toast.success({ title: 'Page updated !' });
+          auth.updateCurrentUser(auth.currentUser);
+          this.loadPages();
+        })
+        .catch(() => {
+          toast.error({ title: 'Can\'t edit this page' });
+        });
+    },
+
+    delPage(pageID) {
+      const pageData = this.admin.pages.find((p) => p.id === pageID);
+      if (!pageData) {
+        toast.error({ title: 'Error, please try again' });
+        return;
+      }
+
+      toast.confirm('Are you sure you want to delete this page ?', () => {
+        db.collection('homes')
+          .doc(this.relation.home.id)
+          .collection('pages')
+          .doc(pageID)
+          .delete()
+          .then(() => {
+            toast.success({ title: 'Page deleted from home !' });
+            this.loadPages();
+          })
+          .catch((e) => {
+            console.log(e);
+            toast.error({ title: 'Can\'t delete this page' });
+          });
+      });
+    },
+
+    newPage() {
+      db.collection('homes')
+        .doc(this.relation.home.id)
+        .collection('pages')
+        .add({
+          icon: '📄',
+          name: 'New page',
+          content: '<page id="pageName">\n  Page content\n</page>\n\n<style>\n  #pageName {}\n</style>',
+        });
+      this.loadPages();
     },
 
     selectServer(server) {
@@ -594,5 +734,15 @@ export default {
   max-width: 400px;
   margin: 20px auto 0;
   cursor: pointer;
+}
+
+.editBtn {
+  width: 30px;
+  fill: var(--color7);
+  cursor: pointer;
+}
+
+.editBtn.grey {
+  fill: var(--color6);
 }
 </style>

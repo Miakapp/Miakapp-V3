@@ -43,6 +43,7 @@ const connect = async (credentials) => {
 
   const client = new WebSocketClient();
   function newSocket() {
+    console.log('Connecting to', home.server);
     client.connect(`wss://${home.server}/${home.id}/`, null, '//coordinator.miakapp');
   }
 
@@ -57,6 +58,7 @@ const connect = async (credentials) => {
       'unexistinggroup.group1.test': 'OOPS2',
       'global.glb1': 'global 1',
       'global.glb2': 'global 2',
+      'global.timestamp': Date.now(),
     }));
   }
 
@@ -128,6 +130,8 @@ const connect = async (credentials) => {
       credentials.secret,
     ]));
 
+    setInterval(() => sendData(s), 10000);
+
     s.on('close', (code, desc) => {
       console.log('CLOSE', code, desc);
       setTimeout(newSocket, 200);
@@ -143,7 +147,7 @@ const connect = async (credentials) => {
 };
 
 connect({
-  home: 'maison1',
-  id: 'coordinatorID',
+  home: 'test1',
+  id: 'ypoHuNQGbwkj2JbvZIDc',
   secret: 'coordinatorSecret',
 });
