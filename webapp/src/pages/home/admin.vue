@@ -118,7 +118,7 @@
             <div class="simpleInput">
               <div>Short name</div>
               <input type="text" placeholder="Short name"
-                v-model="group.name">
+                v-model="group.name" @input="formatShortName(group.id)">
             </div>
 
             <div class="lightLabel">Pages</div>
@@ -408,6 +408,14 @@ export default {
             toast.error({ title: 'Can\'t delete this group' });
           });
       });
+    },
+
+    formatShortName(groupID) {
+      const groupI = this.admin.groups.findIndex((g) => g.id === groupID);
+      if (groupI < 0) return;
+      console.log(this.admin.groups[groupI]);
+      this.admin.groups[groupI].name = this.admin.groups[groupI].name
+        .replace(/[^0-z]/g, '_');
     },
 
     addPageInGroup(groupID) {
