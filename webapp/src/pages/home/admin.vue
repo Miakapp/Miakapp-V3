@@ -413,7 +413,6 @@ export default {
     formatShortName(groupID) {
       const groupI = this.admin.groups.findIndex((g) => g.id === groupID);
       if (groupI < 0) return;
-      console.log(this.admin.groups[groupI]);
       this.admin.groups[groupI].name = this.admin.groups[groupI].name
         .replace(/[^0-z]/g, '_');
     },
