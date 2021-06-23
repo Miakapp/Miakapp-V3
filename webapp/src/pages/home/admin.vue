@@ -223,6 +223,69 @@
     <div class="separator"/>
 
     <div class="block">
+      <div class="title">Coordinator</div>
+      <div>
+        The coordinator is the backend of your home system
+      </div>
+
+      <div class="separator"/>
+
+      <div class="coordinator">
+        <div class="simpleInput">
+          <div>Home ID</div>
+          <input type="text" :value="relation.home.id" readonly>
+        </div>
+
+        <div class="simpleInput">
+          <div>Coordinator ID</div>
+          <input type="text" value="main" readonly>
+        </div>
+
+        <div class="simpleInput">
+          <div>Coordinator Secret</div>
+          <input type="text" :value="admin.lastCoordKey" readonly>
+        </div>
+
+        <div class="infoItem">
+          <div>Creation date</div>
+          <div>{{
+            admin.coordinator
+            && admin.coordinator.createdDate
+            && admin.coordinator.createdDate.seconds
+              ? new Date(admin.coordinator.createdDate.seconds * 1000).toLocaleString()
+              : 'Never'
+          }}</div>
+        </div>
+
+        <div class="infoItem">
+          <div>Created by</div>
+          <div>{{
+            admin.coordinator
+            && admin.coordinator.createdBy
+              ? admin.users.find((u) => u.id === admin.coordinator.createdBy).displayName
+                || 'Unknown user'
+              : '-'
+          }}</div>
+        </div>
+
+        <div class="infoItem">
+          <div>Last connection</div>
+          <div>{{
+            admin.coordinator
+            && admin.coordinator.lastDate
+            && admin.coordinator.lastDate.seconds
+              ? new Date(admin.coordinator.lastDate.seconds * 1000).toLocaleString()
+              : 'Never'
+          }}</div>
+        </div>
+
+        <div class="newButton" @click="newCoordinator">+</div>
+      </div>
+    </div>
+
+    <div class="separator"/>
+
+    <div class="block">
       <div class="title">Server</div>
       <div>
         Select the server you want to use
@@ -259,6 +322,8 @@
 </template>
 
 <script>
+import genKeys from '../lib/credentials';
+
 /** @type {import('firebase').default.auth.Auth} */
 const auth = window.auth;
 
@@ -281,8 +346,10 @@ export default {
       // invitations: [],
       groups: [],
       pages: [],
-      // coordinators: [],
+      coordinator: {},
       servers: [],
+
+      lastCoordKey: '***********',
     },
 
     // eslint-disable-next-line
@@ -547,6 +614,33 @@ export default {
       this.loadPages();
     },
 
+    newCoordinator() {
+      const next = async () => {
+        const keys = await genKeys();
+
+        db.collection('homes')
+          .doc(this.relation.home.id)
+          .collection('coordinators')
+          .doc('main')
+          .set({
+            secret: keys.private,
+            createdDate: new Date(),
+            createdBy: auth.currentUser.uid,
+            lastDate: false,
+          });
+
+        this.admin.lastCoordKey = keys.public;
+        this.loadCoordinator();
+      };
+
+      if (this.admin.coordinator && this.admin.coordinator.secret) {
+        toast.confirm(
+          'Are you sure you want to re-generate an API token ? This action will delete the old token !',
+          next,
+        );
+      } else next();
+    },
+
     selectServer(server) {
       db.collection('homes').doc(this.relation.home.id).update({ server }).then(() => {
         auth.updateCurrentUser(auth.currentUser);
@@ -611,6 +705,15 @@ export default {
       });
     },
 
+    async loadCoordinator() {
+      this.admin.coordinator = (await db
+        .collection('homes')
+        .doc(this.relation.home.id)
+        .collection('coordinators')
+        .doc('main')
+        .get()).data();
+    },
+
     async loadServers() {
       this.admin.servers = (await db.collection('SERVERS').get()).docs.map((d) => ({
         host: d.id,
@@ -653,6 +756,7 @@ export default {
       this.loadUsers();
       this.loadGroups();
       this.loadPages();
+      this.loadCoordinator();
       this.loadServers();
     },
   },
@@ -758,4 +862,21 @@ export default {
 .editBtn.grey {
   fill: var(--color6);
 }
+
+.coordinator {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.infoItem {
+  display: grid;
+  width: 100%;
+  max-width: 400px;
+  grid-template-columns: auto auto;
+  margin: 0 auto;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.infoItem > :first-child { opacity: 0.8 }
 </style>
