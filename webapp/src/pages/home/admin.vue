@@ -231,14 +231,16 @@
       <div class="separator"/>
 
       <div class="coordinator">
-        <div class="simpleInput">
-          <div>Home ID</div>
-          <input type="text" :value="relation.home.id" readonly>
-        </div>
+        <div class="twoColumns">
+          <div class="simpleInput">
+            <div>Home ID</div>
+            <input type="text" :value="relation.home.id" readonly>
+          </div>
 
-        <div class="simpleInput">
-          <div>Coordinator ID</div>
-          <input type="text" value="main" readonly>
+          <div class="simpleInput">
+            <div>Coordinator ID</div>
+            <input type="text" value="main" readonly>
+          </div>
         </div>
 
         <div class="simpleInput">
