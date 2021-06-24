@@ -212,7 +212,8 @@ export default {
           .doc(`${this.$route.params.home}@${auth.currentUser.uid}`)
           .delete()
           .then(() => {
-            toast.success({ title: 'Home leaved !' });
+            this.$router.push('/h');
+            toast.success({ title: 'You left this home !' });
             auth.updateCurrentUser(auth.currentUser);
           })
           .catch(() => {
