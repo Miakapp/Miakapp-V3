@@ -20,9 +20,13 @@ service cloud.firestore {
       return request.resource.data[key] == resource.data[key];
     }
 
+    function getOwner(home) {
+      return get(/databases/$(database)/documents/homes/$(home)).data.owner
+    }
+
     match /relations/{relation} {
       function isOwner() {
-        return get(/databases/$(database)/documents/homes/$(relation.split('@')[0])).data.owner == request.auth.uid;
+        return getOwner(relation.split('@')[0]) == request.auth.uid;
       }
 
       function isAdmin() {
@@ -33,9 +37,10 @@ service cloud.firestore {
       }
 
       function hasValidInvitation() {
-        return get(/databases/$(database)/documents/homes/$(request.resource.data.home)/invitations/$(request.resource.data.invitation)).data.endsOn != null;
+        let exp = get(/databases/$(database)/documents/homes/$(request.resource.data.home)/invitations/$(request.resource.data.invitation)).data.expiresOn.split('-');
+        return request.time.toMillis() < timestamp.date(int(exp[0]), int(exp[1]), int(exp[2])).toMillis();
       }
-      
+
       function isAdminInHome(home) {
         return (
           get(/databases/$(database)/documents/homes/$(home)).data.owner == request.auth.uid
@@ -45,24 +50,27 @@ service cloud.firestore {
 
       // It's user's relation
       // or user is admin in home
-      allow list: if (
+      allow list, get: if (
         resource.data.user == request.auth.uid
         || isAdminInHome(resource.data.home)
       );
 
-      allow create:
-        if resource == null
-          && request.resource.data.user == request.auth.uid
-          && request.resource.data.isAdmin != false
-          && request.auth.token.email_verified
-          && relation == request.resource.data.home + '@' + request.resource.data.user
-          && (
-            (isOwner() && check(['home', 'user', 'displayName', 'isAdmin']))
-            || (hasValidInvitation() && check(['home', 'user', 'displayName', 'invitation']))
-          );
-
-      // It's user's relation
-      allow delete: if request.auth.uid == relation.split('@')[1];
+      allow create: if (
+        resource == null
+        && request.resource.data.user == request.auth.uid
+        && relation == request.resource.data.home + '@' + request.resource.data.user
+        && (
+          (
+            isOwner()
+            && check(['home', 'user', 'displayName', 'isAdmin'])
+            && request.resource.data.isAdmin != false
+            && request.auth.token.email_verified
+          ) || (
+            hasValidInvitation()
+            && check(['home', 'user', 'displayName', 'invitation'])
+          )
+        )
+      );
 
       // If user is owner/admin of relation's home
       allow update: if (
@@ -75,18 +83,17 @@ service cloud.firestore {
         && !('invitation' in resource.data) || same('invitation')
       );
 
-      allow delete: if isAdmin();
+      // It is user's relation and user isn't owner of the home
+      allow delete: if request.auth.uid == relation.split('@')[1] && !isOwner();
+
+      // User is admin and deletes a user who isn't himself
+      allow delete: if request.auth.uid != relation.split('@')[1] && isAdmin();
+
+      // Home doesn't exists
+      allow delete: if !exists(/database/$(database)/documents/homes/$(relation.split('@')[0]));
     }
 
     match /homes/{home} {
-      allow read: if true;
-      allow create:
-        if resource == null
-          && check(['icon', 'name', 'owner'])
-          && request.auth.token.email_verified
-          && request.resource.data.owner == request.auth.uid
-          && home.matches('^([0-9]|[a-z])*$');
-
       function getHome() {
         return get(/databases/$(database)/documents/homes/$(home)).data;
       }
@@ -102,7 +109,16 @@ service cloud.firestore {
       function isAdmin() {
         return isOwner() || relation().isAdmin == true
       }
-      
+
+      allow get: if true;
+      allow create: if (
+        resource == null
+        && check(['icon', 'name', 'owner'])
+        && request.auth.token.email_verified
+        && request.resource.data.owner == request.auth.uid
+        && home.matches('^([0-9]|[a-z])*$')
+      );
+
       allow update: if (
         isAdmin()
         && check(['icon', 'name', 'owner', 'server'])
@@ -115,15 +131,21 @@ service cloud.firestore {
           || isAdmin()
         );
 
-        allow read, write: if (
+        allow write: if (
           group.matches('^([0-9]|[a-z]|[A-Z])*$')
+          && (
+            request.method == 'delete'
+            || (
+              check(['name', 'displayName', 'pages'])
+              && request.resource.data.name != 'global'
+            )
+          )
           && isAdmin()
-          && (check(['name', 'displayName', 'pages']) || request.method == 'delete')
         );
       }
 
       match /pages/{page} {
-        allow read: if (
+        allow get: if (
           page in get(/databases/$(database)/documents/homes/$(home)/groups/$(relation().groups[0])).data.pages
           || page in get(/databases/$(database)/documents/homes/$(home)/groups/$(relation().groups[1])).data.pages
           || page in get(/databases/$(database)/documents/homes/$(home)/groups/$(relation().groups[2])).data.pages
@@ -135,8 +157,30 @@ service cloud.firestore {
           && (check(['icon', 'name', 'content']) || request.method == 'delete')
         );
       }
+
+      match /invitations/{invit} {
+        allow list: if isAdmin();
+
+        allow create, update: if (
+          invit.matches('^([0-9]|[a-z]|[A-Z])*$')
+          && isAdmin()
+          && check(['name', 'createdOn', 'expiresOn'])
+          && (request.method != 'update' || same('createdOn'))
+        );
+
+        allow delete: if isAdmin();
+      }
+
+      match /coordinators/main {
+        allow get: if isAdmin();
+        allow write: if (
+          isAdmin()
+          && check(['secret', 'createdDate', 'createdBy', 'lastDate'])
+          && request.resource.data.createdBy == request.auth.uid
+        );
+      }
     }
-    
+
     match /users/{userID} {
       match /pushTokens/{tokenID} {
         allow read, write: if request.auth.uid == userID;

@@ -1,16 +1,65 @@
 <template>
-  <div class="home" v-if="!['Admin', 'Page'].includes($route.name)">
-    <div class="title" v-if="relation">
-      <!-- eslint-disable-next-line -->
-      <svg viewBox="0 0 91 94"><path d="M11.073,63.127c3.313-6.224,8.636-16.205,8.997-16.752c0.525-0.797,1.154-1.724,2.94-3.299c1.786-1.576,4.451-4.308,4.451-4.308s-5.769,0.144-5.816-3.991c-0.016-1.37,1.367-5.963,3.783-10.725c2.416-4.763,11.729-14.006,11.729-14.006s-7.528,4.247-9.695,5.508c-2.166,1.26-12.854,8.613-14.01,16.387c-1.155,7.772-4.996,36.106-4.996,36.106c0,0.001,3.877,7.506,12.069,13.809c8.193,6.303,23.95,6.197,23.95,6.197l1.991-1.577c-2.739-0.423-15.545-5.674-21.424-9.978C19.818,72.674,12.617,64.833,11.073,63.127z"/><path d="M81.392,63.758c-0.508-0.897-2.702-1.154-5.194-0.695c-2.492,0.458-2.94,1.882-3.186,2.442s0.595,2.556,1.681,3.291s1.365,0.91,2.416,0.876c1.051-0.035,1.52-0.376,1.753-0.942c0.305-0.74-1.094-1.374-1.103-1.864c-0.01-0.47,1.499-0.043,1.864,0.315c0.365,0.357,0.93,1.246,0.21,2.547c-0.562,1.015-2.907,4.159-4.65,5.861c-1.506,1.471-4.973,3.676-8.475,3.711c-3.501,0.036-4.621-0.21-7.737-1.015c-2.304-0.596-7.402-3.925-9.595-5.183c-0.772-0.443-0.451,0.2-0.215,0.498c1.278,1.606,6.201,5.197,11.239,6.841c3.927,1.281,9.243,0.604,11.712-0.524c2.131-0.976,3.812-2.455,5.783-4.622c2.367-2.602,4.615-6.089,4.616-7.773C82.513,65.838,81.941,64.729,81.392,63.758z"/><path d="M69.474,46.562c-0.104,0.84,0.525,3.389,0.525,3.389s0.21-0.343,0.473-1.184c0.263-0.84,0.998-1.785,0.998-1.785s0,0-0.735-0.42S69.474,46.562,69.474,46.562z"/><path d="M73.362,11.478c0,0-7.773,6.197-8.509,8.508c-0.734,2.312,0.946,6.514,2.206,8.299c1.261,1.785,1.959,4.097,1.959,4.097s5.079-9.769,5.604-14.392C75.148,13.369,74.833,11.268,73.362,11.478z"/><path d="M25.778,33.957c0,0,2.94,0.735,4.832,0c1.891-0.734,2.626-6.092,3.886-7.878c1.262-1.786,3.992-9.349,1.892-9.559c0,0-6.198,6.197-8.089,9.559S25.778,33.957,25.778,33.957z"/><path d="M57.956,51.148c0,0-0.63-1.119-1.399-1.891c-0.77-0.77-3.012-2.17-3.012-2.17s-0.42,1.346-1.33,1.346s-1.506-0.82-1.506-0.82s-0.596-0.071-1.786,0.35c-1.19,0.42-2.696,1.295-2.696,1.295s2.731,2.767,5.322,3.432C54.139,53.355,57.956,51.148,57.956,51.148z"/><path d="M62.823,23.502c0,0-2.522-4.423,6.944-12.039c4.121-3.314,8.285-5.572,8.285-5.572s-2.73-0.315-5.042,1.051c-2.311,1.365-7.22,4.937-8.337,5.986c-1.116,1.051-6.158,0.631-8.784,4.623c0,0,1.771,0.817,3.081,1.75C60.281,20.232,62.823,23.502,62.823,23.502z"/></svg>
-      <div>Relation: {{ relation }}</div>
+  <div class="home" v-if="$route.name === 'Home'">
+    <div style="font-size: 50px">{{ relation.home.icon }}</div>
+    <div class="homeName">{{ relation.home.name }}</div>
 
-      <div class="button"
+    <div class="pageBtns">
+      <div class="pageBtn"
         v-for="page in relation.pages" :key="page.id"
-        style="cursor:pointer"
         @click="$router.push(`/h/${relation.home.id}/${page.id}`)"
       >
-        {{ page.icon }} {{ page.name }}
+        <div class="pageBtnIcon">{{ page.icon }}</div>
+        <div class="pageBtnText">{{ page.name }}</div>
+      </div>
+    </div>
+
+    <div class="green svgBtn"
+      v-if="relation.user.admin"
+      @click="$router.push(`/h/${$route.params.home}/admin`)"
+    >
+      <!-- eslint-disable-next-line -->
+      <svg viewBox="0 0 100 100"><path d="M78.5,77.9c0,4.2-3.5,7.7-7.7,7.7H22.1c-4.2,0-7.7-3.5-7.7-7.7V29.2c0-4.2,3.5-7.7,7.7-7.7h23.6l12-11.9H22.1 c-10.8,0-19.6,8.8-19.6,19.6v48.7c0,10.8,8.8,19.6,19.6,19.6h48.7c10.8,0,19.6-8.8,19.6-19.6V42.3l-11.9,12V77.9z"/><path d="M29.9,66.1c-0.8,2.5,1.5,4.8,4,4l13-4.3c2.3-0.8,4.3-2,6.2-3.4L37.6,46.9c-1.4,1.9-2.7,3.9-3.4,6.2L29.9,66.1z"/><path d="M95.4,10.4l-5.8-5.8c-2.8-2.8-7.3-2.8-10.1,0L45.8,38.3l15.9,15.9l33.7-33.7C98.2,17.8,98.2,13.2,95.4,10.4z"/></svg>
+      <div class="text">Manage home</div>
+    </div>
+
+    <div class="block small">
+      <div class="title">User options</div>
+
+      <div class="content">
+        <div class="simpleInput">
+          <div>Display name</div>
+          <input type="text" v-model="user.displayName" placeholder="Display name">
+        </div>
+
+        <div class="twoColumns">
+          <div class="simpleInput">
+            <div>User type</div>
+            <select :value="relation.user.admin" disabled>
+              <option :value="true">{{ relation.user.owner ? 'Owner' : 'Admin' }}</option>
+              <option :value="false">User</option>
+            </select>
+          </div>
+
+          <div class="simpleInput">
+            <div>Notifications</div>
+            <select :value="relation.user.notifications" v-model="user.notifications">
+              <option :value="true">Enabled</option>
+              <option :value="false">Disabled</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="button green" @click="saveUser">Save</div>
+      </div>
+    </div>
+
+    <div class="separator"/>
+
+    <div class="block small">
+      <div class="title">Leave home</div>
+
+      <div class="content">
+        <div class="button red" @click="leaveHome">Leave home</div>
       </div>
     </div>
   </div>
@@ -25,11 +74,10 @@ import miakode from '../lib/miakode';
 const auth = window.auth;
 
 /** @type {import('firebase').default.firestore.Firestore} */
-// const db = window.db;
+const db = window.db;
 
 /** @type {import('izitoast').IziToast} */
 const toast = window.toast;
-// const toastErr = (err) => toast.error({ title: err.message });
 
 export default {
   name: 'Home',
@@ -40,24 +88,35 @@ export default {
 
   computed: {
     relation() {
-      return {
-        variables: this.variables,
-        ...this.relations.find((r) => r.home.id === this.$route.params.home),
-      };
+      const rel = this.relations.find((r) => r.home.id === this.$route.params.home);
+      if (rel) {
+        // eslint-disable-next-line
+        this.user.displayName = rel.user.displayName;
+        // eslint-disable-next-line
+        this.user.notifications = rel.user.notifications;
+
+        return { variables: this.variables, ...rel };
+      }
+      return {};
     },
 
     page() {
-      return this.relation.pages.find((p) => p.id === this.$route.params.page);
+      return this.relation.pages && this.$route.name !== 'Join'
+        ? this.relation.pages.find((p) => p.id === this.$route.params.page)
+        : {};
     },
   },
 
   data: () => ({
     socket: null,
     variables: {},
+    user: {
+      displayName: 'Unnamed user',
+      notifications: false,
+    },
   }),
 
   mounted() {
-    if (!this.relation) this.$router.push('/h');
     this.connect();
   },
 
@@ -72,7 +131,11 @@ export default {
 
   methods: {
     connect() {
-      if (!this.relation.home.server) return;
+      if ((!this.relation || !this.relation.id) && this.$route.name !== 'Join') {
+        this.$router.push('/h');
+        return;
+      }
+      if (!this.relation.home || !this.relation.home.server) return;
       if (this.socket && this.socket.close) this.socket.close();
 
       this.socket = new WebSocket(`wss://${this.relation.home.server}/${this.relation.home.id}/`);
@@ -126,6 +189,105 @@ export default {
     sendPacket(...chunks) {
       if (this.socket) this.socket.send(new Blob(chunks));
     },
+
+    saveUser() {
+      db.collection('relations')
+        .doc(`${this.$route.params.home}@${auth.currentUser.uid}`)
+        .update({
+          displayName: this.user.displayName,
+          notifications: this.user.notifications,
+        })
+        .then(() => {
+          toast.success({ title: 'User updated !' });
+          auth.updateCurrentUser(auth.currentUser);
+        })
+        .catch(() => {
+          toast.error({ title: 'Can\'t update user...' });
+        });
+    },
+
+    leaveHome() {
+      toast.confirm('Are you sure you want to leave this home ?', () => {
+        db.collection('relations')
+          .doc(`${this.$route.params.home}@${auth.currentUser.uid}`)
+          .delete()
+          .then(() => {
+            toast.success({ title: 'Home leaved !' });
+            auth.updateCurrentUser(auth.currentUser);
+          })
+          .catch(() => {
+            toast.error({ title: 'Can\'t leave this home...' });
+          });
+      });
+    },
   },
 };
 </script>
+
+<style scoped>
+.homeName {
+  font-size: 30px;
+  padding: 10px 0 15px;
+}
+
+.pageBtns {
+  display: grid;
+  grid-template-columns: auto auto;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.pageBtn {
+  cursor: pointer;
+  background-color: var(--color4);
+  padding: 25px 20px;
+  margin: 1px;
+}
+
+.pageBtn:hover { background-color: var(--color4-s) }
+
+.pageBtn:last-child { grid-column: 1 / 3 }
+
+.pageBtnIcon {
+  font-size: 40px;
+  margin-bottom: 10px;
+}
+
+.pageBtnText {
+  font-size: 25px;
+}
+
+.svgBtn {
+  max-width: 600px;
+  margin: 15px auto 20px;
+  background-color: var(--color8);
+  cursor: pointer;
+  padding: 25px 30px;
+}
+
+.svgBtn:hover { background-color: var(--color8-s) }
+
+.svgBtn > svg {
+  fill: var(--color1);
+  height: 50px;
+  margin-bottom: 10px;
+}
+
+.svgBtn > .text {
+  font-size: 25px;
+}
+
+.block > .title {
+  margin-bottom: 20px;
+}
+
+.content {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+@media screen and (min-width: 1200px) {
+  .homeName { padding: 15px 0 50px }
+  .pageBtn { margin: 5px }
+}
+</style>

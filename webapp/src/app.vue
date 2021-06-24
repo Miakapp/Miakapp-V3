@@ -121,6 +121,12 @@ form {
   display: grid;
 }
 
+.twoColumns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 5px;
+}
+
 .simpleInput {
   display: grid;
   margin-bottom: 5px;
@@ -167,6 +173,7 @@ input[type=submit], .button { cursor: pointer }
 
 input[type=submit], .button.green { background-color: var(--color8) }
 input[type=submit]:hover, .button.green:hover { background-color: var(--color8-s) }
+input[type=date] { display: block }
 
 input:hover, select:hover { border-radius: 0 }
 

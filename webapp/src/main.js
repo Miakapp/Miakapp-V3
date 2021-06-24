@@ -75,6 +75,7 @@ const router = createRouter({
         children: [
           { name: 'Admin', path: 'admin', component: () => import('./pages/home/admin.vue') },
           { name: 'Page', path: ':page', component: () => import('./pages/home/page.vue') },
+          { name: 'Join', path: 'join/:invitID', component: () => import('./pages/home/join.vue') },
         ],
       }],
     },

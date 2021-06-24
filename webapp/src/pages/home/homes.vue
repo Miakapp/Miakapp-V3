@@ -205,9 +205,7 @@ export default {
         }
 
         const home = fHomeData.data();
-
         const pages = [];
-
         if (!relation.groups) relation.groups = [];
 
         await Promise.all(await relation.groups.map(async (group) => {
@@ -234,6 +232,8 @@ export default {
             owner: home.owner || '',
           },
           user: {
+            displayName: relation.displayName || 'Unnamed user',
+            notifications: relation.notifications || false,
             owner: home.owner === this.fUser.uid,
             admin: relation.isAdmin || home.owner === this.fUser.uid,
           },
@@ -241,11 +241,21 @@ export default {
         };
       }))).filter((h) => h);
 
-      console.log(this.relations);
+      console.log('Relations =>', this.relations);
       localStorage.setItem('data', JSON.stringify(this.relations));
 
       const lastHome = localStorage.getItem('lastHome');
-      if (lastHome && !this.$route.params.home) this.$router.push(`/h/${lastHome}`);
+      if (
+        lastHome
+        && !this.$route.params.home
+        && this.relations.find((r) => r.home.id === lastHome)
+      ) this.$router.push(`/h/${lastHome}`);
+
+      if (
+        this.$route.params.home
+        && this.$route.name !== 'Join'
+        && !this.relations.find((r) => r.home.id === this.$route.params.home)
+      ) window.location.replace('/h');
 
       this.loading = false;
     },

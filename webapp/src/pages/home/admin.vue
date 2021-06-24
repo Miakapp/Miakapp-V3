@@ -28,8 +28,7 @@
           <div class="body">
             <div class="simpleInput">
               <div>Display name</div>
-              <input type="text" placeholder="Display name"
-                v-model="user.displayName">
+              <input type="text" placeholder="Display name" v-model="user.displayName">
             </div>
 
             <div class="simpleInput">
@@ -62,7 +61,7 @@
             <div class="twoColumns">
               <div class="simpleInput">
                 <div>User type</div>
-                <select v-model="user.isAdmin" :disabled="user.isOwner">
+                <select v-model="user.isAdmin" :disabled="user.isOwner || user.isMe">
                   <option :value="true">{{ user.isOwner ? 'Owner' : 'Admin' }}</option>
                   <option :value="false">User</option>
                 </select>
@@ -79,13 +78,71 @@
 
             <div class="twoColumns">
               <div class="button red"
-                :class="{ disabled: user.isOwner }"
+                :class="{ disabled: user.isOwner || user.isMe }"
                 @click="removeUser(user.id)"
               >Remove</div>
               <div class="button green" @click="updateUser(user.id)">Save</div>
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <div class="separator"/>
+
+    <div class="block">
+      <div class="title">Invitations</div>
+      <div>
+        Manage invitation links to add users to your home
+      </div>
+
+      <div class="separator"/>
+
+      <div class="invitations">
+        <div class="droppable" v-for="invit in admin.invitations" :key="invit.id"
+          :class="{ open: invit.open }"
+        >
+          <div class="head withLabel" @click="invit.open = !invit.open">
+            <div class="name">{{ invit.name || 'Unnamed invitation' }}</div>
+            <div class="lightLabel">{{
+              new Date(invit.expiresOn) > new Date()
+                ? `${invit.uses} use${invit.uses > 1 ? 's' : ''}`
+                : 'Expired'
+            }}</div>
+          </div>
+
+          <div class="body">
+            <div class="simpleInput">
+              <div>Name</div>
+              <input type="text" placeholder="Name"
+                v-model="invit.name">
+            </div>
+
+            <div class="twoColumns">
+              <div class="simpleInput">
+                <div>Creation date</div>
+                <input type="date" v-model="invit.createdOn" disabled>
+              </div>
+
+              <div class="simpleInput">
+                <div>Expiration date</div>
+                <input type="date" v-model="invit.expiresOn">
+              </div>
+            </div>
+
+            <div class="simpleInput">
+              <div>URL</div>
+              <input type="url" v-model="invit.URL" readonly>
+            </div>
+
+            <div class="twoColumns">
+              <div class="button red" @click="delInvit(invit.id)">Remove</div>
+              <div class="button green" @click="updateInvit(invit.id)">Save</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="newButton" @click="newInvit">+</div>
       </div>
     </div>
 
@@ -335,6 +392,8 @@ const db = window.db;
 /** @type {import('izitoast').IziToast} */
 const toast = window.toast;
 
+const addZeros = (a = '') => (`${a}`.length < 2 ? `0${a}` : a);
+
 export default {
   name: 'Admin',
 
@@ -345,7 +404,7 @@ export default {
   data: () => ({
     admin: {
       users: [],
-      // invitations: [],
+      invitations: [],
       groups: [],
       pages: [],
       coordinator: {},
@@ -407,6 +466,80 @@ export default {
         });
     },
 
+    newInvit() {
+      const cd = new Date();
+      const ed = new Date(Date.now() + 86400000);
+
+      db.collection('homes')
+        .doc(this.relation.home.id)
+        .collection('invitations')
+        .add({
+          name: 'New invitation',
+          createdOn: `${cd.getFullYear()}-${addZeros(cd.getMonth() + 1)}-${addZeros(cd.getDate())}`,
+          expiresOn: `${ed.getFullYear()}-${addZeros(ed.getMonth() + 1)}-${addZeros(ed.getDate())}`,
+        });
+
+      this.loadInvitations();
+    },
+
+    updateInvit(invitID) {
+      const invitData = this.admin.invitations.find((i) => i.id === invitID);
+      if (!invitData) {
+        toast.error({ title: 'Error, please try again' });
+        return;
+      }
+
+      if (!invitData.name) {
+        toast.error({ title: 'Please set a name' });
+        return;
+      }
+
+      if (!invitData.expiresOn) {
+        toast.error({ title: 'Wrong expire date' });
+        return;
+      }
+
+      db.collection('homes')
+        .doc(this.relation.home.id)
+        .collection('invitations')
+        .doc(invitID)
+        .update({
+          name: invitData.name,
+          expiresOn: invitData.expiresOn,
+        })
+        .then(() => {
+          toast.success({ title: 'Invitation updated !' });
+          this.loadInvitations();
+        })
+        .catch(() => {
+          toast.error({ title: 'Can\'t edit this invitation' });
+        });
+    },
+
+    delInvit(invitID) {
+      const invitData = this.admin.invitations.find((i) => i.id === invitID);
+      if (!invitData) {
+        toast.error({ title: 'Error, please try again' });
+        return;
+      }
+
+      toast.confirm('Are you sure you want to delete this invitation ?', () => {
+        db.collection('homes')
+          .doc(this.relation.home.id)
+          .collection('invitations')
+          .doc(invitID)
+          .delete()
+          .then(() => {
+            toast.success({ title: 'Invitation deleted from home !' });
+            this.loadInvitations();
+          })
+          .catch((e) => {
+            console.log(e);
+            toast.error({ title: 'Can\'t delete this invitation' });
+          });
+      });
+    },
+
     newGroup() {
       db.collection('homes')
         .doc(this.relation.home.id)
@@ -416,6 +549,7 @@ export default {
           name: 'newGroup',
           pages: [],
         });
+
       this.loadGroups();
     },
 
@@ -650,6 +784,45 @@ export default {
       });
     },
 
+    async loadUsers() {
+      this.admin.users = (
+        await db.collection('relations').where('home', '==', this.$route.params.home).get()
+      ).docs.map((d) => {
+        const groups = d.get('groups') || [];
+        return {
+          id: d.get('user'),
+          displayName: d.get('displayName') || '',
+          groups: [
+            groups[0] || '',
+            groups[1] || '',
+            groups[2] || '',
+          ],
+          notifications: d.get('notifications') || false,
+          invitation: d.get('invitation') || false,
+          isAdmin: d.get('isAdmin') || false,
+          isOwner: d.get('user') === this.relation.home.owner,
+          isMe: d.get('user') === auth.currentUser.uid,
+        };
+      });
+    },
+
+    async loadInvitations() {
+      this.admin.invitations = (
+        await db
+          .collection('homes')
+          .doc(this.relation.home.id)
+          .collection('invitations')
+          .get()
+      ).docs.map((d) => ({
+        id: d.id,
+        name: d.get('name') || '',
+        createdOn: d.get('createdOn') || '2000-01-01',
+        expiresOn: d.get('expiresOn') || '2000-01-01',
+        uses: this.admin.users.filter((u) => u.invitation === d.id).length,
+        URL: `${window.location.origin}/h/${this.relation.home.id}/join/${d.id}`,
+      }));
+    },
+
     async loadGroups() {
       this.admin.groups = (
         await db
@@ -685,26 +858,6 @@ export default {
         content: d.get('content') || '',
         icon: d.get('icon') || '❔',
       }));
-    },
-
-    async loadUsers() {
-      this.admin.users = (
-        await db.collection('relations').where('home', '==', this.$route.params.home).get()
-      ).docs.map((d) => {
-        const groups = d.get('groups') || [];
-        return {
-          id: d.get('user'),
-          displayName: d.get('displayName') || '',
-          groups: [
-            groups[0] || '',
-            groups[1] || '',
-            groups[2] || '',
-          ],
-          notifications: d.get('notifications') || false,
-          isAdmin: d.get('isAdmin') || false,
-          isOwner: d.get('user') === this.relation.home.owner,
-        };
-      });
     },
 
     async loadCoordinator() {
@@ -755,7 +908,12 @@ export default {
     },
 
     loadAll() {
-      this.loadUsers();
+      if (!this.relation.user || (!this.relation.user.admin && !this.relation.user.owner)) {
+        this.$router.push(`/h/${this.$route.params.home}`);
+        return;
+      }
+
+      this.loadUsers().then(this.loadInvitations);
       this.loadGroups();
       this.loadPages();
       this.loadCoordinator();
@@ -811,12 +969,6 @@ export default {
   height: 0;
   margin: 0;
   pointer-events: none;
-}
-
-.twoColumns {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  column-gap: 5px;
 }
 
 .pageLine {
