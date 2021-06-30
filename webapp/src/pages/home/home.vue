@@ -1,8 +1,5 @@
 <template>
   <div class="home" v-if="$route.name === 'Home'">
-    <div style="font-size: 50px">{{ relation.home.icon }}</div>
-    <div class="homeName">{{ relation.home.name }}</div>
-
     <div class="pageBtns">
       <div class="pageBtn"
         v-for="page in relation.pages" :key="page.id"
@@ -226,16 +223,11 @@ export default {
 </script>
 
 <style scoped>
-.homeName {
-  font-size: 30px;
-  padding: 10px 0 15px;
-}
-
 .pageBtns {
   display: grid;
   grid-template-columns: auto auto;
   max-width: 600px;
-  margin: 0 auto;
+  margin: 0 auto 10px;
 }
 
 .pageBtn {
@@ -260,7 +252,7 @@ export default {
 
 .svgBtn {
   max-width: 600px;
-  margin: 15px auto 20px;
+  margin: 0 auto 20px;
   background-color: var(--color8);
   cursor: pointer;
   padding: 25px 30px;
@@ -288,7 +280,6 @@ export default {
 }
 
 @media screen and (min-width: 1200px) {
-  .homeName { padding: 15px 0 50px }
   .pageBtn { margin: 5px }
 }
 </style>
