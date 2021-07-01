@@ -7,6 +7,7 @@ import 'firebase/firestore';
 import izitoast from 'izitoast';
 import 'izitoast/dist/css/iziToast.min.css';
 import app from './app.vue';
+import './lib/userEvent';
 
 window.toast = izitoast;
 window.toast.settings({

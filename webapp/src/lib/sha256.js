@@ -1,5 +1,5 @@
 /* eslint-disable no-bitwise */
-export default function (asciiIn) {
+export default function sha256(asciiIn) {
   const rRotate = (value, amount) => (value >>> amount) | (value << (32 - amount));
 
   const maxWord = 2 ** 32;

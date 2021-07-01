@@ -381,7 +381,7 @@
 </template>
 
 <script>
-import genKeys from '../lib/credentials';
+import genKeys from '../../lib/credentials';
 
 /** @type {import('firebase').default.auth.Auth} */
 const auth = window.auth;

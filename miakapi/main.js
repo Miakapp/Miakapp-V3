@@ -38,13 +38,13 @@ function parsePacket(packet) {
 }
 
 const connect = async (credentials) => {
-  const home = await getHome(credentials.home);
-  if (!home.server) throw new Error('There is no selected server for this home');
+  const homeDoc = await getHome(credentials.home);
+  if (!homeDoc.server) throw new Error('There is no selected server for this home');
 
   const client = new WebSocketClient();
   function newSocket() {
-    console.log('Connecting to', home.server);
-    client.connect(`wss://${home.server}/${home.id}/`, null, '//coordinator.miakapp');
+    console.log('Connecting to', homeDoc.server);
+    client.connect(`wss://${homeDoc.server}/${homeDoc.id}/`, null, '//coordinator.miakapp');
   }
 
   function sendData(s) {
@@ -146,8 +146,86 @@ const connect = async (credentials) => {
   newSocket();
 };
 
-connect({
-  home: 'test1',
-  id: 'main',
-  secret: 'cYXlDuWwWOGEN0apByqONBiItCD4tmKiJwnWLlYuuMxFURkWBPPelt8LoVMp1nux',
-});
+/**
+ * User instance
+ * @typedef {{
+ *  id: string,
+ *  displayName: string,
+ *  isAdmin: boolean,
+ *  groups: string[],
+ * }} User
+ */
+
+/**
+ * User login event data
+ * @typedef {Object} UserLoginEvent
+ * @property {User} user
+ * @property {'CONNECT' | 'DISCONNECT'} type Event type
+ * @property {number} connectionUID ID of connection
+ */
+
+/**
+ * User action event data
+ * @typedef {Object} UserActionEvent
+ * @property {User} user
+ * @property {'click' | 'input'} type Event type
+ * @property {string} id ID of DOM element
+ * @property {string} name Name of DOM element
+ * @property {string} value Value of input element (if exists)
+ */
+
+/**
+ * Instance of miakapp home
+ * @typedef {Object} Home
+ * @property {User} variables Dynamic variables to inject in your pages
+ * @property {(modifs: {}) => null} commit Send data modifications to users
+ * @property {(callback: (data: UserLoginEvent) => null) => null
+ * } onUserLogin Event that handles when an user connects or disconnects
+ * @property {(callback: (data: UserActionEvent) => null) => null
+ * } onUserAction Event that handles when an user interact with a page
+ */
+
+/**
+ * Creates a home instance
+ * @param {string} home Home ID (in your URL)
+ * @param {string} id Coordinator ID (default is "main")
+ * @param {string} secret Coordinator secret token
+ * @returns {Home} Returns an instance of home
+ */
+module.exports = function Miakapi(home, id, secret) {
+  /** @type {((data: UserLoginEvent) => null)[]} */
+  const userLoginCallbacks = [];
+  /** @type {((data: UserActionEvent) => null)[]} */
+  const userActionCallbacks = [];
+
+  const { emitCallback, emitNotif } = connect({ home, id, secret }, {
+    onUserLogin(data) {
+      userLoginCallbacks.forEach((h) => h(data));
+    },
+    onUserAction(data) {
+      userActionCallbacks.forEach((h) => h(data));
+    },
+  });
+
+  const variables = {};
+
+  return {
+    variables,
+
+    commit(modifs = {}) {
+      Object.assign(variables, modifs);
+      emitCallback(variables);
+    },
+
+    sendNotif(notification = {}) {
+      emitNotif(notification);
+    },
+
+    onUserLogin(callback) {
+      userLoginCallbacks.push(callback);
+    },
+    onUserAction(callback) {
+      userActionCallbacks.push(callback);
+    },
+  };
+};

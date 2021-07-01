@@ -65,7 +65,7 @@
 </template>
 
 <script>
-import miakode from '../lib/miakode';
+import miakode from '../../lib/miakode';
 
 /** @type {import('firebase').default.auth.Auth} */
 const auth = window.auth;
@@ -143,6 +143,13 @@ export default {
           auth.currentUser.uid,
           await auth.currentUser.getIdToken(),
         ]));
+
+        window.onUserEvent.SOCKET = (data) => {
+          console.log('data', data);
+          this.sendPacket('\x21', miakode.array.encode([
+            data.type, data.id, data.name, data.value,
+          ]));
+        };
       };
 
       this.socket.onerror = () => {};
@@ -155,7 +162,7 @@ export default {
           }
 
           toast.error({ title: ev.reason });
-        } else setTimeout(this.connect, 300);
+        } else setTimeout(this.connect, 1000);
 
         console.log('CLOSED', ev, ev.code, ev.wasClean);
       };
@@ -185,6 +192,7 @@ export default {
 
     sendPacket(...chunks) {
       if (this.socket) this.socket.send(new Blob(chunks));
+      else this.connect();
     },
 
     saveUser() {

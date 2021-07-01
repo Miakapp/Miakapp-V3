@@ -54,7 +54,7 @@ messaging.setBackgroundMessageHandler((payload) => {
   return self.registration.showNotification(payload.data.title, {
     body: payload.data.body,
     badge: './icons/notif.png',
-    icon: payload.data.icon,
+    icon: './icons/128.png',
     image: payload.data.image,
     lang: payload.data.lang,
     timestamp: payload.data.timestamp,

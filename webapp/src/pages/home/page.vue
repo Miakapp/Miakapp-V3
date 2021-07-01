@@ -1,6 +1,9 @@
 <template>
   <div class="page" v-if="page">
-    <div v-if="!edit || !relation.user.admin" v-html="page.content"/>
+    <pageRender v-if="!edit || !relation.user.admin"
+      :content="page.content"
+      :variables="relation.variables"
+    />
     <editor v-else :relation="relation" :page="page"/>
 
     <!-- eslint-disable-next-line -->
@@ -10,11 +13,12 @@
 
 <script>
 import editor from './editor.vue';
+import pageRender from '../components/pageRender.vue';
 
 export default {
   name: 'Page',
 
-  components: { editor },
+  components: { pageRender, editor },
   props: {
     relation: Object,
     page: Object,

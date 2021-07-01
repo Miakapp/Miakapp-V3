@@ -38,7 +38,7 @@
     </div>
 
     <div class="preview">
-      <phone :content="compiledHTML"/>
+      <phone :content="lastContents[page.id]" :variables="relation.variables"/>
     </div>
   </div>
 </template>
@@ -46,8 +46,8 @@
 <script>
 import CodeMirror from 'codemirror';
 import phone from '../components/phone.vue';
-import snippets from '../lib/snippets';
-import { HTMLMinify, formatVar, crop } from '../lib/formatter';
+import snippets from '../../lib/snippets';
+import { crop } from '../../lib/formatter';
 import 'codemirror/lib/codemirror.css';
 import 'codemirror/theme/darcula.css';
 import 'codemirror/mode/htmlmixed/htmlmixed';
@@ -84,34 +84,16 @@ export default {
   },
 
   data: () => ({
+    editor: null,
     uses: {},
     events: [],
     lastContents: {},
     lastSave: 0,
   }),
 
-  computed: {
-    compiledHTML() {
-      // eslint-disable-next-line
-      this.uses = {};
-      let newHtml = HTMLMinify(this.lastContents[this.page.id]);
-
-      if (this.relation.variables) {
-        Object.keys(this.relation.variables).forEach((varnm) => {
-          while (newHtml.includes(`{{${varnm}}}`)) {
-            if (!this.uses[varnm]) this.uses[varnm] = 1;
-            else this.uses[varnm] += 1;
-            newHtml = newHtml.replace(`{{${varnm}}}`, formatVar(this.relation.variables[varnm]));
-          }
-        });
-      }
-
-      return newHtml;
-    },
-  },
-
   methods: {
     crop,
+
     savePage() {
       if (this.lastContents[this.page.id] === this.page.content) return;
       console.log('Saving...');
@@ -158,12 +140,31 @@ export default {
       a.click();
       toast.success({ title: 'Page exported' });
     },
+
+    computeVars(content) {
+      const uses = {};
+
+      if (!this.relation.variables) return;
+      Object.keys(this.relation.variables).forEach((varnm) => {
+        uses[varnm] = content.split(`{{${varnm}}}`).length - 1;
+      });
+
+      this.uses = uses;
+    },
   },
 
   watch: {
     page() {
       if (!this.lastContents[this.page.id]) this.lastContents[this.page.id] = this.page.content;
       this.editor.setValue(this.lastContents[this.page.id]);
+    },
+
+    [['page.content']]() {
+      this.computeVars(this.page.content);
+    },
+
+    [['relation.variables']]() {
+      this.computeVars(this.page.content);
     },
   },
 
@@ -212,28 +213,13 @@ export default {
       this.lastContents[this.page.id] = editor.getValue();
     });
 
-    document.body.onclick = (e) => {
-      let el = e.target;
-      while (!el || !el.attributes
-        || !el.attributes['@click']
-        || !el.attributes['@click'].value
-      ) {
-        if (!el.parent) return;
-        el = el.parent;
+    window.onUserEvent.EDITOR = (data) => {
+      console.log('data', data);
+      if (data.type === 'click') {
+        this.events.unshift({ action: 'Click', value: data.name });
+      } else {
+        this.events.unshift({ action: data.id || data.name || 'Anonymous input', value: data.value });
       }
-
-      this.events.push({ action: 'Click', value: el.attributes['@click'].value });
-    };
-
-    document.body.oninput = (e) => {
-      if (!e || !e.target || !e.target.value || !e.target.attributes['@watch']) return;
-      const action = {
-        id: e.target.id,
-        name: e.target.name,
-        value: e.target.value,
-      };
-
-      this.events.push({ action: action.id || action.name || 'Anonymous input', value: action.value });
     };
 
     document.addEventListener('keydown', (event) => {

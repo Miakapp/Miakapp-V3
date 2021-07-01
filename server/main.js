@@ -13,10 +13,12 @@ firebase.initializeApp({
 });
 
 const miakode = require('./miakode');
+const sha256 = require('./sha256');
 const ws = require('./wsServer').server;
 
 const auth = firebase.auth();
 const db = firebase.firestore();
+const fcm = firebase.messaging();
 
 function setState() {
   db.collection('SERVERS').doc(process.env.SERVER_URL).set({
@@ -143,21 +145,21 @@ function Home(homeID) {
   const groupsDoc = homeDoc.collection('groups');
   const homeUsers = db.collection('relations').where('home', '==', homeID);
 
-  const unsubscribeGroups = groupsDoc.onSnapshot((snapshot) => {
+  const unsubGroups = groupsDoc.onSnapshot((snapshot) => {
     this.fGroups = snapshot.docs.map((a) => ({ id: a.id, ...a.data() }));
     if (this.fRelations.length > 0) this.emit('onHomeUpdate');
     console.log('Groups changes');
   });
 
-  const unsubscribeUsers = homeUsers.onSnapshot((snapshot) => {
+  const unsubUsers = homeUsers.onSnapshot((snapshot) => {
     this.fRelations = snapshot.docs.map((a) => ({ id: a.id, ...a.data() }));
     if (this.fGroups.length > 0) this.emit('onHomeUpdate');
     console.log('Users changes');
   });
 
   this.destroy = () => {
-    unsubscribeGroups();
-    unsubscribeUsers();
+    unsubGroups();
+    unsubUsers();
   };
 }
 
@@ -175,8 +177,10 @@ ws.on('connect', (socket) => {
     type: null,
     /** @type {string | null} */
     homeID: null,
-    /** @type {number} */
+    /** @type {number} Packet unique ID */
     socketID: incrementer,
+    /** @type {number} User or coordinator ID */
+    clientID: null,
   };
 
   let pongPayload = null;
@@ -225,6 +229,7 @@ ws.on('connect', (socket) => {
 
         client.homeID = homeID;
         client.type = 'USER';
+        client.clientID = userID;
 
         function sendVariables() {
           const userVariables = {};
@@ -258,6 +263,12 @@ ws.on('connect', (socket) => {
       return;
     }
 
+    if (msg.type === P_TYPES.USER.ACTION && client.type === 'USER') {
+      const [type, id, name, value] = miakode.array.decode(msg.data);
+      HOMES[client.homeID].emit('onUserAction', [client.clientID, type, id, name, value]);
+      return;
+    }
+
     // COORDINATOR AUTHENTICATION
     if (msg.type === P_TYPES.AUTH.COORD && !client.type) {
       console.log('Auth coord');
@@ -272,35 +283,44 @@ ws.on('connect', (socket) => {
       if ((await homeDoc.get()).exists) {
         const coordDoc = homeDoc.collection('coordinators').doc(coordID);
         const fCoord = await coordDoc.get();
-        if (fCoord.exists && fCoord.data().secret === coordSecret) {
+        if (fCoord.exists && fCoord.data().secret === sha256(coordSecret)) {
           coordDoc.update({ lastDate: Date.now() });
 
           client.homeID = homeID;
+          client.clientID = coordID;
           client.type = 'COORD';
 
           console.log('=>', client);
 
           if (!HOMES[client.homeID]) HOMES[client.homeID] = new Home(client.homeID);
 
-          HOMES[client.homeID].subscribe(client.socketID, 'onHomeUpdate', () => {
+          const sendHomeUsers = () => {
             const users = HOMES[client.homeID].fRelations.map((r) => {
-              const gNs = r.groups.map((id) => HOMES[homeID].fGroups.find((g) => g.id === id).name);
+              const gNs = r.groups.map((id) => {
+                const group = HOMES[homeID].fGroups.find((g) => g.id === id);
+                return (group && group.name) ? group.name : null;
+              }).filter((g) => g);
               return `${r.isAdmin ? '1' : '0'}${r.user}\x01${r.displayName}\x01${gNs.join('\x02')}\x00`;
             });
 
             sendPacket(socket, P_TYPES.COORD.USERLIST, users);
-          });
+          };
+
+          HOMES[client.homeID].subscribe(client.socketID, 'onHomeUpdate', sendHomeUsers);
+          sendHomeUsers();
 
           HOMES[client.homeID].subscribe(client.socketID, 'onUserEvent', (userID, socketID, event) => {
             console.log('onUserEvent', userID, socketID, event);
-            sendPacket(socket, P_TYPES.COORD.USER_CONNECT, miakode.string.encode(
-              `${event}${socketID}@${userID}`,
-            ));
+            sendPacket(
+              socket,
+              P_TYPES.COORD.USER_CONNECT,
+              miakode.string.encode(`${event}${socketID}@${userID}`),
+            );
           });
 
           HOMES[client.homeID].subscribe(client.socketID, 'onUserAction', (action) => {
             console.log('onUserAction', action);
-            sendPacket(socket, P_TYPES.COORD.USER_ACTION, miakode.object.encode(action));
+            sendPacket(socket, P_TYPES.COORD.USER_ACTION, miakode.array.encode(action));
           });
 
           sendPacket(socket, P_TYPES.AUTH.OK);
@@ -316,6 +336,32 @@ ws.on('connect', (socket) => {
       HOMES[client.homeID].emit('onData');
 
       console.log('COMMIT DATA', HOMES[client.homeID].variables);
+      return;
+    }
+
+    if (msg.type === P_TYPES.COORD.NOTIF && client.type === 'COORD') {
+      const [userID, title, body, tag, image] = miakode.array.decode(msg.data);
+
+      (await db.collection('users').doc(userID).collection('pushTokens').get()).forEach((token) => {
+        console.log('SEND NOTIF', [userID]);
+        fcm.send({
+          token,
+          data: {
+            title,
+            body,
+            tag,
+            image,
+            timestamp: Date.now(),
+          },
+        }).catch(() => {
+          db.collection('users')
+            .doc(userID)
+            .collection('pushTokens')
+            .doc(token)
+            .delete();
+        });
+      });
+
       return;
     }
 

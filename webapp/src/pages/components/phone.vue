@@ -1,15 +1,20 @@
 <template>
   <div class="smartphone">
-    <div class="content" v-html="content" @click="onClick"/>
+    <pageRender class="content" :content="content" :variables="variables"/>
   </div>
 </template>
 
 <script>
+import pageRender from './pageRender.vue';
+
 export default {
   name: 'Phone',
+
+  components: { pageRender },
+
   props: {
     content: String,
-    onClick: Function,
+    variables: Object,
   },
 };
 </script>
