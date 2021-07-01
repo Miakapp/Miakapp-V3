@@ -97,6 +97,7 @@ function Home(homeID) {
   this.id = homeID;
   this.variables = {};
   this.listeners = {};
+  this.disconnectCoord = () => null;
 
   /** @type {{ id: string, name: string, displayName: string }[]} */
   this.fGroups = [];
@@ -292,7 +293,15 @@ ws.on('connect', (socket) => {
 
           console.log('=>', client);
 
-          if (!HOMES[client.homeID]) HOMES[client.homeID] = new Home(client.homeID);
+          if (!HOMES[client.homeID]) {
+            HOMES[client.homeID] = new Home(client.homeID);
+          } else {
+            HOMES[client.homeID].disconnectCoord();
+          }
+
+          HOMES[client.homeID].disconnectCoord = () => {
+            socket.close(4005, 'NEW_CONNECTION');
+          };
 
           const sendHomeUsers = () => {
             const users = HOMES[client.homeID].fRelations.map((r) => {

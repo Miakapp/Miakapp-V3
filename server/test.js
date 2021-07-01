@@ -134,6 +134,7 @@ const connect = async (credentials) => {
 
     s.on('close', (code, desc) => {
       console.log('CLOSE', code, desc);
+      if (code === 4005) return;
       setTimeout(newSocket, 200);
     });
   });
