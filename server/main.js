@@ -306,7 +306,7 @@ ws.on('connect', (socket) => {
                 const group = HOMES[homeID].fGroups.find((g) => g.id === id);
                 return (group && group.name) ? group.name : null;
               }).filter((g) => g);
-              return `${r.isAdmin ? '1' : '0'}${r.user}\x01${r.displayName}\x01${gNs.join('\x02')}`;
+              return `${r.isAdmin ? '1' : '0'}${r.notifications ? '1' : '0'}${r.user}\x01${r.displayName}\x01${gNs.join('\x02')}`;
             }).join('\x00');
 
             sendPacket(socket, P_TYPES.COORD.USERLIST, users);
