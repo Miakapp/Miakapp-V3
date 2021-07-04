@@ -8,7 +8,10 @@ setInterval(() => {
 }, 300000);
 
 const httpServer = http.createServer((rq, rs) => {
-  if (rq.url === '/ping') rs.end('pong');
+  if (rq.url === '/ping') {
+    rs.setHeader('Access-Control-Allow-Origin', '*');
+    rs.end('pong');
+  }
 });
 
 httpServer.listen(process.env.PORT || 3000);
