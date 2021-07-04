@@ -22,11 +22,6 @@ function getHome(homeID) {
   });
 }
 
-function sendPacket(socket, type, data) {
-  socket.sendBytes(Buffer.from(`${type}${data}`));
-  console.log(type, data.length);
-}
-
 function parsePacket(packet) {
   if (!packet.binaryData) return { type: 'unknown' };
 
@@ -37,7 +32,9 @@ function parsePacket(packet) {
   };
 }
 
-const connect = async (credentials) => {
+const connect = async (credentials, {
+  onReady, onHomeUpdate, onUserLogin, onUserAction,
+}) => {
   const homeDoc = await getHome(credentials.home);
   if (!homeDoc.server) throw new Error('There is no selected server for this home');
 
@@ -47,23 +44,16 @@ const connect = async (credentials) => {
     client.connect(`wss://${homeDoc.server}/${homeDoc.id}/`, null, '//coordinator.miakapp');
   }
 
-  function sendData(s) {
-    console.log('Sending data');
-    sendPacket(s, '\x41', miakode.object.encode({
-      'group1.test1': 'val 1',
-      'group1.test2': 'val 2',
-      'group1.test.sub1': 'val 3',
-      'group2.test': 'val 4',
-      'unexistinggroup.group1': 'OOPS1',
-      'unexistinggroup.group1.test': 'OOPS2',
-      'global.glb1': 'global 1',
-      'global.glb2': 'global 2',
-      'global.timestamp': Date.now(),
-    }));
+  let socket = null;
+
+  function sendPacket(type, data) {
+    socket.sendBytes(Buffer.from(`${type}${data}`));
+    console.log('sendPacket =>', type, data.length);
   }
 
   client.on('connect', (s) => {
     console.log('Coordinator connected');
+    socket = s;
 
     s.on('message', (packet) => {
       const msg = parsePacket(packet);
@@ -78,62 +68,66 @@ const connect = async (credentials) => {
       // NOTIF: '\x42',
 
       if (msg.type === '\x30') { // PING
-        sendPacket(s, '\x40', msg.data);
+        sendPacket('\x40', msg.data);
         return;
       }
 
       if (msg.type === '\x31') { // USERLIST
         const users = msg.data.split('\x00').filter((u) => u).map((u) => {
           const [id, displayName, groups] = u.split('\x01');
+
           return {
-            id: id.substring(1),
+            id: id.substring(2),
             displayName,
             isAdmin: (id[0] !== '0'),
+            notifEnabled: (id[1] !== '0'),
             groups: groups.split('\x02'),
           };
         });
-        console.log('Users', users);
+
+        onHomeUpdate(users);
         return;
       }
 
       if (msg.type === '\x32') { // USER CONNECT
         const parsed = miakode.string.decode(msg.data);
         const userClient = parsed.substring(1).split('@');
-        console.log('User event', {
-          event: ['DISCONNECT', 'CONNECT'][parsed[0]],
-          connectionID: userClient[0],
+
+        onUserLogin({
+          type: ['DISCONNECT', 'CONNECT'][parsed[0]],
+          connectionUID: userClient[0],
           user: userClient[1],
         });
         return;
       }
 
       if (msg.type === '\x33') { // USER ACTION
-        const [userID, type, id, name, value] = miakode.array.decode(msg.data);
-        console.log('User action', {
-          userID, type, id, name, value,
+        const [user, type, id, name, value] = miakode.array.decode(msg.data);
+        onUserAction({
+          user,
+          type,
+          input: { id, name, value },
         });
         return;
       }
 
       if (msg.type === '\x00') { // LOGGED
-        console.log('Logged');
-        sendData(s);
+        onReady();
         return;
       }
 
       console.log('Unknown packet', msg);
     });
 
-    sendPacket(s, '\x04', miakode.array.encode([
+    sendPacket('\x04', miakode.array.encode([
       credentials.home,
       credentials.id,
       credentials.secret,
     ]));
 
-    setInterval(() => sendData(s), 10000);
-
     s.on('close', (code, desc) => {
       console.log('CLOSE', code, desc);
+      if (code === 4005) return;
       setTimeout(newSocket, 200);
     });
   });
@@ -144,16 +138,31 @@ const connect = async (credentials) => {
   });
 
   newSocket();
+
+  return {
+    emitCallback(data) {
+      sendPacket('\x41', miakode.object.encode(data));
+    },
+    emitNotif(userID, title, body, tag, image) {
+      sendPacket('\x41', miakode.array.encode([
+        userID, title, body, tag, image,
+      ]));
+    },
+    reconnect() {
+      if (socket && socket.close) {
+        socket.close();
+      }
+    },
+  };
 };
 
 /**
  * User instance
- * @typedef {{
- *  id: string,
- *  displayName: string,
- *  isAdmin: boolean,
- *  groups: string[],
- * }} User
+ * @typedef {Object} User
+ * @property {string} id ID of the user
+ * @property {string} displayName Display name of the user
+ * @property {boolean} isAdmin True if the user is admin of the home
+ * @property {string[]} groups List of group names of the user
  */
 
 /**
@@ -165,24 +174,35 @@ const connect = async (credentials) => {
  */
 
 /**
- * User action event data
- * @typedef {Object} UserActionEvent
- * @property {User} user
- * @property {'click' | 'input'} type Event type
+ * DOM input (or button) element in a Miakapp page
+ * @typedef InputElement
  * @property {string} id ID of DOM element
  * @property {string} name Name of DOM element
  * @property {string} value Value of input element (if exists)
  */
 
 /**
+ * User action event data
+ * @typedef {Object} UserActionEvent
+ * @property {User} user User who interacted with an input
+ * @property {'click' | 'input'} type Event type ('click' or 'input')
+ * @property {InputElement} input Input the user interacted with
+ */
+
+/**
  * Instance of miakapp home
  * @typedef {Object} Home
- * @property {User} variables Dynamic variables to inject in your pages
- * @property {(modifs: {}) => null} commit Send data modifications to users
- * @property {(callback: (data: UserLoginEvent) => null) => null
+ * @property {User[]} users List of users who have access to the home
+ * @property {Object<string, string>} variables Dynamic variables to inject in your pages
+ * @property {(modifs: {}) => void} commit Send data modifications to users
+ * @property {(callback: () => void) => void} onReady Event that handles when API is ready
+ * @property {(callback: (users: User[]) => void) => void
+ * } onUpdate Event that handles when an update of home settings happens
+ * @property {(callback: (event: UserLoginEvent) => void) => void
  * } onUserLogin Event that handles when an user connects or disconnects
- * @property {(callback: (data: UserActionEvent) => null) => null
+ * @property {(callback: (action: UserActionEvent) => void) => void
  * } onUserAction Event that handles when an user interact with a page
+ * @property {() => void} reconnect Restart connection to the server
  */
 
 /**
@@ -193,39 +213,82 @@ const connect = async (credentials) => {
  * @returns {Home} Returns an instance of home
  */
 module.exports = function Miakapi(home, id, secret) {
-  /** @type {((data: UserLoginEvent) => null)[]} */
+  /** @type {(() => void)[]} */
+  const readyCallbacks = [];
+  /** @type {((users: User[]) => void)[]} */
+  const userlistUpdateCallbacks = [];
+  /** @type {((event: UserLoginEvent) => void)[]} */
   const userLoginCallbacks = [];
-  /** @type {((data: UserActionEvent) => null)[]} */
+  /** @type {((action: UserActionEvent) => void)[]} */
   const userActionCallbacks = [];
 
-  const { emitCallback, emitNotif } = connect({ home, id, secret }, {
-    onUserLogin(data) {
-      userLoginCallbacks.forEach((h) => h(data));
-    },
-    onUserAction(data) {
-      userActionCallbacks.forEach((h) => h(data));
-    },
-  });
+  const client = {
+    emitCallback() { return false; },
+    emitNotif() { return false; },
+    reconnect() { return false; },
+  };
 
-  const variables = {};
-
-  return {
-    variables,
+  /** @type {Home} */
+  const thisHome = {
+    users: [],
+    variables: {},
 
     commit(modifs = {}) {
-      Object.assign(variables, modifs);
-      emitCallback(variables);
+      Object.assign(this.variables, modifs);
+      client.emitCallback(this.variables);
     },
 
     sendNotif(notification = {}) {
-      emitNotif(notification);
+      client.emitNotif(notification);
     },
 
+    onReady(callback) {
+      readyCallbacks.push(callback);
+    },
+    onUpdate(callback) {
+      userlistUpdateCallbacks.push(callback);
+    },
     onUserLogin(callback) {
       userLoginCallbacks.push(callback);
     },
     onUserAction(callback) {
       userActionCallbacks.push(callback);
     },
+
+    reconnect() {
+      client.reconnect();
+    },
   };
+
+  connect({ home, id, secret }, {
+    onReady() {
+      readyCallbacks.forEach((h) => h());
+    },
+    onHomeUpdate(data) {
+      thisHome.users = data;
+      userlistUpdateCallbacks.forEach((h) => h(thisHome.users));
+    },
+    onUserLogin(data) {
+      const eventData = {
+        ...data,
+        user: thisHome.users.find((u) => u.id === data.user),
+      };
+
+      userLoginCallbacks.forEach((h) => h(eventData));
+    },
+    onUserAction(data) {
+      const eventData = {
+        ...data,
+        user: thisHome.users.find((u) => u.id === data.user),
+      };
+
+      userActionCallbacks.forEach((h) => h(eventData));
+    },
+  }).then(({ emitCallback, emitNotif, reconnect }) => {
+    client.emitCallback = emitCallback;
+    client.emitNotif = emitNotif;
+    client.reconnect = reconnect;
+  });
+
+  return thisHome;
 };
