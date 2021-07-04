@@ -33,8 +33,6 @@ if (process.env.SERVER_URL && process.env.SERVER_NAME) {
   setInterval(setState, 1800000); // 1800000ms = 30min = 48/day
 } else console.log('Server has no URL');
 
-// const connected = [];
-
 /** @enum @const */
 const P_TYPES = {
   AUTH: {
@@ -103,14 +101,13 @@ function Home(homeID) {
   this.fGroups = [];
 
   /**
-   * @typedef {{
-   *  id: string,
-   *  home: string,
-   *  user: string,
-   *  displayName: string,
-   *  groups: string[],
-   *  isAdmin: boolean
-   * }} fRelation
+   * @typedef {Object} fRelation
+   * @property {string} id ID of the relation (homeID@userID)
+   * @property {string} home Home ID of the relation
+   * @property {string} user User ID of the relation
+   * @property {string} displayName Display name of the user in this home
+   * @property {string[]} groups Group names of the user in this home
+   * @property {boolean} isAdmin True if the user is admin in this home
    */
 
   /** @type {fRelation[]} */
@@ -309,8 +306,8 @@ ws.on('connect', (socket) => {
                 const group = HOMES[homeID].fGroups.find((g) => g.id === id);
                 return (group && group.name) ? group.name : null;
               }).filter((g) => g);
-              return `${r.isAdmin ? '1' : '0'}${r.user}\x01${r.displayName}\x01${gNs.join('\x02')}\x00`;
-            });
+              return `${r.isAdmin ? '1' : '0'}${r.user}\x01${r.displayName}\x01${gNs.join('\x02')}`;
+            }).join('\x00');
 
             sendPacket(socket, P_TYPES.COORD.USERLIST, users);
           };
@@ -352,7 +349,7 @@ ws.on('connect', (socket) => {
       const [userID, title, body, tag, image] = miakode.array.decode(msg.data);
 
       (await db.collection('users').doc(userID).collection('pushTokens').get()).forEach((token) => {
-        console.log('SEND NOTIF', [userID]);
+        console.log('SEND NOTIF', [userID, title, body, tag, image]);
         fcm.send({
           token,
           data: {
