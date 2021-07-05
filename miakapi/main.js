@@ -80,7 +80,7 @@ const connect = async (credentials, {
             id: id.substring(2),
             displayName,
             isAdmin: (id[0] !== '0'),
-            notifEnabled: (id[1] !== '0'),
+            notifications: (id[1] !== '0'),
             groups: groups.split('\x02'),
           };
         });
