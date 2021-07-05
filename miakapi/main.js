@@ -79,8 +79,8 @@ const connect = async (credentials, {
           return {
             id: id.substring(2),
             displayName,
-            isAdmin: (id[0] !== '0'),
-            notifications: (id[1] !== '0'),
+            isAdmin: (id[0] === '1'),
+            notifications: (id[1] === '1'),
             groups: groups.split('\x02'),
           };
         });
@@ -162,6 +162,7 @@ const connect = async (credentials, {
  * @property {string} id ID of the user
  * @property {string} displayName Display name of the user
  * @property {boolean} isAdmin True if the user is admin of the home
+ * @property {boolean} notifications True if the user has enabled notifications
  * @property {string[]} groups List of group names of the user
  */
 
