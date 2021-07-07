@@ -2,10 +2,7 @@ if (!window.onUserEvent) window.onUserEvent = {};
 
 document.body.onclick = (e) => {
   let el = e.target;
-  while (!el || !el.attributes
-    || !el.attributes['@click']
-    || !el.attributes['@click'].value
-  ) {
+  while (!el || !el.attributes || !el.attributes['@click']) {
     if (!el.parent) return;
     el = el.parent;
   }

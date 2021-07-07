@@ -145,8 +145,8 @@ export default {
         ]));
 
         window.onUserEvent.SOCKET = (data) => {
-          console.log('UserAction', data);
           if (!data.id) return;
+          console.log('UserAction', data);
           this.sendPacket('\x21', (data.type === 'input' ? 1 : 0) + miakode.array.encode([
             data.id, data.name, data.value,
           ]));
