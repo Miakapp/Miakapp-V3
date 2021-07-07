@@ -145,9 +145,10 @@ export default {
         ]));
 
         window.onUserEvent.SOCKET = (data) => {
-          console.log('data', data);
-          this.sendPacket('\x21', miakode.array.encode([
-            data.type, data.id, data.name, data.value,
+          console.log('UserAction', data);
+          if (!data.id) return;
+          this.sendPacket('\x21', (data.type === 'input' ? 1 : 0) + miakode.array.encode([
+            data.id, data.name, data.value,
           ]));
         };
       };
@@ -180,6 +181,7 @@ export default {
 
           case '\x11': // DATA
             this.variables = miakode.object.decode(data);
+            delete this.variables[''];
             console.log('GlobalData', this.variables);
             break;
 
