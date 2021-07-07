@@ -162,6 +162,11 @@ export default {
             return;
           }
 
+          if (ev.reason === 'NO_GROUP') {
+            toast.error({ title: 'You have no permission in this home' });
+            return;
+          }
+
           toast.error({ title: ev.reason });
         } else setTimeout(this.connect, 1000);
 
