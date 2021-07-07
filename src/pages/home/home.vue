@@ -1,6 +1,6 @@
 <template>
   <div class="home" v-if="$route.name === 'Home'">
-    <div class="pageBtns">
+    <div class="pageBtns" :class="{ odd: relation.pages.length % 2 }">
       <div class="pageBtn"
         v-for="page in relation.pages" :key="page.id"
         @click="$router.push(`/h/${relation.home.id}/${page.id}`)"
@@ -249,7 +249,7 @@ export default {
 
 .pageBtn:hover { background-color: var(--color4-s) }
 
-.pageBtn:last-child { grid-column: 1 / 3 }
+.odd > .pageBtn:last-child { grid-column: 1 / 3 }
 
 .pageBtnIcon {
   font-size: 40px;

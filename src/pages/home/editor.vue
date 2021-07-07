@@ -142,12 +142,12 @@ export default {
       toast.success({ title: 'Page exported' });
     },
 
-    computeVars(content) {
+    computeVars() {
       const uses = {};
 
       if (!this.relation.variables) return;
       Object.keys(this.relation.variables).forEach((varnm) => {
-        uses[varnm] = content.split(`{{${varnm}}}`).length - 1;
+        uses[varnm] = this.lastContents[this.page.id].split(`{{${varnm}}}`).length - 1;
       });
 
       this.uses = uses;
@@ -161,11 +161,11 @@ export default {
     },
 
     [['page.content']]() {
-      this.computeVars(this.page.content);
+      this.computeVars();
     },
 
     [['relation.variables']]() {
-      this.computeVars(this.page.content);
+      this.computeVars();
     },
   },
 
@@ -210,6 +210,7 @@ export default {
 
     editor.on('change', () => {
       this.lastContents[this.page.id] = editor.getValue();
+      this.computeVars();
     });
 
     window.onUserEvent.EDITOR = (data) => {
@@ -365,6 +366,7 @@ export default {
   text-align: left;
   width: 40%;
   height: 100%;
+  z-index: 0;
 }
 
 #editor *, .CodeMirror-hint {
