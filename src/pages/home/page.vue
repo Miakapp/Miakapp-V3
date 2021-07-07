@@ -13,7 +13,7 @@
 
 <script>
 import editor from './editor.vue';
-import pageRender from '../components/pageRender.vue';
+import pageRender from '../../components/pageRender.vue';
 
 export default {
   name: 'Page',

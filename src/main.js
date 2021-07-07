@@ -39,13 +39,12 @@ window.toast.confirm = (message, cb, config = {}) => {
 };
 
 firebase.initializeApp({
-  apiKey: 'AIzaSyBn1cfqRZw9UyEbz9fUb4-pbsqSwu5SxAE',
-  authDomain: 'miakapp-v2.firebaseapp.com',
-  databaseURL: 'https://miakapp-v2.firebaseio.com',
-  projectId: 'miakapp-v2',
-  storageBucket: 'miakapp-v2.appspot.com',
-  messagingSenderId: '639119430041',
-  appId: '1:639119430041:web:09bb571a204d077ebd8308',
+  apiKey: 'AIzaSyBbn5Z7zWn-Qz-JPmNM_YF_rvYvBzvVyec',
+  authDomain: 'miakapp-3.firebaseapp.com',
+  projectId: 'miakapp-3',
+  storageBucket: 'miakapp-3.appspot.com',
+  messagingSenderId: '603250078961',
+  appId: '1:603250078961:web:082db2556ca84f0576a550',
 });
 
 window.firebase = firebase;

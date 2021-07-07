@@ -3,7 +3,7 @@
 </template>
 
 <script>
-import { HTMLMinify, formatVar } from '../../lib/formatter';
+import { HTMLMinify, formatVar } from '../lib/formatter';
 
 export default {
   name: 'PageRender',

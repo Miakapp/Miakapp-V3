@@ -45,7 +45,7 @@
 
 <script>
 import CodeMirror from 'codemirror';
-import phone from '../components/phone.vue';
+import phone from '../../components/phone.vue';
 import snippets from '../../lib/snippets';
 import { crop } from '../../lib/formatter';
 import 'codemirror/lib/codemirror.css';

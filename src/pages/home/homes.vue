@@ -127,8 +127,8 @@
 
 <script>
 import login from '../login.vue';
-import loader from '../components/loader.vue';
-import menuBtn from '../components/menuBtn.vue';
+import loader from '../../components/loader.vue';
+import menuBtn from '../../components/menuBtn.vue';
 import onSwipe from '../../lib/onSwipe';
 
 import accountSettings from '../settings/account.vue';
