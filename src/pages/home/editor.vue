@@ -97,7 +97,6 @@ export default {
 
     savePage() {
       if (this.lastContents[this.page.id] === this.page.content) return;
-      console.log('Saving...');
       db.collection('homes')
         .doc(this.relation.home.id)
         .collection('pages')
