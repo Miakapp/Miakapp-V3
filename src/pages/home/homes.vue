@@ -165,6 +165,8 @@ export default {
 
   created() {
     auth.onIdTokenChanged((fUser) => {
+      if (this.relations && this.relations.length > 0) this.loading = false;
+
       if (fUser) {
         console.log('Signed', fUser);
         this.fUser = { ...fUser };
