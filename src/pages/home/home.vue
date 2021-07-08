@@ -138,11 +138,19 @@ export default {
       this.socket = new WebSocket(`wss://${this.relation.home.server}/${this.relation.home.id}/`);
 
       this.socket.onopen = async () => {
-        this.sendPacket('\x02', miakode.array.encode([
-          this.$route.params.home,
-          auth.currentUser.uid,
-          await auth.currentUser.getIdToken(),
-        ]));
+        const authSocket = async () => {
+          this.sendPacket('\x02', miakode.array.encode([
+            this.$route.params.home,
+            auth.currentUser.uid,
+            await auth.currentUser.getIdToken(),
+          ]));
+        };
+
+        if (!auth.currentUser) {
+          auth.onAuthStateChanged((user) => {
+            if (user) authSocket();
+          });
+        } else authSocket();
 
         window.onUserEvent.SOCKET = (data) => {
           if (!data.id) return;

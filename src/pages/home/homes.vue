@@ -157,21 +157,43 @@ export default {
 
   data: () => ({
     loading: true,
-    fUser: null,
-    relations: JSON.parse(localStorage.getItem('data')) || [],
+    fUser: JSON.parse(localStorage.getItem('user') || null),
+    relations: JSON.parse(localStorage.getItem('data') || '[]'),
 
     menuOpen: false,
   }),
 
   created() {
-    auth.onIdTokenChanged((fUser) => {
-      if (this.relations && this.relations.length > 0) this.loading = false;
+    if (this.fUser && this.relations && this.relations.length > 0) {
+      const lastHome = localStorage.getItem('lastHome');
+      if (
+        lastHome
+        && !this.$route.params.home
+        && this.relations.find((r) => r.home.id === lastHome)
+      ) this.$router.push(`/h/${lastHome}`);
 
+      this.loading = false;
+    }
+
+    auth.onIdTokenChanged((fUser) => {
       if (fUser) {
         console.log('Signed', fUser);
         this.fUser = { ...fUser };
+        localStorage.setItem('user', JSON.stringify({
+          uid: fUser.uid,
+          email: fUser.email,
+          emailVerified: fUser.emailVerified,
+          displayName: fUser.displayName,
+          phoneNumber: fUser.phoneNumber,
+          providerData: fUser.providerData,
+        }));
         this.loadHomes();
-      } else this.loading = false;
+      } else {
+        this.fUser = null;
+        this.loading = false;
+        localStorage.removeItem('user');
+        localStorage.removeItem('data');
+      }
     });
 
     onSwipe((direction) => {
@@ -245,13 +267,6 @@ export default {
 
       console.log('Relations =>', this.relations);
       localStorage.setItem('data', JSON.stringify(this.relations));
-
-      const lastHome = localStorage.getItem('lastHome');
-      if (
-        lastHome
-        && !this.$route.params.home
-        && this.relations.find((r) => r.home.id === lastHome)
-      ) this.$router.push(`/h/${lastHome}`);
 
       if (
         this.$route.params.home

@@ -103,8 +103,10 @@ export default {
       this.aForm.displayName = this.fUser.displayName;
       this.aForm.phoneNumber = this.fUser.phoneNumber;
 
-      this.googleProvider = !!auth.currentUser.providerData.find((p) => p.providerId === 'google.com');
-      this.githubProvider = !!auth.currentUser.providerData.find((p) => p.providerId === 'github.com');
+      if (!this.fUser.providerData) return;
+
+      this.googleProvider = !!this.fUser.providerData.find((p) => p.providerId === 'google.com');
+      this.githubProvider = !!this.fUser.providerData.find((p) => p.providerId === 'github.com');
     },
 
     saveDisplayName() {

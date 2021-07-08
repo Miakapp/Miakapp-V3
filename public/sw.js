@@ -5,18 +5,18 @@ importScripts('https://www.gstatic.com/firebasejs/8.3.2/firebase-messaging.js');
 
 self.addEventListener('fetch', (e) => {
   e.respondWith((async () => {
-    const normalizedUrl = new URL(e.request.url);
-    normalizedUrl.search = '';
+    const nUrl = new URL(e.request.url);
+    nUrl.search = '';
 
     if (
       (
-        !normalizedUrl.hostname.includes('miakapp.com')
-        && !normalizedUrl.hostname.includes('fonts')
+        !nUrl.hostname.includes('miakapp.com')
+        && !nUrl.hostname.includes('fonts')
       )
-      || normalizedUrl.protocol === 'chrome-extension:'
+      || nUrl.protocol === 'chrome-extension:'
     ) return fetch(e.request);
 
-    const url = (e.request.url === e.request.referrer) ? normalizedUrl.origin : e.request.url;
+    const url = (e.request.url.startsWith(`${nUrl.origin}/h`)) ? `${nUrl.origin}/h` : e.request.url;
 
     console.log('CACHING', url);
 
@@ -66,7 +66,7 @@ messaging.setBackgroundMessageHandler((payload) => self.registration.showNotific
     timestamp: payload.data.timestamp,
     actions: JSON.parse(payload.data.actions ?? '[]'),
     renotify: true,
-    tag: payload.data.tag,
+    tag: payload.data.tag || 'DEFAULT',
     vibrate: [100, 50, 100],
   },
 ));
@@ -76,10 +76,10 @@ self.addEventListener('notificationclick', (e) => {
   e.waitUntil(clients.matchAll().then((clientList) => {
     for (let i = 0; i < clientList.length; i += 1) {
       const client = clientList[i];
-      if (client.url === `./h/${e.notification.tag}` && 'focus' in client) return client.focus();
+      if ('focus' in client) return client.focus();
     }
 
-    if (clients.openWindow) return clients.openWindow(`./h/${e.notification.tag}`);
+    if (clients.openWindow) return clients.openWindow('./h');
     return null;
   }));
 });
