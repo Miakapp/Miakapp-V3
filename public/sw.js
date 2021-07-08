@@ -10,26 +10,30 @@ self.addEventListener('fetch', (e) => {
 
     if (
       (
-        !normalizedUrl.hostname.includes('miakapp')
+        !normalizedUrl.hostname.includes('miakapp.com')
         && !normalizedUrl.hostname.includes('fonts')
       )
       || normalizedUrl.protocol === 'chrome-extension:'
-    ) {
-      console.log('FETCHING', e.request);
-      return fetch(e.request);
-    }
+    ) return fetch(e.request);
 
-    console.log('CACHING', e.request);
+    const url = (e.request.url === e.request.referrer) ? normalizedUrl.origin : e.request.url;
+
+    console.log('CACHING', url);
+
+    const cached = await caches.match(url);
+    if (cached) return cached;
 
     const fetchResponseP = fetch(e.request);
     const fetchResponseCloneP = fetchResponseP.then((r) => r.clone());
 
+    console.log('DOWNLOAD', url);
+
     e.waitUntil((async () => {
       const cache = await caches.open('app');
-      await cache.put(e.request, await fetchResponseCloneP);
+      await cache.put(url, await fetchResponseCloneP);
     })());
 
-    return (await caches.match(e.request)) || fetchResponseP;
+    return fetchResponseP;
   })());
 });
 
