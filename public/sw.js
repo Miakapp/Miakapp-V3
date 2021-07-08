@@ -66,7 +66,7 @@ messaging.setBackgroundMessageHandler((payload) => self.registration.showNotific
     timestamp: payload.data.timestamp,
     actions: JSON.parse(payload.data.actions ?? '[]'),
     renotify: true,
-    tag: payload.data.tag || 'DEFAULT',
+    tag: payload.data.tag || Math.random().toString(),
     vibrate: [100, 50, 100],
   },
 ));
