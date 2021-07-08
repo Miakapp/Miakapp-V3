@@ -3,8 +3,8 @@ if (!window.onUserEvent) window.onUserEvent = {};
 document.body.onclick = (e) => {
   let el = e.target;
   while (!el || !el.attributes || !el.attributes['@click']) {
-    if (!el.parent) return;
-    el = el.parent;
+    if (!el.parentElement) return;
+    el = el.parentElement;
   }
 
   Object.values(window.onUserEvent).forEach((h) => h({

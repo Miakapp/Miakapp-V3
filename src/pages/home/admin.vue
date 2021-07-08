@@ -142,7 +142,7 @@
           </div>
         </div>
 
-        <div class="newButton" @click="newInvit">+</div>
+        <div class="button green plusButton" @click="newInvit">+</div>
       </div>
     </div>
 
@@ -221,7 +221,7 @@
           </div>
         </div>
 
-        <div class="newButton" @click="newGroup">+</div>
+        <div class="button green plusButton" @click="newGroup">+</div>
       </div>
     </div>
 
@@ -273,7 +273,7 @@
           </div>
         </div>
 
-        <div class="newButton" @click="newPage">+</div>
+        <div class="button green plusButton" @click="newPage">+</div>
       </div>
     </div>
 
@@ -338,7 +338,7 @@
           }}</div>
         </div>
 
-        <div class="newButton" @click="newCoordinator">+</div>
+        <div class="button green plusButton" @click="newCoordinator">+</div>
       </div>
     </div>
 
@@ -382,6 +382,7 @@
 
 <script>
 import genKeys from '../../lib/credentials';
+import snippets from '../../lib/snippets';
 
 /** @type {import('firebase').default.auth.Auth} */
 const auth = window.auth;
@@ -745,7 +746,7 @@ export default {
         .add({
           icon: '📄',
           name: 'New page',
-          content: '<page id="pageName">\n  Page content\n</page>\n\n<style>\n  #pageName {}\n</style>',
+          content: snippets[0].text,
         });
       this.loadPages();
     },
@@ -997,16 +998,6 @@ export default {
   column-gap: 5px;
 }
 
-.newButton {
-  font-size: 30px;
-  height: 45px;
-  line-height: 40px;
-  background-color: var(--color8);
-  max-width: 400px;
-  margin: 20px auto 0;
-  cursor: pointer;
-}
-
 .editBtn {
   width: 30px;
   fill: var(--color7);
@@ -1021,16 +1012,4 @@ export default {
   max-width: 400px;
   margin: 0 auto;
 }
-
-.infoItem {
-  display: grid;
-  width: 100%;
-  max-width: 400px;
-  grid-template-columns: auto auto;
-  margin: 0 auto;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.infoItem > :first-child { opacity: 0.8 }
 </style>

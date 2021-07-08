@@ -214,7 +214,7 @@ export default {
 
     window.onUserEvent.EDITOR = (data) => {
       if (data.type === 'click') {
-        this.events.unshift({ action: data.id || 'Anonymous button', value: 'Click', errored: !data.id });
+        this.events.unshift({ action: data.id || 'Anonymous element', value: 'Click', errored: !data.id });
       } else {
         this.events.unshift({ action: data.id || 'Anonymous input', value: data.value, errored: !data.id });
       }
@@ -325,6 +325,8 @@ export default {
 }
 .miniTable > *:not(.containerTitle):hover { background-color: var(--color4) }
 
+.miniTable > *:not(.containerTitle) > * { overflow: hidden }
+
 .round {
   font-size: 12px;
   color: var(--lightFont);
@@ -366,6 +368,10 @@ export default {
   width: 40%;
   height: 100%;
   z-index: 0;
+}
+
+@media screen and (min-width: 1000px) {
+  #editor { width: 100% }
 }
 
 #editor *, .CodeMirror-hint {

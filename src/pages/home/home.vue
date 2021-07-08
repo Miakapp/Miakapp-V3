@@ -1,22 +1,24 @@
 <template>
   <div class="home" v-if="$route.name === 'Home'">
-    <div class="pageBtns" :class="{ odd: relation.pages.length % 2 }">
-      <div class="pageBtn"
+    <div class="bigGrid" :class="{ odd: relation.pages.length % 2 }">
+      <div class="bigBtn"
         v-for="page in relation.pages" :key="page.id"
         @click="$router.push(`/h/${relation.home.id}/${page.id}`)"
       >
-        <div class="pageBtnIcon">{{ page.icon }}</div>
-        <div class="pageBtnText">{{ page.name }}</div>
+        <div class="bigBtnIcon">{{ page.icon }}</div>
+        <div class="bigBtnText">{{ page.name }}</div>
       </div>
     </div>
 
-    <div class="green svgBtn"
-      v-if="relation.user.admin"
-      @click="$router.push(`/h/${$route.params.home}/admin`)"
-    >
-      <!-- eslint-disable-next-line -->
-      <svg viewBox="0 0 100 100"><path d="M78.5,77.9c0,4.2-3.5,7.7-7.7,7.7H22.1c-4.2,0-7.7-3.5-7.7-7.7V29.2c0-4.2,3.5-7.7,7.7-7.7h23.6l12-11.9H22.1 c-10.8,0-19.6,8.8-19.6,19.6v48.7c0,10.8,8.8,19.6,19.6,19.6h48.7c10.8,0,19.6-8.8,19.6-19.6V42.3l-11.9,12V77.9z"/><path d="M29.9,66.1c-0.8,2.5,1.5,4.8,4,4l13-4.3c2.3-0.8,4.3-2,6.2-3.4L37.6,46.9c-1.4,1.9-2.7,3.9-3.4,6.2L29.9,66.1z"/><path d="M95.4,10.4l-5.8-5.8c-2.8-2.8-7.3-2.8-10.1,0L45.8,38.3l15.9,15.9l33.7-33.7C98.2,17.8,98.2,13.2,95.4,10.4z"/></svg>
-      <div class="text">Manage home</div>
+    <div class="bigGrid odd">
+      <div class="bigBtn green"
+        v-if="relation.user.admin"
+        @click="$router.push(`/h/${$route.params.home}/admin`)"
+      >
+        <!-- eslint-disable-next-line -->
+        <svg viewBox="0 0 100 100"><path d="M78.5,77.9c0,4.2-3.5,7.7-7.7,7.7H22.1c-4.2,0-7.7-3.5-7.7-7.7V29.2c0-4.2,3.5-7.7,7.7-7.7h23.6l12-11.9H22.1 c-10.8,0-19.6,8.8-19.6,19.6v48.7c0,10.8,8.8,19.6,19.6,19.6h48.7c10.8,0,19.6-8.8,19.6-19.6V42.3l-11.9,12V77.9z"/><path d="M29.9,66.1c-0.8,2.5,1.5,4.8,4,4l13-4.3c2.3-0.8,4.3-2,6.2-3.4L37.6,46.9c-1.4,1.9-2.7,3.9-3.4,6.2L29.9,66.1z"/><path d="M95.4,10.4l-5.8-5.8c-2.8-2.8-7.3-2.8-10.1,0L45.8,38.3l15.9,15.9l33.7-33.7C98.2,17.8,98.2,13.2,95.4,10.4z"/></svg>
+        <div class="bigBtnText">Manage home</div>
+      </div>
     </div>
 
     <div class="block small">
@@ -246,53 +248,6 @@ export default {
 </script>
 
 <style scoped>
-.pageBtns {
-  display: grid;
-  grid-template-columns: auto auto;
-  max-width: 600px;
-  margin: 0 auto 10px;
-}
-
-.pageBtn {
-  cursor: pointer;
-  background-color: var(--color4);
-  padding: 25px 20px;
-  margin: 1px;
-}
-
-.pageBtn:hover { background-color: var(--color4-s) }
-
-.odd > .pageBtn:last-child { grid-column: 1 / 3 }
-
-.pageBtnIcon {
-  font-size: 40px;
-  margin-bottom: 10px;
-}
-
-.pageBtnText {
-  font-size: 25px;
-}
-
-.svgBtn {
-  max-width: 600px;
-  margin: 0 auto 20px;
-  background-color: var(--color8);
-  cursor: pointer;
-  padding: 25px 30px;
-}
-
-.svgBtn:hover { background-color: var(--color8-s) }
-
-.svgBtn > svg {
-  fill: var(--color1);
-  height: 50px;
-  margin-bottom: 10px;
-}
-
-.svgBtn > .text {
-  font-size: 25px;
-}
-
 .block > .title {
   margin-bottom: 20px;
 }
@@ -303,6 +258,6 @@ export default {
 }
 
 @media screen and (min-width: 1200px) {
-  .pageBtn { margin: 5px }
+  .bigBtn { margin: 5px }
 }
 </style>

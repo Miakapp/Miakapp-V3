@@ -22,7 +22,9 @@
 
   --success: #3ea842;
   --warning: #fc6f0f;
+  --warning-s: #ed7e34;
   --error: #da3939;
+  --error-s: #df5454;
 }
 
 body {
@@ -162,7 +164,52 @@ select {
 
 .wIcon { grid-template-columns: min-content auto }
 
-input[type=submit], .button { cursor: pointer }
+.bigGrid {
+  display: grid;
+  grid-template-columns: 50% 50%;
+  max-width: 600px;
+  margin: 0 auto 10px;
+}
+
+.bigBtn {
+  background-color: var(--color4);
+  padding: 25px 20px;
+  margin: 1px;
+  height: 140px;
+  max-width: 600px;
+}
+
+.bigBtn * { pointer-events: none }
+
+.bigBtn:hover { background-color: var(--color4-s) }
+
+.odd > .bigBtn:last-child { grid-column: 1 / 3 }
+
+.bigBtnIcon {
+  font-size: 40px;
+  margin-bottom: 10px;
+}
+
+.bigBtn:hover { padding: 15px 20px }
+.bigBtn:hover > .bigBtnIcon { font-size: 50px }
+.bigBtnText {
+  font-size: 25px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.bigBtn > svg {
+  fill: var(--color1);
+  height: 50px;
+  margin-bottom: 10px;
+}
+
+.bigBtn:hover > svg {
+  margin-top: 10px;
+  height: 55px;
+}
+
+input[type=submit], .button, .bigBtn { cursor: pointer }
 
 .disabled, :disabled {
   opacity: 0.7;
@@ -171,9 +218,14 @@ input[type=submit], .button { cursor: pointer }
 
 .button:hover { background-color: var(--color4-s) }
 
-input[type=submit], .button.green { background-color: var(--color8) }
-input[type=submit]:hover, .button.green:hover { background-color: var(--color8-s) }
-input[type=date] { display: block }
+input[type=time],
+input[type=datetime-local],
+input[type=date],
+input[type=week],
+input[type=month] {
+  display: block;
+  padding: 6px 15px;
+}
 
 input:hover, select:hover { border-radius: 0 }
 
@@ -187,9 +239,14 @@ input:hover, select:hover { border-radius: 0 }
   pointer-events: none;
 }
 
-.button.red {
-  background-color: var(--error);
-}
+input[type=submit], .green { background-color: var(--color8) }
+input[type=submit]:hover, .green:hover { background-color: var(--color8-s) }
+
+.orange { background-color: var(--warning) }
+.orange:hover { background-color: var(--warning-s) }
+
+.red { background-color: var(--error) }
+.red:hover { background-color: var(--error-s) }
 
 .button.bigRed {
   grid-template-columns: auto;
@@ -197,6 +254,25 @@ input:hover, select:hover { border-radius: 0 }
   max-width: 400px;
   margin: 20px auto 10px;
 }
+
+.plusButton {
+  max-width: 400px;
+  font-size: 30px;
+  margin: 20px auto 0;
+  padding-top: 5px;
+}
+
+.infoItem {
+  display: grid;
+  width: 100%;
+  max-width: 400px;
+  grid-template-columns: auto auto;
+  margin: 0 auto;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.infoItem > :first-child { opacity: 0.8 }
 
 .minText {
   margin-top: 10px;
