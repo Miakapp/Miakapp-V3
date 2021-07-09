@@ -180,7 +180,7 @@ export default [
   {
     displayText: 'Big grid with buttons',
     text:
-`<div class="bigGrid odd">
+`<div class="bigGrid">
   <div id="btn1" class="bigBtn" @click>
     <div class="bigBtnIcon">🔷</div>
     <div class="bigBtnText">Normal button</div>

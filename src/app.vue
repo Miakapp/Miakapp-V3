@@ -14,6 +14,7 @@
   --color5: #fe4282;
   --color6: #fc6f0f;
   --color7: #ffbe0e;
+  --color7-s: #ffce48;
   --color8: #3ea842;
   --color8-s: #57a95a;
 
@@ -171,6 +172,10 @@ select {
   margin: 0 auto 10px;
 }
 
+.bigGrid > .bigBtn:nth-child(2n-1):last-of-type {
+  grid-column: 1 / 3;
+}
+
 .bigBtn {
   background-color: var(--color4);
   padding: 25px 20px;
@@ -182,8 +187,6 @@ select {
 .bigBtn * { pointer-events: none }
 
 .bigBtn:hover { background-color: var(--color4-s) }
-
-.odd > .bigBtn:last-child { grid-column: 1 / 3 }
 
 .bigBtnIcon {
   font-size: 40px;
@@ -245,12 +248,14 @@ input[type=submit]:hover, .green:hover { background-color: var(--color8-s) }
 .orange { background-color: var(--warning) }
 .orange:hover { background-color: var(--warning-s) }
 
+.yellow { background-color: var(--color7); color: var(--color3); }
+.yellow:hover { background-color: var(--color7-s); }
+
 .red { background-color: var(--error) }
 .red:hover { background-color: var(--error-s) }
 
-.button.bigRed {
+.button.big {
   grid-template-columns: auto;
-  background-color: var(--error);
   max-width: 400px;
   margin: 20px auto 10px;
 }

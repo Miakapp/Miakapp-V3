@@ -34,7 +34,7 @@
 
         <div class="block">
           <div class="title">Delete account</div>
-          <div class="button bigRed" @click="deleteAccount">Delete account</div>
+          <div class="button red big" @click="deleteAccount">Delete account</div>
         </div>
       </template>
 

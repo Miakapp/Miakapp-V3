@@ -1,6 +1,6 @@
 <template>
   <div class="home" v-if="$route.name === 'Home'">
-    <div class="bigGrid" :class="{ odd: relation.pages.length % 2 }">
+    <div class="bigGrid">
       <div class="bigBtn"
         v-for="page in relation.pages" :key="page.id"
         @click="$router.push(`/h/${relation.home.id}/${page.id}`)"
@@ -10,7 +10,7 @@
       </div>
     </div>
 
-    <div class="bigGrid odd">
+    <div class="bigGrid">
       <div class="bigBtn green"
         v-if="relation.user.admin"
         @click="$router.push(`/h/${$route.params.home}/admin`)"

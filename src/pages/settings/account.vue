@@ -32,7 +32,7 @@
       }">Save</div>
       <div class="fullGrid sticked" id="captcha" v-show="needCaptcha"/>
 
-      <div class="button fullGrid big sticked" v-if="fUser.email"
+      <div class="button fullGrid yellow sticked" v-if="fUser.email"
         :class="{ disabled: resetEmailSent }" @click="sendResetPassword">
         {{ resetEmailSent ? 'Email sent ✓' : 'Reset password'}}
       </div>
@@ -50,7 +50,7 @@
       </div>
     </div>
 
-    <div class="button bigRed" @click="disconnect">Disconnect</div>
+    <div class="button red big" @click="disconnect">Disconnect</div>
   </div>
 </template>
 
@@ -251,13 +251,6 @@ export default {
 
 .fullGrid {
   grid-column: 1 / 4;
-}
-
-.big {
-  grid-column: 1 / 4;
-  grid-template-columns: auto;
-  background-color: var(--color7);
-  color: var(--color3);
 }
 
 .sticked { margin-top: 0 !important }
