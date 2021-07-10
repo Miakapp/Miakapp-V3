@@ -11,6 +11,7 @@ export default {
   props: {
     content: String,
     variables: Object,
+    groups: Array,
   },
 
   computed: {
@@ -24,6 +25,18 @@ export default {
           newHtml = newHtml.replace(`{{${varnm}}}`, formatVar(this.variables[varnm]));
         }
       });
+
+      const groupMatches = newHtml.match(/\[\[.*?\]\]/g);
+      if (groupMatches && this.groups) {
+        groupMatches.forEach((groupMatch) => {
+          const groupName = groupMatch.replace(/\[\[|\]\]/g, '');
+          const replacedBy = this.groups.includes(groupName) ? 'display' : 'noDisplay';
+
+          while (newHtml.includes(groupMatch)) {
+            newHtml = newHtml.replace(groupMatch, replacedBy);
+          }
+        });
+      }
 
       return newHtml;
     },

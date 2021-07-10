@@ -60,18 +60,18 @@
 
             <div class="twoColumns">
               <div class="simpleInput">
-                <div>User type</div>
-                <select v-model="user.isAdmin" :disabled="user.isOwner || user.isMe">
-                  <option :value="true">{{ user.isOwner ? 'Owner' : 'Admin' }}</option>
-                  <option :value="false">User</option>
-                </select>
-              </div>
-
-              <div class="simpleInput">
                 <div>Notifications</div>
                 <select v-model="user.notifications">
                   <option :value="true">Enabled</option>
                   <option :value="false">Disabled</option>
+                </select>
+              </div>
+
+              <div class="simpleInput">
+                <div>User type</div>
+                <select v-model="user.isAdmin" :disabled="user.isOwner || user.isMe">
+                  <option :value="true">{{ user.isOwner ? 'Owner' : 'Admin' }}</option>
+                  <option :value="false">User</option>
                 </select>
               </div>
             </div>

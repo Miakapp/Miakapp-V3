@@ -215,7 +215,7 @@ select {
 input[type=submit], .button, .bigBtn { cursor: pointer }
 
 .disabled, :disabled {
-  opacity: 0.7;
+  opacity: 0.4;
   pointer-events: none;
 }
 
@@ -516,6 +516,7 @@ input.hidden,
 
 .separator { height: 25px }
 .clickable { cursor: pointer }
+.noDisplay:not(.display) { display: none }
 
 @media screen and (max-width: 350px) {
   .statusBar .path *:not(.step:last-child) {

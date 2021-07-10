@@ -3,6 +3,7 @@
     <pageRender v-if="!edit || !relation.user.admin"
       :content="page.content"
       :variables="relation.variables"
+      :groups="relation.user.groups"
     />
     <editor v-else :relation="relation" :page="page"/>
 

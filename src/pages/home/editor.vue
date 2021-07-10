@@ -38,7 +38,11 @@
     </div>
 
     <div class="preview">
-      <phone :content="lastContents[page.id]" :variables="relation.variables"/>
+      <phone
+        :content="lastContents[page.id]"
+        :variables="relation.variables"
+        :groups="relation.user.groups"
+      />
     </div>
   </div>
 </template>

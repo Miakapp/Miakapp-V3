@@ -231,10 +231,13 @@ export default {
         const home = fHomeData.data();
         const pages = [];
         if (!relation.groups) relation.groups = [];
+        const groupShortNames = [];
 
         await Promise.all(await relation.groups.map(async (group) => {
           const fGroupData = await fHome.collection('groups').doc(group).get();
           if (!fGroupData.exists) return null;
+
+          groupShortNames.push(fGroupData.get('name'));
 
           await Promise.all(await fGroupData.data().pages.map(async (page) => {
             const fPageData = await fHome.collection('pages').doc(page).get();
@@ -258,6 +261,7 @@ export default {
           user: {
             displayName: relation.displayName || 'Unnamed user',
             notifications: relation.notifications || false,
+            groups: groupShortNames,
             owner: home.owner === this.fUser.uid,
             admin: relation.isAdmin || home.owner === this.fUser.uid,
           },

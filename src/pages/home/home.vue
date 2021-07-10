@@ -32,18 +32,18 @@
 
         <div class="twoColumns">
           <div class="simpleInput">
-            <div>User type</div>
-            <select :value="relation.user.admin" disabled>
-              <option :value="true">{{ relation.user.owner ? 'Owner' : 'Admin' }}</option>
-              <option :value="false">User</option>
-            </select>
-          </div>
-
-          <div class="simpleInput">
             <div>Notifications</div>
             <select :value="relation.user.notifications" v-model="user.notifications">
               <option :value="true">Enabled</option>
               <option :value="false">Disabled</option>
+            </select>
+          </div>
+
+          <div class="simpleInput">
+            <div>User type</div>
+            <select :value="relation.user.admin" disabled>
+              <option :value="true">{{ relation.user.owner ? 'Owner' : 'Admin' }}</option>
+              <option :value="false">User</option>
             </select>
           </div>
         </div>

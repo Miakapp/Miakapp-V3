@@ -1,6 +1,10 @@
 <template>
   <div class="smartphone">
-    <pageRender class="content" :content="content" :variables="variables"/>
+    <pageRender class="content"
+      :content="content"
+      :variables="variables"
+      :groups="groups"
+    />
   </div>
 </template>
 
@@ -15,6 +19,7 @@ export default {
   props: {
     content: String,
     variables: Object,
+    groups: Array,
   },
 };
 </script>
