@@ -3,15 +3,15 @@ module.exports = {
   outputDir: './dist',
   pwa: {
     name: 'Miakapp',
-    themeColor: '#3ea842',
-    msTileColor: '#3ea842',
+    themeColor: '#ffbf01',
+    msTileColor: '#ffbf01',
     workboxPluginMode: 'InjectManifest',
-    assetsVersion: '1.3',
+    assetsVersion: '3.0',
     appleMobileWebAppCapable: 'yes',
     appleMobileWebAppStatusBarStyle: 'blue',
     manifestOptions: {
       start_url: './h',
-      background_color: '#3ea842',
+      background_color: '#ffbf01',
       display: 'standalone',
       icons: [
         {
