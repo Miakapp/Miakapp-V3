@@ -163,7 +163,14 @@ select {
   width: 100%;
 }
 
-.wIcon { grid-template-columns: min-content auto }
+.wIcon {
+  grid-template-columns: min-content auto;
+  margin-bottom: 0;
+}
+
+input, select, .button:not(.wIcon):not(.plusButton) {
+  height: 36px;
+}
 
 .bigGrid {
   display: grid;
@@ -331,6 +338,7 @@ input[type=submit]:hover, .green:hover { background-color: var(--color8-s) }
   display: grid;
   position: fixed;
   grid-template: min-content auto / 0 auto;
+  height: 100vh;
   top: 0;
   bottom: 0;
   left: 0;
@@ -347,6 +355,7 @@ input[type=submit]:hover, .green:hover { background-color: var(--color8-s) }
   grid-column: 1 / 3;
   z-index: 1000;
   pointer-events: all;
+  height: 55px;
 }
 
 .statusBar .path {
@@ -356,9 +365,7 @@ input[type=submit]:hover, .green:hover { background-color: var(--color8-s) }
 .statusBar .path .step {
   color: var(--color2);
   font-size: 18px;
-  display: grid;
-  grid-template-columns: auto auto;
-  align-content: center;
+  align-self: center;
   cursor: pointer;
   transition-duration: 400ms;
 }
@@ -437,6 +444,7 @@ input[type=submit]:hover, .green:hover { background-color: var(--color8-s) }
 
 .rowItem {
   margin: 2px 2px 0 20px;
+  height: 50px;
 }
 
 .rowHome .name {
@@ -454,7 +462,7 @@ input[type=submit]:hover, .green:hover { background-color: var(--color8-s) }
 .rowItem > div {
   display: grid;
   align-content: end;
-  line-height: 40px;
+  line-height: 50px;
 }
 
 .rowItem > .name { padding-left: 7px }

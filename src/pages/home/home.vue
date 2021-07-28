@@ -184,7 +184,7 @@ export default {
       };
 
       this.socket.onmessage = async (ev) => {
-        const packet = await ev.data.text();
+        const packet = await this.blobToText(ev.data);
         const type = packet[0];
         const data = packet.substring(1);
 
@@ -205,6 +205,16 @@ export default {
             break;
         }
       };
+    },
+
+    blobToText(blob) {
+      if (blob.text) return blob.text();
+
+      const reader = new FileReader();
+      reader.readAsText(blob);
+      return new Promise((cb) => {
+        reader.onloadend = () => cb(reader.result);
+      });
     },
 
     sendPacket(...chunks) {

@@ -35,19 +35,27 @@ export default {
   }),
 
   async mounted() {
-    db.collection('relations')
-      .doc(`${this.$route.params.home}@${auth.currentUser.uid}`)
-      .get()
-      .then(() => {
-        this.$router.push(`/h/${this.$route.params.home}`);
-      })
-      .catch(() => {
-        this.joinable = true;
-      });
+    const continueMount = async () => {
+      db.collection('relations')
+        .doc(`${this.$route.params.home}@${auth.currentUser.uid}`)
+        .get()
+        .then(() => {
+          this.$router.push(`/h/${this.$route.params.home}`);
+        })
+        .catch(() => {
+          this.joinable = true;
+        });
 
-    this.home = (await db.collection('homes')
-      .doc(this.$route.params.home)
-      .get()).data();
+      this.home = (await db.collection('homes')
+        .doc(this.$route.params.home)
+        .get()).data();
+    };
+
+    if (!auth.currentUser) {
+      auth.onAuthStateChanged((user) => {
+        if (user) continueMount();
+      });
+    } else continueMount();
   },
 
   methods: {
