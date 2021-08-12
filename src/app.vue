@@ -235,6 +235,7 @@ input[type=week],
 input[type=month] {
   display: block;
   padding: 6px 15px;
+  line-height: 24px;
 }
 
 input:hover, select:hover { border-radius: 0 }
