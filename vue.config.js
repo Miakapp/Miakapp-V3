@@ -1,6 +1,7 @@
 module.exports = {
   filenameHashing: false,
   outputDir: './dist',
+  transpileDependencies: ['vue-router'],
   pwa: {
     name: 'Miakapp',
     themeColor: '#ffbf01',
