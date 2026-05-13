@@ -1,0 +1,1058 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Miakapp / A complete framework for your smart home</title>
+<meta name="description" content="Miakapp is a hackable, open framework that turns rooms, sensors and switches into one synchronised dashboard. Wire it once, control it forever." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Questrial&family=Unbounded:wght@300;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" />
+<style>
+/* ============================================================
+   MIAKAPP / LANDING
+   palette: 0d0627 navy / 231c4a purple-dim / 543ea8 purple
+            fe4282 pink / fc6f0f orange / ffbe0e yellow / 3ea842 green
+   ============================================================ */
+
+:root{
+  --c1:#dddddd;
+  --c2:#0d0627;
+  --c3:#231c4a;
+  --c4:#543ea8;
+  --c4s:#6651ba;
+  --c5:#fe4282;   /* pink */
+  --c6:#fc6f0f;   /* orange */
+  --c7:#ffbe0e;   /* yellow */
+  --c7s:#ffce48;
+  /* green dropped — c8 now mirrors orange so status accents stay warm */
+  --c8:#fc6f0f;
+  --c8s:#ed7e34;
+  --font:#ffffff;
+  --soft:#dfdfdf;
+
+  --display:'Unbounded',sans-serif;
+  --body:'Questrial','Helvetica Neue',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+
+*{box-sizing:border-box;-webkit-font-smoothing:antialiased}
+html,body{margin:0;padding:0;background:var(--c2);color:var(--font);font-family:var(--body);overflow-x:hidden}
+body{font-size:17px;line-height:1.5}
+img,svg{display:block}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:0;background:transparent;color:inherit;padding:0}
+
+/* ---- ambient backdrops ---- */
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
+  background:
+    radial-gradient(1100px 600px at 80% -10%, rgba(254,66,130,.18), transparent 60%),
+    radial-gradient(900px 700px at -10% 30%, rgba(84,62,168,.35), transparent 65%),
+    radial-gradient(900px 900px at 110% 100%, rgba(255,190,14,.10), transparent 60%);
+}
+body::after{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:2;opacity:.45;mix-blend-mode:overlay;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 1px, transparent 1px 3px),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .25 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+/* grid lines */
+.grid-bg{
+  position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.22;
+  background-image:
+    linear-gradient(rgba(221,221,221,.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(221,221,221,.06) 1px, transparent 1px);
+  background-size:80px 80px;
+  mask-image:radial-gradient(1200px 800px at 50% 30%, #000 30%, transparent 75%);
+}
+
+main{position:relative;z-index:5}
+
+/* =========================================================
+   TOP UTILITY BAR  (mirrors the in-app yellow .statusBar)
+   ========================================================= */
+.statusbar{
+  background:var(--c7);
+  color:var(--c2);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 26px;height:48px;
+  position:sticky;top:0;z-index:50;
+  font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;
+  border-bottom:2px solid var(--c2);
+}
+.statusbar *{color:var(--c2)}
+.statusbar .path{display:flex;align-items:center;gap:10px}
+.statusbar .path .dot{width:8px;height:8px;background:var(--c2);border-radius:50%;animation:blink 1.4s infinite}
+@keyframes blink{50%{opacity:.25}}
+.statusbar .right{display:flex;gap:24px;align-items:center}
+.statusbar .right .sep{opacity:.4}
+.statusbar .menu-burger{display:flex;flex-direction:column;gap:3px;cursor:pointer}
+.statusbar .menu-burger i{display:block;width:18px;height:2px;background:var(--c2)}
+
+/* =========================================================
+   SHELL
+   ========================================================= */
+.shell{max-width:1440px;margin:0 auto;padding:0 32px}
+@media(max-width:720px){.shell{padding:0 18px}}
+
+/* labels */
+.label{
+  font-family:var(--mono);font-size:11px;letter-spacing:.28em;text-transform:uppercase;
+  display:inline-flex;align-items:center;gap:10px;opacity:.85;
+}
+.label .bar{width:28px;height:2px;background:currentColor}
+.label.pink{color:var(--c5)}
+.label.yellow{color:var(--c7)}
+.label.orange{color:var(--c6)}
+.label.green{color:var(--c8)}
+
+/* generic block */
+.block{background:var(--c3);padding:22px;position:relative}
+
+/* =========================================================
+   HERO
+   ========================================================= */
+.hero{padding:72px 0 60px;position:relative}
+.hero-grid{
+  display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:end;
+}
+@media(max-width:1024px){.hero-grid{grid-template-columns:1fr;gap:24px}}
+
+.hero .eyebrow{
+  display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-bottom:36px;
+}
+.hero .eyebrow .pill{
+  font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+  padding:8px 12px;background:var(--c3);
+}
+.hero .eyebrow .pill .num{color:var(--c7);margin-right:8px}
+.hero .eyebrow .pill.live{background:var(--c7);color:var(--c2)}
+.hero .eyebrow .pill.live span{color:var(--c2)}
+.hero .eyebrow .pill.live .dot{display:inline-block;width:7px;height:7px;background:var(--c2);border-radius:50%;margin-right:8px;vertical-align:middle;animation:pulse 1.2s infinite}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:.4}}
+
+h1.hero-title{
+  font-family:var(--display);font-weight:300;
+  font-size:clamp(48px,8.2vw,128px);
+  line-height:.92;letter-spacing:-.03em;margin:0 0 28px;
+}
+h1.hero-title .stack{display:block}
+h1.hero-title .ink{font-weight:900}
+h1.hero-title em{font-style:normal;font-family:var(--display);font-weight:700;font-style:italic}
+h1.hero-title .pink{color:var(--c5)}
+h1.hero-title .yellow{color:var(--c7)}
+h1.hero-title .orange{color:var(--c6)}
+h1.hero-title .green{color:var(--c8)}
+h1.hero-title .underline{
+  position:relative;display:inline-block;
+}
+h1.hero-title .underline::after{
+  content:"";position:absolute;left:0;right:0;bottom:.05em;height:.12em;
+  background:var(--c5);z-index:-1;transform:translateY(20%) skewX(-6deg);
+}
+
+.hero-sub{
+  font-size:clamp(17px,1.4vw,21px);max-width:46ch;color:var(--soft);opacity:.92;margin:0 0 36px;
+}
+
+.cta-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.btn{
+  font-family:var(--mono);font-size:13px;letter-spacing:.18em;text-transform:uppercase;
+  padding:18px 26px;display:inline-flex;align-items:center;gap:14px;
+  border:2px solid transparent;transition:transform .25s,background .25s,color .25s;
+}
+.btn .arrow{transition:transform .25s}
+.btn:hover .arrow{transform:translateX(6px)}
+.btn-primary{background:var(--c7);color:var(--c2)}
+.btn-primary:hover{background:var(--c7s)}
+.btn-primary *{color:var(--c2)}
+.btn-ghost{background:transparent;color:var(--font);border-color:rgba(255,255,255,.22)}
+.btn-ghost:hover{border-color:var(--c5);color:var(--c5)}
+.btn-pink{background:var(--c5);color:var(--font)}
+.btn-pink:hover{background:#ff5d96}
+
+/* hero meta strip */
+.hero-meta{
+  margin-top:54px;display:grid;grid-template-columns:repeat(4,1fr);gap:1px;
+  background:rgba(255,255,255,.06);border-top:1px solid rgba(255,255,255,.10);border-bottom:1px solid rgba(255,255,255,.10);
+}
+.hero-meta .cell{background:var(--c2);padding:18px 16px}
+.hero-meta .k{font-family:var(--mono);font-size:10px;letter-spacing:.24em;text-transform:uppercase;opacity:.55;margin-bottom:8px}
+.hero-meta .v{font-family:var(--display);font-weight:500;font-size:22px;letter-spacing:-.01em}
+.hero-meta .v .accent{color:var(--c5)}
+.hero-meta .v .y{color:var(--c7)}
+.hero-meta .v .g{color:var(--c8)}
+@media(max-width:720px){.hero-meta{grid-template-columns:repeat(2,1fr)}}
+
+/* =========================================================
+   APP PREVIEW MOCK
+   ========================================================= */
+.preview-wrap{
+  position:relative;
+}
+.preview-wrap .sticker{
+  position:absolute;z-index:6;
+  font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;
+  padding:9px 14px;background:var(--c5);color:var(--font);
+}
+.preview-wrap .sticker.rot{transform:rotate(-7deg)}
+.preview-wrap .sticker.yellow{background:var(--c7);color:var(--c2)}
+.preview-wrap .sticker.yellow *{color:var(--c2)}
+.preview-wrap .sticker.s1{top:-22px;left:-12px}
+.preview-wrap .sticker.s2{bottom:-18px;right:-10px;transform:rotate(5deg)}
+
+.preview{
+  position:relative;background:var(--c2);
+  border:2px solid var(--c4);
+  box-shadow:18px 18px 0 var(--c5), 36px 36px 0 var(--c3);
+  overflow:hidden;
+}
+.preview .top{
+  background:var(--c7);color:var(--c2);height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;
+  font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;
+}
+.preview .top *{color:var(--c2)}
+.preview .top .crumbs{display:flex;align-items:center;gap:8px}
+.preview .top .crumbs .sep{opacity:.5}
+.preview .top .crumbs .cur{font-weight:700}
+.preview .top .menu{display:flex;flex-direction:column;gap:3px}
+.preview .top .menu i{width:18px;height:2px;background:var(--c2)}
+
+.preview .body{
+  display:grid;grid-template-columns:200px 1fr;min-height:430px;
+}
+.preview .body .side{
+  background:var(--c3);padding:14px 8px;
+}
+.preview .body .side .row{
+  display:grid;grid-template-columns:28px 1fr 16px;align-items:center;gap:8px;
+  background:var(--c4);padding:10px 12px;margin-bottom:3px;font-size:13px;text-align:left;
+  font-family:var(--body);
+}
+.preview .body .side .row .ico{
+  width:22px;height:22px;background:var(--c1);
+  mask-position:center;-webkit-mask-position:center;
+  mask-repeat:no-repeat;-webkit-mask-repeat:no-repeat;
+  mask-size:contain;-webkit-mask-size:contain;
+}
+.preview .body .side .row.active{border-right:3px solid var(--c8)}
+.preview .body .side .sep{height:2px;background:var(--c8);margin:6px 6px 6px 14px}
+
+.preview .body .stage{
+  padding:18px;display:grid;gap:14px;align-content:start;
+}
+.preview .body .stage .title{
+  display:flex;align-items:baseline;justify-content:space-between;
+}
+.preview .body .stage .title h4{
+  font-family:var(--display);font-weight:500;font-size:22px;margin:0;letter-spacing:-.01em;
+}
+.preview .body .stage .title .meta{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;opacity:.55}
+.bigGrid{
+  display:grid;grid-template-columns:1fr 1fr;gap:2px;
+}
+.bigBtn{
+  background:var(--c4);padding:18px 14px;height:120px;text-align:left;
+  display:flex;flex-direction:column;justify-content:space-between;position:relative;
+}
+.bigBtn .label2{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;opacity:.65}
+.bigBtn .name{font-family:var(--display);font-weight:500;font-size:18px}
+.bigBtn .ico-big{align-self:flex-end;font-size:30px;line-height:1}
+.bigBtn.on{background:var(--c5)}
+.bigBtn.on .label2{color:var(--font);opacity:.9}
+.bigBtn.alert{background:var(--c6)}
+.bigBtn .led{position:absolute;top:12px;right:12px;width:8px;height:8px;border-radius:50%;background:#ffffff60}
+.bigBtn.on .led{background:var(--c7);box-shadow:0 0 0 4px rgba(255,190,14,.18)}
+.bigBtn.alert .led{background:var(--c2)}
+
+.preview .strip{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:2px;
+}
+.preview .strip .cell{
+  background:var(--c3);padding:10px 12px;display:flex;flex-direction:column;gap:4px;text-align:left
+}
+.preview .strip .cell .l{font-family:var(--mono);font-size:9px;letter-spacing:.2em;text-transform:uppercase;opacity:.55}
+.preview .strip .cell .v{font-family:var(--display);font-weight:600;font-size:18px;letter-spacing:-.01em}
+.preview .strip .cell .v.g{color:var(--c8)}
+.preview .strip .cell .v.p{color:var(--c5)}
+.preview .strip .cell .v.y{color:var(--c7)}
+.preview .strip .cell .v.o{color:var(--c6)}
+
+@media(max-width:560px){
+  .preview .body{grid-template-columns:1fr}
+  .preview .body .side{display:none}
+}
+
+/* =========================================================
+   MARQUEE
+   ========================================================= */
+.marquee{
+  margin-top:84px;border-top:2px solid var(--c4);border-bottom:2px solid var(--c4);
+  background:var(--c2);overflow:hidden;
+}
+.marquee .track{
+  display:flex;gap:42px;padding:24px 0;animation:scroll 38s linear infinite;white-space:nowrap;
+}
+.marquee .track .item{
+  font-family:var(--display);font-weight:700;font-size:36px;letter-spacing:-.01em;display:inline-flex;align-items:center;gap:42px;
+}
+.marquee .track .item .star{color:var(--c5);font-family:var(--body);font-size:28px}
+.marquee .track .item .star.y{color:var(--c7)}
+.marquee .track .item .star.g{color:var(--c8)}
+.marquee .track .item .star.o{color:var(--c6)}
+@keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* =========================================================
+   SECTION HEAD
+   ========================================================= */
+.section{padding:120px 0;position:relative}
+.section .head{
+  display:grid;grid-template-columns:1fr auto;align-items:end;gap:24px;margin-bottom:56px;
+}
+.section .head h2{
+  font-family:var(--display);font-weight:500;font-size:clamp(36px,5.2vw,76px);
+  letter-spacing:-.02em;line-height:.96;margin:0;max-width:18ch;
+}
+.section .head h2 em{font-style:italic;color:var(--c5);font-weight:700}
+.section .head .right{display:flex;flex-direction:column;align-items:flex-end;gap:12px;text-align:right;max-width:34ch}
+.section .head .num{
+  font-family:var(--mono);font-size:11px;letter-spacing:.28em;text-transform:uppercase;
+  display:inline-flex;align-items:center;gap:10px;color:var(--c7)
+}
+.section .head .num .bar{width:36px;height:2px;background:var(--c7)}
+.section .head .right p{margin:0;opacity:.75;font-size:15px}
+@media(max-width:820px){
+  .section .head{grid-template-columns:1fr}
+  .section .head .right{align-items:flex-start;text-align:left}
+}
+
+/* =========================================================
+   FEATURES (asymmetric)
+   ========================================================= */
+.features{
+  display:grid;grid-template-columns:repeat(12,1fr);gap:14px;
+}
+.feature{
+  background:var(--c3);padding:26px;position:relative;overflow:hidden;
+  display:flex;flex-direction:column;gap:14px;min-height:240px;
+}
+.feature .idx{
+  position:absolute;top:14px;right:18px;font-family:var(--mono);font-size:10px;letter-spacing:.22em;opacity:.45
+}
+.feature h3{
+  font-family:var(--display);font-weight:500;font-size:26px;line-height:1.05;letter-spacing:-.01em;margin:0;
+}
+.feature p{margin:0;opacity:.78;font-size:15px}
+.feature .tag{
+  font-family:var(--mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase;
+  padding:6px 10px;background:var(--c4);align-self:flex-start;color:var(--c1)
+}
+.feature .glyph{
+  margin-top:auto;display:flex;justify-content:space-between;align-items:end;
+}
+.feature .icon{font-family:var(--display);font-weight:900;font-size:46px;line-height:1;letter-spacing:-.04em}
+
+/* layout */
+.f1{grid-column:span 5}
+.f2{grid-column:span 4;background:var(--c5)}
+.f2 *{color:var(--font)}
+.f2 .tag{background:rgba(255,255,255,.18)}
+.f3{grid-column:span 3;background:var(--c7);color:var(--c2)}
+.f3 *{color:var(--c2)}
+.f3 .tag{background:rgba(13,6,39,.12);color:var(--c2)}
+.f4{grid-column:span 4}
+.f5{grid-column:span 4;background:var(--c4);color:var(--font)}
+.f5 *{color:var(--font)}
+.f5 .tag{background:rgba(255,255,255,.18);color:var(--c1)}
+.f6{grid-column:span 4}
+.f7{grid-column:span 6}
+.f8{grid-column:span 6;background:var(--c6);color:var(--font)}
+.f8 .tag{background:rgba(13,6,39,.2)}
+@media(max-width:980px){
+  .features{grid-template-columns:repeat(6,1fr)}
+  .f1{grid-column:span 6}
+  .f2,.f3,.f4,.f5,.f6{grid-column:span 3}
+  .f7,.f8{grid-column:span 6}
+}
+@media(max-width:560px){
+  .features{grid-template-columns:1fr}
+  .feature{grid-column:span 1 !important}
+}
+
+/* =========================================================
+   MANIFESTO / SPLIT
+   ========================================================= */
+.manifesto{
+  display:grid;grid-template-columns:1.1fr .9fr;gap:24px;align-items:stretch;
+}
+@media(max-width:980px){.manifesto{grid-template-columns:1fr}}
+.manifesto .quote{
+  background:var(--c3);padding:54px;display:flex;flex-direction:column;justify-content:space-between;
+  position:relative;overflow:hidden;
+}
+.manifesto .quote .qmark{
+  font-family:var(--display);font-weight:900;font-size:200px;line-height:.7;color:var(--c5);position:absolute;top:18px;left:24px;opacity:.25;
+}
+.manifesto .quote p{
+  position:relative;z-index:2;font-family:var(--display);font-weight:300;font-size:clamp(22px,2.5vw,34px);line-height:1.18;letter-spacing:-.01em;margin:0;
+}
+.manifesto .quote p em{font-style:italic;font-weight:500;color:var(--c7)}
+.manifesto .quote p span.under{
+  background:linear-gradient(transparent 75%, var(--c5) 75%, var(--c5) 90%, transparent 90%);
+  padding:0 4px;
+}
+.manifesto .quote .sig{margin-top:24px;font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;opacity:.6}
+.manifesto .stack{display:grid;grid-template-rows:1fr 1fr;gap:24px}
+.manifesto .card{
+  background:var(--c4);padding:34px;display:flex;flex-direction:column;justify-content:space-between;
+}
+.manifesto .card.alt{background:var(--c2);border:2px solid var(--c4)}
+.manifesto .card .head2{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;opacity:.7}
+.manifesto .card h4{font-family:var(--display);font-weight:500;font-size:28px;line-height:1.1;letter-spacing:-.01em;margin:0}
+.manifesto .card .row{display:flex;justify-content:space-between;align-items:end}
+.manifesto .card .row .stat{font-family:var(--display);font-weight:700;font-size:40px;letter-spacing:-.02em}
+.manifesto .card .row .stat .accent{color:var(--c7)}
+
+/* =========================================================
+   STACK / DEVS
+   ========================================================= */
+.stack-grid{
+  display:grid;grid-template-columns:1.2fr .8fr;gap:24px;align-items:stretch;
+}
+@media(max-width:980px){.stack-grid{grid-template-columns:1fr}}
+.codepad{
+  background:var(--c2);border:2px solid var(--c4);position:relative;overflow:hidden;
+}
+.codepad .bar{
+  background:var(--c3);padding:10px 14px;display:flex;justify-content:space-between;align-items:center;
+  font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+  border-bottom:2px solid var(--c4);
+}
+.codepad .bar .dots{display:flex;gap:6px}
+.codepad .bar .dots i{width:9px;height:9px;background:var(--c4);border-radius:50%}
+.codepad .bar .dots i:nth-child(1){background:var(--c5)}
+.codepad .bar .dots i:nth-child(2){background:var(--c7)}
+.codepad .bar .dots i:nth-child(3){background:var(--c8)}
+.codepad .bar .tabs{display:flex;gap:14px;opacity:.65}
+.codepad .bar .tabs .t.active{opacity:1;color:var(--c7)}
+.codepad pre{
+  margin:0;padding:24px;font-family:var(--mono);font-size:13px;line-height:1.7;color:var(--soft);
+  overflow-x:auto;text-align:left;
+}
+.codepad pre .k{color:var(--c5)}
+.codepad pre .s{color:var(--c7)}
+.codepad pre .v{color:var(--c8)}
+.codepad pre .c{color:#8884a8;font-style:italic}
+.codepad pre .b{color:var(--c6)}
+.codepad pre .p{color:var(--c4s)}
+
+.devbenefits{display:grid;gap:14px;align-content:start}
+.devbenefits .b{
+  background:var(--c3);padding:24px;display:grid;grid-template-columns:48px 1fr;gap:18px;align-items:start;
+}
+.devbenefits .b .num{
+  font-family:var(--display);font-weight:900;font-size:36px;line-height:1;color:var(--c5);
+}
+.devbenefits .b:nth-child(2) .num{color:var(--c7)}
+.devbenefits .b:nth-child(3) .num{color:var(--c8)}
+.devbenefits .b:nth-child(4) .num{color:var(--c6)}
+.devbenefits .b h5{font-family:var(--display);font-weight:500;font-size:18px;margin:0 0 6px;letter-spacing:-.01em}
+.devbenefits .b p{margin:0;font-size:14px;opacity:.75}
+
+/* =========================================================
+   COMPATIBILITY
+   ========================================================= */
+.compat{
+  margin-top:64px;background:var(--c3);padding:34px;
+}
+.compat .head3{display:flex;justify-content:space-between;align-items:end;margin-bottom:24px;flex-wrap:wrap;gap:14px}
+.compat .head3 h4{font-family:var(--display);font-weight:500;font-size:30px;margin:0;letter-spacing:-.01em}
+.compat .head3 p{margin:0;opacity:.7;font-size:14px}
+.compat .grid{
+  display:grid;grid-template-columns:repeat(8,1fr);gap:2px;
+}
+.compat .grid .cell{
+  background:var(--c2);padding:18px 14px;height:96px;display:flex;flex-direction:column;justify-content:space-between;text-align:left;
+}
+.compat .grid .cell .n{font-family:var(--display);font-weight:500;font-size:14px;letter-spacing:-.01em}
+.compat .grid .cell .d{font-family:var(--mono);font-size:9px;letter-spacing:.2em;opacity:.55;text-transform:uppercase}
+.compat .grid .cell .led{width:8px;height:8px;border-radius:50%;background:var(--c8);align-self:flex-end;box-shadow:0 0 0 3px rgba(252,111,15,.22)}
+.compat .grid .cell.beta .led{background:var(--c7);box-shadow:0 0 0 3px rgba(255,190,14,.18)}
+.compat .grid .cell.soon{opacity:.45}
+.compat .grid .cell.soon .led{background:var(--c4);box-shadow:none}
+.compat .grid .cell.featured{
+  background:var(--c5);grid-column:span 2;height:96px;text-decoration:none;
+  position:relative;overflow:hidden;transition:transform .25s;
+}
+.compat .grid .cell.featured:hover{transform:translateY(-2px)}
+.compat .grid .cell.featured *{color:var(--font)}
+.compat .grid .cell.featured .badge{
+  font-family:var(--mono);font-size:9px;letter-spacing:.22em;text-transform:uppercase;
+  background:var(--c2);padding:3px 8px;align-self:flex-start;color:var(--c7);
+}
+.compat .grid .cell.featured .badge *{color:var(--c7)}
+.compat .grid .cell.featured .n{font-size:18px}
+.compat .grid .cell.featured .row{display:flex;justify-content:space-between;align-items:end}
+.compat .grid .cell.featured .arr{font-size:18px;opacity:.85}
+@media(max-width:980px){
+  .compat .grid{grid-template-columns:repeat(4,1fr)}
+  .compat .grid .cell.featured{grid-column:span 2}
+}
+@media(max-width:560px){
+  .compat .grid{grid-template-columns:repeat(2,1fr)}
+  .compat .grid .cell.featured{grid-column:span 2}
+}
+
+/* =========================================================
+   CTA
+   ========================================================= */
+.cta{
+  margin:60px 0 0;background:var(--c5);padding:80px 56px;position:relative;overflow:hidden;
+}
+.cta::before{
+  content:"";position:absolute;inset:0;
+  background-image:
+    repeating-linear-gradient(45deg, rgba(255,255,255,.08) 0 14px, transparent 14px 28px);
+  mix-blend-mode:overlay;pointer-events:none;
+}
+.cta-inner{position:relative;display:grid;grid-template-columns:1.2fr .8fr;gap:24px;align-items:center}
+@media(max-width:820px){.cta-inner{grid-template-columns:1fr}}
+.cta h2{
+  font-family:var(--display);font-weight:300;font-size:clamp(44px,6vw,84px);line-height:.94;letter-spacing:-.02em;margin:0;
+}
+.cta h2 em{font-style:italic;font-weight:700;color:var(--c7)}
+.cta h2 .ink{font-weight:900;color:var(--c2)}
+.cta .side{display:flex;flex-direction:column;gap:18px;align-items:flex-start}
+.cta .side p{margin:0;font-size:16px;max-width:30ch;color:#fff}
+.cta .side .btn-pink{background:var(--c2);color:var(--c7)}
+.cta .side .btn-pink:hover{background:#1a0e3e;color:var(--font)}
+.cta .side .btn-pink *{color:var(--c7)}
+.cta .side .btn-pink:hover *{color:var(--font)}
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+footer{padding:64px 0 32px;border-top:1px solid rgba(255,255,255,.1);margin-top:90px}
+.foot{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:32px;align-items:start}
+@media(max-width:820px){.foot{grid-template-columns:1fr 1fr;gap:32px}}
+@media(max-width:520px){.foot{grid-template-columns:1fr}}
+.foot .brand{display:flex;flex-direction:column;gap:18px;max-width:32ch}
+.foot .brand .logo-row{display:flex;align-items:center;gap:12px}
+.foot .brand .logo-row svg{height:36px;width:36px;fill:var(--c7)}
+.foot .brand .logo-row .name{font-family:var(--display);font-weight:700;font-size:26px;letter-spacing:-.01em}
+.foot .brand p{margin:0;opacity:.7;font-size:14px}
+.foot .col h6{font-family:var(--mono);font-size:11px;letter-spacing:.24em;text-transform:uppercase;opacity:.55;margin:0 0 14px}
+.foot .col a{display:block;margin-bottom:8px;font-size:15px;opacity:.85}
+.foot .col a:hover{color:var(--c5);opacity:1}
+.foot-base{
+  margin-top:46px;padding-top:22px;border-top:1px solid rgba(255,255,255,.07);
+  display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;opacity:.5;
+  flex-wrap:wrap;gap:10px;
+}
+
+/* =========================================================
+   LOGO MARK (re-usable)
+   ========================================================= */
+.logo-mark{
+  width:54px;height:54px;background:var(--c7);display:grid;place-items:center;
+}
+.logo-mark svg{width:38px;height:38px;fill:var(--c2)}
+
+/* =========================================================
+   reveal on load
+   ========================================================= */
+.reveal{opacity:0;transform:translateY(18px);animation:rev .8s cubic-bezier(.22,.6,.18,1) forwards}
+@keyframes rev{to{opacity:1;transform:none}}
+.d1{animation-delay:.05s}.d2{animation-delay:.15s}.d3{animation-delay:.25s}
+.d4{animation-delay:.35s}.d5{animation-delay:.45s}.d6{animation-delay:.55s}
+.d7{animation-delay:.7s}.d8{animation-delay:.85s}
+
+/* in-view reveal */
+.io{opacity:0;transform:translateY(28px);transition:opacity .8s ease,transform .8s cubic-bezier(.22,.6,.18,1)}
+.io.in{opacity:1;transform:none}
+
+/* selection */
+::selection{background:var(--c5);color:var(--c2)}
+
+/* scrollbar */
+html{scrollbar-color:var(--c4) var(--c2)}
+</style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+
+<!-- ====== STATUSBAR ====== -->
+<div class="statusbar">
+  <div class="path">
+    <span class="dot"></span>
+    <span><b>Miakapp</b> · A complete framework for your smart home</span>
+  </div>
+  <div class="right">
+    <span>Status: <b>OPERATIONAL</b></span>
+    <span class="sep">·</span>
+    <span>Build 03.14</span>
+  </div>
+</div>
+
+<main class="shell">
+
+  <!-- ====== HERO ====== -->
+  <section class="hero">
+    <div class="hero-grid">
+
+      <div>
+        <div class="eyebrow">
+          <span class="logo-mark reveal d1">
+            <svg viewBox="0 0 91 94"><g><path d="M11.073,63.127c3.313-6.224,8.636-16.205,8.997-16.752c0.525-0.797,1.154-1.724,2.94-3.299c1.786-1.576,4.451-4.308,4.451-4.308s-5.769,0.144-5.816-3.991c-0.016-1.37,1.367-5.963,3.783-10.725c2.416-4.763,11.729-14.006,11.729-14.006s-7.528,4.247-9.695,5.508c-2.166,1.26-12.854,8.613-14.01,16.387c-1.155,7.772-4.996,36.106-4.996,36.106c0,0.001,3.877,7.506,12.069,13.809c8.193,6.303,23.95,6.197,23.95,6.197l1.991-1.577c-2.739-0.423-15.545-5.674-21.424-9.978C19.818,72.674,12.617,64.833,11.073,63.127z"/><path d="M81.392,63.758c-0.508-0.897-2.702-1.154-5.194-0.695c-2.492,.458-2.94,1.882-3.186,2.442s.595,2.556,1.681,3.291s1.365,.91,2.416,.876c1.051-.035,1.52-.376,1.753-.942c.305-.74-1.094-1.374-1.103-1.864c-.01-.47,1.499-.043,1.864,.315c.365,.357,.93,1.246,.21,2.547c-.562,1.015-2.907,4.159-4.65,5.861c-1.506,1.471-4.973,3.676-8.475,3.711c-3.501,.036-4.621-.21-7.737-1.015c-2.304-.596-7.402-3.925-9.595-5.183c-.772-.443-.451,.2-.215,.498c1.278,1.606,6.201,5.197,11.239,6.841c3.927,1.281,9.243,.604,11.712-.524c2.131-.976,3.812-2.455,5.783-4.622c2.367-2.602,4.615-6.089,4.616-7.773C82.513,65.838,81.941,64.729,81.392,63.758z"/><path d="M69.474,46.562c-.104,.84,.525,3.389,.525,3.389s.21-.343,.473-1.184c.263-.84,.998-1.785,.998-1.785s0,0-.735-.42S69.474,46.562,69.474,46.562z"/><path d="M73.362,11.478c0,0-7.773,6.197-8.509,8.508c-.734,2.312,.946,6.514,2.206,8.299c1.261,1.785,1.959,4.097,1.959,4.097s5.079-9.769,5.604-14.392C75.148,13.369,74.833,11.268,73.362,11.478z"/><path d="M25.778,33.957c0,0,2.94,.735,4.832,0c1.891-.734,2.626-6.092,3.886-7.878c1.262-1.786,3.992-9.349,1.892-9.559c0,0-6.198,6.197-8.089,9.559S25.778,33.957,25.778,33.957z"/><path d="M57.956,51.148c0,0-.63-1.119-1.399-1.891c-.77-.77-3.012-2.17-3.012-2.17s-.42,1.346-1.33,1.346s-1.506-.82-1.506-.82s-.596-.071-1.786,.35c-1.19,.42-2.696,1.295-2.696,1.295s2.731,2.767,5.322,3.432C54.139,53.355,57.956,51.148,57.956,51.148z"/><path d="M62.823,23.502c0,0-2.522-4.423,6.944-12.039c4.121-3.314,8.285-5.572,8.285-5.572s-2.73-.315-5.042,1.051c-2.311,1.365-7.22,4.937-8.337,5.986c-1.116,1.051-6.158,.631-8.784,4.623c0,0,1.771,.817,3.081,1.75C60.281,20.232,62.823,23.502,62.823,23.502z"/></g></svg>
+          </span>
+          <span class="pill reveal d2"><span class="num">01</span> v3.0 / Open source</span>
+          <span class="pill live reveal d3"><span><span class="dot"></span>Self-hosted · Yours forever</span></span>
+        </div>
+
+        <h1 class="hero-title">
+          <span class="stack reveal d2">A <em>complete</em></span>
+          <span class="stack reveal d3"><span class="ink">framework</span></span>
+          <span class="stack reveal d4">for <span class="underline pink">your</span></span>
+          <span class="stack reveal d5"><span class="yellow ink">smart home.</span></span>
+        </h1>
+
+        <p class="hero-sub reveal d6">
+          You wire your flows in <b>NodeRED</b>. Miakapp ships the polished dashboard your family will actually open. Two tools, one home, zero compromise.
+        </p>
+
+        <div class="cta-row reveal d7">
+          <a class="btn btn-primary" href="https://miakapp.com/h">
+            Access dashboard
+            <span class="arrow">→</span>
+          </a>
+          <a class="btn btn-ghost" href="https://github.com/Miakapp/Miakapp-V3" target="_blank" rel="noopener">
+            View on GitHub
+            <span class="arrow">→</span>
+          </a>
+        </div>
+
+        <div class="hero-meta reveal d8">
+          <div class="cell">
+            <div class="k">Stack</div>
+            <div class="v">Vue <span class="accent">3</span></div>
+          </div>
+          <div class="cell">
+            <div class="k">Backend</div>
+            <div class="v"><span class="y">Firebase</span></div>
+          </div>
+          <div class="cell">
+            <div class="k">Ship as</div>
+            <div class="v"><span class="g">PWA</span></div>
+          </div>
+          <div class="cell">
+            <div class="k">License</div>
+            <div class="v">MIT</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== APP PREVIEW ====== -->
+      <div class="preview-wrap reveal d4">
+        <span class="sticker rot s1">Live preview ↘</span>
+        <span class="sticker yellow s2">Self-hosted · Firebase ready</span>
+
+        <div class="preview">
+          <div class="top">
+            <div class="crumbs">
+              <span>Miakapp</span>
+              <span class="sep">›</span>
+              <span>Maison</span>
+              <span class="sep">›</span>
+              <span class="cur">Salon</span>
+            </div>
+            <div class="menu"><i></i><i></i><i></i></div>
+          </div>
+          <div class="body">
+            <div class="side">
+              <div class="row">
+                <span class="ico" style="background:var(--c1);mask-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><path d=%22M12 3 2 12h3v8h6v-6h2v6h6v-8h3z%22/></svg>');-webkit-mask-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><path d=%22M12 3 2 12h3v8h6v-6h2v6h6v-8h3z%22/></svg>')"></span>
+                <span>Maison</span><span style="opacity:.4">›</span>
+              </div>
+              <div class="row active">
+                <span class="ico" style="background:var(--c1);mask-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><circle cx=%2212%22 cy=%2212%22 r=%229%22 fill=%22none%22 stroke=%22white%22 stroke-width=%222%22/><circle cx=%2212%22 cy=%2212%22 r=%223%22/></svg>');-webkit-mask-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><circle cx=%2212%22 cy=%2212%22 r=%229%22 fill=%22none%22 stroke=%22white%22 stroke-width=%222%22/><circle cx=%2212%22 cy=%2212%22 r=%223%22/></svg>')"></span>
+                <span>Salon</span><span style="opacity:.4">›</span>
+              </div>
+              <div class="row">
+                <span class="ico"></span><span>Cuisine</span><span style="opacity:.4">›</span>
+              </div>
+              <div class="row">
+                <span class="ico"></span><span>Chambre</span><span style="opacity:.4">›</span>
+              </div>
+              <div class="sep"></div>
+              <div class="row">
+                <span class="ico"></span><span>Routines</span><span style="opacity:.4">›</span>
+              </div>
+              <div class="row">
+                <span class="ico"></span><span>Capteurs</span><span style="opacity:.4">›</span>
+              </div>
+            </div>
+
+            <div class="stage">
+              <div class="title">
+                <h4>Salon</h4>
+                <span class="meta">12:38 · 21.4°C</span>
+              </div>
+
+              <div class="bigGrid">
+                <button class="bigBtn on">
+                  <span class="led"></span>
+                  <div class="label2">Lumière</div>
+                  <div class="name">Plafond</div>
+                  <div class="ico-big">◐</div>
+                </button>
+                <button class="bigBtn">
+                  <span class="led"></span>
+                  <div class="label2">Lumière</div>
+                  <div class="name">Lampadaire</div>
+                  <div class="ico-big">○</div>
+                </button>
+                <button class="bigBtn alert">
+                  <span class="led"></span>
+                  <div class="label2">Fenêtre</div>
+                  <div class="name">Ouverte</div>
+                  <div class="ico-big">▢</div>
+                </button>
+                <button class="bigBtn">
+                  <span class="led"></span>
+                  <div class="label2">Thermostat</div>
+                  <div class="name">21.4 °C</div>
+                  <div class="ico-big">≈</div>
+                </button>
+              </div>
+
+              <div class="strip">
+                <div class="cell"><span class="l">Energy</span><span class="v g">412W</span></div>
+                <div class="cell"><span class="l">Mode</span><span class="v p">Soir</span></div>
+                <div class="cell"><span class="l">Humidité</span><span class="v y">54%</span></div>
+                <div class="cell"><span class="l">Présence</span><span class="v o">3</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ====== MARQUEE ====== -->
+  <div class="marquee">
+    <div class="track">
+      <span class="item">Lights <span class="star">✦</span> Thermostats <span class="star y">✦</span> Routines <span class="star g">✦</span> Cameras <span class="star o">✦</span> Sensors <span class="star">✦</span> Locks <span class="star y">✦</span> Plugs <span class="star g">✦</span> Music <span class="star o">✦</span> Curtains <span class="star">✦</span> Garden <span class="star y">✦</span> Energy <span class="star g">✦</span></span>
+      <span class="item">Lights <span class="star">✦</span> Thermostats <span class="star y">✦</span> Routines <span class="star g">✦</span> Cameras <span class="star o">✦</span> Sensors <span class="star">✦</span> Locks <span class="star y">✦</span> Plugs <span class="star g">✦</span> Music <span class="star o">✦</span> Curtains <span class="star">✦</span> Garden <span class="star y">✦</span> Energy <span class="star g">✦</span></span>
+    </div>
+  </div>
+
+  <!-- ====== FEATURES ====== -->
+  <section class="section">
+    <div class="head io">
+      <h2>One canvas, <em>every</em> room, every device.</h2>
+      <div class="right">
+        <span class="num"><span class="bar"></span>SECTION 02 · THE UI LAYER</span>
+        <p>Drop in widgets, drag them where you want, wire each block to a NodeRED message. Then ship the whole thing as a PWA your family can install in a tap.</p>
+      </div>
+    </div>
+
+    <div class="features">
+      <div class="feature f1 io">
+        <span class="idx">F.01</span>
+        <span class="label pink"><span class="bar"></span>VISUAL EDITOR</span>
+        <h3>Build dashboards by dragging blocks, not writing YAML.</h3>
+        <p>Resize, recolor, rearrange. Live preview on every device in your house, instantly.</p>
+        <div class="glyph">
+          <span class="tag">No-code</span>
+          <span class="icon" style="color:var(--c5)">◧</span>
+        </div>
+      </div>
+
+      <div class="feature f2 io">
+        <span class="idx">F.02</span>
+        <span class="label" style="color:#fff"><span class="bar"></span>NODE-RED NATIVE</span>
+        <h3>Speaks NodeRED out of the box.</h3>
+        <p>Drop the official miakapi node into a flow. Every tap is a message, every sensor update mirrors instantly.</p>
+        <div class="glyph"><span class="tag">Bridge</span><span class="icon">⇄</span></div>
+      </div>
+
+      <div class="feature f3 io">
+        <span class="idx">F.03</span>
+        <span class="label"><span class="bar"></span>FAMILY</span>
+        <h3>Group permissions</h3>
+        <p>Kids can't kill the wifi at 2am. Promise.</p>
+        <div class="glyph"><span class="tag">RBAC</span><span class="icon">⌘</span></div>
+      </div>
+
+      <div class="feature f4 io">
+        <span class="idx">F.04</span>
+        <span class="label yellow"><span class="bar"></span>PWA</span>
+        <h3>Installs like a native app. Works offline.</h3>
+        <p>Service worker baked in. iOS, Android, desktop, watch shortcuts. One codebase.</p>
+        <div class="glyph"><span class="tag">Cross-platform</span><span class="icon" style="color:var(--c7)">◇</span></div>
+      </div>
+
+      <div class="feature f5 io">
+        <span class="idx">F.05</span>
+        <span class="label"><span class="bar"></span>REALTIME</span>
+        <h3>Firestore-backed sync</h3>
+        <p>Flip a switch on one phone, watch every screen in the house light up in 40ms.</p>
+        <div class="glyph"><span class="tag">Firebase</span><span class="icon">⇋</span></div>
+      </div>
+
+      <div class="feature f6 io">
+        <span class="idx">F.06</span>
+        <span class="label orange"><span class="bar"></span>OPEN</span>
+        <h3>Your data lives in your project, not ours.</h3>
+        <p>Bring your own Firebase. Self-host the dashboard. Inspect every byte.</p>
+        <div class="glyph"><span class="tag">MIT</span><span class="icon" style="color:var(--c6)">∎</span></div>
+      </div>
+
+      <div class="feature f7 io">
+        <span class="idx">F.07</span>
+        <span class="label green"><span class="bar"></span>CUSTOMIZE</span>
+        <h3>Your brand. Your widgets. Your way.</h3>
+        <p>Override CSS variables, drop in your own Vue components. The dashboard can look like anything: a kid's room, a yacht, a vineyard, a clinic.</p>
+        <div class="glyph"><span class="tag">CSS · Vue</span><span class="icon" style="color:var(--c8)">◇</span></div>
+      </div>
+
+      <div class="feature f8 io">
+        <span class="idx">F.08</span>
+        <span class="label"><span class="bar"></span>NOTIFICATIONS</span>
+        <h3>Pings that don't suck.</h3>
+        <p>Door left open? Battery dying? Send it to the right person, the right way, on the right schedule.</p>
+        <div class="glyph"><span class="tag">Push · SMS · Email</span><span class="icon">◭</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== MANIFESTO ====== -->
+  <section class="section" style="padding-top:0">
+    <div class="head io">
+      <h2>Built by people <em>tired of</em> closed ecosystems.</h2>
+      <div class="right">
+        <span class="num"><span class="bar"></span>SECTION 03 · PHILOSOPHY</span>
+        <p>Every smart home product wants to be a walled garden. Miakapp is the opposite, by design.</p>
+      </div>
+    </div>
+
+    <div class="manifesto">
+      <div class="quote io">
+        <span class="qmark">"</span>
+        <p>Your house shouldn't need a <span class="under">subscription</span>. Your sensors shouldn't <em>phone home</em>. Your dashboard should be <span class="under">yours</span> — to break, to bend, to make beautiful.</p>
+        <div class="sig">Mathieu Colmon · Creator</div>
+      </div>
+      <div class="stack">
+        <div class="card io">
+          <span class="head2">Principle 01</span>
+          <h4>Hackable down to the last pixel.</h4>
+          <div class="row">
+            <span style="opacity:.85;max-width:22ch;font-size:14px">Vue components, CSS variables, no compiled black boxes.</span>
+            <span class="stat"><span class="accent">100%</span></span>
+          </div>
+        </div>
+        <div class="card alt io">
+          <span class="head2">Principle 02</span>
+          <h4>Owned, not rented.</h4>
+          <div class="row">
+            <span style="opacity:.85;max-width:22ch;font-size:14px">Self-host on your own Firebase or your own metal. Forever.</span>
+            <span class="stat" style="color:var(--c5)">$0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== DEV / STACK ====== -->
+  <section class="section" style="padding-top:0">
+    <div class="head io">
+      <h2>For tinkerers <em>and</em> the people they live with.</h2>
+      <div class="right">
+        <span class="num"><span class="bar"></span>SECTION 04 · UNDER THE HOOD</span>
+        <p>You build the brains in NodeRED. Miakapp wraps it in a Vue 3 + Firebase UI your family will actually open. Open source. One command to deploy.</p>
+      </div>
+    </div>
+
+    <div class="stack-grid">
+      <div class="codepad io">
+        <div class="bar">
+          <div class="dots"><i></i><i></i><i></i></div>
+          <div class="tabs"><span class="t active">evening-scene.flow</span><span class="t">miakapi.config</span><span class="t">dashboard.miak</span></div>
+          <div style="opacity:.5">NODE-RED · FLOW.JSON</div>
+        </div>
+<pre><span class="c">// a slice of a real NodeRED flow.</span>
+<span class="c">// every payload reaches the dashboard, live.</span>
+
+[
+  {
+    <span class="p">"id"</span>: <span class="s">"motion-entrance"</span>,
+    <span class="p">"type"</span>: <span class="s">"motion-sensor"</span>,
+    <span class="p">"topic"</span>: <span class="s">"presence/entrance"</span>,
+    <span class="p">"wires"</span>: [[<span class="s">"evening-scene"</span>]]
+  },
+  {
+    <span class="p">"id"</span>: <span class="s">"evening-scene"</span>,
+    <span class="p">"type"</span>: <span class="s">"function"</span>,
+    <span class="p">"func"</span>: <span class="s">"if (sun.set &amp;&amp; presence)\n  msg.payload = { hue: '#fe4282', bright: 30 };\nreturn msg;"</span>,
+    <span class="p">"wires"</span>: [[<span class="s">"salon-plafond"</span>]]
+  },
+  {
+    <span class="p">"id"</span>: <span class="s">"salon-plafond"</span>,
+    <span class="p">"type"</span>: <span class="k">"miakapi-out"</span>,   <span class="c">// ← the official Miakapp node</span>
+    <span class="p">"device"</span>: <span class="s">"lights.salon.plafond"</span>,
+    <span class="p">"label"</span>: <span class="s">"Plafond"</span>
+  }
+]</pre>
+      </div>
+
+      <div class="devbenefits">
+        <div class="b io">
+          <div class="num">01</div>
+          <div>
+            <h5>One node, infinite devices</h5>
+            <p>Install <code style="font-family:var(--mono);background:var(--c2);padding:2px 8px">node-red-contrib-miakapi</code>. Anything NodeRED can reach, your dashboard can show.</p>
+          </div>
+        </div>
+        <div class="b io">
+          <div class="num">02</div>
+          <div>
+            <h5>Firebase as the spine</h5>
+            <p>Auth, Firestore, hosting, push. Free tier covers most households.</p>
+          </div>
+        </div>
+        <div class="b io">
+          <div class="num">03</div>
+          <div>
+            <h5>PWA out of the box</h5>
+            <p>Service worker, manifest, install prompts. Your family taps once, it lives on their phone.</p>
+          </div>
+        </div>
+        <div class="b io">
+          <div class="num">04</div>
+          <div>
+            <h5>One command deploy</h5>
+            <p><code style="font-family:var(--mono);background:var(--c2);padding:2px 8px">npm run deploy</code> and you're shipping. That's it.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPAT GRID -->
+    <div class="compat io">
+      <div class="head3">
+        <h4>One node in <em style="color:var(--c5);font-style:italic">NodeRED</em>, the whole world wires in.</h4>
+        <p>Drop our <code style="font-family:var(--mono);background:var(--c2);padding:2px 8px;color:var(--c7)">node-red-contrib-miakapi</code> into a flow and pipe thousands of devices, services and APIs straight into your dashboard.</p>
+      </div>
+      <div class="grid">
+        <a class="cell featured" href="https://flows.nodered.org/node/node-red-contrib-miakapi" target="_blank" rel="noopener">
+          <span class="badge">★ Official bridge</span>
+          <div class="row">
+            <div>
+              <div class="n">node-red-contrib-miakapi</div>
+              <div class="d">NodeRED package · install &amp; flow</div>
+            </div>
+            <span class="arr">↗</span>
+          </div>
+        </a>
+        <div class="cell"><span class="n">Philips Hue</span><span class="d">Lights · via NodeRED</span><span class="led"></span></div>
+        <div class="cell"><span class="n">Sonoff</span><span class="d">Switch · via NodeRED</span><span class="led"></span></div>
+        <div class="cell"><span class="n">Zigbee2MQTT</span><span class="d">Bridge · via NodeRED</span><span class="led"></span></div>
+        <div class="cell"><span class="n">Shelly</span><span class="d">Energy · via NodeRED</span><span class="led"></span></div>
+        <div class="cell"><span class="n">Tasmota</span><span class="d">DIY · via NodeRED</span><span class="led"></span></div>
+        <div class="cell"><span class="n">Sonos</span><span class="d">Audio · via NodeRED</span><span class="led"></span></div>
+        <div class="cell"><span class="n">MQTT</span><span class="d">Any broker</span><span class="led"></span></div>
+        <div class="cell"><span class="n">Aqara</span><span class="d">Sensors · via NodeRED</span><span class="led"></span></div>
+        <div class="cell"><span class="n">Tuya</span><span class="d">Cloud · via NodeRED</span><span class="led"></span></div>
+        <div class="cell"><span class="n">REST APIs</span><span class="d">HTTP nodes</span><span class="led"></span></div>
+        <div class="cell"><span class="n">Webhooks</span><span class="d">Inbound · outbound</span><span class="led"></span></div>
+        <div class="cell"><span class="n">Reolink</span><span class="d">Camera · via NodeRED</span><span class="led"></span></div>
+        <div class="cell soon"><span class="n">+ yours</span><span class="d">drop a node</span><span class="led"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== CTA ====== -->
+  <section class="cta io">
+    <div class="cta-inner">
+      <h2>Turn your <em>house</em> into something <span class="ink">remarkable.</span></h2>
+      <div class="side">
+        <p>Fork the repo, plug in your Firebase keys, and ship a smart home dashboard your family will actually use, in an afternoon.</p>
+        <a class="btn btn-pink" href="https://miakapp.com/h">
+          Access dashboard
+          <span class="arrow">→</span>
+        </a>
+        <span style="font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#fff;opacity:.8">MIT · Free forever · Self-host</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== FOOTER ====== -->
+  <footer>
+    <div class="foot">
+      <div class="brand">
+        <div class="logo-row">
+          <svg viewBox="0 0 91 94"><path d="M11.073,63.127c3.313-6.224,8.636-16.205,8.997-16.752c.525-.797,1.154-1.724,2.94-3.299c1.786-1.576,4.451-4.308,4.451-4.308s-5.769,.144-5.816-3.991c-.016-1.37,1.367-5.963,3.783-10.725c2.416-4.763,11.729-14.006,11.729-14.006s-7.528,4.247-9.695,5.508c-2.166,1.26-12.854,8.613-14.01,16.387c-1.155,7.772-4.996,36.106-4.996,36.106c0,.001,3.877,7.506,12.069,13.809c8.193,6.303,23.95,6.197,23.95,6.197l1.991-1.577c-2.739-.423-15.545-5.674-21.424-9.978C19.818,72.674,12.617,64.833,11.073,63.127z M81.392,63.758c-.508-.897-2.702-1.154-5.194-.695c-2.492,.458-2.94,1.882-3.186,2.442s.595,2.556,1.681,3.291s1.365,.91,2.416,.876c1.051-.035,1.52-.376,1.753-.942c.305-.74-1.094-1.374-1.103-1.864c-.01-.47,1.499-.043,1.864,.315c.365,.357,.93,1.246,.21,2.547c-.562,1.015-2.907,4.159-4.65,5.861c-1.506,1.471-4.973,3.676-8.475,3.711c-3.501,.036-4.621-.21-7.737-1.015c-2.304-.596-7.402-3.925-9.595-5.183c-.772-.443-.451,.2-.215,.498c1.278,1.606,6.201,5.197,11.239,6.841c3.927,1.281,9.243,.604,11.712-.524c2.131-.976,3.812-2.455,5.783-4.622c2.367-2.602,4.615-6.089,4.616-7.773C82.513,65.838,81.941,64.729,81.392,63.758z M73.362,11.478c0,0-7.773,6.197-8.509,8.508c-.734,2.312,.946,6.514,2.206,8.299c1.261,1.785,1.959,4.097,1.959,4.097s5.079-9.769,5.604-14.392C75.148,13.369,74.833,11.268,73.362,11.478z M25.778,33.957c0,0,2.94,.735,4.832,0c1.891-.734,2.626-6.092,3.886-7.878c1.262-1.786,3.992-9.349,1.892-9.559c0,0-6.198,6.197-8.089,9.559S25.778,33.957,25.778,33.957z M62.823,23.502c0,0-2.522-4.423,6.944-12.039c4.121-3.314,8.285-5.572,8.285-5.572s-2.73-.315-5.042,1.051c-2.311,1.365-7.22,4.937-8.337,5.986c-1.116,1.051-6.158,.631-8.784,4.623c0,0,1.771,.817,3.081,1.75C60.281,20.232,62.823,23.502,62.823,23.502z"/></svg>
+          <span class="name">miakapp</span>
+        </div>
+        <p>A complete, open, ridiculously flexible framework for your smart home. Built in France by makers, for makers.</p>
+      </div>
+      <div class="col">
+        <h6>Product</h6>
+        <a href="#">Features</a>
+        <a href="#">Integrations</a>
+        <a href="#">Pricing</a>
+        <a href="#">Changelog</a>
+      </div>
+      <div class="col">
+        <h6>Develop</h6>
+        <a href="https://github.com/Miakapp" target="_blank" rel="noopener">GitHub org</a>
+        <a href="https://github.com/Miakapp/Miakapp-V3" target="_blank" rel="noopener">Webapp source</a>
+        <a href="https://flows.nodered.org/node/node-red-contrib-miakapi" target="_blank" rel="noopener">NodeRED node</a>
+        <a href="https://github.com/Miakapp/Miakapp-V3/issues" target="_blank" rel="noopener">Issues</a>
+      </div>
+      <div class="col">
+        <h6>Community</h6>
+        <a href="#">Discord</a>
+        <a href="#">Forum</a>
+        <a href="#">Showcase</a>
+        <a href="#">Contact</a>
+      </div>
+    </div>
+    <div class="foot-base">
+      <span>© 2026 Miakapp · MIT</span>
+      <span>Made with ◐ in France</span>
+      <span>v3.0.0 · Build 03.14</span>
+    </div>
+  </footer>
+
+</main>
+
+<script>
+  // intersection-observer reveals
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        e.target.classList.add('in');
+        io.unobserve(e.target);
+      }
+    });
+  }, { rootMargin: '0px 0px -10% 0px', threshold: 0.05 });
+  document.querySelectorAll('.io').forEach(el=>io.observe(el));
+
+  // little flicker on a random preview "led" every few seconds
+  const leds = document.querySelectorAll('.bigBtn .led');
+  setInterval(()=>{
+    const led = leds[Math.floor(Math.random()*leds.length)];
+    if(!led) return;
+    const prev = led.style.background;
+    led.style.background = 'var(--c8)';
+    led.style.boxShadow = '0 0 0 5px rgba(252,111,15,.28)';
+    setTimeout(()=>{led.style.background=prev;led.style.boxShadow='';}, 320);
+  }, 1800);
+</script>
+</body>
+</html>
