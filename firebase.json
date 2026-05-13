@@ -10,8 +10,12 @@
     ],
     "rewrites": [
       {
+        "source": "/",
+        "destination": "/landing.html"
+      },
+      {
         "source": "**",
-        "destination": "/index.html"
+        "destination": "/app.html"
       }
     ]
   },
