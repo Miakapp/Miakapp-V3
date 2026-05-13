@@ -231,12 +231,11 @@ h1.hero-title .underline::after{
   background:var(--c4);padding:10px 12px;margin-bottom:3px;font-size:13px;text-align:left;
   font-family:var(--body);
 }
-.preview .body .side .row .ico{
-  width:22px;height:22px;background:var(--c1);
-  mask-position:center;-webkit-mask-position:center;
-  mask-repeat:no-repeat;-webkit-mask-repeat:no-repeat;
-  mask-size:contain;-webkit-mask-size:contain;
+.preview .body .side .row svg.ico{
+  width:20px;height:20px;fill:var(--c1);opacity:.95;
 }
+.preview .body .side .row.active svg.ico{fill:var(--c7);opacity:1}
+.preview .body .side .row .chev{font-size:14px;opacity:.45;text-align:center}
 .preview .body .side .row.active{border-right:3px solid var(--c8)}
 .preview .body .side .sep{height:2px;background:var(--c8);margin:6px 6px 6px 14px}
 
@@ -548,9 +547,15 @@ footer{padding:64px 0 32px;border-top:1px solid rgba(255,255,255,.1);margin-top:
 .foot .col a:hover{color:var(--c5);opacity:1}
 .foot-base{
   margin-top:46px;padding-top:22px;border-top:1px solid rgba(255,255,255,.07);
-  display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;opacity:.5;
+  display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;opacity:.55;
   flex-wrap:wrap;gap:10px;
 }
+.foot-base .heart{
+  width:11px;height:11px;display:inline-block;vertical-align:-1px;
+  fill:var(--c5);margin:0 3px;
+  animation:beat 1.4s ease-in-out infinite;
+}
+@keyframes beat{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
 
 /* =========================================================
    LOGO MARK (re-usable)
@@ -673,25 +678,29 @@ html{scrollbar-color:var(--c4) var(--c2)}
           <div class="body">
             <div class="side">
               <div class="row">
-                <span class="ico" style="background:var(--c1);mask-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><path d=%22M12 3 2 12h3v8h6v-6h2v6h6v-8h3z%22/></svg>');-webkit-mask-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><path d=%22M12 3 2 12h3v8h6v-6h2v6h6v-8h3z%22/></svg>')"></span>
-                <span>Home</span><span style="opacity:.4">›</span>
+                <svg class="ico" viewBox="0 0 24 24"><path d="M12 3 2 12h3v8h5v-6h4v6h5v-8h3z"/></svg>
+                <span>Home</span><span class="chev">›</span>
               </div>
               <div class="row active">
-                <span class="ico" style="background:var(--c1);mask-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><circle cx=%2212%22 cy=%2212%22 r=%229%22 fill=%22none%22 stroke=%22white%22 stroke-width=%222%22/><circle cx=%2212%22 cy=%2212%22 r=%223%22/></svg>');-webkit-mask-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><circle cx=%2212%22 cy=%2212%22 r=%229%22 fill=%22none%22 stroke=%22white%22 stroke-width=%222%22/><circle cx=%2212%22 cy=%2212%22 r=%223%22/></svg>')"></span>
-                <span>Lounge</span><span style="opacity:.4">›</span>
+                <svg class="ico" viewBox="0 0 24 24"><path d="M4 11V8a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v3h4V8a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v3a3 3 0 0 1 3 3v5h-2v-2H3v2H1v-5a3 3 0 0 1 3-3z"/></svg>
+                <span>Lounge</span><span class="chev">›</span>
               </div>
               <div class="row">
-                <span class="ico"></span><span>Kitchen</span><span style="opacity:.4">›</span>
+                <svg class="ico" viewBox="0 0 24 24"><path d="M5 9h14v3a5 5 0 0 1-5 5h-4a5 5 0 0 1-5-5V9zm9-6h2v5h-2V3zm-4 0h2v5h-2V3zM6 3h2v5H6V3zm-2 16h16v2H4v-2z"/></svg>
+                <span>Kitchen</span><span class="chev">›</span>
               </div>
               <div class="row">
-                <span class="ico"></span><span>Bedroom</span><span style="opacity:.4">›</span>
+                <svg class="ico" viewBox="0 0 24 24"><path d="M3 11h11V7a1 1 0 0 1 1-1h5a3 3 0 0 1 3 3v9h-2v-2H3v2H1V8a1 1 0 0 1 2 0v3zm2-2a2 2 0 1 1 4 0 2 2 0 0 1-4 0z"/></svg>
+                <span>Bedroom</span><span class="chev">›</span>
               </div>
               <div class="sep"></div>
               <div class="row">
-                <span class="ico"></span><span>Routines</span><span style="opacity:.4">›</span>
+                <svg class="ico" viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6a6 6 0 0 1 5.2 9l1.5 1.5A8 8 0 0 0 12 4zM6.8 7.5L5.3 6A8 8 0 0 0 12 20v3l4-4-4-4v3a6 6 0 0 1-5.2-10.5z"/></svg>
+                <span>Routines</span><span class="chev">›</span>
               </div>
               <div class="row">
-                <span class="ico"></span><span>Sensors</span><span style="opacity:.4">›</span>
+                <svg class="ico" viewBox="0 0 24 24"><path d="M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM4.9 4.9 6.3 6.3a8 8 0 0 0 0 11.4l-1.4 1.4a10 10 0 0 1 0-14.2zm14.2 0a10 10 0 0 1 0 14.2l-1.4-1.4a8 8 0 0 0 0-11.4l1.4-1.4zM8.4 8.4 9.8 9.8a4 4 0 0 0 0 4.4l-1.4 1.4a6 6 0 0 1 0-7.2zm7.2 0a6 6 0 0 1 0 7.2l-1.4-1.4a4 4 0 0 0 0-4.4l1.4-1.4z"/></svg>
+                <span>Sensors</span><span class="chev">›</span>
               </div>
             </div>
 
@@ -1015,7 +1024,7 @@ html{scrollbar-color:var(--c4) var(--c2)}
     </div>
     <div class="foot-base">
       <span>© 2026 Miakapp · MIT</span>
-      <span>Made with ◐ in France</span>
+      <span>Made with <svg class="heart" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-4.5-9-9C1.5 8.6 3.5 5 7 5c2 0 3.5 1 5 3 1.5-2 3-3 5-3 3.5 0 5.5 3.6 4 7-2 4.5-9 9-9 9z"/></svg> in France</span>
       <span>v3.0.0 · Build 03.14</span>
     </div>
   </footer>
