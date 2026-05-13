@@ -69,7 +69,7 @@ body input[type=submit] { user-select: none }
 .title svg {
   fill: var(--color2);
   width: 80px;
-  background-color: var(--color8);
+  background-color: var(--color7);
   border-radius: 50px;
   padding: 10px;
   margin-bottom: 15px;
