@@ -664,9 +664,9 @@ html{scrollbar-color:var(--c4) var(--c2)}
             <div class="crumbs">
               <span>Miakapp</span>
               <span class="sep">›</span>
-              <span>Maison</span>
+              <span>Home</span>
               <span class="sep">›</span>
-              <span class="cur">Salon</span>
+              <span class="cur">Lounge</span>
             </div>
             <div class="menu"><i></i><i></i><i></i></div>
           </div>
@@ -674,50 +674,50 @@ html{scrollbar-color:var(--c4) var(--c2)}
             <div class="side">
               <div class="row">
                 <span class="ico" style="background:var(--c1);mask-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><path d=%22M12 3 2 12h3v8h6v-6h2v6h6v-8h3z%22/></svg>');-webkit-mask-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><path d=%22M12 3 2 12h3v8h6v-6h2v6h6v-8h3z%22/></svg>')"></span>
-                <span>Maison</span><span style="opacity:.4">›</span>
+                <span>Home</span><span style="opacity:.4">›</span>
               </div>
               <div class="row active">
                 <span class="ico" style="background:var(--c1);mask-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><circle cx=%2212%22 cy=%2212%22 r=%229%22 fill=%22none%22 stroke=%22white%22 stroke-width=%222%22/><circle cx=%2212%22 cy=%2212%22 r=%223%22/></svg>');-webkit-mask-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><circle cx=%2212%22 cy=%2212%22 r=%229%22 fill=%22none%22 stroke=%22white%22 stroke-width=%222%22/><circle cx=%2212%22 cy=%2212%22 r=%223%22/></svg>')"></span>
-                <span>Salon</span><span style="opacity:.4">›</span>
+                <span>Lounge</span><span style="opacity:.4">›</span>
               </div>
               <div class="row">
-                <span class="ico"></span><span>Cuisine</span><span style="opacity:.4">›</span>
+                <span class="ico"></span><span>Kitchen</span><span style="opacity:.4">›</span>
               </div>
               <div class="row">
-                <span class="ico"></span><span>Chambre</span><span style="opacity:.4">›</span>
+                <span class="ico"></span><span>Bedroom</span><span style="opacity:.4">›</span>
               </div>
               <div class="sep"></div>
               <div class="row">
                 <span class="ico"></span><span>Routines</span><span style="opacity:.4">›</span>
               </div>
               <div class="row">
-                <span class="ico"></span><span>Capteurs</span><span style="opacity:.4">›</span>
+                <span class="ico"></span><span>Sensors</span><span style="opacity:.4">›</span>
               </div>
             </div>
 
             <div class="stage">
               <div class="title">
-                <h4>Salon</h4>
+                <h4>Lounge</h4>
                 <span class="meta">12:38 · 21.4°C</span>
               </div>
 
               <div class="bigGrid">
                 <button class="bigBtn on">
                   <span class="led"></span>
-                  <div class="label2">Lumière</div>
-                  <div class="name">Plafond</div>
+                  <div class="label2">Light</div>
+                  <div class="name">Ceiling</div>
                   <div class="ico-big">◐</div>
                 </button>
                 <button class="bigBtn">
                   <span class="led"></span>
-                  <div class="label2">Lumière</div>
-                  <div class="name">Lampadaire</div>
+                  <div class="label2">Light</div>
+                  <div class="name">Lamp</div>
                   <div class="ico-big">○</div>
                 </button>
                 <button class="bigBtn alert">
                   <span class="led"></span>
-                  <div class="label2">Fenêtre</div>
-                  <div class="name">Ouverte</div>
+                  <div class="label2">Window</div>
+                  <div class="name">Open</div>
                   <div class="ico-big">▢</div>
                 </button>
                 <button class="bigBtn">
@@ -730,9 +730,9 @@ html{scrollbar-color:var(--c4) var(--c2)}
 
               <div class="strip">
                 <div class="cell"><span class="l">Energy</span><span class="v g">412W</span></div>
-                <div class="cell"><span class="l">Mode</span><span class="v p">Soir</span></div>
-                <div class="cell"><span class="l">Humidité</span><span class="v y">54%</span></div>
-                <div class="cell"><span class="l">Présence</span><span class="v o">3</span></div>
+                <div class="cell"><span class="l">Mode</span><span class="v p">Evening</span></div>
+                <div class="cell"><span class="l">Humidity</span><span class="v y">54%</span></div>
+                <div class="cell"><span class="l">Presence</span><span class="v o">3</span></div>
               </div>
             </div>
           </div>
@@ -898,13 +898,13 @@ html{scrollbar-color:var(--c4) var(--c2)}
     <span class="p">"id"</span>: <span class="s">"evening-scene"</span>,
     <span class="p">"type"</span>: <span class="s">"function"</span>,
     <span class="p">"func"</span>: <span class="s">"if (sun.set &amp;&amp; presence)\n  msg.payload = { hue: '#fe4282', bright: 30 };\nreturn msg;"</span>,
-    <span class="p">"wires"</span>: [[<span class="s">"salon-plafond"</span>]]
+    <span class="p">"wires"</span>: [[<span class="s">"lounge-ceiling"</span>]]
   },
   {
-    <span class="p">"id"</span>: <span class="s">"salon-plafond"</span>,
+    <span class="p">"id"</span>: <span class="s">"lounge-ceiling"</span>,
     <span class="p">"type"</span>: <span class="k">"miakapi-out"</span>,   <span class="c">// ← the official Miakapp node</span>
-    <span class="p">"device"</span>: <span class="s">"lights.salon.plafond"</span>,
-    <span class="p">"label"</span>: <span class="s">"Plafond"</span>
+    <span class="p">"device"</span>: <span class="s">"lights.lounge.ceiling"</span>,
+    <span class="p">"label"</span>: <span class="s">"Ceiling"</span>
   }
 ]</pre>
       </div>
