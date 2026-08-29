@@ -7,11 +7,16 @@ implemented across several repositories.
 ## Documents
 
 - [`specs/2026-08-29-miakapp-3.5-design.md`](specs/2026-08-29-miakapp-3.5-design.md)
-  — approved product and architecture direction. The protocol, component
-  runtime, platform control plane, and migration contracts still have explicit
-  design gates before implementation.
+  — approved product and architecture direction. The component runtime,
+  platform control plane, and migration contracts still have explicit design
+  gates before implementation.
+- [`rfcs/0001-wire-protocol.md`](rfcs/0001-wire-protocol.md) — accepted protocol
+  1.0 byte contract, state and call semantics, limits and compatibility rules.
 - [`roadmaps/2026-08-29-miakapp-3.5-coordination.md`](roadmaps/2026-08-29-miakapp-3.5-coordination.md)
   — cross-repository sequence, ownership, acceptance gates, and deferred work.
+
+The protocol RFC is backed by the independent Go and TypeScript implementations
+and shared binary fixtures under [`../protocol/`](../protocol/).
 
 Repository-specific implementation plans must link back to these documents and
 must not redefine a shared contract locally.
