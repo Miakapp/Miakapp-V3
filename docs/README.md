@@ -8,12 +8,16 @@ implemented across several repositories.
 
 - [`specs/2026-08-29-miakapp-3.5-design.md`](specs/2026-08-29-miakapp-3.5-design.md)
   — approved product and architecture direction. The platform control plane and
-  migration contracts still have explicit design gates before implementation.
+  operational migration procedure still have explicit design gates before
+  implementation.
 - [`rfcs/0001-wire-protocol.md`](rfcs/0001-wire-protocol.md) — accepted protocol
   1.0 byte contract, state and call semantics, limits and compatibility rules.
 - [`rfcs/0002-component-runtime.md`](rfcs/0002-component-runtime.md) — accepted
   browser boundary, immutable artifact, capability bridge, semantic UI ABI, and
   release lifecycle.
+- [`rfcs/0003-coordinator-sdk-and-migration.md`](rfcs/0003-coordinator-sdk-and-migration.md)
+  — accepted public coordinator API, retry and lifecycle semantics, temporary
+  Node-RED boundary, fail-closed shadow modes, and comparison contract.
 - [`roadmaps/2026-08-29-miakapp-3.5-coordination.md`](roadmaps/2026-08-29-miakapp-3.5-coordination.md)
   — cross-repository sequence, ownership, acceptance gates, and deferred work.
 
@@ -22,7 +26,9 @@ binary fixtures under [`../protocol/`](../protocol/). RFC 0002's architecture
 selection is backed by a deliberately bounded, three-engine hostile browser
 corpus under [`../component-runtime/`](../component-runtime/); complete
 production conformance remains an exit gate for the component-platform vertical
-slice.
+slice. RFC 0003 is backed by the API-level corpus, bounded replay runner,
+synthetic-home adapter and effect recorder under [`../coordinator-contract/`](../coordinator-contract/);
+the real MiakAPI and Node-RED implementations must still pass that contract.
 
 Repository-specific implementation plans must link back to these documents and
 must not redefine a shared contract locally.
