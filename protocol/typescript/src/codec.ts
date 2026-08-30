@@ -62,6 +62,34 @@ export const Opcode = {
 } as const;
 
 const KNOWN_CORE_OPCODES = new Set<number>(Object.values(Opcode));
+const ERROR_CORRELATION_SOURCE_OPCODES = new Set<number>([
+  Opcode.Reauth,
+  Opcode.StateSync,
+  Opcode.StateSet,
+  Opcode.StateAclSync,
+  Opcode.StateResync,
+  Opcode.EventSync,
+  Opcode.EventAclSync,
+  Opcode.Subscribe,
+  Opcode.Unsubscribe,
+  Opcode.Event,
+  Opcode.FunctionSync,
+  Opcode.Call,
+  Opcode.CallResult,
+  Opcode.CallError,
+  Opcode.CallCancel,
+  Opcode.CallCredit,
+]);
+const KNOWN_CORE_ERROR_CODES = new Set<number>([
+  1000, 1001, 1002, 1003, 1004, 1005,
+  1100, 1101, 1102,
+  1200, 1201, 1202, 1203,
+  1300, 1301, 1302, 1303, 1304, 1305,
+  1400, 1401, 1402, 1403, 1404, 1405,
+  1500,
+]);
+const APPLICATION_ERROR_CODE_MINIMUM = 2000;
+const APPLICATION_ERROR_CODE_MAXIMUM = 2999;
 const MAX_SAFE_INTEGER = Number.MAX_SAFE_INTEGER;
 const MIN_SAFE_INTEGER = Number.MIN_SAFE_INTEGER;
 const textEncoder = new TextEncoder();
@@ -528,12 +556,42 @@ function integer(value: unknown, minimum: number, maximum: number, label: string
   return value as number;
 }
 
+function coreErrorCode(value: unknown, label: string): number {
+  const code = integer(value, 1, 0xffff, label);
+  if (!KNOWN_CORE_ERROR_CODES.has(code)) fail('invalid_frame', `${label} is not a known core error code`);
+  return code;
+}
+
+function callErrorCode(value: unknown, label: string): number {
+  const code = integer(value, 1, 0xffff, label);
+  const isApplicationCode = code >= APPLICATION_ERROR_CODE_MINIMUM
+    && code <= APPLICATION_ERROR_CODE_MAXIMUM;
+  if (!KNOWN_CORE_ERROR_CODES.has(code) && !isApplicationCode) {
+    fail('invalid_frame', `${label} is not a permitted call error code`);
+  }
+  return code;
+}
+
 function positiveId(value: unknown, label: string): number {
   return integer(value, 1, MAX_SAFE_INTEGER, label);
 }
 
-function requestIdOrZero(value: unknown, label: string): number {
+function correlationIdOrZero(value: unknown, label: string): number {
   return integer(value, 0, MAX_SAFE_INTEGER, label);
+}
+
+function errorCorrelation(correlationValue: unknown, sourceOpcodeValue: unknown): void {
+  const correlationId = correlationIdOrZero(correlationValue, 'ERROR.correlationId');
+  const sourceOpcode = integer(sourceOpcodeValue, 0, 0xff, 'ERROR.sourceOpcode');
+  if (correlationId === 0) {
+    if (sourceOpcode !== 0) {
+      fail('invalid_frame', 'ERROR.sourceOpcode must be zero without an origin');
+    }
+    return;
+  }
+  if (!ERROR_CORRELATION_SOURCE_OPCODES.has(sourceOpcode)) {
+    fail('invalid_frame', 'ERROR.sourceOpcode is not an originating frame');
+  }
 }
 
 function booleanValue(value: unknown, label: string): boolean {
@@ -728,9 +786,8 @@ function validateFrame(frame: Frame): void {
     }
     case Opcode.Error: {
       const fields = exactTuple(payload, 5, 'ERROR');
-      requestIdOrZero(fields[0], 'ERROR.requestId');
-      integer(fields[1], 0, 0xff, 'ERROR.sourceOpcode');
-      integer(fields[2], 1, 0xffff, 'ERROR.code');
+      errorCorrelation(fields[0], fields[1]);
+      coreErrorCode(fields[2], 'ERROR.code');
       booleanValue(fields[3], 'ERROR.retryable');
       stringValue(fields[4], 1, 256, 'ERROR.message');
       return;
@@ -738,7 +795,7 @@ function validateFrame(frame: Frame): void {
     case Opcode.Fatal: {
       const fields = exactTuple(payload, 4, 'FATAL');
       integer(fields[0], 0, 0xff, 'FATAL.sourceOpcode');
-      integer(fields[1], 1, 0xffff, 'FATAL.code');
+      coreErrorCode(fields[1], 'FATAL.code');
       booleanValue(fields[2], 'FATAL.retryable');
       stringValue(fields[3], 1, 256, 'FATAL.message');
       return;
@@ -971,7 +1028,7 @@ function validateFrame(frame: Frame): void {
     case Opcode.CallError: {
       const fields = exactTuple(payload, 5, 'CALL_ERROR');
       positiveId(fields[0], 'CALL_ERROR.callId');
-      integer(fields[1], 1, 0xffff, 'CALL_ERROR.code');
+      callErrorCode(fields[1], 'CALL_ERROR.code');
       booleanValue(fields[2], 'CALL_ERROR.retryable');
       stringValue(fields[3], 1, 256, 'CALL_ERROR.message');
       return;

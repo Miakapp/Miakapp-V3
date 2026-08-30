@@ -29,7 +29,14 @@ interface InvalidSemanticFixture {
   error: ProtocolErrorKind;
 }
 
+interface ErrorCodeFixtures {
+  core: number[];
+  application: [number, number];
+}
+
 interface FixtureFile {
+  errorCodes: ErrorCodeFixtures;
+  errorCorrelationSources: number[];
   valid: Fixture[];
   invalidWire: InvalidWireFixture[];
   invalidSemantic: InvalidSemanticFixture[];
@@ -123,5 +130,59 @@ describe('shared protocol fixtures', () => {
     expect([...covered].sort((left, right) => left - right)).toEqual(
       [...expected].sort((left, right) => left - right),
     );
+  });
+
+  test('enforces the shared error code catalogue', () => {
+    for (const code of fixtures.errorCodes.core) {
+      expect(() => encodeFrame({
+        opcode: Opcode.Error,
+        payload: [1, Opcode.Event, code, false, 'error'],
+      })).not.toThrow();
+      expect(() => encodeFrame({
+        opcode: Opcode.Fatal,
+        payload: [Opcode.Event, code, false, 'error'],
+      })).not.toThrow();
+      expect(() => encodeFrame({
+        opcode: Opcode.CallError,
+        payload: [1, code, false, 'error', null],
+      })).not.toThrow();
+    }
+
+    const [minimum, maximum] = fixtures.errorCodes.application;
+    for (let code = minimum; code <= maximum; code += 1) {
+      expect(() => encodeFrame({
+        opcode: Opcode.CallError,
+        payload: [1, code, false, 'error', null],
+      })).not.toThrow();
+      expectProtocolError(() => encodeFrame({
+        opcode: Opcode.Error,
+        payload: [1, Opcode.Event, code, false, 'error'],
+      }), 'invalid_frame');
+      expectProtocolError(() => encodeFrame({
+        opcode: Opcode.Fatal,
+        payload: [Opcode.Event, code, false, 'error'],
+      }), 'invalid_frame');
+    }
+  });
+
+  test('enforces the shared ERROR correlation source catalogue', () => {
+    const allowed = new Set(fixtures.errorCorrelationSources);
+    for (let sourceOpcode = 1; sourceOpcode <= 0xff; sourceOpcode += 1) {
+      const action = () => encodeFrame({
+        opcode: Opcode.Error,
+        payload: [1, sourceOpcode, 1200, false, 'error'],
+      });
+      if (allowed.has(sourceOpcode)) expect(action).not.toThrow();
+      else expectProtocolError(action, 'invalid_frame');
+    }
+
+    expect(() => encodeFrame({
+      opcode: Opcode.Error,
+      payload: [0, 0, 1200, false, 'error'],
+    })).not.toThrow();
+    expectProtocolError(() => encodeFrame({
+      opcode: Opcode.Error,
+      payload: [1, 0, 1200, false, 'error'],
+    }), 'invalid_frame');
   });
 });

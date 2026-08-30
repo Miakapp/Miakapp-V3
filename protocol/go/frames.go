@@ -61,6 +61,11 @@ const (
 	MaxCallTimeoutMS            = 300_000
 )
 
+const (
+	applicationErrorCodeMinimum int64 = 2000
+	applicationErrorCodeMaximum int64 = 2999
+)
+
 var coordinatorNamePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`)
 
 type Frame struct {
@@ -79,6 +84,44 @@ func knownCoreOpcode(opcode byte) bool {
 	case opcode >= OpcodeFunctionSync && opcode <= OpcodeCallCredit:
 		return true
 	case opcode >= OpcodePresenceSnapshot && opcode <= OpcodePresenceChange:
+		return true
+	default:
+		return false
+	}
+}
+
+func errorCorrelationSourceOpcode(opcode byte) bool {
+	switch opcode {
+	case OpcodeReauth,
+		OpcodeStateSync,
+		OpcodeStateSet,
+		OpcodeStateACLSync,
+		OpcodeStateResync,
+		OpcodeEventSync,
+		OpcodeEventACLSync,
+		OpcodeSubscribe,
+		OpcodeUnsubscribe,
+		OpcodeEvent,
+		OpcodeFunctionSync,
+		OpcodeCall,
+		OpcodeCallResult,
+		OpcodeCallError,
+		OpcodeCallCancel,
+		OpcodeCallCredit:
+		return true
+	default:
+		return false
+	}
+}
+
+func knownCoreErrorCode(code int64) bool {
+	switch code {
+	case 1000, 1001, 1002, 1003, 1004, 1005,
+		1100, 1101, 1102,
+		1200, 1201, 1202, 1203,
+		1300, 1301, 1302, 1303, 1304, 1305,
+		1400, 1401, 1402, 1403, 1404, 1405,
+		1500:
 		return true
 	default:
 		return false
@@ -155,6 +198,50 @@ func integer(value any, minimum, maximum int64, label string) (int64, error) {
 		return 0, protocolError(ErrInvalidFrame, "%s must be an integer in range", label)
 	}
 	return number, nil
+}
+
+func coreErrorCode(value any, label string) (int64, error) {
+	code, err := integer(value, 1, 0xffff, label)
+	if err != nil {
+		return 0, err
+	}
+	if !knownCoreErrorCode(code) {
+		return 0, protocolError(ErrInvalidFrame, "%s is not a known core error code", label)
+	}
+	return code, nil
+}
+
+func callErrorCode(value any, label string) (int64, error) {
+	code, err := integer(value, 1, 0xffff, label)
+	if err != nil {
+		return 0, err
+	}
+	isApplicationCode := code >= applicationErrorCodeMinimum && code <= applicationErrorCodeMaximum
+	if !knownCoreErrorCode(code) && !isApplicationCode {
+		return 0, protocolError(ErrInvalidFrame, "%s is not a permitted call error code", label)
+	}
+	return code, nil
+}
+
+func errorCorrelation(correlationValue, sourceOpcodeValue any) error {
+	correlationID, err := integer(correlationValue, 0, maxSafeInteger, "ERROR.correlationId")
+	if err != nil {
+		return err
+	}
+	sourceOpcode, err := integer(sourceOpcodeValue, 0, 0xff, "ERROR.sourceOpcode")
+	if err != nil {
+		return err
+	}
+	if correlationID == 0 {
+		if sourceOpcode != 0 {
+			return protocolError(ErrInvalidFrame, "ERROR.sourceOpcode must be zero without an origin")
+		}
+		return nil
+	}
+	if !errorCorrelationSourceOpcode(byte(sourceOpcode)) {
+		return protocolError(ErrInvalidFrame, "ERROR.sourceOpcode is not an originating frame")
+	}
+	return nil
 }
 
 func positiveID(value any, label string) (int64, error) {
@@ -539,13 +626,10 @@ func validateFrame(frame Frame) error {
 		if err != nil {
 			return err
 		}
-		if _, err = integer(fields[0], 0, maxSafeInteger, "ERROR.requestId"); err != nil {
+		if err = errorCorrelation(fields[0], fields[1]); err != nil {
 			return err
 		}
-		if _, err = integer(fields[1], 0, 0xff, "ERROR.sourceOpcode"); err != nil {
-			return err
-		}
-		if _, err = integer(fields[2], 1, 0xffff, "ERROR.code"); err != nil {
+		if _, err = coreErrorCode(fields[2], "ERROR.code"); err != nil {
 			return err
 		}
 		if err = booleanValue(fields[3], "ERROR.retryable"); err != nil {
@@ -562,7 +646,7 @@ func validateFrame(frame Frame) error {
 		if _, err = integer(fields[0], 0, 0xff, "FATAL.sourceOpcode"); err != nil {
 			return err
 		}
-		if _, err = integer(fields[1], 1, 0xffff, "FATAL.code"); err != nil {
+		if _, err = coreErrorCode(fields[1], "FATAL.code"); err != nil {
 			return err
 		}
 		if err = booleanValue(fields[2], "FATAL.retryable"); err != nil {
@@ -857,7 +941,7 @@ func validateFrame(frame Frame) error {
 		if _, err = positiveID(fields[0], "CALL_ERROR.callId"); err != nil {
 			return err
 		}
-		if _, err = integer(fields[1], 1, 0xffff, "CALL_ERROR.code"); err != nil {
+		if _, err = callErrorCode(fields[1], "CALL_ERROR.code"); err != nil {
 			return err
 		}
 		if err = booleanValue(fields[2], "CALL_ERROR.retryable"); err != nil {
