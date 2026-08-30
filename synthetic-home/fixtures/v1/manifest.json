@@ -1,0 +1,32 @@
+{
+  "schema": "miakapp.synthetic-home-manifest/1",
+  "fixture_version": 1,
+  "corpus_id": "syn_reference_oracle_v1",
+  "seed": 20420405,
+  "clock": {
+    "start": "2042-04-05T06:00:00Z",
+    "timezone": "UTC"
+  },
+  "provenance": {
+    "kind": "hand_authored_synthetic",
+    "derived_from_export": false,
+    "contains_production_data": false,
+    "human_review_required": true
+  },
+  "files": {
+    "home": "home.json",
+    "scenarios": "scenarios.json"
+  },
+  "required_coverage": [
+    "bootstrap",
+    "persisted_context",
+    "sensor_automation",
+    "authorization",
+    "concurrent_action",
+    "climate_control",
+    "energy_schedule",
+    "notification",
+    "reconnect",
+    "outcome_unknown"
+  ]
+}
