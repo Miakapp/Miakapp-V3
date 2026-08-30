@@ -1,0 +1,230 @@
+{
+  "schema": "miakapp.synthetic-home/1",
+  "home_id": "syn_home_aster",
+  "actors": [
+    {
+      "id": "syn_actor_owner",
+      "role": "owner",
+      "groups": ["syn_group_control", "syn_group_climate", "syn_group_observe"],
+      "notifications_enabled": true
+    },
+    {
+      "id": "syn_actor_resident",
+      "role": "resident",
+      "groups": ["syn_group_control", "syn_group_climate", "syn_group_observe"],
+      "notifications_enabled": true
+    },
+    {
+      "id": "syn_actor_guest",
+      "role": "guest",
+      "groups": ["syn_group_observe"],
+      "notifications_enabled": false
+    }
+  ],
+  "groups": [
+    { "id": "syn_group_control" },
+    { "id": "syn_group_climate" },
+    { "id": "syn_group_observe" }
+  ],
+  "zones": [
+    { "id": "syn_zone_alpha" },
+    { "id": "syn_zone_beta" },
+    { "id": "syn_zone_gamma" }
+  ],
+  "devices": [
+    {
+      "id": "syn_contact_alpha",
+      "zone_id": "syn_zone_alpha",
+      "kind": "sensor.contact",
+      "capabilities": ["sensor.open", "battery.level"]
+    },
+    {
+      "id": "syn_occupancy_alpha",
+      "zone_id": "syn_zone_alpha",
+      "kind": "sensor.occupancy",
+      "capabilities": ["sensor.occupied", "battery.level"]
+    },
+    {
+      "id": "syn_light_alpha",
+      "zone_id": "syn_zone_alpha",
+      "kind": "actuator.light",
+      "capabilities": ["light.power"]
+    },
+    {
+      "id": "syn_barrier_beta",
+      "zone_id": "syn_zone_beta",
+      "kind": "actuator.barrier",
+      "capabilities": ["barrier.motion", "barrier.position"]
+    },
+    {
+      "id": "syn_media_beta",
+      "zone_id": "syn_zone_beta",
+      "kind": "sensor.media",
+      "capabilities": ["media.snapshot"]
+    },
+    {
+      "id": "syn_thermostat_gamma",
+      "zone_id": "syn_zone_gamma",
+      "kind": "actuator.thermostat",
+      "capabilities": ["climate.mode", "climate.setpoint", "climate.temperature"]
+    },
+    {
+      "id": "syn_meter_gamma",
+      "zone_id": "syn_zone_gamma",
+      "kind": "sensor.energy",
+      "capabilities": ["energy.power", "energy.total", "energy.tariff"]
+    },
+    {
+      "id": "syn_service_alpha",
+      "zone_id": "syn_zone_alpha",
+      "kind": "service.monitor",
+      "capabilities": ["service.health", "service.restart"]
+    }
+  ],
+  "state_paths": [
+    { "path": "system.connection.status", "value_type": "string", "persistence": "ephemeral", "writable": false },
+    { "path": "system.clock.iso", "value_type": "string", "persistence": "ephemeral", "writable": false },
+    { "path": "system.snapshot.revision", "value_type": "number", "persistence": "ephemeral", "writable": false },
+    { "path": "zone.alpha.contact.open", "value_type": "boolean", "persistence": "ephemeral", "writable": false },
+    { "path": "zone.alpha.occupancy.active", "value_type": "boolean", "persistence": "ephemeral", "writable": false },
+    { "path": "zone.alpha.light.on", "value_type": "boolean", "persistence": "persisted", "writable": true },
+    { "path": "access.barrier.phase", "value_type": "string", "persistence": "persisted", "writable": false },
+    { "path": "access.barrier.position", "value_type": "number", "persistence": "persisted", "writable": false },
+    { "path": "access.barrier.mode", "value_type": "string", "persistence": "persisted", "writable": true },
+    { "path": "climate.zone_gamma.mode", "value_type": "string", "persistence": "persisted", "writable": true },
+    { "path": "climate.zone_gamma.setpoint", "value_type": "number", "persistence": "persisted", "writable": true },
+    { "path": "climate.zone_gamma.temperature", "value_type": "number", "persistence": "ephemeral", "writable": false },
+    { "path": "energy.grid.power_w", "value_type": "number", "persistence": "ephemeral", "writable": false },
+    { "path": "energy.grid.total_kwh", "value_type": "number", "persistence": "persisted", "writable": false },
+    { "path": "energy.tariff.period", "value_type": "string", "persistence": "persisted", "writable": false },
+    { "path": "energy.tariff.unit_price", "value_type": "number", "persistence": "persisted", "writable": false },
+    { "path": "device.contact_alpha.battery_percent", "value_type": "number", "persistence": "persisted", "writable": false },
+    { "path": "service.coordinator.health", "value_type": "string", "persistence": "ephemeral", "writable": false },
+    { "path": "service.coordinator.last_restart", "value_type": "string", "persistence": "persisted", "writable": false },
+    { "path": "notifications.low_battery.sent", "value_type": "boolean", "persistence": "persisted", "writable": false },
+    { "path": "automation.entry_light.activations", "value_type": "number", "persistence": "persisted", "writable": false },
+    { "path": "operations.barrier.status", "value_type": "string", "persistence": "ephemeral", "writable": false },
+    { "path": "operations.climate.status", "value_type": "string", "persistence": "ephemeral", "writable": false }
+  ],
+  "actions": [
+    {
+      "id": "syn_action_light_toggle",
+      "type": "click",
+      "element_id": "syn_element_light_toggle",
+      "name": "lighting.toggle",
+      "allowed_groups": ["syn_group_control"],
+      "idempotency": "non_idempotent"
+    },
+    {
+      "id": "syn_action_barrier_toggle",
+      "type": "click",
+      "element_id": "syn_element_barrier_toggle",
+      "name": "access.barrier.toggle",
+      "allowed_groups": ["syn_group_control"],
+      "idempotency": "non_idempotent"
+    },
+    {
+      "id": "syn_action_barrier_mode",
+      "type": "input",
+      "element_id": "syn_element_barrier_mode",
+      "name": "access.barrier.mode",
+      "allowed_groups": ["syn_group_control"],
+      "idempotency": "idempotent",
+      "value_type": "string"
+    },
+    {
+      "id": "syn_action_climate_setpoint",
+      "type": "input",
+      "element_id": "syn_element_climate_setpoint",
+      "name": "climate.setpoint",
+      "allowed_groups": ["syn_group_climate"],
+      "idempotency": "idempotent",
+      "value_type": "number"
+    },
+    {
+      "id": "syn_action_climate_mode",
+      "type": "input",
+      "element_id": "syn_element_climate_mode",
+      "name": "climate.mode",
+      "allowed_groups": ["syn_group_climate"],
+      "idempotency": "idempotent",
+      "value_type": "string"
+    },
+    {
+      "id": "syn_action_service_restart",
+      "type": "click",
+      "element_id": "syn_element_service_restart",
+      "name": "service.restart",
+      "allowed_groups": ["syn_group_control"],
+      "idempotency": "non_idempotent"
+    }
+  ],
+  "events": [
+    { "name": "contact.alpha.changed", "value_type": "boolean" },
+    { "name": "occupancy.alpha.changed", "value_type": "boolean" },
+    { "name": "barrier.beta.phase", "value_type": "string" },
+    { "name": "climate.gamma.temperature", "value_type": "number" },
+    { "name": "energy.grid.sample", "value_type": "object" },
+    { "name": "battery.contact_alpha.level", "value_type": "number" },
+    { "name": "tariff.period.changed", "value_type": "string" }
+  ],
+  "notification_contract": {
+    "required_fields": ["title", "body"],
+    "optional_fields": ["tag", "image"],
+    "audience": "group_filtered",
+    "delivery": "intent_only"
+  },
+  "lifecycle_signals": ["ready", "disconnect", "reconnect", "no_coordinator"],
+  "initial_state": {
+    "system.connection.status": "connected",
+    "system.clock.iso": "2042-04-05T06:00:00Z",
+    "system.snapshot.revision": 1,
+    "zone.alpha.contact.open": false,
+    "zone.alpha.occupancy.active": false,
+    "zone.alpha.light.on": false,
+    "access.barrier.phase": "closed",
+    "access.barrier.position": 0,
+    "access.barrier.mode": "standard",
+    "climate.zone_gamma.mode": "heat",
+    "climate.zone_gamma.setpoint": 20,
+    "climate.zone_gamma.temperature": 19.5,
+    "energy.grid.power_w": 350,
+    "energy.grid.total_kwh": 1200,
+    "energy.tariff.period": "off_peak",
+    "energy.tariff.unit_price": 0.14,
+    "device.contact_alpha.battery_percent": 80,
+    "service.coordinator.health": "healthy",
+    "service.coordinator.last_restart": "2042-04-01T08:00:00Z",
+    "notifications.low_battery.sent": false,
+    "automation.entry_light.activations": 4,
+    "operations.barrier.status": "idle",
+    "operations.climate.status": "idle"
+  },
+  "initial_context": {
+    "global": {
+      "tariff.period": "off_peak",
+      "tariff.unit_price": 0.14,
+      "notifications.low_battery_sent": false,
+      "system.snapshot_revision": 1
+    },
+    "flows": {
+      "syn_flow_entry": {
+        "entry.activation_count": 4,
+        "entry.last_contact_open": false
+      },
+      "syn_flow_barrier": {
+        "barrier.phase": "closed",
+        "barrier.busy": false,
+        "barrier.last_operation": null
+      },
+      "syn_flow_climate": {
+        "climate.schedule_enabled": true,
+        "climate.setpoint": 20
+      },
+      "syn_flow_energy": {
+        "energy.period": "off_peak",
+        "energy.unit_price": 0.14
+      }
+    }
+  }
+}
