@@ -9,7 +9,8 @@
     "publish": "firebase deploy --only hosting",
     "deploy": "npm run build && npm run publish",
     "deployRules": "firebase deploy --only firestore:rules",
-    "test:protocol": "./protocol/check.sh"
+    "test:protocol": "./protocol/check.sh",
+    "test:runtime": "./component-runtime/check.sh"
   },
   "dependencies": {
     "codemirror": "^5.61.1",
