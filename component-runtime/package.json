@@ -1,0 +1,23 @@
+{
+  "name": "@miakapp/component-runtime-contract",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test:unit": "bun test test/contract.test.ts",
+    "test:browser": "playwright test",
+    "check": "bun run typecheck && bun run test:unit && bun run test:browser",
+    "serve:test": "bun run test/server.ts"
+  },
+  "dependencies": {
+    "acorn": "8.18.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "@types/bun": "1.4.0",
+    "@types/node": "26.4.0",
+    "esbuild": "0.28.2",
+    "typescript": "7.0.2"
+  }
+}
