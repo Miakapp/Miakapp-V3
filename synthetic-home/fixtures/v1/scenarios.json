@@ -1,0 +1,484 @@
+{
+  "schema": "miakapp.synthetic-home-scenarios/1",
+  "home_id": "syn_home_aster",
+  "scenarios": [
+    {
+      "id": "syn_scenario_bootstrap",
+      "description": "A ready signal rebuilds published state from fictional persisted context without device actuation.",
+      "coverage": ["bootstrap", "persisted_context"],
+      "setup": {
+        "connection": "connected",
+        "state": {},
+        "context": {
+          "global": {},
+          "flows": {
+            "syn_flow_entry": {
+              "entry.activation_count": 7
+            }
+          }
+        }
+      },
+      "stimuli": [
+        { "kind": "lifecycle", "signal": "ready" }
+      ],
+      "expected": {
+        "state_patch": {
+          "system.snapshot.revision": 2,
+          "automation.entry_light.activations": 7
+        },
+        "context_patch": {
+          "global": { "system.snapshot_revision": 2 },
+          "flows": {}
+        },
+        "recorded_commands": [],
+        "notification_intents": [],
+        "lifecycle": [
+          { "signal": "ready" }
+        ],
+        "operations": [],
+        "unchanged_paths": [
+          "access.barrier.phase",
+          "climate.zone_gamma.setpoint",
+          "energy.grid.total_kwh"
+        ]
+      }
+    },
+    {
+      "id": "syn_scenario_entry_automation",
+      "description": "Synthetic contact and occupancy events activate a light and update a persisted counter.",
+      "coverage": ["sensor_automation", "persisted_context"],
+      "setup": {
+        "connection": "connected",
+        "state": {},
+        "context": { "global": {}, "flows": {} }
+      },
+      "stimuli": [
+        { "kind": "event", "name": "contact.alpha.changed", "value": true },
+        { "kind": "event", "name": "occupancy.alpha.changed", "value": true }
+      ],
+      "expected": {
+        "state_patch": {
+          "zone.alpha.contact.open": true,
+          "zone.alpha.occupancy.active": true,
+          "zone.alpha.light.on": true,
+          "automation.entry_light.activations": 5
+        },
+        "context_patch": {
+          "global": {},
+          "flows": {
+            "syn_flow_entry": {
+              "entry.activation_count": 5,
+              "entry.last_contact_open": true
+            }
+          }
+        },
+        "recorded_commands": [
+          {
+            "target_id": "syn_light_alpha",
+            "name": "light.power",
+            "value": true,
+            "cause": { "kind": "stimulus", "stimulus_index": 1 }
+          }
+        ],
+        "notification_intents": [],
+        "lifecycle": [],
+        "operations": [],
+        "unchanged_paths": [
+          "access.barrier.phase",
+          "climate.zone_gamma.mode",
+          "energy.tariff.period"
+        ]
+      }
+    },
+    {
+      "id": "syn_scenario_action_denied",
+      "description": "A fictional observer without the control group cannot invoke a protected action.",
+      "coverage": ["authorization"],
+      "setup": {
+        "connection": "connected",
+        "state": {},
+        "context": { "global": {}, "flows": {} }
+      },
+      "stimuli": [
+        {
+          "kind": "action",
+          "operation_id": "syn_op_denied",
+          "actor_id": "syn_actor_guest",
+          "action_id": "syn_action_barrier_toggle",
+          "type": "click",
+          "element_id": "syn_element_barrier_toggle",
+          "name": "access.barrier.toggle"
+        }
+      ],
+      "expected": {
+        "state_patch": {},
+        "context_patch": { "global": {}, "flows": {} },
+        "recorded_commands": [],
+        "notification_intents": [],
+        "lifecycle": [],
+        "operations": [
+          { "operation_id": "syn_op_denied", "status": "denied", "reason": "group_not_allowed" }
+        ],
+        "unchanged_paths": [
+          "access.barrier.phase",
+          "access.barrier.position",
+          "access.barrier.mode"
+        ]
+      }
+    },
+    {
+      "id": "syn_scenario_barrier_busy",
+      "description": "A second authorized barrier action is rejected while the fictional actuator is already moving.",
+      "coverage": ["concurrent_action", "authorization"],
+      "setup": {
+        "connection": "connected",
+        "state": {
+          "access.barrier.phase": "opening",
+          "access.barrier.position": 40,
+          "operations.barrier.status": "pending"
+        },
+        "context": {
+          "global": {},
+          "flows": {
+            "syn_flow_barrier": {
+              "barrier.phase": "opening",
+              "barrier.busy": true
+            }
+          }
+        }
+      },
+      "stimuli": [
+        {
+          "kind": "action",
+          "operation_id": "syn_op_barrier_busy",
+          "actor_id": "syn_actor_owner",
+          "action_id": "syn_action_barrier_toggle",
+          "type": "click",
+          "element_id": "syn_element_barrier_toggle",
+          "name": "access.barrier.toggle"
+        }
+      ],
+      "expected": {
+        "state_patch": {},
+        "context_patch": { "global": {}, "flows": {} },
+        "recorded_commands": [],
+        "notification_intents": [],
+        "lifecycle": [],
+        "operations": [
+          { "operation_id": "syn_op_barrier_busy", "status": "denied", "reason": "device_busy" }
+        ],
+        "unchanged_paths": [
+          "access.barrier.phase",
+          "access.barrier.position",
+          "operations.barrier.status"
+        ]
+      }
+    },
+    {
+      "id": "syn_scenario_barrier_complete",
+      "description": "An authorized barrier action records one command and reaches a terminal state after synthetic feedback.",
+      "coverage": ["authorization", "notification"],
+      "setup": {
+        "connection": "connected",
+        "state": {},
+        "context": { "global": {}, "flows": {} }
+      },
+      "stimuli": [
+        {
+          "kind": "action",
+          "operation_id": "syn_op_barrier_open",
+          "actor_id": "syn_actor_owner",
+          "action_id": "syn_action_barrier_toggle",
+          "type": "click",
+          "element_id": "syn_element_barrier_toggle",
+          "name": "access.barrier.toggle"
+        },
+        { "kind": "event", "name": "barrier.beta.phase", "value": "opening" },
+        { "kind": "event", "name": "barrier.beta.phase", "value": "open" }
+      ],
+      "expected": {
+        "state_patch": {
+          "access.barrier.phase": "open",
+          "access.barrier.position": 100,
+          "operations.barrier.status": "applied"
+        },
+        "context_patch": {
+          "global": {},
+          "flows": {
+            "syn_flow_barrier": {
+              "barrier.phase": "open",
+              "barrier.busy": false,
+              "barrier.last_operation": "syn_op_barrier_open"
+            }
+          }
+        },
+        "recorded_commands": [
+          {
+            "target_id": "syn_barrier_beta",
+            "name": "barrier.motion",
+            "value": "open",
+            "cause": { "kind": "operation", "operation_id": "syn_op_barrier_open" }
+          }
+        ],
+        "notification_intents": [
+          {
+            "title": "Synthetic barrier update",
+            "body": "The fictional barrier reached its requested position.",
+            "tag": "syn_barrier_complete",
+            "image": "https://media.synthetic.test/fixtures/barrier-complete.png",
+            "audience": { "groups": ["syn_group_control"], "actors": [] }
+          }
+        ],
+        "lifecycle": [],
+        "operations": [
+          { "operation_id": "syn_op_barrier_open", "status": "accepted" },
+          { "operation_id": "syn_op_barrier_open", "status": "applied" }
+        ],
+        "unchanged_paths": [
+          "climate.zone_gamma.setpoint",
+          "energy.grid.total_kwh"
+        ]
+      }
+    },
+    {
+      "id": "syn_scenario_climate_setpoint",
+      "description": "A permitted numeric input updates fictional climate state and its persisted schedule context.",
+      "coverage": ["climate_control", "persisted_context", "authorization"],
+      "setup": {
+        "connection": "connected",
+        "state": {},
+        "context": { "global": {}, "flows": {} }
+      },
+      "stimuli": [
+        { "kind": "event", "name": "climate.gamma.temperature", "value": 19.8 },
+        {
+          "kind": "action",
+          "operation_id": "syn_op_climate_setpoint",
+          "actor_id": "syn_actor_resident",
+          "action_id": "syn_action_climate_setpoint",
+          "type": "input",
+          "element_id": "syn_element_climate_setpoint",
+          "name": "climate.setpoint",
+          "value": 21.5
+        }
+      ],
+      "expected": {
+        "state_patch": {
+          "climate.zone_gamma.temperature": 19.8,
+          "climate.zone_gamma.setpoint": 21.5,
+          "operations.climate.status": "applied"
+        },
+        "context_patch": {
+          "global": {},
+          "flows": {
+            "syn_flow_climate": { "climate.setpoint": 21.5 }
+          }
+        },
+        "recorded_commands": [
+          {
+            "target_id": "syn_thermostat_gamma",
+            "name": "climate.setpoint",
+            "value": 21.5,
+            "cause": { "kind": "operation", "operation_id": "syn_op_climate_setpoint" }
+          }
+        ],
+        "notification_intents": [],
+        "lifecycle": [],
+        "operations": [
+          { "operation_id": "syn_op_climate_setpoint", "status": "accepted" },
+          { "operation_id": "syn_op_climate_setpoint", "status": "applied" }
+        ],
+        "unchanged_paths": [
+          "climate.zone_gamma.mode",
+          "access.barrier.phase",
+          "energy.tariff.period"
+        ]
+      }
+    },
+    {
+      "id": "syn_scenario_energy_period",
+      "description": "A fixed synthetic timer and telemetry sample change an energy period and emit a notification intent.",
+      "coverage": ["energy_schedule", "notification", "persisted_context"],
+      "setup": {
+        "connection": "connected",
+        "state": {},
+        "context": { "global": {}, "flows": {} }
+      },
+      "stimuli": [
+        {
+          "kind": "event",
+          "name": "energy.grid.sample",
+          "value": { "power_w": 780, "total_kwh": 1200.4 }
+        },
+        { "kind": "timer", "name": "tariff.schedule.advance", "at": "2042-04-05T07:00:00Z" },
+        { "kind": "event", "name": "tariff.period.changed", "value": "peak" }
+      ],
+      "expected": {
+        "state_patch": {
+          "system.clock.iso": "2042-04-05T07:00:00Z",
+          "energy.grid.power_w": 780,
+          "energy.grid.total_kwh": 1200.4,
+          "energy.tariff.period": "peak",
+          "energy.tariff.unit_price": 0.31
+        },
+        "context_patch": {
+          "global": {
+            "tariff.period": "peak",
+            "tariff.unit_price": 0.31
+          },
+          "flows": {
+            "syn_flow_energy": {
+              "energy.period": "peak",
+              "energy.unit_price": 0.31
+            }
+          }
+        },
+        "recorded_commands": [],
+        "notification_intents": [
+          {
+            "title": "Synthetic tariff period",
+            "body": "The fictional energy schedule entered its peak period.",
+            "tag": "syn_tariff_period",
+            "audience": { "groups": ["syn_group_observe"], "actors": [] }
+          }
+        ],
+        "lifecycle": [],
+        "operations": [],
+        "unchanged_paths": [
+          "access.barrier.phase",
+          "climate.zone_gamma.setpoint"
+        ]
+      }
+    },
+    {
+      "id": "syn_scenario_low_battery",
+      "description": "A fictional low-battery event emits one tagged intent and persists its deduplication state.",
+      "coverage": ["notification", "persisted_context"],
+      "setup": {
+        "connection": "connected",
+        "state": {},
+        "context": { "global": {}, "flows": {} }
+      },
+      "stimuli": [
+        { "kind": "event", "name": "battery.contact_alpha.level", "value": 9 }
+      ],
+      "expected": {
+        "state_patch": {
+          "device.contact_alpha.battery_percent": 9,
+          "notifications.low_battery.sent": true
+        },
+        "context_patch": {
+          "global": { "notifications.low_battery_sent": true },
+          "flows": {}
+        },
+        "recorded_commands": [],
+        "notification_intents": [
+          {
+            "title": "Synthetic battery warning",
+            "body": "A fictional contact sensor reported a low battery.",
+            "tag": "syn_low_battery_contact",
+            "audience": { "groups": ["syn_group_control"], "actors": [] }
+          }
+        ],
+        "lifecycle": [],
+        "operations": [],
+        "unchanged_paths": [
+          "zone.alpha.contact.open",
+          "zone.alpha.light.on",
+          "access.barrier.phase"
+        ]
+      }
+    },
+    {
+      "id": "syn_scenario_reconnect",
+      "description": "A reconnect followed by ready restores service health and emits a fresh snapshot without actuation.",
+      "coverage": ["reconnect", "bootstrap"],
+      "setup": {
+        "connection": "disconnected",
+        "state": {
+          "system.connection.status": "disconnected",
+          "service.coordinator.health": "unavailable"
+        },
+        "context": { "global": {}, "flows": {} }
+      },
+      "stimuli": [
+        { "kind": "lifecycle", "signal": "reconnect" },
+        { "kind": "lifecycle", "signal": "ready" }
+      ],
+      "expected": {
+        "state_patch": {
+          "system.connection.status": "connected",
+          "service.coordinator.health": "healthy",
+          "system.snapshot.revision": 2
+        },
+        "context_patch": {
+          "global": { "system.snapshot_revision": 2 },
+          "flows": {}
+        },
+        "recorded_commands": [],
+        "notification_intents": [],
+        "lifecycle": [
+          { "signal": "reconnect" },
+          { "signal": "ready" }
+        ],
+        "operations": [],
+        "unchanged_paths": [
+          "zone.alpha.light.on",
+          "access.barrier.phase",
+          "climate.zone_gamma.setpoint",
+          "energy.grid.total_kwh"
+        ]
+      }
+    },
+    {
+      "id": "syn_scenario_outcome_unknown",
+      "description": "A disconnect after dispatch leaves a non-idempotent synthetic restart outcome unknown and prevents an automatic retry.",
+      "coverage": ["outcome_unknown", "reconnect"],
+      "setup": {
+        "connection": "connected",
+        "state": {},
+        "context": { "global": {}, "flows": {} }
+      },
+      "stimuli": [
+        {
+          "kind": "action",
+          "operation_id": "syn_op_service_restart",
+          "actor_id": "syn_actor_owner",
+          "action_id": "syn_action_service_restart",
+          "type": "click",
+          "element_id": "syn_element_service_restart",
+          "name": "service.restart"
+        },
+        { "kind": "lifecycle", "signal": "disconnect" }
+      ],
+      "expected": {
+        "state_patch": {
+          "system.connection.status": "disconnected",
+          "service.coordinator.health": "unknown"
+        },
+        "context_patch": { "global": {}, "flows": {} },
+        "recorded_commands": [
+          {
+            "target_id": "syn_service_alpha",
+            "name": "service.restart",
+            "value": true,
+            "cause": { "kind": "operation", "operation_id": "syn_op_service_restart" }
+          }
+        ],
+        "notification_intents": [],
+        "lifecycle": [
+          { "signal": "disconnect", "reason": "transport_closed_after_dispatch" }
+        ],
+        "operations": [
+          { "operation_id": "syn_op_service_restart", "status": "accepted" },
+          { "operation_id": "syn_op_service_restart", "status": "outcome_unknown", "reason": "transport_closed_after_dispatch" }
+        ],
+        "unchanged_paths": [
+          "service.coordinator.last_restart",
+          "access.barrier.phase",
+          "climate.zone_gamma.setpoint"
+        ]
+      }
+    }
+  ]
+}
