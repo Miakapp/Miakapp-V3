@@ -4,3 +4,4 @@ package-lock.json
 .firebase
 component-runtime/test-results/
 component-runtime/playwright-report/
+synthetic-home/dist/
