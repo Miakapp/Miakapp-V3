@@ -81,6 +81,34 @@ assert.equal(
   '{"schema":"miakapp.coordinator-contract/1","scenarios":14,"status":"conformant"}\n',
 );
 
+for (const [profile, scenarios] of [['sdk', 11], ['migration', 3]]) {
+  const result = spawnSync(
+    process.execPath,
+    [checker, '--profile', profile, isolatedSubject],
+    {
+      cwd: contractRoot,
+      encoding: 'utf8',
+      env: process.env,
+      killSignal: 'SIGKILL',
+      timeout: 5_000,
+    },
+  );
+  if (result.error !== undefined) throw result.error;
+  assert.equal(result.status, 0, profile);
+  assert.equal(result.signal, null, profile);
+  assert.equal(result.stderr, '', profile);
+  assert.equal(
+    result.stdout,
+    `${JSON.stringify({
+      schema: 'miakapp.coordinator-contract/1',
+      profile,
+      scenarios,
+      status: 'conformant',
+    })}\n`,
+    profile,
+  );
+}
+
 for (const [attack, expectedError] of [
   ['invalid_response', 'External subject worker sent an invalid response'],
   ['oversized_response', 'Worker protocol frame must contain 1 to 4194304 bytes'],

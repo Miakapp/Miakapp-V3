@@ -13,10 +13,16 @@ import { readFrames, writeFrame } from './framed-channel.mjs';
 const ERROR_NAME = /^[A-Za-z][A-Za-z0-9]{0,63}$/;
 const UNSAFE_ERROR_CHARACTER = /[\p{Cc}\p{Cs}]/u;
 const UTF8 = new TextEncoder();
+const CONTRACT_PROFILES = new Set(['sdk', 'migration', 'all']);
 
-const [subjectPath, ...extraArguments] = process.argv.slice(2);
-if (subjectPath === undefined || extraArguments.length > 0) {
-  throw new Error('Usage: run-subject.mjs <absolute-or-relative-subject-module>');
+const [profileFlag, profile, subjectPath, ...extraArguments] = process.argv.slice(2);
+if (profileFlag !== '--profile'
+  || !CONTRACT_PROFILES.has(profile)
+  || subjectPath === undefined
+  || extraArguments.length > 0) {
+  throw new Error(
+    'Usage: run-subject.mjs --profile sdk|migration|all <absolute-or-relative-subject-module>',
+  );
 }
 
 const send = process.send?.bind(process);
@@ -268,10 +274,11 @@ try {
     },
   };
 
-  const results = await replayContractCorpus(corpus, processBoundedSubject);
+  const results = await replayContractCorpus(corpus, processBoundedSubject, { profile });
   terminateSubjectWorker();
   process.stdout.write(`${JSON.stringify({
     schema: corpus.schema,
+    ...(profile === 'all' ? {} : { profile }),
     scenarios: results.length,
     status: 'conformant',
   })}\n`);

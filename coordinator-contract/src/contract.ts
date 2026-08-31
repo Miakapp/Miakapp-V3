@@ -24,7 +24,7 @@ const CONTRACT_ID = /^sdk_[a-z][a-z0-9_]{0,62}$/;
 const ERROR_CODE = /^[a-z][a-z0-9_]{0,62}$/;
 const FORBIDDEN_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
 
-export const CONTRACT_COVERAGE = Object.freeze([
+export const SDK_CONTRACT_COVERAGE = Object.freeze([
   'inert_construction',
   'startup_barrier',
   'atomic_declaration_activation',
@@ -38,12 +38,21 @@ export const CONTRACT_COVERAGE = Object.freeze([
   'call_streaming',
   'call_cancellation',
   'presence_cleanup',
+] as const);
+
+export const MIGRATION_CONTRACT_COVERAGE = Object.freeze([
   'shadow_state',
   'recorded_effects',
   'unclassified_effect',
 ] as const);
 
+export const CONTRACT_COVERAGE = Object.freeze([
+  ...SDK_CONTRACT_COVERAGE,
+  ...MIGRATION_CONTRACT_COVERAGE,
+] as const);
+
 export type ContractCoverage = (typeof CONTRACT_COVERAGE)[number];
+export type ContractProfile = 'sdk' | 'migration' | 'all';
 
 export const DECLARATION_ORDER = Object.freeze([
   'state',
@@ -2134,6 +2143,32 @@ export function validateCoordinatorContractCorpus(value: unknown): CoordinatorCo
     required_coverage: requiredCoverage,
     scenarios,
   };
+}
+
+export function selectCoordinatorContractScenarios(
+  corpus: CoordinatorContractCorpus,
+  profile: ContractProfile,
+): CoordinatorContractScenario[] {
+  if (profile !== 'sdk' && profile !== 'migration' && profile !== 'all') {
+    fail('invalid_profile', 'contract profile must be sdk, migration, or all');
+  }
+  const scenarios = profile === 'all'
+    ? corpus.scenarios
+    : corpus.scenarios.filter(({ setup }) => (
+      profile === 'sdk' ? setup.mode === 'sdk' : setup.mode !== 'sdk'
+    ));
+  const requiredCoverage: readonly ContractCoverage[] = profile === 'sdk'
+    ? SDK_CONTRACT_COVERAGE
+    : profile === 'migration'
+      ? MIGRATION_CONTRACT_COVERAGE
+      : corpus.required_coverage;
+  const covered = new Set(scenarios.flatMap(({ coverage }) => coverage));
+  for (const coverage of requiredCoverage) {
+    if (!covered.has(coverage)) {
+      fail('missing_coverage', `${profile} contract profile does not cover ${coverage}`);
+    }
+  }
+  return scenarios;
 }
 
 export function validateContractObservation(
