@@ -10,7 +10,10 @@ import {
   CONTRACT_LIMITS,
   ContractViolation,
   DECLARATION_ORDER,
+  MIGRATION_CONTRACT_COVERAGE,
+  SDK_CONTRACT_COVERAGE,
   loadCoordinatorContractCorpus,
+  selectCoordinatorContractScenarios,
   validateContractObservation,
   validateCoordinatorContractCorpus,
 } from '../src/index.js';
@@ -30,6 +33,35 @@ describe('coordinator contract corpus', () => {
     expect([...corpus.required_coverage].sort()).toEqual([...CONTRACT_COVERAGE].sort());
     const covered = new Set(corpus.scenarios.flatMap(({ coverage }) => coverage));
     expect([...covered].sort()).toEqual([...CONTRACT_COVERAGE].sort());
+  });
+
+  test('separates complete SDK and migration conformance profiles', () => {
+    const sdkScenarios = selectCoordinatorContractScenarios(corpus, 'sdk');
+    expect(sdkScenarios).toHaveLength(11);
+    expect(sdkScenarios.every(({ setup }) => setup.mode === 'sdk')).toBe(true);
+    expect([...new Set(sdkScenarios.flatMap(({ coverage }) => coverage))].sort())
+      .toEqual([...SDK_CONTRACT_COVERAGE].sort());
+
+    const migrationScenarios = selectCoordinatorContractScenarios(corpus, 'migration');
+    expect(migrationScenarios).toHaveLength(3);
+    expect(migrationScenarios.every(({ setup }) => setup.mode !== 'sdk')).toBe(true);
+    expect([...new Set(migrationScenarios.flatMap(({ coverage }) => coverage))].sort())
+      .toEqual([...MIGRATION_CONTRACT_COVERAGE].sort());
+    expect(selectCoordinatorContractScenarios(corpus, 'all')).toHaveLength(14);
+  });
+
+  test('rejects unknown or incomplete contract profiles', () => {
+    expect(() => selectCoordinatorContractScenarios(corpus, 'unsupported' as never)).toThrow(
+      expect.objectContaining({ code: 'invalid_profile' }),
+    );
+
+    const incomplete = structuredClone(corpus);
+    incomplete.scenarios = incomplete.scenarios.filter(
+      ({ id }) => id !== 'sdk_presence_cleanup',
+    );
+    expect(() => selectCoordinatorContractScenarios(incomplete, 'sdk')).toThrow(
+      expect.objectContaining({ code: 'missing_coverage' }),
+    );
   });
 
   test('contains only material accepted by the public-fixture privacy policy', () => {
