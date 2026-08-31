@@ -7,9 +7,8 @@ implemented across several repositories.
 ## Documents
 
 - [`specs/2026-08-29-miakapp-3.5-design.md`](specs/2026-08-29-miakapp-3.5-design.md)
-  — approved product and architecture direction. The platform control plane and
-  operational migration procedure still have explicit design gates before
-  implementation.
+  — approved product and architecture direction. The operational migration
+  procedure retains an explicit gate before cutover.
 - [`rfcs/0001-wire-protocol.md`](rfcs/0001-wire-protocol.md) — accepted protocol
   1.0 byte contract, state and call semantics, limits and compatibility rules.
 - [`rfcs/0002-component-runtime.md`](rfcs/0002-component-runtime.md) — accepted
@@ -18,6 +17,9 @@ implemented across several repositories.
 - [`rfcs/0003-coordinator-sdk-and-migration.md`](rfcs/0003-coordinator-sdk-and-migration.md)
   — accepted public coordinator API, retry and lifecycle semantics, temporary
   Node-RED boundary, fail-closed shadow modes, and comparison contract.
+- [`rfcs/0004-platform-control-plane.md`](rfcs/0004-platform-control-plane.md)
+  — accepted owner bootstrap, Home Key, resource-specific token, JWKS, Firebase
+  identity, push-consent and component-publication contract.
 - [`roadmaps/2026-08-29-miakapp-3.5-coordination.md`](roadmaps/2026-08-29-miakapp-3.5-coordination.md)
   — cross-repository sequence, ownership, acceptance gates, and deferred work.
 
@@ -28,7 +30,11 @@ corpus under [`../component-runtime/`](../component-runtime/); complete
 production conformance remains an exit gate for the component-platform vertical
 slice. RFC 0003 is backed by the API-level corpus, bounded replay runner,
 synthetic-home adapter and effect recorder under [`../coordinator-contract/`](../coordinator-contract/);
-the real MiakAPI and Node-RED implementations must still pass that contract.
+the real MiakAPI and Node-RED implementations must still pass that contract. RFC
+0004 is backed by deterministic signed vectors, independent TypeScript and Go
+verifiers, and a bounded behavioral model under
+[`../control-plane-contract/`](../control-plane-contract/); Firebase Emulator and
+staging acceptance remain implementation gates.
 
 Repository-specific implementation plans must link back to these documents and
 must not redefine a shared contract locally.
