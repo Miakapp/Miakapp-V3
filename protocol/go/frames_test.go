@@ -31,10 +31,17 @@ type invalidSemanticFixture struct {
 	Error   ErrorKind `json:"error"`
 }
 
+type errorCodeFixtures struct {
+	Core        []int64 `json:"core"`
+	Application []int64 `json:"application"`
+}
+
 type fixtureFile struct {
-	Valid           []validFixture           `json:"valid"`
-	InvalidWire     []invalidWireFixture     `json:"invalidWire"`
-	InvalidSemantic []invalidSemanticFixture `json:"invalidSemantic"`
+	ErrorCodes              errorCodeFixtures        `json:"errorCodes"`
+	ErrorCorrelationSources []byte                   `json:"errorCorrelationSources"`
+	Valid                   []validFixture           `json:"valid"`
+	InvalidWire             []invalidWireFixture     `json:"invalidWire"`
+	InvalidSemantic         []invalidSemanticFixture `json:"invalidSemantic"`
 }
 
 func loadFixtures(t *testing.T) fixtureFile {
@@ -213,6 +220,81 @@ func TestFixtureCoverage(t *testing.T) {
 	if !reflect.DeepEqual(covered, expected) {
 		t.Fatalf("fixture opcode coverage mismatch\nwant: %v\n got: %v", expected, covered)
 	}
+}
+
+func TestErrorCodeCatalogue(t *testing.T) {
+	fixtures := loadFixtures(t)
+	for _, code := range fixtures.ErrorCodes.Core {
+		frames := []Frame{
+			{Opcode: OpcodeError, Payload: []any{int64(1), int64(OpcodeEvent), code, false, "error"}},
+			{Opcode: OpcodeFatal, Payload: []any{int64(OpcodeEvent), code, false, "error"}},
+			{Opcode: OpcodeCallError, Payload: []any{int64(1), code, false, "error", nil}},
+		}
+		for _, frame := range frames {
+			if _, err := EncodeFrame(frame); err != nil {
+				t.Fatalf("core error code %d should be accepted for opcode %#x: %v", code, frame.Opcode, err)
+			}
+		}
+	}
+
+	if len(fixtures.ErrorCodes.Application) != 2 {
+		t.Fatalf("application error-code range must contain two bounds")
+	}
+	minimum := fixtures.ErrorCodes.Application[0]
+	maximum := fixtures.ErrorCodes.Application[1]
+	for code := minimum; code <= maximum; code++ {
+		if _, err := EncodeFrame(Frame{
+			Opcode:  OpcodeCallError,
+			Payload: []any{int64(1), code, false, "error", nil},
+		}); err != nil {
+			t.Fatalf("application error code %d should be accepted in CALL_ERROR: %v", code, err)
+		}
+
+		_, err := EncodeFrame(Frame{
+			Opcode:  OpcodeError,
+			Payload: []any{int64(1), int64(OpcodeEvent), code, false, "error"},
+		})
+		requireProtocolError(t, err, ErrInvalidFrame)
+
+		_, err = EncodeFrame(Frame{
+			Opcode:  OpcodeFatal,
+			Payload: []any{int64(OpcodeEvent), code, false, "error"},
+		})
+		requireProtocolError(t, err, ErrInvalidFrame)
+	}
+}
+
+func TestErrorCorrelationSourceCatalogue(t *testing.T) {
+	fixtures := loadFixtures(t)
+	allowed := make(map[byte]struct{}, len(fixtures.ErrorCorrelationSources))
+	for _, sourceOpcode := range fixtures.ErrorCorrelationSources {
+		allowed[sourceOpcode] = struct{}{}
+	}
+	for sourceOpcode := 1; sourceOpcode <= 0xff; sourceOpcode++ {
+		_, err := EncodeFrame(Frame{
+			Opcode:  OpcodeError,
+			Payload: []any{int64(1), int64(sourceOpcode), int64(1200), false, "error"},
+		})
+		_, accepted := allowed[byte(sourceOpcode)]
+		if accepted && err != nil {
+			t.Fatalf("ERROR source opcode %#x should be accepted: %v", sourceOpcode, err)
+		}
+		if !accepted {
+			requireProtocolError(t, err, ErrInvalidFrame)
+		}
+	}
+
+	if _, err := EncodeFrame(Frame{
+		Opcode:  OpcodeError,
+		Payload: []any{int64(0), int64(0), int64(1200), false, "error"},
+	}); err != nil {
+		t.Fatalf("ERROR without an originating frame should be accepted: %v", err)
+	}
+	_, err := EncodeFrame(Frame{
+		Opcode:  OpcodeError,
+		Payload: []any{int64(1), int64(0), int64(1200), false, "error"},
+	})
+	requireProtocolError(t, err, ErrInvalidFrame)
 }
 
 func TestValueProfile(t *testing.T) {

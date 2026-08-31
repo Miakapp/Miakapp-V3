@@ -1,0 +1,1857 @@
+{
+  "schema": "miakapp.coordinator-contract/1",
+  "fixture_version": 1,
+  "required_coverage": [
+    "inert_construction",
+    "startup_barrier",
+    "atomic_declaration_activation",
+    "declaration_reconciliation",
+    "live_declaration_replacement",
+    "declaration_failure_rollback",
+    "lifecycle_ownership",
+    "offline_rejection",
+    "event_error_correlation",
+    "outcome_unknown",
+    "call_streaming",
+    "call_cancellation",
+    "presence_cleanup",
+    "shadow_state",
+    "recorded_effects",
+    "unclassified_effect"
+  ],
+  "scenarios": [
+    {
+      "id": "sdk_inert_construction",
+      "description": "Constructing a coordinator has no network, token, timer, or listener side effect.",
+      "coverage": ["inert_construction"],
+      "setup": {
+        "mode": "sdk",
+        "desired_declarations": [
+          "state",
+          "state_access",
+          "events",
+          "event_access",
+          "functions"
+        ]
+      },
+      "stimuli": [
+        { "kind": "construct" }
+      ],
+      "expected": {
+        "statuses": ["idle"],
+        "status_checkpoints": [
+          { "stimulus_index": 0, "status": "idle" }
+        ],
+        "lifecycle_promises": [],
+        "access_reasons": [],
+        "declarations": [],
+        "declaration_snapshots": [],
+        "declaration_promises": [],
+        "declaration_visibility": [],
+        "operations": [],
+        "call_streams": [],
+        "presence": [],
+        "state_publications": 0,
+        "effects": [],
+        "errors": [],
+        "resources": {
+          "sockets": 0,
+          "socket_high_water": 0,
+          "timers": 0,
+          "listeners": 0,
+          "iterators": 0
+        }
+      }
+    },
+    {
+      "id": "sdk_startup_barrier",
+      "description": "Readiness follows authentication and all five complete declaration acknowledgements.",
+      "coverage": ["startup_barrier", "atomic_declaration_activation"],
+      "setup": {
+        "mode": "sdk",
+        "desired_declarations": [
+          "state",
+          "state_access",
+          "events",
+          "event_access",
+          "functions"
+        ]
+      },
+      "stimuli": [
+        { "kind": "start", "promise_id": "sdk_start_startup" },
+        { "kind": "welcome", "session_id": 101, "generation": 1 },
+        { "kind": "declaration_ack", "domain": "state", "transaction": 1 },
+        { "kind": "declaration_probe" },
+        { "kind": "declaration_ack", "domain": "state_access", "transaction": 1 },
+        { "kind": "declaration_probe" },
+        { "kind": "declaration_ack", "domain": "events", "transaction": 1 },
+        { "kind": "declaration_probe" },
+        { "kind": "declaration_ack", "domain": "event_access", "transaction": 1 },
+        { "kind": "declaration_handoff", "transaction": 1 },
+        { "kind": "declaration_probe" },
+        { "kind": "declaration_ack", "domain": "functions", "transaction": 1 },
+        { "kind": "declaration_probe" }
+      ],
+      "expected": {
+        "statuses": ["connecting", "authenticating", "synchronizing", "ready"],
+        "status_checkpoints": [
+          { "stimulus_index": 0, "status": "connecting" },
+          { "stimulus_index": 1, "status": "authenticating" },
+          { "stimulus_index": 1, "status": "synchronizing" },
+          { "stimulus_index": 11, "status": "ready" }
+        ],
+        "lifecycle_promises": [
+          {
+            "operation": "start",
+            "promise_id": "sdk_start_startup",
+            "invocation_stimulus_index": 0,
+            "settlement_stimulus_index": 11,
+            "outcome": "resolved",
+            "session_id": 101,
+            "generation": 1
+          }
+        ],
+        "access_reasons": ["initial"],
+        "declarations": [
+          { "domain": "state", "generation": 1, "transaction": 1 },
+          { "domain": "state_access", "generation": 1, "transaction": 1 },
+          { "domain": "events", "generation": 1, "transaction": 1 },
+          { "domain": "event_access", "generation": 1, "transaction": 1 },
+          { "domain": "functions", "generation": 1, "transaction": 1 }
+        ],
+        "declaration_snapshots": [
+          {
+            "generation": 1,
+            "transaction": 1,
+            "stimulus_index": 1,
+            "revisions": {
+              "state": 0,
+              "state_access": 0,
+              "events": 0,
+              "event_access": 0,
+              "functions": 0
+            }
+          }
+        ],
+        "declaration_promises": [],
+        "declaration_visibility": ["none", "none", "none", "none", "desired"],
+        "operations": [],
+        "call_streams": [],
+        "presence": [],
+        "state_publications": 0,
+        "effects": [],
+        "errors": [],
+        "resources": {
+          "sockets": 1,
+          "socket_high_water": 1,
+          "timers": "not_asserted",
+          "listeners": "not_asserted",
+          "iterators": "not_asserted"
+        }
+      }
+    },
+    {
+      "id": "sdk_reconnect_reconciliation",
+      "description": "Reconnect redeclares the latest complete slices and settles their pending promise without repeating an effectful operation.",
+      "coverage": ["declaration_reconciliation", "outcome_unknown"],
+      "setup": {
+        "mode": "sdk",
+        "desired_declarations": [
+          "state",
+          "state_access",
+          "events",
+          "event_access",
+          "functions"
+        ]
+      },
+      "stimuli": [
+        { "kind": "start", "promise_id": "sdk_start_reconnect" },
+        { "kind": "welcome", "session_id": 201, "generation": 1 },
+        { "kind": "declaration_ack", "domain": "state", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "state_access", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "events", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "event_access", "transaction": 1 },
+        { "kind": "declaration_handoff", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "functions", "transaction": 1 },
+        {
+          "kind": "operation",
+          "operation_id": "sdk_op_state_applied",
+          "operation": "state_set",
+          "phase": "sent"
+        },
+        {
+          "kind": "operation_terminal",
+          "operation_id": "sdk_op_state_applied",
+          "outcome": "applied"
+        },
+        {
+          "kind": "operation",
+          "operation_id": "sdk_op_state_failed",
+          "operation": "state_set",
+          "phase": "sent"
+        },
+        {
+          "kind": "operation_terminal",
+          "operation_id": "sdk_op_state_failed",
+          "outcome": "failed"
+        },
+        {
+          "kind": "operation",
+          "operation_id": "sdk_op_state_rejected",
+          "operation": "state_set",
+          "phase": "sent"
+        },
+        {
+          "kind": "operation_terminal",
+          "operation_id": "sdk_op_state_rejected",
+          "outcome": "not_dispatched"
+        },
+        {
+          "kind": "operation",
+          "operation_id": "sdk_op_state_unknown",
+          "operation": "state_set",
+          "phase": "sent"
+        },
+        {
+          "kind": "operation",
+          "operation_id": "sdk_op_event_sent",
+          "operation": "event",
+          "phase": "sent"
+        },
+        {
+          "kind": "operation",
+          "operation_id": "sdk_op_call_sent_unknown",
+          "operation": "call",
+          "phase": "sent",
+          "idempotency_key": "sdk_key_reconnect"
+        },
+        {
+          "kind": "operation",
+          "operation_id": "sdk_op_call_unknown",
+          "operation": "call",
+          "phase": "accepted",
+          "idempotency_key": null
+        },
+        {
+          "kind": "declaration_update",
+          "transaction": 2,
+          "promise_ids": ["sdk_decl_reconnect_pending"],
+          "changed_domains": ["state"],
+          "revisions": {
+            "state": 1,
+            "state_access": 0,
+            "events": 0,
+            "event_access": 0,
+            "functions": 0
+          }
+        },
+        { "kind": "declaration_ack", "domain": "state", "transaction": 2 },
+        { "kind": "declaration_probe" },
+        { "kind": "disconnect", "phase": "accepted" },
+        { "kind": "welcome", "session_id": 202, "generation": 2 },
+        { "kind": "declaration_ack", "domain": "state", "transaction": 1 },
+        { "kind": "declaration_probe" },
+        { "kind": "declaration_ack", "domain": "state_access", "transaction": 1 },
+        { "kind": "declaration_probe" },
+        { "kind": "declaration_ack", "domain": "events", "transaction": 1 },
+        { "kind": "declaration_probe" },
+        { "kind": "declaration_ack", "domain": "event_access", "transaction": 1 },
+        { "kind": "declaration_handoff", "transaction": 1 },
+        { "kind": "declaration_probe" },
+        { "kind": "declaration_ack", "domain": "functions", "transaction": 1 },
+        { "kind": "declaration_probe" }
+      ],
+      "expected": {
+        "statuses": [
+          "connecting",
+          "authenticating",
+          "synchronizing",
+          "ready",
+          "synchronizing",
+          "reconnecting",
+          "connecting",
+          "authenticating",
+          "synchronizing",
+          "ready"
+        ],
+        "status_checkpoints": [
+          { "stimulus_index": 0, "status": "connecting" },
+          { "stimulus_index": 1, "status": "authenticating" },
+          { "stimulus_index": 1, "status": "synchronizing" },
+          { "stimulus_index": 7, "status": "ready" },
+          { "stimulus_index": 18, "status": "synchronizing" },
+          { "stimulus_index": 21, "status": "reconnecting" },
+          { "stimulus_index": 22, "status": "connecting" },
+          { "stimulus_index": 22, "status": "authenticating" },
+          { "stimulus_index": 22, "status": "synchronizing" },
+          { "stimulus_index": 32, "status": "ready" }
+        ],
+        "lifecycle_promises": [
+          {
+            "operation": "start",
+            "promise_id": "sdk_start_reconnect",
+            "invocation_stimulus_index": 0,
+            "settlement_stimulus_index": 7,
+            "outcome": "resolved",
+            "session_id": 201,
+            "generation": 1
+          }
+        ],
+        "access_reasons": ["initial", "reconnect"],
+        "declarations": [
+          { "domain": "state", "generation": 1, "transaction": 1 },
+          { "domain": "state_access", "generation": 1, "transaction": 1 },
+          { "domain": "events", "generation": 1, "transaction": 1 },
+          { "domain": "event_access", "generation": 1, "transaction": 1 },
+          { "domain": "functions", "generation": 1, "transaction": 1 },
+          { "domain": "state", "generation": 1, "transaction": 2 },
+          { "domain": "state", "generation": 2, "transaction": 1 },
+          { "domain": "state_access", "generation": 2, "transaction": 1 },
+          { "domain": "events", "generation": 2, "transaction": 1 },
+          { "domain": "event_access", "generation": 2, "transaction": 1 },
+          { "domain": "functions", "generation": 2, "transaction": 1 }
+        ],
+        "declaration_snapshots": [
+          {
+            "generation": 1,
+            "transaction": 1,
+            "stimulus_index": 1,
+            "revisions": {
+              "state": 0,
+              "state_access": 0,
+              "events": 0,
+              "event_access": 0,
+              "functions": 0
+            }
+          },
+          {
+            "generation": 1,
+            "transaction": 2,
+            "stimulus_index": 18,
+            "revisions": {
+              "state": 1,
+              "state_access": 0,
+              "events": 0,
+              "event_access": 0,
+              "functions": 0
+            }
+          },
+          {
+            "generation": 2,
+            "transaction": 1,
+            "stimulus_index": 22,
+            "revisions": {
+              "state": 1,
+              "state_access": 0,
+              "events": 0,
+              "event_access": 0,
+              "functions": 0
+            }
+          }
+        ],
+        "declaration_promises": [
+          {
+            "promise_id": "sdk_decl_reconnect_pending",
+            "transaction": 2,
+            "stimulus_index": 32,
+            "outcome": "activated"
+          }
+        ],
+        "declaration_visibility": ["previous", "previous", "previous", "previous", "previous", "desired"],
+        "operations": [
+          {
+            "operation_id": "sdk_op_state_applied",
+            "operation": "state_set",
+            "attempts": 1,
+            "outcome": "applied"
+          },
+          {
+            "operation_id": "sdk_op_state_failed",
+            "operation": "state_set",
+            "attempts": 1,
+            "outcome": "failed"
+          },
+          {
+            "operation_id": "sdk_op_state_rejected",
+            "operation": "state_set",
+            "attempts": 1,
+            "outcome": "not_dispatched"
+          },
+          {
+            "operation_id": "sdk_op_state_unknown",
+            "operation": "state_set",
+            "attempts": 1,
+            "outcome": "outcome_unknown"
+          },
+          {
+            "operation_id": "sdk_op_event_sent",
+            "operation": "event",
+            "attempts": 1,
+            "outcome": "sent"
+          },
+          {
+            "operation_id": "sdk_op_call_sent_unknown",
+            "operation": "call",
+            "attempts": 1,
+            "outcome": "outcome_unknown",
+            "idempotency_key": "sdk_key_reconnect"
+          },
+          {
+            "operation_id": "sdk_op_call_unknown",
+            "operation": "call",
+            "attempts": 1,
+            "outcome": "outcome_unknown",
+            "idempotency_key": null
+          }
+        ],
+        "call_streams": [
+          {
+            "operation_id": "sdk_op_call_sent_unknown",
+            "acceptance": "rejected",
+            "progress": [],
+            "terminal": { "kind": "error", "code": "outcome_unknown" }
+          },
+          {
+            "operation_id": "sdk_op_call_unknown",
+            "acceptance": "resolved",
+            "progress": [],
+            "terminal": { "kind": "error", "code": "outcome_unknown" }
+          }
+        ],
+        "presence": [],
+        "state_publications": 0,
+        "effects": [],
+        "errors": [],
+        "resources": {
+          "sockets": 1,
+          "socket_high_water": 1,
+          "timers": "not_asserted",
+          "listeners": "not_asserted",
+          "iterators": "not_asserted"
+        }
+      }
+    },
+    {
+      "id": "sdk_live_declaration_replacement",
+      "description": "A post-handoff update queues behind the activating snapshot while every slice remains atomically visible.",
+      "coverage": ["live_declaration_replacement"],
+      "setup": {
+        "mode": "sdk",
+        "desired_declarations": [
+          "state",
+          "state_access",
+          "events",
+          "event_access",
+          "functions"
+        ]
+      },
+      "stimuli": [
+        { "kind": "start", "promise_id": "sdk_start_live_replace" },
+        { "kind": "welcome", "session_id": 601, "generation": 1 },
+        { "kind": "declaration_ack", "domain": "state", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "state_access", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "events", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "event_access", "transaction": 1 },
+        { "kind": "declaration_handoff", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "functions", "transaction": 1 },
+        {
+          "kind": "declaration_update",
+          "transaction": 2,
+          "promise_ids": ["sdk_decl_live_handed_off"],
+          "changed_domains": ["state"],
+          "revisions": {
+            "state": 1,
+            "state_access": 0,
+            "events": 0,
+            "event_access": 0,
+            "functions": 0
+          }
+        },
+        { "kind": "declaration_ack", "domain": "state", "transaction": 2 },
+        { "kind": "declaration_probe" },
+        { "kind": "declaration_ack", "domain": "state_access", "transaction": 2 },
+        { "kind": "declaration_probe" },
+        { "kind": "declaration_ack", "domain": "events", "transaction": 2 },
+        { "kind": "declaration_probe" },
+        { "kind": "declaration_ack", "domain": "event_access", "transaction": 2 },
+        { "kind": "declaration_handoff", "transaction": 2 },
+        { "kind": "declaration_probe" },
+        {
+          "kind": "declaration_update",
+          "transaction": 3,
+          "promise_ids": ["sdk_decl_live_queued"],
+          "changed_domains": ["events"],
+          "revisions": {
+            "state": 1,
+            "state_access": 0,
+            "events": 1,
+            "event_access": 0,
+            "functions": 0
+          }
+        },
+        { "kind": "declaration_ack", "domain": "functions", "transaction": 2 },
+        { "kind": "declaration_probe" },
+        { "kind": "declaration_ack", "domain": "state", "transaction": 3 },
+        { "kind": "declaration_probe" },
+        { "kind": "declaration_ack", "domain": "state_access", "transaction": 3 },
+        { "kind": "declaration_probe" },
+        { "kind": "declaration_ack", "domain": "events", "transaction": 3 },
+        { "kind": "declaration_probe" },
+        { "kind": "declaration_ack", "domain": "event_access", "transaction": 3 },
+        { "kind": "declaration_handoff", "transaction": 3 },
+        { "kind": "declaration_probe" },
+        { "kind": "declaration_ack", "domain": "functions", "transaction": 3 },
+        { "kind": "declaration_probe" }
+      ],
+      "expected": {
+        "statuses": ["connecting", "authenticating", "synchronizing", "ready", "synchronizing", "ready"],
+        "status_checkpoints": [
+          { "stimulus_index": 0, "status": "connecting" },
+          { "stimulus_index": 1, "status": "authenticating" },
+          { "stimulus_index": 1, "status": "synchronizing" },
+          { "stimulus_index": 7, "status": "ready" },
+          { "stimulus_index": 8, "status": "synchronizing" },
+          { "stimulus_index": 30, "status": "ready" }
+        ],
+        "lifecycle_promises": [
+          {
+            "operation": "start",
+            "promise_id": "sdk_start_live_replace",
+            "invocation_stimulus_index": 0,
+            "settlement_stimulus_index": 7,
+            "outcome": "resolved",
+            "session_id": 601,
+            "generation": 1
+          }
+        ],
+        "access_reasons": ["initial"],
+        "declarations": [
+          { "domain": "state", "generation": 1, "transaction": 1 },
+          { "domain": "state_access", "generation": 1, "transaction": 1 },
+          { "domain": "events", "generation": 1, "transaction": 1 },
+          { "domain": "event_access", "generation": 1, "transaction": 1 },
+          { "domain": "functions", "generation": 1, "transaction": 1 },
+          { "domain": "state", "generation": 1, "transaction": 2 },
+          { "domain": "state_access", "generation": 1, "transaction": 2 },
+          { "domain": "events", "generation": 1, "transaction": 2 },
+          { "domain": "event_access", "generation": 1, "transaction": 2 },
+          { "domain": "functions", "generation": 1, "transaction": 2 },
+          { "domain": "state", "generation": 1, "transaction": 3 },
+          { "domain": "state_access", "generation": 1, "transaction": 3 },
+          { "domain": "events", "generation": 1, "transaction": 3 },
+          { "domain": "event_access", "generation": 1, "transaction": 3 },
+          { "domain": "functions", "generation": 1, "transaction": 3 }
+        ],
+        "declaration_snapshots": [
+          {
+            "generation": 1,
+            "transaction": 1,
+            "stimulus_index": 1,
+            "revisions": {
+              "state": 0,
+              "state_access": 0,
+              "events": 0,
+              "event_access": 0,
+              "functions": 0
+            }
+          },
+          {
+            "generation": 1,
+            "transaction": 2,
+            "stimulus_index": 8,
+            "revisions": {
+              "state": 1,
+              "state_access": 0,
+              "events": 0,
+              "event_access": 0,
+              "functions": 0
+            }
+          },
+          {
+            "generation": 1,
+            "transaction": 3,
+            "stimulus_index": 19,
+            "revisions": {
+              "state": 1,
+              "state_access": 0,
+              "events": 1,
+              "event_access": 0,
+              "functions": 0
+            }
+          }
+        ],
+        "declaration_promises": [
+          {
+            "promise_id": "sdk_decl_live_handed_off",
+            "transaction": 2,
+            "stimulus_index": 19,
+            "outcome": "activated"
+          },
+          {
+            "promise_id": "sdk_decl_live_queued",
+            "transaction": 3,
+            "stimulus_index": 30,
+            "outcome": "activated"
+          }
+        ],
+        "declaration_visibility": [
+          "previous",
+          "previous",
+          "previous",
+          "previous",
+          "previous",
+          "previous",
+          "previous",
+          "previous",
+          "previous",
+          "desired"
+        ],
+        "operations": [],
+        "call_streams": [],
+        "presence": [],
+        "state_publications": 0,
+        "effects": [],
+        "errors": [],
+        "resources": {
+          "sockets": 1,
+          "socket_high_water": 1,
+          "timers": "not_asserted",
+          "listeners": "not_asserted",
+          "iterators": "not_asserted"
+        }
+      }
+    },
+    {
+      "id": "sdk_declaration_failure_rollback",
+      "description": "A colliding activation rolls desired slices back before a later unrelated update succeeds.",
+      "coverage": ["declaration_failure_rollback"],
+      "setup": {
+        "mode": "sdk",
+        "desired_declarations": [
+          "state",
+          "state_access",
+          "events",
+          "event_access",
+          "functions"
+        ]
+      },
+      "stimuli": [
+        { "kind": "start", "promise_id": "sdk_start_failure_rollback" },
+        { "kind": "welcome", "session_id": 602, "generation": 1 },
+        { "kind": "declaration_ack", "domain": "state", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "state_access", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "events", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "event_access", "transaction": 1 },
+        { "kind": "declaration_handoff", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "functions", "transaction": 1 },
+        {
+          "kind": "declaration_update",
+          "transaction": 2,
+          "promise_ids": ["sdk_decl_failed_state", "sdk_decl_failed_access"],
+          "changed_domains": ["state", "state_access"],
+          "revisions": {
+            "state": 1,
+            "state_access": 1,
+            "events": 0,
+            "event_access": 0,
+            "functions": 0
+          }
+        },
+        { "kind": "declaration_ack", "domain": "state", "transaction": 2 },
+        { "kind": "declaration_probe" },
+        { "kind": "declaration_ack", "domain": "state_access", "transaction": 2 },
+        { "kind": "declaration_ack", "domain": "events", "transaction": 2 },
+        { "kind": "declaration_ack", "domain": "event_access", "transaction": 2 },
+        { "kind": "declaration_handoff", "transaction": 2 },
+        { "kind": "declaration_probe" },
+        {
+          "kind": "declaration_error",
+          "domain": "functions",
+          "transaction": 2,
+          "code": "ownership_collision"
+        },
+        { "kind": "declaration_probe" },
+        {
+          "kind": "declaration_update",
+          "transaction": 3,
+          "promise_ids": ["sdk_decl_recovery_events"],
+          "changed_domains": ["events"],
+          "revisions": {
+            "state": 0,
+            "state_access": 0,
+            "events": 1,
+            "event_access": 0,
+            "functions": 0
+          }
+        },
+        { "kind": "declaration_ack", "domain": "state", "transaction": 3 },
+        { "kind": "declaration_probe" },
+        { "kind": "declaration_ack", "domain": "state_access", "transaction": 3 },
+        { "kind": "declaration_ack", "domain": "events", "transaction": 3 },
+        { "kind": "declaration_ack", "domain": "event_access", "transaction": 3 },
+        { "kind": "declaration_handoff", "transaction": 3 },
+        { "kind": "declaration_ack", "domain": "functions", "transaction": 3 },
+        { "kind": "declaration_probe" }
+      ],
+      "expected": {
+        "statuses": [
+          "connecting",
+          "authenticating",
+          "synchronizing",
+          "ready",
+          "synchronizing",
+          "ready",
+          "synchronizing",
+          "ready"
+        ],
+        "status_checkpoints": [
+          { "stimulus_index": 0, "status": "connecting" },
+          { "stimulus_index": 1, "status": "authenticating" },
+          { "stimulus_index": 1, "status": "synchronizing" },
+          { "stimulus_index": 7, "status": "ready" },
+          { "stimulus_index": 8, "status": "synchronizing" },
+          { "stimulus_index": 16, "status": "ready" },
+          { "stimulus_index": 18, "status": "synchronizing" },
+          { "stimulus_index": 25, "status": "ready" }
+        ],
+        "lifecycle_promises": [
+          {
+            "operation": "start",
+            "promise_id": "sdk_start_failure_rollback",
+            "invocation_stimulus_index": 0,
+            "settlement_stimulus_index": 7,
+            "outcome": "resolved",
+            "session_id": 602,
+            "generation": 1
+          }
+        ],
+        "access_reasons": ["initial"],
+        "declarations": [
+          { "domain": "state", "generation": 1, "transaction": 1 },
+          { "domain": "state_access", "generation": 1, "transaction": 1 },
+          { "domain": "events", "generation": 1, "transaction": 1 },
+          { "domain": "event_access", "generation": 1, "transaction": 1 },
+          { "domain": "functions", "generation": 1, "transaction": 1 },
+          { "domain": "state", "generation": 1, "transaction": 2 },
+          { "domain": "state_access", "generation": 1, "transaction": 2 },
+          { "domain": "events", "generation": 1, "transaction": 2 },
+          { "domain": "event_access", "generation": 1, "transaction": 2 },
+          { "domain": "state", "generation": 1, "transaction": 3 },
+          { "domain": "state_access", "generation": 1, "transaction": 3 },
+          { "domain": "events", "generation": 1, "transaction": 3 },
+          { "domain": "event_access", "generation": 1, "transaction": 3 },
+          { "domain": "functions", "generation": 1, "transaction": 3 }
+        ],
+        "declaration_snapshots": [
+          {
+            "generation": 1,
+            "transaction": 1,
+            "stimulus_index": 1,
+            "revisions": {
+              "state": 0,
+              "state_access": 0,
+              "events": 0,
+              "event_access": 0,
+              "functions": 0
+            }
+          },
+          {
+            "generation": 1,
+            "transaction": 2,
+            "stimulus_index": 8,
+            "revisions": {
+              "state": 1,
+              "state_access": 1,
+              "events": 0,
+              "event_access": 0,
+              "functions": 0
+            }
+          },
+          {
+            "generation": 1,
+            "transaction": 3,
+            "stimulus_index": 18,
+            "revisions": {
+              "state": 0,
+              "state_access": 0,
+              "events": 1,
+              "event_access": 0,
+              "functions": 0
+            }
+          }
+        ],
+        "declaration_promises": [
+          {
+            "promise_id": "sdk_decl_failed_state",
+            "transaction": 2,
+            "stimulus_index": 16,
+            "outcome": "rejected",
+            "code": "ownership_collision"
+          },
+          {
+            "promise_id": "sdk_decl_failed_access",
+            "transaction": 2,
+            "stimulus_index": 16,
+            "outcome": "rejected",
+            "code": "ownership_collision"
+          },
+          {
+            "promise_id": "sdk_decl_recovery_events",
+            "transaction": 3,
+            "stimulus_index": 25,
+            "outcome": "activated"
+          }
+        ],
+        "declaration_visibility": ["previous", "previous", "desired", "previous", "desired"],
+        "operations": [],
+        "call_streams": [],
+        "presence": [],
+        "state_publications": 0,
+        "effects": [],
+        "errors": [{ "code": "ownership_collision", "stimulus_index": 16 }],
+        "resources": {
+          "sockets": 1,
+          "socket_high_water": 1,
+          "timers": "not_asserted",
+          "listeners": "not_asserted",
+          "iterators": "not_asserted"
+        }
+      }
+    },
+    {
+      "id": "sdk_offline_rejection",
+      "description": "Effectful operations reject before dispatch instead of waiting for a later ready session.",
+      "coverage": ["offline_rejection"],
+      "setup": {
+        "mode": "sdk",
+        "desired_declarations": [
+          "state",
+          "state_access",
+          "events",
+          "event_access",
+          "functions"
+        ]
+      },
+      "stimuli": [
+        { "kind": "start", "promise_id": "sdk_start_offline" },
+        {
+          "kind": "operation",
+          "operation_id": "sdk_op_offline_state",
+          "operation": "state_set",
+          "phase": "before_send"
+        },
+        {
+          "kind": "operation",
+          "operation_id": "sdk_op_offline_event",
+          "operation": "event",
+          "phase": "before_send"
+        },
+        {
+          "kind": "operation",
+          "operation_id": "sdk_op_offline_call",
+          "operation": "call",
+          "phase": "before_send",
+          "idempotency_key": null
+        },
+        { "kind": "stop", "promise_id": "sdk_stop_offline" }
+      ],
+      "expected": {
+        "statuses": ["connecting", "stopping", "stopped"],
+        "status_checkpoints": [
+          { "stimulus_index": 0, "status": "connecting" },
+          { "stimulus_index": 4, "status": "stopping" },
+          { "stimulus_index": 4, "status": "stopped" }
+        ],
+        "lifecycle_promises": [
+          {
+            "operation": "start",
+            "promise_id": "sdk_start_offline",
+            "invocation_stimulus_index": 0,
+            "settlement_stimulus_index": 4,
+            "outcome": "rejected",
+            "code": "cancelled"
+          },
+          {
+            "operation": "stop",
+            "promise_id": "sdk_stop_offline",
+            "invocation_stimulus_index": 4,
+            "settlement_stimulus_index": 4,
+            "outcome": "resolved"
+          }
+        ],
+        "access_reasons": ["initial"],
+        "declarations": [],
+        "declaration_snapshots": [],
+        "declaration_promises": [],
+        "declaration_visibility": [],
+        "operations": [
+          {
+            "operation_id": "sdk_op_offline_state",
+            "operation": "state_set",
+            "attempts": 0,
+            "outcome": "not_dispatched"
+          },
+          {
+            "operation_id": "sdk_op_offline_event",
+            "operation": "event",
+            "attempts": 0,
+            "outcome": "not_dispatched"
+          },
+          {
+            "operation_id": "sdk_op_offline_call",
+            "operation": "call",
+            "attempts": 0,
+            "outcome": "not_dispatched",
+            "idempotency_key": null
+          }
+        ],
+        "call_streams": [
+          {
+            "operation_id": "sdk_op_offline_call",
+            "acceptance": "rejected",
+            "progress": [],
+            "terminal": { "kind": "error", "code": "not_dispatched" }
+          }
+        ],
+        "presence": [],
+        "state_publications": 0,
+        "effects": [],
+        "errors": [],
+        "resources": {
+          "sockets": 0,
+          "socket_high_water": 0,
+          "timers": 0,
+          "listeners": 0,
+          "iterators": 0
+        }
+      }
+    },
+    {
+      "id": "sdk_event_error_correlation",
+      "description": "A delayed relay rejection keeps the first event correlation after a second event is sent.",
+      "coverage": ["event_error_correlation"],
+      "setup": {
+        "mode": "sdk",
+        "desired_declarations": [
+          "state",
+          "state_access",
+          "events",
+          "event_access",
+          "functions"
+        ]
+      },
+      "stimuli": [
+        { "kind": "start", "promise_id": "sdk_start_event_error" },
+        { "kind": "welcome", "session_id": 701, "generation": 1 },
+        { "kind": "declaration_ack", "domain": "state", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "state_access", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "events", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "event_access", "transaction": 1 },
+        { "kind": "declaration_handoff", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "functions", "transaction": 1 },
+        {
+          "kind": "operation",
+          "operation_id": "sdk_op_event_error",
+          "operation": "event",
+          "phase": "sent"
+        },
+        {
+          "kind": "operation",
+          "operation_id": "sdk_op_event_later",
+          "operation": "event",
+          "phase": "sent"
+        },
+        {
+          "kind": "operation_error",
+          "operation_id": "sdk_op_event_error",
+          "code": "authorization"
+        }
+      ],
+      "expected": {
+        "statuses": ["connecting", "authenticating", "synchronizing", "ready"],
+        "status_checkpoints": [
+          { "stimulus_index": 0, "status": "connecting" },
+          { "stimulus_index": 1, "status": "authenticating" },
+          { "stimulus_index": 1, "status": "synchronizing" },
+          { "stimulus_index": 7, "status": "ready" }
+        ],
+        "lifecycle_promises": [
+          {
+            "operation": "start",
+            "promise_id": "sdk_start_event_error",
+            "invocation_stimulus_index": 0,
+            "settlement_stimulus_index": 7,
+            "outcome": "resolved",
+            "session_id": 701,
+            "generation": 1
+          }
+        ],
+        "access_reasons": ["initial"],
+        "declarations": [
+          { "domain": "state", "generation": 1, "transaction": 1 },
+          { "domain": "state_access", "generation": 1, "transaction": 1 },
+          { "domain": "events", "generation": 1, "transaction": 1 },
+          { "domain": "event_access", "generation": 1, "transaction": 1 },
+          { "domain": "functions", "generation": 1, "transaction": 1 }
+        ],
+        "declaration_snapshots": [
+          {
+            "generation": 1,
+            "transaction": 1,
+            "stimulus_index": 1,
+            "revisions": {
+              "state": 0,
+              "state_access": 0,
+              "events": 0,
+              "event_access": 0,
+              "functions": 0
+            }
+          }
+        ],
+        "declaration_promises": [],
+        "declaration_visibility": [],
+        "operations": [
+          {
+            "operation_id": "sdk_op_event_error",
+            "operation": "event",
+            "attempts": 1,
+            "outcome": "sent"
+          },
+          {
+            "operation_id": "sdk_op_event_later",
+            "operation": "event",
+            "attempts": 1,
+            "outcome": "sent"
+          }
+        ],
+        "call_streams": [],
+        "presence": [],
+        "state_publications": 0,
+        "effects": [],
+        "errors": [
+          {
+            "code": "authorization",
+            "stimulus_index": 10,
+            "correlation": {
+              "kind": "event",
+              "local_id": "sdk_op_event_error"
+            }
+          }
+        ],
+        "resources": {
+          "sockets": 1,
+          "socket_high_water": 1,
+          "timers": "not_asserted",
+          "listeners": "not_asserted",
+          "iterators": "not_asserted"
+        }
+      }
+    },
+    {
+      "id": "sdk_lifecycle_ownership",
+      "description": "Duplicate start is rejected, a pre-handoff declaration is superseded, and repeated stop shares one cleanup promise.",
+      "coverage": ["lifecycle_ownership"],
+      "setup": {
+        "mode": "sdk",
+        "desired_declarations": [
+          "state",
+          "state_access",
+          "events",
+          "event_access",
+          "functions"
+        ]
+      },
+      "stimuli": [
+        { "kind": "start", "promise_id": "sdk_start_primary" },
+        { "kind": "start", "promise_id": "sdk_start_duplicate" },
+        { "kind": "welcome", "session_id": 801, "generation": 1 },
+        { "kind": "declaration_ack", "domain": "state", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "state_access", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "events", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "event_access", "transaction": 1 },
+        { "kind": "declaration_handoff", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "functions", "transaction": 1 },
+        {
+          "kind": "declaration_update",
+          "transaction": 2,
+          "promise_ids": ["sdk_decl_stop_superseded"],
+          "changed_domains": ["state"],
+          "revisions": {
+            "state": 1,
+            "state_access": 0,
+            "events": 0,
+            "event_access": 0,
+            "functions": 0
+          }
+        },
+        { "kind": "declaration_ack", "domain": "state", "transaction": 2 },
+        {
+          "kind": "declaration_update",
+          "transaction": 3,
+          "promise_ids": ["sdk_decl_stop_pending"],
+          "changed_domains": ["state"],
+          "revisions": {
+            "state": 2,
+            "state_access": 0,
+            "events": 0,
+            "event_access": 0,
+            "functions": 0
+          }
+        },
+        { "kind": "declaration_ack", "domain": "state", "transaction": 3 },
+        { "kind": "stop", "promise_id": "sdk_stop_shared" },
+        { "kind": "stop", "promise_id": "sdk_stop_shared" }
+      ],
+      "expected": {
+        "statuses": [
+          "connecting",
+          "authenticating",
+          "synchronizing",
+          "ready",
+          "synchronizing",
+          "stopping",
+          "stopped"
+        ],
+        "status_checkpoints": [
+          { "stimulus_index": 0, "status": "connecting" },
+          { "stimulus_index": 2, "status": "authenticating" },
+          { "stimulus_index": 2, "status": "synchronizing" },
+          { "stimulus_index": 8, "status": "ready" },
+          { "stimulus_index": 9, "status": "synchronizing" },
+          { "stimulus_index": 13, "status": "stopping" },
+          { "stimulus_index": 13, "status": "stopped" }
+        ],
+        "lifecycle_promises": [
+          {
+            "operation": "start",
+            "promise_id": "sdk_start_primary",
+            "invocation_stimulus_index": 0,
+            "settlement_stimulus_index": 8,
+            "outcome": "resolved",
+            "session_id": 801,
+            "generation": 1
+          },
+          {
+            "operation": "start",
+            "promise_id": "sdk_start_duplicate",
+            "invocation_stimulus_index": 1,
+            "settlement_stimulus_index": 1,
+            "outcome": "rejected",
+            "code": "invalid_lifecycle"
+          },
+          {
+            "operation": "stop",
+            "promise_id": "sdk_stop_shared",
+            "invocation_stimulus_index": 13,
+            "settlement_stimulus_index": 13,
+            "outcome": "resolved"
+          },
+          {
+            "operation": "stop",
+            "promise_id": "sdk_stop_shared",
+            "invocation_stimulus_index": 14,
+            "settlement_stimulus_index": 13,
+            "outcome": "resolved"
+          }
+        ],
+        "access_reasons": ["initial"],
+        "declarations": [
+          { "domain": "state", "generation": 1, "transaction": 1 },
+          { "domain": "state_access", "generation": 1, "transaction": 1 },
+          { "domain": "events", "generation": 1, "transaction": 1 },
+          { "domain": "event_access", "generation": 1, "transaction": 1 },
+          { "domain": "functions", "generation": 1, "transaction": 1 },
+          { "domain": "state", "generation": 1, "transaction": 2 },
+          { "domain": "state", "generation": 1, "transaction": 3 }
+        ],
+        "declaration_snapshots": [
+          {
+            "generation": 1,
+            "transaction": 1,
+            "stimulus_index": 2,
+            "revisions": {
+              "state": 0,
+              "state_access": 0,
+              "events": 0,
+              "event_access": 0,
+              "functions": 0
+            }
+          },
+          {
+            "generation": 1,
+            "transaction": 2,
+            "stimulus_index": 9,
+            "revisions": {
+              "state": 1,
+              "state_access": 0,
+              "events": 0,
+              "event_access": 0,
+              "functions": 0
+            }
+          },
+          {
+            "generation": 1,
+            "transaction": 3,
+            "stimulus_index": 11,
+            "revisions": {
+              "state": 2,
+              "state_access": 0,
+              "events": 0,
+              "event_access": 0,
+              "functions": 0
+            }
+          }
+        ],
+        "declaration_promises": [
+          {
+            "promise_id": "sdk_decl_stop_superseded",
+            "transaction": 2,
+            "stimulus_index": 11,
+            "outcome": "rejected",
+            "code": "superseded"
+          },
+          {
+            "promise_id": "sdk_decl_stop_pending",
+            "transaction": 3,
+            "stimulus_index": 13,
+            "outcome": "rejected",
+            "code": "cancelled"
+          }
+        ],
+        "declaration_visibility": [],
+        "operations": [],
+        "call_streams": [],
+        "presence": [],
+        "state_publications": 0,
+        "effects": [],
+        "errors": [{ "code": "invalid_lifecycle", "stimulus_index": 1 }],
+        "resources": {
+          "sockets": 0,
+          "socket_high_water": 1,
+          "timers": 0,
+          "listeners": 0,
+          "iterators": 0
+        }
+      }
+    },
+    {
+      "id": "sdk_call_streaming",
+      "description": "Accepted calls expose bounded progress and settle exactly once by result or CALL_ERROR.",
+      "coverage": ["call_streaming"],
+      "setup": {
+        "mode": "sdk",
+        "desired_declarations": [
+          "state",
+          "state_access",
+          "events",
+          "event_access",
+          "functions"
+        ]
+      },
+      "stimuli": [
+        { "kind": "start", "promise_id": "sdk_start_call_stream" },
+        { "kind": "welcome", "session_id": 301, "generation": 1 },
+        { "kind": "declaration_ack", "domain": "state", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "state_access", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "events", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "event_access", "transaction": 1 },
+        { "kind": "declaration_handoff", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "functions", "transaction": 1 },
+        {
+          "kind": "operation",
+          "operation_id": "sdk_op_stream",
+          "operation": "call",
+          "phase": "accepted",
+          "idempotency_key": null
+        },
+        { "kind": "call_progress", "operation_id": "sdk_op_stream", "value": 25 },
+        { "kind": "call_progress", "operation_id": "sdk_op_stream", "value": 75 },
+        { "kind": "call_result", "operation_id": "sdk_op_stream", "value": "complete" },
+        {
+          "kind": "operation",
+          "operation_id": "sdk_op_call_failed",
+          "operation": "call",
+          "phase": "accepted",
+          "idempotency_key": null
+        },
+        {
+          "kind": "operation_error",
+          "operation_id": "sdk_op_call_failed",
+          "code": "application_failure"
+        },
+        {
+          "kind": "operation_terminal",
+          "operation_id": "sdk_op_call_failed",
+          "outcome": "failed"
+        }
+      ],
+      "expected": {
+        "statuses": ["connecting", "authenticating", "synchronizing", "ready"],
+        "status_checkpoints": [
+          { "stimulus_index": 0, "status": "connecting" },
+          { "stimulus_index": 1, "status": "authenticating" },
+          { "stimulus_index": 1, "status": "synchronizing" },
+          { "stimulus_index": 7, "status": "ready" }
+        ],
+        "lifecycle_promises": [
+          {
+            "operation": "start",
+            "promise_id": "sdk_start_call_stream",
+            "invocation_stimulus_index": 0,
+            "settlement_stimulus_index": 7,
+            "outcome": "resolved",
+            "session_id": 301,
+            "generation": 1
+          }
+        ],
+        "access_reasons": ["initial"],
+        "declarations": [
+          { "domain": "state", "generation": 1, "transaction": 1 },
+          { "domain": "state_access", "generation": 1, "transaction": 1 },
+          { "domain": "events", "generation": 1, "transaction": 1 },
+          { "domain": "event_access", "generation": 1, "transaction": 1 },
+          { "domain": "functions", "generation": 1, "transaction": 1 }
+        ],
+        "declaration_snapshots": [
+          {
+            "generation": 1,
+            "transaction": 1,
+            "stimulus_index": 1,
+            "revisions": {
+              "state": 0,
+              "state_access": 0,
+              "events": 0,
+              "event_access": 0,
+              "functions": 0
+            }
+          }
+        ],
+        "declaration_promises": [],
+        "declaration_visibility": [],
+        "operations": [
+          {
+            "operation_id": "sdk_op_stream",
+            "operation": "call",
+            "attempts": 1,
+            "outcome": "succeeded",
+            "idempotency_key": null
+          },
+          {
+            "operation_id": "sdk_op_call_failed",
+            "operation": "call",
+            "attempts": 1,
+            "outcome": "failed",
+            "idempotency_key": null
+          }
+        ],
+        "call_streams": [
+          {
+            "operation_id": "sdk_op_stream",
+            "acceptance": "resolved",
+            "progress": [25, 75],
+            "terminal": { "kind": "result", "value": "complete" }
+          },
+          {
+            "operation_id": "sdk_op_call_failed",
+            "acceptance": "resolved",
+            "progress": [],
+            "terminal": { "kind": "error", "code": "failed" }
+          }
+        ],
+        "presence": [],
+        "state_publications": 0,
+        "effects": [],
+        "errors": [
+          {
+            "code": "application_failure",
+            "stimulus_index": 13,
+            "correlation": {
+              "kind": "call",
+              "local_id": "sdk_op_call_failed"
+            }
+          }
+        ],
+        "resources": {
+          "sockets": 1,
+          "socket_high_water": 1,
+          "timers": "not_asserted",
+          "listeners": "not_asserted",
+          "iterators": "not_asserted"
+        }
+      }
+    },
+    {
+      "id": "sdk_call_cancellation",
+      "description": "Explicit relay rejection or cancellation terminals prove non-dispatch before acceptance, while accepted cancellation stays uncertain.",
+      "coverage": ["call_cancellation"],
+      "setup": {
+        "mode": "sdk",
+        "desired_declarations": [
+          "state",
+          "state_access",
+          "events",
+          "event_access",
+          "functions"
+        ]
+      },
+      "stimuli": [
+        { "kind": "start", "promise_id": "sdk_start_call_cancel" },
+        { "kind": "welcome", "session_id": 302, "generation": 1 },
+        { "kind": "declaration_ack", "domain": "state", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "state_access", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "events", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "event_access", "transaction": 1 },
+        { "kind": "declaration_handoff", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "functions", "transaction": 1 },
+        {
+          "kind": "operation",
+          "operation_id": "sdk_op_rejected_before_accept",
+          "operation": "call",
+          "phase": "sent",
+          "idempotency_key": null
+        },
+        {
+          "kind": "operation_error",
+          "operation_id": "sdk_op_rejected_before_accept",
+          "code": "not_declared"
+        },
+        {
+          "kind": "operation_terminal",
+          "operation_id": "sdk_op_rejected_before_accept",
+          "outcome": "not_dispatched"
+        },
+        {
+          "kind": "operation",
+          "operation_id": "sdk_op_cancel_before_accept",
+          "operation": "call",
+          "phase": "sent",
+          "idempotency_key": null
+        },
+        { "kind": "call_cancel", "operation_id": "sdk_op_cancel_before_accept" },
+        {
+          "kind": "operation_error",
+          "operation_id": "sdk_op_cancel_before_accept",
+          "code": "cancelled"
+        },
+        {
+          "kind": "operation_terminal",
+          "operation_id": "sdk_op_cancel_before_accept",
+          "outcome": "not_dispatched"
+        },
+        {
+          "kind": "operation",
+          "operation_id": "sdk_op_cancel",
+          "operation": "call",
+          "phase": "accepted",
+          "idempotency_key": null
+        },
+        { "kind": "call_progress", "operation_id": "sdk_op_cancel", "value": "started" },
+        { "kind": "call_cancel", "operation_id": "sdk_op_cancel" },
+        {
+          "kind": "operation_error",
+          "operation_id": "sdk_op_cancel",
+          "code": "outcome_unknown"
+        },
+        {
+          "kind": "operation_terminal",
+          "operation_id": "sdk_op_cancel",
+          "outcome": "outcome_unknown"
+        }
+      ],
+      "expected": {
+        "statuses": ["connecting", "authenticating", "synchronizing", "ready"],
+        "status_checkpoints": [
+          { "stimulus_index": 0, "status": "connecting" },
+          { "stimulus_index": 1, "status": "authenticating" },
+          { "stimulus_index": 1, "status": "synchronizing" },
+          { "stimulus_index": 7, "status": "ready" }
+        ],
+        "lifecycle_promises": [
+          {
+            "operation": "start",
+            "promise_id": "sdk_start_call_cancel",
+            "invocation_stimulus_index": 0,
+            "settlement_stimulus_index": 7,
+            "outcome": "resolved",
+            "session_id": 302,
+            "generation": 1
+          }
+        ],
+        "access_reasons": ["initial"],
+        "declarations": [
+          { "domain": "state", "generation": 1, "transaction": 1 },
+          { "domain": "state_access", "generation": 1, "transaction": 1 },
+          { "domain": "events", "generation": 1, "transaction": 1 },
+          { "domain": "event_access", "generation": 1, "transaction": 1 },
+          { "domain": "functions", "generation": 1, "transaction": 1 }
+        ],
+        "declaration_snapshots": [
+          {
+            "generation": 1,
+            "transaction": 1,
+            "stimulus_index": 1,
+            "revisions": {
+              "state": 0,
+              "state_access": 0,
+              "events": 0,
+              "event_access": 0,
+              "functions": 0
+            }
+          }
+        ],
+        "declaration_promises": [],
+        "declaration_visibility": [],
+        "operations": [
+          {
+            "operation_id": "sdk_op_rejected_before_accept",
+            "operation": "call",
+            "attempts": 1,
+            "outcome": "not_dispatched",
+            "idempotency_key": null
+          },
+          {
+            "operation_id": "sdk_op_cancel_before_accept",
+            "operation": "call",
+            "attempts": 1,
+            "outcome": "not_dispatched",
+            "idempotency_key": null
+          },
+          {
+            "operation_id": "sdk_op_cancel",
+            "operation": "call",
+            "attempts": 1,
+            "outcome": "outcome_unknown",
+            "idempotency_key": null
+          }
+        ],
+        "call_streams": [
+          {
+            "operation_id": "sdk_op_rejected_before_accept",
+            "acceptance": "rejected",
+            "progress": [],
+            "terminal": { "kind": "error", "code": "not_dispatched" }
+          },
+          {
+            "operation_id": "sdk_op_cancel_before_accept",
+            "acceptance": "rejected",
+            "progress": [],
+            "terminal": { "kind": "error", "code": "not_dispatched" }
+          },
+          {
+            "operation_id": "sdk_op_cancel",
+            "acceptance": "resolved",
+            "progress": ["started"],
+            "terminal": { "kind": "error", "code": "outcome_unknown" }
+          }
+        ],
+        "presence": [],
+        "state_publications": 0,
+        "effects": [],
+        "errors": [
+          {
+            "code": "not_declared",
+            "stimulus_index": 9,
+            "correlation": {
+              "kind": "call",
+              "local_id": "sdk_op_rejected_before_accept"
+            }
+          },
+          {
+            "code": "cancelled",
+            "stimulus_index": 13,
+            "correlation": {
+              "kind": "call",
+              "local_id": "sdk_op_cancel_before_accept"
+            }
+          },
+          {
+            "code": "outcome_unknown",
+            "stimulus_index": 18,
+            "correlation": {
+              "kind": "call",
+              "local_id": "sdk_op_cancel"
+            }
+          }
+        ],
+        "resources": {
+          "sockets": 1,
+          "socket_high_water": 1,
+          "timers": "not_asserted",
+          "listeners": "not_asserted",
+          "iterators": "not_asserted"
+        }
+      }
+    },
+    {
+      "id": "sdk_presence_cleanup",
+      "description": "Presence is rebuilt per session and all owned resources are gone after stop.",
+      "coverage": ["presence_cleanup"],
+      "setup": {
+        "mode": "sdk",
+        "desired_declarations": [
+          "state",
+          "state_access",
+          "events",
+          "event_access",
+          "functions"
+        ]
+      },
+      "stimuli": [
+        { "kind": "start", "promise_id": "sdk_start_presence" },
+        { "kind": "welcome", "session_id": 401, "generation": 1 },
+        { "kind": "declaration_ack", "domain": "state", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "state_access", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "events", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "event_access", "transaction": 1 },
+        { "kind": "declaration_handoff", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "functions", "transaction": 1 },
+        {
+          "kind": "presence",
+          "entries": [
+            { "session_id": 501, "user_id": "sdk_user_alpha" },
+            { "session_id": 502, "user_id": "sdk_user_beta" }
+          ]
+        },
+        { "kind": "disconnect", "phase": "ready" },
+        { "kind": "welcome", "session_id": 402, "generation": 2 },
+        { "kind": "declaration_ack", "domain": "state", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "state_access", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "events", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "event_access", "transaction": 1 },
+        { "kind": "declaration_handoff", "transaction": 1 },
+        { "kind": "declaration_ack", "domain": "functions", "transaction": 1 },
+        {
+          "kind": "presence",
+          "entries": [
+            { "session_id": 503, "user_id": "sdk_user_beta" }
+          ]
+        },
+        { "kind": "stop", "promise_id": "sdk_stop_presence" }
+      ],
+      "expected": {
+        "statuses": [
+          "connecting",
+          "authenticating",
+          "synchronizing",
+          "ready",
+          "reconnecting",
+          "connecting",
+          "authenticating",
+          "synchronizing",
+          "ready",
+          "stopping",
+          "stopped"
+        ],
+        "status_checkpoints": [
+          { "stimulus_index": 0, "status": "connecting" },
+          { "stimulus_index": 1, "status": "authenticating" },
+          { "stimulus_index": 1, "status": "synchronizing" },
+          { "stimulus_index": 7, "status": "ready" },
+          { "stimulus_index": 9, "status": "reconnecting" },
+          { "stimulus_index": 10, "status": "connecting" },
+          { "stimulus_index": 10, "status": "authenticating" },
+          { "stimulus_index": 10, "status": "synchronizing" },
+          { "stimulus_index": 16, "status": "ready" },
+          { "stimulus_index": 18, "status": "stopping" },
+          { "stimulus_index": 18, "status": "stopped" }
+        ],
+        "lifecycle_promises": [
+          {
+            "operation": "start",
+            "promise_id": "sdk_start_presence",
+            "invocation_stimulus_index": 0,
+            "settlement_stimulus_index": 7,
+            "outcome": "resolved",
+            "session_id": 401,
+            "generation": 1
+          },
+          {
+            "operation": "stop",
+            "promise_id": "sdk_stop_presence",
+            "invocation_stimulus_index": 18,
+            "settlement_stimulus_index": 18,
+            "outcome": "resolved"
+          }
+        ],
+        "access_reasons": ["initial", "reconnect"],
+        "declarations": [
+          { "domain": "state", "generation": 1, "transaction": 1 },
+          { "domain": "state_access", "generation": 1, "transaction": 1 },
+          { "domain": "events", "generation": 1, "transaction": 1 },
+          { "domain": "event_access", "generation": 1, "transaction": 1 },
+          { "domain": "functions", "generation": 1, "transaction": 1 },
+          { "domain": "state", "generation": 2, "transaction": 1 },
+          { "domain": "state_access", "generation": 2, "transaction": 1 },
+          { "domain": "events", "generation": 2, "transaction": 1 },
+          { "domain": "event_access", "generation": 2, "transaction": 1 },
+          { "domain": "functions", "generation": 2, "transaction": 1 }
+        ],
+        "declaration_snapshots": [
+          {
+            "generation": 1,
+            "transaction": 1,
+            "stimulus_index": 1,
+            "revisions": {
+              "state": 0,
+              "state_access": 0,
+              "events": 0,
+              "event_access": 0,
+              "functions": 0
+            }
+          },
+          {
+            "generation": 2,
+            "transaction": 1,
+            "stimulus_index": 10,
+            "revisions": {
+              "state": 0,
+              "state_access": 0,
+              "events": 0,
+              "event_access": 0,
+              "functions": 0
+            }
+          }
+        ],
+        "declaration_promises": [],
+        "declaration_visibility": [],
+        "operations": [],
+        "call_streams": [],
+        "presence": [
+          [
+            { "session_id": 501, "user_id": "sdk_user_alpha" },
+            { "session_id": 502, "user_id": "sdk_user_beta" }
+          ],
+          [],
+          [
+            { "session_id": 503, "user_id": "sdk_user_beta" }
+          ],
+          []
+        ],
+        "state_publications": 0,
+        "effects": [],
+        "errors": [],
+        "resources": {
+          "sockets": 0,
+          "socket_high_water": 1,
+          "timers": 0,
+          "listeners": 0,
+          "iterators": 0
+        }
+      }
+    },
+    {
+      "id": "sdk_shadow_state",
+      "description": "Shadow state reaches only the beta state publisher and exposes no callable action path.",
+      "coverage": ["shadow_state"],
+      "setup": {
+        "mode": "shadow_state",
+        "desired_declarations": []
+      },
+      "stimuli": [
+        {
+          "kind": "state_publish",
+          "paths": ["zone.alpha.light.on", "system.connection.status"]
+        }
+      ],
+      "expected": {
+        "statuses": [],
+        "status_checkpoints": [],
+        "lifecycle_promises": [],
+        "access_reasons": [],
+        "declarations": [],
+        "declaration_snapshots": [],
+        "declaration_promises": [],
+        "declaration_visibility": [],
+        "operations": [],
+        "call_streams": [],
+        "presence": [],
+        "state_publications": 1,
+        "effects": [],
+        "errors": [],
+        "resources": {
+          "sockets": 1,
+          "socket_high_water": 1,
+          "timers": "not_asserted",
+          "listeners": "not_asserted",
+          "iterators": "not_asserted"
+        }
+      }
+    },
+    {
+      "id": "sdk_recorded_effects",
+      "description": "Recorded-action mode redirects device commands and notification intents to the recorder.",
+      "coverage": ["recorded_effects"],
+      "setup": {
+        "mode": "recorded_action",
+        "desired_declarations": []
+      },
+      "stimuli": [
+        { "kind": "effect", "effect": "device_command" },
+        { "kind": "effect", "effect": "notification_intent" }
+      ],
+      "expected": {
+        "statuses": [],
+        "status_checkpoints": [],
+        "lifecycle_promises": [],
+        "access_reasons": [],
+        "declarations": [],
+        "declaration_snapshots": [],
+        "declaration_promises": [],
+        "declaration_visibility": [],
+        "operations": [],
+        "call_streams": [],
+        "presence": [],
+        "state_publications": 0,
+        "effects": [
+          { "effect": "device_command", "destination": "recorder" },
+          { "effect": "notification_intent", "destination": "recorder" }
+        ],
+        "errors": [],
+        "resources": {
+          "sockets": 0,
+          "socket_high_water": 0,
+          "timers": 0,
+          "listeners": 0,
+          "iterators": 0
+        }
+      }
+    },
+    {
+      "id": "sdk_unclassified_effect",
+      "description": "An effect outside the closed recorder vocabulary is rejected before reaching a sink.",
+      "coverage": ["unclassified_effect"],
+      "setup": {
+        "mode": "recorded_action",
+        "desired_declarations": []
+      },
+      "stimuli": [
+        { "kind": "effect", "effect": "unclassified" }
+      ],
+      "expected": {
+        "statuses": [],
+        "status_checkpoints": [],
+        "lifecycle_promises": [],
+        "access_reasons": [],
+        "declarations": [],
+        "declaration_snapshots": [],
+        "declaration_promises": [],
+        "declaration_visibility": [],
+        "operations": [],
+        "call_streams": [],
+        "presence": [],
+        "state_publications": 0,
+        "effects": [
+          { "effect": "unclassified", "destination": "rejected" }
+        ],
+        "errors": [{ "code": "unclassified_effect", "stimulus_index": 0 }],
+        "resources": {
+          "sockets": 0,
+          "socket_high_water": 0,
+          "timers": 0,
+          "listeners": 0,
+          "iterators": 0
+        }
+      }
+    }
+  ]
+}

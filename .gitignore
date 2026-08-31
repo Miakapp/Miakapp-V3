@@ -5,3 +5,4 @@ package-lock.json
 component-runtime/test-results/
 component-runtime/playwright-report/
 synthetic-home/dist/
+coordinator-contract/dist/

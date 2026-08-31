@@ -188,15 +188,18 @@ reserved unless a frame explicitly assigns it a meaning.
 |---|---|---|
 | `requestId` | originating connection | 1..MAX_SAFE_INTEGER; unique while in flight |
 | `callId` | one connection | same allocation rule as `requestId` |
-| `eventId` | originating connection | 1..MAX_SAFE_INTEGER |
+| `eventId` | originating connection | 1..MAX_SAFE_INTEGER; never reused during that connection lifetime |
 | `sessionId` | relay process epoch | 1..MAX_SAFE_INTEGER; immutable |
 | dictionary ID | home epoch and dictionary kind | positive; never reused inside the epoch |
 | `revision` | home state | positive, monotonically increasing |
 | `policyRevision` | home authorization declarations | positive, monotonically increasing |
 | `generation` | `(home, coordinator name)` | positive, monotonically increasing |
 
-Reusing an in-flight request identifier is an error even when the bytes are
-identical. Version 1.0 does not deduplicate requests across connections.
+Reusing an in-flight request identifier, call identifier or any earlier event
+identifier is an error even when the bytes are identical. Event identifiers have
+connection-lifetime uniqueness because a successful event has no terminal
+acknowledgement after which reuse would be safe. Version 1.0 does not deduplicate
+requests across connections.
 
 ### 5.2 Names
 
@@ -288,7 +291,7 @@ trailing fields.
 |---:|---|---|---|
 | `0x00` | `HELLO` | client -> relay | `[major, minMinor, maxMinor, role, token, context]` |
 | `0x01` | `WELCOME` | relay -> client | `[major, minor, sessionId, epoch, enrolled, coordinators, limits, expiresAtMs]` |
-| `0x02` | `ERROR` | relay -> client | `[requestIdOrZero, sourceOpcode, code, retryable, message]` |
+| `0x02` | `ERROR` | relay -> client | `[correlationIdOrZero, sourceOpcode, code, retryable, message]` |
 | `0x03` | `FATAL` | relay -> client | `[sourceOpcodeOrZero, code, retryable, message]` |
 | `0x04` | `REAUTH` | client -> relay | `[requestId, token]` |
 | `0x05` | `REAUTH_OK` | relay -> client | `[requestId, expiresAtMs]` |
@@ -302,6 +305,14 @@ verification before the previous token deadline. Failure is fatal.
 `HOME_STATUS` announces enrollment or coordinator availability without forcing a
 reconnect. `GOAWAY` starts draining: the client sends no new request and closes
 after terminal replies or the relay deadline.
+
+For `ERROR`, `sourceOpcode` selects the correlation namespace. The first field is
+the originating `eventId` when `sourceOpcode` is `EVENT`, the originating
+`callId` for a call frame, the originating `requestId` for another request frame,
+and zero only when no originating frame exists. A receiver MUST NOT look up an
+event correlation in its request-ID table. A relay emits an event error, if any,
+before closing the originating connection; reconnect starts a new identifier
+namespace.
 
 ### 7.2 State frames
 
@@ -332,9 +343,10 @@ patterns               = [pattern, ...]
 
 One coordinator may declare at most 4,096 paths. `STATE_SYNC` is its complete
 owned slice, not a merge. Paths absent from the new declaration are deleted.
-The relay validates ownership and collisions before changing anything, then
-commits the declaration atomically. `STATE_SYNC_OK` returns the IDs for all paths
-owned by that coordinator.
+The relay validates ownership and collisions, then stages the declaration inside
+the atomic coordinator declaration transaction defined in Section 7.5.
+`STATE_SYNC_OK` returns the staged IDs for all paths owned by that coordinator;
+those IDs MUST NOT be used until the transaction activates.
 
 The home dictionary contains at most 16,384 paths. IDs are never reused inside
 an epoch. `STATE_DICT` with `replace=true` replaces the receiving client's
@@ -355,8 +367,8 @@ does not auto-retry. A successful batch increments the home revision once.
 `STATE_ACL_SYNC` is the sending coordinator's complete ACL slice. A pattern is
 either an exact state path or a dotted prefix ending in `.*`. An empty patterns
 array creates an enrolled user with no visible state. ACL slices from trusted
-coordinators are unioned. ACL changes that alter a user's view cause a fresh
-snapshot.
+coordinators are unioned. Activation of an ACL change that alters a user's view
+causes a fresh snapshot.
 
 ### 7.3 Event frames
 
@@ -398,7 +410,7 @@ not imply replay or deduplication.
 
 A connection has at most 256 active subscriptions. Subscription authorization is
 checked both when subscribing and when delivering. An ACL change removes invalid
-subscriptions immediately.
+subscriptions as part of atomic declaration activation.
 
 ### 7.4 Call frames
 
@@ -450,7 +462,56 @@ acceptance, the relay forwards cancellation and returns
 `CALL_ERROR/OUTCOME_UNKNOWN`; it does not claim that a side effect was undone.
 Late results are discarded after the route is terminal.
 
-### 7.5 Presence frames
+### 7.5 Atomic coordinator declaration activation
+
+The five complete coordinator slices form one declaration transaction in this
+fixed order:
+
+1. `STATE_SYNC`;
+2. `STATE_ACL_SYNC`;
+3. `EVENT_SYNC`;
+4. `EVENT_ACL_SYNC`;
+5. `FUNCTION_SYNC`.
+
+Every coordinator starts with an empty desired value for every slice. Initial
+synchronization, reconnect and an in-session declaration replacement therefore
+send all five frames, including empty slices. Only one transaction may be staged
+per coordinator connection. `STATE_SYNC` starts a new transaction and discards
+an incomplete staged transaction; any later declaration frame without the
+required predecessor is `UNEXPECTED_FRAME`. Staging reserves no ownership and
+MUST NOT hold a home lock across frames. The relay discards an incomplete stage
+on connection close, replacement by a new `STATE_SYNC`, or after 30 seconds and
+releases all temporary memory; expiry returns `DEADLINE_EXCEEDED` when the
+connection is still usable.
+
+The relay validates and stages each slice without changing the active state,
+ACLs, topics, event ACLs, function routes, dictionaries, subscriptions or user
+views. The first four success frames acknowledge staging only. When the fifth
+slice arrives, the relay acquires the home-scoped activation lock and revalidates
+the complete staged transaction against the current epoch, authorization policy,
+ownership tables, aggregate limits and the full post-activation user views. This
+final validation is mandatory even when every slice was valid when first staged:
+another coordinator may have activated a colliding name in the meantime.
+
+If final validation succeeds, the relay atomically replaces all five active
+slices while holding that lock and enqueues `FUNCTION_SYNC_OK` on the coordinator
+connection before the new routes become dispatchable. No client can observe a
+prefix of the transaction, and the coordinator processes the final
+acknowledgement before any dispatch that uses the new dictionaries or handler
+slice. Dictionary and user-view frames caused by activation follow that final
+success frame in the relay's ordered processing. Two colliding concurrent
+transactions can both stage, but at most one can pass locked final validation.
+
+An error, final-validation failure, expiry or disconnect before activation
+discards the staged transaction and leaves the previous active configuration
+unchanged until its ordinary generation grace expires. A final-validation error
+is correlated with the `FUNCTION_SYNC` request that attempted activation. A
+collision or permanent authorization failure therefore cannot partially publish
+a new policy. Grants from different trusted coordinators remain unioned; changing
+several coordinators is not one transaction and requires an explicit higher-level
+rollout.
+
+### 7.6 Presence frames
 
 | Opcode | Name | Direction | Payload |
 |---:|---|---|---|
@@ -486,9 +547,12 @@ created -> sent -> accepted -> streaming -> succeeded
                    +-------------+-> outcome_unknown
 ```
 
-Failure before `CALL_ACCEPTED` means the relay did not dispatch the call and may
-be retryable. Failure after acceptance cannot prove whether business or physical
-work occurred; absent a terminal result, the outcome is unknown.
+Only local rejection before the complete `CALL` frame is handed to the transport,
+or an explicit relay terminal response that guarantees pre-dispatch failure, can
+prove that a call was not dispatched. Transport loss after handoff is
+`OUTCOME_UNKNOWN` even when the caller never observed `CALL_ACCEPTED`: the relay
+may already have queued `CALL_DISPATCH`. After acceptance, any failure without a
+terminal result is likewise unknown.
 
 Request and call identifiers provide correlation only. They do not create
 exactly-once delivery.
@@ -499,11 +563,12 @@ A coordinator name is unique within a home. Authenticating the same name creates
 a larger generation and evicts the previous connection. Frames from an evicted
 generation are rejected.
 
-On disconnect, the coordinator's state, ACL, event and function slices enter a
-30-second grace period by default. Reconnection with the same name replaces that
-generation and must redeclare every complete slice. After grace expiry, all
-slices are purged atomically and affected users receive status, dictionary and
-state updates as applicable.
+On disconnect, the coordinator's active state, ACL, event and function slices
+enter a 30-second grace period by default. Reconnection with the same name stages
+all five complete slices; the prior active configuration remains visible until
+the new declaration transaction activates or its grace expires. After grace
+expiry, all active slices are purged atomically and affected users receive status,
+dictionary and state updates as applicable.
 
 Multiple names provide namespace sharding, not concurrent authority over the
 same actuator. This wire protocol does not provide physical fencing.
@@ -551,6 +616,11 @@ subscriptions and in-flight calls. One home cannot borrow another home's budget.
 | `1404` | `OUTCOME_UNKNOWN` | no automatic retry |
 | `1405` | `CANCELLED` | no |
 | `1500` | `INTERNAL` | yes when explicitly marked |
+
+Codes `2000` through `2999` are reserved for sanitized application call errors.
+They are valid only in callee-originated `CALL_ERROR` frames, are never valid in
+`ERROR` or `FATAL`, and do not extend the relay error catalogue. The relay still
+validates the bounded message and details value before forwarding them.
 
 The frame's `retryable` field is authoritative for that occurrence. Human error
 messages are diagnostic, at most 256 UTF-8 bytes, and MUST NOT be parsed by a
