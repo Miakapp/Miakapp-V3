@@ -33,8 +33,12 @@ synthetic-home adapter and effect recorder under [`../coordinator-contract/`](..
 the real MiakAPI and Node-RED implementations must still pass that contract. RFC
 0004 is backed by deterministic signed vectors, independent TypeScript and Go
 verifiers, and a bounded behavioral model under
-[`../control-plane-contract/`](../control-plane-contract/); Firebase Emulator and
-staging acceptance remain implementation gates.
+[`../control-plane-contract/`](../control-plane-contract/). Its first
+owner-to-access-token implementation slice runs through Auth, Functions and
+Firestore under [`../control-plane/`](../control-plane/); separate Firestore and
+Storage client contexts prove the initial deny-by-default Rules boundary. The
+remaining push/publication emulator matrix and staging acceptance are still
+implementation gates.
 
 Repository-specific implementation plans must link back to these documents and
 must not redefine a shared contract locally.

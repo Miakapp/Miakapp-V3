@@ -13,7 +13,8 @@
     "test:runtime": "./component-runtime/check.sh",
     "test:synthetic-home": "./synthetic-home/check.sh",
     "test:coordinator-contract": "./coordinator-contract/check.sh",
-    "test:control-plane-contract": "./control-plane-contract/check.sh"
+    "test:control-plane-contract": "./control-plane-contract/check.sh",
+    "test:control-plane-emulator": "./control-plane/check.sh"
   },
   "dependencies": {
     "codemirror": "^5.61.1",
