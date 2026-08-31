@@ -1,0 +1,48 @@
+{
+  "functions": [
+    {
+      "source": ".",
+      "codebase": "control-plane-emulator",
+      "ignore": [
+        ".firebase",
+        ".git",
+        "*-debug.log",
+        "*-debug.*.log",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local",
+        "node_modules",
+        "test"
+      ]
+    }
+  ],
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "emulators": {
+    "auth": {
+      "host": "127.0.0.1",
+      "port": 9099
+    },
+    "firestore": {
+      "host": "127.0.0.1",
+      "port": 8080
+    },
+    "functions": {
+      "host": "127.0.0.1",
+      "port": 5001
+    },
+    "storage": {
+      "host": "127.0.0.1",
+      "port": 9199
+    },
+    "ui": {
+      "enabled": false
+    },
+    "singleProjectMode": true
+  }
+}
