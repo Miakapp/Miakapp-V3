@@ -289,8 +289,8 @@ function validateArtifactUrl(raw: unknown, context: PointerValidationContext): s
   } catch {
     return fail('pointer_invalid', 'url is invalid');
   }
-  if (url.protocol !== 'https:' || url.username || url.password || url.hash) {
-    fail('pointer_invalid', 'url must be credential-free HTTPS without a fragment');
+  if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash) {
+    fail('pointer_invalid', 'url must be credential-free HTTPS without a query or fragment');
   }
   if (!context.allowedArtifactOrigins.has(url.origin)) {
     fail('pointer_invalid', 'url origin is not allowed');

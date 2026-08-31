@@ -256,8 +256,8 @@ The host MUST reject the pointer unless:
 - `generation` is a positive safe integer and is not below the highest accepted
   generation for this home;
 - `release` is non-empty UTF-8 of at most 64 bytes;
-- `url` is HTTPS, contains no user information or fragment, and matches the
-  configured artifact origin and path prefix;
+- `url` is HTTPS, contains no user information, query or fragment, and matches
+  the configured artifact origin and path prefix;
 - `sha256` is a 32-byte SHA-256 digest encoded as unpadded base64url;
 - `size` is a positive integer no larger than 2,097,152 decoded bytes;
 - each requirement list is duplicate-free, bounded, and syntactically valid;
@@ -282,13 +282,19 @@ The publisher SHOULD reject these constructs before upload. After byte
 verification, the broker MUST decode with fatal UTF-8 handling and parse the
 entire program as Script source using its pinned platform-owned parser. It rejects
 syntax errors, module syntax, dynamic import expressions, source-map directives,
-and excessive AST complexity before Worker construction. This runtime parse is
-mandatory: Chromium can emit a dynamic-import request before reporting its CSP
-rejection.
+and excessive lexical or AST complexity before Worker construction. The parser
+aborts during tokenization after 100,000 lexical tokens instead of first building
+an attacker-sized AST. This runtime parse is mandatory: Chromium can emit a
+dynamic-import request before reporting its CSP rejection.
 
 The artifact object name MUST contain its digest and MUST be immutable. CSP still
 blocks string compilation and network APIs, but it is not the only import
 control.
+
+The finalized artifact URL is token-free and may be publicly cacheable. Published
+artifacts therefore contain no credential, private home state, source map or
+other confidentiality-sensitive material. Upload staging remains private; the
+control plane promotes only bytes that passed delivery-path verification.
 
 The runtime evaluates the verified program inside a fixed nested lexical scope.
 Artifact code MUST use `self` for Worker-global APIs and MUST NOT depend on
@@ -543,6 +549,8 @@ ABI 1 limits are:
 | Resource | Limit |
 | --- | ---: |
 | decoded artifact | 2,097,152 bytes |
+| program lexical tokens | 100,000 |
+| program AST members | 250,000 |
 | broker/host envelope after canonical accounting | 524,288 bytes |
 | UI nodes | 1,024 |
 | UI depth | 32 |
