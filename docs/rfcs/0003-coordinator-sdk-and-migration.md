@@ -906,8 +906,8 @@ A coordinator SDK conforms to API 1.0 when it:
    stop;
 10. passes the RFC 0001 codec fixtures and session direction tests required of its
     transport layer;
-11. passes the coordinator-contract corpus under Bun and the supported Node
-    runtime.
+11. passes the complete coordinator-contract `sdk` profile under Bun and the
+    supported Node runtime.
 
 A migration adapter additionally conforms when it:
 
@@ -923,9 +923,15 @@ A migration adapter additionally conforms when it:
 10. emits deprecation/onboarding guidance without making the bridge a permanent
     product promise.
 
+The migration adapter MUST pass the complete coordinator-contract `migration`
+profile. The executable runner MAY also run `all` as a kit-integrity check, but
+neither implementation is required to impersonate the other boundary. Profile
+selection MUST retain the fixed coverage set for that profile; selecting an
+arbitrary subset is not conformance.
+
 The shared executable package establishes the public surface and fixture runner.
 It does not prove a future MiakAPI build or Node-RED runtime conforms until that
-implementation is installed as the subject and passes the same corpus.
+implementation is installed as the subject and passes its complete profile.
 
 ## 20. Security and privacy acceptance matrix
 

@@ -48,6 +48,29 @@ describe('coordinator contract replay', () => {
     expect(second).toEqual(first);
   });
 
+  test('replays only the requested complete conformance profile', async () => {
+    const sdk = await replayContractCorpus(
+      corpus,
+      new ExpectedSubject(corpus),
+      { profile: 'sdk' },
+    );
+    expect(sdk).toHaveLength(11);
+    expect(sdk.every(({ scenario_id: id }) => id !== 'sdk_shadow_state'
+      && id !== 'sdk_recorded_effects'
+      && id !== 'sdk_unclassified_effect')).toBe(true);
+
+    const migration = await replayContractCorpus(
+      corpus,
+      new ExpectedSubject(corpus),
+      { profile: 'migration' },
+    );
+    expect(migration.map(({ scenario_id: id }) => id)).toEqual([
+      'sdk_shadow_state',
+      'sdk_recorded_effects',
+      'sdk_unclassified_effect',
+    ]);
+  });
+
   test('preserves ordered stimuli', async () => {
     const kinds: string[] = [];
     const expected = new ExpectedSubject(corpus);

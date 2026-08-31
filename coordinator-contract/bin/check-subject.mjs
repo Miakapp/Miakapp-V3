@@ -13,6 +13,7 @@ const MAX_TOTAL_TIMEOUT_MS = 300_000;
 const MAX_OUTPUT_BYTES = 1_048_576;
 const TIMEOUT_EXIT_CODE = 124;
 const CHILD_KILL_GRACE_MS = 250;
+const CONTRACT_PROFILES = new Set(['sdk', 'migration', 'all']);
 
 const platformError = externalRunnerPlatformError(process.platform);
 
@@ -31,9 +32,18 @@ function timeoutFromEnvironment(name, fallback, maximum) {
   return value;
 }
 
-const [subjectPath, ...extraArguments] = process.argv.slice(2);
-if (subjectPath === undefined || extraArguments.length > 0) {
-  throw new Error('Usage: check-subject.mjs <absolute-or-relative-subject-module>');
+const arguments_ = process.argv.slice(2);
+let profile = 'all';
+let subjectPath;
+if (arguments_.length === 1) {
+  [subjectPath] = arguments_;
+} else if (arguments_.length === 3 && arguments_[0] === '--profile') {
+  [, profile, subjectPath] = arguments_;
+}
+if (subjectPath === undefined || !CONTRACT_PROFILES.has(profile)) {
+  throw new Error(
+    'Usage: check-subject.mjs [--profile sdk|migration|all] <absolute-or-relative-subject-module>',
+  );
 }
 
 const stageTimeoutMs = timeoutFromEnvironment(
@@ -47,7 +57,7 @@ const totalTimeoutMs = timeoutFromEnvironment(
   MAX_TOTAL_TIMEOUT_MS,
 );
 const workerPath = fileURLToPath(new URL('./run-subject.mjs', import.meta.url));
-const child = spawn(process.execPath, [workerPath, resolve(subjectPath)], {
+const child = spawn(process.execPath, [workerPath, '--profile', profile, resolve(subjectPath)], {
   detached: true,
   env: process.env,
   stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
