@@ -1,0 +1,114 @@
+import {
+  createHmac,
+  createPrivateKey,
+  randomBytes,
+  sign,
+  timingSafeEqual,
+  type KeyObject,
+} from 'node:crypto';
+
+import { apiError } from './errors.js';
+import {
+  HOME_KEY_PATTERN,
+  type AccessGrant,
+  type DeploymentConfig,
+} from './types.js';
+
+function canonicalBase64url(value: string, bytes: number): Uint8Array {
+  if (!/^[A-Za-z0-9_-]+$/.test(value)) throw apiError('invalid_home_key');
+  const decoded = Buffer.from(value, 'base64url');
+  if (decoded.byteLength !== bytes || decoded.toString('base64url') !== value) {
+    throw apiError('invalid_home_key');
+  }
+  return decoded;
+}
+
+export function randomIdentifier(): string {
+  return randomBytes(16).toString('base64url');
+}
+
+export interface GeneratedHomeKey {
+  readonly value: string;
+  readonly keyId: string;
+}
+
+export function generateHomeKey(): GeneratedHomeKey {
+  const keyId = randomIdentifier();
+  const secret = randomBytes(32).toString('base64url');
+  return Object.freeze({ value: `mhk1_${keyId}_${secret}`, keyId });
+}
+
+export function parseHomeKey(value: string): { readonly keyId: string } {
+  const match = HOME_KEY_PATTERN.exec(value);
+  const keyId = match?.[1];
+  const secret = match?.[2];
+  if (keyId === undefined || secret === undefined) throw apiError('invalid_home_key');
+  canonicalBase64url(keyId, 16);
+  canonicalBase64url(secret, 32);
+  return Object.freeze({ keyId });
+}
+
+export function deriveHomeKeyVerifier(homeKey: string, pepper: Uint8Array): string {
+  parseHomeKey(homeKey);
+  if (pepper.byteLength !== 32) throw new Error('Home Key pepper must contain 32 bytes');
+  return createHmac('sha256', pepper).update(homeKey, 'ascii').digest('base64url');
+}
+
+export function homeKeyVerifierMatches(
+  homeKey: string,
+  pepper: Uint8Array,
+  expectedVerifier: unknown,
+): boolean {
+  if (typeof expectedVerifier !== 'string') return false;
+  let calculated: Buffer;
+  let expected: Buffer;
+  try {
+    calculated = Buffer.from(deriveHomeKeyVerifier(homeKey, pepper), 'base64url');
+    expected = Buffer.from(expectedVerifier, 'base64url');
+  } catch {
+    return false;
+  }
+  return calculated.byteLength === expected.byteLength && timingSafeEqual(calculated, expected);
+}
+
+export interface SignedAccessToken {
+  readonly token: string;
+  readonly expiresAtMs: number;
+}
+
+export class AccessTokenSigner {
+  readonly #config: DeploymentConfig;
+  readonly #privateKey: KeyObject;
+
+  constructor(config: DeploymentConfig) {
+    this.#config = config;
+    this.#privateKey = createPrivateKey({ key: config.signingPrivateJwk, format: 'jwk' });
+  }
+
+  sign(grant: AccessGrant): SignedAccessToken {
+    const issuedAt = grant.issuedAt;
+    const expiresAt = issuedAt + 300;
+    const header = {
+      alg: 'EdDSA',
+      kid: this.#config.signingPublicJwk.kid,
+      typ: 'at+jwt',
+    };
+    const claims: Record<string, string | number> = {
+      iss: this.#config.issuer,
+      sub: grant.homeId,
+      aud: grant.audience,
+      exp: expiresAt,
+      iat: issuedAt,
+      jti: grant.tokenId,
+      client_id: grant.clientId,
+      scope: grant.scope,
+    };
+    if (grant.role !== null) claims.miakapp_role = grant.role;
+    if (grant.coordinatorName !== null) claims.miakapp_coordinator = grant.coordinatorName;
+    const encodedHeader = Buffer.from(JSON.stringify(header), 'utf8').toString('base64url');
+    const encodedClaims = Buffer.from(JSON.stringify(claims), 'utf8').toString('base64url');
+    const signingInput = `${encodedHeader}.${encodedClaims}`;
+    const signature = sign(null, Buffer.from(signingInput, 'ascii'), this.#privateKey).toString('base64url');
+    return Object.freeze({ token: `${signingInput}.${signature}`, expiresAtMs: expiresAt * 1_000 });
+  }
+}

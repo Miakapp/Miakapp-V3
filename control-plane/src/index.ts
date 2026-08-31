@@ -1,0 +1,26 @@
+import { initializeApp } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
+import { onRequest } from 'firebase-functions/v2/https';
+
+import { createControlPlaneApp } from './api.js';
+import { loadEmulatorConfig } from './config.js';
+import { AccessTokenSigner } from './crypto.js';
+import { ControlPlaneStore } from './store.js';
+import { SYSTEM_CLOCK } from './types.js';
+
+const config = loadEmulatorConfig();
+const firebase = initializeApp({ projectId: config.projectId });
+const auth = getAuth(firebase);
+const firestore = getFirestore(firebase);
+const store = new ControlPlaneStore(firestore, config, SYSTEM_CLOCK);
+const signer = new AccessTokenSigner(config);
+const app = createControlPlaneApp({ auth, clock: SYSTEM_CLOCK, config, signer, store });
+
+export const controlPlaneApi = onRequest({
+  region: config.region,
+  cors: false,
+  concurrency: 16,
+  maxInstances: 4,
+  timeoutSeconds: 30,
+}, app);

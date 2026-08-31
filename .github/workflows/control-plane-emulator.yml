@@ -1,0 +1,49 @@
+name: Control-plane Firebase Emulator slice
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/control-plane-emulator.yml'
+      - 'control-plane/**'
+      - 'control-plane-contract/**'
+      - 'docs/rfcs/0004-platform-control-plane.md'
+      - 'docs/specs/2026-08-29-miakapp-3.5-design.md'
+      - 'docs/roadmaps/2026-08-29-miakapp-3.5-coordination.md'
+      - 'package.json'
+  pull_request:
+    paths:
+      - '.github/workflows/control-plane-emulator.yml'
+      - 'control-plane/**'
+      - 'control-plane-contract/**'
+      - 'docs/rfcs/0004-platform-control-plane.md'
+      - 'docs/specs/2026-08-29-miakapp-3.5-design.md'
+      - 'docs/roadmaps/2026-08-29-miakapp-3.5-coordination.md'
+      - 'package.json'
+
+permissions:
+  contents: read
+
+jobs:
+  emulator:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: control-plane
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22.22.0
+          package-manager-cache: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: 1.2.23
+      - name: Run the isolated Firebase Emulator slice
+        run: ./check.sh
