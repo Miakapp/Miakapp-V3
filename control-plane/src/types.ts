@@ -1,0 +1,106 @@
+import type { JsonWebKey } from 'node:crypto';
+
+export const HOME_ID_PATTERN = /^[a-z][a-z0-9-]{1,61}[a-z0-9]$/;
+export const COORDINATOR_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
+export const IDENTIFIER_PATTERN = /^[A-Za-z0-9_-]{22}$/;
+export const HOME_KEY_PATTERN = /^mhk1_([A-Za-z0-9_-]{22})_([A-Za-z0-9_-]{43})$/;
+export const ACCESS_SCOPES = Object.freeze([
+  'relay:coordinator',
+  'relay:cli',
+  'push:send',
+  'components:publish',
+] as const);
+
+export type AccessScope = typeof ACCESS_SCOPES[number];
+
+export interface FirebasePrincipal {
+  readonly userId: string;
+  readonly authenticatedAt: number;
+  readonly expiresAt: number;
+}
+
+export interface HomeInput {
+  readonly homeId: string;
+  readonly name: string;
+  readonly icon: string;
+  readonly relayUrl: string;
+}
+
+export interface HomeRepresentation {
+  readonly home_id: string;
+  readonly name: string;
+  readonly icon: string;
+  readonly relay_url: string;
+  readonly created_at: string;
+  readonly updated_at: string;
+}
+
+export interface HomePatch {
+  readonly name?: string;
+  readonly icon?: string;
+  readonly relayUrl?: string;
+}
+
+export interface HomeKeyMetadata {
+  readonly key_id: string;
+  readonly label: string;
+  readonly scopes: AccessScope[];
+  readonly created_at: string;
+  readonly revoked_at: string | null;
+  readonly last_used_at: string | null;
+}
+
+export type ExchangeRequest =
+  | {
+    readonly purpose: 'relay';
+    readonly role: 'coordinator';
+    readonly coordinatorName: string;
+    readonly reason: 'initial' | 'reauth' | 'reconnect';
+  }
+  | {
+    readonly purpose: 'relay';
+    readonly role: 'cli';
+    readonly reason: 'initial' | 'reauth' | 'reconnect';
+  }
+  | { readonly purpose: 'push' }
+  | { readonly purpose: 'components' };
+
+export interface AccessGrant {
+  readonly issuedAt: number;
+  readonly tokenId: string;
+  readonly homeId: string;
+  readonly clientId: string;
+  readonly label: string;
+  readonly scope: AccessScope;
+  readonly audience: string;
+  readonly role: 'coordinator' | 'cli' | null;
+  readonly coordinatorName: string | null;
+}
+
+export interface DeploymentConfig {
+  readonly projectId: string;
+  readonly region: string;
+  readonly allowedOrigins: ReadonlySet<string>;
+  readonly issuer: string;
+  readonly jwksUri: string;
+  readonly exchangeEndpoint: string;
+  readonly pushAudience: string;
+  readonly componentsAudience: string;
+  readonly verifierKeyVersion: string;
+  readonly homeKeyPepperForVersion: (version: string) => Uint8Array | undefined;
+  readonly signingPrivateJwk: JsonWebKey & { readonly kid: string };
+  readonly signingPublicJwk: Readonly<{
+    kty: 'OKP';
+    crv: 'Ed25519';
+    x: string;
+    use: 'sig';
+    alg: 'EdDSA';
+    kid: string;
+  }>;
+}
+
+export interface Clock {
+  now(): number;
+}
+
+export const SYSTEM_CLOCK: Clock = Object.freeze({ now: () => Date.now() });
