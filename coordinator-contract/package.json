@@ -23,11 +23,13 @@
     "build": "tsc -p tsconfig.build.json",
     "smoke:node": "node test/node-smoke.mjs",
     "smoke:external": "node bin/check-subject.mjs test/external-subject.mjs",
+    "smoke:external:sdk": "node bin/check-subject.mjs --profile sdk test/external-subject.mjs",
+    "smoke:external:migration": "node bin/check-subject.mjs --profile migration test/external-subject.mjs",
     "test:external-platform": "node test/external-runner-platform-regression.mjs",
     "test:external-watchdog": "node test/external-runner-regression.mjs",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
-    "check": "bun run typecheck && bun run test && bun run build && bun run smoke:node && bun run test:external-platform && bun run smoke:external && bun run test:external-watchdog"
+    "check": "bun run typecheck && bun run test && bun run build && bun run smoke:node && bun run test:external-platform && bun run smoke:external && bun run smoke:external:sdk && bun run smoke:external:migration && bun run test:external-watchdog"
   },
   "dependencies": {
     "@miakapp/synthetic-home-conformance": "file:../synthetic-home"

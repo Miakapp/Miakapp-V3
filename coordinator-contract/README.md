@@ -7,7 +7,7 @@ executable before either implementation repository adopts it.
 It is a contract kit, not the `miakapi` SDK, a relay client, a Node-RED node, or a
 production migration tool. Passing its self-tests proves that the corpus and
 runner are internally consistent. A future implementation conforms only after it
-is installed as the subject and passes the same scenarios.
+is installed as the subject and passes its complete named profile.
 
 ## Contents
 
@@ -92,11 +92,19 @@ export async function createCoordinatorContractSubject() {
 }
 ```
 
-The pinned checkout then runs:
+The pinned checkout then runs the profile owned by that implementation:
 
 ```sh
-./coordinator-contract/check-external.sh /absolute/path/to/subject.mjs
+./coordinator-contract/check-external.sh --profile sdk /absolute/path/to/miakapi-subject.mjs
+./coordinator-contract/check-external.sh --profile migration /absolute/path/to/migration-subject.mjs
 ```
+
+The `sdk` profile contains all 11 coordinator scenarios. The `migration` profile
+contains all three shadow/effect scenarios. Omitting `--profile`, or selecting
+`all`, preserves the full 14-scenario kit check; it is not required for an
+implementation that owns only one side of the boundary. A profile is accepted
+only when its complete fixed coverage set is present, so filtering cannot turn a
+partial implementation into conformance.
 
 External-subject execution is POSIX-only. On Windows, the Node checker exits
 before spawning either the trusted runner or the subject worker. Windows cannot
@@ -104,8 +112,9 @@ guarantee runner-owned subtree cleanup when the checker is terminated unless the
 processes are contained in a native Job Object, which this portable package does
 not install.
 
-The command builds both local contract packages and replays the versioned corpus
-against that external module. Consumers never track `main` implicitly. A fixture
+The command builds both local contract packages and replays the selected complete
+profile from the versioned corpus against that external module. Consumers never
+track `main` implicitly. A fixture
 schema or public SDK major change requires an explicit pin update; during a major
 migration, consumers run the old and new pinned contract checks in parallel until
 the old compatibility target is retired.

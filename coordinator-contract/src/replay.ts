@@ -1,9 +1,11 @@
 import {
   type ContractObservation,
+  type ContractProfile,
   type ContractSetup,
   type ContractStimulus,
   type CoordinatorContractCorpus,
   type CoordinatorContractScenario,
+  selectCoordinatorContractScenarios,
   validateContractObservation,
 } from './contract.js';
 
@@ -22,6 +24,7 @@ export interface CoordinatorContractSubject {
 
 export interface ContractReplayOptions {
   hookTimeoutMs?: number;
+  profile?: ContractProfile;
   signal?: AbortSignal;
 }
 
@@ -222,7 +225,8 @@ export async function replayContractCorpus(
   options: ContractReplayOptions = {},
 ): Promise<ContractReplayResult[]> {
   const results: ContractReplayResult[] = [];
-  for (const scenario of corpus.scenarios) {
+  const scenarios = selectCoordinatorContractScenarios(corpus, options.profile ?? 'all');
+  for (const scenario of scenarios) {
     results.push(await replayContractScenario(corpus, scenario.id, subject, options));
   }
   return results;
