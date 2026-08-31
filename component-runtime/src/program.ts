@@ -2,6 +2,7 @@ import { parse } from 'acorn';
 import { ContractViolation, LIMITS } from './contract';
 
 const SOURCE_MAP_DIRECTIVE = /[#@]\s*sourceMappingURL\s*=/u;
+const MAX_PROGRAM_TOKENS = 100_000;
 const MAX_AST_MEMBERS = 250_000;
 
 function fail(message: string): never {
@@ -21,6 +22,7 @@ export function validateGuestProgram(bytes: Uint8Array): void {
   }
   let syntaxTree: unknown;
   let hasSourceMapDirective = false;
+  let tokens = 0;
   try {
     syntaxTree = parse(source, {
       ecmaVersion: 'latest',
@@ -28,6 +30,10 @@ export function validateGuestProgram(bytes: Uint8Array): void {
       allowHashBang: false,
       onComment: (_block, text) => {
         if (SOURCE_MAP_DIRECTIVE.test(text)) hasSourceMapDirective = true;
+      },
+      onToken: () => {
+        tokens += 1;
+        if (tokens > MAX_PROGRAM_TOKENS) fail('guest program exceeds the lexical token limit');
       },
     });
   } catch (error) {

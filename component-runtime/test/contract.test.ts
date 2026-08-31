@@ -96,6 +96,7 @@ describe('component pointer', () => {
     ['wrong home', pointer({ home_id: 'home-other' }), 'pointer_invalid'],
     ['rollback', pointer({ generation: 2 }), 'pointer_invalid'],
     ['wrong origin', pointer({ url: 'https://attacker.example/a.mjs' }), 'pointer_invalid'],
+    ['query credential', pointer({ url: `${artifactOrigin}/homes/home-test/a.mjs?token=secret` }), 'pointer_invalid'],
     ['oversize', pointer({ size: LIMITS.artifactBytes + 1 }), 'artifact_too_large'],
     ['bad digest', pointer({ sha256: 'not-a-digest' }), 'pointer_invalid'],
   ])('rejects %s', (_label, candidate, code) => {
@@ -344,5 +345,10 @@ describe('guest program profile', () => {
 
   test('rejects malformed UTF-8 before Worker construction', () => {
     expect(() => validateGuestProgram(Uint8Array.from([0xc3, 0x28]))).toThrow(/UTF-8/);
+  });
+
+  test('aborts token-dense input before constructing a full near-limit AST', () => {
+    expect(() => validateGuestProgram(new TextEncoder().encode(';'.repeat(LIMITS.artifactBytes))))
+      .toThrow(/token limit/);
   });
 });
