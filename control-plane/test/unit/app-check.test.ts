@@ -13,7 +13,7 @@ const NOW = 1_788_220_800;
 const CLOCK = Object.freeze({ now: () => NOW * 1_000 });
 const ENVIRONMENT = {
   FUNCTIONS_EMULATOR: 'true',
-  GCLOUD_PROJECT: 'demo-miakapp-v35',
+  GCLOUD_PROJECT: 'demo-miakapp-v4',
 } as NodeJS.ProcessEnv;
 const FIXTURE_URL = new URL(
   '../../../control-plane-contract/fixtures/v1/access-tokens.json',

@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { createHmac, type JsonWebKey } from 'node:crypto';
 
-import type { DeploymentConfig } from './types.js';
+import type { EmulatorDeploymentConfig } from './types.js';
 
-const EMULATOR_PROJECT = 'demo-miakapp-v35';
+const EMULATOR_PROJECT = 'demo-miakapp-v4';
 const FIXTURE_URL = new URL('../../control-plane-contract/fixtures/v1/access-tokens.json', import.meta.url);
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -66,7 +66,9 @@ export function assertEmulatorRuntime(environment: NodeJS.ProcessEnv = process.e
   }
 }
 
-export function loadEmulatorConfig(environment: NodeJS.ProcessEnv = process.env): DeploymentConfig {
+export function loadEmulatorConfig(
+  environment: NodeJS.ProcessEnv = process.env,
+): EmulatorDeploymentConfig {
   assertEmulatorRuntime(environment);
   const fixture = readSyntheticFixture();
   const signing = fixture.test_only_private_keys.future;

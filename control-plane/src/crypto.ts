@@ -2,8 +2,9 @@ import {
   createHmac,
   createPrivateKey,
   randomBytes,
-  sign,
+  sign as nodeSign,
   timingSafeEqual,
+  type JsonWebKey,
   type KeyObject,
 } from 'node:crypto';
 
@@ -11,7 +12,7 @@ import { apiError } from './errors.js';
 import {
   HOME_KEY_PATTERN,
   type AccessGrant,
-  type DeploymentConfig,
+  type SigningPublicJwk,
 } from './types.js';
 
 function canonicalBase64url(value: string, bytes: number): Uint8Array {
@@ -76,39 +77,74 @@ export interface SignedAccessToken {
   readonly expiresAtMs: number;
 }
 
+export interface AccessTokenSigningConfig {
+  readonly issuer: string;
+  readonly signingPublicJwk: SigningPublicJwk;
+}
+
+export interface LocalAccessTokenSigningConfig extends AccessTokenSigningConfig {
+  readonly signingPrivateJwk: JsonWebKey & { readonly kid: string };
+}
+
+export interface PreparedAccessToken {
+  readonly signingInput: string;
+  readonly expiresAtMs: number;
+}
+
+export function prepareAccessToken(
+  config: AccessTokenSigningConfig,
+  grant: AccessGrant,
+): PreparedAccessToken {
+  const issuedAt = grant.issuedAt;
+  const expiresAt = issuedAt + 300;
+  const header = {
+    alg: 'EdDSA',
+    kid: config.signingPublicJwk.kid,
+    typ: 'at+jwt',
+  };
+  const claims: Record<string, string | number> = {
+    iss: config.issuer,
+    sub: grant.homeId,
+    aud: grant.audience,
+    exp: expiresAt,
+    iat: issuedAt,
+    jti: grant.tokenId,
+    client_id: grant.clientId,
+    scope: grant.scope,
+  };
+  if (grant.role !== null) claims.miakapp_role = grant.role;
+  if (grant.coordinatorName !== null) claims.miakapp_coordinator = grant.coordinatorName;
+  const encodedHeader = Buffer.from(JSON.stringify(header), 'utf8').toString('base64url');
+  const encodedClaims = Buffer.from(JSON.stringify(claims), 'utf8').toString('base64url');
+  return Object.freeze({
+    signingInput: `${encodedHeader}.${encodedClaims}`,
+    expiresAtMs: expiresAt * 1_000,
+  });
+}
+
+export function serializeAccessToken(
+  prepared: PreparedAccessToken,
+  signature: Uint8Array,
+): SignedAccessToken {
+  if (signature.byteLength !== 64) throw new Error('Ed25519 signature must contain 64 bytes');
+  return Object.freeze({
+    token: `${prepared.signingInput}.${Buffer.from(signature).toString('base64url')}`,
+    expiresAtMs: prepared.expiresAtMs,
+  });
+}
+
 export class AccessTokenSigner {
-  readonly #config: DeploymentConfig;
+  readonly #config: AccessTokenSigningConfig;
   readonly #privateKey: KeyObject;
 
-  constructor(config: DeploymentConfig) {
+  constructor(config: LocalAccessTokenSigningConfig) {
     this.#config = config;
     this.#privateKey = createPrivateKey({ key: config.signingPrivateJwk, format: 'jwk' });
   }
 
   sign(grant: AccessGrant): SignedAccessToken {
-    const issuedAt = grant.issuedAt;
-    const expiresAt = issuedAt + 300;
-    const header = {
-      alg: 'EdDSA',
-      kid: this.#config.signingPublicJwk.kid,
-      typ: 'at+jwt',
-    };
-    const claims: Record<string, string | number> = {
-      iss: this.#config.issuer,
-      sub: grant.homeId,
-      aud: grant.audience,
-      exp: expiresAt,
-      iat: issuedAt,
-      jti: grant.tokenId,
-      client_id: grant.clientId,
-      scope: grant.scope,
-    };
-    if (grant.role !== null) claims.miakapp_role = grant.role;
-    if (grant.coordinatorName !== null) claims.miakapp_coordinator = grant.coordinatorName;
-    const encodedHeader = Buffer.from(JSON.stringify(header), 'utf8').toString('base64url');
-    const encodedClaims = Buffer.from(JSON.stringify(claims), 'utf8').toString('base64url');
-    const signingInput = `${encodedHeader}.${encodedClaims}`;
-    const signature = sign(null, Buffer.from(signingInput, 'ascii'), this.#privateKey).toString('base64url');
-    return Object.freeze({ token: `${signingInput}.${signature}`, expiresAtMs: expiresAt * 1_000 });
+    const prepared = prepareAccessToken(this.#config, grant);
+    const signature = nodeSign(null, Buffer.from(prepared.signingInput, 'ascii'), this.#privateKey);
+    return serializeAccessToken(prepared, signature);
   }
 }

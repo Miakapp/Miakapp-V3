@@ -43,8 +43,8 @@ fi
 
 export CI=1
 export FIREBASE_CLI_DISABLE_UPDATE_CHECK=true
-export GCLOUD_PROJECT=demo-miakapp-v35
-export GOOGLE_CLOUD_PROJECT=demo-miakapp-v35
+export GCLOUD_PROJECT=demo-miakapp-v4
+export GOOGLE_CLOUD_PROJECT=demo-miakapp-v4
 export FUNCTIONS_EMULATOR_HOST=127.0.0.1:5001
 
 bun install --frozen-lockfile --no-progress
@@ -54,7 +54,7 @@ bun run build
 
 bunx firebase emulators:exec \
   --non-interactive \
-  --project demo-miakapp-v35 \
+  --project demo-miakapp-v4 \
   --config firebase.json \
   --only auth,firestore,functions,storage \
   "bun run test:emulator"

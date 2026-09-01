@@ -10,8 +10,8 @@ on:
       - 'synthetic-home/**'
       - 'docs/rfcs/0001-wire-protocol.md'
       - 'docs/rfcs/0003-coordinator-sdk-and-migration.md'
-      - 'docs/specs/2026-08-29-miakapp-3.5-design.md'
-      - 'docs/roadmaps/2026-08-29-miakapp-3.5-coordination.md'
+      - 'docs/specs/2026-08-29-miakapp-v4-design.md'
+      - 'docs/roadmaps/2026-08-29-miakapp-v4-coordination.md'
       - 'package.json'
   pull_request:
     paths:
@@ -20,8 +20,8 @@ on:
       - 'synthetic-home/**'
       - 'docs/rfcs/0001-wire-protocol.md'
       - 'docs/rfcs/0003-coordinator-sdk-and-migration.md'
-      - 'docs/specs/2026-08-29-miakapp-3.5-design.md'
-      - 'docs/roadmaps/2026-08-29-miakapp-3.5-coordination.md'
+      - 'docs/specs/2026-08-29-miakapp-v4-design.md'
+      - 'docs/roadmaps/2026-08-29-miakapp-v4-coordination.md'
       - 'package.json'
 
 permissions:

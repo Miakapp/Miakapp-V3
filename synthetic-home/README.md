@@ -84,7 +84,7 @@ TypeScript source.
 ## Boundary
 
 This corpus closes the sanitized synthetic-fixture action only. It does not yet
-implement the MiakAPI 3.5 surface, the temporary Node-RED shadow adapter,
+implement the MiakAPI 4 surface, the temporary Node-RED shadow adapter,
 production comparison, backup/restore rehearsal, or platform push contract.
 Those consumers must adapt to this replay API without importing private data.
 The `concurrent_action` capsule models the deterministic busy guard observed by

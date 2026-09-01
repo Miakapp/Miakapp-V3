@@ -69,7 +69,7 @@ function memoryBucket(): {
   let calls = 0;
   return {
     bucket: {
-      name: 'demo-miakapp-v35.appspot.com',
+      name: 'demo-miakapp-v4.appspot.com',
       file(name: string) {
         calls += 1;
         return new MemoryFile(name, objects);
@@ -81,10 +81,10 @@ function memoryBucket(): {
 }
 
 const CONFIG: EmulatorComponentStorageConfig = Object.freeze({
-  projectId: 'demo-miakapp-v35',
+  projectId: 'demo-miakapp-v4',
   functionsEmulator: true,
   storageEmulatorHost: '127.0.0.1:9199',
-  bucketName: 'demo-miakapp-v35.appspot.com',
+  bucketName: 'demo-miakapp-v4.appspot.com',
 });
 const UPLOAD_ID = Buffer.alloc(16, 1).toString('base64url');
 const DIGEST = Buffer.alloc(32, 2).toString('base64url');
