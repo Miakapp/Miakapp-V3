@@ -2,7 +2,7 @@ import { apiError } from './errors.js';
 import { IDENTIFIER_PATTERN, SHA256_PATTERN } from './types.js';
 import { MAX_COMPONENT_ARTIFACT_BYTES } from './component-artifact.js';
 
-const EMULATOR_PROJECT = 'demo-miakapp-v35';
+const EMULATOR_PROJECT = 'demo-miakapp-v4';
 const JAVASCRIPT_CONTENT_TYPE = 'application/javascript; charset=utf-8';
 
 interface StoredObjectMetadata {

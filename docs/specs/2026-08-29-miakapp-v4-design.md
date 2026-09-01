@@ -1,4 +1,4 @@
-# Miakapp 3.5 — Design
+# Miakapp 4 — Design
 
 Date: 2026-08-29
 Status: architecture approved; wire, component-runtime, coordinator-SDK and
@@ -23,7 +23,7 @@ running at the user's home, behind NAT) and **users** (browsers).
 `miakapp-server` is the mandatory hop, because the coordinator has no public
 address.
 
-Moving to 3.5 changes what the server *is*: it stops being a relay that carries
+Moving to Miakapp 4 changes what the server *is*: it stops being a relay that carries
 business logic and becomes a **generic data bridge**. All application logic —
 users, permissions, invitations — moves down into the coordinator, which is
 written by an AI agent.
@@ -96,7 +96,7 @@ flowchart LR
 
 **The server holds no platform secrets.** It only verifies signatures with
 public keys and makes no authenticated outbound calls. It still receives
-plaintext home data in 3.5; the selected relay is therefore trusted by the home
+plaintext home data in Miakapp 4; the selected relay is therefore trusted by the home
 for confidentiality and correct routing (§ 4).
 
 ---
@@ -187,7 +187,7 @@ the server's IP instead of the real caller's.
 
 ---
 
-## 6. The 3.5 protocol
+## 6. The Miakapp 4 protocol
 
 Protocol 1.0 is defined normatively by
 [`RFC 0001`](../rfcs/0001-wire-protocol.md). The RFC, shared binary fixtures and
@@ -328,7 +328,7 @@ example one for users and their rights, others for distinct slices of the data.
 This is namespace sharding, not active-active redundancy. Two coordinators must
 not concurrently control the same physical actuator merely because the relay
 accepts both sockets. Redundancy for a physical effect requires fencing at the
-resource boundary and is out of scope for 3.5.
+resource boundary and is out of scope for Miakapp 4.
 
 **Identity**: a coordinator connects with a name. Uniqueness on (home, name).
 Same name → the previous one is evicted. Different name → they coexist.
@@ -403,7 +403,7 @@ three cases, **none of which closes the socket**:
 | Enrolled user | filtered dictionary and snapshot |
 
 v3 closed the socket on `NO_COORDINATOR`, which triggered a reconnection loop
-every second. In 3.5 each of these states is announced, and the frontend leaves
+every second. In Miakapp 4 each of these states is announced, and the frontend leaves
 it on its own when the situation changes.
 
 **Connected but not enrolled is a normal state**: it is the door to the
@@ -414,7 +414,7 @@ An enrolled browser sends `REAUTH` with a refreshed Firebase ID token before
 expiry (45 minutes by default). Reauthentication never changes the immutable
 session identifier or lets the browser replace its UID.
 
-**No session resumption in 3.5.** A reconnection costs one snapshot, on the
+**No session resumption in Miakapp 4.** A reconnection costs one snapshot, on the
 order of a few kilobytes. The dictionary and a state version number leave the
 door open should measurement ever justify it.
 
@@ -605,7 +605,7 @@ the stable numeric catalogue, retryability and safe user-facing messages.
 
 ## 15. Testing
 
-Absent in v3; non-negotiable in 3.5.
+Absent in v3; non-negotiable in Miakapp 4.
 
 - **Codec — implemented in the contract harness**: canonical round-trip over
   Unicode, safe-integer boundaries, binary values and nested structures, with
@@ -650,7 +650,7 @@ Absent in v3; non-negotiable in 3.5.
 
 ## 16. Migration
 
-The official 3.5 relay has no permanent v3 compatibility layer. A v3 sidecar
+The official Miakapp 4 relay has no permanent v3 compatibility layer. A v3 sidecar
 would read `relations` and `groups`, precisely the collections being deleted.
 Keeping it alive after migration would require writing membership into two
 models in parallel — the divergence problem this refactor eliminates.
@@ -658,7 +658,7 @@ models in parallel — the divergence problem this refactor eliminates.
 That does **not** justify migrating blind. Before the final platform cutover:
 
 1. an isolated beta stack is deployed;
-2. a 3.5-compatible Node-RED adapter publishes representative state to both
+2. a Miakapp 4-compatible Node-RED adapter publishes representative state to both
    systems while beta actuation is disabled or recorded;
 3. synthetic and production-shaped behavior is compared;
 4. backup and restore are rehearsed;
@@ -705,7 +705,7 @@ but accepted downtime is not a substitute for a rehearsed rollback.
 
 ## 17. Out of scope
 
-Planned but not implemented in 3.5:
+Planned but not implemented in Miakapp 4:
 
 - Coordinator-appointed admins, able to create and delete Home Keys and to talk
   to the embedded agent.
@@ -774,11 +774,13 @@ implementations still have to pass the corresponding vertical-slice exit gates.
    a recording FCM transport. A component slice covers private upload, byte
    read-back, immutable release publication, reconciliation, generation CAS,
    quarantine and rollback. A fixed-slot admission slice now covers atomic
-   rate/byte budgets, bounded redacted audit and pre-effect denial. The Local
+   rate/byte budgets, bounded redacted audit and pre-effect denial. The local
+   application/dependency fault matrix now consolidates transaction replay,
+   ambiguous commit, push/Storage effect and reconciliation evidence. The Local
    Emulator Suite provides neither an App Check nor an FCM service emulator, so
    real App Check enforcement, FCM acceptance/delivery, production Storage/KMS,
-   trusted edge admission, complete Section 18 and staging behavior remain
-   implementation exit gates.
+   trusted edge admission, relay integration, network faults, complete Section 18
+   and staging behavior remain implementation exit gates.
 4. **MiakAPI coordinator API — closed 2026-08-30; broader agent experience open**
    — RFC 0003 defines the public coordinator lifecycle, declarations, state,
    events, calls, presence, errors and compatibility boundary. CLI/MCP tools,
@@ -796,7 +798,7 @@ repository now contains its first owner-to-access-token increment under
 `control-plane/`; its synthetic local push slice now covers FID proof, grants and
 semantic sends, its component slice covers publication authority and immutable
 delivery, and its admission slice covers bounded local counters and audit. Real
-push/service infrastructure, trusted network attribution, the remaining fault
-matrix, session machines, queueing and disconnect behavior still have to pass
+push/service infrastructure, trusted network attribution, staging fault rows,
+session machines, queueing and disconnect behavior still have to pass
 their staging or vertical-slice tests. Contract-kit, synthetic service seams or
 partial-emulator self-conformance alone is not production readiness.

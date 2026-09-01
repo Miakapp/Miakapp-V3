@@ -1,7 +1,7 @@
 # RFC 0003 — Coordinator SDK and migration adapter 1.0
 
 - Status: accepted
-- Product release: Miakapp 3.5
+- Product release: Miakapp 4
 - Public SDK major: `miakapi@4`
 - Last updated: 2026-08-30
 
@@ -54,7 +54,7 @@ The coordinator surface has eight constraints:
    isolated recorder, and an unclassified effect fails closed.
 8. **The working v3 installation is an oracle, not a new architecture.** Legacy
    groups, DOM element actions and push selection may be translated temporarily
-   for comparison but do not enter the 3.5 product contract.
+   for comparison but do not enter the Miakapp 4 product contract.
 
 ## 3. Package and runtime boundary
 
@@ -62,7 +62,7 @@ The coordinator surface has eight constraints:
 
 The existing `miakapi@3` CommonJS factory is not source-compatible with this API.
 The new surface therefore ships as `miakapi@4`, even though the product release is
-Miakapp 3.5. The npm major follows semantic compatibility; it is not the product
+Miakapp 4. The npm major follows semantic compatibility; it is not the product
 version or wire major.
 
 Released artifacts are immutable. Removing or changing an exported public type,
@@ -739,7 +739,7 @@ For the temporary comparison window only:
   into explicit user ACL entries;
 - an empty explicit ACL remains an enrolled user with no state visibility;
 - DOM element action IDs, admin flags, notification flags and group names remain
-  adapter inputs and never become general 3.5 SDK concepts;
+  adapter inputs and never become general Miakapp 4 SDK concepts;
 - notification sends become notification intents in all non-live modes.
 
 Translation is deterministic and closed: an unknown path form, duplicate user,
@@ -753,7 +753,7 @@ The adapter exposes these modes with an explicit order of authority:
 | Mode | State publication | Candidate input | Effect destination |
 |---|---|---|---|
 | `observe` | none | synthetic/local only | recorder |
-| `shadow_state` | beta 3.5 relay | no user calls declared | recorder |
+| `shadow_state` | beta Miakapp 4 relay | no user calls declared | recorder |
 | `recorded_action` | isolated beta relay | declared only in isolated test | recorder |
 | `canary_live` | canary relay | explicitly enabled | approved live sink |
 
@@ -870,7 +870,7 @@ orchestrator process.
 
 ## 18. Preserved and intentionally fixed behavior
 
-| V3 behavior | 3.5 migration decision |
+| V3 behavior | 4 migration decision |
 |---|---|
 | coordinator starts locally and reconnects | preserved with explicit lifecycle and jittered backoff |
 | complete variable view can initialize a client | preserved as declared state plus authoritative user snapshot |
@@ -980,7 +980,7 @@ changing coordinator lifecycle semantics. It MUST still return only the bounded
 
 | Decision | Rationale |
 |---|---|
-| `miakapi@4` for Miakapp 3.5 | npm compatibility and product releases are different version domains |
+| `miakapi@4` for Miakapp 4 | npm compatibility and product releases are different version domains |
 | strings in public APIs, IDs on wire | agents author meaningful names; the SDK owns epoch-scoped dictionaries |
 | desired declaration cache | complete slices are safe and required to redeclare after reconnect |
 | no offline command queue | stale physical intent is more dangerous than explicit unavailability |
@@ -997,7 +997,7 @@ changing coordinator lifecycle semantics. It MUST still return only the bounded
 
 - [RFC 0001](0001-wire-protocol.md) defines protocol 1.0 and its delivery
   semantics.
-- [Miakapp 3.5 design](../specs/2026-08-29-miakapp-3.5-design.md) defines the
+- [Miakapp 4 design](../specs/2026-08-29-miakapp-v4-design.md) defines the
   ecosystem trust and migration boundary.
 - [Synthetic-home fixture](../../synthetic-home/README.md) defines the public
   deterministic behavior oracle.
