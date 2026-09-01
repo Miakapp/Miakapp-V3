@@ -537,14 +537,21 @@ export class ComponentStore {
     throw apiError('temporarily_unavailable');
   }
 
-  async deliverUpload(uploadId: string, uploadToken: string, bytes: Uint8Array): Promise<void> {
+  async deliverUpload(
+    uploadId: string,
+    uploadToken: string,
+    bytes: Uint8Array,
+    beforeReservation: (homeId: string) => Promise<void> = async () => undefined,
+  ): Promise<void> {
     if (!canonicalBase64url(uploadId, 16) || !canonicalBase64url(uploadToken, 32)) {
       throw apiError('invalid_upload_capability');
     }
     if (bytes.byteLength === 0 || bytes.byteLength > MAX_COMPONENT_ARTIFACT_BYTES) {
       throw apiError(bytes.byteLength > MAX_COMPONENT_ARTIFACT_BYTES ? 'limit_exceeded' : 'invalid_artifact');
     }
-    const homeId = await this.#reserveDelivery(uploadId, uploadToken);
+    const homeId = await this.#authorizedDeliveryHome(uploadId, uploadToken);
+    await beforeReservation(homeId);
+    await this.#reserveDelivery(uploadId, uploadToken);
     await this.#storage.writeStaging(uploadId, bytes);
     await this.#markDelivered(uploadId, homeId);
   }
@@ -803,6 +810,33 @@ export class ComponentStore {
         consumed_at: now,
       });
       transaction.update(indexRef, { status: 'delivery_reserved' });
+      return homeId;
+    });
+  }
+
+  async #authorizedDeliveryHome(uploadId: string, uploadToken: string): Promise<string> {
+    const indexRef = this.#firestore.collection('componentUploadIndex').doc(uploadId);
+    return this.#firestore.runTransaction(async (transaction) => {
+      const indexSnapshot = await transaction.get(indexRef);
+      if (!indexSnapshot.exists || indexSnapshot.get('upload_id') !== uploadId) {
+        throw apiError('invalid_upload_capability');
+      }
+      const homeId = indexSnapshot.get('home_id');
+      if (typeof homeId !== 'string' || !HOME_ID_PATTERN.test(homeId)) {
+        throw apiError('invalid_upload_capability');
+      }
+      const uploadRef = this.#homeRef(homeId).collection('componentUploads').doc(uploadId);
+      const uploadSnapshot = await transaction.get(uploadRef);
+      if (!uploadSnapshot.exists) throw apiError('invalid_upload_capability');
+      const upload = validateUpload(uploadSnapshot, homeId);
+      validateUploadIndex(indexSnapshot, upload);
+      const now = this.#clock.now();
+      if (upload.status !== 'awaiting_upload'
+        || upload.createdAt.toMillis() > now
+        || upload.expiresAt.toMillis() <= now
+        || !this.#capabilityMatches(uploadId, uploadToken, upload)) {
+        throw apiError('invalid_upload_capability');
+      }
       return homeId;
     });
   }

@@ -15,6 +15,67 @@ export const ACCESS_SCOPES = Object.freeze([
 
 export type AccessScope = typeof ACCESS_SCOPES[number];
 
+export const ADMISSION_OPERATIONS = Object.freeze([
+  'home.create',
+  'home.patch',
+  'home_key.create',
+  'home_key.revoke',
+  'access.exchange',
+  'push.destination.challenge',
+  'push.destination.register',
+  'push.destination.delete',
+  'push.grant.create',
+  'push.grant.revoke',
+  'push.send',
+  'component.upload.issue',
+  'component.upload.deliver',
+  'component.finalize',
+  'component.activate',
+] as const);
+
+export type AdmissionOperation = typeof ADMISSION_OPERATIONS[number];
+
+export const ADMISSION_BUDGETS = Object.freeze([
+  'audit.events',
+  'source.operations',
+  'home.create.actor',
+  'home.create.source',
+  'access.exchange.source',
+  'access.exchange.key',
+  'access.exchange.home',
+  'push.challenge.actor',
+  'push.challenge.app',
+  'push.challenge.source',
+  'push.send.key',
+  'push.send.home',
+  'push.send.grant',
+  'push.send.destination',
+  'component.upload.issue.home',
+  'component.upload.issue_bytes.home',
+  'component.upload.delivery.upload',
+  'component.upload.delivery.home',
+  'component.upload.delivery_bytes.home',
+  'component.finalize.home',
+  'component.activate.home',
+] as const);
+
+export type AdmissionBudget = typeof ADMISSION_BUDGETS[number];
+
+export interface AdmissionLimit {
+  readonly maximum: number;
+  readonly windowMilliseconds: number;
+}
+
+export interface AdmissionProfile {
+  readonly limits: Readonly<Record<AdmissionBudget, AdmissionLimit>>;
+  readonly auditRetentionMilliseconds: number;
+  readonly auditSlots: number;
+  readonly bucketSlots: number;
+  readonly maximumAuditEventBytes: number;
+  readonly bucketRetentionMilliseconds: number;
+  readonly maximumRetryAfterSeconds: number;
+}
+
 export interface FirebasePrincipal {
   readonly userId: string;
   readonly authenticatedAt: number;
@@ -191,6 +252,11 @@ export interface DeploymentConfig {
   readonly appCheckPublicJwk: JsonWebKey & { readonly kid: string };
   readonly pushKeyVersion: string;
   readonly pushHmacKeyForVersion: (version: string) => Uint8Array | undefined;
+  readonly admissionProfile: AdmissionProfile;
+  readonly auditKeyVersion: string;
+  readonly auditHmacKeyForVersion: (version: string) => Uint8Array | undefined;
+  readonly networkKeyVersion: string;
+  readonly networkHmacKeyForVersion: (version: string) => Uint8Array | undefined;
   readonly signingPrivateJwk: JsonWebKey & { readonly kid: string };
   readonly signingPublicJwk: Readonly<{
     kty: 'OKP';

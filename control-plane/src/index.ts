@@ -5,6 +5,7 @@ import { getStorage } from 'firebase-admin/storage';
 import { onRequest } from 'firebase-functions/v2/https';
 
 import { createControlPlaneApp } from './api.js';
+import { AdmissionController } from './admission.js';
 import { loadEmulatorConfig } from './config.js';
 import { AccessTokenSigner } from './crypto.js';
 import { FirebaseComponentStorage } from './component-storage.js';
@@ -28,6 +29,7 @@ const componentStorage = new FirebaseComponentStorage(
   },
 );
 const componentStore = new ComponentStore(firestore, componentStorage, config, SYSTEM_CLOCK);
+const admission = new AdmissionController(firestore, config, SYSTEM_CLOCK);
 const store = new ControlPlaneStore(firestore, config, SYSTEM_CLOCK);
 const pushStore = new PushStore(firestore, config, SYSTEM_CLOCK);
 const pushTransport = new FirestoreRecordingPushTransport(firestore, {
@@ -37,6 +39,7 @@ const pushTransport = new FirestoreRecordingPushTransport(firestore, {
 });
 const signer = new AccessTokenSigner(config);
 const app = createControlPlaneApp({
+  admission,
   auth,
   clock: SYSTEM_CLOCK,
   config,

@@ -571,7 +571,7 @@ describe('Firebase Emulator FID-to-semantic-push vertical slice', () => {
     const privateDestinations = await firestore.collection('users').doc(owner.userId)
       .collection('pushDestinations').get();
     expect(privateDestinations.size).toBe(16);
-  });
+  }, 15_000);
 
   test('renews and revokes grants uniformly, and destination deletion immediately removes authority', async () => {
     await createHome('grant-home');

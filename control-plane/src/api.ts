@@ -1,5 +1,11 @@
 import express, { type Request, type Response } from 'express';
+import { isIP } from 'node:net';
 
+import {
+  AdmissionController,
+  auditOutcomeFor,
+  type AdmissionTicket,
+} from './admission.js';
 import {
   authenticateFirebase,
   requireRecentAuthentication,
@@ -19,7 +25,7 @@ import {
   validateComponentRequirements,
 } from './component-artifact.js';
 import { ComponentStore } from './component-store.js';
-import { AccessTokenSigner, randomIdentifier } from './crypto.js';
+import { AccessTokenSigner, parseHomeKey, randomIdentifier } from './crypto.js';
 import { ApiError, apiError } from './errors.js';
 import {
   assertExactKeys,
@@ -40,6 +46,7 @@ import {
   SHA256_PATTERN,
   COMPONENT_ABI,
   type AccessScope,
+  type AdmissionOperation,
   type AppCheckPrincipal,
   type Clock,
   type ComponentPublisherPrincipal,
@@ -62,6 +69,7 @@ interface RawRequest extends Request {
 }
 
 export interface ApiDependencies {
+  readonly admission: AdmissionController;
   readonly auth: FirebaseTokenVerifier;
   readonly clock: Clock;
   readonly config: DeploymentConfig;
@@ -91,8 +99,82 @@ function applyCors(request: Request, response: Response, config: DeploymentConfi
     'Access-Control-Allow-Credentials': 'false',
     'Access-Control-Allow-Headers': 'Authorization, Content-Type, Miakapp-Push-Proof, X-Firebase-AppCheck',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+    'Access-Control-Expose-Headers': 'Retry-After',
     'Access-Control-Max-Age': '600',
   });
+}
+
+function admissionOperation(request: Request): AdmissionOperation | null {
+  const { method, path } = request;
+  if (method === 'POST' && path === '/v1/homes') return 'home.create';
+  if (method === 'PATCH' && /^\/v1\/homes\/[a-z][a-z0-9-]{1,61}[a-z0-9]$/.test(path)) return 'home.patch';
+  if (method === 'POST' && /^\/v1\/homes\/[a-z][a-z0-9-]{1,61}[a-z0-9]\/home-keys$/.test(path)) {
+    return 'home_key.create';
+  }
+  if (method === 'DELETE'
+    && /^\/v1\/homes\/[a-z][a-z0-9-]{1,61}[a-z0-9]\/home-keys\/[A-Za-z0-9_-]{22}$/.test(path)) {
+    return 'home_key.revoke';
+  }
+  if (method === 'POST' && path === '/v1/access-tokens:exchange') return 'access.exchange';
+  if (method === 'POST' && path === '/v1/push-destinations:challenge') return 'push.destination.challenge';
+  if (method === 'POST' && path === '/v1/push-destinations:complete') return 'push.destination.register';
+  if (method === 'DELETE' && /^\/v1\/push-destinations\/[A-Za-z0-9_-]{22}$/.test(path)) {
+    return 'push.destination.delete';
+  }
+  if (method === 'POST'
+    && /^\/v1\/homes\/[a-z][a-z0-9-]{1,61}[a-z0-9]\/push-grants$/.test(path)) {
+    return 'push.grant.create';
+  }
+  if (method === 'DELETE'
+    && /^\/v1\/homes\/[a-z][a-z0-9-]{1,61}[a-z0-9]\/push-grants\/[A-Za-z0-9_-]{22}$/.test(path)) {
+    return 'push.grant.revoke';
+  }
+  if (method === 'POST' && path === '/v1/push') return 'push.send';
+  if (method === 'POST'
+    && /^\/v1\/homes\/[a-z][a-z0-9-]{1,61}[a-z0-9]\/component-uploads$/.test(path)) {
+    return 'component.upload.issue';
+  }
+  if (method === 'PUT' && /^\/v1\/component-uploads\/[A-Za-z0-9_-]{22}$/.test(path)) {
+    return 'component.upload.deliver';
+  }
+  if (method === 'POST'
+    && /^\/v1\/homes\/[a-z][a-z0-9-]{1,61}[a-z0-9]\/component-uploads\/[A-Za-z0-9_-]{22}:finalize$/.test(path)) {
+    return 'component.finalize';
+  }
+  if (method === 'POST'
+    && /^\/v1\/homes\/[a-z][a-z0-9-]{1,61}[a-z0-9]\/component-releases:activate$/.test(path)) {
+    return 'component.activate';
+  }
+  return null;
+}
+
+function requestSource(request: Request): string {
+  const remote = request.socket.remoteAddress;
+  if (remote === undefined) return 'unknown';
+  const normalized = remote.startsWith('::ffff:') && isIP(remote.slice(7)) === 4
+    ? remote.slice(7)
+    : remote;
+  return isIP(normalized) === 0 ? 'unknown' : normalized;
+}
+
+function activeAdmission(
+  ticket: AdmissionTicket | null,
+  operation: AdmissionOperation,
+): AdmissionTicket {
+  if (ticket === null || ticket.operation !== operation) throw apiError('temporarily_unavailable');
+  return ticket;
+}
+
+function identifyOwner(ticket: AdmissionTicket, principal: { readonly userId: string }): void {
+  ticket.identifyActor('firebase_user', principal.userId);
+}
+
+function identifyComponentPublisher(
+  ticket: AdmissionTicket,
+  principal: ComponentPublisherPrincipal,
+): void {
+  if (principal.kind === 'owner') ticket.identifyActor('firebase_user', principal.userId);
+  else ticket.identifyActor('access_token', principal.clientId);
 }
 
 function rawBody(request: RawRequest): Uint8Array {
@@ -508,6 +590,7 @@ function sendComponentArtifact(response: Response, sha256: string, bytes: Uint8A
 
 function sendError(response: Response, requestId: string, error: unknown): void {
   const api = error instanceof ApiError ? error : apiError('temporarily_unavailable');
+  if (api.retryAfterSeconds !== null) response.set('Retry-After', String(api.retryAfterSeconds));
   sendJson(response, api.status, {
     error: {
       code: api.code,
@@ -523,9 +606,9 @@ async function routeRequest(
   response: Response,
   dependencies: ApiDependencies,
   requestId: string,
+  admission: AdmissionTicket | null,
 ): Promise<void> {
   if (request.originalUrl.includes('?')) throw apiError('invalid_request');
-  applyCors(request, response, dependencies.config);
   if (request.method === 'OPTIONS') {
     requireEmptyBody(request);
     response.sendStatus(204);
@@ -571,16 +654,33 @@ async function routeRequest(
 
   const componentDeliveryMatch = /^\/v1\/component-uploads\/([A-Za-z0-9_-]{22})$/.exec(request.path);
   if (componentDeliveryMatch !== null && request.method === 'PUT') {
+    const ticket = activeAdmission(admission, 'component.upload.deliver');
     const uploadId = keyId(componentDeliveryMatch[1] as string);
     const uploadToken = componentUploadCapability(request);
     const bytes = componentArtifactBody(request);
-    await dependencies.componentStore.deliverUpload(uploadId, uploadToken, bytes);
+    ticket.identifySubject(uploadId);
+    await dependencies.componentStore.deliverUpload(uploadId, uploadToken, bytes, async (id) => {
+      ticket.identifyActor('upload_capability', uploadToken);
+      ticket.identifyHome(id);
+      await ticket.consume([
+        { budget: 'component.upload.delivery.upload', subject: uploadId },
+        { budget: 'component.upload.delivery.home', subject: id },
+        { budget: 'component.upload.delivery_bytes.home', subject: id, units: bytes.byteLength },
+      ]);
+    });
     response.sendStatus(204);
     return;
   }
 
   if (request.path === '/v1/push-destinations:challenge' && request.method === 'POST') {
+    const ticket = activeAdmission(admission, 'push.destination.challenge');
     const { owner, appCheck } = await destinationPrincipals(request, dependencies);
+    identifyOwner(ticket, owner);
+    ticket.identifySubject(appCheck.appId);
+    await ticket.consume([
+      { budget: 'push.challenge.actor', subject: owner.userId },
+      { budget: 'push.challenge.app', subject: appCheck.appId },
+    ], ['push.challenge.source']);
     const challenge = await dependencies.pushStore.issueDestinationChallenge(
       owner,
       appCheck,
@@ -600,9 +700,12 @@ async function routeRequest(
   }
 
   if (request.path === '/v1/push-destinations:complete' && request.method === 'POST') {
+    const ticket = activeAdmission(admission, 'push.destination.register');
     const { owner, appCheck } = await destinationPrincipals(request, dependencies);
+    identifyOwner(ticket, owner);
     emptyObjectBody(request);
     const proof = destinationProof(request.get('Miakapp-Push-Proof'));
+    ticket.identifySubject(proof.challengeId);
     const destination = await dependencies.pushStore.completeDestinationChallenge(
       owner,
       appCheck,
@@ -623,20 +726,36 @@ async function routeRequest(
 
   const destinationDeleteMatch = /^\/v1\/push-destinations\/([A-Za-z0-9_-]{22})$/.exec(request.path);
   if (destinationDeleteMatch !== null && request.method === 'DELETE') {
+    const ticket = activeAdmission(admission, 'push.destination.delete');
     const { owner } = await destinationPrincipals(request, dependencies);
+    identifyOwner(ticket, owner);
     requireEmptyBody(request);
+    const destinationId = keyId(destinationDeleteMatch[1] as string);
+    ticket.identifySubject(destinationId);
     await dependencies.pushStore.deleteDestination(
       owner,
-      keyId(destinationDeleteMatch[1] as string),
+      destinationId,
     );
     response.sendStatus(204);
     return;
   }
 
   if (request.path === '/v1/push' && request.method === 'POST') {
+    const ticket = activeAdmission(admission, 'push.send');
     const principal = pushPrincipal(request, dependencies);
+    ticket.identifyActor('access_token', principal.clientId);
+    ticket.identifyHome(principal.homeId);
     const input = pushNotification(jsonBody(request));
+    ticket.identifySubject(input.grantId);
+    await ticket.consume([
+      { budget: 'push.send.key', subject: principal.clientId },
+      { budget: 'push.send.home', subject: principal.homeId },
+      { budget: 'push.send.grant', subject: input.grantId },
+    ]);
     const destination = await dependencies.pushStore.authorizePush(principal, input.grantId);
+    await ticket.consume([
+      { budget: 'push.send.destination', subject: destination.destinationId },
+    ]);
     await dependencies.pushTransport.sendSemanticNotification({
       fid: destination.fid,
       grantId: input.grantId,
@@ -649,19 +768,32 @@ async function routeRequest(
   }
 
   if (request.path === '/v1/homes' && request.method === 'POST') {
+    const ticket = activeAdmission(admission, 'home.create');
     const principal = await ownerPrincipal(request, dependencies);
     requireRecentAuthentication(principal, dependencies.clock.now());
-    const home = await dependencies.store.createHome(principal, homeInput(jsonBody(request)));
+    identifyOwner(ticket, principal);
+    const input = homeInput(jsonBody(request));
+    ticket.identifyHome(input.homeId);
+    ticket.identifySubject(input.homeId);
+    await ticket.consume([
+      { budget: 'home.create.actor', subject: principal.userId },
+    ], ['home.create.source']);
+    const home = await dependencies.store.createHome(principal, input);
     sendJson(response, 201, { schema: 'miakapp.home/1', home });
     return;
   }
 
   const homeMatch = /^\/v1\/homes\/([a-z][a-z0-9-]{1,61}[a-z0-9])$/.exec(request.path);
   if (homeMatch !== null && request.method === 'PATCH') {
+    const ticket = activeAdmission(admission, 'home.patch');
     const principal = await ownerPrincipal(request, dependencies);
+    identifyOwner(ticket, principal);
+    const id = pathHomeId(homeMatch[1] as string);
+    ticket.identifyHome(id);
+    ticket.identifySubject(id);
     const patch = homePatch(jsonBody(request));
     if (patch.relayUrl !== undefined) requireRecentAuthentication(principal, dependencies.clock.now());
-    const home = await dependencies.store.patchHome(principal, pathHomeId(homeMatch[1] as string), patch);
+    const home = await dependencies.store.patchHome(principal, id, patch);
     sendJson(response, 200, { schema: 'miakapp.home/1', home });
     return;
   }
@@ -669,12 +801,21 @@ async function routeRequest(
   const componentUploadsMatch = /^\/v1\/homes\/([a-z][a-z0-9-]{1,61}[a-z0-9])\/component-uploads$/
     .exec(request.path);
   if (componentUploadsMatch !== null && request.method === 'POST') {
+    const ticket = activeAdmission(admission, 'component.upload.issue');
     const id = pathHomeId(componentUploadsMatch[1] as string);
     const principal = await componentPrincipal(request, dependencies, id);
+    identifyComponentPublisher(ticket, principal);
+    ticket.identifyHome(id);
+    ticket.identifySubject(id);
+    const input = componentUploadInput(jsonBody(request));
+    await ticket.consume([
+      { budget: 'component.upload.issue.home', subject: id },
+      { budget: 'component.upload.issue_bytes.home', subject: id, units: input.size },
+    ]);
     const upload = await dependencies.componentStore.issueUpload(
       principal,
       id,
-      componentUploadInput(jsonBody(request)),
+      input,
     );
     sendJson(response, 201, upload);
     return;
@@ -698,13 +839,19 @@ async function routeRequest(
   const componentFinalizeMatch = /^\/v1\/homes\/([a-z][a-z0-9-]{1,61}[a-z0-9])\/component-uploads\/([A-Za-z0-9_-]{22}):finalize$/
     .exec(request.path);
   if (componentFinalizeMatch !== null && request.method === 'POST') {
+    const ticket = activeAdmission(admission, 'component.finalize');
     const id = pathHomeId(componentFinalizeMatch[1] as string);
     const principal = await componentPrincipal(request, dependencies, id);
+    identifyComponentPublisher(ticket, principal);
+    ticket.identifyHome(id);
     emptyObjectBody(request);
+    const uploadId = keyId(componentFinalizeMatch[2] as string);
+    ticket.identifySubject(uploadId);
+    await ticket.consume([{ budget: 'component.finalize.home', subject: id }]);
     const release = await dependencies.componentStore.finalizeRelease(
       principal,
       id,
-      keyId(componentFinalizeMatch[2] as string),
+      uploadId,
     );
     sendJson(response, 200, release);
     return;
@@ -713,12 +860,18 @@ async function routeRequest(
   const componentActivateMatch = /^\/v1\/homes\/([a-z][a-z0-9-]{1,61}[a-z0-9])\/component-releases:activate$/
     .exec(request.path);
   if (componentActivateMatch !== null && request.method === 'POST') {
+    const ticket = activeAdmission(admission, 'component.activate');
     const id = pathHomeId(componentActivateMatch[1] as string);
     const principal = await componentPrincipal(request, dependencies, id);
+    identifyComponentPublisher(ticket, principal);
+    ticket.identifyHome(id);
+    const activation = componentActivation(jsonBody(request));
+    ticket.identifySubject(activation.sha256);
+    await ticket.consume([{ budget: 'component.activate.home', subject: id }]);
     const pointer = await dependencies.componentStore.activateRelease(
       principal,
       id,
-      componentActivation(jsonBody(request)),
+      activation,
     );
     sendJson(response, 200, pointer);
     return;
@@ -741,9 +894,17 @@ async function routeRequest(
 
   const keysMatch = /^\/v1\/homes\/([a-z][a-z0-9-]{1,61}[a-z0-9])\/home-keys$/.exec(request.path);
   if (keysMatch !== null && (request.method === 'GET' || request.method === 'POST')) {
+    const ticket = request.method === 'POST'
+      ? activeAdmission(admission, 'home_key.create')
+      : null;
     const principal = await ownerPrincipal(request, dependencies);
     requireRecentAuthentication(principal, dependencies.clock.now());
     const id = pathHomeId(keysMatch[1] as string);
+    if (ticket !== null) {
+      identifyOwner(ticket, principal);
+      ticket.identifyHome(id);
+      ticket.identifySubject(id);
+    }
     if (request.method === 'GET') {
       requireEmptyBody(request);
       const keys = await dependencies.store.listHomeKeys(principal, id);
@@ -751,6 +912,7 @@ async function routeRequest(
     } else {
       const input = keyCreation(jsonBody(request));
       const created = await dependencies.store.createHomeKey(principal, id, input.label, input.scopes);
+      ticket?.identifySubject(created.metadata.key_id);
       sendJson(response, 201, {
         schema: 'miakapp.home-key-created/1',
         key: created.metadata,
@@ -762,8 +924,15 @@ async function routeRequest(
 
   const grantsMatch = /^\/v1\/homes\/([a-z][a-z0-9-]{1,61}[a-z0-9])\/push-grants$/.exec(request.path);
   if (grantsMatch !== null && (request.method === 'GET' || request.method === 'POST')) {
+    const ticket = request.method === 'POST'
+      ? activeAdmission(admission, 'push.grant.create')
+      : null;
     const principal = await ownerPrincipal(request, dependencies);
     const id = pathHomeId(grantsMatch[1] as string);
+    if (ticket !== null) {
+      identifyOwner(ticket, principal);
+      ticket.identifyHome(id);
+    }
     if (request.method === 'GET') {
       requireEmptyBody(request);
       const grants = await dependencies.pushStore.listGrants(principal, id);
@@ -774,10 +943,12 @@ async function routeRequest(
         MAX_PUSH_GRANT_LIST_RESPONSE_BYTES,
       );
     } else {
+      const destinationId = grantCreation(jsonBody(request));
+      ticket?.identifySubject(destinationId);
       const grant = await dependencies.pushStore.createGrant(
         principal,
         id,
-        grantCreation(jsonBody(request)),
+        destinationId,
       );
       sendJson(response, 201, { schema: 'miakapp.push-grant/1', grant });
     }
@@ -787,12 +958,18 @@ async function routeRequest(
   const grantDeleteMatch = /^\/v1\/homes\/([a-z][a-z0-9-]{1,61}[a-z0-9])\/push-grants\/([A-Za-z0-9_-]{22})$/
     .exec(request.path);
   if (grantDeleteMatch !== null && request.method === 'DELETE') {
+    const ticket = activeAdmission(admission, 'push.grant.revoke');
     const principal = await ownerPrincipal(request, dependencies);
+    identifyOwner(ticket, principal);
     requireEmptyBody(request);
+    const id = pathHomeId(grantDeleteMatch[1] as string);
+    const grantId = keyId(grantDeleteMatch[2] as string);
+    ticket.identifyHome(id);
+    ticket.identifySubject(grantId);
     await dependencies.pushStore.revokeGrant(
       principal,
-      pathHomeId(grantDeleteMatch[1] as string),
-      keyId(grantDeleteMatch[2] as string),
+      id,
+      grantId,
     );
     response.sendStatus(204);
     return;
@@ -801,29 +978,46 @@ async function routeRequest(
   const revokeMatch = /^\/v1\/homes\/([a-z][a-z0-9-]{1,61}[a-z0-9])\/home-keys\/([A-Za-z0-9_-]{22})$/
     .exec(request.path);
   if (revokeMatch !== null && request.method === 'DELETE') {
+    const ticket = activeAdmission(admission, 'home_key.revoke');
     const principal = await ownerPrincipal(request, dependencies);
     requireRecentAuthentication(principal, dependencies.clock.now());
+    identifyOwner(ticket, principal);
     requireEmptyBody(request);
+    const id = pathHomeId(revokeMatch[1] as string);
+    const revokedKeyId = keyId(revokeMatch[2] as string);
+    ticket.identifyHome(id);
+    ticket.identifySubject(revokedKeyId);
     await dependencies.store.revokeHomeKey(
       principal,
-      pathHomeId(revokeMatch[1] as string),
-      keyId(revokeMatch[2] as string),
+      id,
+      revokedKeyId,
     );
     response.sendStatus(204);
     return;
   }
 
   if (request.path === '/v1/access-tokens:exchange' && request.method === 'POST') {
+    const ticket = activeAdmission(admission, 'access.exchange');
     const authorization = request.headers.authorization;
     if (typeof authorization !== 'string') throw apiError('invalid_home_key');
     const match = /^Bearer ([\x21-\x7e]+)$/.exec(authorization);
     const homeKey = match?.[1];
     if (homeKey === undefined) throw apiError('invalid_home_key');
+    const { keyId: exchangedKeyId } = parseHomeKey(homeKey);
+    ticket.identifySubject(exchangedKeyId);
+    await ticket.consume([
+      { budget: 'access.exchange.key', subject: exchangedKeyId },
+    ], ['access.exchange.source']);
     const exchange = exchangeRequest(jsonBody(request));
     const { grant, signed } = await dependencies.store.exchangeHomeKey(
       homeKey,
       exchange,
       dependencies.signer,
+      async (grant) => {
+        ticket.identifyActor('home_key', grant.clientId);
+        ticket.identifyHome(grant.homeId);
+        await ticket.consume([{ budget: 'access.exchange.home', subject: grant.homeId }]);
+      },
     );
     sendJson(response, 200, {
       schema: 'miakapp.access-token/1',
@@ -844,11 +1038,31 @@ export function createControlPlaneApp(dependencies: ApiDependencies): express.Ex
   app.disable('x-powered-by');
   app.use(async (request: RawRequest, response: Response) => {
     const requestId = randomIdentifier();
+    const operation = admissionOperation(request);
+    let admission: AdmissionTicket | null = null;
     setPrivateHeaders(response);
     try {
-      await routeRequest(request, response, dependencies, requestId);
+      applyCors(request, response, dependencies.config);
+      if (operation !== null) {
+        admission = await dependencies.admission.open({
+          requestId,
+          operation,
+          source: requestSource(request),
+        });
+      }
+      await routeRequest(request, response, dependencies, requestId, admission);
+      if (admission !== null) await admission.finish('ok');
     } catch (error) {
-      if (!response.headersSent) sendError(response, requestId, error);
+      let responseError = error;
+      if (admission !== null) {
+        const audit = auditOutcomeFor(error);
+        try {
+          await admission.finish(audit.outcome, audit.code);
+        } catch (auditError) {
+          if (!response.headersSent) responseError = auditError;
+        }
+      }
+      if (!response.headersSent) sendError(response, requestId, responseError);
     }
   });
   return app;
