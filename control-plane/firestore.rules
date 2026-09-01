@@ -7,6 +7,11 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    match /components/{homeId} {
+      allow get: if request.auth != null;
+      allow list, create, update, delete: if false;
+    }
+
     match /controlHomes/{homeId} {
       allow read, write: if false;
 
@@ -36,6 +41,18 @@ service cloud.firestore {
     }
 
     match /pushGrantIndex/{grantId} {
+      allow read, write: if false;
+    }
+
+    match /componentUploadIndex/{uploadId} {
+      allow read, write: if false;
+    }
+
+    match /componentArtifacts/{artifact} {
+      allow read, write: if false;
+    }
+
+    match /componentQuarantine/{digest} {
       allow read, write: if false;
     }
 

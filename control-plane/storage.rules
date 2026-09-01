@@ -2,6 +2,14 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
+    match /components/{artifact} {
+      allow read, write: if false;
+    }
+
+    match /component-staging/{artifact} {
+      allow read, write: if false;
+    }
+
     match /{object=**} {
       allow read, write: if false;
     }

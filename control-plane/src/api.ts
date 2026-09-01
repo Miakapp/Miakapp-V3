@@ -11,8 +11,14 @@ import {
 } from './app-check.js';
 import {
   AccessTokenVerificationError,
+  verifyComponentAccessToken,
   verifyPushAccessToken,
 } from './access-token.js';
+import {
+  MAX_COMPONENT_ARTIFACT_BYTES,
+  validateComponentRequirements,
+} from './component-artifact.js';
+import { ComponentStore } from './component-store.js';
 import { AccessTokenSigner, randomIdentifier } from './crypto.js';
 import { ApiError, apiError } from './errors.js';
 import {
@@ -31,9 +37,13 @@ import {
   COORDINATOR_NAME_PATTERN,
   HOME_ID_PATTERN,
   IDENTIFIER_PATTERN,
+  SHA256_PATTERN,
+  COMPONENT_ABI,
   type AccessScope,
   type AppCheckPrincipal,
   type Clock,
+  type ComponentPublisherPrincipal,
+  type ComponentUploadInput,
   type DeploymentConfig,
   type ExchangeRequest,
   type HomeInput,
@@ -59,6 +69,7 @@ export interface ApiDependencies {
   readonly store: ControlPlaneStore;
   readonly pushStore: PushStore;
   readonly pushTransport: PushTransport;
+  readonly componentStore: ComponentStore;
 }
 
 function setPrivateHeaders(response: Response): void {
@@ -79,7 +90,7 @@ function applyCors(request: Request, response: Response, config: DeploymentConfi
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Credentials': 'false',
     'Access-Control-Allow-Headers': 'Authorization, Content-Type, Miakapp-Push-Proof, X-Firebase-AppCheck',
-    'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
     'Access-Control-Max-Age': '600',
   });
 }
@@ -151,6 +162,48 @@ function keyId(value: string): string {
 function identifierValue(value: JsonValue | undefined): string {
   const id = stringValue(value);
   return keyId(id);
+}
+
+function digestValue(value: JsonValue | undefined): string {
+  const digest = stringValue(value);
+  if (!SHA256_PATTERN.test(digest)
+    || Buffer.from(digest, 'base64url').byteLength !== 32
+    || Buffer.from(digest, 'base64url').toString('base64url') !== digest) {
+    throw apiError('invalid_request');
+  }
+  return digest;
+}
+
+function safeNonnegativeInteger(value: JsonValue | undefined): number {
+  if (!Number.isSafeInteger(value) || (value as number) < 0) throw apiError('invalid_request');
+  return value as number;
+}
+
+function componentUploadInput(body: { [key: string]: JsonValue }): ComponentUploadInput {
+  assertExactKeys(body, ['release', 'abi', 'sha256', 'size', 'requires']);
+  const size = safeNonnegativeInteger(body.size);
+  if (body.abi !== COMPONENT_ABI || size === 0) throw apiError('invalid_request');
+  if (size > MAX_COMPONENT_ARTIFACT_BYTES) throw apiError('limit_exceeded');
+  return Object.freeze({
+    release: boundedText(body.release, 64),
+    abi: COMPONENT_ABI,
+    sha256: digestValue(body.sha256),
+    size,
+    requires: validateComponentRequirements(body.requires),
+  });
+}
+
+function componentActivation(body: { [key: string]: JsonValue }): {
+  readonly sha256: string;
+  readonly expectedGeneration: number;
+  readonly generation: number;
+} {
+  assertExactKeys(body, ['sha256', 'expected_generation', 'generation']);
+  return Object.freeze({
+    sha256: digestValue(body.sha256),
+    expectedGeneration: safeNonnegativeInteger(body.expected_generation),
+    generation: safeNonnegativeInteger(body.generation),
+  });
 }
 
 function fidValue(value: JsonValue | undefined): string {
@@ -340,6 +393,94 @@ function pushPrincipal(request: Request, dependencies: ApiDependencies) {
   }
 }
 
+function authorizationAlgorithm(request: Request): string {
+  try {
+    const authorization = request.headers.authorization;
+    if (typeof authorization !== 'string' || Buffer.byteLength(authorization, 'utf8') > 8_199) {
+      throw new Error('invalid authorization');
+    }
+    const token = /^Bearer ([\x21-\x7e]+)$/.exec(authorization)?.[1];
+    const segments = token?.split('.');
+    const encodedHeader = segments?.length === 3 ? segments[0] : undefined;
+    if (encodedHeader === undefined
+      || !/^[A-Za-z0-9_-]+$/.test(encodedHeader)
+      || encodedHeader.length > 2_731) {
+      throw new Error('invalid authorization');
+    }
+    const decoded = Buffer.from(encodedHeader, 'base64url');
+    if (decoded.byteLength > 2_048 || decoded.toString('base64url') !== encodedHeader) {
+      throw new Error('invalid authorization');
+    }
+    const header = objectValue(parseRequestJson(decoded));
+    return stringValue(header.alg);
+  } catch {
+    throw apiError('invalid_access_token');
+  }
+}
+
+async function componentPrincipal(
+  request: Request,
+  dependencies: ApiDependencies,
+  homeId: string,
+): Promise<ComponentPublisherPrincipal> {
+  const algorithm = authorizationAlgorithm(request);
+  if (algorithm === 'EdDSA') {
+    try {
+      const principal = verifyComponentAccessToken(
+        request.headers.authorization,
+        dependencies.config,
+        dependencies.clock,
+      );
+      return Object.freeze({
+        kind: 'access_token',
+        homeId: principal.homeId,
+        clientId: principal.clientId,
+      });
+    } catch (error) {
+      if (error instanceof AccessTokenVerificationError) throw apiError('invalid_access_token');
+      throw error;
+    }
+  }
+  if (algorithm === 'RS256'
+    || (algorithm === 'none' && dependencies.config.projectId === 'demo-miakapp-v35')) {
+    const owner = await ownerPrincipal(request, dependencies);
+    requireRecentAuthentication(owner, dependencies.clock.now());
+    return Object.freeze({ kind: 'owner', homeId, userId: owner.userId });
+  }
+  throw apiError('invalid_access_token');
+}
+
+function componentUploadCapability(request: Request): string {
+  const authorization = request.headers.authorization;
+  if (typeof authorization !== 'string') throw apiError('invalid_upload_capability');
+  const token = /^Bearer ([A-Za-z0-9_-]{43})$/.exec(authorization)?.[1];
+  if (token === undefined
+    || Buffer.from(token, 'base64url').byteLength !== 32
+    || Buffer.from(token, 'base64url').toString('base64url') !== token) {
+    throw apiError('invalid_upload_capability');
+  }
+  return token;
+}
+
+function componentArtifactBody(request: RawRequest): Uint8Array {
+  if (request.get('Content-Type') !== 'application/javascript; charset=utf-8'
+    || request.get('Content-Encoding') !== undefined
+    || request.get('Transfer-Encoding') !== undefined
+    || request.get('Range') !== undefined
+    || request.get('Content-Range') !== undefined) {
+    throw apiError('invalid_request');
+  }
+  const rawLength = request.get('Content-Length');
+  if (rawLength === undefined || !/^[1-9][0-9]*$/.test(rawLength)) throw apiError('invalid_request');
+  const length = Number(rawLength);
+  if (!Number.isSafeInteger(length) || length > MAX_COMPONENT_ARTIFACT_BYTES) {
+    throw apiError('limit_exceeded');
+  }
+  const bytes = rawBody(request);
+  if (bytes.byteLength !== length) throw apiError('invalid_request');
+  return bytes;
+}
+
 function sendJson(
   response: Response,
   status: number,
@@ -349,6 +490,20 @@ function sendJson(
   const body = JSON.stringify(value);
   if (Buffer.byteLength(body, 'utf8') > maximumBytes) throw apiError('temporarily_unavailable');
   response.status(status).type('application/json').send(body);
+}
+
+function sendComponentArtifact(response: Response, sha256: string, bytes: Uint8Array): void {
+  const body = Buffer.from(bytes);
+  response.removeHeader('Pragma');
+  response.set({
+    'Cache-Control': 'public, max-age=31536000, immutable',
+    'Content-Length': String(body.byteLength),
+    'Content-Security-Policy': "default-src 'none'; sandbox",
+    'Content-Type': 'application/javascript; charset=utf-8',
+    'Cross-Origin-Resource-Policy': 'cross-origin',
+    ETag: `"${sha256}"`,
+  });
+  response.status(200).send(body);
 }
 
 function sendError(response: Response, requestId: string, error: unknown): void {
@@ -398,6 +553,32 @@ async function routeRequest(
   }
 
   assertNoCookie(request);
+  const componentArtifactMatch = /^\/v1\/components\/([A-Za-z0-9_-]{43})\.js$/.exec(request.path);
+  if (componentArtifactMatch !== null && request.method === 'GET') {
+    requireEmptyBody(request);
+    if (request.headers.authorization !== undefined
+      || request.headers['x-firebase-appcheck'] !== undefined
+      || request.get('Miakapp-Push-Proof') !== undefined
+      || request.get('Range') !== undefined
+      || request.get('If-Range') !== undefined) {
+      throw apiError('invalid_request');
+    }
+    const sha256 = digestValue(componentArtifactMatch[1] as string);
+    const bytes = await dependencies.componentStore.readPublishedArtifact(sha256);
+    sendComponentArtifact(response, sha256, bytes);
+    return;
+  }
+
+  const componentDeliveryMatch = /^\/v1\/component-uploads\/([A-Za-z0-9_-]{22})$/.exec(request.path);
+  if (componentDeliveryMatch !== null && request.method === 'PUT') {
+    const uploadId = keyId(componentDeliveryMatch[1] as string);
+    const uploadToken = componentUploadCapability(request);
+    const bytes = componentArtifactBody(request);
+    await dependencies.componentStore.deliverUpload(uploadId, uploadToken, bytes);
+    response.sendStatus(204);
+    return;
+  }
+
   if (request.path === '/v1/push-destinations:challenge' && request.method === 'POST') {
     const { owner, appCheck } = await destinationPrincipals(request, dependencies);
     const challenge = await dependencies.pushStore.issueDestinationChallenge(
@@ -482,6 +663,79 @@ async function routeRequest(
     if (patch.relayUrl !== undefined) requireRecentAuthentication(principal, dependencies.clock.now());
     const home = await dependencies.store.patchHome(principal, pathHomeId(homeMatch[1] as string), patch);
     sendJson(response, 200, { schema: 'miakapp.home/1', home });
+    return;
+  }
+
+  const componentUploadsMatch = /^\/v1\/homes\/([a-z][a-z0-9-]{1,61}[a-z0-9])\/component-uploads$/
+    .exec(request.path);
+  if (componentUploadsMatch !== null && request.method === 'POST') {
+    const id = pathHomeId(componentUploadsMatch[1] as string);
+    const principal = await componentPrincipal(request, dependencies, id);
+    const upload = await dependencies.componentStore.issueUpload(
+      principal,
+      id,
+      componentUploadInput(jsonBody(request)),
+    );
+    sendJson(response, 201, upload);
+    return;
+  }
+
+  const componentUploadReadMatch = /^\/v1\/homes\/([a-z][a-z0-9-]{1,61}[a-z0-9])\/component-uploads\/([A-Za-z0-9_-]{22})$/
+    .exec(request.path);
+  if (componentUploadReadMatch !== null && request.method === 'GET') {
+    const id = pathHomeId(componentUploadReadMatch[1] as string);
+    const principal = await componentPrincipal(request, dependencies, id);
+    requireEmptyBody(request);
+    const upload = await dependencies.componentStore.inspectUpload(
+      principal,
+      id,
+      keyId(componentUploadReadMatch[2] as string),
+    );
+    sendJson(response, 200, upload);
+    return;
+  }
+
+  const componentFinalizeMatch = /^\/v1\/homes\/([a-z][a-z0-9-]{1,61}[a-z0-9])\/component-uploads\/([A-Za-z0-9_-]{22}):finalize$/
+    .exec(request.path);
+  if (componentFinalizeMatch !== null && request.method === 'POST') {
+    const id = pathHomeId(componentFinalizeMatch[1] as string);
+    const principal = await componentPrincipal(request, dependencies, id);
+    emptyObjectBody(request);
+    const release = await dependencies.componentStore.finalizeRelease(
+      principal,
+      id,
+      keyId(componentFinalizeMatch[2] as string),
+    );
+    sendJson(response, 200, release);
+    return;
+  }
+
+  const componentActivateMatch = /^\/v1\/homes\/([a-z][a-z0-9-]{1,61}[a-z0-9])\/component-releases:activate$/
+    .exec(request.path);
+  if (componentActivateMatch !== null && request.method === 'POST') {
+    const id = pathHomeId(componentActivateMatch[1] as string);
+    const principal = await componentPrincipal(request, dependencies, id);
+    const pointer = await dependencies.componentStore.activateRelease(
+      principal,
+      id,
+      componentActivation(jsonBody(request)),
+    );
+    sendJson(response, 200, pointer);
+    return;
+  }
+
+  const componentReleaseReadMatch = /^\/v1\/homes\/([a-z][a-z0-9-]{1,61}[a-z0-9])\/component-releases\/([A-Za-z0-9_-]{43})$/
+    .exec(request.path);
+  if (componentReleaseReadMatch !== null && request.method === 'GET') {
+    const id = pathHomeId(componentReleaseReadMatch[1] as string);
+    const principal = await componentPrincipal(request, dependencies, id);
+    requireEmptyBody(request);
+    const release = await dependencies.componentStore.inspectRelease(
+      principal,
+      id,
+      digestValue(componentReleaseReadMatch[2] as string),
+    );
+    sendJson(response, 200, release);
     return;
   }
 

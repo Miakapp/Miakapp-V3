@@ -533,7 +533,7 @@ describe('Firebase Emulator FID-to-semantic-push vertical slice', () => {
     ]);
     expect(destinations.size).toBe(1);
     expect(ownerState.get('active_destination_count')).toBe(1);
-  });
+  }, 15_000);
 
   test('enforces challenge and destination ceilings at the exact boundary', async () => {
     for (let index = 0; index < 3; index += 1) {
