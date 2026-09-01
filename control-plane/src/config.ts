@@ -29,6 +29,12 @@ interface SyntheticFixture {
       readonly d: string;
       readonly kid: string;
     };
+    readonly firebase: JsonWebKey & {
+      readonly kty: 'RSA';
+      readonly n: string;
+      readonly e: string;
+      readonly kid: string;
+    };
   };
 }
 
@@ -54,9 +60,17 @@ export function loadEmulatorConfig(environment: NodeJS.ProcessEnv = process.env)
   assertEmulatorRuntime(environment);
   const fixture = readSyntheticFixture();
   const signing = fixture.test_only_private_keys.future;
+  const appCheckSigning = fixture.test_only_private_keys.firebase;
   const pepper = Buffer.from(fixture.home_key.pepper_base64url, 'base64url');
   const verifierKeyVersion = 'test-only-emulator-v1';
-  if (pepper.byteLength !== 32 || signing.d.length === 0 || signing.x.length === 0 || signing.kid.length === 0) {
+  const appCheckAppId = '1:1234567890:web:0123456789abcdef';
+  if (pepper.byteLength !== 32
+    || signing.d.length === 0
+    || signing.x.length === 0
+    || signing.kid.length === 0
+    || appCheckSigning.n.length === 0
+    || appCheckSigning.e.length === 0
+    || appCheckSigning.kid.length === 0) {
     throw new Error('Synthetic emulator key material is invalid');
   }
   return Object.freeze({
@@ -70,6 +84,21 @@ export function loadEmulatorConfig(environment: NodeJS.ProcessEnv = process.env)
     componentsAudience: fixture.deployment.components_audience,
     verifierKeyVersion,
     homeKeyPepperForVersion: (version: string) => (
+      version === verifierKeyVersion ? new Uint8Array(pepper) : undefined
+    ),
+    appCheckAppId,
+    appCheckIssuer: 'https://firebaseappcheck.googleapis.com/1234567890',
+    appCheckAudience: 'projects/1234567890',
+    appCheckPublicJwk: Object.freeze({
+      kty: 'RSA',
+      n: appCheckSigning.n,
+      e: appCheckSigning.e,
+      use: 'sig',
+      alg: 'RS256',
+      kid: appCheckSigning.kid,
+    }),
+    pushKeyVersion: verifierKeyVersion,
+    pushHmacKeyForVersion: (version: string) => (
       version === verifierKeyVersion ? new Uint8Array(pepper) : undefined
     ),
     signingPrivateJwk: signing,

@@ -3,7 +3,12 @@ import { readFileSync } from 'node:fs';
 
 interface FirestoreIndexes {
   readonly indexes: readonly unknown[];
-  readonly fieldOverrides: readonly unknown[];
+  readonly fieldOverrides: readonly {
+    readonly collectionGroup: string;
+    readonly fieldPath: string;
+    readonly ttl: boolean;
+    readonly indexes: readonly unknown[];
+  }[];
 }
 
 interface FirebaseConfig {
@@ -15,9 +20,17 @@ function fixture<T>(name: string): T {
 }
 
 describe('Firebase deployment configuration', () => {
-  test('declares no composite index after bounded registry sorting moved in memory', () => {
+  test('uses no composite index and gives expired push challenges a production TTL policy', () => {
     const config = fixture<FirestoreIndexes>('firestore.indexes.json');
-    expect(config).toEqual({ indexes: [], fieldOverrides: [] });
+    expect(config).toEqual({
+      indexes: [],
+      fieldOverrides: [{
+        collectionGroup: 'pushChallenges',
+        fieldPath: 'expires_at',
+        ttl: true,
+        indexes: [],
+      }],
+    });
   });
 
   test('excludes local dependencies, tests, and generated emulator logs from Functions uploads', () => {

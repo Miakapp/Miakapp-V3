@@ -107,10 +107,11 @@ Random values use a cryptographically secure generator.
 ### 4.2 JSON and HTTP
 
 Control-plane requests and responses use UTF-8 JSON with
-`Content-Type: application/json`. Unless a section lowers the limit:
+`Content-Type: application/json`. Unless a section sets a different limit:
 
 - one request body is at most 16 KiB;
-- one response body is at most 64 KiB;
+- one response body is at most 64 KiB, except the 96 KiB push-grant list in
+  Section 12.4;
 - nesting depth is at most 16;
 - total JSON values are at most 2,048;
 - one string is at most 4,096 UTF-8 bytes;
@@ -598,17 +599,17 @@ An authenticated user owns private FCM delivery records under
 `users/{uid}/pushDestinations/{destinationId}`. Firestore client rules deny every
 read and write in this collection. Registration, listing and deletion go through
 Functions so a path owned by a UID is never mistaken for proof that the same user
-possesses a caller-supplied FCM token.
+possesses a caller-supplied Firebase Installation ID (FID).
 
-Registration is a two-phase proof-of-delivery protocol. First,
+Registration is a two-phase proof-of-possession protocol. First,
 `POST /v1/push-destinations:challenge` requires both a Firebase ID token and a
 valid Firebase App Check token. Its closed body is
-`{ "provider":"fcm", "token":"<1..4096-byte FCM token>" }`. Before contacting
+`{ "provider":"fcm", "fid":"<1..4096-byte Firebase Installation ID>" }`. Before contacting
 FCM, the Function enforces the per-UID, per-App-Check-app and per-source budgets
 in Section 14. App Check authenticates the calling app and Firebase authenticates
 the user; neither is treated as proof that this installation owns the supplied
-delivery address. The Function stores a five-minute challenge bound to the
-verified UID, verified App Check app ID and a keyed token fingerprint, sends a
+FID. The Function stores a five-minute challenge bound to the verified UID,
+verified App Check app ID and a keyed FID fingerprint, sends a
 random 256-bit challenge
 secret in a data-only FCM message, and returns `202` with exactly
 `schema="miakapp.push-challenge/1"`, a random `challenge_id` and `expires_at`.
@@ -618,20 +619,24 @@ The app that receives that message calls
 Check app ID and `Miakapp-Push-Proof: <challengeId>.<secret>`. The Function
 compares the proof in constant time, consumes it once, rechecks destination and
 write quotas transactionally, chooses the random destination ID, and stores the
-record. The UID, App Check app ID and token fingerprint must all match the
+record. The UID, App Check app ID and FID fingerprint must all match the
 challenge. An app logged in as another user cannot complete it. Expired,
 replayed, wrong-user and wrong-app proofs fail uniformly as
 `invalid_destination_proof`.
 
 Version 1 destination records contain exactly
-`schema="miakapp.push-destination/1"`, `provider="fcm"`, the private token, its
-keyed fingerprint, verified App Check app ID, and `created_at`/`updated_at`
+`schema="miakapp.push-destination/1"`, `provider="fcm"`, private `fid`, keyed
+`fid_fingerprint`, verified App Check `verified_app_id`, and
+`created_at`/`updated_at`
 server timestamps. The completion response contains bounded metadata but never
-the raw token. A coordinator and relay never receive the destination. Challenge
-records and uncompleted tokens are short-lived and garbage-collected. Provider
+the raw FID. A coordinator and relay never receive the destination. Challenge
+records and uncompleted FIDs are short-lived and garbage-collected. Provider
 registration refresh and stale-record cleanup follow the current FCM lifecycle
-guidance; any installation identifier recorded for that purpose is metadata, not
-authorization evidence.
+guidance. The FID remains delivery metadata, not authorization evidence; only
+successful completion of the bound one-time challenge proves possession for this
+registration. The challenge `expires_at` field has a Firestore TTL policy;
+application-level bounded pruning remains mandatory because TTL deletion is not
+an instantaneous admission-control mechanism.
 
 `GET /v1/push-destinations` returns at most 16 metadata records and
 `DELETE /v1/push-destinations/{destinationId}` returns uniform `204`; both require
@@ -639,13 +644,13 @@ the verified user and App Check. Deleting a destination immediately invalidates
 every referencing grant because
 send authorization requires a current destination read. Physical grant cleanup
 may be asynchronous. Destination identifiers are random 16-byte IDs and do not
-contain the address. Direct non-FCM Web Push is deferred.
+contain or encode the FID. Direct non-FCM Web Push is deferred.
 
 The complete destination-management surface is:
 
 | Method and path | Request | Success |
 |---|---|---|
-| `POST /v1/push-destinations:challenge` | Section 12.1 provider/token object | `202`, challenge object |
+| `POST /v1/push-destinations:challenge` | Section 12.1 provider/FID object | `202`, challenge object |
 | `POST /v1/push-destinations:complete` | `{}` plus `Miakapp-Push-Proof` | `201`, destination object |
 | `GET /v1/push-destinations` | no body | `200`, destination list |
 | `DELETE /v1/push-destinations/{destinationId}` | no body | uniform `204` |
@@ -666,8 +671,8 @@ Public destination metadata is exactly `destination_id`, `provider`,
 Listing returns
 `{ "schema":"miakapp.push-destination-list/1", "destinations":[...] }`,
 ordered by `created_at` then `destination_id`, with no more than 16 entries.
-These closed responses omit the FCM token, keyed fingerprint, verified App Check
-app ID and every installation identifier. Completion's empty object and proof
+These closed responses omit `fid`, `fid_fingerprint`, `verified_app_id` and every
+other private destination field. Completion's empty object and proof
 header are also closed: no destination ID or metadata is client-selected.
 
 ### 12.2 Explicit home-scoped grant
@@ -713,7 +718,9 @@ grant ID and a bounded semantic notification:
 `title` is 1..120 UTF-8 bytes, `body` is 1..1,024, and optional `tag` is 1..64;
 all reject control characters. Arbitrary URLs, destination addresses, UIDs, raw
 FCM options, HTML and unknown fields are forbidden. The platform constructs any
-click destination from the verified home ID.
+click destination from the verified home ID. Version 1's exact HTML-free text
+grammar additionally rejects U+003C (`<`) and U+003E (`>`) in `title`, `body`
+and `tag`; consumers render all three as text, never markup.
 
 The Function requires all of:
 
@@ -740,11 +747,20 @@ verified `sub`:
 | `DELETE /v1/homes/{homeId}/push-grants/{grantId}` | no body | uniform `204` |
 
 Grant metadata contains exactly `grant_id`, `home_id`, `destination_id`,
-`created_at`, `expires_at` and `revoked_at`; it never contains the delivery token.
+`created_at`, `expires_at` and `revoked_at`; it never contains the FID.
 The creation response schema is `miakapp.push-grant/1`, the list schema is
 `miakapp.push-grant-list/1`, and lists are ordered and capped at 256. Creating a
 replacement is the version 1 renewal operation. None of these routes accepts a
 Home Key or Miakapp access token.
+The closed creation response is exactly
+`{ "schema":"miakapp.push-grant/1", "grant":<metadata> }`; the closed list
+response is exactly
+`{ "schema":"miakapp.push-grant-list/1", "grants":[<metadata>,...] }`, ordered
+by `created_at` then `grant_id`.
+This list is the sole 96 KiB response-body exception to Section 4.2. The larger
+bound accommodates all 256 closed metadata records, including 63-byte home IDs
+and populated `revoked_at` timestamps; every other response remains capped at
+64 KiB.
 Deletion returns the same `204` for an owned active, already revoked, absent, or
 different-user grant ID after authenticating the caller; only a matching
 `(uid, homeId, grantId)` record is mutated. This prevents an existence oracle and
@@ -953,6 +969,7 @@ Errors use the closed shape:
 |---:|---|---|
 | 400 | `invalid_request` | malformed, oversized or unknown-field input |
 | 401 | `invalid_firebase_token` | human authentication failed |
+| 401 | `invalid_app_check_token` | application verification failed |
 | 401 | `recent_authentication_required` | sensitive owner operation needs reauthentication |
 | 401 | `invalid_home_key` | absent, unknown, revoked or mismatched key |
 | 401 | `invalid_access_token` | signature or token profile failed |
@@ -1017,7 +1034,7 @@ contract harness MUST prove:
    clocked key-set transitions;
 8. Firebase RS256 claim validation with 2,048- and 3,072-bit keys, authenticated
    time extraction and verified-email suppression;
-9. challenge-proved push destination registration bound to verified Firebase UID
+9. challenge-proved FID destination registration bound to verified Firebase UID
    and App Check app ID, proof expiry/replay/wrong-principal denial, user-created
    grant, cross-home denial, causal grant expiry without an intervening
    invalidator, uniform revocation and destination deletion;
@@ -1044,9 +1061,16 @@ uncertain-outcome behavior. Relay integration MUST prove exact `HELLO`/`REAUTH`
 binding, JWKS cache expiry, single-flight unknown-`kid` refresh and refresh abuse
 limits.
 
-Emulator success does not prove Cloud KMS, IAM, Secret Manager, real FCM delivery,
-ingress limits or production Google certificate behavior; those require staging
-tests before deployment.
+The Local Emulator Suite provides no App Check or FCM service emulator. Local
+tests therefore use explicitly synthetic App Check verifier and FCM transport
+seams. That evidence may prove the closed HTTP schemas, identity and FID binding,
+one-time proof state machine, authorization, quotas and the exact outbound
+transport request, but it is not App Check attestation or FCM service evidence.
+
+Emulator success does not prove Cloud KMS, IAM, Secret Manager, real App Check
+verification or enforcement, real FCM acceptance or delivery, ingress limits or
+production Google certificate behavior. Those remain staging gates before
+deployment.
 
 ## 19. Security claims and non-claims
 
@@ -1099,7 +1123,7 @@ push destination.
 ### Direct client writes for push destinations
 
 Rejected. A Firestore path scoped to `request.auth.uid` proves who writes the
-document, not possession of the FCM token inside it, and rules cannot provide the
+document, not possession of the FID inside it, and rules cannot provide the
 transactional quotas and FCM challenge audit required here. Registration uses the
 two-phase Function protocol in Section 12.
 

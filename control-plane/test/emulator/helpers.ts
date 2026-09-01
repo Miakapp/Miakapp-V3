@@ -45,6 +45,9 @@ export async function signUp(email: string): Promise<EmulatorUser> {
 export interface ApiRequestOptions {
   readonly token?: string;
   readonly homeKey?: string;
+  readonly accessToken?: string;
+  readonly appCheckToken?: string;
+  readonly pushProof?: string;
   readonly body?: unknown;
   readonly rawBody?: string;
   readonly origin?: string;
@@ -60,6 +63,9 @@ export async function apiRequest(
   headers.set('Origin', options.origin ?? ALLOWED_ORIGIN);
   if (options.token !== undefined) headers.set('Authorization', `Bearer ${options.token}`);
   if (options.homeKey !== undefined) headers.set('Authorization', `Bearer ${options.homeKey}`);
+  if (options.accessToken !== undefined) headers.set('Authorization', `Bearer ${options.accessToken}`);
+  if (options.appCheckToken !== undefined) headers.set('X-Firebase-AppCheck', options.appCheckToken);
+  if (options.pushProof !== undefined) headers.set('Miakapp-Push-Proof', options.pushProof);
   if (options.cookie !== undefined) headers.set('Cookie', options.cookie);
   let body: string | undefined;
   if (options.rawBody !== undefined) {
