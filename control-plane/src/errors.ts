@@ -6,11 +6,16 @@ export type ApiErrorCode =
   | 'invalid_home_key'
   | 'invalid_access_token'
   | 'invalid_destination_proof'
+  | 'invalid_upload_capability'
   | 'not_home_owner'
   | 'insufficient_scope'
   | 'invalid_push_grant'
+  | 'publisher_mismatch'
+  | 'digest_quarantined'
   | 'home_not_found'
   | 'home_exists'
+  | 'generation_conflict'
+  | 'invalid_artifact'
   | 'limit_exceeded'
   | 'temporarily_unavailable';
 
@@ -32,12 +37,17 @@ const ERROR_DEFINITIONS: Readonly<Record<ApiErrorCode, ErrorDefinition>> = Objec
   invalid_home_key: { status: 401, message: 'Authentication failed', retryable: false },
   invalid_access_token: { status: 401, message: 'Authentication failed', retryable: false },
   invalid_destination_proof: { status: 401, message: 'Destination proof is invalid', retryable: false },
+  invalid_upload_capability: { status: 401, message: 'Upload capability is invalid', retryable: false },
   not_home_owner: { status: 403, message: 'Home ownership is required', retryable: false },
   insufficient_scope: { status: 403, message: 'Required scope is not granted', retryable: false },
   invalid_push_grant: { status: 403, message: 'Push grant is invalid', retryable: false },
+  publisher_mismatch: { status: 403, message: 'Publisher identity does not match', retryable: false },
+  digest_quarantined: { status: 403, message: 'Component digest is quarantined', retryable: false },
   home_not_found: { status: 404, message: 'Home was not found', retryable: false },
   home_exists: { status: 409, message: 'Home ID is already allocated', retryable: false },
+  generation_conflict: { status: 409, message: 'Component generation precondition failed', retryable: false },
   limit_exceeded: { status: 413, message: 'A platform limit was exceeded', retryable: false },
+  invalid_artifact: { status: 422, message: 'Component artifact is invalid', retryable: false },
   temporarily_unavailable: {
     status: 503,
     message: 'Service is temporarily unavailable',

@@ -63,6 +63,7 @@ export function loadEmulatorConfig(environment: NodeJS.ProcessEnv = process.env)
   const appCheckSigning = fixture.test_only_private_keys.firebase;
   const pepper = Buffer.from(fixture.home_key.pepper_base64url, 'base64url');
   const verifierKeyVersion = 'test-only-emulator-v1';
+  const componentBucket = `${EMULATOR_PROJECT}.appspot.com`;
   const appCheckAppId = '1:1234567890:web:0123456789abcdef';
   if (pepper.byteLength !== 32
     || signing.d.length === 0
@@ -82,6 +83,13 @@ export function loadEmulatorConfig(environment: NodeJS.ProcessEnv = process.env)
     exchangeEndpoint: fixture.deployment.exchange_endpoint,
     pushAudience: fixture.deployment.push_audience,
     componentsAudience: fixture.deployment.components_audience,
+    componentBucket,
+    componentUploadBaseUrl: 'https://control.example.test/v1/component-uploads',
+    componentArtifactBaseUrl: 'https://control.example.test/v1/components',
+    componentKeyVersion: verifierKeyVersion,
+    componentHmacKeyForVersion: (version: string) => (
+      version === verifierKeyVersion ? new Uint8Array(pepper) : undefined
+    ),
     verifierKeyVersion,
     homeKeyPepperForVersion: (version: string) => (
       version === verifierKeyVersion ? new Uint8Array(pepper) : undefined

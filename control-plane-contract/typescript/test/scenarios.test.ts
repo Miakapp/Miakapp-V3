@@ -194,6 +194,21 @@ describe('control-plane behavioral scenarios', () => {
     await expect(replay(validateScenarioFixture(fixture as JsonValue))).rejects.toBeInstanceOf(ContractViolation);
   });
 
+  test('classifies malformed and oversized component declarations with the stable HTTP codes', async () => {
+    const fixture = await mutableFixture();
+    const entries = operations(fixture, 'component_publication');
+    const zeroSize = entries.find((entry) => entry.kind === 'request_upload'
+      && entry.upload_ref === 'zero-size-upload');
+    const oversized = entries.find((entry) => entry.kind === 'request_upload'
+      && entry.upload_ref === 'oversized-upload');
+    if (zeroSize === undefined || oversized === undefined) {
+      throw new Error('component declaration failure evidence missing');
+    }
+    expect(zeroSize.expected).toEqual({ outcome: 'error', code: 'invalid_request' });
+    expect(oversized.expected).toEqual({ outcome: 'error', code: 'limit_exceeded' });
+    await expect(replay(validateScenarioFixture(fixture as JsonValue))).resolves.toBeUndefined();
+  });
+
   test('does not accept a false successful delivery-path read-back', async () => {
     const fixture = await mutableFixture();
     const delivery = operations(fixture, 'component_publication')
