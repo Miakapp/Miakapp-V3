@@ -1028,7 +1028,8 @@ function executeOperation(state: ReplayState, operation: { [key: string]: JsonVa
       const digest = stringValue(operation.digest, 'request_upload.digest');
       decodeCanonicalBase64url(digest, 'request_upload.digest', 32);
       const size = integerValue(operation.size, 'request_upload.size');
-      if (size <= 0 || size > 2_097_152) return record(state, 'component.upload.issue', denied('invalid_artifact'));
+      if (size <= 0) return record(state, 'component.upload.issue', denied('invalid_request'));
+      if (size > 2_097_152) return record(state, 'component.upload.issue', denied('limit_exceeded'));
       const release = boundedText(operation.release, 'request_upload.release', 64);
       if (operation.abi !== 'miakapp.component/1') {
         throw new ContractViolation('invalid_fixture', 'request_upload.abi is unsupported');

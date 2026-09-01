@@ -843,10 +843,25 @@ The client sends the exact Worker bytes once with `PUT <upload_url>`,
 `Content-Length`. The upload URL contains no credential. The upload endpoint
 accepts no cookies, redirects, ranges, compression or multipart encoding, streams
 with the 2 MiB ceiling and returns `204`. A capability cannot be reused. Upload
-objects remain private staging data. After successful finalization, the service
-copies or promotes the exact verified bytes to an immutable, content-addressed,
-token-free public object whose CORS policy permits the trusted web host. The RFC
-0002 pointer names only that final object and contains no query credential.
+objects remain private staging data. The service writes verified bytes to an
+immutable, content-addressed Storage object that remains private under both
+Storage Rules and bucket IAM. The RFC 0002 pointer instead names the token-free
+control-plane resource `GET /v1/components/{sha256}.js`; it never names a raw
+Cloud Storage URL or contains a query credential.
+
+That GET succeeds only after a durable artifact-publication marker has committed
+atomically with the release record. The handler validates the marker, reads the
+private immutable object, verifies its stored metadata, size and digest, and
+returns the exact bytes with `Content-Type: application/javascript; charset=utf-8`,
+an exact `Content-Length`, `ETag: "{sha256}"`, `Cache-Control: public,
+max-age=31536000, immutable`, `Cross-Origin-Resource-Policy: cross-origin`, and
+CORS restricted to the trusted web origin. It accepts no authorization, cookie,
+query, request body, redirect or range. Before marker commit or for an absent
+digest it returns uniform `invalid_artifact` under `Cache-Control: no-store`.
+This binary response is the sole 2 MiB exception to Section 4.2's response-body
+limit. Writing the Storage object alone never opens the actual pointer URL; the
+marker is the cross-service finalization linearization point and keeps a
+Storage-success/Firestore-failure orphan private.
 
 The original publisher then calls
 `POST /v1/homes/{homeId}/component-uploads/{uploadId}:finalize` with an empty JSON

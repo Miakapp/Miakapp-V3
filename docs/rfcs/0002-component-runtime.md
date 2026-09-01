@@ -230,7 +230,7 @@ Firestore document `components/{homeID}` contains exactly one pointer:
   "generation": 42,
   "release": "2026-08-30.1",
   "abi": "miakapp.component/1",
-  "url": "https://storage.googleapis.com/.../sha256-<digest>.mjs",
+  "url": "https://control.example/v1/components/<digest>.js",
   "sha256": "base64url-without-padding",
   "size": 348210,
   "requires": {

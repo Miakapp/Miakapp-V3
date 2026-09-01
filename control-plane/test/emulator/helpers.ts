@@ -50,6 +50,9 @@ export interface ApiRequestOptions {
   readonly pushProof?: string;
   readonly body?: unknown;
   readonly rawBody?: string;
+  readonly rawBytes?: Uint8Array;
+  readonly contentType?: string;
+  readonly headers?: Readonly<Record<string, string>>;
   readonly origin?: string;
   readonly cookie?: string;
 }
@@ -67,14 +70,21 @@ export async function apiRequest(
   if (options.appCheckToken !== undefined) headers.set('X-Firebase-AppCheck', options.appCheckToken);
   if (options.pushProof !== undefined) headers.set('Miakapp-Push-Proof', options.pushProof);
   if (options.cookie !== undefined) headers.set('Cookie', options.cookie);
-  let body: string | undefined;
+  let body: string | ArrayBuffer | undefined;
+  if (options.rawBytes !== undefined && (options.body !== undefined || options.rawBody !== undefined)) {
+    throw new Error('apiRequest accepts only one body form');
+  }
   if (options.rawBody !== undefined) {
     body = options.rawBody;
     headers.set('Content-Type', 'application/json');
   } else if (options.body !== undefined) {
     body = JSON.stringify(options.body);
     headers.set('Content-Type', 'application/json');
+  } else if (options.rawBytes !== undefined) {
+    body = Uint8Array.from(options.rawBytes).buffer;
+    headers.set('Content-Type', options.contentType ?? 'application/octet-stream');
   }
+  for (const [name, value] of Object.entries(options.headers ?? {})) headers.set(name, value);
   return fetch(`${API_BASE}${path}`, { method, headers, ...(body === undefined ? {} : { body }) });
 }
 

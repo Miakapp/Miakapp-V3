@@ -35,9 +35,15 @@ the real MiakAPI and Node-RED implementations must still pass that contract. RFC
 verifiers, and a bounded behavioral model under
 [`../control-plane-contract/`](../control-plane-contract/). Its first
 owner-to-access-token implementation slice runs through Auth, Functions and
-Firestore under [`../control-plane/`](../control-plane/); separate Firestore and
-Storage client contexts prove the initial deny-by-default Rules boundary. The
-remaining push/publication emulator matrix and staging acceptance are still
+Firestore under [`../control-plane/`](../control-plane/). The same isolated
+package now contains synthetic push and local component-publication vertical
+slices; the latter drives private staging, server read-back, marker-gated public
+delivery and pointer CAS through the Functions, Storage and Firestore emulators.
+Structural adapter tests separately prove create-only generation-precondition
+wiring because the Storage Emulator does not enforce that production
+precondition. Separate client contexts prove the public-pointer and private
+Storage/private-record Rules boundaries.
+Bounded admission, the remaining fault matrix and staging acceptance are still
 implementation gates.
 
 Repository-specific implementation plans must link back to these documents and

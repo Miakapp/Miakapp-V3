@@ -4,6 +4,8 @@ export const HOME_ID_PATTERN = /^[a-z][a-z0-9-]{1,61}[a-z0-9]$/;
 export const COORDINATOR_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 export const IDENTIFIER_PATTERN = /^[A-Za-z0-9_-]{22}$/;
 export const HOME_KEY_PATTERN = /^mhk1_([A-Za-z0-9_-]{22})_([A-Za-z0-9_-]{43})$/;
+export const SHA256_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+export const COMPONENT_ABI = 'miakapp.component/1' as const;
 export const ACCESS_SCOPES = Object.freeze([
   'relay:coordinator',
   'relay:cli',
@@ -83,6 +85,63 @@ export interface PushAccessPrincipal {
   readonly expiresAt: number;
 }
 
+export type ComponentPublisherPrincipal =
+  | {
+    readonly kind: 'owner';
+    readonly homeId: string;
+    readonly userId: string;
+  }
+  | {
+    readonly kind: 'access_token';
+    readonly homeId: string;
+    readonly clientId: string;
+  };
+
+export interface ComponentRequirements {
+  readonly state_read: readonly string[];
+  readonly event_subscribe: readonly string[];
+  readonly event_publish: readonly string[];
+  readonly call: readonly string[];
+  readonly presentation: readonly string[];
+}
+
+export interface ComponentUploadInput {
+  readonly release: string;
+  readonly abi: typeof COMPONENT_ABI;
+  readonly sha256: string;
+  readonly size: number;
+  readonly requires: ComponentRequirements;
+}
+
+export interface ComponentUploadRepresentation {
+  readonly schema: 'miakapp.component-upload/1';
+  readonly upload_id: string;
+  readonly upload_url: string;
+  readonly upload_token: string;
+  readonly expires_at: string;
+}
+
+export type ComponentUploadStatus = 'awaiting_upload' | 'delivered' | 'finalized';
+
+export interface ComponentUploadStatusRepresentation extends ComponentUploadInput {
+  readonly schema: 'miakapp.component-upload-status/1';
+  readonly upload_id: string;
+  readonly status: ComponentUploadStatus;
+  readonly expires_at: string;
+}
+
+export interface ComponentReleaseRepresentation extends ComponentUploadInput {
+  readonly schema: 'miakapp.component-release/1';
+  readonly finalized_at: string;
+}
+
+export interface ComponentPointerRepresentation extends ComponentUploadInput {
+  readonly schema: 'miakapp.component-pointer/1';
+  readonly home_id: string;
+  readonly generation: number;
+  readonly url: string;
+}
+
 export type ExchangeRequest =
   | {
     readonly purpose: 'relay';
@@ -119,6 +178,11 @@ export interface DeploymentConfig {
   readonly exchangeEndpoint: string;
   readonly pushAudience: string;
   readonly componentsAudience: string;
+  readonly componentBucket: string;
+  readonly componentUploadBaseUrl: string;
+  readonly componentArtifactBaseUrl: string;
+  readonly componentKeyVersion: string;
+  readonly componentHmacKeyForVersion: (version: string) => Uint8Array | undefined;
   readonly verifierKeyVersion: string;
   readonly homeKeyPepperForVersion: (version: string) => Uint8Array | undefined;
   readonly appCheckAppId: string;
