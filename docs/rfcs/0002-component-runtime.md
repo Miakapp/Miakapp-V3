@@ -9,7 +9,7 @@
 
 ## 1. Abstract
 
-Miakapp 3.5 lets a home publish one generated user-interface bundle. That bundle
+Miakapp 4 lets a home publish one generated user-interface bundle. That bundle
 is home-authored and platform-untrusted: it may receive data and invoke operations
 that the current home deliberately grants, but it must not inherit the authority
 of the authenticated Miakapp application.

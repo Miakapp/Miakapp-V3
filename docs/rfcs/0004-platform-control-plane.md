@@ -6,7 +6,7 @@ Date: 2026-08-31
 
 ## 1. Scope
 
-This RFC defines the privileged Miakapp 3.5 control plane shared by the web
+This RFC defines the privileged Miakapp 4 control plane shared by the web
 application, Firebase Functions, MiakAPI and RFC 0001 relays. It specifies:
 
 - owner bootstrap and the persistent public home directory;
@@ -943,7 +943,7 @@ those limits are not access-token claims.
 
 ### 14.1 Local Emulator admission profile
 
-The isolated `demo-miakapp-v35` implementation uses exact fixed windows. This is
+The isolated `demo-miakapp-v4` implementation uses exact fixed windows. This is
 an executable local profile, not a portable production default:
 
 | Dimension | Limit and window |
@@ -1132,6 +1132,16 @@ uncertain-outcome behavior. Relay integration MUST prove exact `HELLO`/`REAUTH`
 binding, JWKS cache expiry, single-flight unknown-`kid` refresh and refresh abuse
 limits.
 
+The implementation fault gate is enumerated in
+[`control-plane/FAULT-MATRIX.md`](../../control-plane/FAULT-MATRIX.md). Its local
+rows MUST exercise the real request router or named persistence/transport adapter,
+not merely assert a fixture label. Unknown dependency or commit-boundary failures
+MUST be correlated, bounded, free of secret material and recorded as
+`outcome_unknown`; definitive caller or policy failures remain `denied`.
+Application-level fakes and Emulator state mutation are valid only for the local
+rows named there. Network loss, managed-service retry semantics, IAM, KMS, real
+App Check, FCM and production Storage behavior remain staging rows.
+
 The Local Emulator Suite provides no App Check or FCM service emulator. Local
 tests therefore use explicitly synthetic App Check verifier and FCM transport
 seams. That evidence may prove the closed HTTP schemas, identity and FID binding,
@@ -1200,7 +1210,7 @@ two-phase Function protocol in Section 12.
 
 ### Platform membership relation
 
-Rejected for 3.5. The coordinator owns membership and permissions. User-owned
+Rejected for Miakapp 4. The coordinator owns membership and permissions. User-owned
 home bookmarks remain convenience data only.
 
 ### Direct client writes for component pointers

@@ -1,10 +1,10 @@
-# Miakapp 3.5 — Cross-repository roadmap
+# Miakapp 4 — Cross-repository roadmap
 
 Date: 2026-08-29
 
 Status: active coordination plan
 
-Target: Miakapp 3.5
+Target: Miakapp 4
 
 ## 1. Product outcome
 
@@ -25,7 +25,8 @@ are starting points, not competitors that must be replaced on day one.
 
 ## 2. Confirmed direction
 
-- The release is Miakapp 3.5, not a separate V4 product.
+- The release is Miakapp 4, a deliberate breaking successor to Miakapp 3 rather
+  than an in-place compatibility release.
 - Firebase Auth remains the human identity root.
 - A local coordinator owns home-specific application logic, membership,
   invitations, permissions, variables, events, and functions.
@@ -39,7 +40,7 @@ are starting points, not competitors that must be replaced on day one.
   exchange and push delivery.
 - Platform-side relations, groups, pages, invitations, and coordinator secrets
   are removed after migration.
-- The official 3.5 service does not permanently carry the v3 protocol.
+- The official Miakapp 4 service does not permanently carry the v3 protocol.
 - A central Miakapp Git service is deferred. Agents may manage their own Git
   repositories; the publication API must leave room for a later mirror.
 - An embedded in-app agent is deferred until the external coding-agent workflow
@@ -69,7 +70,7 @@ A dynamically imported module runs with the privileges of the Miakapp origin.
 A hash proves identity, not safety. Home-authored bundles must therefore not be
 imported directly into the authenticated host application.
 
-RFC 0002 closes the design gate. The default 3.5 runtime uses a hidden broker on
+RFC 0002 closes the design gate. The default Miakapp 4 runtime uses a hidden broker on
 a separate site under an opaque sandbox origin and deny-by-default CSP. The
 broker parses the verified self-contained Worker program, starts it behind a
 fixed confinement prelude in a terminable Dedicated Worker, retains the host
@@ -114,16 +115,16 @@ Optimisations stay only when realistic benchmarks demonstrate a material gain.
 ### 3.5 Migration boundary
 
 The cloud platform may have a final hard cutover, but the real home-automation
-behavior must first be characterized and exercised against the 3.5 stack.
+behavior must first be characterized and exercised against the Miakapp 4 stack.
 
 The existing Node-RED package may be deprecated as a public product while a
-3.5-compatible adapter remains available as a migration bridge. This preserves
+Miakapp 4-compatible adapter remains available as a migration bridge. This preserves
 the working installation as an oracle and rollback target without contaminating
 the production relay with a permanent legacy protocol.
 
 ## 4. Repository responsibilities
 
-| Repository | 3.5 responsibility |
+| Repository | Miakapp 4 responsibility |
 |---|---|
 | `Miakapp-V3` | Canonical ecosystem docs, React platform shell, component host, Firebase rules/configuration, and web onboarding |
 | `Miakapp-Server` | Go relay and protocol-conformance implementation; no platform secrets or product business logic |
@@ -178,7 +179,7 @@ Deliverables:
 5. a timed restore rehearsal for the local coordinator environment;
 6. an explicit list of behavior intentionally preserved versus fixed.
 
-Exit gate: the 3.5 implementation can be compared against a deterministic oracle
+Exit gate: the Miakapp 4 implementation can be compared against a deterministic oracle
 without accessing private production data in CI.
 
 Characterization status (2026-08-30): `synthetic-home/` contains a hand-authored
@@ -253,6 +254,13 @@ dimensions, bounded 429 responses, request-ID correlation and no additional
 signature after exchange denial. Trusted source attribution, edge admission,
 alerting and capacity/cost calibration remain staging gates.
 
+A fifth local slice consolidates dependency exceptions, transaction callback
+replay, ambiguous commits, post-effect push/Storage failures, component
+reconciliation, activation CAS and audit-finalization failures in the executable
+[`control-plane/FAULT-MATRIX.md`](../../control-plane/FAULT-MATRIX.md). It closes
+the deterministic application-level fault rows without claiming production
+network or managed-service behavior.
+
 Deliverables:
 
 1. owner bootstrap and Home Key lifecycle;
@@ -265,11 +273,11 @@ Deliverables:
 6. **local emulator slice complete; staging open** — per-home quotas, fixed-
    window rate/byte limits, redacted audit records, and bounded
    security-operation write/effect costs;
-7. emulator-first tests for rules and Functions — the Section 5–7 slice is
-   complete; synthetic push evidence now covers destinations, grants and sends,
-   plus component publication/read-back, pointer activation and bounded
-   admission/audit; production service integration, remaining fault injection
-   and staging admission evidence are open.
+7. **local deterministic matrix complete; relay/staging rows open** — emulator-
+   first tests cover rules and Functions, synthetic push, component publication,
+   bounded admission/audit, retry, ambiguous outcomes and reconciliation;
+   production service integration, network faults, relay token refresh and
+   staging admission evidence remain open.
 
 Exit gate: a compromised relay cannot obtain a Home Key or platform credential,
 and a Home Key cannot exercise capabilities outside its declared scopes.
@@ -372,8 +380,13 @@ current consumer.
    registration, grants and semantic sends with synthetic App Check/FCM evidence,
    plus local component publication/read-back, immutable releases, reconciliation,
    concurrent CAS, quarantine and rollback, and fixed-slot audit/rate/cost
-   admission; next complete the remaining RFC 0004 Section 18 fault matrix and
-   staging-only infrastructure gates.
+   admission. Its deterministic application/dependency fault matrix is now
+   explicit and executable. A closed, credential-free staging manifest now fixes
+   the isolated target, initial resource/IAM/cost posture and teardown inventory
+   without creating a project or enabling deployment. Next implement the missing
+   production adapters, obtain explicit location/billing approval, and only then
+   convert the reviewed intent into a deployable plan that closes the
+   relay-integration and staging-only RFC 0004 Section 18 gates.
 
 ## 9. Evidence that would change this plan
 

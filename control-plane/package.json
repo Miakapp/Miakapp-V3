@@ -16,6 +16,8 @@
     "check": "./check.sh"
   },
   "dependencies": {
+    "@google-cloud/kms": "5.7.0",
+    "@google-cloud/secret-manager": "6.3.0",
     "acorn": "8.18.0",
     "express": "5.2.1",
     "firebase-admin": "14.3.0",

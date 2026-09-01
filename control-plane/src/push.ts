@@ -1,6 +1,6 @@
 import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 
-export const EMULATOR_PUSH_PROJECT_ID = 'demo-miakapp-v35';
+export const EMULATOR_PUSH_PROJECT_ID = 'demo-miakapp-v4';
 export const EMULATOR_PUSH_DELIVERIES_COLLECTION = 'emulatorPushDeliveries';
 export const EMULATOR_PUSH_DELIVERY_SCHEMA = 'miakapp.emulator-push-delivery/1';
 

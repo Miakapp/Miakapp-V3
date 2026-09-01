@@ -8,16 +8,16 @@ on:
       - '.github/workflows/control-plane-contract.yml'
       - 'control-plane-contract/**'
       - 'docs/rfcs/0004-platform-control-plane.md'
-      - 'docs/specs/2026-08-29-miakapp-3.5-design.md'
-      - 'docs/roadmaps/2026-08-29-miakapp-3.5-coordination.md'
+      - 'docs/specs/2026-08-29-miakapp-v4-design.md'
+      - 'docs/roadmaps/2026-08-29-miakapp-v4-coordination.md'
       - 'package.json'
   pull_request:
     paths:
       - '.github/workflows/control-plane-contract.yml'
       - 'control-plane-contract/**'
       - 'docs/rfcs/0004-platform-control-plane.md'
-      - 'docs/specs/2026-08-29-miakapp-3.5-design.md'
-      - 'docs/roadmaps/2026-08-29-miakapp-3.5-coordination.md'
+      - 'docs/specs/2026-08-29-miakapp-v4-design.md'
+      - 'docs/roadmaps/2026-08-29-miakapp-v4-coordination.md'
       - 'package.json'
 
 permissions:

@@ -25,7 +25,7 @@ import {
   validateComponentRequirements,
 } from './component-artifact.js';
 import { ComponentStore } from './component-store.js';
-import { AccessTokenSigner, parseHomeKey, randomIdentifier } from './crypto.js';
+import { parseHomeKey, randomIdentifier } from './crypto.js';
 import { ApiError, apiError } from './errors.js';
 import {
   assertExactKeys,
@@ -35,7 +35,7 @@ import {
   stringValue,
   type JsonValue,
 } from './json.js';
-import { ControlPlaneStore } from './store.js';
+import { ControlPlaneStore, type AccessTokenIssuer } from './store.js';
 import { type PushTransport } from './push.js';
 import { PushStore } from './push-store.js';
 import {
@@ -73,7 +73,7 @@ export interface ApiDependencies {
   readonly auth: FirebaseTokenVerifier;
   readonly clock: Clock;
   readonly config: DeploymentConfig;
-  readonly signer: AccessTokenSigner;
+  readonly signer: AccessTokenIssuer;
   readonly store: ControlPlaneStore;
   readonly pushStore: PushStore;
   readonly pushTransport: PushTransport;
@@ -524,7 +524,7 @@ async function componentPrincipal(
     }
   }
   if (algorithm === 'RS256'
-    || (algorithm === 'none' && dependencies.config.projectId === 'demo-miakapp-v35')) {
+    || (algorithm === 'none' && dependencies.config.projectId === 'demo-miakapp-v4')) {
     const owner = await ownerPrincipal(request, dependencies);
     requireRecentAuthentication(owner, dependencies.clock.now());
     return Object.freeze({ kind: 'owner', homeId, userId: owner.userId });

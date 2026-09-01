@@ -1,7 +1,7 @@
 # RFC 0001 — Miakapp wire protocol 1.0
 
 - Status: accepted
-- Product release: Miakapp 3.5
+- Product release: Miakapp 4
 - Protocol version: 1.0
 - Last updated: 2026-08-30
 
