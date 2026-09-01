@@ -435,6 +435,7 @@ export class PushStore {
   ): Promise<PushChallengeDelivery> {
     const collection = this.#firestore.collection('users').doc(principal.userId).collection('pushChallenges');
     const challengeRef = collection.doc(challengeId);
+    const ownerRef = this.#firestore.collection('controlPushOwners').doc(principal.userId);
     const nowMilliseconds = this.#clock.now();
     const now = Timestamp.fromMillis(nowMilliseconds);
     const expiresAt = Timestamp.fromMillis(nowMilliseconds + CHALLENGE_TTL_MILLISECONDS);
@@ -446,10 +447,12 @@ export class PushStore {
       keyVersion,
     );
     const result = await this.#firestore.runTransaction(async (transaction) => {
-      const [existing, registry] = await Promise.all([
+      const [existing, ownerSnapshot, registry] = await Promise.all([
         transaction.get(challengeRef),
+        transaction.get(ownerRef),
         transaction.get(collection.limit(MAX_ACTIVE_CHALLENGES + 1)),
       ]);
+      const owner = destinationOwner(ownerSnapshot, principal.userId);
       if (registry.size > MAX_ACTIVE_CHALLENGES) throw apiError('temporarily_unavailable');
       const records = registry.docs.map((document) => ({
         record: validateChallenge(document, principal.userId),
@@ -493,6 +496,12 @@ export class PushStore {
         consumed_at: null,
       };
       transaction.create(challengeRef, data);
+      transaction.set(ownerRef, {
+        schema: 'miakapp.push-owner/1',
+        owner_uid: principal.userId,
+        active_destination_count: owner.destinationCount,
+        updated_at: now,
+      });
       return Object.freeze({ expiresAt });
     });
     return Object.freeze({
