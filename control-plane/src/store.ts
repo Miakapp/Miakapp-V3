@@ -201,6 +201,11 @@ function reconcileKeyRegistry(
   return records;
 }
 
+function compareKeyRecords(left: ValidatedKeyRecord, right: ValidatedKeyRecord): number {
+  return left.createdAt.toMillis() - right.createdAt.toMillis()
+    || Buffer.compare(Buffer.from(left.snapshot.id, 'ascii'), Buffer.from(right.snapshot.id, 'ascii'));
+}
+
 function homeRepresentation(data: DocumentData): HomeRepresentation {
   if (typeof data.home_id !== 'string'
     || typeof data.name !== 'string'
@@ -397,10 +402,7 @@ export class ControlPlaneStore {
       if (home.retainedKeyCount >= MAX_RETAINED_HOME_KEYS) {
         compacted = registry
           .filter((record) => record.status === 'revoked')
-          .sort((left, right) => (
-            left.createdAt.toMillis() - right.createdAt.toMillis()
-            || left.snapshot.id.localeCompare(right.snapshot.id)
-          ))[0];
+          .sort(compareKeyRecords)[0];
         if (compacted === undefined) throw apiError('limit_exceeded');
       }
 
@@ -455,10 +457,7 @@ export class ControlPlaneStore {
         homeRef.collection('homeKeys').limit(MAX_RETAINED_HOME_KEYS + 1),
       );
       const records = reconcileKeyRegistry(snapshot, home, homeId)
-        .sort((left, right) => (
-          left.createdAt.toMillis() - right.createdAt.toMillis()
-          || left.snapshot.id.localeCompare(right.snapshot.id)
-        ));
+        .sort(compareKeyRecords);
       return Object.freeze(records.map((record) => record.metadata)) as HomeKeyMetadata[];
     });
   }
