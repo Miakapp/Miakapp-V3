@@ -2,7 +2,7 @@
 
 This package is the first deployed-shape implementation slice of
 [RFC 0004](../docs/rfcs/0004-platform-control-plane.md). It runs only against
-the Firebase Local Emulator Suite and the exact `demo-miakapp-v35` project. It
+the Firebase Local Emulator Suite and the exact `demo-miakapp-v4` project. It
 cannot be loaded as a production Function.
 
 The slice implements:
@@ -153,16 +153,52 @@ Functions Framework may reject compressed or oversized requests before
 application code runs, so the 2 MiB application check is not evidence of a
 production streaming ingress limit.
 
+An inactive production-security boundary now lives in
+[`src/production-config.ts`](src/production-config.ts),
+[`src/cloud-security.ts`](src/cloud-security.ts), and
+[`src/google-cloud-clients.ts`](src/google-cloud-clients.ts). It accepts only the
+explicit staging or production project, numeric Secret Manager versions and one
+full Ed25519 KMS key-version name. Initialization reads each declared 32-byte
+secret once, checks the returned resource name and CRC32C, then binds the KMS
+public key to the configured JWKS key. The staging and production project IDs
+are also bound respectively to `https://control.staging.miakapp.com` and
+`https://control.miakapp.com`; they cannot mint tokens carrying the other
+environment's issuer. Each token uses one `AsymmetricSign` request over the exact
+JWS signing input with automatic client retries disabled; the response name,
+request-integrity acknowledgement, signature CRC32C and signature itself are
+verified against an independent immutable copy before release. Production client
+construction fails before creating either SDK client when
+`GOOGLE_SDK_NODE_LOGGING` is nonempty, because that debug mode can serialize
+Secret Manager payloads and complete KMS signing material.
+
+Those modules are not imported by [`src/index.ts`](src/index.ts). Their unit
+tests use injected clients and make no ADC, network or cloud-resource call. The
+concrete Google adapter is exercised with injected transports to prove that the
+generated clients receive fresh extensible call options while preserving the
+bounded timeout and `retry: null`; no real client method runs in that test. The
+private fixture JWK is now confined to the emulator-specific configuration
+subtype. This is local adapter evidence only: there is still no production
+runtime loader or composition root, service-account binding, live JWKS
+publication/rotation, provisioned key or secret, deployment authorization or
+`STAGE-01` acceptance result.
+
 Passing this slice does **not** close RFC 0004's complete emulator or production
 gate. Push registration and sending have only synthetic local service evidence;
 component publication and read-back have local Emulator evidence only. Bounded
-audit/rate/cost admission now has local transactional evidence, but trusted
-production source attribution, Cloud Armor plus ingress restriction, alerting,
-load/cost calibration and TTL/index deployment remain staging gates. The
-remaining fault-injection matrix, live JWKS rotation, Cloud KMS, Secret Manager,
-IAM, bucket CORS/lifecycle policy, real App Check, real FCM, production Firebase
-certificates and staging rollback also remain subsequent work. Admin SDK access
+audit/rate/cost admission now has local transactional evidence. The deterministic
+application/dependency failures, transaction replays, ambiguous Storage state,
+CAS races and audit outcomes are consolidated in [`FAULT-MATRIX.md`](FAULT-MATRIX.md).
+Trusted production source attribution, Cloud Armor plus ingress restriction,
+alerting, load/cost calibration, TTL/index deployment, live network faults, live
+JWKS rotation, live Cloud KMS and Secret Manager behavior, IAM, bucket CORS/lifecycle policy, real
+App Check, real FCM, production Firebase certificates and staging rollback remain
+subsequent staging work. Admin SDK access
 bypasses Firestore and Storage Rules, so the Rules tests exercise separate client
 contexts explicitly. Public discovery, JWKS and artifact reads are bounded only
 by local Function instance/concurrency settings in this slice; production edge
 admission must cover them before deployment.
+
+The reviewable [`../infrastructure/staging/`](../infrastructure/staging/) intent
+now freezes the future project's target, locations, initial resource and IAM
+inventory, cost posture, unresolved production adapters and teardown evidence.
+Its CI gate has no credentials and authorizes no project creation or deployment.

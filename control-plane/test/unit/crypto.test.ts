@@ -17,7 +17,7 @@ import { verifyMiakappAccessToken } from '../../../control-plane-contract/typesc
 
 const environment = {
   FUNCTIONS_EMULATOR: 'true',
-  GCLOUD_PROJECT: 'demo-miakapp-v35',
+  GCLOUD_PROJECT: 'demo-miakapp-v4',
 } as NodeJS.ProcessEnv;
 
 describe('control-plane cryptography', () => {
@@ -74,7 +74,7 @@ describe('control-plane cryptography', () => {
       GCLOUD_PROJECT: 'miakapp-3',
     } as NodeJS.ProcessEnv)).toThrow(/restricted to the demo Firebase Emulator project/);
     expect(() => loadEmulatorConfig({
-      GCLOUD_PROJECT: 'demo-miakapp-v35',
+      GCLOUD_PROJECT: 'demo-miakapp-v4',
     } as NodeJS.ProcessEnv)).toThrow(/restricted to the demo Firebase Emulator project/);
   });
 });

@@ -13,12 +13,12 @@ const now = 1_788_220_800;
 
 function decoded(overrides: Partial<DecodedIdToken> = {}): DecodedIdToken {
   return {
-    aud: 'demo-miakapp-v35',
+    aud: 'demo-miakapp-v4',
     auth_time: now - 60,
     exp: now + 3_600,
     firebase: { identities: {}, sign_in_provider: 'password' },
     iat: now - 60,
-    iss: 'https://securetoken.google.com/demo-miakapp-v35',
+    iss: 'https://securetoken.google.com/demo-miakapp-v4',
     sub: 'synthetic-owner',
     uid: 'synthetic-owner',
     ...overrides,

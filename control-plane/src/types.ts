@@ -230,6 +230,15 @@ export interface AccessGrant {
   readonly coordinatorName: string | null;
 }
 
+export type SigningPublicJwk = Readonly<{
+  kty: 'OKP';
+  crv: 'Ed25519';
+  x: string;
+  use: 'sig';
+  alg: 'EdDSA';
+  kid: string;
+}>;
+
 export interface DeploymentConfig {
   readonly projectId: string;
   readonly region: string;
@@ -257,15 +266,11 @@ export interface DeploymentConfig {
   readonly auditHmacKeyForVersion: (version: string) => Uint8Array | undefined;
   readonly networkKeyVersion: string;
   readonly networkHmacKeyForVersion: (version: string) => Uint8Array | undefined;
+  readonly signingPublicJwk: SigningPublicJwk;
+}
+
+export interface EmulatorDeploymentConfig extends DeploymentConfig {
   readonly signingPrivateJwk: JsonWebKey & { readonly kid: string };
-  readonly signingPublicJwk: Readonly<{
-    kty: 'OKP';
-    crv: 'Ed25519';
-    x: string;
-    use: 'sig';
-    alg: 'EdDSA';
-    kid: string;
-  }>;
 }
 
 export interface Clock {

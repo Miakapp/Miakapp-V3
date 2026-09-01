@@ -33,7 +33,7 @@ import {
   SYSTEM_CLOCK,
   type AccessGrant,
   type AccessScope,
-  type DeploymentConfig,
+  type EmulatorDeploymentConfig,
   type FirebasePrincipal,
 } from '../../src/types.js';
 import type {
@@ -175,7 +175,7 @@ function decodedClaims(token: string): Record<string, unknown> {
 function configWithPeppers(
   currentVersion: string,
   peppers: Readonly<Record<string, Uint8Array>>,
-): DeploymentConfig {
+): EmulatorDeploymentConfig {
   return Object.freeze({
     ...config,
     verifierKeyVersion: currentVersion,

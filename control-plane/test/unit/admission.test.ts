@@ -8,7 +8,7 @@ import { ADMISSION_BUDGETS, SYSTEM_CLOCK, type DeploymentConfig } from '../../sr
 
 const config = loadEmulatorConfig({
   FUNCTIONS_EMULATOR: 'true',
-  GCLOUD_PROJECT: 'demo-miakapp-v35',
+  GCLOUD_PROJECT: 'demo-miakapp-v4',
 } as NodeJS.ProcessEnv);
 
 describe('bounded control-plane admission configuration', () => {

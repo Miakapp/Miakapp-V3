@@ -2,7 +2,7 @@ import { createPublicKey, verify, type JsonWebKey } from 'node:crypto';
 
 import { type JsonValue, parseRequestJson } from './json.js';
 
-const EMULATOR_PROJECT = 'demo-miakapp-v35';
+const EMULATOR_PROJECT = 'demo-miakapp-v4';
 const MAX_TOKEN_BYTES = 8_192;
 const MAX_AUTHORIZATION_BYTES = MAX_TOKEN_BYTES + 'Bearer '.length;
 const MAX_HEADER_BYTES = 2_048;

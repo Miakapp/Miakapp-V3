@@ -1,4 +1,4 @@
-export const PROJECT_ID = 'demo-miakapp-v35';
+export const PROJECT_ID = 'demo-miakapp-v4';
 
 function requiredEnvironment(name: string): string {
   const value = process.env[name];
