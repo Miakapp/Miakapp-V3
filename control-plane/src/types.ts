@@ -19,6 +19,11 @@ export interface FirebasePrincipal {
   readonly expiresAt: number;
 }
 
+export interface AppCheckPrincipal {
+  readonly appId: string;
+  readonly expiresAt: number;
+}
+
 export interface HomeInput {
   readonly homeId: string;
   readonly name: string;
@@ -48,6 +53,34 @@ export interface HomeKeyMetadata {
   readonly created_at: string;
   readonly revoked_at: string | null;
   readonly last_used_at: string | null;
+}
+
+export interface PushDestinationMetadata {
+  readonly destination_id: string;
+  readonly provider: 'fcm';
+  readonly created_at: string;
+  readonly updated_at: string;
+}
+
+export interface PushGrantMetadata {
+  readonly grant_id: string;
+  readonly home_id: string;
+  readonly destination_id: string;
+  readonly created_at: string;
+  readonly expires_at: string;
+  readonly revoked_at: string | null;
+}
+
+export interface PushNotification {
+  readonly title: string;
+  readonly body: string;
+  readonly tag: string | null;
+}
+
+export interface PushAccessPrincipal {
+  readonly homeId: string;
+  readonly clientId: string;
+  readonly expiresAt: number;
 }
 
 export type ExchangeRequest =
@@ -88,6 +121,12 @@ export interface DeploymentConfig {
   readonly componentsAudience: string;
   readonly verifierKeyVersion: string;
   readonly homeKeyPepperForVersion: (version: string) => Uint8Array | undefined;
+  readonly appCheckAppId: string;
+  readonly appCheckIssuer: string;
+  readonly appCheckAudience: string;
+  readonly appCheckPublicJwk: JsonWebKey & { readonly kid: string };
+  readonly pushKeyVersion: string;
+  readonly pushHmacKeyForVersion: (version: string) => Uint8Array | undefined;
   readonly signingPrivateJwk: JsonWebKey & { readonly kid: string };
   readonly signingPublicJwk: Readonly<{
     kty: 'OKP';
