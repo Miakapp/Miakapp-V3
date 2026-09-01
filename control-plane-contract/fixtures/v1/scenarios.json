@@ -1052,6 +1052,58 @@
         },
         {
           "kind": "request_upload",
+          "token_ref": "publisher-token",
+          "home_id": "component-home",
+          "upload_ref": "zero-size-upload",
+          "capability_ref": "zero-size-capability",
+          "release": "2026-08-31.zero-size",
+          "abi": "miakapp.component/1",
+          "requires": {
+            "state_read": [
+              "global.temperature"
+            ],
+            "event_subscribe": [],
+            "event_publish": [],
+            "call": [
+              "lighting.set"
+            ],
+            "presentation": []
+          },
+          "digest": "CdQom4XxaLuAnrpxa9bm-vYaLVpqncqRw6r37YCmwGI",
+          "size": 0,
+          "expected": {
+            "outcome": "error",
+            "code": "invalid_request"
+          }
+        },
+        {
+          "kind": "request_upload",
+          "token_ref": "publisher-token",
+          "home_id": "component-home",
+          "upload_ref": "oversized-upload",
+          "capability_ref": "oversized-capability",
+          "release": "2026-08-31.oversized",
+          "abi": "miakapp.component/1",
+          "requires": {
+            "state_read": [
+              "global.temperature"
+            ],
+            "event_subscribe": [],
+            "event_publish": [],
+            "call": [
+              "lighting.set"
+            ],
+            "presentation": []
+          },
+          "digest": "CdQom4XxaLuAnrpxa9bm-vYaLVpqncqRw6r37YCmwGI",
+          "size": 2097153,
+          "expected": {
+            "outcome": "error",
+            "code": "limit_exceeded"
+          }
+        },
+        {
+          "kind": "request_upload",
           "user_token": "firebase_stale_authentication",
           "home_id": "component-home",
           "upload_ref": "stale-owner-upload",
@@ -1596,6 +1648,14 @@
           {
             "event": "access.exchange",
             "outcome": "ok"
+          },
+          {
+            "event": "component.upload.issue",
+            "outcome": "denied"
+          },
+          {
+            "event": "component.upload.issue",
+            "outcome": "denied"
           },
           {
             "event": "component.upload.issue",

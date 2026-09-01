@@ -3,7 +3,9 @@ import { createPrivateKey, sign } from 'node:crypto';
 
 import {
   AccessTokenVerificationError,
+  verifyComponentAccessToken,
   verifyPushAccessToken,
+  type ComponentAccessTokenVerifierConfig,
   type PushAccessTokenVerifierConfig,
 } from '../../src/access-token.js';
 import { loadEmulatorConfig } from '../../src/config.js';
@@ -25,6 +27,11 @@ const baseClaims = Object.freeze({
   jti: Buffer.alloc(16, 3).toString('base64url'),
   client_id: Buffer.alloc(16, 0).toString('base64url'),
   scope: 'push:send',
+});
+const componentClaims = Object.freeze({
+  ...baseClaims,
+  aud: config.componentsAudience,
+  scope: 'components:publish',
 });
 
 function signRawToken(headerJson: string, claimsJson: string): string {
@@ -57,6 +64,23 @@ function expectInvalid(
   let thrown: unknown;
   try {
     verifyPushAccessToken(authorizationHeader, verifierConfig, CLOCK);
+  } catch (error) {
+    thrown = error;
+  }
+  expect(thrown).toBeInstanceOf(AccessTokenVerificationError);
+  expect(thrown).toMatchObject({
+    code: 'invalid_access_token',
+    message: 'Authentication failed',
+  });
+}
+
+function expectInvalidComponent(
+  authorizationHeader: string | readonly string[] | undefined,
+  verifierConfig: ComponentAccessTokenVerifierConfig = config,
+): void {
+  let thrown: unknown;
+  try {
+    verifyComponentAccessToken(authorizationHeader, verifierConfig, CLOCK);
   } catch (error) {
     thrown = error;
   }
@@ -162,5 +186,33 @@ describe('push-profile access-token verification', () => {
       { ...config, signingPublicJwk: pollutedKey },
       CLOCK,
     )).toThrow(/public key is invalid/);
+  });
+});
+
+describe('component-publisher access-token verification', () => {
+  test('accepts only the exact audience-bound component profile', () => {
+    const token = signToken(componentClaims);
+    expect(verifyComponentAccessToken(authorization(token), config, CLOCK)).toEqual({
+      homeId: 'synthetic-home',
+      clientId: baseClaims.client_id,
+      expiresAt: NOW + 300,
+    });
+  });
+
+  test.each([
+    ['push scope', baseClaims],
+    ['push audience', { ...componentClaims, aud: config.pushAudience }],
+    ['relay scope', { ...componentClaims, scope: 'relay:coordinator' }],
+    ['multiple scopes', { ...componentClaims, scope: 'components:publish push:send' }],
+  ] as Array<[string, Readonly<Record<string, unknown>>]>)('rejects %s without profile fallback', (_name, claims) => {
+    expectInvalidComponent(authorization(signToken(claims)));
+  });
+
+  test('keeps component verifier configuration failures separate from caller failures', () => {
+    expect(() => verifyComponentAccessToken(
+      authorization(signToken(componentClaims)),
+      { ...config, projectId: 'production-project' },
+      CLOCK,
+    )).toThrow(/restricted to the demo Firebase Emulator project/);
   });
 });

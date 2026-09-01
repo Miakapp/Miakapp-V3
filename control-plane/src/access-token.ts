@@ -19,10 +19,9 @@ export interface AccessTokenVerificationClock {
   now(): number;
 }
 
-export interface PushAccessTokenVerifierConfig {
+interface AccessTokenVerifierBaseConfig {
   readonly projectId: string;
   readonly issuer: string;
-  readonly pushAudience: string;
   readonly signingPublicJwk: Readonly<{
     readonly kty: 'OKP';
     readonly crv: 'Ed25519';
@@ -33,11 +32,22 @@ export interface PushAccessTokenVerifierConfig {
   }>;
 }
 
-export interface VerifiedPushAccessPrincipal {
+export interface PushAccessTokenVerifierConfig extends AccessTokenVerifierBaseConfig {
+  readonly pushAudience: string;
+}
+
+export interface ComponentAccessTokenVerifierConfig extends AccessTokenVerifierBaseConfig {
+  readonly componentsAudience: string;
+}
+
+export interface VerifiedAccessPrincipal {
   readonly homeId: string;
   readonly clientId: string;
   readonly expiresAt: number;
 }
+
+export type VerifiedPushAccessPrincipal = VerifiedAccessPrincipal;
+export type VerifiedComponentAccessPrincipal = VerifiedAccessPrincipal;
 
 export class AccessTokenVerificationError extends Error {
   readonly code = 'invalid_access_token' as const;
@@ -130,16 +140,19 @@ function validatedClockSeconds(clock: AccessTokenVerificationClock): number {
   return Math.floor(milliseconds / 1_000);
 }
 
-function validateConfig(config: PushAccessTokenVerifierConfig): ValidatedEd25519Key {
+function validateConfig(
+  config: AccessTokenVerifierBaseConfig,
+  audience: string,
+): ValidatedEd25519Key {
   if (config.projectId !== EMULATOR_PROJECT) {
     throw new Error('Synthetic access-token verification is restricted to the demo Firebase Emulator project');
   }
   if (typeof config.issuer !== 'string'
     || Buffer.byteLength(config.issuer, 'utf8') > 2_048
     || !GRAPHIC_ASCII.test(config.issuer)
-    || typeof config.pushAudience !== 'string'
-    || Buffer.byteLength(config.pushAudience, 'utf8') > 2_048
-    || !GRAPHIC_ASCII.test(config.pushAudience)) {
+    || typeof audience !== 'string'
+    || Buffer.byteLength(audience, 'utf8') > 2_048
+    || !GRAPHIC_ASCII.test(audience)) {
     throw new Error('Access-token verification configuration is invalid');
   }
 
@@ -168,6 +181,59 @@ function validateConfig(config: PushAccessTokenVerifierConfig): ValidatedEd25519
       kid: key.kid,
     },
   };
+}
+
+function verifyAccessToken(
+  authorizationHeader: string | readonly string[] | undefined,
+  config: AccessTokenVerifierBaseConfig,
+  audience: string,
+  scope: 'push:send' | 'components:publish',
+  clock: AccessTokenVerificationClock,
+): VerifiedAccessPrincipal {
+  const key = validateConfig(config, audience);
+  const now = validatedClockSeconds(clock);
+  const parsed = parseToken(bearerToken(authorizationHeader));
+
+  if (!hasExactKeys(parsed.header, ['alg', 'kid', 'typ'])
+    || parsed.header.alg !== 'EdDSA'
+    || parsed.header.typ !== 'at+jwt'
+    || parsed.header.kid !== key.kid) {
+    fail();
+  }
+  verifyTokenSignature(parsed, key);
+
+  const claims = parsed.claims;
+  if (!hasExactKeys(claims, ['iss', 'sub', 'aud', 'exp', 'iat', 'jti', 'client_id', 'scope'])
+    || claims.iss !== config.issuer
+    || claims.aud !== audience
+    || claims.scope !== scope) {
+    fail();
+  }
+  const homeId = claims.sub;
+  const clientId = canonicalIdentifier(claims.client_id);
+  const tokenId = canonicalIdentifier(claims.jti);
+  const issuedAt = claims.iat;
+  const expiresAt = claims.exp;
+  if (typeof homeId !== 'string'
+    || Buffer.byteLength(homeId, 'utf8') > 63
+    || !HOME_ID.test(homeId)
+    || clientId === undefined
+    || tokenId === undefined
+    || typeof issuedAt !== 'number'
+    || !Number.isSafeInteger(issuedAt)
+    || issuedAt < 0
+    || typeof expiresAt !== 'number'
+    || !Number.isSafeInteger(expiresAt)
+    || expiresAt < 0
+    || expiresAt <= now
+    || issuedAt > now + FUTURE_IAT_TOLERANCE_SECONDS
+    || expiresAt <= issuedAt
+    || expiresAt - issuedAt > ACCESS_TOKEN_TTL_SECONDS
+    || expiresAt > now + ACCESS_TOKEN_TTL_SECONDS) {
+    fail();
+  }
+
+  return Object.freeze({ homeId, clientId, expiresAt });
 }
 
 function verifyTokenSignature(parsed: ParsedToken, key: ValidatedEd25519Key): void {
@@ -199,48 +265,28 @@ export function verifyPushAccessToken(
   config: PushAccessTokenVerifierConfig,
   clock: AccessTokenVerificationClock,
 ): VerifiedPushAccessPrincipal {
-  const key = validateConfig(config);
-  const now = validatedClockSeconds(clock);
-  const parsed = parseToken(bearerToken(authorizationHeader));
+  return verifyAccessToken(
+    authorizationHeader,
+    config,
+    config.pushAudience,
+    'push:send',
+    clock,
+  );
+}
 
-  if (!hasExactKeys(parsed.header, ['alg', 'kid', 'typ'])
-    || parsed.header.alg !== 'EdDSA'
-    || parsed.header.typ !== 'at+jwt'
-    || parsed.header.kid !== key.kid) {
-    fail();
-  }
-  verifyTokenSignature(parsed, key);
-
-  const claims = parsed.claims;
-  if (!hasExactKeys(claims, ['iss', 'sub', 'aud', 'exp', 'iat', 'jti', 'client_id', 'scope'])
-    || claims.iss !== config.issuer
-    || claims.aud !== config.pushAudience
-    || claims.scope !== 'push:send') {
-    fail();
-  }
-  const homeId = claims.sub;
-  const clientId = canonicalIdentifier(claims.client_id);
-  const tokenId = canonicalIdentifier(claims.jti);
-  const issuedAt = claims.iat;
-  const expiresAt = claims.exp;
-  if (typeof homeId !== 'string'
-    || Buffer.byteLength(homeId, 'utf8') > 63
-    || !HOME_ID.test(homeId)
-    || clientId === undefined
-    || tokenId === undefined
-    || typeof issuedAt !== 'number'
-    || !Number.isSafeInteger(issuedAt)
-    || issuedAt < 0
-    || typeof expiresAt !== 'number'
-    || !Number.isSafeInteger(expiresAt)
-    || expiresAt < 0
-    || expiresAt <= now
-    || issuedAt > now + FUTURE_IAT_TOLERANCE_SECONDS
-    || expiresAt <= issuedAt
-    || expiresAt - issuedAt > ACCESS_TOKEN_TTL_SECONDS
-    || expiresAt > now + ACCESS_TOKEN_TTL_SECONDS) {
-    fail();
-  }
-
-  return Object.freeze({ homeId, clientId, expiresAt });
+/**
+ * Verifies one complete Authorization header against the closed component-publisher profile.
+ */
+export function verifyComponentAccessToken(
+  authorizationHeader: string | readonly string[] | undefined,
+  config: ComponentAccessTokenVerifierConfig,
+  clock: AccessTokenVerificationClock,
+): VerifiedComponentAccessPrincipal {
+  return verifyAccessToken(
+    authorizationHeader,
+    config,
+    config.componentsAudience,
+    'components:publish',
+    clock,
+  );
 }
