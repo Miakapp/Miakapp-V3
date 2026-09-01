@@ -941,14 +941,52 @@ database lookup controlled by the attacker. A deployment-level relay admission
 policy separately bounds connections per IP, total homes and aggregate memory;
 those limits are not access-token claims.
 
+### 14.1 Local Emulator admission profile
+
+The isolated `demo-miakapp-v35` implementation uses exact fixed windows. This is
+an executable local profile, not a portable production default:
+
+| Dimension | Limit and window |
+|---|---:|
+| audited security-sensitive operations | 4,096 / 60 s |
+| security-sensitive operations per source fingerprint | 512 / 60 s |
+| home creation per Firebase UID / source fingerprint | 32 / 1 h; 64 / 1 h |
+| exchange per source / Home Key / home | 256 / 60 s; 32 / 60 s; 128 / 60 s |
+| push challenge per UID / App Check app / source | 64 / 60 s; 256 / 60 s; 128 / 60 s |
+| push send per Home Key / home / grant / destination | 120 / 60 s; 240 / 60 s; 120 / 60 s; 120 / 60 s |
+| component upload issue per home | 64 attempts / 60 s and 64 MiB / 1 h |
+| component delivery per upload / home | 8 attempts / 15 min; 64 attempts / 60 s and 64 MiB / 1 h |
+| component finalization / activation per home | 64 / 60 s; 64 / 60 s |
+
+Admission is a Firestore transaction over a fixed 65,536-slot bucket table,
+partitioned evenly by budget. A keyed fingerprint selects one slot inside its
+budget partition; the raw dimension value is never persisted.
+An occupied, unexpired slot with a different fingerprint fails closed instead of
+being overwritten. Each slot is reused at its next fixed-window boundary and
+has a one-day TTL policy as cleanup defense in depth. The slot count, rather than
+eventual TTL execution, is the physical collection bound.
+
+Every accepted sensitive request first reserves an audit event and the generic
+source budget. Additional actor, key, home, grant, destination, upload and byte
+budgets are reserved atomically when their verified dimensions become known.
+The exchange home budget commits after authoritative Home Key reservation but
+before signing. A component delivery performs a capability-authorized read,
+reserves its upload/home/byte budgets, then repeats authorization while consuming
+the capability before its first Storage write. A push destination budget commits
+after grant authorization but before the transport call. A denied reservation
+therefore performs none of the corresponding signing, Storage or push-transport
+effects.
+
 ## 15. Audit, privacy and redaction
 
 Security-sensitive control-plane operations append a bounded audit event. Events
 include a generated event ID, server time, operation kind, outcome, home ID when
-known, actor kind and a deployment-keyed, truncated fingerprint of a verified
-actor, key or grant identifier. Raw grant IDs are capabilities and are never
-stored in audit. Events may include a separately keyed truncated network
-fingerprint for abuse correlation.
+known, actor kind and a deployment-keyed, truncated fingerprint only after that
+actor has been verified. A separate subject fingerprint may identify a
+syntactically valid attempted key, grant, upload or other resource before its
+authority is verified; it never upgrades the request's actor attribution. Raw
+grant IDs are capabilities and are never stored in audit. Events may include a
+separately keyed truncated network fingerprint for abuse correlation.
 
 Audit and application logs MUST NOT include:
 
@@ -964,6 +1002,22 @@ Public errors contain a generated request ID for correlation. Detailed internal
 causes remain in access-controlled diagnostics with the same secret redaction.
 Audit retention is finite and documented; deletion policy and legal basis are a
 deployment responsibility.
+
+The local Emulator implementation stores the closed
+`miakapp.control-audit/1` shape in a fixed 4,096-slot ring. Each logical event is
+at most 2,048 JSON bytes and carries `event_id`, public `request_id`, operation,
+status, stable outcome code, optional home ID, actor kind, separately keyed
+actor/subject and network fingerprints, consumed budget names, key versions and
+server timestamps. The initial status is `pending`; completion changes it to
+`ok`, `denied` or `outcome_unknown`. A crash may leave bounded `pending`
+evidence for reconciliation. Completed slots may be reused, pending slots fail
+closed until expiry, and a seven-day TTL is cleanup defense in depth. Audit-rate
+saturation adds at most one coalesced marker per bucket window when a writable
+slot remains; later attempts do not create per-request audit documents.
+`denied` means a definitive protocol or authorization rejection. A retryable
+platform/dependency failure is conservatively `outcome_unknown`, because a
+Storage, push or transactional effect may already have crossed its commit
+boundary.
 
 ## 16. Stable HTTP failures
 
@@ -1007,6 +1061,8 @@ Messages are stable, safe English text and never repeat attacker input. Unknown
 internal failures map to `temporarily_unavailable` or a generic internal failure,
 not to serialized exception text. Retryability never implies that a non-idempotent
 key creation, push send or publication activation may be blindly retried.
+Every `rate_limited` response includes `Retry-After` as an integer number of
+seconds in the closed range 1–300; no other error includes that header.
 
 ## 17. Transactions, idempotency and uncertain outcomes
 

@@ -28,6 +28,13 @@ inspection, immutable content-addressed publication, publisher-bound release
 finalization, reconciliation reads, transactional pointer activation,
 quarantine, and rollback to an already verified digest.
 
+The admission slice adds exact Firestore fixed-window budgets before costly
+signing, Storage and synthetic push effects. It uses a fixed-slot counter table,
+a fixed-slot redacted audit ring, domain-separated HMAC fingerprints, stable
+`429 rate_limited` responses with bounded `Retry-After`, and TTL policies as
+cleanup defense in depth. Firestore client Rules deny all counter, ring-state and
+audit access.
+
 The implementation deliberately lives under `control-plane/` with dedicated
 Firebase configuration and rules. It does not modify or deploy the legacy root
 Firebase project, `.firebaserc`, Firestore rules, or web application.
@@ -97,6 +104,25 @@ conflicting revocation or relay change therefore wins before the reservation or
 follows an already-issued bounded lease; HTTP response arrival order does not
 redefine that transaction order.
 
+For bounded admission, the corpus proves exact atomic global and resource
+saturation under concurrency, multi-unit byte charging, independent subjects,
+fixed-window reset, one coalesced audit saturation marker, finite physical slot
+counts, and request-ID correlation from a public 429 to its private redacted
+event. Early 429 responses retain the allowed-origin CORS contract. The HTTP
+exchange regression also proves that a rejected key budget leaves the previous
+issuance reservation unchanged, so no additional signature can be reached. The
+component delivery and push-send call graphs reserve their verified resource
+budgets before their first Storage or transport effect.
+
+The exact local profile is documented in RFC 0004 §14.1 and configured in
+[`src/config.ts`](src/config.ts). Long-lived audit records contain only keyed,
+truncated actor/resource and separately keyed network fingerprints; tests scan
+the denied exchange event for the raw Home Key and key ID. The local source
+dimension uses only the direct TCP peer exposed by the Functions emulator and
+does not trust forwarded headers. Syntactically valid but unverified credentials
+remain anonymous actors, and retryable dependency failures are recorded as
+`outcome_unknown` rather than a definitive denial.
+
 Synthetic fixture signing keys and the Home Key pepper are test-only material
 from [`control-plane-contract/`](../control-plane-contract/). They are rejected
 unless the Function is running in the exact demo emulator project. No production
@@ -130,9 +156,13 @@ production streaming ingress limit.
 Passing this slice does **not** close RFC 0004's complete emulator or production
 gate. Push registration and sending have only synthetic local service evidence;
 component publication and read-back have local Emulator evidence only. Bounded
-audit/rate/cost admission, the remaining fault-injection matrix, live JWKS
-rotation, Cloud KMS, Secret Manager, IAM, bucket CORS/lifecycle policy, real App
-Check, real FCM, production Firebase certificates, production index/TTL
-deployment, ingress limits, and staging rollback remain subsequent work. Admin
-SDK access also bypasses Firestore and Storage Rules, so the Rules tests exercise
-separate client contexts explicitly.
+audit/rate/cost admission now has local transactional evidence, but trusted
+production source attribution, Cloud Armor plus ingress restriction, alerting,
+load/cost calibration and TTL/index deployment remain staging gates. The
+remaining fault-injection matrix, live JWKS rotation, Cloud KMS, Secret Manager,
+IAM, bucket CORS/lifecycle policy, real App Check, real FCM, production Firebase
+certificates and staging rollback also remain subsequent work. Admin SDK access
+bypasses Firestore and Storage Rules, so the Rules tests exercise separate client
+contexts explicitly. Public discovery, JWKS and artifact reads are bounded only
+by local Function instance/concurrency settings in this slice; production edge
+admission must cover them before deployment.

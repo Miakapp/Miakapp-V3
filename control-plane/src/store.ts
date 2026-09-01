@@ -493,6 +493,7 @@ export class ControlPlaneStore {
     homeKey: string,
     request: ExchangeRequest,
     issuer: AccessTokenIssuer,
+    beforeSigning: (grant: AccessGrant) => Promise<void> = async () => undefined,
   ): Promise<AccessTokenExchange> {
     const { keyId } = parseHomeKey(homeKey);
     const issuedAt = Math.floor(this.#clock.now() / 1_000);
@@ -500,6 +501,7 @@ export class ControlPlaneStore {
     const grant = await this.#firestore.runTransaction((transaction) => (
       this.#reserveGrant(transaction, homeKey, keyId, request, issuedAt, tokenId)
     ));
+    await beforeSigning(grant);
     const signed = await issuer.sign(grant);
     return Object.freeze({ grant, signed });
   }
