@@ -20,12 +20,22 @@ function fixture<T>(name: string): T {
 }
 
 describe('Firebase deployment configuration', () => {
-  test('uses no composite index and gives expired push challenges a production TTL policy', () => {
+  test('uses no composite index and gives every expiring private record a TTL policy', () => {
     const config = fixture<FirestoreIndexes>('firestore.indexes.json');
     expect(config).toEqual({
       indexes: [],
       fieldOverrides: [{
         collectionGroup: 'pushChallenges',
+        fieldPath: 'expires_at',
+        ttl: true,
+        indexes: [],
+      }, {
+        collectionGroup: 'controlAdmissionBuckets',
+        fieldPath: 'expires_at',
+        ttl: true,
+        indexes: [],
+      }, {
+        collectionGroup: 'controlAudit',
         fieldPath: 'expires_at',
         ttl: true,
         indexes: [],

@@ -64,6 +64,14 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    match /controlAdmissionBuckets/{slotId} {
+      allow read, write: if false;
+    }
+
+    match /controlAdmissionState/{stateId} {
+      allow read, write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
