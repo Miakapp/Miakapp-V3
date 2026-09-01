@@ -19,7 +19,27 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    match /controlPushOwners/{ownerId} {
+      allow read, write: if false;
+    }
+
+    match /users/{ownerId}/pushChallenges/{challengeId} {
+      allow read, write: if false;
+    }
+
+    match /users/{ownerId}/pushDestinations/{destinationId} {
+      allow read, write: if false;
+    }
+
     match /homeKeyIndex/{keyId} {
+      allow read, write: if false;
+    }
+
+    match /pushGrantIndex/{grantId} {
+      allow read, write: if false;
+    }
+
+    match /emulatorPushDeliveries/{deliveryId} {
       allow read, write: if false;
     }
 

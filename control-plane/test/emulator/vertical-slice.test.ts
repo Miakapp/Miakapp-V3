@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { deleteApp, initializeApp } from 'firebase-admin/app';
 import {
   FieldValue,
+  Timestamp,
   getFirestore,
   type Firestore,
   type ReadOnlyTransactionOptions,
@@ -534,6 +535,23 @@ describe('Firebase Emulator owner-to-access-token vertical slice', () => {
     await assertFails(setDoc(doc(authenticated.firestore(), 'homes', 'client-home'), { name: 'forbidden' }));
     await assertFails(getDoc(doc(authenticated.firestore(), 'controlHomes', 'synthetic-home')));
     await assertFails(getDoc(doc(authenticated.firestore(), 'homeKeyIndex', 'AAAAAAAAAAAAAAAAAAAAAA')));
+    await assertFails(getDoc(doc(
+      authenticated.firestore(),
+      'users',
+      owner.userId,
+      'pushChallenges',
+      'AAAAAAAAAAAAAAAAAAAAAA',
+    )));
+    await assertFails(getDoc(doc(
+      authenticated.firestore(),
+      'users',
+      owner.userId,
+      'pushDestinations',
+      'AAAAAAAAAAAAAAAAAAAAAA',
+    )));
+    await assertFails(getDoc(doc(authenticated.firestore(), 'controlPushOwners', owner.userId)));
+    await assertFails(getDoc(doc(authenticated.firestore(), 'pushGrantIndex', 'AAAAAAAAAAAAAAAAAAAAAA')));
+    await assertFails(getDoc(doc(authenticated.firestore(), 'emulatorPushDeliveries', 'synthetic-delivery')));
     await assertFails(uploadString(
       ref(authenticated.storage(`gs://${PROJECT_ID}.appspot.com`), 'forbidden.txt'),
       'forbidden',
@@ -541,7 +559,23 @@ describe('Firebase Emulator owner-to-access-token vertical slice', () => {
   });
 
   test('enforces the exact home/key ceilings and safely compacts concurrent revoked replacements', async () => {
-    const store = new ControlPlaneStore(firestore, config, SYSTEM_CLOCK);
+    let generatedKeyIndex = 0;
+    const keyGenerator: HomeKeyGenerator = () => {
+      const index = generatedKeyIndex;
+      generatedKeyIndex += 1;
+      const keyBytes = Buffer.alloc(16);
+      if (index === 0) keyBytes[15] = 1;
+      else if (index === 1) keyBytes[0] = 104;
+      else keyBytes.writeUInt32BE(index + 1, 12);
+      const secretBytes = Buffer.alloc(32);
+      secretBytes.writeUInt32BE(index + 1, 28);
+      const keyId = keyBytes.toString('base64url');
+      return Object.freeze({
+        keyId,
+        value: `mhk1_${keyId}_${secretBytes.toString('base64url')}`,
+      });
+    };
+    const store = new ControlPlaneStore(firestore, config, SYSTEM_CLOCK, keyGenerator);
     const principal = ownerPrincipal();
     for (let index = 1; index <= 16; index += 1) {
       await store.createHome(principal, {
@@ -573,6 +607,25 @@ describe('Firebase Emulator owner-to-access-token vertical slice', () => {
     for (let index = 0; index < 64; index += 1) {
       keys.push(await store.createHomeKey(principal, homeId, `Key ${index}`, ['relay:coordinator']));
     }
+    const first = keys[0];
+    const second = keys[1];
+    const active = keys[2];
+    if (first === undefined || second === undefined || active === undefined) throw new Error('Boundary keys missing');
+    const tiedCreatedAt = Timestamp.fromMillis(Date.now() - 60_000);
+    await Promise.all([
+      firestore.collection('controlHomes').doc(homeId).collection('homeKeys')
+        .doc(first.metadata.key_id).update({ created_at: tiedCreatedAt }),
+      firestore.collection('controlHomes').doc(homeId).collection('homeKeys')
+        .doc(second.metadata.key_id).update({ created_at: tiedCreatedAt }),
+      firestore.collection('homeKeyIndex').doc(first.metadata.key_id).update({ created_at: tiedCreatedAt }),
+      firestore.collection('homeKeyIndex').doc(second.metadata.key_id).update({ created_at: tiedCreatedAt }),
+    ]);
+    const tiedIds = (await store.listHomeKeys(principal, homeId))
+      .map((key) => key.key_id)
+      .filter((id) => id === first.metadata.key_id || id === second.metadata.key_id);
+    expect(tiedIds).toEqual([first.metadata.key_id, second.metadata.key_id].sort((left, right) => (
+      Buffer.compare(Buffer.from(left, 'ascii'), Buffer.from(right, 'ascii'))
+    )));
     const quotaHomeRef = firestore.collection('controlHomes').doc(homeId);
     await quotaHomeRef.update({ active_key_count: 63, retained_key_count: 63 });
     await expectApiError(
@@ -586,10 +639,6 @@ describe('Firebase Emulator owner-to-access-token vertical slice', () => {
       'limit_exceeded',
     );
 
-    const first = keys[0];
-    const second = keys[1];
-    const active = keys[2];
-    if (first === undefined || second === undefined || active === undefined) throw new Error('Boundary keys missing');
     await Promise.all([
       store.revokeHomeKey(principal, homeId, first.metadata.key_id),
       store.revokeHomeKey(principal, homeId, second.metadata.key_id),

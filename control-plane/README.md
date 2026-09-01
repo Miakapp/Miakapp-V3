@@ -15,6 +15,12 @@ The slice implements:
   metadata listing, retained-record compaction, and uniform revocation; and
 - scope-attenuated, audience-bound, five-minute access-token exchange.
 
+The push vertical slice adds closed Firebase Installation ID (FID)
+challenge/completion schemas, strict synthetic App Check and push-access-token
+verification, a synthetic recording FCM transport, keyed FID fingerprints, the
+one-time proof-of-possession state machine, bounded destination/grant registries,
+user-owned home-scoped consent, and semantic notification sending.
+
 The implementation deliberately lives under `control-plane/` with dedicated
 Firebase configuration and rules. It does not modify or deploy the legacy root
 Firebase project, `.firebaserc`, Firestore rules, or web application.
@@ -76,9 +82,23 @@ from [`control-plane-contract/`](../control-plane-contract/). They are rejected
 unless the Function is running in the exact demo emulator project. No production
 credential or private home data belongs in this package.
 
+The Local Emulator Suite provides no App Check or FCM service emulator. The
+push-destination tests therefore use only the fixture's test App Check key and an
+explicit recording transport; they can prove token-profile rejection, closed
+schemas, verified UID/app/FID binding, challenge expiry and one-time completion,
+authorization, and the exact synthetic transport request and record. They do not
+construct a Firebase Admin `FidMessage` or prove real App Check attestation, FCM
+acceptance, or device delivery. Real service construction and acceptance remain
+staging gates.
+
+Expired challenge records carry a Firestore TTL policy and are also pruned on
+subsequent issuance. The Emulator does not execute production TTL deletion, so
+the tests prove the configured policy and application pruning separately.
+
 Passing this slice does **not** close RFC 0004's complete emulator or production
-gate. Push destinations/grants, App Check, component publication and read-back,
-audit/rate/cost admission, live JWKS rotation, Cloud KMS, Secret Manager, IAM,
-FCM delivery, production Firebase certificates, indexes, ingress limits, and
+gate. Push registration and sending have only synthetic local service evidence;
+component publication and read-back, audit/rate/cost admission, live JWKS
+rotation, Cloud KMS, Secret Manager, IAM, real App Check, real FCM, production
+Firebase certificates, production index/TTL deployment, ingress limits, and
 staging rollback remain subsequent work. Admin SDK access also bypasses
 Firestore Rules, so the Rules tests exercise separate client contexts explicitly.
