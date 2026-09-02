@@ -3,7 +3,8 @@
 Status: apply-capable configuration; mock-tested offline; blocked on bootstrap
 
 This root describes the ordinary protected foundation for the existing,
-unbilled `miakapp-v4-staging` project. Billing, budgets, both Storage buckets,
+billing-linked but undeployed `miakapp-v4-staging` project. Billing management,
+budgets, both Storage buckets,
 the runtime service account and its project IAM, remote-state storage, Workload
 Identity Federation, and CI identities belong to
 [`../bootstrap/`](../bootstrap/), not this root.

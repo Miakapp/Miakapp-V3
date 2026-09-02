@@ -1,6 +1,7 @@
 # Staging Terraform bootstrap proposal
 
-Status: guarded plan observed (36 add, 0 change, 0 destroy); never applied
+Status: approved billing link active; guarded plan observed (36 add, 0 change,
+0 destroy); never applied
 
 This root owns the one-time resources required before the ordinary staging
 foundation can use remote state and keyless GitHub automation:
@@ -32,8 +33,11 @@ escape that boundary.
 ## Circular state migration
 
 The GCS bucket does not exist and cannot back the operation that creates it.
-Consequently, this root has no active backend block. The guarded plan uses the
-implicit local backend and writes no saved plan or state.
+Consequently, this root has no active backend block. The diagnostic guarded plan
+uses the implicit local backend and writes no saved plan or state. The separate
+saved-plan wrapper confines its prospective local state to the private plan
+bundle; a successful plan is rejected if Terraform creates that state before an
+apply.
 
 [`backend.gcs.tf.example`](backend.gcs.tf.example) is the exact reviewed backend
 block for a later migration. A future authorized bootstrap must:
@@ -50,9 +54,10 @@ block for a later migration. A future authorized bootstrap must:
    resource; and
 7. remove the protected local state copy only after both checks agree.
 
-No apply or migration wrapper is committed in this phase. Local state is
-sensitive and must never be committed, attached to a public issue, or discarded
-before migration is proven.
+Saved-plan preparation and inspection wrappers are now committed, but have not
+been run. No apply or migration wrapper is committed in this phase. Local state
+is sensitive and must never be committed, attached to a public issue, or
+discarded before migration is proven.
 
 ## Guarded plan
 
@@ -70,18 +75,69 @@ environment overrides, initializes providers without a remote backend, and does
 not save a plan. Direct `terraform apply` remains technically possible but is
 explicitly unauthorized.
 
-On 2026-09-02, the command was run against configuration commit
-`f363d4ee3cc6639edfa59fefe92cb1ffca682fd1`. It proposed 36 additions, no
-changes, and no destroys: two billing/budget resources, eight service APIs, two
+On 2026-09-03, after the separately authorized billing link, the command was run
+against configuration commit
+`9b3905bb62718b57456b0658386b424ed635e82f`. It proposed 36 additions, no changes,
+and no destroys: two billing/budget resources, eight service APIs, two
 buckets, three service accounts, three Workload Identity pool/provider
 resources, and 18 IAM bindings. No saved plan, Terraform state, or apply was
-created. Post-plan checks found billing still unlinked, enabled services,
-project IAM, and bucket inventory unchanged, and all proposed service accounts,
-buckets, and the Workload Identity pool still absent. This diagnostic result is
-not an exact saved plan and cannot be applied later.
+created. Post-plan checks found billing still linked to the approved account,
+enabled services, project IAM, and bucket inventory unchanged, and all proposed
+service accounts, buckets, and the Workload Identity pool still absent. This
+diagnostic result is not an exact saved plan and cannot be applied later. With no
+Terraform state, the provider represents the already-active billing association
+as an addition; the diagnostic did not create or change that link.
 
 The state bucket uses uniform access, Public Access Prevention, Object
 Versioning, and seven-day soft delete. Foundation state retains at least ten
 newer generations before versions older than 30 days are pruned. Unique saved
 plans are deleted live after two days and their archived version after one more
 day; deleted data may still remain recoverable during soft delete.
+
+## Exact saved-plan preparation
+
+This path is implemented but intentionally has not been run from the current
+uncommitted change. It must run from the clean commit whose exact plan will be
+reviewed. First create a persistent operator-owned directory outside the Git
+repository and remove every group/other permission from it. Then run:
+
+```sh
+private_parent='/absolute/private/miakapp-bootstrap-plans'
+mkdir -p "$private_parent"
+chmod 700 "$private_parent"
+
+MIAKAPP_STAGING_BILLING_ACCOUNT_ID='XXXXXX-XXXXXX-XXXXXX' \
+MIAKAPP_STAGING_BOOTSTRAP_CONFIRMATION='miakapp-v4-staging' \
+./save-plan.sh "$private_parent"
+```
+
+The wrapper rejects a dirty checkout, Git/Terraform/Google overrides, credential
+files, a foreign billing-account fingerprint, local state in the source tree,
+and any plan other than the exact reviewed 36 create-only resource instances. It
+uses a fresh bundle-local Terraform data directory so stale backend metadata
+cannot be reused, removes that directory after planning, and leaves a unique
+mode-0700 bundle containing only:
+
+- `bootstrap.tfplan`, the sensitive mode-0600 Terraform binary; and
+- `metadata.json`, a closed mode-0600 summary with the source commit, plan
+  SHA-256, exact resource addresses, and explicit false apply/migration
+  authorization bits.
+
+Planned values and the raw billing-account identifier never enter the metadata.
+Terraform JSON is streamed into the bounded reducer and is not persisted. The
+private diagnostic log is deleted on success, and every known partial artifact
+is deleted on failure. The bundle must not be moved, renamed, committed,
+uploaded to a public artifact service, or copied into an issue or pull request.
+
+Inspect it only from the same clean commit:
+
+```sh
+MIAKAPP_STAGING_BOOTSTRAP_INSPECTION_CONFIRMATION='miakapp-v4-staging' \
+./inspect-plan.sh '/absolute/private/miakapp-bootstrap-plans/miakapp-staging-bootstrap-plan-XXXXXX'
+```
+
+Inspection verifies the private file modes and exact two-file inventory, source
+commit, SHA-256 digest, and a newly derived binary-plan summary before rendering
+the full plan. The final rendering is sensitive and must remain in the local
+operator terminal. Neither command can apply, import, destroy, migrate state, or
+authorize a later mutation.
