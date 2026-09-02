@@ -191,4 +191,23 @@ describe('production runtime configuration', () => {
         .toThrow(ProductionConfigurationError);
     }
   });
+
+  test('rejects every proxy environment that can redirect metadata or managed-service traffic', () => {
+    const runtime = parseProductionRuntimeConfig(candidate());
+    for (const name of [
+      'ALL_PROXY',
+      'GRPC_PROXY',
+      'HTTP_PROXY',
+      'HTTPS_PROXY',
+      'all_proxy',
+      'grpc_proxy',
+      'http_proxy',
+      'https_proxy',
+    ]) {
+      expect(() => assertProductionRuntimeEnvironment(runtime, {
+        GCLOUD_PROJECT: 'miakapp-v4-staging',
+        [name]: 'http://proxy.attacker.test:8080',
+      })).toThrow(ProductionConfigurationError);
+    }
+  });
 });

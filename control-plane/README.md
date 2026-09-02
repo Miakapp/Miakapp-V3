@@ -180,11 +180,14 @@ The complete inactive production composition now lives in
 document binds the exact staging or production project, issuer, origins, App
 Check app, dedicated component bucket and dedicated runtime service-account
 email. It rejects every emulator variable, Google SDK debug logging, credential
-file override, metadata-host override, quota-project override and Google Cloud
-universe override. Every
-Google client is constructed with a metadata-only credential pinned to that
-service account and an exact `googleapis.com` endpoint, rather than invoking the
-ambient ADC search path. The composition injects Firebase Auth, standard
+file override, metadata-host override, HTTP/HTTPS/gRPC proxy override,
+quota-project override and Google Cloud universe override. Every Google client
+is constructed with a metadata-only credential pinned to that service account
+and an exact `googleapis.com` endpoint, rather than invoking the ambient ADC
+search path. Firestore uses its direct pinned constructor with that same
+explicit Google Auth instance, exact default database and exact service path;
+Firebase Admin's structural credential remains limited to the Firebase services
+that support it. The composition injects Firebase Auth, standard
 Firebase Admin App Check
 verification, Firestore, FCM FID messaging, production Storage, the five pinned
 secret keyrings and the KMS signer into the existing application. App Check

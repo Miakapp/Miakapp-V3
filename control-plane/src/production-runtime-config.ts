@@ -30,6 +30,7 @@ const EMULATOR_VARIABLES = Object.freeze([
   'STORAGE_EMULATOR_HOST',
 ] as const);
 const CREDENTIAL_AND_ENDPOINT_OVERRIDES = Object.freeze([
+  'ALL_PROXY',
   'GCE_METADATA_HOST',
   'GCE_METADATA_IP',
   'GOOGLE_APPLICATION_CREDENTIALS',
@@ -37,6 +38,13 @@ const CREDENTIAL_AND_ENDPOINT_OVERRIDES = Object.freeze([
   'GOOGLE_CLOUD_QUOTA_PROJECT',
   'GOOGLE_CLOUD_UNIVERSE_DOMAIN',
   'GOOGLE_SDK_NODE_LOGGING',
+  'GRPC_PROXY',
+  'HTTP_PROXY',
+  'HTTPS_PROXY',
+  'all_proxy',
+  'grpc_proxy',
+  'http_proxy',
+  'https_proxy',
 ] as const);
 
 export interface ProductionRuntimeConfig {

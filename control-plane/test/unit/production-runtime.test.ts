@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { generateKeyPairSync, sign } from 'node:crypto';
-import { deleteApp, initializeApp } from 'firebase-admin/app';
-import type { Firestore } from 'firebase-admin/firestore';
+import { deleteApp, getApp, initializeApp } from 'firebase-admin/app';
+import { Firestore } from 'firebase-admin/firestore';
 
 import {
   crc32c,
@@ -206,6 +206,13 @@ describe('inactive production composition root', () => {
       environment: { GCLOUD_PROJECT: 'miakapp-v4-staging', FUNCTIONS_EMULATOR: 'true' },
       factories,
     })).rejects.toThrow(/configuration is invalid/);
+    await expect(createProductionControlPlane(candidate(), {
+      environment: {
+        GCLOUD_PROJECT: 'miakapp-v4-staging',
+        HTTPS_PROXY: 'http://proxy.attacker.test:8080',
+      },
+      factories,
+    })).rejects.toThrow(/configuration is invalid/);
     await expect(createProductionControlPlane({ schema: 'wrong' }, {
       environment: { GCLOUD_PROJECT: 'miakapp-v4-staging' },
       factories,
@@ -232,6 +239,30 @@ describe('inactive production composition root', () => {
         .toThrow(/configuration is invalid/);
     } finally {
       await deleteApp(foreign);
+    }
+  });
+
+  test('constructs the real Firestore client with the explicit production identity', async () => {
+    const runtime = parseProductionRuntimeConfig(candidate());
+    const identity = createProductionRuntimeIdentity(runtime);
+    const services = createFirebaseProductionServices(runtime, identity);
+    const settings = (services.firestore as unknown as {
+      readonly _settings: Readonly<Record<string, unknown>>;
+    })._settings;
+
+    try {
+      expect(services.firestore).toBeInstanceOf(Firestore);
+      expect(services.firestore.databaseId).toBe('(default)');
+      expect(settings).toMatchObject({
+        databaseId: '(default)',
+        projectId: 'miakapp-v4-staging',
+        servicePath: 'firestore.googleapis.com',
+        universeDomain: 'googleapis.com',
+      });
+      expect(settings.auth).toBe(identity.googleAuth);
+    } finally {
+      await services.firestore.terminate();
+      await deleteApp(getApp('miakapp-control-plane-staging'));
     }
   });
 });

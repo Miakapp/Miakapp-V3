@@ -3,7 +3,7 @@ import { Storage } from '@google-cloud/storage';
 import { getAppCheck } from 'firebase-admin/app-check';
 import { getApp, getApps, initializeApp, type App } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
-import { getFirestore, type Firestore } from 'firebase-admin/firestore';
+import { Firestore } from 'firebase-admin/firestore';
 
 import { AdmissionController } from './admission.js';
 import {
@@ -114,10 +114,17 @@ export function createFirebaseProductionServices(
     retryOptions: Object.freeze({ autoRetry: false, maxRetries: 0 }),
     universeDomain: 'googleapis.com',
   });
+  const firestore = new Firestore({
+    auth: identity.googleAuth,
+    databaseId: '(default)',
+    projectId: config.security.projectId,
+    servicePath: 'firestore.googleapis.com',
+    universeDomain: 'googleapis.com',
+  });
   return Object.freeze({
     auth: new FirebaseAdminAuthVerifier(getAuth(app)),
     appCheck: getAppCheck(app),
-    firestore: getFirestore(app),
+    firestore,
     identity,
     componentBucket: componentStorage.bucket(config.componentBucket),
   });
