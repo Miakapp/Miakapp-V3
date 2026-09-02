@@ -28,12 +28,12 @@ function rejects(mutator, pattern) {
   );
 }
 
-test('accepts the observed bootstrap plan after the approved billing link without deployment', () => {
+test('accepts the reviewed private bootstrap plan without deployment authorization', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 12);
+  assert.equal(validated.revision, 13);
   assert.equal(
     validated.status,
-    'bootstrap_plan_observed_billing_linked_keyless_blueprint_undeployed',
+    'bootstrap_saved_plan_reviewed_billing_linked_undeployed',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
@@ -105,6 +105,34 @@ test('accepts the observed bootstrap plan after the approved billing link withou
     validated.terraform.local_plan_observation.post_plan_checks[0],
     'billing-linked-to-approved-account',
   );
+  assert.equal(
+    validated.terraform.local_saved_plan_observation.configuration_commit,
+    'c192f97959833f53a19d4e6dc50b26292c88b3b5',
+  );
+  assert.equal(
+    validated.terraform.local_saved_plan_observation.plan_sha256,
+    '0918d21c4677ce0958be9ccc43057d8d76a33857fdfbea066120ba953e30b5c1',
+  );
+  assert.deepEqual(validated.terraform.local_saved_plan_observation.result, {
+    add: 36,
+    change: 0,
+    destroy: 0,
+  });
+  assert.equal(validated.terraform.local_saved_plan_observation.private_bundle_outside_repository, true);
+  assert.equal(validated.terraform.local_saved_plan_observation.private_bundle_path_committed, false);
+  assert.equal(validated.terraform.local_saved_plan_observation.planned_values_committed, false);
+  assert.equal(
+    validated.terraform.local_saved_plan_observation.raw_billing_account_identifier_committed,
+    false,
+  );
+  assert.equal(validated.terraform.local_saved_plan_observation.binary_digest_verified, true);
+  assert.equal(validated.terraform.local_saved_plan_observation.binary_plan_matches_metadata, true);
+  assert.equal(validated.terraform.local_saved_plan_observation.full_plan_reviewed, true);
+  assert.equal(validated.terraform.local_saved_plan_observation.local_state_artifacts_created, false);
+  assert.equal(validated.terraform.local_saved_plan_observation.apply_authorized, false);
+  assert.equal(validated.terraform.local_saved_plan_observation.apply_executed, false);
+  assert.equal(validated.terraform.local_saved_plan_observation.state_migration_authorized, false);
+  assert.equal(validated.terraform.local_saved_plan_observation.state_migration_executed, false);
   assert.equal(validated.evidence.github_policy_observation_verified, true);
   assert.equal(validated.evidence.active_cloud_workflow_present, false);
   assert.equal(validated.readiness.required_blockers.includes('github-terraform-workflow-not-installed'), true);
@@ -407,6 +435,33 @@ test('rejects incomplete or mutated bootstrap plan evidence', () => {
   rejects((candidate) => {
     candidate.terraform.local_plan_observation.post_plan_checks.pop();
   }, /terraform\.local_plan_observation\.post_plan_checks/);
+  rejects((candidate) => {
+    candidate.terraform.local_saved_plan_observation.plan_sha256 = '0'.repeat(64);
+  }, /terraform\.local_saved_plan_observation\.plan_sha256/);
+  rejects((candidate) => {
+    candidate.terraform.local_saved_plan_observation.result.destroy = 1;
+  }, /terraform\.local_saved_plan_observation\.result\.destroy/);
+  rejects((candidate) => {
+    candidate.terraform.local_saved_plan_observation.private_bundle_path_committed = true;
+  }, /terraform\.local_saved_plan_observation\.private_bundle_path_committed/);
+  rejects((candidate) => {
+    candidate.terraform.local_saved_plan_observation.raw_billing_account_identifier_committed = true;
+  }, /terraform\.local_saved_plan_observation\.raw_billing_account_identifier_committed/);
+  rejects((candidate) => {
+    candidate.terraform.local_saved_plan_observation.full_plan_reviewed = false;
+  }, /terraform\.local_saved_plan_observation\.full_plan_reviewed/);
+  rejects((candidate) => {
+    candidate.terraform.local_saved_plan_observation.apply_authorized = true;
+  }, /terraform\.local_saved_plan_observation\.apply_authorized/);
+  rejects((candidate) => {
+    candidate.terraform.local_saved_plan_observation.state_migration_executed = true;
+  }, /terraform\.local_saved_plan_observation\.state_migration_executed/);
+  rejects((candidate) => {
+    candidate.terraform.local_saved_plan_observation.post_inspection_checks.pop();
+  }, /terraform\.local_saved_plan_observation\.post_inspection_checks/);
+  rejects((candidate) => {
+    candidate.terraform.local_saved_plan_observation.secret = 'must-not-be-accepted';
+  }, /terraform\.local_saved_plan_observation must contain exactly/);
 });
 
 test('requires every production blocker and staging evidence row', () => {

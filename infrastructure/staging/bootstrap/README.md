@@ -1,7 +1,7 @@
 # Staging Terraform bootstrap proposal
 
-Status: approved billing link active; guarded plan observed (36 add, 0 change,
-0 destroy); never applied
+Status: approved billing link active; exact private plan reviewed (36 add,
+0 change, 0 destroy); never applied
 
 This root owns the one-time resources required before the ordinary staging
 foundation can use remote state and keyless GitHub automation:
@@ -40,28 +40,29 @@ bundle; a successful plan is rejected if Terraform creates that state before an
 apply.
 
 [`backend.gcs.tf.example`](backend.gcs.tf.example) is the exact reviewed backend
-block for a later migration. A future authorized bootstrap must:
+block for a later migration. Saved-plan creation and review are complete. A
+future authorized bootstrap must:
 
-1. revalidate the external GitHub policy and current cloud inventory;
-2. create and independently review an exact saved bootstrap plan;
-3. apply that plan from protected temporary local state only after a new explicit
+1. revalidate the exact saved-plan digest, external GitHub policy, and current
+   cloud inventory;
+2. apply that plan from protected temporary local state only after a new explicit
    authorization;
-4. activate the backend template and run `terraform init -migrate-state` with
+3. activate the backend template and run `terraform init -migrate-state` with
    the exact bucket and `terraform/bootstrap` prefix;
-5. initialize the empty `terraform/foundation` state with protected operator
+4. initialize the empty `terraform/foundation` state with protected operator
    credentials, then verify its exact generation before admitting CI planning;
-6. verify the remote bootstrap object generation and reconcile every managed cloud
+5. verify the remote bootstrap object generation and reconcile every managed cloud
    resource; and
-7. remove the protected local state copy only after both checks agree.
+6. remove the protected local state copy only after both checks agree.
 
-Saved-plan preparation and inspection wrappers are now committed, but have not
-been run. No apply or migration wrapper is committed in this phase. Local state
-is sensitive and must never be committed, attached to a public issue, or
-discarded before migration is proven.
+Saved-plan preparation and inspection were completed on 2026-09-03. No apply or
+migration wrapper is committed in this phase. Local state is sensitive and must
+never be committed, attached to a public issue, or discarded before migration is
+proven.
 
-## Guarded plan
+## Guarded diagnostic plan
 
-The only supported command here is non-mutating:
+The basic non-saved diagnostic command is:
 
 ```sh
 MIAKAPP_STAGING_BILLING_ACCOUNT_ID='XXXXXX-XXXXXX-XXXXXX' \
@@ -96,10 +97,17 @@ day; deleted data may still remain recoverable during soft delete.
 
 ## Exact saved-plan preparation
 
-This path is implemented but intentionally has not been run from the current
-uncommitted change. It must run from the clean commit whose exact plan will be
-reviewed. First create a persistent operator-owned directory outside the Git
-repository and remove every group/other permission from it. Then run:
+This path produced the authoritative plan from clean commit
+`c192f97959833f53a19d4e6dc50b26292c88b3b5` on 2026-09-03. Its SHA-256 is
+`0918d21c4677ce0958be9ccc43057d8d76a33857fdfbea066120ba953e30b5c1`; the
+verified and manually reviewed result is exactly 36 additions, no changes, and
+no destroys. It created no state and performed no apply or migration. Only that
+digest is authoritative; any other local bundle is superseded and must not be
+applied.
+
+To produce a replacement, first create a persistent operator-owned directory
+outside the Git repository and remove every group/other permission from it. Then
+run:
 
 ```sh
 private_parent='/absolute/private/miakapp-bootstrap-plans'
