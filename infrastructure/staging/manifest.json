@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 9,
-  "status": "keyless_activation_blueprint_ready_unbilled",
+  "revision": 10,
+  "status": "github_security_configured_keyless_blueprint_unbilled",
   "environment": "staging",
   "project": {
     "project_id": "miakapp-v4-staging",
@@ -382,7 +382,7 @@
       "secret-version-lifecycle",
       "remote-state-bootstrap-not-applied",
       "keyless-plan-and-apply-identities-not-created",
-      "github-branch-environment-and-actions-policy-not-configured",
+      "github-terraform-workflow-not-installed",
       "live-foundation-plan-not-reviewed"
     ]
   },
@@ -394,6 +394,7 @@
     "live_plan_script": "terraform/plan.sh",
     "automation_blueprint": "automation/staging-terraform.yml",
     "github_policy": "automation/github-policy.json",
+    "github_policy_observation_verified": true,
     "cloud_credentials_required": false,
     "live_plan_cloud_credentials_required": true,
     "ci_may_authenticate": false,

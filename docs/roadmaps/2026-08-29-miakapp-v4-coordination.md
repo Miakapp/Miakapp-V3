@@ -274,9 +274,10 @@ validate separate apply-capable bootstrap and foundation Terraform roots with
 mock providers. A private versioned GCS state design, separate keyless plan/apply
 identities, numeric-claim WIF conditions and a protected same-plan automation
 blueprint are closed in code. They remain unapplied: the GCS bucket, state,
-identities and GitHub policy do not exist, the workflow is deliberately outside
-`.github/workflows`, and no Function resource is included. All staging rows
-remain open.
+and cloud identities do not exist. The GitHub branch, environments and Actions
+policy were configured and re-observed on 2026-09-02, but the workflow is
+deliberately outside `.github/workflows` and no Function resource is included.
+All staging rows remain open.
 
 Deliverables:
 
@@ -411,12 +412,12 @@ current consumer.
    and both buckets remain human-bootstrap resources, so the apply identity
    cannot rewrite its own trust boundary or the bootstrap state. A dormant,
    SHA-pinned workflow binds a private saved plan to a protected apply job,
-   while a closed policy record proves that the current repository settings and
-   cloud resources are not yet activated. Next
-   independently configure and re-observe that GitHub policy, review the exact
-   bootstrap plan, obtain separate mutation authorization, migrate bootstrap
-   state, initialize and verify an empty foundation state with protected
-   operator credentials, then review the foundation plan. The production entry point and exact
+   while a closed policy record now proves that the branch, environment and
+   Actions settings were configured and re-observed without activating cloud
+   resources or installing the workflow. Next review the exact bootstrap plan,
+   obtain separate mutation authorization, migrate bootstrap state, initialize
+   and verify an empty foundation state with protected operator credentials,
+   authorize workflow installation, then review the foundation plan. The production entry point and exact
    runtime IAM expansion remain required before closing relay-integration and
    staging-only RFC 0004 Section 18 gates.
 

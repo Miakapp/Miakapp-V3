@@ -94,10 +94,14 @@ proceed.
 ## Dormant GitHub automation
 
 [`automation/github-policy.json`](automation/github-policy.json) captures both
-the observed GitHub settings and the settings required before activation. At the
-recorded boundary, `main` is unprotected, only the unrelated `miakapi`
-environment exists, action selection/SHA enforcement are absent, and the cloud
-workflow is not installed.
+the observed GitHub settings and the settings required before activation. On
+2026-09-02, `main` was protected with the credential-free staging gate bound to
+GitHub Actions, the plan/apply environments were restricted to `main`, and
+Actions were restricted to the reviewed SHA-pinned integrations with read-only
+default permissions. The unrelated `miakapi` environment was left unchanged.
+Repository OIDC customization remains at its default because the future Google
+provider, not GitHub's repository subject template, will enforce the immutable
+numeric and workflow claims. The cloud workflow is still not installed.
 
 The dormant blueprint requires:
 
@@ -131,20 +135,20 @@ with `-backend=false` and never reads credentials or contacts staging.
 
 The active validation workflow has only `contents: read`; it has no OIDC or
 secret permission. The dormant workflow deliberately fails its first policy job
-until a later reviewed activation changes the policy record.
+because workflow installation and cloud bootstrap remain unauthorized.
 
 ## Next authorization gate
 
-Before any additional cloud action, a separate reviewed pass must:
+The GitHub branch, environment and Actions prerequisite was completed and
+re-observed on 2026-09-02 without installing a cloud workflow. Before any
+additional cloud action, a separate reviewed pass must:
 
-1. independently re-observe and configure the GitHub branch, environment, and
-   Actions policy;
-2. produce a bootstrap plan and explicit cost/resource inventory for review;
-3. receive new operator authorization to link billing and apply that exact plan;
-4. migrate and reconcile bootstrap state before any foundation plan;
-5. install the cloud workflow only after its WIF providers and service accounts
+1. produce a bootstrap plan and explicit cost/resource inventory for review;
+2. receive new operator authorization to link billing and apply that exact plan;
+3. migrate and reconcile bootstrap state before any foundation plan;
+4. install the cloud workflow only after its WIF providers and service accounts
    exist; and
-6. review a live foundation plan before granting apply approval.
+5. review a live foundation plan before granting apply approval.
 
 The production Function entry point, exact FCM runtime permission, secret
 version lifecycle, ingress design, monitoring, real-service fault matrix,
