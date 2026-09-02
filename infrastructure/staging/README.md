@@ -84,9 +84,10 @@ The inactive factory pins metadata credentials to
 `miakapp-control-plane@miakapp-v4-staging.iam.gserviceaccount.com`, pins the
 standard Google API universe/endpoints, disables generated-client retries and
 rejects credential-file, emulator, quota-project, universe and SDK-debug
-environment overrides, including alternate metadata hosts. This is a locally
-verified construction constraint, not evidence that the account or its IAM
-bindings exist.
+environment overrides, including alternate metadata hosts and HTTP/HTTPS/gRPC
+proxy paths. Firestore receives the same explicit Google Auth instance through
+its direct pinned constructor. This is a locally verified construction
+constraint, not evidence that the account or its IAM bindings exist.
 
 ## Activation gate
 
