@@ -45,6 +45,14 @@ export interface EmulatorComponentStorageConfig {
   readonly bucketName: string;
 }
 
+export interface ProductionComponentStorageConfig {
+  readonly environment: 'staging' | 'production';
+  readonly projectId: string;
+  readonly functionsEmulator: boolean;
+  readonly storageEmulatorHost: string | undefined;
+  readonly bucketName: string;
+}
+
 export interface ComponentObjectStorage {
   writeStaging(uploadId: string, bytes: Uint8Array): Promise<void>;
   readStaging(uploadId: string): Promise<Uint8Array | null>;
@@ -87,18 +95,10 @@ function validateStoredMetadata(
   }
 }
 
-export class FirebaseComponentStorage implements ComponentObjectStorage {
+class ComponentStorageAdapter implements ComponentObjectStorage {
   readonly #bucket: ComponentStorageBucket;
 
-  constructor(bucket: ComponentStorageBucket, config: EmulatorComponentStorageConfig) {
-    if (config.projectId !== EMULATOR_PROJECT
-      || !config.functionsEmulator
-      || typeof config.storageEmulatorHost !== 'string'
-      || config.storageEmulatorHost.trim().length === 0
-      || config.bucketName !== bucket.name
-      || config.bucketName !== `${EMULATOR_PROJECT}.appspot.com`) {
-      throw new Error('Component storage is restricted to the demo Firebase Emulator project');
-    }
+  constructor(bucket: ComponentStorageBucket) {
     this.#bucket = bucket;
   }
 
@@ -224,5 +224,44 @@ export class FirebaseComponentStorage implements ComponentObjectStorage {
 
   #publicPath(sha256: string): string {
     return `components/${sha256}.js`;
+  }
+}
+
+export class FirebaseComponentStorage extends ComponentStorageAdapter {
+  constructor(bucket: ComponentStorageBucket, config: EmulatorComponentStorageConfig) {
+    if (config.projectId !== EMULATOR_PROJECT
+      || !config.functionsEmulator
+      || typeof config.storageEmulatorHost !== 'string'
+      || config.storageEmulatorHost.trim().length === 0
+      || config.bucketName !== bucket.name
+      || config.bucketName !== `${EMULATOR_PROJECT}.appspot.com`) {
+      throw new Error('Component storage is restricted to the demo Firebase Emulator project');
+    }
+    super(bucket);
+  }
+}
+
+const PRODUCTION_COMPONENT_BUCKETS = Object.freeze({
+  staging: Object.freeze({
+    projectId: 'miakapp-v4-staging',
+    bucketName: 'miakapp-v4-staging-components',
+  }),
+  production: Object.freeze({
+    projectId: 'miakapp-v4',
+    bucketName: 'miakapp-v4-components',
+  }),
+} as const);
+
+export class ProductionFirebaseComponentStorage extends ComponentStorageAdapter {
+  constructor(bucket: ComponentStorageBucket, config: ProductionComponentStorageConfig) {
+    const expected = PRODUCTION_COMPONENT_BUCKETS[config.environment];
+    if (config.projectId !== expected.projectId
+      || config.bucketName !== expected.bucketName
+      || bucket.name !== expected.bucketName
+      || config.functionsEmulator
+      || config.storageEmulatorHost !== undefined) {
+      throw new Error('Production component storage configuration is invalid');
+    }
+    super(bucket);
   }
 }

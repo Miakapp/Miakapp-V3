@@ -2,7 +2,11 @@ import { createPublicKey, verify, type JsonWebKey } from 'node:crypto';
 
 import { type JsonValue, parseRequestJson } from './json.js';
 
-const EMULATOR_PROJECT = 'demo-miakapp-v4';
+const ENVIRONMENT_ISSUERS = Object.freeze({
+  'demo-miakapp-v4': 'https://control.example.test',
+  'miakapp-v4-staging': 'https://control.staging.miakapp.com',
+  'miakapp-v4': 'https://control.miakapp.com',
+} as const);
 const MAX_TOKEN_BYTES = 8_192;
 const MAX_AUTHORIZATION_BYTES = MAX_TOKEN_BYTES + 'Bearer '.length;
 const MAX_HEADER_BYTES = 2_048;
@@ -143,16 +147,16 @@ function validatedClockSeconds(clock: AccessTokenVerificationClock): number {
 function validateConfig(
   config: AccessTokenVerifierBaseConfig,
   audience: string,
+  scope: 'push:send' | 'components:publish',
 ): ValidatedEd25519Key {
-  if (config.projectId !== EMULATOR_PROJECT) {
-    throw new Error('Synthetic access-token verification is restricted to the demo Firebase Emulator project');
-  }
-  if (typeof config.issuer !== 'string'
+  const expectedIssuer = ENVIRONMENT_ISSUERS[
+    config.projectId as keyof typeof ENVIRONMENT_ISSUERS
+  ];
+  if (expectedIssuer === undefined
+    || config.issuer !== expectedIssuer
     || Buffer.byteLength(config.issuer, 'utf8') > 2_048
     || !GRAPHIC_ASCII.test(config.issuer)
-    || typeof audience !== 'string'
-    || Buffer.byteLength(audience, 'utf8') > 2_048
-    || !GRAPHIC_ASCII.test(audience)) {
+    || audience !== `${expectedIssuer}${scope === 'push:send' ? '/v1/push' : '/v1/components'}`) {
     throw new Error('Access-token verification configuration is invalid');
   }
 
@@ -190,7 +194,7 @@ function verifyAccessToken(
   scope: 'push:send' | 'components:publish',
   clock: AccessTokenVerificationClock,
 ): VerifiedAccessPrincipal {
-  const key = validateConfig(config, audience);
+  const key = validateConfig(config, audience, scope);
   const now = validatedClockSeconds(clock);
   const parsed = parseToken(bearerToken(authorizationHeader));
 

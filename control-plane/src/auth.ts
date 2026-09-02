@@ -10,6 +10,60 @@ export interface FirebaseTokenVerifier {
   verifyIdToken(token: string): Promise<DecodedIdToken>;
 }
 
+export interface FirebaseAdminAuthClient {
+  verifyIdToken(token: string): Promise<DecodedIdToken>;
+}
+
+export class FirebaseTokenDependencyError extends Error {
+  constructor() {
+    super('Firebase authentication dependency is unavailable');
+    this.name = 'FirebaseTokenDependencyError';
+  }
+}
+
+function firebaseErrorCode(error: unknown): string | undefined {
+  return error !== null
+    && typeof error === 'object'
+    && 'code' in error
+    && typeof error.code === 'string'
+    ? error.code
+    : undefined;
+}
+
+function firebaseErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : '';
+}
+
+function definitiveFirebaseTokenRejection(error: unknown): boolean {
+  const code = firebaseErrorCode(error);
+  if (code === 'auth/id-token-expired'
+    || code === 'auth/id-token-revoked'
+    || code === 'auth/invalid-id-token') {
+    return true;
+  }
+  if (code !== 'auth/argument-error') return false;
+  const message = firebaseErrorMessage(error);
+  return !message.includes('Error fetching public keys for Google certs:')
+    && !message.includes('Error while making request:');
+}
+
+export class FirebaseAdminAuthVerifier implements FirebaseTokenVerifier {
+  readonly #client: FirebaseAdminAuthClient;
+
+  constructor(client: FirebaseAdminAuthClient) {
+    this.#client = client;
+  }
+
+  async verifyIdToken(token: string): Promise<DecodedIdToken> {
+    try {
+      return await this.#client.verifyIdToken(token);
+    } catch (error) {
+      if (definitiveFirebaseTokenRejection(error)) throw error;
+      throw new FirebaseTokenDependencyError();
+    }
+  }
+}
+
 function bearerToken(value: string | string[] | undefined): string {
   if (typeof value !== 'string' || Buffer.byteLength(value, 'utf8') > MAX_FIREBASE_TOKEN_BYTES + 7) {
     throw apiError('invalid_firebase_token');
@@ -56,7 +110,10 @@ export async function authenticateFirebase(
   try {
     const decoded = await verifier.verifyIdToken(bearerToken(authorization));
     return firebasePrincipalFromDecodedToken(decoded, nowMilliseconds);
-  } catch {
+  } catch (error) {
+    if (error instanceof FirebaseTokenDependencyError) {
+      throw apiError('temporarily_unavailable');
+    }
     throw apiError('invalid_firebase_token');
   }
 }

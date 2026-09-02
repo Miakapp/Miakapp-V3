@@ -69,13 +69,25 @@ does not invoke Firebase, `gcloud`, Terraform, the network, or a credential
 provider. The matching CI workflow has only `contents: read` permission and no
 OIDC or secret access.
 
-The control-plane now also has an inactive, locally tested production-security
-boundary: a closed resource-reference parser, pinned Secret Manager reads and an
-Ed25519 Cloud KMS signer. The manifest records that unit-test evidence without
-claiming real-service acceptance. The Function entry point still imports only
-the demo-emulator composition; the production loader, IAM bindings, live key
-publication, rotation and every `STAGE-01` observation remain activation
-blockers.
+The control-plane now also has an inactive, locally tested production
+composition: a closed runtime/resource parser, pinned Secret Manager reads, an
+Ed25519 Cloud KMS signer, standard Firebase Admin App Check verification,
+FID-targeted FCM messaging and a production Storage boundary. The manifest
+records that unit-test evidence without claiming real-service acceptance. The
+Function entry point still imports only the demo-emulator composition; the
+inactive factory is never called by Firebase configuration. IAM bindings, a
+deployable `onInit()` entry point, live key publication/rotation and every
+`STAGE-*` observation remain activation blockers. No project or billable
+operation results from this code.
+
+The inactive factory pins metadata credentials to
+`miakapp-control-plane@miakapp-v4-staging.iam.gserviceaccount.com`, pins the
+standard Google API universe/endpoints, disables generated-client retries and
+rejects credential-file, emulator, quota-project, universe and SDK-debug
+environment overrides, including alternate metadata hosts and HTTP/HTTPS/gRPC
+proxy paths. Firestore receives the same explicit Google Auth instance through
+its direct pinned constructor. This is a locally verified construction
+constraint, not evidence that the account or its IAM bindings exist.
 
 ## Activation gate
 

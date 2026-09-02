@@ -256,9 +256,6 @@ export interface DeploymentConfig {
   readonly verifierKeyVersion: string;
   readonly homeKeyPepperForVersion: (version: string) => Uint8Array | undefined;
   readonly appCheckAppId: string;
-  readonly appCheckIssuer: string;
-  readonly appCheckAudience: string;
-  readonly appCheckPublicJwk: JsonWebKey & { readonly kid: string };
   readonly pushKeyVersion: string;
   readonly pushHmacKeyForVersion: (version: string) => Uint8Array | undefined;
   readonly admissionProfile: AdmissionProfile;
@@ -270,6 +267,9 @@ export interface DeploymentConfig {
 }
 
 export interface EmulatorDeploymentConfig extends DeploymentConfig {
+  readonly appCheckIssuer: string;
+  readonly appCheckAudience: string;
+  readonly appCheckPublicJwk: JsonWebKey & { readonly kid: string };
   readonly signingPrivateJwk: JsonWebKey & { readonly kid: string };
 }
 

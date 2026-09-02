@@ -129,13 +129,16 @@ unless the Function is running in the exact demo emulator project. No production
 credential or private home data belongs in this package.
 
 The Local Emulator Suite provides no App Check or FCM service emulator. The
-push-destination tests therefore use only the fixture's test App Check key and an
-explicit recording transport; they can prove token-profile rejection, closed
-schemas, verified UID/app/FID binding, challenge expiry and one-time completion,
-authorization, and the exact synthetic transport request and record. They do not
-construct a Firebase Admin `FidMessage` or prove real App Check attestation, FCM
-acceptance, or device delivery. Real service construction and acceptance remain
-staging gates.
+push-destination Emulator tests therefore use only the fixture's test App Check
+key and an explicit recording transport; they can prove token-profile rejection,
+closed schemas, verified UID/app/FID binding, challenge expiry and one-time
+completion, authorization, and the exact synthetic transport request and record.
+Separate unit tests now prove the exact FID-targeted FCM HTTP v1 request built by
+the inactive production transport and its one-attempt, redacted failure boundary.
+The transport deliberately does not use the Firebase Admin Messaging retry loop:
+an uncertain provider result is never duplicated automatically. These tests do
+not prove real App Check attestation, FCM acceptance, or device delivery. Real
+service acceptance remains a staging gate.
 
 Expired challenge records carry a Firestore TTL policy and are also pruned on
 subsequent issuance. The Emulator does not execute production TTL deletion, so
@@ -153,7 +156,7 @@ Functions Framework may reject compressed or oversized requests before
 application code runs, so the 2 MiB application check is not evidence of a
 production streaming ingress limit.
 
-An inactive production-security boundary now lives in
+An inactive production-security boundary lives in
 [`src/production-config.ts`](src/production-config.ts),
 [`src/cloud-security.ts`](src/cloud-security.ts), and
 [`src/google-cloud-clients.ts`](src/google-cloud-clients.ts). It accepts only the
@@ -171,16 +174,42 @@ construction fails before creating either SDK client when
 `GOOGLE_SDK_NODE_LOGGING` is nonempty, because that debug mode can serialize
 Secret Manager payloads and complete KMS signing material.
 
-Those modules are not imported by [`src/index.ts`](src/index.ts). Their unit
-tests use injected clients and make no ADC, network or cloud-resource call. The
+The complete inactive production composition now lives in
+[`src/production-runtime-config.ts`](src/production-runtime-config.ts) and
+[`src/production-runtime.ts`](src/production-runtime.ts). Its closed runtime
+document binds the exact staging or production project, issuer, origins, App
+Check app, dedicated component bucket and dedicated runtime service-account
+email. It rejects every emulator variable, Google SDK debug logging, credential
+file override, metadata-host override, HTTP/HTTPS/gRPC proxy override,
+quota-project override and Google Cloud universe override. Every Google client
+is constructed with a metadata-only credential pinned to that service account
+and an exact `googleapis.com` endpoint, rather than invoking the ambient ADC
+search path. Firestore uses its direct pinned constructor with that same
+explicit Google Auth instance, exact default database and exact service path;
+Firebase Admin's structural credential remains limited to the Firebase services
+that support it. The composition injects Firebase Auth, standard
+Firebase Admin App Check
+verification, Firestore, FCM FID messaging, production Storage, the five pinned
+secret keyrings and the KMS signer into the existing application. App Check
+token consumption is deliberately disabled in version 1: the one-time FID proof
+and transactional admission controls provide the request-level replay boundary
+without the extra limited-use-token round trip and provider quota. This policy
+still requires real attestation and wrong-app tests in `STAGE-03`.
+
+None of those modules is imported by [`src/index.ts`](src/index.ts), which
+remains the demo-emulator entry point. Production composition occurs only when
+`createProductionControlPlane()` is called explicitly; importing its module
+does not construct a client or read a secret. Unit tests use injected clients and
+make no ADC, network or cloud-resource call. The
 concrete Google adapter is exercised with injected transports to prove that the
 generated clients receive fresh extensible call options while preserving the
 bounded timeout and `retry: null`; no real client method runs in that test. The
-private fixture JWK is now confined to the emulator-specific configuration
-subtype. This is local adapter evidence only: there is still no production
-runtime loader or composition root, service-account binding, live JWKS
-publication/rotation, provisioned key or secret, deployment authorization or
-`STAGE-01` acceptance result.
+private fixture JWK remains confined to the emulator-specific configuration
+subtype. This is local composition evidence only: there is still no deployed
+production entry point, `onInit()` activation, provisioned IAM binding, live
+JWKS publication/rotation, provisioned key or secret, deployment authorization
+or `STAGE-01` acceptance result. This change creates no project, resource or
+billable operation.
 
 Passing this slice does **not** close RFC 0004's complete emulator or production
 gate. Push registration and sending have only synthetic local service evidence;

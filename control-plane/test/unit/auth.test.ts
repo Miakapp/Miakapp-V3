@@ -3,6 +3,7 @@ import type { DecodedIdToken } from 'firebase-admin/auth';
 
 import {
   authenticateFirebase,
+  FirebaseAdminAuthVerifier,
   firebasePrincipalFromDecodedToken,
   requireRecentAuthentication,
   type FirebaseTokenVerifier,
@@ -90,5 +91,44 @@ describe('Firebase owner principal', () => {
       now * 1_000,
     )).rejects.toThrow(ApiError);
     expect(verified).toBe(1);
+  });
+
+  test('keeps definitive Firebase rejection separate from key-fetch dependency failure', async () => {
+    const verifierFor = (error: Error & { readonly code: string }) => (
+      new FirebaseAdminAuthVerifier({
+        verifyIdToken: async () => Promise.reject(error),
+      })
+    );
+    const coded = (code: string, message: string): Error & { readonly code: string } => (
+      Object.assign(new Error(message), { code })
+    );
+
+    await expect(authenticateFirebase(
+      verifierFor(coded('auth/invalid-id-token', 'private invalid-token detail')),
+      'Bearer signed-token',
+      now * 1_000,
+    )).rejects.toMatchObject({
+      code: 'invalid_firebase_token',
+      status: 401,
+      retryable: false,
+    });
+
+    for (const dependencyError of [
+      coded(
+        'auth/argument-error',
+        'Error fetching public keys for Google certs: private network detail',
+      ),
+      coded('auth/internal-error', 'private dependency detail'),
+    ]) {
+      await expect(authenticateFirebase(
+        verifierFor(dependencyError),
+        'Bearer signed-token',
+        now * 1_000,
+      )).rejects.toMatchObject({
+        code: 'temporarily_unavailable',
+        status: 503,
+        retryable: true,
+      });
+    }
   });
 });

@@ -1,13 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { createHmac, type JsonWebKey } from 'node:crypto';
 
+import { CONTROL_PLANE_ADMISSION_PROFILE } from './admission-profile.js';
 import type { EmulatorDeploymentConfig } from './types.js';
 
 const EMULATOR_PROJECT = 'demo-miakapp-v4';
 const FIXTURE_URL = new URL('../../control-plane-contract/fixtures/v1/access-tokens.json', import.meta.url);
-const MINUTE = 60_000;
-const HOUR = 60 * MINUTE;
-const DAY = 24 * HOUR;
 
 interface SyntheticFixture {
   readonly provenance: {
@@ -125,37 +123,7 @@ export function loadEmulatorConfig(
     pushHmacKeyForVersion: (version: string) => (
       version === verifierKeyVersion ? new Uint8Array(pepper) : undefined
     ),
-    admissionProfile: Object.freeze({
-      limits: Object.freeze({
-        'audit.events': { maximum: 4_096, windowMilliseconds: MINUTE },
-        'source.operations': { maximum: 512, windowMilliseconds: MINUTE },
-        'home.create.actor': { maximum: 32, windowMilliseconds: HOUR },
-        'home.create.source': { maximum: 64, windowMilliseconds: HOUR },
-        'access.exchange.source': { maximum: 256, windowMilliseconds: MINUTE },
-        'access.exchange.key': { maximum: 32, windowMilliseconds: MINUTE },
-        'access.exchange.home': { maximum: 128, windowMilliseconds: MINUTE },
-        'push.challenge.actor': { maximum: 64, windowMilliseconds: MINUTE },
-        'push.challenge.app': { maximum: 256, windowMilliseconds: MINUTE },
-        'push.challenge.source': { maximum: 128, windowMilliseconds: MINUTE },
-        'push.send.key': { maximum: 120, windowMilliseconds: MINUTE },
-        'push.send.home': { maximum: 240, windowMilliseconds: MINUTE },
-        'push.send.grant': { maximum: 120, windowMilliseconds: MINUTE },
-        'push.send.destination': { maximum: 120, windowMilliseconds: MINUTE },
-        'component.upload.issue.home': { maximum: 64, windowMilliseconds: MINUTE },
-        'component.upload.issue_bytes.home': { maximum: 64 * 1_024 * 1_024, windowMilliseconds: HOUR },
-        'component.upload.delivery.upload': { maximum: 8, windowMilliseconds: 15 * MINUTE },
-        'component.upload.delivery.home': { maximum: 64, windowMilliseconds: MINUTE },
-        'component.upload.delivery_bytes.home': { maximum: 64 * 1_024 * 1_024, windowMilliseconds: HOUR },
-        'component.finalize.home': { maximum: 64, windowMilliseconds: MINUTE },
-        'component.activate.home': { maximum: 64, windowMilliseconds: MINUTE },
-      }),
-      auditRetentionMilliseconds: 7 * DAY,
-      auditSlots: 4_096,
-      bucketSlots: 65_536,
-      maximumAuditEventBytes: 2_048,
-      bucketRetentionMilliseconds: DAY,
-      maximumRetryAfterSeconds: 300,
-    }),
+    admissionProfile: CONTROL_PLANE_ADMISSION_PROFILE,
     auditKeyVersion,
     auditHmacKeyForVersion: (version: string) => (
       version === auditKeyVersion ? new Uint8Array(auditKey) : undefined

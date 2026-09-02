@@ -1,6 +1,6 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 1,
+  "revision": 2,
   "status": "planning",
   "environment": "staging",
   "project": {
@@ -253,6 +253,7 @@
     ],
     "fault_matrix": "../../control-plane/FAULT-MATRIX.md",
     "production_security_boundary": "../../control-plane/test/unit/cloud-security.test.ts",
+    "production_composition_boundary": "../../control-plane/test/unit/production-runtime.test.ts",
     "environment_decision": "../../docs/operations/2026-09-01-miakapp-v4-environments.md"
   },
   "teardown": {

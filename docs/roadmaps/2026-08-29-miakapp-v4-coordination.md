@@ -261,6 +261,14 @@ reconciliation, activation CAS and audit-finalization failures in the executable
 the deterministic application-level fault rows without claiming production
 network or managed-service behavior.
 
+A sixth offline slice now provides a closed staging/production runtime parser,
+standard Firebase Admin App Check verification, FID-targeted FCM transport,
+production Storage binding and an explicit dependency-injected composition root.
+It rejects emulator and credential-file environments and is not imported by the
+Firebase Emulator Function entry point. Its tests use only injected clients: no
+project, billing link, service account, key, secret or deployment exists, and all
+staging rows remain open.
+
 Deliverables:
 
 1. owner bootstrap and Home Key lifecycle;
@@ -376,17 +384,19 @@ current consumer.
    slice in isolated local Firebase Auth, Functions and Firestore emulators,
    including separate Firestore/Storage client Rules and independent token
    verification.
-8. **In progress 2026-09-01** — the emulator implementation now covers closed FID
+8. **In progress 2026-09-02** — the emulator implementation now covers closed FID
    registration, grants and semantic sends with synthetic App Check/FCM evidence,
    plus local component publication/read-back, immutable releases, reconciliation,
    concurrent CAS, quarantine and rollback, and fixed-slot audit/rate/cost
    admission. Its deterministic application/dependency fault matrix is now
-   explicit and executable. A closed, credential-free staging manifest now fixes
+   explicit and executable. An inactive offline production composition now binds
+   the real SDK seams without importing or deploying them. A closed,
+   credential-free staging manifest fixes
    the isolated target, initial resource/IAM/cost posture and teardown inventory
-   without creating a project or enabling deployment. Next implement the missing
-   production adapters, obtain explicit location/billing approval, and only then
-   convert the reviewed intent into a deployable plan that closes the
-   relay-integration and staging-only RFC 0004 Section 18 gates.
+   without creating a project or enabling deployment. Next obtain explicit
+   location/billing approval, define the production entry point and runtime IAM,
+   and only then convert the reviewed intent into a deployable plan that closes
+   the relay-integration and staging-only RFC 0004 Section 18 gates.
 
 ## 9. Evidence that would change this plan
 

@@ -14,6 +14,11 @@ import {
   type AuditOutcome,
 } from '../../src/admission.js';
 import { createControlPlaneApp, type ApiDependencies } from '../../src/api.js';
+import {
+  FirebaseAdminAppCheckVerifier,
+  SyntheticAppCheckVerifier,
+} from '../../src/app-check.js';
+import { FirebaseAdminAuthVerifier } from '../../src/auth.js';
 import type { ComponentActivationInput } from '../../src/component-store.js';
 import { loadEmulatorConfig } from '../../src/config.js';
 import { AccessTokenSigner } from '../../src/crypto.js';
@@ -90,6 +95,7 @@ interface RouterRequest {
 
 interface DependencyOverrides {
   readonly admission?: object;
+  readonly appCheck?: object;
   readonly auth?: object;
   readonly signer?: object;
   readonly store?: object;
@@ -258,6 +264,7 @@ class RecordingAdmission {
 function dependencies(overrides: DependencyOverrides = {}): ApiDependencies {
   return {
     admission: overrides.admission ?? new RecordingAdmission(),
+    appCheck: overrides.appCheck ?? new SyntheticAppCheckVerifier(CONFIG, CLOCK),
     auth: overrides.auth ?? OWNER_AUTH,
     clock: CLOCK,
     config: CONFIG,
@@ -440,6 +447,60 @@ describe('control-plane API dependency fault matrix', () => {
     expect(createCalls).toBe(0);
   });
 
+  test('reports a Firebase Auth key-fetch outage as unavailable rather than denied', async () => {
+    const admission = new RecordingAdmission();
+    let createCalls = 0;
+    const keyFetchFailure = Object.assign(dependencyFailure('firebase-auth-jwks'), {
+      code: 'auth/argument-error',
+      message: `Error fetching public keys for Google certs: ${FAILURE_SENTINEL}`,
+    });
+    const response = await request(dependencies({
+      admission,
+      auth: new FirebaseAdminAuthVerifier({
+        verifyIdToken: async () => Promise.reject(keyFetchFailure),
+      }),
+      store: {
+        createHome: async () => {
+          createCalls += 1;
+        },
+      },
+    }), homeCreateRequest());
+
+    expectUnavailable(response, admission);
+    expectUnknownAudit(admission);
+    expect(createCalls).toBe(0);
+  });
+
+  test('reports an App Check key-fetch outage as unavailable rather than denied', async () => {
+    const admission = new RecordingAdmission();
+    let challengeCalls = 0;
+    const keyFetchFailure = Object.assign(dependencyFailure('app-check-jwks'), {
+      code: 'app-check/invalid-argument',
+      cause: { code: 'key-fetch-error' },
+    });
+    const response = await request(dependencies({
+      admission,
+      appCheck: new FirebaseAdminAppCheckVerifier({
+        verifyToken: async () => Promise.reject(keyFetchFailure),
+      }, CONFIG.appCheckAppId),
+      pushStore: {
+        issueDestinationChallenge: async () => {
+          challengeCalls += 1;
+        },
+      },
+    }), jsonRequest('POST', '/v1/push-destinations:challenge', {
+      provider: 'fcm',
+      fid: FID,
+    }, {
+      Authorization: OWNER_AUTHORIZATION,
+      'X-Firebase-AppCheck': APP_CHECK_TOKEN,
+    }));
+
+    expectUnavailable(response, admission);
+    expectUnknownAudit(admission);
+    expect(challengeCalls).toBe(0);
+  });
+
   test('records a failed home Firestore mutation as outcome unknown without retry', async () => {
     const admission = new RecordingAdmission();
     let createCalls = 0;
@@ -581,6 +642,7 @@ describe('control-plane API dependency fault matrix', () => {
         sendSemanticNotification: async (delivery: SemanticNotificationPushDelivery) => {
           transportCalls += 1;
           order.push('transport');
+          expect(delivery.homeId).toBe(HOME_ID);
           expect(delivery.grantId).toBe(GRANT_ID);
           throw dependencyFailure('pushTransport.sendSemanticNotification');
         },
