@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-github-policy/1",
-  "revision": 1,
-  "status": "required_not_configured",
+  "revision": 2,
+  "status": "github_security_configured_cloud_inactive",
   "observed_on": "2026-09-02",
   "repository": {
     "name_with_owner": "Miakapp/Miakapp-V3",
@@ -11,16 +11,69 @@
     "default_branch": "main"
   },
   "observed": {
-    "main_protected": false,
+    "main_branch": {
+      "protected": true,
+      "enforce_admins": true,
+      "pull_request_required": true,
+      "required_approvals": 0,
+      "dismiss_stale_reviews": true,
+      "conversation_resolution_required": true,
+      "strict_status_checks": true,
+      "required_status_checks": [
+        {
+          "context": "Staging manifest safety gate / validate",
+          "app_id": "15368"
+        }
+      ],
+      "force_pushes_allowed": false,
+      "deletions_allowed": false
+    },
     "environment_names": [
-      "miakapi"
+      "miakapi",
+      "miakapp-v4-staging-apply",
+      "miakapp-v4-staging-plan"
     ],
+    "plan_environment": {
+      "name": "miakapp-v4-staging-plan",
+      "required_reviewer_ids": [],
+      "prevent_self_review": false,
+      "admin_bypass_allowed": false,
+      "custom_branch_policies": [
+        "main"
+      ]
+    },
+    "apply_environment": {
+      "name": "miakapp-v4-staging-apply",
+      "required_reviewer_ids": [
+        "21021423"
+      ],
+      "prevent_self_review": false,
+      "admin_bypass_allowed": false,
+      "custom_branch_policies": [
+        "main"
+      ]
+    },
     "oidc_uses_default_subject": true,
     "oidc_uses_immutable_subject": false,
     "oidc_subject_prefix": "repo:Miakapp/Miakapp-V3",
-    "allowed_actions": "all",
-    "sha_pinning_required": false,
-    "default_workflow_permissions": "write",
+    "actions": {
+      "allowed_actions": "selected",
+      "sha_pinning_required": true,
+      "default_workflow_permissions": "read",
+      "can_approve_pull_request_reviews": false,
+      "github_owned_allowed": false,
+      "verified_allowed": false,
+      "allowed_action_patterns": [
+        "actions/checkout@*",
+        "actions/setup-go@*",
+        "actions/setup-java@*",
+        "actions/setup-node@*",
+        "google-github-actions/auth@*",
+        "google-github-actions/setup-gcloud@*",
+        "hashicorp/setup-terraform@*",
+        "oven-sh/setup-bun@*"
+      ]
+    },
     "active_workflow_installed": false,
     "cloud_authentication_enabled": false
   },
@@ -34,7 +87,10 @@
       "conversation_resolution_required": true,
       "strict_status_checks": true,
       "required_status_checks": [
-        "Staging manifest safety gate / validate"
+        {
+          "context": "Staging manifest safety gate / validate",
+          "app_id": "15368"
+        }
       ],
       "force_pushes_allowed": false,
       "deletions_allowed": false
@@ -64,6 +120,8 @@
       "sha_pinning_required": true,
       "default_workflow_permissions": "read",
       "can_approve_pull_request_reviews": false,
+      "github_owned_allowed": false,
+      "verified_allowed": false,
       "allowed_action_patterns": [
         "actions/checkout@*",
         "actions/setup-go@*",
@@ -85,7 +143,7 @@
     }
   },
   "activation": {
-    "policy_observation_verified": false,
+    "policy_observation_verified": true,
     "workflow_install_authorized": false,
     "cloud_bootstrap_authorized": false,
     "active_workflow_path": ".github/workflows/staging-terraform.yml",

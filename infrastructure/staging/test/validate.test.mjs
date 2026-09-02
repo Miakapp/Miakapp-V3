@@ -28,8 +28,10 @@ function rejects(mutator, pattern) {
   );
 }
 
-test('accepts the keyless Paris activation blueprint while cloud state remains unbilled', () => {
+test('accepts the GitHub-secured keyless Paris blueprint while cloud state remains unbilled', () => {
   const validated = validateStagingManifest(manifest());
+  assert.equal(validated.revision, 10);
+  assert.equal(validated.status, 'github_security_configured_keyless_blueprint_unbilled');
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
   assert.equal(validated.project.lifecycle, 'firebase_enabled_unbilled');
@@ -71,7 +73,13 @@ test('accepts the keyless Paris activation blueprint while cloud state remains u
   assert.equal(validated.terraform.saved_plan.public_artifacts_allowed, false);
   assert.equal(validated.terraform.apply_authorized, false);
   assert.equal(validated.terraform.local_plan_executed, false);
+  assert.equal(validated.evidence.github_policy_observation_verified, true);
   assert.equal(validated.evidence.active_cloud_workflow_present, false);
+  assert.equal(validated.readiness.required_blockers.includes('github-terraform-workflow-not-installed'), true);
+  assert.equal(
+    validated.readiness.required_blockers.includes('github-branch-environment-and-actions-policy-not-configured'),
+    false,
+  );
   assert.equal(
     validated.evidence.production_security_boundary,
     '../../control-plane/test/unit/cloud-security.test.ts',
