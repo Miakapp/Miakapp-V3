@@ -266,10 +266,10 @@ standard Firebase Admin App Check verification, FID-targeted FCM transport,
 production Storage binding and an explicit dependency-injected composition root.
 It rejects emulator and credential-file environments and is not imported by the
 Firebase Emulator Function entry point. Its tests use only injected clients and
-never contact staging. The `miakapp-v4-staging` Firebase project now exists
-unbilled, but it has no registered app, regional data resource, runtime identity,
-key, secret or deployment. Paris (`europe-west9`) and a fingerprinted existing
-billing account are approved planning inputs. Credential-free checks now
+never contact staging. The `miakapp-v4-staging` Firebase project now has its
+approved billing link, but it has no registered app, regional data resource,
+runtime identity, key, secret or deployment. Paris (`europe-west9`) and the
+fingerprinted billing account remain reviewed inputs. Credential-free checks now
 validate separate apply-capable bootstrap and foundation Terraform roots with
 mock providers. A private versioned GCS state design, separate keyless plan/apply
 identities, numeric-claim WIF conditions and a protected same-plan automation
@@ -394,7 +394,7 @@ current consumer.
    slice in isolated local Firebase Auth, Functions and Firestore emulators,
    including separate Firestore/Storage client Rules and independent token
    verification.
-8. **In progress 2026-09-02** — the emulator implementation now covers closed FID
+8. **In progress 2026-09-03** — the emulator implementation now covers closed FID
    registration, grants and semantic sends with synthetic App Check/FCM evidence,
    plus local component publication/read-back, immutable releases, reconciliation,
    concurrent CAS, quarantine and rollback, and fixed-slot audit/rate/cost
@@ -403,10 +403,11 @@ current consumer.
    the real SDK seams without importing or deploying them. A closed,
    credential-free staging manifest fixes
    the isolated target, initial resource/IAM/cost posture and teardown inventory
-   without enabling deployment. The staging Firebase project was claimed
-   unbilled on 2026-09-02; its bootstrap inventory has no registered app,
-   database, bucket or deployed workload. Paris and the billing-account choice
-   are now reviewed. Provider-pinned bootstrap and foundation roots describe
+   without enabling deployment. The staging Firebase project was claimed on
+   2026-09-02 and linked to the approved billing account on 2026-09-03; its
+   bootstrap inventory has no registered app, database, bucket or deployed
+   workload. Paris and the billing-account choice are reviewed. Provider-pinned
+   bootstrap and foundation roots describe
    private versioned state, separate keyless plan/apply identities and the
    regional foundation. Escalation-capable project IAM, service-account creation
    and both buckets remain human-bootstrap resources, so the apply identity
@@ -414,9 +415,11 @@ current consumer.
    SHA-pinned workflow binds a private saved plan to a protected apply job,
    while a closed policy record now proves that the branch, environment and
    Actions settings were configured and re-observed without activating cloud
-   resources or installing the workflow. Next review the exact bootstrap plan,
-   obtain separate mutation authorization, migrate bootstrap state, initialize
-   and verify an empty foundation state with protected operator credentials,
+   resources or installing the workflow. A fresh non-saved diagnostic bootstrap
+   plan reports 36 additions, no changes and no destroys. Next create and review
+   an exact saved plan, obtain separate mutation authorization, migrate bootstrap
+   state, initialize and verify an empty foundation state with protected operator
+   credentials,
    authorize workflow installation, then review the foundation plan. The production entry point and exact
    runtime IAM expansion remain required before closing relay-integration and
    staging-only RFC 0004 Section 18 gates.
