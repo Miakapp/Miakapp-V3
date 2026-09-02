@@ -6,6 +6,7 @@ import { onRequest } from 'firebase-functions/v2/https';
 
 import { createControlPlaneApp } from './api.js';
 import { AdmissionController } from './admission.js';
+import { SyntheticAppCheckVerifier } from './app-check.js';
 import { loadEmulatorConfig } from './config.js';
 import { AccessTokenSigner } from './crypto.js';
 import { FirebaseComponentStorage } from './component-storage.js';
@@ -40,6 +41,7 @@ const pushTransport = new FirestoreRecordingPushTransport(firestore, {
 const signer = new AccessTokenSigner(config);
 const app = createControlPlaneApp({
   admission,
+  appCheck: new SyntheticAppCheckVerifier(config, SYSTEM_CLOCK),
   auth,
   clock: SYSTEM_CLOCK,
   config,

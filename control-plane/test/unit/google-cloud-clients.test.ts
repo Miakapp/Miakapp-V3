@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { GoogleAuth } from 'google-gax';
 
 import type { CloudCallOptions } from '../../src/cloud-security.js';
 import {
@@ -33,11 +34,23 @@ describe('Google Cloud client adapters', () => {
         return [{ name: request.name }];
       },
     };
+    const auth = new GoogleAuth({ projectId: 'miakapp-v4-staging' });
+    const constructions: unknown[] = [];
     const factories: GoogleCloudSecurityClientFactories = {
-      kms: () => kms,
-      secrets: () => secrets,
+      kms: (options) => {
+        constructions.push(options);
+        return kms;
+      },
+      secrets: (options) => {
+        constructions.push(options);
+        return secrets;
+      },
     };
-    const clients = createGoogleCloudSecurityClients(factories);
+    const clients = createGoogleCloudSecurityClients(
+      auth,
+      'miakapp-v4-staging',
+      factories,
+    );
     const original = Object.freeze({ timeout: 1_234, retry: null } as const);
 
     await clients.kms.getPublicKey({ name: 'kms-version' }, original);
@@ -49,6 +62,20 @@ describe('Google Cloud client adapters', () => {
     await clients.secrets.accessSecretVersion({ name: 'secret-version' }, original);
 
     expect(received).toHaveLength(3);
+    expect(constructions).toEqual([
+      {
+        apiEndpoint: 'cloudkms.googleapis.com',
+        auth,
+        projectId: 'miakapp-v4-staging',
+        universeDomain: 'googleapis.com',
+      },
+      {
+        apiEndpoint: 'secretmanager.googleapis.com',
+        auth,
+        projectId: 'miakapp-v4-staging',
+        universeDomain: 'googleapis.com',
+      },
+    ]);
     expect(received.every((options) => options !== original)).toBe(true);
     expect(received.every((options) => (
       options.timeout === 1_234 && options.retry === null
@@ -71,7 +98,11 @@ describe('Google Cloud client adapters', () => {
     };
     process.env.GOOGLE_SDK_NODE_LOGGING = 'secret-manager';
     try {
-      expect(() => createGoogleCloudSecurityClients(factories)).toThrow(ProductionConfigurationError);
+      expect(() => createGoogleCloudSecurityClients(
+        new GoogleAuth({ projectId: 'miakapp-v4-staging' }),
+        'miakapp-v4-staging',
+        factories,
+      )).toThrow(ProductionConfigurationError);
       expect(constructions).toBe(0);
     } finally {
       if (previous === undefined) delete process.env.GOOGLE_SDK_NODE_LOGGING;

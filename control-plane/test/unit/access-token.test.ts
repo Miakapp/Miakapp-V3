@@ -178,7 +178,7 @@ describe('push-profile access-token verification', () => {
       header,
       { ...config, projectId: 'production-project' },
       CLOCK,
-    )).toThrow(/restricted to the demo Firebase Emulator project/);
+    )).toThrow(/configuration is invalid/);
 
     const pollutedKey = { ...config.signingPublicJwk, d: 'private-material' };
     expect(() => verifyPushAccessToken(
@@ -186,6 +186,51 @@ describe('push-profile access-token verification', () => {
       { ...config, signingPublicJwk: pollutedKey },
       CLOCK,
     )).toThrow(/public key is invalid/);
+  });
+
+  test.each([
+    ['staging', 'miakapp-v4-staging', 'https://control.staging.miakapp.com'],
+    ['production', 'miakapp-v4', 'https://control.miakapp.com'],
+  ] as Array<[string, string, string]>)('accepts the exact %s project, issuer, and audience binding', (
+    _environment,
+    projectId,
+    issuer,
+  ) => {
+    const productionClaims = {
+      ...baseClaims,
+      iss: issuer,
+      aud: `${issuer}/v1/push`,
+    };
+    const verifierConfig: PushAccessTokenVerifierConfig = {
+      projectId,
+      issuer,
+      pushAudience: `${issuer}/v1/push`,
+      signingPublicJwk: config.signingPublicJwk,
+    };
+    expect(verifyPushAccessToken(
+      authorization(signToken(productionClaims)),
+      verifierConfig,
+      CLOCK,
+    )).toEqual({
+      homeId: 'synthetic-home',
+      clientId: baseClaims.client_id,
+      expiresAt: NOW + 300,
+    });
+  });
+
+  test('rejects every cross-environment configuration before token verification', () => {
+    expect(() => verifyPushAccessToken(authorization(), {
+      ...config,
+      projectId: 'miakapp-v4-staging',
+    }, CLOCK)).toThrow(/configuration is invalid/);
+    expect(() => verifyPushAccessToken(authorization(), {
+      ...config,
+      issuer: 'https://control.staging.miakapp.com',
+    }, CLOCK)).toThrow(/configuration is invalid/);
+    expect(() => verifyPushAccessToken(authorization(), {
+      ...config,
+      pushAudience: 'https://control.example.test/v1/components',
+    }, CLOCK)).toThrow(/configuration is invalid/);
   });
 });
 
@@ -213,6 +258,6 @@ describe('component-publisher access-token verification', () => {
       authorization(signToken(componentClaims)),
       { ...config, projectId: 'production-project' },
       CLOCK,
-    )).toThrow(/restricted to the demo Firebase Emulator project/);
+    )).toThrow(/configuration is invalid/);
   });
 });
