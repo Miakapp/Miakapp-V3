@@ -1,10 +1,31 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import {
+  chmodSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { validateBootstrapRoot } from '../bootstrap/guard.mjs';
+import {
+  buildSavedPlanMetadata,
+  createPrivateBundle,
+  inspectPrivateBundle,
+  validatePlanAgainstMetadata,
+  validateSavedPlanMetadata,
+  writeSavedPlanMetadata,
+} from '../bootstrap/saved-plan.mjs';
 
 const bootstrapRoot = new URL('../bootstrap/', import.meta.url);
 const terraformFiles = readdirSync(bootstrapRoot).filter((name) => name.endsWith('.tf')).sort();
@@ -18,8 +39,23 @@ const localsSource = readFileSync(new URL('locals.tf', bootstrapRoot), 'utf8');
 const stateSource = readFileSync(new URL('state.tf', bootstrapRoot), 'utf8');
 const backendTemplate = readFileSync(new URL('backend.gcs.tf.example', bootstrapRoot), 'utf8');
 const planScript = readFileSync(new URL('plan.sh', bootstrapRoot), 'utf8');
+const savePlanScript = readFileSync(new URL('save-plan.sh', bootstrapRoot), 'utf8');
+const inspectPlanScript = readFileSync(new URL('inspect-plan.sh', bootstrapRoot), 'utf8');
 const bootstrapLock = readFileSync(new URL('.terraform.lock.hcl', bootstrapRoot), 'utf8');
 const foundationLock = readFileSync(new URL('../terraform/.terraform.lock.hcl', import.meta.url), 'utf8');
+
+const expectedSavedPlanTypes = Object.freeze({
+  google_billing_budget: 1,
+  google_billing_project_info: 1,
+  google_iam_workload_identity_pool: 1,
+  google_iam_workload_identity_pool_provider: 2,
+  google_project_iam_member: 10,
+  google_project_service: 8,
+  google_service_account: 3,
+  google_service_account_iam_member: 2,
+  google_storage_bucket: 2,
+  google_storage_bucket_iam_member: 6,
+});
 
 function localSet(name) {
   const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -39,6 +75,48 @@ function guardedPlan(environment) {
       MIAKAPP_STAGING_BOOTSTRAP_CONFIRMATION: 'miakapp-v4-staging',
       ...environment,
     },
+  });
+}
+
+function guardedSavedPlan(environment) {
+  return spawnSync(fileURLToPath(new URL('save-plan.sh', bootstrapRoot)), ['/tmp'], {
+    cwd: fileURLToPath(bootstrapRoot),
+    encoding: 'utf8',
+    env: {
+      HOME: process.env.HOME,
+      PATH: process.env.PATH,
+      MIAKAPP_STAGING_BILLING_ACCOUNT_ID: 'AAAAAA-BBBBBB-CCCCCC',
+      MIAKAPP_STAGING_BOOTSTRAP_CONFIRMATION: 'miakapp-v4-staging',
+      ...environment,
+    },
+  });
+}
+
+function syntheticTerraformPlan(secret = 'must-not-appear') {
+  const resourceChanges = [];
+  for (const [type, count] of Object.entries(expectedSavedPlanTypes)) {
+    for (let index = 0; index < count; index += 1) {
+      const instanceKey = type === 'google_project_iam_member' ? `roles/viewer-${index}` : `${index}`;
+      resourceChanges.push({
+        address: `${type}.fixture["${instanceKey}"]`,
+        mode: 'managed',
+        type,
+        change: {
+          actions: ['create'],
+          before: null,
+          after: { secret },
+        },
+      });
+    }
+  }
+  return { terraform_version: '1.11.3', resource_changes: resourceChanges };
+}
+
+function metadataForPlan(planBytes, plan = syntheticTerraformPlan()) {
+  return buildSavedPlanMetadata(plan, {
+    configurationCommit: 'a'.repeat(40),
+    createdAt: '2026-09-03T01:02:03Z',
+    planSha256: createHash('sha256').update(planBytes).digest('hex'),
   });
 }
 
@@ -188,6 +266,20 @@ test('keeps bootstrap execution plan-only and local-state-only until separately 
   assert.match(planScript, /Credential-file environment variables are forbidden/);
   assert.match(planScript, /approved_fingerprint=/);
   assert.match(planScript, /unset MIAKAPP_STAGING_BILLING_ACCOUNT_ID/);
+  assert.match(savePlanScript, /status --porcelain=v1 --untracked-files=all/);
+  assert.match(savePlanScript, /create-bundle/);
+  assert.match(savePlanScript, /export TF_DATA_DIR="\$terraform_data_dir"/);
+  assert.match(savePlanScript, /rm -rf -- "\$terraform_data_dir"/);
+  assert.match(savePlanScript, /-state="\$state_file"/);
+  assert.match(savePlanScript, /-out="\$plan_file"/);
+  assert.match(savePlanScript, /show -json "\$plan_file"/);
+  assert.match(savePlanScript, /sha256/);
+  assert.match(savePlanScript, /unexpectedly created local state while planning/);
+  assert.doesNotMatch(savePlanScript, /terraform\s+(apply|destroy|import)|firebase\s+deploy/);
+  assert.match(inspectPlanScript, /node "\$bundle_helper" verify/);
+  assert.match(inspectPlanScript, /export TF_DATA_DIR="\$\{inspection_root\}\/terraform-data"/);
+  assert.match(inspectPlanScript, /show -no-color "\$\{bundle\}\/bootstrap\.tfplan"/);
+  assert.doesNotMatch(inspectPlanScript, /terraform\s+(apply|destroy|import)|gcloud\s+storage/);
 });
 
 test('rejects bootstrap overrides before Terraform or Google access', () => {
@@ -202,6 +294,112 @@ test('rejects bootstrap overrides before Terraform or Google access', () => {
     const result = guardedPlan({ [name]: value });
     assert.equal(result.status, 1, name);
     assert.match(result.stderr, new RegExp(message), name);
+
+    const savedResult = guardedSavedPlan({ [name]: value });
+    assert.equal(savedResult.status, 1, `saved ${name}`);
+    assert.match(savedResult.stderr, new RegExp(message), `saved ${name}`);
+  }
+});
+
+test('reduces the exact create-only plan to closed metadata without retaining values', () => {
+  const secret = 'AAAAAA-BBBBBB-CCCCCC';
+  const metadata = metadataForPlan(Buffer.from('synthetic-plan'), syntheticTerraformPlan(secret));
+  assert.equal(metadata.schema, 'miakapp.staging-bootstrap-plan/1');
+  assert.deepEqual(metadata.plan.change_summary, { create: 36, update: 0, delete: 0 });
+  assert.equal(metadata.authorization.apply_authorized, false);
+  assert.equal(metadata.authorization.state_migration_authorized, false);
+  assert.doesNotMatch(JSON.stringify(metadata), new RegExp(secret));
+  assert.doesNotThrow(() => validateSavedPlanMetadata(metadata));
+  assert.doesNotThrow(() => validatePlanAgainstMetadata(syntheticTerraformPlan(), metadata));
+
+  const extraField = structuredClone(metadata);
+  extraField.plan.unreviewed = true;
+  assert.throws(() => validateSavedPlanMetadata(extraField), /exactly the reviewed fields/);
+
+  const destructive = syntheticTerraformPlan();
+  destructive.resource_changes[0].change.actions = ['delete'];
+  assert.throws(
+    () => metadataForPlan(Buffer.from('synthetic-plan'), destructive),
+    /must be create-only/,
+  );
+
+  const differentPlan = syntheticTerraformPlan();
+  differentPlan.resource_changes[0].address = 'google_billing_budget.different["0"]';
+  assert.throws(
+    () => validatePlanAgainstMetadata(differentPlan, metadata),
+    /do not match the saved metadata/,
+  );
+});
+
+test('creates and verifies a private exact-inventory bundle and rejects tampering', async () => {
+  const temporary = mkdtempSync(join(tmpdir(), 'miakapp-bootstrap-plan-test-'));
+  chmodSync(temporary, 0o700);
+  try {
+    const bundle = createPrivateBundle(temporary, fileURLToPath(new URL('../../../', import.meta.url)));
+    const planPath = join(bundle, 'bootstrap.tfplan');
+    const metadataPath = join(bundle, 'metadata.json');
+    const planBytes = Buffer.from('synthetic-plan-binary');
+    writeFileSync(planPath, planBytes, { flag: 'wx', mode: 0o600 });
+    writeSavedPlanMetadata(metadataPath, metadataForPlan(planBytes));
+    assert.equal(statSync(bundle).mode & 0o777, 0o700);
+    assert.equal(statSync(planPath).mode & 0o777, 0o600);
+    assert.equal(statSync(metadataPath).mode & 0o777, 0o600);
+
+    const inspected = await inspectPrivateBundle(bundle, 'a'.repeat(40));
+    assert.equal(inspected.plan.sha256, createHash('sha256').update(planBytes).digest('hex'));
+
+    chmodSync(planPath, 0o644);
+    await assert.rejects(
+      () => inspectPrivateBundle(bundle, 'a'.repeat(40)),
+      /must not be accessible by group or other users/,
+    );
+    chmodSync(planPath, 0o600);
+
+    writeFileSync(planPath, 'tampered-plan', { mode: 0o600 });
+    await assert.rejects(
+      () => inspectPrivateBundle(bundle, 'a'.repeat(40)),
+      /Saved Terraform plan SHA-256/,
+    );
+
+    writeFileSync(planPath, planBytes, { mode: 0o600 });
+    const unexpectedPath = join(bundle, 'unexpected.txt');
+    writeFileSync(unexpectedPath, 'unexpected', { mode: 0o600 });
+    await assert.rejects(
+      () => inspectPrivateBundle(bundle, 'a'.repeat(40)),
+      /must contain exactly metadata.json and bootstrap.tfplan/,
+    );
+  } finally {
+    rmSync(temporary, { recursive: true });
+  }
+});
+
+test('rejects relative, symlinked, and publicly accessible private-plan parents', () => {
+  assert.throws(
+    () => createPrivateBundle('relative/path', fileURLToPath(new URL('../../../', import.meta.url))),
+    /must be an absolute path/,
+  );
+  const temporary = mkdtempSync(join(tmpdir(), 'miakapp-bootstrap-parent-test-'));
+  const privateParent = join(temporary, 'private');
+  const symlinkParent = join(temporary, 'linked');
+  try {
+    writeFileSync(privateParent, '', { mode: 0o600 });
+    assert.throws(
+      () => createPrivateBundle(privateParent, fileURLToPath(new URL('../../../', import.meta.url))),
+      /wrong file type/,
+    );
+    rmSync(privateParent);
+    symlinkSync(temporary, symlinkParent);
+    assert.throws(
+      () => createPrivateBundle(symlinkParent, fileURLToPath(new URL('../../../', import.meta.url))),
+      /must not be a symbolic link/,
+    );
+    chmodSync(temporary, 0o755);
+    assert.throws(
+      () => createPrivateBundle(temporary, fileURLToPath(new URL('../../../', import.meta.url))),
+      /must not be accessible by group or other users/,
+    );
+  } finally {
+    rmSync(temporary, { recursive: true });
   }
 });
 

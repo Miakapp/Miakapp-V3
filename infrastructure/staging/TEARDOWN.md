@@ -1,26 +1,28 @@
 # Miakapp 4 staging teardown rehearsal
 
 Status: non-executable rehearsal; neither Terraform root has been applied, the
-cloud workflow is dormant, and the Firebase bootstrap project remains unbilled
+cloud workflow is dormant, and only the approved billing link is active
 
 This runbook applies to the existing `miakapp-v4-staging` project. It must never
 be run against `miakapp-3`, `miakapp-v4`, or a `demo-*` project. A future
 executable implementation must require the operator to type the full project ID
 and must produce a plan before any destructive action.
 
-At the 2026-09-02 bootstrap boundary, Firebase has reserved the default Hosting
-site namespace, created its project service identity and enabled its bootstrap
-APIs. There is no billing link, App Engine application, Firebase app, database,
-bucket, Function, Cloud Run service, KMS key ring or secret. Deleting the whole
-project would permanently retire its globally unique ID; adding Firebase cannot
-otherwise be fully undone. Retaining this empty unbilled project is therefore the
-default until an explicit owner decision says otherwise.
+At the 2026-09-02 bootstrap boundary, Firebase reserved the default Hosting site
+namespace, created its project service identity and enabled its bootstrap APIs.
+The owner linked the reviewed billing account on 2026-09-03; that operation
+created no budget, App Engine application, Firebase app, database, bucket,
+Function, Cloud Run service, KMS key ring or secret. Deleting the whole project
+would permanently retire its globally unique ID; adding Firebase cannot
+otherwise be fully undone. Retaining this empty undeployed project, with the
+billing link removable during an authorized teardown, is therefore the default.
 
 The repository now contains separate apply-capable bootstrap and foundation
 roots, a private versioned GCS backend design, keyless plan/apply identities and
 a dormant GitHub workflow blueprint. None exists in the cloud. The circular
 bootstrap uses protected temporary local state first, then the reviewed GCS
-migration template; no apply or migration command is committed. Local
+migration template. Private saved-plan preparation and inspection commands are
+present but have not been run; no apply or migration command is committed. Local
 `.terraform/` provider caches are disposable and are not cloud inventory.
 
 Infrastructure state or a successful destroy command is not sufficient evidence

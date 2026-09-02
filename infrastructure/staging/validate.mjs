@@ -107,7 +107,7 @@ const STAGING_ROWS = [
 ];
 
 const LOCAL_PLAN_POST_CHECKS = [
-  'billing-unlinked',
+  'billing-linked-to-approved-account',
   'enabled-services-unchanged',
   'project-iam-unchanged',
   'bucket-inventory-unchanged',
@@ -183,7 +183,7 @@ function validateProject(value) {
   if (typeof project.project_id === 'string' && project.project_id.startsWith('demo-')) {
     reject('project.project_id', 'must not use a demo namespace');
   }
-  exact(project.lifecycle, 'firebase_enabled_unbilled', 'project.lifecycle');
+  exact(project.lifecycle, 'firebase_enabled_billing_linked_undeployed', 'project.lifecycle');
   exact(project.creation_authorized, false, 'project.creation_authorized');
   exact(project.billing_link_authorized, false, 'project.billing_link_authorized');
   exact(project.deployment_authorized, false, 'project.deployment_authorized');
@@ -214,8 +214,8 @@ function validateBootstrap(value) {
     'project_service_accounts',
     'enabled_service_apis',
   ]);
-  exact(bootstrap.observed_on, '2026-09-02', 'bootstrap.observed_on');
-  exact(bootstrap.billing_enabled, false, 'bootstrap.billing_enabled');
+  exact(bootstrap.observed_on, '2026-09-03', 'bootstrap.observed_on');
+  exact(bootstrap.billing_enabled, true, 'bootstrap.billing_enabled');
   exact(bootstrap.firebase_apps, 0, 'bootstrap.firebase_apps');
   exact(bootstrap.hosting_site, 'miakapp-v4-staging', 'bootstrap.hosting_site');
   exact(bootstrap.app_engine_application, false, 'bootstrap.app_engine_application');
@@ -427,6 +427,7 @@ function validateCost(value) {
     'identifier_sha256',
     'raw_identifier_committed',
     'link_state',
+    'terraform_management_state',
   ]);
   exact(billingAccount.selection_state, 'approved', 'cost.billing_account.selection_state');
   exact(
@@ -435,7 +436,16 @@ function validateCost(value) {
     'cost.billing_account.identifier_sha256',
   );
   exact(billingAccount.raw_identifier_committed, false, 'cost.billing_account.raw_identifier_committed');
-  exact(billingAccount.link_state, 'not_linked', 'cost.billing_account.link_state');
+  exact(
+    billingAccount.link_state,
+    'linked_to_approved_account',
+    'cost.billing_account.link_state',
+  );
+  exact(
+    billingAccount.terraform_management_state,
+    'active_outside_terraform_state',
+    'cost.billing_account.terraform_management_state',
+  );
   exact(cost.currency, 'EUR', 'cost.currency');
   exactArray(cost.alert_thresholds, [2, 5, 10], 'cost.alert_thresholds');
   exact(cost.alerts_are_not_hard_caps, true, 'cost.alerts_are_not_hard_caps');
@@ -668,10 +678,10 @@ function validateTerraform(value) {
     'local_state_artifacts_created',
     'post_plan_checks',
   ]);
-  exact(observation.observed_on, '2026-09-02', 'terraform.local_plan_observation.observed_on');
+  exact(observation.observed_on, '2026-09-03', 'terraform.local_plan_observation.observed_on');
   exact(
     observation.configuration_commit,
-    'f363d4ee3cc6639edfa59fefe92cb1ffca682fd1',
+    '9b3905bb62718b57456b0658386b424ed635e82f',
     'terraform.local_plan_observation.configuration_commit',
   );
 
@@ -818,10 +828,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 11, 'manifest.revision');
+  exact(manifest.revision, 12, 'manifest.revision');
   exact(
     manifest.status,
-    'bootstrap_plan_observed_keyless_blueprint_unbilled',
+    'bootstrap_plan_observed_billing_linked_keyless_blueprint_undeployed',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
