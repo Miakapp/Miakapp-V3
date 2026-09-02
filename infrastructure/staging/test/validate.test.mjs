@@ -28,10 +28,10 @@ function rejects(mutator, pattern) {
   );
 }
 
-test('accepts the GitHub-secured keyless Paris blueprint while cloud state remains unbilled', () => {
+test('accepts the observed bootstrap plan while cloud state remains unbilled and unchanged', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 10);
-  assert.equal(validated.status, 'github_security_configured_keyless_blueprint_unbilled');
+  assert.equal(validated.revision, 11);
+  assert.equal(validated.status, 'bootstrap_plan_observed_keyless_blueprint_unbilled');
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
   assert.equal(validated.project.lifecycle, 'firebase_enabled_unbilled');
@@ -72,7 +72,23 @@ test('accepts the GitHub-secured keyless Paris blueprint while cloud state remai
   assert.equal(validated.terraform.saved_plan.state, 'private_gcs_blueprint_not_active');
   assert.equal(validated.terraform.saved_plan.public_artifacts_allowed, false);
   assert.equal(validated.terraform.apply_authorized, false);
-  assert.equal(validated.terraform.local_plan_executed, false);
+  assert.equal(validated.terraform.local_plan_executed, true);
+  assert.deepEqual(validated.terraform.local_plan_observation.result, {
+    add: 36,
+    change: 0,
+    destroy: 0,
+  });
+  assert.deepEqual(validated.terraform.local_plan_observation.resource_counts, {
+    billing_and_budget: 2,
+    service_apis: 8,
+    storage_buckets: 2,
+    service_accounts: 3,
+    workload_identity_pool_and_providers: 3,
+    iam_bindings: 18,
+  });
+  assert.equal(validated.terraform.local_plan_observation.saved_plan_created, false);
+  assert.equal(validated.terraform.local_plan_observation.apply_executed, false);
+  assert.equal(validated.terraform.local_plan_observation.local_state_artifacts_created, false);
   assert.equal(validated.evidence.github_policy_observation_verified, true);
   assert.equal(validated.evidence.active_cloud_workflow_present, false);
   assert.equal(validated.readiness.required_blockers.includes('github-terraform-workflow-not-installed'), true);
@@ -346,8 +362,32 @@ test('rejects Terraform activation, identity, state, provider, and deployment dr
     candidate.terraform.offline_check_uses_mock_providers = false;
   }, /terraform\.offline_check_uses_mock_providers/);
   rejects((candidate) => {
-    candidate.terraform.local_plan_executed = true;
+    candidate.terraform.local_plan_executed = false;
   }, /terraform\.local_plan_executed/);
+});
+
+test('rejects incomplete or mutated bootstrap plan evidence', () => {
+  rejects((candidate) => {
+    candidate.terraform.local_plan_observation.configuration_commit = '0'.repeat(40);
+  }, /terraform\.local_plan_observation\.configuration_commit/);
+  rejects((candidate) => {
+    candidate.terraform.local_plan_observation.result.add = 35;
+  }, /terraform\.local_plan_observation\.result\.add/);
+  rejects((candidate) => {
+    candidate.terraform.local_plan_observation.resource_counts.iam_bindings = 17;
+  }, /terraform\.local_plan_observation\.resource_counts\.iam_bindings/);
+  rejects((candidate) => {
+    candidate.terraform.local_plan_observation.saved_plan_created = true;
+  }, /terraform\.local_plan_observation\.saved_plan_created/);
+  rejects((candidate) => {
+    candidate.terraform.local_plan_observation.apply_executed = true;
+  }, /terraform\.local_plan_observation\.apply_executed/);
+  rejects((candidate) => {
+    candidate.terraform.local_plan_observation.local_state_artifacts_created = true;
+  }, /terraform\.local_plan_observation\.local_state_artifacts_created/);
+  rejects((candidate) => {
+    candidate.terraform.local_plan_observation.post_plan_checks.pop();
+  }, /terraform\.local_plan_observation\.post_plan_checks/);
 });
 
 test('requires every production blocker and staging evidence row', () => {
