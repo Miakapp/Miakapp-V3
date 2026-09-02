@@ -1,7 +1,8 @@
 # Miakapp 4 staging teardown rehearsal
 
 Status: non-executable rehearsal; neither Terraform root has been applied, the
-cloud workflow is dormant, and only the approved billing link is active
+cloud workflow is dormant, only the approved billing link is active in cloud,
+and the reviewed local plan has not been authorized
 
 This runbook applies to the existing `miakapp-v4-staging` project. It must never
 be run against `miakapp-3`, `miakapp-v4`, or a `demo-*` project. A future
@@ -21,9 +22,10 @@ The repository now contains separate apply-capable bootstrap and foundation
 roots, a private versioned GCS backend design, keyless plan/apply identities and
 a dormant GitHub workflow blueprint. None exists in the cloud. The circular
 bootstrap uses protected temporary local state first, then the reviewed GCS
-migration template. Private saved-plan preparation and inspection commands are
-present but have not been run; no apply or migration command is committed. Local
-`.terraform/` provider caches are disposable and are not cloud inventory.
+migration template. One exact saved plan has been prepared and inspected in a
+private local bundle outside the repository; it contains no state and has not
+been applied. No apply or migration command is committed. Local `.terraform/`
+provider caches are disposable and are not cloud inventory.
 
 Infrastructure state or a successful destroy command is not sufficient evidence
 that spend has stopped. Managed Functions can leave Cloud Run revisions,

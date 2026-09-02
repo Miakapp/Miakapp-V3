@@ -415,11 +415,12 @@ current consumer.
    SHA-pinned workflow binds a private saved plan to a protected apply job,
    while a closed policy record now proves that the branch, environment and
    Actions settings were configured and re-observed without activating cloud
-   resources or installing the workflow. A fresh non-saved diagnostic bootstrap
-   plan reports 36 additions, no changes and no destroys. Next create and review
-   an exact saved plan, obtain separate mutation authorization, migrate bootstrap
-   state, initialize and verify an empty foundation state with protected operator
-   credentials,
+   resources or installing the workflow. A fresh non-saved diagnostic and the
+   subsequent digest-verified private saved bootstrap plan both report 36
+   additions, no changes and no destroys. The exact plan is reviewed but remains
+   unapplied. Next obtain explicit mutation authorization for that digest,
+   migrate and reconcile bootstrap state, initialize and verify an empty
+   foundation state with protected operator credentials,
    authorize workflow installation, then review the foundation plan. The production entry point and exact
    runtime IAM expansion remain required before closing relay-integration and
    staging-only RFC 0004 Section 18 gates.

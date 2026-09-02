@@ -1,7 +1,7 @@
 # Miakapp 4 staging activation blueprint
 
-Status: approved billing link active and guarded bootstrap plan re-observed; the
-Firebase project remains empty and undeployed
+Status: approved billing link active and exact private bootstrap plan reviewed;
+the Firebase project remains empty and undeployed
 
 This directory contains a closed, apply-capable description of the future
 `miakapp-v4-staging` foundation. It does not authorize or perform cloud
@@ -18,7 +18,8 @@ dated inventory in [`manifest.json`](manifest.json) records:
 - no registered Firebase app, App Engine application, Firestore database,
   Storage bucket, Function, Cloud Run service, KMS key ring, or secret;
 - no staging runtime, planner, or deployer identity; and
-- no live Terraform state or saved plan.
+- one exact saved bootstrap plan exists only in a private local bundle outside
+  the repository; no Terraform state exists.
 
 On 2026-09-03, after the separately authorized billing link, the guarded
 bootstrap command ran against configuration commit
@@ -29,6 +30,16 @@ service-account, Workload Identity, and local-state boundaries. The command
 saved no plan and performed no apply. Because no Terraform state exists, the
 provider still represents the already-active billing association as an addition;
 the command did not create or change that link.
+
+Later on 2026-09-03, the guarded saved-plan path produced and fully inspected the
+authoritative create-only plan from commit
+`c192f97959833f53a19d4e6dc50b26292c88b3b5`. Its SHA-256 is
+`0918d21c4677ce0958be9ccc43057d8d76a33857fdfbea066120ba953e30b5c1`, and
+its exact result is the same 36 additions, no changes, and no destroys. The
+private bundle path, planned values, and raw billing-account identifier are not
+committed. Planning and inspection created no state, performed no apply, and
+left the target budget, buckets, service accounts, and Workload Identity pool
+absent.
 
 Firebase-enabled APIs and its managed Admin SDK service account exist, but they
 are not evidence of a deployed or metered workload. Paris (`europe-west9`) and
@@ -43,7 +54,7 @@ resources, install a cloud workflow, open ingress, apply, or destroy.
 
 | Path | Purpose | Current execution boundary |
 |---|---|---|
-| [`bootstrap/`](bootstrap/) | Billing, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Guarded 36/0/0 diagnostic observed; exact private-plan tooling ready but not run; never applied |
+| [`bootstrap/`](bootstrap/) | Billing, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Exact private 36/0/0 plan reviewed; never applied |
 | [`terraform/`](terraform/) | APIs, Firestore, KMS, empty Secret Manager containers, and resource-scoped runtime IAM | Mock-tested offline; live plan blocked until bootstrap state exists |
 | [`automation/`](automation/) | GitHub policy record, dormant plan/apply workflow, private-plan scripts, and operator inspection | Outside `.github/workflows`; cannot run |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
@@ -92,9 +103,9 @@ is the exact migration target, not an active Terraform file.
 
 The bootstrap root now contains guarded commands that can save an exact plan to
 a mode-0700 directory outside the repository and inspect it locally after
-verifying its source commit, digest and create-only resource inventory. They have
-not been run because the plan must be produced from the final clean commit. A
-future separately authorized step must apply that reviewed plan from its
+verifying its source commit, digest and create-only resource inventory. Those
+commands produced and inspected the authoritative plan recorded above. A future
+separately authorized step must apply that exact plan from its
 protected local-state path, activate the backend template, migrate that exact
 state to `terraform/bootstrap`, and independently reconcile the remote
 generation before deleting any local copy. There is deliberately still no apply
@@ -155,13 +166,13 @@ because workflow installation and cloud bootstrap remain unauthorized.
 ## Next authorization gate
 
 The GitHub branch, environment and Actions prerequisite are configured. The
-approved billing link and a fresh non-saved bootstrap diagnostic plan were
-completed and re-observed on 2026-09-03 without installing a cloud workflow or
-creating any other resource. Before any additional cloud action, a separate
-reviewed pass must:
+approved billing link, non-saved diagnostic, and exact private saved-plan review
+were completed on 2026-09-03 without installing a cloud workflow or creating any
+other resource. Before any additional cloud action, a separate reviewed pass
+must:
 
-1. revalidate the external policy and cloud inventory, then create and review an
-   exact saved bootstrap plan and receive new operator authorization to apply it;
+1. receive explicit operator authorization for the exact recorded plan, then
+   revalidate its digest, external policy, and cloud inventory before applying;
 2. migrate and reconcile bootstrap state before any foundation plan;
 3. install the cloud workflow only after its WIF providers and service accounts
    exist; and

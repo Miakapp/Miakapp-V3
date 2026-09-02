@@ -116,6 +116,15 @@ const LOCAL_PLAN_POST_CHECKS = [
   'workload-identity-pool-absent',
 ];
 
+const LOCAL_SAVED_PLAN_POST_CHECKS = [
+  'billing-linked-to-approved-account',
+  'repository-plan-and-state-artifacts-absent',
+  'target-budget-absent',
+  'target-buckets-absent',
+  'target-service-accounts-absent',
+  'workload-identity-pool-absent',
+];
+
 const TEARDOWN_INVENTORY = [
   'cloud-functions-and-cloud-run-revisions',
   'eventarc-triggers',
@@ -486,6 +495,7 @@ function validateTerraform(value) {
     'local_plan_requires_operator_confirmation',
     'local_plan_executed',
     'local_plan_observation',
+    'local_saved_plan_observation',
   ]);
   exact(terraform.state, 'bootstrap_foundation_and_automation_blueprint', 'terraform.state');
   exact(
@@ -728,6 +738,163 @@ function validateTerraform(value) {
     LOCAL_PLAN_POST_CHECKS,
     'terraform.local_plan_observation.post_plan_checks',
   );
+
+  const savedObservation = record(
+    terraform.local_saved_plan_observation,
+    'terraform.local_saved_plan_observation',
+    [
+      'observed_on',
+      'created_at',
+      'configuration_commit',
+      'terraform_version',
+      'plan_sha256',
+      'result',
+      'resource_counts',
+      'private_bundle_outside_repository',
+      'private_bundle_path_committed',
+      'planned_values_committed',
+      'raw_billing_account_identifier_committed',
+      'binary_digest_verified',
+      'binary_plan_matches_metadata',
+      'full_plan_reviewed',
+      'local_state_artifacts_created',
+      'apply_authorized',
+      'apply_executed',
+      'state_migration_authorized',
+      'state_migration_executed',
+      'post_inspection_checks',
+    ],
+  );
+  exact(savedObservation.observed_on, '2026-09-03', 'terraform.local_saved_plan_observation.observed_on');
+  exact(
+    savedObservation.created_at,
+    '2026-09-02T23:32:22Z',
+    'terraform.local_saved_plan_observation.created_at',
+  );
+  exact(
+    savedObservation.configuration_commit,
+    'c192f97959833f53a19d4e6dc50b26292c88b3b5',
+    'terraform.local_saved_plan_observation.configuration_commit',
+  );
+  exact(
+    savedObservation.terraform_version,
+    '1.11.3',
+    'terraform.local_saved_plan_observation.terraform_version',
+  );
+  exact(
+    savedObservation.plan_sha256,
+    '0918d21c4677ce0958be9ccc43057d8d76a33857fdfbea066120ba953e30b5c1',
+    'terraform.local_saved_plan_observation.plan_sha256',
+  );
+
+  const savedResult = record(savedObservation.result, 'terraform.local_saved_plan_observation.result', [
+    'add',
+    'change',
+    'destroy',
+  ]);
+  exact(savedResult.add, 36, 'terraform.local_saved_plan_observation.result.add');
+  exact(savedResult.change, 0, 'terraform.local_saved_plan_observation.result.change');
+  exact(savedResult.destroy, 0, 'terraform.local_saved_plan_observation.result.destroy');
+
+  const savedResourceCounts = record(
+    savedObservation.resource_counts,
+    'terraform.local_saved_plan_observation.resource_counts',
+    [
+      'billing_and_budget',
+      'service_apis',
+      'storage_buckets',
+      'service_accounts',
+      'workload_identity_pool_and_providers',
+      'iam_bindings',
+    ],
+  );
+  exact(
+    savedResourceCounts.billing_and_budget,
+    2,
+    'terraform.local_saved_plan_observation.resource_counts.billing_and_budget',
+  );
+  exact(
+    savedResourceCounts.service_apis,
+    8,
+    'terraform.local_saved_plan_observation.resource_counts.service_apis',
+  );
+  exact(
+    savedResourceCounts.storage_buckets,
+    2,
+    'terraform.local_saved_plan_observation.resource_counts.storage_buckets',
+  );
+  exact(
+    savedResourceCounts.service_accounts,
+    3,
+    'terraform.local_saved_plan_observation.resource_counts.service_accounts',
+  );
+  exact(
+    savedResourceCounts.workload_identity_pool_and_providers,
+    3,
+    'terraform.local_saved_plan_observation.resource_counts.workload_identity_pool_and_providers',
+  );
+  exact(
+    savedResourceCounts.iam_bindings,
+    18,
+    'terraform.local_saved_plan_observation.resource_counts.iam_bindings',
+  );
+  exact(
+    savedObservation.private_bundle_outside_repository,
+    true,
+    'terraform.local_saved_plan_observation.private_bundle_outside_repository',
+  );
+  exact(
+    savedObservation.private_bundle_path_committed,
+    false,
+    'terraform.local_saved_plan_observation.private_bundle_path_committed',
+  );
+  exact(
+    savedObservation.planned_values_committed,
+    false,
+    'terraform.local_saved_plan_observation.planned_values_committed',
+  );
+  exact(
+    savedObservation.raw_billing_account_identifier_committed,
+    false,
+    'terraform.local_saved_plan_observation.raw_billing_account_identifier_committed',
+  );
+  exact(
+    savedObservation.binary_digest_verified,
+    true,
+    'terraform.local_saved_plan_observation.binary_digest_verified',
+  );
+  exact(
+    savedObservation.binary_plan_matches_metadata,
+    true,
+    'terraform.local_saved_plan_observation.binary_plan_matches_metadata',
+  );
+  exact(
+    savedObservation.full_plan_reviewed,
+    true,
+    'terraform.local_saved_plan_observation.full_plan_reviewed',
+  );
+  exact(
+    savedObservation.local_state_artifacts_created,
+    false,
+    'terraform.local_saved_plan_observation.local_state_artifacts_created',
+  );
+  exact(savedObservation.apply_authorized, false, 'terraform.local_saved_plan_observation.apply_authorized');
+  exact(savedObservation.apply_executed, false, 'terraform.local_saved_plan_observation.apply_executed');
+  exact(
+    savedObservation.state_migration_authorized,
+    false,
+    'terraform.local_saved_plan_observation.state_migration_authorized',
+  );
+  exact(
+    savedObservation.state_migration_executed,
+    false,
+    'terraform.local_saved_plan_observation.state_migration_executed',
+  );
+  exactArray(
+    savedObservation.post_inspection_checks,
+    LOCAL_SAVED_PLAN_POST_CHECKS,
+    'terraform.local_saved_plan_observation.post_inspection_checks',
+  );
 }
 
 function validateReadiness(value) {
@@ -828,10 +995,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 12, 'manifest.revision');
+  exact(manifest.revision, 13, 'manifest.revision');
   exact(
     manifest.status,
-    'bootstrap_plan_observed_billing_linked_keyless_blueprint_undeployed',
+    'bootstrap_saved_plan_reviewed_billing_linked_undeployed',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');

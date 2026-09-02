@@ -2,8 +2,8 @@
 
 Date: 2026-09-01
 
-Status: accepted direction; approved staging billing link active and guarded
-bootstrap plan re-observed on 2026-09-03; project remains undeployed
+Status: accepted direction; approved staging billing link active and exact
+private bootstrap plan reviewed on 2026-09-03; project remains undeployed
 
 ## Decision
 
@@ -194,9 +194,12 @@ record. No WIF identity, bucket or state exists.
 The 2026-09-03 non-saved diagnostic plan again reported 36 additions, no changes,
 and no destroys; it performed no apply and created no state. The untracked but
 already-active billing association consequently still appears as an addition in
-that state-free diagnostic. Before another cloud action, a reviewed pass must
-save and review an exact bootstrap plan, receive new operator authorization,
-apply from protected temporary state, migrate and reconcile that state,
+that state-free diagnostic. The subsequent private saved plan from commit
+`c192f97959833f53a19d4e6dc50b26292c88b3b5` was digest-verified and fully
+reviewed with the same 36/0/0 result. It remains unapplied and created no state or
+cloud resource. Before another cloud action, the owner must explicitly authorize
+that exact plan; the operator must then revalidate its digest and inventory,
+apply from protected temporary state, migrate and reconcile that state, and
 initialize and verify the
 empty foundation state with protected operator credentials, then authorize and
 install the workflow. A separate reviewed foundation plan is required before
