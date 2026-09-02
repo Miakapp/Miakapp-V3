@@ -28,21 +28,28 @@ function rejects(mutator, pattern) {
   );
 }
 
-test('accepts the observed bootstrap plan while cloud state remains unbilled and unchanged', () => {
+test('accepts the observed bootstrap plan after the approved billing link without deployment', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 11);
-  assert.equal(validated.status, 'bootstrap_plan_observed_keyless_blueprint_unbilled');
+  assert.equal(validated.revision, 12);
+  assert.equal(
+    validated.status,
+    'bootstrap_plan_observed_billing_linked_keyless_blueprint_undeployed',
+  );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
-  assert.equal(validated.project.lifecycle, 'firebase_enabled_unbilled');
-  assert.equal(validated.bootstrap.billing_enabled, false);
+  assert.equal(validated.project.lifecycle, 'firebase_enabled_billing_linked_undeployed');
+  assert.equal(validated.bootstrap.billing_enabled, true);
   assert.equal(validated.bootstrap.firebase_apps, 0);
   assert.equal(validated.bootstrap.hosting_site, 'miakapp-v4-staging');
   assert.deepEqual(validated.bootstrap.storage_buckets, []);
   assert.equal(validated.locations.primary, 'europe-west9');
   assert.equal(validated.locations.immutable_choice_reviewed, true);
   assert.equal(validated.cost.billing_account.selection_state, 'approved');
-  assert.equal(validated.cost.billing_account.link_state, 'not_linked');
+  assert.equal(validated.cost.billing_account.link_state, 'linked_to_approved_account');
+  assert.equal(
+    validated.cost.billing_account.terraform_management_state,
+    'active_outside_terraform_state',
+  );
   assert.equal(validated.terraform.state, 'bootstrap_foundation_and_automation_blueprint');
   assert.equal(validated.terraform.supported_workflow, 'credential_free_validation_and_local_plan_only');
   assert.equal(validated.terraform.configuration_apply_capable, true);
@@ -89,6 +96,15 @@ test('accepts the observed bootstrap plan while cloud state remains unbilled and
   assert.equal(validated.terraform.local_plan_observation.saved_plan_created, false);
   assert.equal(validated.terraform.local_plan_observation.apply_executed, false);
   assert.equal(validated.terraform.local_plan_observation.local_state_artifacts_created, false);
+  assert.equal(validated.terraform.local_plan_observation.observed_on, '2026-09-03');
+  assert.equal(
+    validated.terraform.local_plan_observation.configuration_commit,
+    '9b3905bb62718b57456b0658386b424ed635e82f',
+  );
+  assert.equal(
+    validated.terraform.local_plan_observation.post_plan_checks[0],
+    'billing-linked-to-approved-account',
+  );
   assert.equal(validated.evidence.github_policy_observation_verified, true);
   assert.equal(validated.evidence.active_cloud_workflow_present, false);
   assert.equal(validated.readiness.required_blockers.includes('github-terraform-workflow-not-installed'), true);
@@ -124,15 +140,15 @@ test('rejects legacy, production, and demo project targets', () => {
   }
 });
 
-test('rejects drift from the observed unbilled bootstrap inventory', () => {
+test('rejects drift from the observed billing-linked undeployed bootstrap inventory', () => {
   rejects((candidate) => {
     candidate.project.project_number = '000000000000';
   }, /project\.project_number/);
   rejects((candidate) => {
-    candidate.project.lifecycle = 'billing_linked';
+    candidate.project.lifecycle = 'firebase_enabled_unbilled';
   }, /project\.lifecycle/);
   rejects((candidate) => {
-    candidate.bootstrap.billing_enabled = true;
+    candidate.bootstrap.billing_enabled = false;
   }, /bootstrap\.billing_enabled/);
   rejects((candidate) => {
     candidate.bootstrap.firebase_apps = 1;
@@ -278,8 +294,11 @@ test('rejects fixed-cost services and budget safety drift', () => {
     candidate.cost.billing_account.raw_identifier_committed = true;
   }, /cost\.billing_account\.raw_identifier_committed/);
   rejects((candidate) => {
-    candidate.cost.billing_account.link_state = 'linked';
+    candidate.cost.billing_account.link_state = 'not_linked';
   }, /cost\.billing_account\.link_state/);
+  rejects((candidate) => {
+    candidate.cost.billing_account.terraform_management_state = 'managed';
+  }, /cost\.billing_account\.terraform_management_state/);
   rejects((candidate) => {
     candidate.cost.free_tier_assumed = true;
   }, /cost\.free_tier_assumed/);

@@ -30,13 +30,16 @@ node infrastructure/staging/automation/guard.mjs \
   "${repository_root}/infrastructure/staging/automation"
 node infrastructure/staging/bootstrap/guard.mjs \
   "${repository_root}/infrastructure/staging/bootstrap"
+node --check infrastructure/staging/bootstrap/saved-plan.mjs
 node infrastructure/staging/terraform/guard.mjs \
   "${repository_root}/infrastructure/staging/terraform"
 bash -n \
   infrastructure/staging/automation/apply.sh \
   infrastructure/staging/automation/inspect-plan.sh \
   infrastructure/staging/automation/plan.sh \
+  infrastructure/staging/bootstrap/inspect-plan.sh \
   infrastructure/staging/bootstrap/plan.sh \
+  infrastructure/staging/bootstrap/save-plan.sh \
   infrastructure/staging/terraform/plan.sh
 node --test \
   infrastructure/staging/test/bootstrap.test.mjs \

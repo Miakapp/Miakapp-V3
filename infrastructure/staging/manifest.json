@@ -1,13 +1,13 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 11,
-  "status": "bootstrap_plan_observed_keyless_blueprint_unbilled",
+  "revision": 12,
+  "status": "bootstrap_plan_observed_billing_linked_keyless_blueprint_undeployed",
   "environment": "staging",
   "project": {
     "project_id": "miakapp-v4-staging",
     "project_number": "1072737219170",
     "display_name": "Miakapp V4 Staging",
-    "lifecycle": "firebase_enabled_unbilled",
+    "lifecycle": "firebase_enabled_billing_linked_undeployed",
     "creation_authorized": false,
     "billing_link_authorized": false,
     "deployment_authorized": false,
@@ -22,8 +22,8 @@
     ]
   },
   "bootstrap": {
-    "observed_on": "2026-09-02",
-    "billing_enabled": false,
+    "observed_on": "2026-09-03",
+    "billing_enabled": true,
     "firebase_apps": 0,
     "hosting_site": "miakapp-v4-staging",
     "app_engine_application": false,
@@ -268,7 +268,8 @@
       "selection_state": "approved",
       "identifier_sha256": "4557923f1be719b78ee844b14bfa4654be3eb3fa785a2cb5a2624c3f85d12270",
       "raw_identifier_committed": false,
-      "link_state": "not_linked"
+      "link_state": "linked_to_approved_account",
+      "terraform_management_state": "active_outside_terraform_state"
     },
     "currency": "EUR",
     "alert_thresholds": [
@@ -365,8 +366,8 @@
     "local_plan_requires_operator_confirmation": true,
     "local_plan_executed": true,
     "local_plan_observation": {
-      "observed_on": "2026-09-02",
-      "configuration_commit": "f363d4ee3cc6639edfa59fefe92cb1ffca682fd1",
+      "observed_on": "2026-09-03",
+      "configuration_commit": "9b3905bb62718b57456b0658386b424ed635e82f",
       "result": {
         "add": 36,
         "change": 0,
@@ -384,7 +385,7 @@
       "apply_executed": false,
       "local_state_artifacts_created": false,
       "post_plan_checks": [
-        "billing-unlinked",
+        "billing-linked-to-approved-account",
         "enabled-services-unchanged",
         "project-iam-unchanged",
         "bucket-inventory-unchanged",

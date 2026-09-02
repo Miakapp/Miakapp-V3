@@ -2,8 +2,8 @@
 
 Date: 2026-09-01
 
-Status: accepted direction; keyless staging activation blueprint ready on
-2026-09-02; project remains unbilled and undeployed
+Status: accepted direction; approved staging billing link active and guarded
+bootstrap plan re-observed on 2026-09-03; project remains undeployed
 
 ## Decision
 
@@ -22,7 +22,7 @@ are:
 | Environment | Project ID | Data | Purpose |
 |---|---|---|---|
 | Local | `demo-miakapp-v4` | synthetic only | Hermetic Emulator Suite and CI |
-| Staging | `miakapp-v4-staging` | synthetic only | Existing unbilled project for real-service acceptance, load calibration and migration rehearsal |
+| Staging | `miakapp-v4-staging` | synthetic only | Existing billing-linked, undeployed project for real-service acceptance, load calibration and migration rehearsal |
 | Production | `miakapp-v4` | migrated production data | Canary, then final Miakapp 4 service |
 | Legacy production | `miakapp-3` | existing production data | Unchanged service and rollback oracle during migration |
 
@@ -30,9 +30,9 @@ The `miakapp-v4-staging` Firebase project was created manually on 2026-09-02;
 `miakapp-v4` does not exist. Paris (`europe-west9`) is the reviewed immutable
 regional location, and the owner selected an existing EUR billing account whose
 identifier is represented publicly only by a SHA-256 fingerprint. The account
-is not linked. The repository workflow still creates or deploys neither
-environment. The local package rejects execution outside the exact `demo-*`
-namespace, and the root Firebase default remains the legacy project.
+was linked on 2026-09-03. The repository workflow still creates or deploys
+neither environment. The local package rejects execution outside the exact
+`demo-*` namespace, and the root Firebase default remains the legacy project.
 
 References:
 
@@ -72,12 +72,14 @@ warns that a staging application must not use production project credentials.
 
 The merged local control-plane work, Terraform source, dormant cloud workflow
 blueprint, and active credential-free validation add **no Firebase usage and no
-cloud cost**.
+cloud cost**. The billing association enables future metered services but does
+not itself create one.
 It runs against local Auth, Firestore, Functions and Storage emulators and cannot
-load as a production Function. The staging project currently has no linked
-billing account, registered Firebase app, App Engine application, database,
-bucket or deployed workload. Firebase enabled its bootstrap APIs and reserved a
-Hosting site namespace, but no application was deployed to it.
+load as a production Function. The staging project currently has the approved
+billing link, but the link operation created no budget, registered Firebase app,
+App Engine application, database, bucket or deployed workload. Firebase enabled
+its bootstrap APIs and reserved a Hosting site namespace, but no application was
+deployed to it.
 
 For a low-volume staging project, the intended initial posture is:
 
@@ -159,8 +161,9 @@ successful Firestore import.
 
 The local fault matrix and reviewable staging manifest preceded the one-shot
 creation of `miakapp-v4-staging`. The 2026-09-02 bootstrap claimed the permanent
-project ID and enabled Firebase without linking billing or selecting an immutable
-resource location. Its sanitized inventory now lives under
+project ID and enabled Firebase without selecting an immutable resource
+location. A separately authorized operation linked the approved billing account
+on 2026-09-03. Its sanitized inventory now lives under
 [`../../infrastructure/staging/`](../../infrastructure/staging/).
 
 The location and billing-account selection are reviewed inputs. Separate
@@ -188,9 +191,13 @@ repository OIDC subject were left unchanged. The workflow remains outside
 `.github/workflows`, and its policy job rejects the current cloud-inactive
 record. No WIF identity, bucket or state exists.
 
-Before another cloud action, a reviewed pass must save and review an exact
-bootstrap plan, receive new operator authorization, apply from protected
-temporary state, migrate and reconcile that state, initialize and verify the
+The 2026-09-03 non-saved diagnostic plan again reported 36 additions, no changes,
+and no destroys; it performed no apply and created no state. The untracked but
+already-active billing association consequently still appears as an addition in
+that state-free diagnostic. Before another cloud action, a reviewed pass must
+save and review an exact bootstrap plan, receive new operator authorization,
+apply from protected temporary state, migrate and reconcile that state,
+initialize and verify the
 empty foundation state with protected operator credentials, then authorize and
 install the workflow. A separate reviewed foundation plan is required before
 apply approval. The production Function entry point,

@@ -1,7 +1,7 @@
 # Miakapp 4 staging activation blueprint
 
-Status: guarded bootstrap plan observed; the Firebase project is still unbilled,
-empty, and undeployed
+Status: approved billing link active and guarded bootstrap plan re-observed; the
+Firebase project remains empty and undeployed
 
 This directory contains a closed, apply-capable description of the future
 `miakapp-v4-staging` foundation. It does not authorize or perform cloud
@@ -13,33 +13,37 @@ The one-shot Firebase bootstrap on 2026-09-02 reserved project
 `miakapp-v4-staging` (`1072737219170`) and its default Hosting site name. The
 dated inventory in [`manifest.json`](manifest.json) records:
 
-- no billing link;
+- the approved EUR billing link is active; the link operation created no budget
+  or billing export;
 - no registered Firebase app, App Engine application, Firestore database,
   Storage bucket, Function, Cloud Run service, KMS key ring, or secret;
 - no staging runtime, planner, or deployer identity; and
 - no live Terraform state or saved plan.
 
-On 2026-09-02, the guarded bootstrap command ran against configuration commit
-`f363d4ee3cc6639edfa59fefe92cb1ffca682fd1` and proposed 36 additions, no
+On 2026-09-03, after the separately authorized billing link, the guarded
+bootstrap command ran against configuration commit
+`9b3905bb62718b57456b0658386b424ed635e82f` and proposed 36 additions, no
 changes, and no destroys. The closed observation in the manifest records the
-resource-category totals and the unchanged billing, API, IAM, bucket, service
-account, Workload Identity, and local state boundaries. The command saved no
-plan and performed no apply.
+resource-category totals, the approved link, and the unchanged API, IAM, bucket,
+service-account, Workload Identity, and local-state boundaries. The command
+saved no plan and performed no apply. Because no Terraform state exists, the
+provider still represents the already-active billing association as an addition;
+the command did not create or change that link.
 
 Firebase-enabled APIs and its managed Admin SDK service account exist, but they
-are not evidence of a deployed or billable workload. Paris (`europe-west9`) and
-the SHA-256 fingerprint of an existing EUR billing account are reviewed inputs;
+are not evidence of a deployed or metered workload. Paris (`europe-west9`) and
+the SHA-256 fingerprint of the linked EUR billing account are reviewed inputs;
 the raw billing account identifier is not committed.
 
-All authorization bits in the manifest remain false. Passing the local gate is
-review evidence, never authorization to link billing, create resources, install
-a cloud workflow, open ingress, apply, or destroy.
+All authorization bits for additional cloud actions in the manifest remain
+false. Passing the local gate is review evidence, never authorization to create
+resources, install a cloud workflow, open ingress, apply, or destroy.
 
 ## Repository layout
 
 | Path | Purpose | Current execution boundary |
 |---|---|---|
-| [`bootstrap/`](bootstrap/) | Billing, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Guarded 36/0/0 plan observed with local User ADC; never applied |
+| [`bootstrap/`](bootstrap/) | Billing, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Guarded 36/0/0 diagnostic observed; exact private-plan tooling ready but not run; never applied |
 | [`terraform/`](terraform/) | APIs, Firestore, KMS, empty Secret Manager containers, and resource-scoped runtime IAM | Mock-tested offline; live plan blocked until bootstrap state exists |
 | [`automation/`](automation/) | GitHub policy record, dormant plan/apply workflow, private-plan scripts, and operator inspection | Outside `.github/workflows`; cannot run |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
@@ -86,11 +90,15 @@ bootstrap root therefore has no active backend block and its guarded plan uses
 the implicit local backend. [`bootstrap/backend.gcs.tf.example`](bootstrap/backend.gcs.tf.example)
 is the exact migration target, not an active Terraform file.
 
-A future explicitly authorized bootstrap must save and review an exact plan,
-apply it from protected temporary local state, activate the backend template,
-migrate that exact state to `terraform/bootstrap`, and independently reconcile
-the remote generation before deleting any local copy. There is deliberately no
-apply or migration wrapper in this revision.
+The bootstrap root now contains guarded commands that can save an exact plan to
+a mode-0700 directory outside the repository and inspect it locally after
+verifying its source commit, digest and create-only resource inventory. They have
+not been run because the plan must be produced from the final clean commit. A
+future separately authorized step must apply that reviewed plan from its
+protected local-state path, activate the backend template, migrate that exact
+state to `terraform/bootstrap`, and independently reconcile the remote
+generation before deleting any local copy. There is deliberately still no apply
+or migration wrapper in this revision.
 
 The ordinary foundation root already points at `terraform/foundation` and reads
 the bootstrap output from `terraform/bootstrap`. A closed precondition checks
@@ -146,14 +154,14 @@ because workflow installation and cloud bootstrap remain unauthorized.
 
 ## Next authorization gate
 
-The GitHub branch, environment and Actions prerequisite and the non-saved
-bootstrap diagnostic plan were completed and re-observed on 2026-09-02 without
-installing a cloud workflow or changing Google Cloud. Before any additional
-cloud action, a separate reviewed pass must:
+The GitHub branch, environment and Actions prerequisite are configured. The
+approved billing link and a fresh non-saved bootstrap diagnostic plan were
+completed and re-observed on 2026-09-03 without installing a cloud workflow or
+creating any other resource. Before any additional cloud action, a separate
+reviewed pass must:
 
-1. revalidate the external policy and cloud inventory, then receive new operator
-   authorization to link billing and create, review, and apply an exact saved
-   bootstrap plan;
+1. revalidate the external policy and cloud inventory, then create and review an
+   exact saved bootstrap plan and receive new operator authorization to apply it;
 2. migrate and reconcile bootstrap state before any foundation plan;
 3. install the cloud workflow only after its WIF providers and service accounts
    exist; and
