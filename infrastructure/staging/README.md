@@ -1,120 +1,151 @@
-# Miakapp 4 staging intent
+# Miakapp 4 staging activation blueprint
 
-Status: planning only; no cloud project or resource has been created
+Status: credential-free validation only; the Firebase project is still unbilled,
+empty, and undeployed
 
-This directory records the reviewable infrastructure intent for the future
-`miakapp-v4-staging` project. It is deliberately not Terraform, Firebase CLI
-configuration, or a deployment workflow. Merging it does not reserve a project
-ID, link billing, enable an API, authenticate to Google Cloud, or deploy code.
+This directory contains a closed, apply-capable description of the future
+`miakapp-v4-staging` foundation. It does not authorize or perform cloud
+mutation. No active repository workflow authenticates to Google Cloud.
 
-## Safety boundary
+## Current truth
 
-[`manifest.json`](manifest.json) is a closed, machine-validated policy. The
-current revision requires all of the following:
+The one-shot Firebase bootstrap on 2026-09-02 reserved project
+`miakapp-v4-staging` (`1072737219170`) and its default Hosting site name. The
+dated inventory in [`manifest.json`](manifest.json) records:
 
-- the only staging target is `miakapp-v4-staging`;
-- `miakapp-3`, `miakapp-v4`, and every `demo-*` project are invalid targets;
-- project creation, billing linkage, deployment, public ingress and CI cloud
-  authentication remain disabled;
-- the root Firebase default remains the untouched `miakapp-3` legacy project,
-  and no staging alias is allowed;
-- staging data is synthetic only;
-- the regional intent is consistently `europe-west1`, but is not marked reviewed
-  because Firestore and bucket locations become difficult or impossible to
-  change after creation;
-- the Function scales to zero and is capped at one instance;
-- the component bucket is private, uses uniform access and Public Access
-  Prevention, has no CORS origin, versioning, retention lock or soft-delete
-  window in the initial cost posture;
-- no load balancer, forwarding rule, Cloud Armor policy, VPC connector, Cloud
-  NAT, minimum instance or Analytics property is accepted; and
-- secret values, broad project roles and human IAM bindings cannot be represented
-  by the schema.
+- no billing link;
+- no registered Firebase app, App Engine application, Firestore database,
+  Storage bucket, Function, Cloud Run service, KMS key ring, or secret;
+- no staging runtime, planner, or deployer identity; and
+- no live Terraform state or saved plan.
 
-The manifest names resources and intended access so they can be reviewed before
-an infrastructure implementation exists. It does not assert that those resources
-or bindings already exist. The FCM runtime permission intentionally remains
-unresolved until the real transport adapter determines the narrow deployable
-role.
+Firebase-enabled APIs and its managed Admin SDK service account exist, but they
+are not evidence of a deployed or billable workload. Paris (`europe-west9`) and
+the SHA-256 fingerprint of an existing EUR billing account are reviewed inputs;
+the raw billing account identifier is not committed.
 
-## Planned inventory
+All authorization bits in the manifest remain false. Passing the local gate is
+review evidence, never authorization to link billing, create resources, install
+a cloud workflow, open ingress, apply, or destroy.
 
-| Boundary | Initial intent |
-|---|---|
-| Project | `miakapp-v4-staging`, not created, no billing account |
-| Compute | one second-generation `controlPlane` Function in `europe-west1`, `minInstances=0`, `maxInstances=1` |
-| Firestore | default Standard regional database, deletion protection enabled, three explicit TTL fields |
-| Storage | dedicated private component bucket, not the Firebase default bucket |
-| Signing | software Ed25519 Cloud KMS key; manual version lifecycle |
-| Secrets | five named Secret Manager resources, automatic replication, at most two active versions each |
-| Identity | one dedicated runtime service account and resource-scoped access inventory |
-| Cost | EUR 2/5/10 alert thresholds, no free-tier assumption, no hard-cap claim |
-| Teardown | manual, independently inventoried, typed project-ID confirmation |
+## Repository layout
 
-Cloud KMS key rings cannot be deleted. Budget alerts can arrive late and do not
-stop spend. The Cloud Run spend-cap preview covers only eligible compute and is
-not enabled or treated as a project-wide safety boundary here.
+| Path | Purpose | Current execution boundary |
+|---|---|---|
+| [`bootstrap/`](bootstrap/) | Billing, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Plan only with local User ADC; never applied |
+| [`terraform/`](terraform/) | APIs, Firestore, KMS, empty Secret Manager containers, and resource-scoped runtime IAM | Mock-tested offline; live plan blocked until bootstrap state exists |
+| [`automation/`](automation/) | GitHub policy record, dormant plan/apply workflow, private-plan scripts, and operator inspection | Outside `.github/workflows`; cannot run |
+| [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
+| [`TEARDOWN.md`](TEARDOWN.md) | Manual recovery and teardown rehearsal | Documentation only |
+
+## Safety and cost posture
+
+The proposed foundation fixes every regional resource to Paris, keeps the
+Function at `minInstances=0` and `maxInstances=1`, and includes no load balancer,
+Cloud Armor policy, VPC connector, Cloud NAT, Analytics property, or deployed
+compute. The component bucket is private, has Public Access Prevention and no
+CORS origin. No secret value or service-account key is represented.
+
+If separately authorized and applied, the remote-state bucket would use uniform
+access, Public Access Prevention, Object Versioning, and a seven-day soft-delete
+window. Foundation state retains recovery history. Live saved plans expire after
+two days, their archived generation after one further day, and deleted bytes may
+remain recoverable during the bucket soft-delete window. Plans and state may
+contain private data and must never be committed or uploaded to public Actions
+artifacts.
+
+The planner and deployer configurations are keyless and separate. Both may read
+the private bucket. The planner may manage only `.tflock` objects and create
+saved plans; it cannot create or replace state. The empty foundation state must
+be initialized and verified with protected operator credentials before CI is
+admitted. Only the deployer may write foundation state; neither may mutate the bootstrap
+state prefix. Escalation-capable project IAM, service-account creation and bucket
+creation remain human-bootstrap operations. The deployer has only service-scoped
+foundation roles plus administration of the separate component bucket; it has no
+project-wide Storage or IAM role capable of bypassing the state boundary. None
+of these identities exists today.
+
+This repository change itself costs nothing. If activated, the empty state
+bucket should store only small state and short-lived plan objects, but Storage
+operations and retained versions are usage-metered. Budget alerts at EUR 2, EUR
+5, and EUR 10 are alarms rather than hard caps. The software KMS key version is
+the principal planned idle fixed cost; actual staging measurements must replace
+estimates before production.
+
+## Remote-state bootstrap boundary
+
+The GCS bucket cannot be the backend of the transaction that creates it. The
+bootstrap root therefore has no active backend block and its guarded plan uses
+the implicit local backend. [`bootstrap/backend.gcs.tf.example`](bootstrap/backend.gcs.tf.example)
+is the exact migration target, not an active Terraform file.
+
+A future explicitly authorized bootstrap must save and review an exact plan,
+apply it from protected temporary local state, activate the backend template,
+migrate that exact state to `terraform/bootstrap`, and independently reconcile
+the remote generation before deleting any local copy. There is deliberately no
+apply or migration wrapper in this revision.
+
+The ordinary foundation root already points at `terraform/foundation` and reads
+the bootstrap output from `terraform/bootstrap`. A closed precondition checks
+the exact project, region, both buckets, identity providers, all service
+accounts, and numeric GitHub repository IDs before any foundation resource can
+proceed.
+
+## Dormant GitHub automation
+
+[`automation/github-policy.json`](automation/github-policy.json) captures both
+the observed GitHub settings and the settings required before activation. At the
+recorded boundary, `main` is unprotected, only the unrelated `miakapi`
+environment exists, action selection/SHA enforcement are absent, and the cloud
+workflow is not installed.
+
+The dormant blueprint requires:
+
+- protected `main` with the credential-free staging gate required;
+- SHA-pinned selected actions and read-only default workflow permissions;
+- separate `miakapp-v4-staging-plan` and `miakapp-v4-staging-apply`
+  environments;
+- OIDC conditions over immutable repository/owner IDs, `main`, the exact
+  workflow reference, and the exact environment; and
+- explicit approval in the apply environment before the same-run,
+  digest-verified private plan is applied.
+
+There is one known human administrator. The desired apply environment therefore
+records that administrator as reviewer while allowing self-approval. This is an
+explicit operator checkpoint, not independent four-eyes review. Administrator
+bypass remains forbidden.
 
 ## Validate locally
 
-Node.js 22 is the only requirement:
+Node.js 22 and Terraform 1.11.3 are required:
 
 ```sh
 npm run test:staging-manifest
 ```
 
-The check parses the bounded manifest, rejects unknown fields and policy drift,
-verifies the legacy `.firebaserc` default, and runs adversarial mutations. It
-does not invoke Firebase, `gcloud`, Terraform, the network, or a credential
-provider. The matching CI workflow has only `contents: read` permission and no
-OIDC or secret access.
+The gate validates bounded closed manifests, all three reviewed inventories,
+the absent active workflow, pinned actions and providers, exact locks for macOS
+ARM64 and Linux AMD64, both Terraform roots with mock providers, script syntax,
+private-plan handling, and hostile environment inputs. It initializes Terraform
+with `-backend=false` and never reads credentials or contacts staging.
 
-The control-plane now also has an inactive, locally tested production
-composition: a closed runtime/resource parser, pinned Secret Manager reads, an
-Ed25519 Cloud KMS signer, standard Firebase Admin App Check verification,
-FID-targeted FCM messaging and a production Storage boundary. The manifest
-records that unit-test evidence without claiming real-service acceptance. The
-Function entry point still imports only the demo-emulator composition; the
-inactive factory is never called by Firebase configuration. IAM bindings, a
-deployable `onInit()` entry point, live key publication/rotation and every
-`STAGE-*` observation remain activation blockers. No project or billable
-operation results from this code.
+The active validation workflow has only `contents: read`; it has no OIDC or
+secret permission. The dormant workflow deliberately fails its first policy job
+until a later reviewed activation changes the policy record.
 
-The inactive factory pins metadata credentials to
-`miakapp-control-plane@miakapp-v4-staging.iam.gserviceaccount.com`, pins the
-standard Google API universe/endpoints, disables generated-client retries and
-rejects credential-file, emulator, quota-project, universe and SDK-debug
-environment overrides, including alternate metadata hosts and HTTP/HTTPS/gRPC
-proxy paths. Firestore receives the same explicit Google Auth instance through
-its direct pinned constructor. This is a locally verified construction
-constraint, not evidence that the account or its IAM bindings exist.
+## Next authorization gate
 
-## Activation gate
+Before any additional cloud action, a separate reviewed pass must:
 
-Before this planning record can become deployable infrastructure, a separately
-reviewed change must:
+1. independently re-observe and configure the GitHub branch, environment, and
+   Actions policy;
+2. produce a bootstrap plan and explicit cost/resource inventory for review;
+3. receive new operator authorization to link billing and apply that exact plan;
+4. migrate and reconcile bootstrap state before any foundation plan;
+5. install the cloud workflow only after its WIF providers and service accounts
+   exist; and
+6. review a live foundation plan before granting apply approval.
 
-1. resolve every item in `readiness.required_blockers` with production adapters
-   and evidence;
-2. obtain explicit operator approval for the immutable locations, project
-   creation and billing linkage;
-3. define the deployer identity and exact FCM permission without broad roles;
-4. keep the project target explicit in every command and workflow;
-5. add a dry-run/plan artifact that cannot target legacy or production; and
-6. rehearse [`TEARDOWN.md`](TEARDOWN.md) before opening public ingress.
-
-Passing this manifest gate authorizes none of those actions. The real-service
-acceptance work remains the `STAGE-01` through `STAGE-09` matrix in
-[`../../control-plane/FAULT-MATRIX.md`](../../control-plane/FAULT-MATRIX.md).
-
-## References
-
-- [Firebase environment isolation](https://firebase.google.com/docs/projects/dev-workflows/overview-environments)
-- [Firebase infrastructure with Terraform](https://firebase.google.com/docs/projects/terraform/get-started)
-- [Manage Functions instances](https://firebase.google.com/docs/functions/manage-functions)
-- [Firebase billing safety](https://firebase.google.com/docs/projects/billing/avoid-surprise-bills)
-- [Cloud Billing budgets](https://cloud.google.com/billing/docs/how-to/budgets)
-- [Firebase project locations](https://firebase.google.com/docs/projects/locations)
-- [Cloud Storage uniform bucket-level access](https://cloud.google.com/storage/docs/uniform-bucket-level-access)
-- [Secret Manager best practices](https://cloud.google.com/secret-manager/docs/best-practices)
-- [Cloud KMS IAM](https://cloud.google.com/kms/docs/iam)
+The production Function entry point, exact FCM runtime permission, secret
+version lifecycle, ingress design, monitoring, real-service fault matrix,
+migration rehearsal, and every `STAGE-*` observation remain open blockers.

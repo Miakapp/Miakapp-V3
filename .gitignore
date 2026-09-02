@@ -6,3 +6,13 @@ component-runtime/test-results/
 component-runtime/playwright-report/
 synthetic-home/dist/
 coordinator-contract/dist/
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+crash.log
+crash.*.log
+gha-creds-*.json
