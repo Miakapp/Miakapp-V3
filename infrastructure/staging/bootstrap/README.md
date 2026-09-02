@@ -1,6 +1,6 @@
 # Staging Terraform bootstrap proposal
 
-Status: reviewable plan-only configuration; never applied
+Status: guarded plan observed (36 add, 0 change, 0 destroy); never applied
 
 This root owns the one-time resources required before the ordinary staging
 foundation can use remote state and keyless GitHub automation:
@@ -56,8 +56,7 @@ before migration is proven.
 
 ## Guarded plan
 
-The only supported command here is non-mutating and has not been run against
-Google Cloud:
+The only supported command here is non-mutating:
 
 ```sh
 MIAKAPP_STAGING_BILLING_ACCOUNT_ID='XXXXXX-XXXXXX-XXXXXX' \
@@ -70,6 +69,16 @@ billing-account SHA-256 fingerprint, rejects all ambient Terraform and Google
 environment overrides, initializes providers without a remote backend, and does
 not save a plan. Direct `terraform apply` remains technically possible but is
 explicitly unauthorized.
+
+On 2026-09-02, the command was run against configuration commit
+`f363d4ee3cc6639edfa59fefe92cb1ffca682fd1`. It proposed 36 additions, no
+changes, and no destroys: two billing/budget resources, eight service APIs, two
+buckets, three service accounts, three Workload Identity pool/provider
+resources, and 18 IAM bindings. No saved plan, Terraform state, or apply was
+created. Post-plan checks found billing still unlinked, enabled services,
+project IAM, and bucket inventory unchanged, and all proposed service accounts,
+buckets, and the Workload Identity pool still absent. This diagnostic result is
+not an exact saved plan and cannot be applied later.
 
 The state bucket uses uniform access, Public Access Prevention, Object
 Versioning, and seven-day soft delete. Foundation state retains at least ten

@@ -106,6 +106,16 @@ const STAGING_ROWS = [
   'STAGE-09',
 ];
 
+const LOCAL_PLAN_POST_CHECKS = [
+  'billing-unlinked',
+  'enabled-services-unchanged',
+  'project-iam-unchanged',
+  'bucket-inventory-unchanged',
+  'target-buckets-absent',
+  'target-service-accounts-absent',
+  'workload-identity-pool-absent',
+];
+
 const TEARDOWN_INVENTORY = [
   'cloud-functions-and-cloud-run-revisions',
   'eventarc-triggers',
@@ -465,6 +475,7 @@ function validateTerraform(value) {
     'offline_check_uses_mock_providers',
     'local_plan_requires_operator_confirmation',
     'local_plan_executed',
+    'local_plan_observation',
   ]);
   exact(terraform.state, 'bootstrap_foundation_and_automation_blueprint', 'terraform.state');
   exact(
@@ -645,7 +656,68 @@ function validateTerraform(value) {
     true,
     'terraform.local_plan_requires_operator_confirmation',
   );
-  exact(terraform.local_plan_executed, false, 'terraform.local_plan_executed');
+  exact(terraform.local_plan_executed, true, 'terraform.local_plan_executed');
+
+  const observation = record(terraform.local_plan_observation, 'terraform.local_plan_observation', [
+    'observed_on',
+    'configuration_commit',
+    'result',
+    'resource_counts',
+    'saved_plan_created',
+    'apply_executed',
+    'local_state_artifacts_created',
+    'post_plan_checks',
+  ]);
+  exact(observation.observed_on, '2026-09-02', 'terraform.local_plan_observation.observed_on');
+  exact(
+    observation.configuration_commit,
+    'f363d4ee3cc6639edfa59fefe92cb1ffca682fd1',
+    'terraform.local_plan_observation.configuration_commit',
+  );
+
+  const result = record(observation.result, 'terraform.local_plan_observation.result', [
+    'add',
+    'change',
+    'destroy',
+  ]);
+  exact(result.add, 36, 'terraform.local_plan_observation.result.add');
+  exact(result.change, 0, 'terraform.local_plan_observation.result.change');
+  exact(result.destroy, 0, 'terraform.local_plan_observation.result.destroy');
+
+  const resourceCounts = record(
+    observation.resource_counts,
+    'terraform.local_plan_observation.resource_counts',
+    [
+      'billing_and_budget',
+      'service_apis',
+      'storage_buckets',
+      'service_accounts',
+      'workload_identity_pool_and_providers',
+      'iam_bindings',
+    ],
+  );
+  exact(resourceCounts.billing_and_budget, 2, 'terraform.local_plan_observation.resource_counts.billing_and_budget');
+  exact(resourceCounts.service_apis, 8, 'terraform.local_plan_observation.resource_counts.service_apis');
+  exact(resourceCounts.storage_buckets, 2, 'terraform.local_plan_observation.resource_counts.storage_buckets');
+  exact(resourceCounts.service_accounts, 3, 'terraform.local_plan_observation.resource_counts.service_accounts');
+  exact(
+    resourceCounts.workload_identity_pool_and_providers,
+    3,
+    'terraform.local_plan_observation.resource_counts.workload_identity_pool_and_providers',
+  );
+  exact(resourceCounts.iam_bindings, 18, 'terraform.local_plan_observation.resource_counts.iam_bindings');
+  exact(observation.saved_plan_created, false, 'terraform.local_plan_observation.saved_plan_created');
+  exact(observation.apply_executed, false, 'terraform.local_plan_observation.apply_executed');
+  exact(
+    observation.local_state_artifacts_created,
+    false,
+    'terraform.local_plan_observation.local_state_artifacts_created',
+  );
+  exactArray(
+    observation.post_plan_checks,
+    LOCAL_PLAN_POST_CHECKS,
+    'terraform.local_plan_observation.post_plan_checks',
+  );
 }
 
 function validateReadiness(value) {
@@ -746,10 +818,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 10, 'manifest.revision');
+  exact(manifest.revision, 11, 'manifest.revision');
   exact(
     manifest.status,
-    'github_security_configured_keyless_blueprint_unbilled',
+    'bootstrap_plan_observed_keyless_blueprint_unbilled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
