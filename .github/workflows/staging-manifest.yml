@@ -4,27 +4,14 @@ on:
   push:
     branches:
       - main
-    paths:
-      - '.firebaserc'
-      - '.github/workflows/staging-manifest.yml'
-      - 'infrastructure/staging/**'
-      - 'docs/operations/2026-09-01-miakapp-v4-environments.md'
-      - 'control-plane/FAULT-MATRIX.md'
-      - 'package.json'
   pull_request:
-    paths:
-      - '.firebaserc'
-      - '.github/workflows/staging-manifest.yml'
-      - 'infrastructure/staging/**'
-      - 'docs/operations/2026-09-01-miakapp-v4-environments.md'
-      - 'control-plane/FAULT-MATRIX.md'
-      - 'package.json'
 
 permissions:
   contents: read
 
 jobs:
   validate:
+    name: Staging manifest safety gate / validate
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -33,5 +20,9 @@ jobs:
         with:
           node-version: 22.22.0
           package-manager-cache: false
-      - name: Validate the credential-free staging intent
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: 1.11.3
+          terraform_wrapper: false
+      - name: Validate and mock-plan the credential-free staging foundation
         run: npm run test:staging-manifest

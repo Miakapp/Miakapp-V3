@@ -101,8 +101,14 @@ Run:
 
 The local gate is closed only when every `LOCAL-*` row is represented by a causal
 test and the complete check is green. No `STAGE-*` row may be relabelled local or
-complete merely because a fake returned the expected error. The planning-only
+complete merely because a fake returned the expected error. The reviewable
 [`../infrastructure/staging/manifest.json`](../infrastructure/staging/manifest.json)
-binds all nine staging rows to an isolated, non-created project and fails closed
-if a change enables cloud actions, credentials, public ingress or fixed-cost edge
-services. It does not satisfy any row by itself.
+and apply-capable Terraform configuration bind all nine staging rows to the
+existing isolated, unbilled project in Paris. Separate bootstrap/foundation
+roots, a private remote-state design and a keyless plan/apply workflow are
+reviewable but unapplied. The cloud workflow is deliberately dormant outside
+`.github/workflows`, and its policy gate rejects the current unconfigured GitHub
+posture. Active credential-free CI uses mock providers and fails closed if a
+change claims cloud activation, credentials, public ingress, Function deployment
+or fixed-cost edge services. Neither the manifest, the blueprint nor a
+mock-provider check satisfies any staging row by itself.

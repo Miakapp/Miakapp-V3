@@ -265,9 +265,18 @@ A sixth offline slice now provides a closed staging/production runtime parser,
 standard Firebase Admin App Check verification, FID-targeted FCM transport,
 production Storage binding and an explicit dependency-injected composition root.
 It rejects emulator and credential-file environments and is not imported by the
-Firebase Emulator Function entry point. Its tests use only injected clients: no
-project, billing link, service account, key, secret or deployment exists, and all
-staging rows remain open.
+Firebase Emulator Function entry point. Its tests use only injected clients and
+never contact staging. The `miakapp-v4-staging` Firebase project now exists
+unbilled, but it has no registered app, regional data resource, runtime identity,
+key, secret or deployment. Paris (`europe-west9`) and a fingerprinted existing
+billing account are approved planning inputs. Credential-free checks now
+validate separate apply-capable bootstrap and foundation Terraform roots with
+mock providers. A private versioned GCS state design, separate keyless plan/apply
+identities, numeric-claim WIF conditions and a protected same-plan automation
+blueprint are closed in code. They remain unapplied: the GCS bucket, state,
+identities and GitHub policy do not exist, the workflow is deliberately outside
+`.github/workflows`, and no Function resource is included. All staging rows
+remain open.
 
 Deliverables:
 
@@ -393,10 +402,23 @@ current consumer.
    the real SDK seams without importing or deploying them. A closed,
    credential-free staging manifest fixes
    the isolated target, initial resource/IAM/cost posture and teardown inventory
-   without creating a project or enabling deployment. Next obtain explicit
-   location/billing approval, define the production entry point and runtime IAM,
-   and only then convert the reviewed intent into a deployable plan that closes
-   the relay-integration and staging-only RFC 0004 Section 18 gates.
+   without enabling deployment. The staging Firebase project was claimed
+   unbilled on 2026-09-02; its bootstrap inventory has no registered app,
+   database, bucket or deployed workload. Paris and the billing-account choice
+   are now reviewed. Provider-pinned bootstrap and foundation roots describe
+   private versioned state, separate keyless plan/apply identities and the
+   regional foundation. Escalation-capable project IAM, service-account creation
+   and both buckets remain human-bootstrap resources, so the apply identity
+   cannot rewrite its own trust boundary or the bootstrap state. A dormant,
+   SHA-pinned workflow binds a private saved plan to a protected apply job,
+   while a closed policy record proves that the current repository settings and
+   cloud resources are not yet activated. Next
+   independently configure and re-observe that GitHub policy, review the exact
+   bootstrap plan, obtain separate mutation authorization, migrate bootstrap
+   state, initialize and verify an empty foundation state with protected
+   operator credentials, then review the foundation plan. The production entry point and exact
+   runtime IAM expansion remain required before closing relay-integration and
+   staging-only RFC 0004 Section 18 gates.
 
 ## 9. Evidence that would change this plan
 
