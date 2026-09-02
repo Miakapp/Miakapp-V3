@@ -44,6 +44,7 @@ properties below:
 | `LOCAL-13` | Two component activations race the same generation | Exactly one CAS wins; quarantine and rollback preserve an already verified digest | `test/emulator/component-vertical-slice.test.ts` — “activates by CAS, blocks quarantine, rolls back, and enforces client Rules” |
 | `LOCAL-14` | Admission budget is exhausted before Home Key reservation/signing | Correlated `429`; no extra reservation/signature; one bounded audit outcome | `test/emulator/admission-vertical-slice.test.ts` — “returns a correlated 429 before another Home Key reservation or signing effect” |
 | `LOCAL-15` | Pinned Secret Manager or Cloud KMS adapter receives a dependency failure, malformed response, mismatched version, invalid checksum, mutable signing input or wrong signing key; generated-client debug logging is enabled | Generic failure; no secret disclosure or invalid token; exact environment issuer; one call per pinned secret and at most one signing RPC with automatic retries disabled; SDK clients are not constructed under sensitive logging | `test/unit/cloud-security.test.ts`, `test/unit/google-cloud-clients.test.ts`, and `test/unit/production-config.test.ts` — production cloud security boundaries |
+| `LOCAL-16` | Inactive production runtime receives a cross-environment config, emulator/credential/endpoint/quota/proxy override, foreign Firebase app, wrong App Check app, Firebase JWKS outage, failed FCM send or mismatched Storage bucket | Fail before SDK construction where possible; exact project/issuer/origin/bucket/service-account binding; explicit Firestore Google Auth without ambient ADC; definitive identity rejection remains `401` while provider-key outage is correlated `503`; one raw FCM HTTP v1 attempt with no SDK retry; create-only Storage/read-back; no import-time cloud effect | `test/unit/production-runtime-config.test.ts`, `test/unit/production-runtime.test.ts`, `test/unit/api-fault-matrix.test.ts`, `test/unit/auth.test.ts`, `test/unit/app-check.test.ts`, `test/unit/push.test.ts`, `test/unit/component-storage.test.ts`, and `test/unit/access-token.test.ts` — offline production composition boundaries |
 
 The unit API cases execute the real Express router, parsers, token profiles and
 response encoder. Only the external dependency at the named boundary is replaced
@@ -77,6 +78,13 @@ mock.
 and fail-closed response validation with injected clients. It does not prove managed-service IAM,
 latency, transport retries, audit logs, key lifecycle or Secret Manager
 consistency, and therefore does not close `STAGE-01`.
+
+`LOCAL-16` proves only closed configuration and dependency wiring with injected
+SDK clients, plus construction of the real pinned Firestore client without a
+network call. The production factories use explicit metadata-only identities
+and reject standard proxy environment overrides, but the tests perform no
+metadata, App Check, FCM, Storage, KMS or Secret Manager network call and
+therefore close none of `STAGE-01`, `STAGE-03`, `STAGE-04` or `STAGE-06`.
 
 - [Functions Emulator differences](https://firebase.google.com/docs/emulator-suite/connect_functions#how_the_cloud_functions_emulator_differs_from_production)
 - [Firestore Emulator differences](https://firebase.google.com/docs/emulator-suite/connect_firestore#how_the_cloud_firestore_emulator_differs_from_production)

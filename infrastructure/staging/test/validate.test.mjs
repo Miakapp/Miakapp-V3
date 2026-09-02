@@ -35,6 +35,10 @@ test('accepts the committed planning-only staging intent and legacy Firebase def
     validated.evidence.production_security_boundary,
     '../../control-plane/test/unit/cloud-security.test.ts',
   );
+  assert.equal(
+    validated.evidence.production_composition_boundary,
+    '../../control-plane/test/unit/production-runtime.test.ts',
+  );
   assert.equal(validateFirebaseRc(firebaseRc()).projects.default, 'miakapp-3');
 });
 

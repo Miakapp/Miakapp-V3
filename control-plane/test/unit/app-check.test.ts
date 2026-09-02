@@ -3,8 +3,11 @@ import { createPrivateKey, sign, type JsonWebKey } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
 import {
+  AppCheckDependencyError,
   AppCheckVerificationError,
+  FirebaseAdminAppCheckVerifier,
   verifySyntheticAppCheckToken,
+  type FirebaseAdminAppCheckClient,
   type SyntheticAppCheckVerifierConfig,
 } from '../../src/app-check.js';
 import { loadEmulatorConfig } from '../../src/config.js';
@@ -178,5 +181,75 @@ describe('synthetic App Check verification', () => {
       { ...config, appCheckPublicJwk: signingFixture.test_only_private_keys.firebase },
       CLOCK,
     )).toThrow(/public key is invalid/);
+  });
+});
+
+describe('Firebase Admin App Check verification', () => {
+  test('verifies one bounded token without enabling consumption and binds the exact app', async () => {
+    const calls: unknown[][] = [];
+    const client: FirebaseAdminAppCheckClient = {
+      async verifyToken(...args: [string]) {
+        calls.push(args);
+        return {
+          appId: config.appCheckAppId,
+          token: { exp: NOW + 3_600 },
+        };
+      },
+    };
+    const verifier = new FirebaseAdminAppCheckVerifier(client, config.appCheckAppId);
+
+    await expect(verifier.verifyToken('signed-app-check-token')).resolves.toEqual({
+      appId: config.appCheckAppId,
+      expiresAt: NOW + 3_600,
+    });
+    expect(calls).toEqual([['signed-app-check-token']]);
+  });
+
+  test('separates definitive rejection from App Check dependency failures', async () => {
+    const invalid = Object.assign(new Error('private invalid-token detail'), {
+      code: 'app-check/invalid-argument',
+    });
+    await expect(new FirebaseAdminAppCheckVerifier({
+      verifyToken: async () => Promise.reject(invalid),
+    }, config.appCheckAppId).verifyToken('signed-app-check-token'))
+      .rejects.toBeInstanceOf(AppCheckVerificationError);
+
+    await expect(new FirebaseAdminAppCheckVerifier({
+      verifyToken: async () => ({ appId: 'wrong-app', token: { exp: NOW + 3_600 } }),
+    }, config.appCheckAppId).verifyToken('signed-app-check-token'))
+      .rejects.toBeInstanceOf(AppCheckVerificationError);
+
+    const keyFetchFailure = Object.assign(new Error('private provider detail'), {
+      code: 'app-check/invalid-argument',
+      cause: { code: 'key-fetch-error' },
+    });
+    for (const client of [
+      { verifyToken: async () => Promise.reject(new Error('private provider detail')) },
+      { verifyToken: async () => Promise.reject(keyFetchFailure) },
+      { verifyToken: async () => ({ appId: config.appCheckAppId, token: {} }) },
+    ] satisfies FirebaseAdminAppCheckClient[]) {
+      await expect(new FirebaseAdminAppCheckVerifier(client, config.appCheckAppId)
+        .verifyToken('signed-app-check-token')).rejects.toBeInstanceOf(AppCheckDependencyError);
+    }
+
+    const accepting: FirebaseAdminAppCheckClient = {
+      verifyToken: async () => ({ appId: config.appCheckAppId, token: { exp: NOW + 1 } }),
+    };
+    const verifier = new FirebaseAdminAppCheckVerifier(accepting, config.appCheckAppId);
+    await expect(verifier.verifyToken(undefined)).rejects.toBeInstanceOf(AppCheckVerificationError);
+    await expect(verifier.verifyToken(['token'])).rejects.toBeInstanceOf(AppCheckVerificationError);
+    await expect(verifier.verifyToken('A'.repeat(8_193))).rejects.toBeInstanceOf(AppCheckVerificationError);
+  });
+
+  test('rejects invalid trusted configuration before touching the SDK', () => {
+    let calls = 0;
+    const client: FirebaseAdminAppCheckClient = {
+      verifyToken: async () => {
+        calls += 1;
+        return {};
+      },
+    };
+    expect(() => new FirebaseAdminAppCheckVerifier(client, '')).toThrow(/configuration is invalid/);
+    expect(calls).toBe(0);
   });
 });

@@ -2,9 +2,11 @@ import { describe, expect, test } from 'bun:test';
 
 import {
   FirebaseComponentStorage,
+  ProductionFirebaseComponentStorage,
   type ComponentStorageBucket,
   type ComponentStorageFile,
   type EmulatorComponentStorageConfig,
+  type ProductionComponentStorageConfig,
 } from '../../src/component-storage.js';
 
 interface SavedObject {
@@ -60,7 +62,7 @@ class MemoryFile implements ComponentStorageFile {
   }
 }
 
-function memoryBucket(): {
+function memoryBucket(name = 'demo-miakapp-v4.appspot.com'): {
   readonly bucket: ComponentStorageBucket;
   readonly objects: Map<string, SavedObject>;
   readonly fileCalls: () => number;
@@ -69,7 +71,7 @@ function memoryBucket(): {
   let calls = 0;
   return {
     bucket: {
-      name: 'demo-miakapp-v4.appspot.com',
+      name,
       file(name: string) {
         calls += 1;
         return new MemoryFile(name, objects);
@@ -191,5 +193,56 @@ describe('FirebaseComponentStorage', () => {
       await expect(storage.writeArtifact(DIGEST, bytes))
         .rejects.toMatchObject({ code: 'invalid_artifact' });
     }
+  });
+});
+
+describe('ProductionFirebaseComponentStorage', () => {
+  const productionConfig: ProductionComponentStorageConfig = Object.freeze({
+    environment: 'staging',
+    projectId: 'miakapp-v4-staging',
+    functionsEmulator: false,
+    storageEmulatorHost: undefined,
+    bucketName: 'miakapp-v4-staging-components',
+  });
+
+  test('binds the exact environment, project, and private bucket before touching Storage', () => {
+    for (const candidate of [
+      { ...productionConfig, projectId: 'miakapp-v4' },
+      { ...productionConfig, functionsEmulator: true },
+      { ...productionConfig, storageEmulatorHost: '127.0.0.1:9199' },
+      { ...productionConfig, bucketName: 'other-bucket' },
+    ]) {
+      const memory = memoryBucket('miakapp-v4-staging-components');
+      expect(() => new ProductionFirebaseComponentStorage(memory.bucket, candidate))
+        .toThrow(/configuration is invalid/);
+      expect(memory.fileCalls()).toBe(0);
+    }
+  });
+
+  test('uses the same create-only and exact read-back contract in staging', async () => {
+    const memory = memoryBucket('miakapp-v4-staging-components');
+    const storage = new ProductionFirebaseComponentStorage(memory.bucket, productionConfig);
+    const bytes = Buffer.from('self.answer = 42;\n');
+
+    await storage.writeStaging(UPLOAD_ID, bytes);
+    await storage.writeArtifact(DIGEST, bytes);
+
+    expect(await storage.readStaging(UPLOAD_ID)).toEqual(new Uint8Array(bytes));
+    expect(await storage.readArtifact(DIGEST)).toEqual(new Uint8Array(bytes));
+    expect(memory.objects.get(`component-staging/${UPLOAD_ID}.js`)?.options.preconditionOpts)
+      .toEqual({ ifGenerationMatch: 0 });
+    expect(memory.objects.get(`components/${DIGEST}.js`)?.options.preconditionOpts)
+      .toEqual({ ifGenerationMatch: 0 });
+  });
+
+  test('accepts only the exact production bucket for the production project', () => {
+    const memory = memoryBucket('miakapp-v4-components');
+    expect(() => new ProductionFirebaseComponentStorage(memory.bucket, {
+      environment: 'production',
+      projectId: 'miakapp-v4',
+      functionsEmulator: false,
+      storageEmulatorHost: undefined,
+      bucketName: 'miakapp-v4-components',
+    })).not.toThrow();
   });
 });

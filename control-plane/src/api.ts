@@ -13,7 +13,7 @@ import {
 } from './auth.js';
 import {
   AppCheckVerificationError,
-  verifySyntheticAppCheckToken,
+  type AppCheckVerifier,
 } from './app-check.js';
 import {
   AccessTokenVerificationError,
@@ -70,6 +70,7 @@ interface RawRequest extends Request {
 
 export interface ApiDependencies {
   readonly admission: AdmissionController;
+  readonly appCheck: AppCheckVerifier;
   readonly auth: FirebaseTokenVerifier;
   readonly clock: Clock;
   readonly config: DeploymentConfig;
@@ -443,12 +444,13 @@ async function ownerPrincipal(request: Request, dependencies: ApiDependencies) {
   return authenticateFirebase(dependencies.auth, request.headers.authorization, now);
 }
 
-function appCheckPrincipal(request: Request, dependencies: ApiDependencies): AppCheckPrincipal {
+async function appCheckPrincipal(
+  request: Request,
+  dependencies: ApiDependencies,
+): Promise<AppCheckPrincipal> {
   try {
-    return verifySyntheticAppCheckToken(
+    return await dependencies.appCheck.verifyToken(
       request.headers['x-firebase-appcheck'],
-      dependencies.config,
-      dependencies.clock,
     );
   } catch (error) {
     if (error instanceof AppCheckVerificationError) throw apiError('invalid_app_check_token');
@@ -458,7 +460,7 @@ function appCheckPrincipal(request: Request, dependencies: ApiDependencies): App
 
 async function destinationPrincipals(request: Request, dependencies: ApiDependencies) {
   const owner = await ownerPrincipal(request, dependencies);
-  const appCheck = appCheckPrincipal(request, dependencies);
+  const appCheck = await appCheckPrincipal(request, dependencies);
   return Object.freeze({ owner, appCheck });
 }
 
@@ -758,6 +760,7 @@ async function routeRequest(
     ]);
     await dependencies.pushTransport.sendSemanticNotification({
       fid: destination.fid,
+      homeId: principal.homeId,
       grantId: input.grantId,
       title: input.notification.title,
       body: input.notification.body,
