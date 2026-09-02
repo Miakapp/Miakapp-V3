@@ -32,12 +32,34 @@ export interface VerifiedSyntheticAppCheckPrincipal {
   readonly expiresAt: number;
 }
 
+export type VerifiedAppCheckPrincipal = VerifiedSyntheticAppCheckPrincipal;
+
+export interface AppCheckVerifier {
+  verifyToken(
+    headerToken: string | readonly string[] | undefined,
+  ): Promise<VerifiedAppCheckPrincipal>;
+}
+
+export interface FirebaseAdminAppCheckClient {
+  verifyToken(token: string): Promise<Readonly<{
+    readonly appId?: string;
+    readonly token?: Readonly<{ readonly exp?: number }>;
+  }>>;
+}
+
 export class AppCheckVerificationError extends Error {
   readonly code = 'invalid_app_check_token' as const;
 
   constructor() {
     super('Application verification failed');
     this.name = 'AppCheckVerificationError';
+  }
+}
+
+export class AppCheckDependencyError extends Error {
+  constructor() {
+    super('Application verification dependency is unavailable');
+    this.name = 'AppCheckDependencyError';
   }
 }
 
@@ -247,4 +269,80 @@ export function verifySyntheticAppCheckToken(
   }
 
   return Object.freeze({ appId: config.appCheckAppId, expiresAt });
+}
+
+export class SyntheticAppCheckVerifier implements AppCheckVerifier {
+  readonly #config: SyntheticAppCheckVerifierConfig;
+  readonly #clock: AppCheckVerificationClock;
+
+  constructor(config: SyntheticAppCheckVerifierConfig, clock: AppCheckVerificationClock) {
+    this.#config = config;
+    this.#clock = clock;
+  }
+
+  async verifyToken(
+    headerToken: string | readonly string[] | undefined,
+  ): Promise<VerifiedAppCheckPrincipal> {
+    return verifySyntheticAppCheckToken(headerToken, this.#config, this.#clock);
+  }
+}
+
+export class FirebaseAdminAppCheckVerifier implements AppCheckVerifier {
+  readonly #client: FirebaseAdminAppCheckClient;
+  readonly #expectedAppId: string;
+
+  constructor(client: FirebaseAdminAppCheckClient, expectedAppId: string) {
+    if (expectedAppId.length === 0
+      || Buffer.byteLength(expectedAppId, 'utf8') > 128
+      || !GRAPHIC_ASCII.test(expectedAppId)) {
+      throw new Error('Firebase App Check verification configuration is invalid');
+    }
+    this.#client = client;
+    this.#expectedAppId = expectedAppId;
+  }
+
+  async verifyToken(
+    headerToken: string | readonly string[] | undefined,
+  ): Promise<VerifiedAppCheckPrincipal> {
+    if (typeof headerToken !== 'string'
+      || headerToken.length === 0
+      || Buffer.byteLength(headerToken, 'utf8') > MAX_TOKEN_BYTES
+      || !GRAPHIC_ASCII.test(headerToken)) {
+      fail();
+    }
+    let result: Awaited<ReturnType<FirebaseAdminAppCheckClient['verifyToken']>>;
+    try {
+      result = await this.#client.verifyToken(headerToken);
+    } catch (error) {
+      const code = error !== null
+        && typeof error === 'object'
+        && 'code' in error
+        && typeof error.code === 'string'
+        ? error.code
+        : undefined;
+      const causeCode = error !== null
+        && typeof error === 'object'
+        && 'cause' in error
+        && error.cause !== null
+        && typeof error.cause === 'object'
+        && 'code' in error.cause
+        && typeof error.cause.code === 'string'
+        ? error.cause.code
+        : undefined;
+      if ((code === 'app-check/invalid-argument'
+          || code === 'app-check/app-check-token-expired')
+        && causeCode !== 'key-fetch-error') {
+        return fail();
+      }
+      throw new AppCheckDependencyError();
+    }
+    const expiresAt = result.token?.exp;
+    if (result.appId !== this.#expectedAppId) return fail();
+    if (typeof expiresAt !== 'number'
+      || !Number.isSafeInteger(expiresAt)
+      || expiresAt < 0) {
+      throw new AppCheckDependencyError();
+    }
+    return Object.freeze({ appId: result.appId, expiresAt });
+  }
 }

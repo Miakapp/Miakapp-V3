@@ -1,5 +1,6 @@
 import { KeyManagementServiceClient } from '@google-cloud/kms';
 import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
+import type { GoogleAuth } from 'google-gax';
 
 import type {
   CloudCallOptions,
@@ -34,8 +35,15 @@ export interface GoogleSecretManagerTransport {
 }
 
 export interface GoogleCloudSecurityClientFactories {
-  readonly kms: () => GoogleKmsTransport;
-  readonly secrets: () => GoogleSecretManagerTransport;
+  readonly kms: (options: GoogleCloudClientConstructionOptions) => GoogleKmsTransport;
+  readonly secrets: (options: GoogleCloudClientConstructionOptions) => GoogleSecretManagerTransport;
+}
+
+export interface GoogleCloudClientConstructionOptions {
+  readonly apiEndpoint: string;
+  readonly auth: GoogleAuth;
+  readonly projectId: string;
+  readonly universeDomain: 'googleapis.com';
 }
 
 export interface GoogleCloudSecurityClients {
@@ -44,8 +52,28 @@ export interface GoogleCloudSecurityClients {
 }
 
 const GOOGLE_CLIENT_FACTORIES: GoogleCloudSecurityClientFactories = Object.freeze({
-  kms: () => new KeyManagementServiceClient() as unknown as GoogleKmsTransport,
-  secrets: () => new SecretManagerServiceClient() as unknown as GoogleSecretManagerTransport,
+  kms: ({
+    apiEndpoint,
+    auth,
+    projectId,
+    universeDomain,
+  }: GoogleCloudClientConstructionOptions) => new KeyManagementServiceClient({
+    apiEndpoint,
+    auth,
+    projectId,
+    universeDomain,
+  }),
+  secrets: ({
+    apiEndpoint,
+    auth,
+    projectId,
+    universeDomain,
+  }: GoogleCloudClientConstructionOptions) => new SecretManagerServiceClient({
+    apiEndpoint,
+    auth,
+    projectId,
+    universeDomain,
+  }),
 });
 
 function checkedTuple<Response>(result: unknown): readonly [Response] {
@@ -63,11 +91,23 @@ export function assertGoogleSdkLoggingDisabled(
 }
 
 export function createGoogleCloudSecurityClients(
+  auth: GoogleAuth,
+  projectId: string,
   factories: GoogleCloudSecurityClientFactories = GOOGLE_CLIENT_FACTORIES,
 ): GoogleCloudSecurityClients {
   assertGoogleSdkLoggingDisabled(process.env);
-  const kms = factories.kms();
-  const secrets = factories.secrets();
+  const kms = factories.kms({
+    apiEndpoint: 'cloudkms.googleapis.com',
+    auth,
+    projectId,
+    universeDomain: 'googleapis.com',
+  });
+  const secrets = factories.secrets({
+    apiEndpoint: 'secretmanager.googleapis.com',
+    auth,
+    projectId,
+    universeDomain: 'googleapis.com',
+  });
   return Object.freeze({
     kms: Object.freeze({
       async getPublicKey(

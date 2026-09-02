@@ -354,6 +354,7 @@ function validateEvidence(value) {
     'staging_rows',
     'fault_matrix',
     'production_security_boundary',
+    'production_composition_boundary',
     'environment_decision',
   ]);
   exact(evidence.manifest_check_command, 'npm run test:staging-manifest', 'evidence.manifest_check_command');
@@ -366,6 +367,11 @@ function validateEvidence(value) {
     evidence.production_security_boundary,
     '../../control-plane/test/unit/cloud-security.test.ts',
     'evidence.production_security_boundary',
+  );
+  exact(
+    evidence.production_composition_boundary,
+    '../../control-plane/test/unit/production-runtime.test.ts',
+    'evidence.production_composition_boundary',
   );
   exact(
     evidence.environment_decision,
@@ -405,7 +411,7 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 1, 'manifest.revision');
+  exact(manifest.revision, 2, 'manifest.revision');
   exact(manifest.status, 'planning', 'manifest.status');
   exact(manifest.environment, 'staging', 'manifest.environment');
   validateProject(manifest.project);
