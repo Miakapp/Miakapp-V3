@@ -1,6 +1,6 @@
 # Miakapp 4 staging activation blueprint
 
-Status: credential-free validation only; the Firebase project is still unbilled,
+Status: guarded bootstrap plan observed; the Firebase project is still unbilled,
 empty, and undeployed
 
 This directory contains a closed, apply-capable description of the future
@@ -19,6 +19,13 @@ dated inventory in [`manifest.json`](manifest.json) records:
 - no staging runtime, planner, or deployer identity; and
 - no live Terraform state or saved plan.
 
+On 2026-09-02, the guarded bootstrap command ran against configuration commit
+`f363d4ee3cc6639edfa59fefe92cb1ffca682fd1` and proposed 36 additions, no
+changes, and no destroys. The closed observation in the manifest records the
+resource-category totals and the unchanged billing, API, IAM, bucket, service
+account, Workload Identity, and local state boundaries. The command saved no
+plan and performed no apply.
+
 Firebase-enabled APIs and its managed Admin SDK service account exist, but they
 are not evidence of a deployed or billable workload. Paris (`europe-west9`) and
 the SHA-256 fingerprint of an existing EUR billing account are reviewed inputs;
@@ -32,7 +39,7 @@ a cloud workflow, open ingress, apply, or destroy.
 
 | Path | Purpose | Current execution boundary |
 |---|---|---|
-| [`bootstrap/`](bootstrap/) | Billing, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Plan only with local User ADC; never applied |
+| [`bootstrap/`](bootstrap/) | Billing, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Guarded 36/0/0 plan observed with local User ADC; never applied |
 | [`terraform/`](terraform/) | APIs, Firestore, KMS, empty Secret Manager containers, and resource-scoped runtime IAM | Mock-tested offline; live plan blocked until bootstrap state exists |
 | [`automation/`](automation/) | GitHub policy record, dormant plan/apply workflow, private-plan scripts, and operator inspection | Outside `.github/workflows`; cannot run |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
@@ -139,16 +146,18 @@ because workflow installation and cloud bootstrap remain unauthorized.
 
 ## Next authorization gate
 
-The GitHub branch, environment and Actions prerequisite was completed and
-re-observed on 2026-09-02 without installing a cloud workflow. Before any
-additional cloud action, a separate reviewed pass must:
+The GitHub branch, environment and Actions prerequisite and the non-saved
+bootstrap diagnostic plan were completed and re-observed on 2026-09-02 without
+installing a cloud workflow or changing Google Cloud. Before any additional
+cloud action, a separate reviewed pass must:
 
-1. produce a bootstrap plan and explicit cost/resource inventory for review;
-2. receive new operator authorization to link billing and apply that exact plan;
-3. migrate and reconcile bootstrap state before any foundation plan;
-4. install the cloud workflow only after its WIF providers and service accounts
+1. revalidate the external policy and cloud inventory, then receive new operator
+   authorization to link billing and create, review, and apply an exact saved
+   bootstrap plan;
+2. migrate and reconcile bootstrap state before any foundation plan;
+3. install the cloud workflow only after its WIF providers and service accounts
    exist; and
-5. review a live foundation plan before granting apply approval.
+4. review a live foundation plan before granting apply approval.
 
 The production Function entry point, exact FCM runtime permission, secret
 version lifecycle, ingress design, monitoring, real-service fault matrix,

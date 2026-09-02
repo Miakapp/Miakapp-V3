@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 10,
-  "status": "github_security_configured_keyless_blueprint_unbilled",
+  "revision": 11,
+  "status": "bootstrap_plan_observed_keyless_blueprint_unbilled",
   "environment": "staging",
   "project": {
     "project_id": "miakapp-v4-staging",
@@ -363,7 +363,36 @@
     "function_deployment_included": false,
     "offline_check_uses_mock_providers": true,
     "local_plan_requires_operator_confirmation": true,
-    "local_plan_executed": false
+    "local_plan_executed": true,
+    "local_plan_observation": {
+      "observed_on": "2026-09-02",
+      "configuration_commit": "f363d4ee3cc6639edfa59fefe92cb1ffca682fd1",
+      "result": {
+        "add": 36,
+        "change": 0,
+        "destroy": 0
+      },
+      "resource_counts": {
+        "billing_and_budget": 2,
+        "service_apis": 8,
+        "storage_buckets": 2,
+        "service_accounts": 3,
+        "workload_identity_pool_and_providers": 3,
+        "iam_bindings": 18
+      },
+      "saved_plan_created": false,
+      "apply_executed": false,
+      "local_state_artifacts_created": false,
+      "post_plan_checks": [
+        "billing-unlinked",
+        "enabled-services-unchanged",
+        "project-iam-unchanged",
+        "bucket-inventory-unchanged",
+        "target-buckets-absent",
+        "target-service-accounts-absent",
+        "workload-identity-pool-absent"
+      ]
+    }
   },
   "readiness": {
     "cloud_actions_enabled": false,
