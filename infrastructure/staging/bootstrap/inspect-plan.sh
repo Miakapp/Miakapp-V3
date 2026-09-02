@@ -71,6 +71,14 @@ trap cleanup EXIT
 export TF_CLI_CONFIG_FILE="${bootstrap_root}/terraform-cli.tfrc"
 export TF_DATA_DIR="${inspection_root}/terraform-data"
 export TF_IN_AUTOMATION=1
+if ! terraform -chdir="$bootstrap_root" init \
+  -backend=false \
+  -input=false \
+  -lockfile=readonly \
+  -no-color >/dev/null; then
+  echo "Terraform could not install the locked providers required to inspect the saved plan." >&2
+  exit 1
+fi
 if ! terraform -chdir="$bootstrap_root" show -json "${bundle}/bootstrap.tfplan" 2>/dev/null \
   | node "$bundle_helper" verify-plan "${bundle}/metadata.json"; then
   echo "The Terraform plan binary does not match its reviewed metadata." >&2

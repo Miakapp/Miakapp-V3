@@ -278,6 +278,9 @@ test('keeps bootstrap execution plan-only and local-state-only until separately 
   assert.doesNotMatch(savePlanScript, /terraform\s+(apply|destroy|import)|firebase\s+deploy/);
   assert.match(inspectPlanScript, /node "\$bundle_helper" verify/);
   assert.match(inspectPlanScript, /export TF_DATA_DIR="\$\{inspection_root\}\/terraform-data"/);
+  assert.match(inspectPlanScript, /terraform -chdir="\$bootstrap_root" init/);
+  assert.match(inspectPlanScript, /-backend=false/);
+  assert.match(inspectPlanScript, /-lockfile=readonly/);
   assert.match(inspectPlanScript, /show -no-color "\$\{bundle\}\/bootstrap\.tfplan"/);
   assert.doesNotMatch(inspectPlanScript, /terraform\s+(apply|destroy|import)|gcloud\s+storage/);
 });
@@ -368,6 +371,88 @@ test('creates and verifies a private exact-inventory bundle and rejects tamperin
       () => inspectPrivateBundle(bundle, 'a'.repeat(40)),
       /must contain exactly metadata.json and bootstrap.tfplan/,
     );
+  } finally {
+    rmSync(temporary, { recursive: true });
+  }
+});
+
+test('initializes locked providers before rendering an exact saved plan', () => {
+  const temporary = mkdtempSync(join(tmpdir(), 'miakapp-bootstrap-inspection-test-'));
+  chmodSync(temporary, 0o700);
+  try {
+    const bundle = createPrivateBundle(temporary, fileURLToPath(new URL('../../../', import.meta.url)));
+    const planPath = join(bundle, 'bootstrap.tfplan');
+    const metadataPath = join(bundle, 'metadata.json');
+    const planJsonPath = join(temporary, 'plan.json');
+    const initMarkerPath = join(temporary, 'terraform-initialized');
+    const fakeGitPath = join(temporary, 'git');
+    const fakeTerraformPath = join(temporary, 'terraform');
+    const planBytes = Buffer.from('synthetic-plan-binary');
+
+    writeFileSync(planPath, planBytes, { flag: 'wx', mode: 0o600 });
+    writeSavedPlanMetadata(metadataPath, metadataForPlan(planBytes));
+    writeFileSync(planJsonPath, JSON.stringify(syntheticTerraformPlan()), { mode: 0o600 });
+    writeFileSync(fakeGitPath, `#!/usr/bin/env bash
+set -euo pipefail
+for argument in "$@"; do
+  if [[ "$argument" == "status" ]]; then
+    exit 0
+  fi
+  if [[ "$argument" == "rev-parse" ]]; then
+    printf '%s\\n' '${'a'.repeat(40)}'
+    exit 0
+  fi
+done
+exit 1
+`, { mode: 0o700 });
+    writeFileSync(fakeTerraformPath, `#!/usr/bin/env bash
+set -euo pipefail
+command_name=''
+json_output=false
+for argument in "$@"; do
+  case "$argument" in
+    version|init|show) command_name="$argument" ;;
+    -json) json_output=true ;;
+  esac
+done
+case "$command_name" in
+  version)
+    printf '%s\\n' '{"terraform_version":"1.11.3"}'
+    ;;
+  init)
+    printf '%s\\n' initialized > "$MIAKAPP_FAKE_TERRAFORM_INIT_MARKER"
+    ;;
+  show)
+    [[ -f "$MIAKAPP_FAKE_TERRAFORM_INIT_MARKER" ]] || exit 17
+    if [[ "$json_output" == true ]]; then
+      command cat "$MIAKAPP_FAKE_TERRAFORM_PLAN_JSON"
+    else
+      printf '%s\\n' 'synthetic reviewed plan'
+    fi
+    ;;
+  *) exit 18 ;;
+esac
+`, { mode: 0o700 });
+
+    const result = spawnSync(
+      fileURLToPath(new URL('inspect-plan.sh', bootstrapRoot)),
+      [bundle],
+      {
+        cwd: fileURLToPath(bootstrapRoot),
+        encoding: 'utf8',
+        env: {
+          HOME: process.env.HOME,
+          PATH: `${temporary}:${process.env.PATH}`,
+          MIAKAPP_FAKE_TERRAFORM_INIT_MARKER: initMarkerPath,
+          MIAKAPP_FAKE_TERRAFORM_PLAN_JSON: planJsonPath,
+          MIAKAPP_STAGING_BOOTSTRAP_INSPECTION_CONFIRMATION: 'miakapp-v4-staging',
+        },
+      },
+    );
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(readFileSync(initMarkerPath, 'utf8'), 'initialized\n');
+    assert.match(result.stdout, /synthetic reviewed plan/);
   } finally {
     rmSync(temporary, { recursive: true });
   }
