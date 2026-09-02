@@ -181,16 +181,19 @@ output matches every exact project, region, identity and repository value.
 A GitHub policy record and dormant workflow blueprint define separate numeric-
 claim WIF providers and service accounts, protected plan/apply environments,
 SHA-pinned selected actions, a private create-only saved plan and same-run digest
-verification. The repository's actual `main`/environment/Actions settings do not
-yet meet that policy, the workflow is outside `.github/workflows`, and its policy
-job rejects the current inactive record. No WIF identity, bucket or state exists.
+verification. On 2026-09-02, the repository's actual
+`main`/environment/Actions settings were configured and independently
+re-observed against that policy. The existing `miakapi` environment and default
+repository OIDC subject were left unchanged. The workflow remains outside
+`.github/workflows`, and its policy job rejects the current cloud-inactive
+record. No WIF identity, bucket or state exists.
 
-Before another cloud action, a reviewed pass must configure and re-observe the
-external GitHub policy, save and review an exact bootstrap plan, receive new
-operator authorization, apply from protected temporary state, migrate and
-reconcile that state, initialize and verify the empty foundation state with
-protected operator credentials, then install the workflow. A separate reviewed foundation
-plan is required before apply approval. The production Function entry point,
+Before another cloud action, a reviewed pass must save and review an exact
+bootstrap plan, receive new operator authorization, apply from protected
+temporary state, migrate and reconcile that state, initialize and verify the
+empty foundation state with protected operator credentials, then authorize and
+install the workflow. A separate reviewed foundation plan is required before
+apply approval. The production Function entry point,
 exact FCM permission, quotas, alerts and teardown evidence remain blockers.
 Deployment, public ingress and active CI authentication remain disabled. Passing
 the manifest check is evidence, not authorization.

@@ -65,14 +65,21 @@ function exactGitHubEnvironment(kind) {
   };
 }
 
-test('records the observed GitHub posture without treating it as activation', () => {
-  assert.equal(policy.status, 'required_not_configured');
-  assert.equal(policy.observed.main_protected, false);
-  assert.deepEqual(policy.observed.environment_names, ['miakapi']);
+test('records the verified GitHub security posture without treating it as cloud activation', () => {
+  assert.equal(policy.status, 'github_security_configured_cloud_inactive');
+  assert.deepEqual(policy.observed.main_branch, policy.required.main_branch);
+  assert.deepEqual(policy.observed.environment_names, [
+    'miakapi',
+    'miakapp-v4-staging-apply',
+    'miakapp-v4-staging-plan',
+  ]);
+  assert.deepEqual(policy.observed.plan_environment, policy.required.plan_environment);
+  assert.deepEqual(policy.observed.apply_environment, policy.required.apply_environment);
+  assert.deepEqual(policy.observed.actions, policy.required.actions);
   assert.equal(policy.observed.active_workflow_installed, false);
   assert.equal(policy.observed.cloud_authentication_enabled, false);
   assert.deepEqual(policy.activation, {
-    policy_observation_verified: false,
+    policy_observation_verified: true,
     workflow_install_authorized: false,
     cloud_bootstrap_authorized: false,
     active_workflow_path: '.github/workflows/staging-terraform.yml',
@@ -82,7 +89,16 @@ test('records the observed GitHub posture without treating it as activation', ()
 });
 
 test('rejects policy weakening, activation self-claims, and unknown fields', () => {
+  rejects((candidate) => { candidate.observed.main_branch.protected = false; }, /observed\.main_branch\.protected/);
+  rejects((candidate) => {
+    candidate.observed.main_branch.required_status_checks[0].app_id = '1';
+  }, /observed\.main_branch\.required_status_checks\[0\]\.app_id/);
+  rejects((candidate) => { candidate.observed.apply_environment.required_reviewer_ids = []; }, /required_reviewer_ids/);
+  rejects((candidate) => { candidate.observed.actions.github_owned_allowed = true; }, /github_owned_allowed/);
   rejects((candidate) => { candidate.required.main_branch.enforce_admins = false; }, /enforce_admins/);
+  rejects((candidate) => {
+    candidate.required.main_branch.required_status_checks[0].app_id = '1';
+  }, /required\.main_branch\.required_status_checks\[0\]\.app_id/);
   rejects((candidate) => { candidate.required.main_branch.force_pushes_allowed = true; }, /force_pushes_allowed/);
   rejects((candidate) => { candidate.required.apply_environment.required_reviewer_ids = []; }, /required_reviewer_ids/);
   rejects((candidate) => { candidate.required.apply_environment.admin_bypass_allowed = true; }, /admin_bypass_allowed/);
@@ -93,7 +109,7 @@ test('rejects policy weakening, activation self-claims, and unknown fields', () 
   rejects((candidate) => { candidate.unreviewed = true; }, /must contain exactly/);
   assert.throws(
     () => validateGitHubPolicy(policy, { requireActivation: true }),
-    /has not been independently verified and authorized/,
+    /still forbids workflow installation and cloud bootstrap/,
   );
 });
 
@@ -104,7 +120,7 @@ test('the policy CLI fails closed without a stack trace when activation is absen
     policyPath,
   ], { encoding: 'utf8' });
   assert.equal(result.status, 1);
-  assert.match(result.stderr, /^GitHub policy rejected: activation has not been independently verified and authorized\n$/);
+  assert.match(result.stderr, /^GitHub policy rejected: activation still forbids workflow installation and cloud bootstrap\n$/);
   assert.equal(result.stdout, '');
 });
 

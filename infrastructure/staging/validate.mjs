@@ -90,7 +90,7 @@ const REQUIRED_BLOCKERS = [
   'secret-version-lifecycle',
   'remote-state-bootstrap-not-applied',
   'keyless-plan-and-apply-identities-not-created',
-  'github-branch-environment-and-actions-policy-not-configured',
+  'github-terraform-workflow-not-installed',
   'live-foundation-plan-not-reviewed',
 ];
 
@@ -663,6 +663,7 @@ function validateEvidence(value) {
     'live_plan_script',
     'automation_blueprint',
     'github_policy',
+    'github_policy_observation_verified',
     'cloud_credentials_required',
     'live_plan_cloud_credentials_required',
     'ci_may_authenticate',
@@ -680,6 +681,11 @@ function validateEvidence(value) {
   exact(evidence.live_plan_script, 'terraform/plan.sh', 'evidence.live_plan_script');
   exact(evidence.automation_blueprint, 'automation/staging-terraform.yml', 'evidence.automation_blueprint');
   exact(evidence.github_policy, 'automation/github-policy.json', 'evidence.github_policy');
+  exact(
+    evidence.github_policy_observation_verified,
+    true,
+    'evidence.github_policy_observation_verified',
+  );
   exact(evidence.cloud_credentials_required, false, 'evidence.cloud_credentials_required');
   exact(
     evidence.live_plan_cloud_credentials_required,
@@ -740,8 +746,12 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 9, 'manifest.revision');
-  exact(manifest.status, 'keyless_activation_blueprint_ready_unbilled', 'manifest.status');
+  exact(manifest.revision, 10, 'manifest.revision');
+  exact(
+    manifest.status,
+    'github_security_configured_keyless_blueprint_unbilled',
+    'manifest.status',
+  );
   exact(manifest.environment, 'staging', 'manifest.environment');
   validateProject(manifest.project);
   validateBootstrap(manifest.bootstrap);
