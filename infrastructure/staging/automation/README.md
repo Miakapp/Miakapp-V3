@@ -1,11 +1,14 @@
 # Dormant staging Terraform automation
 
-Status: blueprint only; not installed under `.github/workflows`; cannot run
+Status: GitHub security configured; blueprint not installed under
+`.github/workflows`; cannot run
 
 The YAML and scripts in this directory describe the supported future keyless
 plan/apply path. They are deliberately outside GitHub's active workflow
-directory. Copying the blueprint is unauthorized until `github-policy.json` is
-replaced by an independently captured, reviewed activation record.
+directory. `github-policy.json` now records the independently observed branch,
+environment and Actions configuration, but copying the blueprint remains
+unauthorized until the cloud bootstrap and workflow-installation gates are
+separately approved.
 
 The blueprint uses two separately admitted GitHub environments and two separate
 Google service accounts. Both OIDC providers require the immutable numeric
@@ -38,11 +41,10 @@ days and its archived version after one further day; seven-day bucket soft delet
 can retain recoverable bytes longer. The workflow never uses public GitHub
 artifact storage.
 
-Activation requires a separate reviewed change: configure and re-observe the
-GitHub branch/environment/Actions policy, apply and migrate the bootstrap state,
-initialize and verify the empty foundation state with protected operator
-credentials, replace the policy record with an independently captured active
-record, and only then copy this YAML into
+Activation requires a separate reviewed change: apply and migrate the bootstrap
+state, initialize and verify the empty foundation state with protected operator
+credentials, authorize workflow installation in the policy record, and only then
+copy this YAML into
 `.github/workflows/staging-terraform.yml`. Merely copying the file is
-insufficient: its policy job deliberately rejects the current inactive record
-before requesting OIDC credentials.
+insufficient: its policy job deliberately rejects the current cloud-inactive
+record before requesting OIDC credentials.
