@@ -285,7 +285,7 @@ beforeAll(async () => {
   ]);
 });
 
-beforeEach(clearFirestore);
+beforeEach(() => clearFirestore(firestore));
 
 afterAll(async () => {
   await deleteApp(admin);
@@ -560,7 +560,7 @@ describe('Firebase Emulator FID-to-semantic-push vertical slice', () => {
     expect(challengeOverflow.status).toBe(413);
     expect(await errorCode(challengeOverflow)).toBe('limit_exceeded');
 
-    await clearFirestore();
+    await clearFirestore(firestore);
     for (let index = 0; index < 16; index += 1) {
       await registerDestination(`destination-fid-${String(index).padStart(2, '0')}`);
     }

@@ -66,9 +66,19 @@ On Apple Silicon with Homebrew, the check automatically discovers the keg-only
 
 The runner installs the pinned lockfile, type-checks, runs unit tests, builds the
 Function, starts Auth, Firestore, Functions, and Storage emulators, and executes
-the integration and Rules corpus. Every Firebase invocation uses the fixed
-`demo-*` project; attempts to load the Function outside that emulator runtime
-fail closed.
+the integration and Rules corpus. Firestore Emulator 1.19.4 is pinned while
+[firebase-tools#10518](https://github.com/firebase/firebase-tools/issues/10518)
+tracks intermittent transaction-lock failures observed in later releases. The
+runner downloads the JAR into the ignored `.firebase/emulators` cache and
+verifies its exact byte size and SHA-256 digest before executing it. Every
+admission scenario and each remaining stateful test file run behind a fresh
+emulator process boundary. Concurrent operations inside a scenario remain
+unchanged, while emulator-only transaction locks cannot contaminate later
+evidence. Tests also clear documents collection by collection instead of using
+the emulator-wide reset endpoint, so a failed scenario cannot turn later
+cleanup into a cascade of HTTP 409 responses. Every Firebase invocation uses
+the fixed `demo-*` project; attempts to load the Function outside that emulator
+runtime fail closed.
 
 ## Evidence and boundary
 

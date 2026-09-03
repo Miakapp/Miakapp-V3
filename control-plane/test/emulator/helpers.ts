@@ -1,3 +1,5 @@
+import type { Firestore } from 'firebase-admin/firestore';
+
 export const PROJECT_ID = 'demo-miakapp-v4';
 
 function requiredEnvironment(name: string): string {
@@ -18,12 +20,16 @@ export interface EmulatorUser {
   readonly userId: string;
 }
 
-export async function clearFirestore(): Promise<void> {
-  const response = await fetch(
-    `http://${FIRESTORE_HOST}/emulator/v1/projects/${PROJECT_ID}/databases/(default)/documents`,
-    { method: 'DELETE' },
-  );
-  if (!response.ok) throw new Error(`Firestore reset failed with ${response.status}`);
+export async function clearFirestore(firestore: Firestore): Promise<void> {
+  // Avoid the emulator-wide REST reset: newer emulator releases can leave it
+  // returning 409 after a transaction contention timeout.
+  const collections = await firestore.listCollections();
+  for (const collection of collections) {
+    await firestore.recursiveDelete(collection);
+  }
+  if ((await firestore.listCollections()).length !== 0) {
+    throw new Error('Firestore reset left top-level documents behind');
+  }
 }
 
 export async function signUp(email: string): Promise<EmulatorUser> {
