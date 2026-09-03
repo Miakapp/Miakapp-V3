@@ -168,10 +168,22 @@ node "$execution_helper" verify-project <"${execution}/project.json"
 run_gcloud_json "${execution}/billing.json" billing projects describe "$project_id"
 billing_account_id="$(node "$execution_helper" verify-billing-link <"${execution}/billing.json")"
 
-run_gcloud_json "${execution}/budgets.json" billing budgets list \
-  "--billing-account=${billing_account_id}"
-unset billing_account_id
-node "$execution_helper" verify-absent-targets budgets <"${execution}/budgets.json"
+budget_preflight_deferred=false
+if gcloud billing budgets list \
+  "--billing-account=${billing_account_id}" \
+  "--billing-project=${project_id}" \
+  --format=json \
+  --quiet >"${execution}/budgets-before.json" 2>>"$cloud_log"; then
+  node "$execution_helper" verify-absent-targets budgets <"${execution}/budgets-before.json"
+else
+  run_gcloud_json "${execution}/billing-budget-api-before.json" services list \
+    --enabled \
+    "--project=${project_id}" \
+    --filter=config.name=billingbudgets.googleapis.com
+  node "$execution_helper" verify-empty-inventory billing-budget-api \
+    <"${execution}/billing-budget-api-before.json"
+  budget_preflight_deferred=true
+fi
 run_gcloud_json "${execution}/buckets.json" storage buckets list "--project=${project_id}"
 node "$execution_helper" verify-absent-targets storage-buckets <"${execution}/buckets.json"
 run_gcloud_json "${execution}/service-accounts.json" iam service-accounts list "--project=${project_id}"
@@ -290,6 +302,30 @@ node "$execution_helper" reconcile-state \
   "$metadata_file" \
   "$reconciliation_mode"
 
+if [[ "$apply_status" -eq 0 ]]; then
+  budget_postcheck_succeeded=false
+  for attempt in {1..12}; do
+    if gcloud billing budgets list \
+      "--billing-account=${billing_account_id}" \
+      "--billing-project=${project_id}" \
+      --format=json \
+      --quiet >"${execution}/budgets-after.json" 2>>"$cloud_log" \
+      && node "$execution_helper" verify-provisioned-targets budgets \
+        <"${execution}/budgets-after.json" 2>>"$cloud_log"; then
+      budget_postcheck_succeeded=true
+      break
+    fi
+    if [[ "$attempt" -lt 12 ]]; then
+      sleep 5
+    fi
+  done
+  if [[ "$budget_postcheck_succeeded" != true ]]; then
+    echo "Exactly one bootstrap budget could not be verified after the successful apply; recovery material was preserved." >&2
+    exit 1
+  fi
+fi
+unset billing_account_id
+
 if [[ -n "$(git -C "$repository_root" status --porcelain=v1 --untracked-files=all)" ]] \
   || find "${repository_root}/infrastructure/staging" -type f \
     \( -name '*.tfstate' -o -name '*.tfstate.*' -o -name '*.tfplan' \) -print -quit | grep -q .; then
@@ -304,4 +340,7 @@ fi
 
 execution_complete=true
 echo "The exact reviewed bootstrap plan was applied and its state was migrated and reconciled in the private GCS backend."
+if [[ "$budget_preflight_deferred" == true ]]; then
+  echo "Budget absence was deferred while its API was disabled; exactly one target budget was verified after apply."
+fi
 echo "The verified temporary local state and private execution logs were removed."

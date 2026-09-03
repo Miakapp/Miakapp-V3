@@ -1,6 +1,6 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 14,
+  "revision": 15,
   "status": "bootstrap_saved_plan_reviewed_billing_linked_undeployed",
   "environment": "staging",
   "project": {
@@ -367,6 +367,8 @@
       "approved_plan_sha256": "0918d21c4677ce0958be9ccc43057d8d76a33857fdfbea066120ba953e30b5c1",
       "exact_authorization_required": true,
       "cloud_preflight_required": true,
+      "budget_preflight_deferred_only_when_api_disabled": true,
+      "budget_postcondition_required": true,
       "partial_state_migration_attempted": true,
       "local_recovery_preserved_on_failure": true,
       "local_state_removed_only_after_reconciliation": true,

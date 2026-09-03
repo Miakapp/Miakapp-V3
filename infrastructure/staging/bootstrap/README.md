@@ -87,7 +87,11 @@ MIAKAPP_STAGING_BOOTSTRAP_EXECUTION_AUTHORIZATION='apply-and-migrate:miakapp-v4-
 
 Before mutation, the wrapper revalidates the plan, its exact Terraform source,
 the active project and billing fingerprint, and the absence of the target
-budget, buckets, service accounts, and Workload Identity pool. It rejects
+budget, buckets, service accounts, and Workload Identity pool. If the Budget
+API is not enabled yet, only that budget lookup may be deferred, and only after
+a separate Service Usage observation proves that the API is disabled. After a
+complete apply and state reconciliation, the wrapper retries the lookup through
+the staging quota project and requires exactly one target budget. It rejects
 credential files, endpoint, proxy, Git, and Terraform overrides. The plan is
 applied once with state and logs confined beside the private bundle. The backend
 template is activated only in a separate private working copy; Terraform then
@@ -98,8 +102,9 @@ local copy is removed.
 
 If apply is partial, the wrapper still attempts to migrate and reconcile the
 partial subset so already-created resources are not orphaned. Any apply,
-migration, read-back, inventory, or reconciliation failure leaves the private
-execution directory intact and prints only its location plus a bounded error.
+migration, read-back, inventory, reconciliation, or budget-postcondition failure
+leaves the private execution directory intact and prints only its location plus
+a bounded error.
 Terraform also runs from that private directory, so a higher-priority
 `errored.tfstate` produced after a persistence failure cannot land in the
 repository and is used for recovery instead of any older normal state.

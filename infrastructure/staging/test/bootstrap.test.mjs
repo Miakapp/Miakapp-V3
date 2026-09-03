@@ -24,6 +24,7 @@ import { fileURLToPath } from 'node:url';
 import { validateBootstrapRoot } from '../bootstrap/guard.mjs';
 import {
   APPROVED_PLAN_SHA256,
+  BUDGET_DISPLAY_NAME,
   EXECUTION_AUTHORIZATION,
   FOUNDATION_ACTIVATION,
   FOUNDATION_ACTIVATION_TYPE,
@@ -36,6 +37,7 @@ import {
   verifyBillingObservation,
   verifyEmptyInventory,
   verifyProjectObservation,
+  verifyProvisionedTargetInventory,
   verifyRemoteStateObject,
 } from '../bootstrap/bootstrap-execution.mjs';
 import {
@@ -195,6 +197,10 @@ function writeExecutable(path, sourceText) {
 
 function runSyntheticBootstrapExecution({
   applyStatus = 0,
+  budgetApiUnexpectedlyEnabled = false,
+  budgetCountAfterApply = 1,
+  budgetPostcheckUnavailable = false,
+  deferBudgetPreflight = false,
   emergencyState = false,
   lockAlreadyHeld = false,
   migrationFails = false,
@@ -229,10 +235,16 @@ function runSyntheticBootstrapExecution({
   const divergentStatePath = join(temporary, 'divergent-state.json');
   const remoteStatePath = join(temporary, 'remote-state.json');
   const callLogPath = join(temporary, 'calls.log');
+  const applyMarkerPath = join(temporary, 'apply.marker');
+  const budgetsAfterPath = join(temporary, 'budgets-after.json');
   writeFileSync(planJsonPath, JSON.stringify(plan), { mode: 0o600 });
   writeFileSync(statePath, JSON.stringify(selectedState), { mode: 0o600 });
   writeFileSync(staleStatePath, JSON.stringify(staleState), { mode: 0o600 });
   writeFileSync(divergentStatePath, JSON.stringify(divergentState), { mode: 0o600 });
+  writeFileSync(budgetsAfterPath, JSON.stringify(Array.from(
+    { length: budgetCountAfterApply },
+    (_, index) => ({ displayName: BUDGET_DISPLAY_NAME, name: `budgets/${index + 1}` }),
+  )), { mode: 0o600 });
 
   writeExecutable(join(temporary, 'git'), String.raw`#!/usr/bin/env bash
 set -euo pipefail
@@ -292,6 +304,7 @@ case "$command_name" in
     else
       command cp "$MIAKAPP_FAKE_LOCAL_STATE" "$state_path"
     fi
+    command touch "$MIAKAPP_FAKE_APPLY_MARKER"
     exit "$MIAKAPP_FAKE_APPLY_STATUS"
     ;;
   init)
@@ -322,7 +335,26 @@ case " $* " in
   *" projects describe "*)
     printf '%s\n' '{"projectId":"miakapp-v4-staging","projectNumber":"1072737219170","name":"Miakapp V4 Staging","lifecycleState":"ACTIVE"}'
     ;;
-  *" billing budgets list "*|*" storage buckets list "*|*" iam service-accounts list "*|*" iam workload-identity-pools list "*)
+  *" billing budgets list "*)
+    if [[ -e "$MIAKAPP_FAKE_APPLY_MARKER" ]]; then
+      if [[ "$MIAKAPP_FAKE_BUDGET_POSTCHECK_UNAVAILABLE" == true ]]; then
+        exit 88
+      fi
+      command cat "$MIAKAPP_FAKE_BUDGETS_AFTER"
+    elif [[ "$MIAKAPP_FAKE_DEFER_BUDGET_PREFLIGHT" == true ]]; then
+      exit 87
+    else
+      printf '%s\n' '[]'
+    fi
+    ;;
+  *" services list "*"billingbudgets.googleapis.com"*)
+    if [[ "$MIAKAPP_FAKE_BUDGET_API_UNEXPECTEDLY_ENABLED" == true ]]; then
+      printf '%s\n' '[{"config":{"name":"billingbudgets.googleapis.com"}}]'
+    else
+      printf '%s\n' '[]'
+    fi
+    ;;
+  *" storage buckets list "*|*" iam service-accounts list "*|*" iam workload-identity-pools list "*)
     printf '%s\n' '[]'
     ;;
   *" storage ls "*)
@@ -337,6 +369,10 @@ case " $* " in
     ;;
   *) exit 94 ;;
 esac
+`);
+  writeExecutable(join(temporary, 'sleep'), String.raw`#!/usr/bin/env bash
+set -euo pipefail
+printf 'sleep:%s\n' "$*" >>"$MIAKAPP_FAKE_CALL_LOG"
 `);
 
   const result = spawnSync(
@@ -357,7 +393,12 @@ esac
         MIAKAPP_FAKE_DIVERGENT_STATE: divergentStatePath,
         MIAKAPP_FAKE_REMOTE_STATE: remoteStatePath,
         MIAKAPP_FAKE_CALL_LOG: callLogPath,
+        MIAKAPP_FAKE_APPLY_MARKER: applyMarkerPath,
+        MIAKAPP_FAKE_BUDGETS_AFTER: budgetsAfterPath,
         MIAKAPP_FAKE_APPLY_STATUS: String(applyStatus),
+        MIAKAPP_FAKE_BUDGET_API_UNEXPECTEDLY_ENABLED: String(budgetApiUnexpectedlyEnabled),
+        MIAKAPP_FAKE_BUDGET_POSTCHECK_UNAVAILABLE: String(budgetPostcheckUnavailable),
+        MIAKAPP_FAKE_DEFER_BUDGET_PREFLIGHT: String(deferBudgetPreflight),
         MIAKAPP_FAKE_EMERGENCY_STATE: String(emergencyState),
         MIAKAPP_FAKE_MIGRATION_FAILS: String(migrationFails),
         MIAKAPP_FAKE_PREEXISTING_STATE: String(preexistingState),
@@ -768,6 +809,25 @@ test('binds bootstrap execution to the exact reviewed plan and closed cloud obse
     ], 'service-accounts'),
     /already contains a bootstrap target/,
   );
+  assert.doesNotThrow(() => verifyProvisionedTargetInventory([
+    { displayName: BUDGET_DISPLAY_NAME },
+    { displayName: 'Unrelated budget' },
+  ], 'budgets'));
+  assert.throws(
+    () => verifyProvisionedTargetInventory([], 'budgets'),
+    /must contain exactly one bootstrap target/,
+  );
+  assert.throws(
+    () => verifyProvisionedTargetInventory([
+      { displayName: BUDGET_DISPLAY_NAME },
+      { displayName: BUDGET_DISPLAY_NAME },
+    ], 'budgets'),
+    /must contain exactly one bootstrap target/,
+  );
+  assert.throws(
+    () => verifyProvisionedTargetInventory([], 'service-accounts'),
+    /label is invalid/,
+  );
   assert.doesNotThrow(() => verifyRemoteStateObject({
     bucket: STATE_BUCKET,
     name: STATE_OBJECT,
@@ -931,6 +991,8 @@ test('keeps the bootstrap execution wrapper dormant and recovery-first', () => {
   assert.match(applyAndMigrateScript, /verify-authorization/);
   assert.match(applyAndMigrateScript, /mkdir -m 700 -- "\$execution_lock"/);
   assert.match(applyAndMigrateScript, /verify-absent-targets/);
+  assert.match(applyAndMigrateScript, /--billing-project=\$\{project_id\}/);
+  assert.match(applyAndMigrateScript, /verify-provisioned-targets budgets/);
   assert.match(applyAndMigrateScript, /terraform[\s\S]*apply[\s\S]*-state="\$local_state"/);
   assert.match(applyAndMigrateScript, /terraform -chdir="\$apply_root" apply/);
   assert.doesNotMatch(applyAndMigrateScript, /terraform -chdir="\$bootstrap_root" apply/);
@@ -960,6 +1022,72 @@ test('orchestrates one exact apply, migration, read-back, and verified cleanup w
     assert.equal(migrateIndex > applyIndex, true);
     assert.equal(pullIndex > migrateIndex, true);
     assert.equal((execution.calls.match(/terraform:apply:false/g) ?? []).length, 1);
+  } finally {
+    rmSync(execution.temporary, { recursive: true });
+  }
+});
+
+test('defers budget absence only while the Budget API is disabled and verifies it after apply', () => {
+  const execution = runSyntheticBootstrapExecution({ deferBudgetPreflight: true });
+  try {
+    assert.equal(execution.result.status, 0, execution.result.stderr);
+    assert.match(execution.result.stdout, /Budget absence was deferred/);
+    const apiObservation = execution.calls.indexOf('gcloud:services list --enabled');
+    const apply = execution.calls.indexOf('terraform:apply:false');
+    const budgetAfter = execution.calls.lastIndexOf('gcloud:billing budgets list');
+    assert.equal(apiObservation >= 0 && apiObservation < apply, true);
+    assert.equal(budgetAfter > apply, true);
+    assert.equal(execution.executionDirectories.length, 0);
+  } finally {
+    rmSync(execution.temporary, { recursive: true });
+  }
+});
+
+test('rejects budget preflight deferral when the Budget API is observed as enabled', () => {
+  const execution = runSyntheticBootstrapExecution({
+    budgetApiUnexpectedlyEnabled: true,
+    deferBudgetPreflight: true,
+  });
+  try {
+    assert.equal(execution.result.status, 1);
+    assert.match(execution.result.stderr, /billing-budget-api inventory is not empty/);
+    assert.doesNotMatch(execution.calls, /terraform:apply:false/);
+    assert.equal(execution.executionDirectories.length, 1);
+  } finally {
+    rmSync(execution.temporary, { recursive: true });
+  }
+});
+
+test('preserves reconciled recovery state when the target budget is absent or duplicated after apply', () => {
+  for (const budgetCountAfterApply of [0, 2]) {
+    const execution = runSyntheticBootstrapExecution({
+      budgetCountAfterApply,
+      deferBudgetPreflight: true,
+    });
+    try {
+      assert.equal(execution.result.status, 1);
+      assert.match(execution.result.stdout, /managed resources: 36/);
+      assert.match(execution.result.stderr, /Exactly one bootstrap budget could not be verified/);
+      assert.equal((execution.calls.match(/sleep:5/g) ?? []).length, 11);
+      assert.equal(execution.executionDirectories.length, 1);
+      assert.equal(existsSync(join(execution.executionDirectories[0], 'remote-bootstrap.tfstate')), true);
+    } finally {
+      rmSync(execution.temporary, { recursive: true });
+    }
+  }
+});
+
+test('preserves reconciled recovery state when the target budget cannot be inspected after apply', () => {
+  const execution = runSyntheticBootstrapExecution({
+    budgetPostcheckUnavailable: true,
+    deferBudgetPreflight: true,
+  });
+  try {
+    assert.equal(execution.result.status, 1);
+    assert.match(execution.result.stdout, /managed resources: 36/);
+    assert.match(execution.result.stderr, /Exactly one bootstrap budget could not be verified/);
+    assert.equal((execution.calls.match(/sleep:5/g) ?? []).length, 11);
+    assert.equal(execution.executionDirectories.length, 1);
   } finally {
     rmSync(execution.temporary, { recursive: true });
   }
