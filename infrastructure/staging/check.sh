@@ -25,7 +25,7 @@ fi
 
 node infrastructure/staging/validate.mjs infrastructure/staging/manifest.json
 node infrastructure/staging/automation/validate-policy.mjs \
-  --require-plan-activation \
+  --require-apply-activation \
   infrastructure/staging/automation/github-policy.json
 node infrastructure/staging/automation/guard.mjs \
   "${repository_root}/infrastructure/staging/automation"
