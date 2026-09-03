@@ -70,7 +70,8 @@ and must never be committed or attached to a public issue.
 The execution command is intentionally single-use and bound to configuration
 commit `6340bffbddcc4797067ef48170fc5c3524345bf2`, plan digest
 `6fb0b0c15fa04338a40ab59de790c3a4a85f96b418377c4a70570a8dabd5d457`,
-project `miakapp-v4-staging`, and remote object
+the exact repository commit that executes it, project `miakapp-v4-staging`, and
+remote object
 `gs://miakapp-v4-staging-tfstate-1072737219170/terraform/bootstrap/default.tfstate`.
 The replacement plan has not been authorized or applied. Do not set the runtime
 authorization merely because this command exists.
@@ -84,15 +85,17 @@ apply-and-migrate operation, an operator may run from a clean descendant of the
 reviewed configuration commit:
 
 ```sh
-MIAKAPP_STAGING_BOOTSTRAP_EXECUTION_AUTHORIZATION='apply-and-migrate:miakapp-v4-staging:6fb0b0c15fa04338a40ab59de790c3a4a85f96b418377c4a70570a8dabd5d457' \
+MIAKAPP_STAGING_BOOTSTRAP_EXECUTION_AUTHORIZATION='apply-and-migrate:miakapp-v4-staging:6fb0b0c15fa04338a40ab59de790c3a4a85f96b418377c4a70570a8dabd5d457:<40-hex-reviewed-execution-commit>' \
   ./infrastructure/staging/bootstrap/apply-and-migrate.sh \
   '/absolute/private/miakapp-staging-bootstrap-plan-...'
 ```
 
-Before mutation, the wrapper revalidates the plan, its exact Terraform source,
-the active project and billing fingerprint, and the absence of the target
-budget, buckets, service accounts, and Workload Identity pool. If the Budget
-API is not enabled yet, only that budget lookup may be deferred, and only after
+Before mutation, the wrapper requires the authorization's repository commit to
+equal the clean checkout's current commit. It then revalidates the plan, its
+exact Terraform source, the active project and billing fingerprint, and the
+absence of the target budget, buckets, service accounts, and Workload Identity
+pool. If the Budget API is not enabled yet, only that budget lookup may be
+deferred, and only after
 a separate Service Usage observation proves that the API is disabled. After a
 complete apply and state reconciliation, the wrapper retries the lookup through
 the staging quota project and requires exactly one target budget. It rejects
