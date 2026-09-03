@@ -1,13 +1,13 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 30,
-  "status": "foundation_partial_apply_recovery_authorized",
+  "revision": 32,
+  "status": "foundation_complete_recovery_retired",
   "environment": "staging",
   "project": {
     "project_id": "miakapp-v4-staging",
     "project_number": "1072737219170",
     "display_name": "Miakapp V4 Staging",
-    "lifecycle": "firebase_enabled_billing_linked_bootstrap_and_partial_foundation_created_undeployed",
+    "lifecycle": "firebase_enabled_billing_linked_bootstrap_and_foundation_created_undeployed",
     "creation_authorized": false,
     "billing_link_authorized": false,
     "deployment_authorized": false,
@@ -62,6 +62,10 @@
       "projects/1072737219170/locations/global/workloadIdentityPools/miakapp-github/providers/staging-apply",
       "projects/1072737219170/locations/global/workloadIdentityPools/miakapp-github/providers/staging-plan"
     ],
+    "workload_identity_provider_states": {
+      "staging-apply": "disabled",
+      "staging-plan": "disabled"
+    },
     "enabled_service_apis": [
       "analyticshub.googleapis.com",
       "appengine.googleapis.com",
@@ -264,7 +268,7 @@
     ],
     "iam": {
       "runtime_identity_state": "created_not_deployed",
-      "foundation_resource_bindings_state": "partial_eight_recovery_bindings_missing",
+      "foundation_resource_bindings_state": "complete_eight_recovery_bindings_present",
       "broad_project_roles_forbidden": true,
       "human_runtime_bindings_forbidden": true,
       "resource_bindings": [
@@ -335,11 +339,11 @@
     }
   },
   "terraform": {
-    "state": "foundation_partial_apply_recovery_authorized",
-    "supported_workflow": "credential_free_validation_and_manual_keyless_partial_recovery",
+    "state": "foundation_complete_recovery_retired",
+    "supported_workflow": "credential_free_validation_and_manual_read_only_plan",
     "configuration_apply_capable": true,
-    "active_cloud_workflow": ".github/workflows/staging-terraform.yml",
-    "workflow_blueprint_state": "installed_exact_partial_recovery_copy",
+    "active_cloud_workflow": null,
+    "workflow_blueprint_state": "retired_recovery_blueprint_retained_as_evidence",
     "bootstrap_root": "bootstrap",
     "foundation_root": "terraform",
     "automation_root": "automation",
@@ -356,7 +360,7 @@
     ],
     "backend": {
       "type": "gcs",
-      "state": "bootstrap_and_partial_foundation_state_present",
+      "state": "bootstrap_and_complete_foundation_state_present",
       "bucket": "miakapp-v4-staging-tfstate-1072737219170",
       "bootstrap_prefix": "terraform/bootstrap",
       "foundation_prefix": "terraform/foundation",
@@ -367,8 +371,12 @@
       "public_access_prevention": "enforced"
     },
     "identity": {
-      "state": "planner_and_deployer_exercised_recovery_authorized",
+      "state": "planner_and_deployer_exercised_recovery_wif_providers_disabled",
       "workload_identity_pool": "miakapp-github",
+      "workload_identity_pool_state": "enabled_retained",
+      "plan_provider_state": "disabled",
+      "apply_provider_state": "disabled",
+      "reviewed_github_oidc_exchange_allowed": false,
       "planner_service_account": "miakapp-tf-plan@miakapp-v4-staging.iam.gserviceaccount.com",
       "deployer_service_account": "miakapp-tf-apply@miakapp-v4-staging.iam.gserviceaccount.com",
       "runtime_service_account": "miakapp-control-plane@miakapp-v4-staging.iam.gserviceaccount.com",
@@ -376,7 +384,7 @@
       "service_account_keys_allowed": false,
       "bootstrap_state_write_allowed": false,
       "planner_service_usage_consumer_allowed": true,
-      "planner_service_usage_consumer_state": "live_binding_created_bootstrap_state_reconciliation_pending",
+      "planner_service_usage_consumer_state": "managed_in_reconciled_remote_bootstrap_state",
       "deployer_project_iam_mutation_allowed": false,
       "deployer_service_account_administration_allowed": false,
       "deployer_project_wide_storage_administration_allowed": false,
@@ -396,7 +404,7 @@
       "github_repository_owner_id": "83046838"
     },
     "saved_plan": {
-      "state": "partial_foundation_apply_bundle_retained_as_recovery_evidence",
+      "state": "consumed_recovery_plan_soft_deleted_recoverable",
       "public_artifacts_allowed": false,
       "create_only": true,
       "sha256_verified_before_apply": true,
@@ -405,7 +413,7 @@
       "soft_delete_days": 7
     },
     "bootstrap_execution": {
-      "state": "bootstrap_complete_state_migrated_and_reconciled",
+      "state": "bootstrap_complete_state_reconciled_planner_role_adopted_and_recovery_wif_disabled",
       "script": "bootstrap/migrate-recovered-state.sh",
       "retired_apply_script": "bootstrap/apply-and-migrate.sh",
       "helper": "bootstrap/bootstrap-execution.mjs",
@@ -469,19 +477,31 @@
         "raw_contents_committed": false
       },
       "remote_state": {
-        "state": "migrated_and_reconciled",
+        "state": "migrated_reconciled_planner_role_adopted_and_recovery_wif_disabled",
         "bucket": "miakapp-v4-staging-tfstate-1072737219170",
         "object": "terraform/bootstrap/default.tfstate",
-        "generation": "1788439334043522",
-        "sha256": "8753dcceaa848ba8734d9892dbec6f2445fbf6b3fbead7da375cc37f0702d3bf",
-        "size_bytes": 60909,
+        "generation": "1788460174191027",
+        "sha256": "288d947d35f5d5a278aaff210ea878a9dab817f594b4c3161ed117bb2e30e26d",
+        "size_bytes": 61864,
         "terraform_version": "1.11.3",
-        "serial": 40,
-        "managed_resources": 36,
+        "serial": 42,
+        "managed_resources": 37,
+        "data_resources": 2,
+        "outputs": 1,
         "lineage_sha256": "35e52294057979e6191eaa05141a9476261d4b0ea75c9113128f780abda7a9ba",
-        "canonical_serial_increment": 1,
-        "check_results_exact_permutation": true,
-        "remainder_exactly_equal": true,
+        "initial_migration_reconciliation": {
+          "state": "initial_bootstrap_migration_reconciled",
+          "generation": "1788439334043522",
+          "sha256": "8753dcceaa848ba8734d9892dbec6f2445fbf6b3fbead7da375cc37f0702d3bf",
+          "size_bytes": 60909,
+          "terraform_version": "1.11.3",
+          "serial": 40,
+          "managed_resources": 36,
+          "source_recovery_serial": 39,
+          "canonical_serial_increment": 1,
+          "check_results_exact_permutation": true,
+          "remainder_exactly_equal": true
+        },
         "initialization_generation": {
           "state": "noncurrent_recoverable_empty_state",
           "generation": "1788439333248171",
@@ -492,6 +512,128 @@
           "raw_contents_committed": false
         },
         "raw_contents_committed": false
+      },
+      "planner_role_adoption_observation": {
+        "observed_on": "2026-09-03",
+        "configuration_commit": "c5ff539af5598f4cc91eef9753ff90bfa5502974",
+        "terraform_version": "1.11.3",
+        "backend": "gcs",
+        "import_address": "google_project_iam_member.planner[\"roles/serviceusage.serviceUsageConsumer\"]",
+        "import_id": "miakapp-v4-staging roles/serviceusage.serviceUsageConsumer serviceAccount:miakapp-tf-plan@miakapp-v4-staging.iam.gserviceaccount.com",
+        "private_plan_sha256": "0bab71811fa5dc8d084c47e3938accb8cf4421da4264edb8665bee1989895d6f",
+        "private_plan_size_bytes": 24405,
+        "result": {
+          "import": 1,
+          "add": 0,
+          "change": 0,
+          "destroy": 0
+        },
+        "state_before": {
+          "generation": "1788439334043522",
+          "sha256": "8753dcceaa848ba8734d9892dbec6f2445fbf6b3fbead7da375cc37f0702d3bf",
+          "size_bytes": 60909,
+          "serial": 40,
+          "managed_resources": 36,
+          "data_resources": 2,
+          "outputs": 1
+        },
+        "state_after": {
+          "generation": "1788457646215552",
+          "sha256": "7833a4a298ba87c9a116cfcf2c48d4a82b1babd706516e35162d358397136544",
+          "size_bytes": 61910,
+          "serial": 41,
+          "managed_resources": 37,
+          "data_resources": 2,
+          "outputs": 1
+        },
+        "project_iam_etag_before": "BwZalzR1TWY=",
+        "project_iam_etag_after": "BwZalzR1TWY=",
+        "project_iam_canonical_sha256_before": "5aa86bdfc2df0f42627afbd4822f56ad1f7e889a6bcab7271858691421ee6b5d",
+        "project_iam_canonical_sha256_after": "5aa86bdfc2df0f42627afbd4822f56ad1f7e889a6bcab7271858691421ee6b5d",
+        "project_iam_unchanged": true,
+        "set_iam_policy_audit_entries": 0,
+        "normalized_state_remainder_sha256_before": "1869481d2084c66d3db043d24b0667788ae9c10ffde272c3154bd9f1167e9de3",
+        "normalized_state_remainder_sha256_after": "1869481d2084c66d3db043d24b0667788ae9c10ffde272c3154bd9f1167e9de3",
+        "check_results_exact_permutation": true,
+        "state_remainder_exactly_equal": true,
+        "follow_up_plan_exit_code": 0,
+        "follow_up_plan_result": "no_changes",
+        "temporary_lock_released": true,
+        "raw_plan_committed": false,
+        "raw_state_committed": false
+      },
+      "recovery_federation_retirement_observation": {
+        "observed_on": "2026-09-03",
+        "configuration_commit": "ee457535a64355cd8133410d9c8c43f039608928",
+        "terraform_version": "1.11.3",
+        "backend": "gcs",
+        "private_plan_sha256": "8f570dfe5450b704112d484f058fc6dfcd39069a92c8bb483c5029027183e888",
+        "private_plan_size_bytes": 25925,
+        "plan_result": {
+          "no_op": 35,
+          "import": 0,
+          "add": 0,
+          "change": 2,
+          "destroy": 0
+        },
+        "changes": [
+          {
+            "address": "google_iam_workload_identity_pool_provider.apply",
+            "attribute": "disabled",
+            "before": false,
+            "after": true
+          },
+          {
+            "address": "google_iam_workload_identity_pool_provider.plan",
+            "attribute": "disabled",
+            "before": false,
+            "after": true
+          }
+        ],
+        "only_disabled_attribute_changed": true,
+        "workload_identity_pool_state_after": "enabled_retained",
+        "apply_completed": true,
+        "apply_result": {
+          "add": 0,
+          "change": 2,
+          "destroy": 0
+        },
+        "state_before": {
+          "generation": "1788457646215552",
+          "sha256": "7833a4a298ba87c9a116cfcf2c48d4a82b1babd706516e35162d358397136544",
+          "size_bytes": 61910,
+          "serial": 41,
+          "managed_resources": 37,
+          "data_resources": 2,
+          "outputs": 1
+        },
+        "state_after": {
+          "generation": "1788460174191027",
+          "sha256": "288d947d35f5d5a278aaff210ea878a9dab817f594b4c3161ed117bb2e30e26d",
+          "size_bytes": 61864,
+          "serial": 42,
+          "managed_resources": 37,
+          "data_resources": 2,
+          "outputs": 1
+        },
+        "state_lineage_sha256_before": "35e52294057979e6191eaa05141a9476261d4b0ea75c9113128f780abda7a9ba",
+        "state_lineage_sha256_after": "35e52294057979e6191eaa05141a9476261d4b0ea75c9113128f780abda7a9ba",
+        "state_lineage_unchanged": true,
+        "iam_hash_profile": "jq_compact_key_sorted_json_without_etag",
+        "project_iam_normalized_sha256_before": "7aeffa3819cb67be2a241bdf1e29f04fc3e9a7af9e412786ae7174eb00859f10",
+        "project_iam_normalized_sha256_after": "7aeffa3819cb67be2a241bdf1e29f04fc3e9a7af9e412786ae7174eb00859f10",
+        "planner_service_account_iam_normalized_sha256_before": "0123aa229345a8351d737f9e140bd0891c6a6bd5be177df9c93520f9cd3347b4",
+        "planner_service_account_iam_normalized_sha256_after": "0123aa229345a8351d737f9e140bd0891c6a6bd5be177df9c93520f9cd3347b4",
+        "deployer_service_account_iam_normalized_sha256_before": "fe1c653a9602756b3625cc2b34e838bd00217f635acf4adea4b1b98af0e06e8b",
+        "deployer_service_account_iam_normalized_sha256_after": "fe1c653a9602756b3625cc2b34e838bd00217f635acf4adea4b1b98af0e06e8b",
+        "project_iam_unchanged": true,
+        "planner_service_account_iam_unchanged": true,
+        "deployer_service_account_iam_unchanged": true,
+        "follow_up_plan_exit_code": 0,
+        "follow_up_plan_result": "no_changes",
+        "temporary_lock_released": true,
+        "raw_plan_committed": false,
+        "raw_state_committed": false
       },
       "source_state_preserved_on_failure": true,
       "source_state_preserved_after_reconciliation": true,
@@ -828,7 +970,95 @@
       "full_plan_reviewed": true,
       "raw_planned_values_committed": false
     },
-    "apply_authorized": true,
+    "foundation_recovery_apply_observation": {
+      "observed_on": "2026-09-03",
+      "configuration_commit": "d6e2a40064091d803cca79126cf91a75992cec1f",
+      "workflow_run_id": "33784785967",
+      "workflow_run_attempt": 1,
+      "workflow_result": "failure_after_successful_apply_during_follow_up_plan",
+      "environment_approval": "approved",
+      "terraform_version": "1.11.3",
+      "backend": "gcs",
+      "plan_object": "gs://miakapp-v4-staging-tfstate-1072737219170/plans/d6e2a40064091d803cca79126cf91a75992cec1f/33784785967/1/foundation.tfplan",
+      "plan_generation": "1788456590438484",
+      "plan_size_bytes": 18924,
+      "plan_sha256": "d68d4d6748e03691cb1d103a0ab593413110349ba4b39b0ea4efb9be381f1a1f",
+      "strict_validation_profile": "partial-foundation-recovery",
+      "strict_validation_passed": true,
+      "requested_result": {
+        "create": 8,
+        "no_op": 25,
+        "update": 0,
+        "delete": 0
+      },
+      "resource_counts": {
+        "kms_iam_bindings": 1,
+        "secret_iam_bindings": 5,
+        "component_bucket_iam_bindings": 2
+      },
+      "contains_workload": false,
+      "contains_public_ingress": false,
+      "contains_secret_versions": false,
+      "contains_billing_resource": false,
+      "apply_attempted": true,
+      "apply_completed": true,
+      "workflow_failure_stage": "post_apply_convergence_plan",
+      "workflow_failure_cause": "deployer_identity_lacks_planner_read_surface",
+      "state_before": {
+        "object": "terraform/foundation/default.tfstate",
+        "generation": "1788452068422403",
+        "sha256": "7729ee35a104ce04f918faa05cd47d4d37731baac96def6e8531b17175f721bb",
+        "size_bytes": 42621,
+        "terraform_version": "1.11.3",
+        "serial": 4,
+        "managed_resources": 25,
+        "data_resources": 2,
+        "outputs": 0
+      },
+      "state_after": {
+        "object": "terraform/foundation/default.tfstate",
+        "generation": "1788456706865449",
+        "sha256": "e2eca5fc0934a51a4c9a56650665285717772fd350b59e87d18b1ec2da04d8b0",
+        "size_bytes": 53619,
+        "lineage_sha256": "113390906103bdbefa4bac8b5d9549f7d867c38e8e9c4bef989977a12222c7d4",
+        "terraform_version": "1.11.3",
+        "serial": 6,
+        "managed_resources": 33,
+        "data_resources": 3,
+        "outputs": 1
+      },
+      "independent_convergence": {
+        "authentication": "user_adc",
+        "plan_sha256": "d63373c1c59b7bd6c797a7ff5f94e7f5361bd27552c78ab86f9215727441ef34",
+        "plan_size_bytes": 20008,
+        "exit_code": 0,
+        "result": "no_changes",
+        "managed_no_op": 33,
+        "applyable": false,
+        "complete": true,
+        "errored": false,
+        "raw_plan_committed": false
+      },
+      "live_inventory": {
+        "foundation_resource_iam_bindings": 8,
+        "foundation_resource_iam_bindings_exact": true,
+        "secret_containers": 5,
+        "secret_versions": 0,
+        "firestore_ttl_fields_active": 3,
+        "kms_primary_version": 1,
+        "kms_primary_version_state": "ENABLED",
+        "kms_protection_level": "SOFTWARE",
+        "kms_algorithm": "EC_SIGN_ED25519",
+        "cloud_run_services": 0,
+        "cloud_functions": 0
+      },
+      "plan_live_generation_present": false,
+      "plan_soft_deleted_recoverable": true,
+      "temporary_lock_released": true,
+      "raw_planned_values_committed": false,
+      "recovery_required": false
+    },
+    "apply_authorized": false,
     "destroy_authorized": false,
     "function_deployment_included": false,
     "offline_check_uses_mock_providers": true,
@@ -967,8 +1197,8 @@
     }
   },
   "readiness": {
-    "plan_only_cloud_actions_authorized": true,
-    "foundation_apply_authorized": true,
+    "manual_read_only_cloud_plan_authorized": true,
+    "foundation_apply_authorized": false,
     "required_blockers": [
       "production-config-loader",
       "kms-signer-and-jwks-rotation",
@@ -981,8 +1211,7 @@
       "monitoring-and-billing-alerts",
       "migration-rehearsal",
       "production-function-entrypoint",
-      "secret-version-lifecycle",
-      "staging-foundation-recovery-not-applied"
+      "secret-version-lifecycle"
     ]
   },
   "evidence": {
@@ -996,10 +1225,17 @@
     "github_policy_observation_verified": true,
     "credential_free_validation": true,
     "manual_live_plan_requires_user_adc": true,
-    "ci_plan_uses_keyless_oidc": true,
+    "historical_ci_plan_used_keyless_oidc": true,
     "persistent_ci_credentials_allowed": false,
-    "active_plan_workflow_present": true,
-    "active_apply_workflow_present": true,
+    "active_plan_workflow_present": false,
+    "active_apply_workflow_present": false,
+    "recovery_workflow_retired": true,
+    "staging_wif_providers_disabled": true,
+    "retired_recovery_workflow": {
+      "id": "349440747",
+      "state": "disabled_manually",
+      "active_file_present": false
+    },
     "staging_rows": [
       "STAGE-01",
       "STAGE-02",

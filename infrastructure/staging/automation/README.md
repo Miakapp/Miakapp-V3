@@ -1,69 +1,57 @@
-# Guarded staging Terraform partial-recovery automation
+# Retired staging Terraform foundation recovery
 
-Status: protected manual keyless partial-foundation recovery authorized
+Status: one-shot partial-foundation recovery completed and retired
 
-The YAML and scripts in this directory describe the bounded recovery path after
-the initial staging foundation apply stopped with partial state. The active workflow at
-`.github/workflows/staging-terraform.yml` is byte-identical to this blueprint
-and bound to policy SHA-256
+The manual keyless workflow that completed the staging foundation recovery is
+no longer installed under `.github/workflows/`. Its three activation flags are
+false in `github-policy.json`, so neither planning nor applying can be admitted
+through that path. GitHub workflow `349440747` was independently observed in
+state `disabled_manually` before its active source was removed.
+
+`staging-terraform.yml` is immutable historical evidence of the exact workflow
+that ran. Its reviewed SHA-256 remains
 `701891a221ee949c5b1f0d67e537911fc7fa1476f46c5e670593eb341f2cae2e`.
-It becomes active only through protected `main`.
+It must not be copied back into the active workflow directory without a new,
+explicitly reviewed authorization.
 
-The infrastructure reserves two separately admitted GitHub environments and
-two separate Google service accounts. Both OIDC providers require the immutable
-numeric
-repository and owner IDs, `main`, the exact workflow reference, and the expected
-environment claim. The planner can read infrastructure, consume project quota
-for those reads, manage only `.tflock` objects, and create private saved plans;
-it cannot create or replace state. Only
-the deployer receives resource mutation roles, and those exclude
-project IAM, service-account administration and project-wide Storage so the
-deployer cannot rewrite its own trust boundary or the bootstrap state.
+The historical workflow separated planning and applying across distinct GitHub
+environments and Google service accounts. It stored saved plans privately,
+validated the closed `partial-foundation-recovery` resource inventory, required
+approval before applying the exact saved binary, serialized the eight IAM
+writes, and verified convergence after apply. These details explain the
+evidence; they do not grant current authority.
 
-The workflow has policy, plan, and apply jobs. The plan job writes a saved plan
-to the private state bucket with a create-only
-object precondition and a planner identity that lacks delete/replace authority
-for `plans/`. Public logs contain only bounded action counts and resource
-addresses, never planned values. Before upload, the plan must pass the closed
-`partial-foundation-recovery` policy: exactly 25 no-ops and eight additive IAM
-creates, the exact partial prior-state inventory, seven accepted refresh-only
-provider normalizations, fully known targets, critical references and passing
-Terraform checks. The plan job cannot request the deployer identity.
+The corresponding cloud exchange path is also retired. Configuration commit
+`ee457535a64355cd8133410d9c8c43f039608928` produced a 25,925-byte private plan
+with SHA-256
+`8f570dfe5450b704112d484f058fc6dfcd39069a92c8bb483c5029027183e888`.
+It contained 35 no-ops and exactly two updates: only `disabled` changed from
+`false` to `true` on the plan and apply Workload Identity providers. Apply
+reported `0 added, 2 changed, 0 destroyed`; a follow-up plan reported no
+changes. The Workload Identity pool remains enabled and retained.
 
-If Terraform itself fails before a saved plan exists, the wrapper retains its
-bounded log under the same private, create-only, short-lived `plans/` prefix and
-prints only the object path and SHA-256 publicly. This permits diagnosis without
-placing provider details or planned values in Actions logs. The temporary runner
-copy is still discarded.
+Current bootstrap state generation `1788460174191027` is 61,864 bytes at
+serial 42 with 37 managed resources, two data resources and one output. Its
+SHA-256 is
+`288d947d35f5d5a278aaff210ea878a9dab817f594b4c3161ed117bb2e30e26d`.
+The preceding serial-41 generation remains the historical evidence for planner
+role adoption.
 
-The apply job depends on both earlier jobs and on explicit approval in the
-`miakapp-v4-staging-apply` environment. `apply.sh` accepts only the exact private
-object path and SHA-256 emitted by the same workflow attempt, repeats the closed
-plan validation immediately before Terraform, and applies that saved binary
-without replanning. The eight IAM writes are serialized to avoid competing
-read-modify-write operations on the same policy. It then runs a private,
-non-saving plan and succeeds only if Terraform reports complete convergence.
-Detailed plans and apply logs remain in discarded runner files.
+Disabling both providers closes the reviewed GitHub OIDC exchange route. It
+does not delete the planner/deployer service accounts or their IAM grants, and
+does not prove that other administrators cannot impersonate them. Those
+identities remain part of the teardown inventory.
 
-`inspect-plan.sh` remains the read-only operator path for historical initial
-plans. The partial recovery was independently planned and fully reviewed from
-state generation `1788452068422403`: exactly eight creates, 25 no-ops and no
-configuration update or delete. Its temporary local saved plan passed the new
-profile and was removed after validation.
+`plan.sh` and `apply.sh` are intentionally inert compatibility entrypoints. They
+fail immediately without inspecting credentials, invoking Terraform, or making
+network or cloud calls. Keeping hard-fail files prevents an old reference from
+silently performing a different operation.
 
-The apply environment records one explicit reviewer and allows that reviewer to
-approve their own manually dispatched run because the repository has
-only one human administrator. This is a deliberate two-step operator check, not
-independent four-eyes approval. Administrator bypass must still be disabled.
+`inspect-plan.sh` remains the explicitly invoked, read-only operator tool for
+historical initial plans. Saved plan data is sensitive and remains subject to
+the private state bucket's retention and soft-delete controls.
 
-Saved plans are sensitive. The bucket policy deletes the live object after two
-days and its archived version after one further day; seven-day bucket soft delete
-can retain recoverable bytes longer. The workflow never uses public GitHub
-artifact storage.
-
-`github-policy.json` preserves the independently observed GitHub settings and
-authorizes this exact one-shot recovery workflow. Its policy job verifies the
-active file, blueprint, digest, and apply authorization before either cloud job
-can request OIDC credentials. Any resource inventory or action change fails
-before a plan can be uploaded or applied; after successful convergence, this
-authorization is retired in a separate protected change.
+`validate-policy.mjs` accepts only the exact retired policy during ordinary
+validation. Both `--require-plan-activation` and
+`--require-apply-activation` fail closed. It also requires the active workflow
+path to be absent and the historical blueprint to retain its reviewed digest.
