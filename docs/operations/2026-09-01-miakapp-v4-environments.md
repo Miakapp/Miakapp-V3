@@ -2,9 +2,9 @@
 
 Date: 2026-09-01
 
-Status: accepted direction; approved staging billing link active; authorized
-bootstrap plan failed with zero created resources on 2026-09-03; replacement
-import plan reviewed but not authorized; project remains undeployed
+Status: accepted direction; staging bootstrap resources created on 2026-09-03;
+complete state preserved locally pending remote migration; project remains
+application-undeployed
 
 ## Decision
 
@@ -77,10 +77,11 @@ cloud cost**. The billing association enables future metered services but does
 not itself create one.
 It runs against local Auth, Firestore, Functions and Storage emulators and cannot
 load as a production Function. The staging project currently has the approved
-billing link and all eight Terraform bootstrap APIs are enabled. No target
-budget, registered Firebase app, App Engine application, database, bucket or
-deployed workload exists. Firebase also reserved a Hosting site namespace, but
-no application was deployed to it.
+billing link, alert budget, all eight Terraform bootstrap APIs, two private
+buckets, three bootstrap service accounts, and Workload Identity Federation. No
+registered Firebase app, App Engine application, database, Function, Cloud Run
+service, or deployed workload exists. Firebase also reserved a Hosting site
+namespace, but no application was deployed to it.
 
 For a low-volume staging project, the intended initial posture is:
 
@@ -97,12 +98,13 @@ For a low-volume staging project, the intended initial posture is:
 - no silently enabled fixed-price edge product. The ingress design and its full
   load-balancer/edge-policy baseline must be priced and accepted explicitly.
 
-The proposed private Terraform bucket stores small state objects and short-lived
-saved plans. Object Versioning and seven-day soft delete deliberately retain
+The private Terraform bucket will store small state objects and short-lived
+saved plans after the pending migration. Object Versioning and seven-day soft delete deliberately retain
 recovery bytes longer than the two-day live-plan window, so the cost is
 usage-metered rather than literally zero after activation. The planner/deployer,
 Workload Identity Federation, and GitHub OIDC exchanges have no always-on
-compute instance. None of these resources exists yet.
+compute instance. These bootstrap resources now exist, but no active workflow
+uses them.
 
 At personal-home traffic, the usage-metered services are expected to remain near
 their free tiers or cost cents, but that is an estimate rather than a guarantee.
@@ -190,7 +192,8 @@ verification. On 2026-09-02, the repository's actual
 re-observed against that policy. The existing `miakapi` environment and default
 repository OIDC subject were left unchanged. The workflow remains outside
 `.github/workflows`, and its policy job rejects the current cloud-inactive
-record. No WIF identity, bucket or remote state exists.
+record. The WIF identities and buckets now exist, but no remote bootstrap state
+object or active workflow exists.
 
 The first private saved plan was superseded after Cloud Billing rejected a
 redundant billing-association write before Terraform recorded resources. The
@@ -203,14 +206,18 @@ managed resources; no state bucket existed, so migration could not start.
 Independent inventory found the target budget, buckets, service accounts and
 Workload Identity pool absent. The digest is superseded and must not be retried.
 
-The providers now attribute API quota to `miakapp-v4-staging`, and the recovery
-tooling requires the exact private state fingerprint and lineage. The replacement
-plan was created from commit `e9f410c58c8cbbf8f5f7a17170c9e8ed55a10501`,
-fully reviewed, and bound by SHA-256
+The providers now attribute API quota to `miakapp-v4-staging`. The final plan
+was created from commit `e9f410c58c8cbbf8f5f7a17170c9e8ed55a10501`, fully
+reviewed, and bound by SHA-256
 `12927b270f2bfa78c8f8c8c7e7071ce9cfec18d5e848165c04b585260bd5f7da`.
-It contains 27 creations, nine no-op resources and no import, update or deletion.
-Application and state migration still require a separate exact authorization.
-Only after its state migration and reconciliation may the
+Its authorized execution completed all 27 creations on top of the nine recovered
+no-op resources. Terraform preserved an exact 36-resource state at serial 39
+with SHA-256
+`c083e7a05f2ccf273abda98c0739584336d2cbaffd8ea836b65b0790f94833a2`.
+The original wrapper then rejected Terraform's real output representation before
+backend migration, so the state bucket remains empty. The apply entry point is
+retired; a new migration-only wrapper requires separate state-and-commit-bound
+authorization and cannot apply infrastructure. Only after state migration and reconciliation may the
 operator initialize the empty foundation state with protected credentials,
 authorize and install the workflow, and review a separate foundation plan. The
 production Function entry point,

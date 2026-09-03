@@ -1,13 +1,13 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 20,
-  "status": "bootstrap_recovery_plan_reviewed_awaiting_authorization",
+  "revision": 21,
+  "status": "bootstrap_apply_complete_state_migration_recovery_pending",
   "environment": "staging",
   "project": {
     "project_id": "miakapp-v4-staging",
     "project_number": "1072737219170",
     "display_name": "Miakapp V4 Staging",
-    "lifecycle": "firebase_enabled_billing_linked_undeployed",
+    "lifecycle": "firebase_enabled_billing_linked_bootstrap_created_undeployed",
     "creation_authorized": false,
     "billing_link_authorized": false,
     "deployment_authorized": false,
@@ -28,13 +28,29 @@
     "hosting_site": "miakapp-v4-staging",
     "app_engine_application": false,
     "firestore_databases": [],
-    "storage_buckets": [],
+    "storage_buckets": [
+      "miakapp-v4-staging-components",
+      "miakapp-v4-staging-tfstate-1072737219170"
+    ],
     "cloud_functions": [],
     "cloud_run_services": [],
     "kms_key_rings": [],
     "secrets": [],
     "project_service_accounts": [
-      "firebase-adminsdk-fbsvc@miakapp-v4-staging.iam.gserviceaccount.com"
+      "firebase-adminsdk-fbsvc@miakapp-v4-staging.iam.gserviceaccount.com",
+      "miakapp-control-plane@miakapp-v4-staging.iam.gserviceaccount.com",
+      "miakapp-tf-apply@miakapp-v4-staging.iam.gserviceaccount.com",
+      "miakapp-tf-plan@miakapp-v4-staging.iam.gserviceaccount.com"
+    ],
+    "budget_display_names": [
+      "Miakapp V4 staging monthly"
+    ],
+    "workload_identity_pools": [
+      "projects/1072737219170/locations/global/workloadIdentityPools/miakapp-github"
+    ],
+    "workload_identity_providers": [
+      "projects/1072737219170/locations/global/workloadIdentityPools/miakapp-github/providers/staging-apply",
+      "projects/1072737219170/locations/global/workloadIdentityPools/miakapp-github/providers/staging-plan"
     ],
     "enabled_service_apis": [
       "analyticshub.googleapis.com",
@@ -226,7 +242,7 @@
       }
     ],
     "iam": {
-      "runtime_identity_state": "not_created",
+      "runtime_identity_state": "created_not_deployed",
       "broad_project_roles_forbidden": true,
       "human_runtime_bindings_forbidden": true,
       "resource_bindings": [
@@ -274,7 +290,7 @@
       "identifier_sha256": "4557923f1be719b78ee844b14bfa4654be3eb3fa785a2cb5a2624c3f85d12270",
       "raw_identifier_committed": false,
       "link_state": "linked_to_approved_account",
-      "terraform_management_state": "preserved_in_private_local_recovery_state"
+      "terraform_management_state": "managed_in_private_complete_local_state_pending_remote_migration"
     },
     "currency": "EUR",
     "alert_thresholds": [
@@ -297,8 +313,8 @@
     }
   },
   "terraform": {
-    "state": "bootstrap_foundation_and_automation_blueprint",
-    "supported_workflow": "credential_free_validation_and_guarded_bootstrap_execution",
+    "state": "bootstrap_applied_state_migration_pending",
+    "supported_workflow": "credential_free_validation_and_guarded_state_migration",
     "configuration_apply_capable": true,
     "active_cloud_workflow": "none",
     "workflow_blueprint_state": "dormant_not_installed",
@@ -318,18 +334,18 @@
     ],
     "backend": {
       "type": "gcs",
-      "state": "configured_bucket_not_created",
+      "state": "bucket_created_state_object_absent",
       "bucket": "miakapp-v4-staging-tfstate-1072737219170",
       "bootstrap_prefix": "terraform/bootstrap",
       "foundation_prefix": "terraform/foundation",
       "bootstrap_migration_template": "bootstrap/backend.gcs.tf.example",
-      "bootstrap_migration_state": "template_not_activated",
+      "bootstrap_migration_state": "complete_local_state_pending_migration",
       "locking_enabled": true,
       "object_versioning_enabled": true,
       "public_access_prevention": "enforced"
     },
     "identity": {
-      "state": "configured_not_created",
+      "state": "created_not_used_by_active_workflow",
       "workload_identity_pool": "miakapp-github",
       "planner_service_account": "miakapp-tf-plan@miakapp-v4-staging.iam.gserviceaccount.com",
       "deployer_service_account": "miakapp-tf-apply@miakapp-v4-staging.iam.gserviceaccount.com",
@@ -356,7 +372,7 @@
       "github_repository_owner_id": "83046838"
     },
     "saved_plan": {
-      "state": "private_gcs_blueprint_not_active",
+      "state": "applied_private_bundle_retained_for_state_migration",
       "public_artifacts_allowed": false,
       "create_only": true,
       "sha256_verified_before_apply": true,
@@ -365,25 +381,43 @@
       "soft_delete_days": 7
     },
     "bootstrap_execution": {
-      "state": "recovery_plan_reviewed_awaiting_exact_authorization",
-      "script": "bootstrap/apply-and-migrate.sh",
+      "state": "apply_complete_state_migration_recovery_unbound",
+      "script": "bootstrap/migrate-recovered-state.sh",
+      "retired_apply_script": "bootstrap/apply-and-migrate.sh",
       "helper": "bootstrap/bootstrap-execution.mjs",
       "approved_configuration_commit": "e9f410c58c8cbbf8f5f7a17170c9e8ed55a10501",
       "approved_plan_sha256": "12927b270f2bfa78c8f8c8c7e7071ce9cfec18d5e848165c04b585260bd5f7da",
+      "migration_configuration_commit": "0000000000000000000000000000000000000000",
       "exact_authorization_required": true,
       "repository_commit_bound": true,
       "cloud_preflight_required": true,
       "budget_preflight_requires_quota_project": true,
-      "budget_postcondition_required": true,
+      "provisioned_target_preflight_required": true,
+      "migration_only": true,
+      "apply_entry_point_retired": true,
       "recovery_state": {
-        "state": "preserved_private_local",
-        "sha256": "07fc7412e35efaff288e2efd30f786c2871d9fa836fb813a178d247ccb1efe5a",
+        "state": "preserved_private_complete_local",
+        "sha256": "c083e7a05f2ccf273abda98c0739584336d2cbaffd8ea836b65b0790f94833a2",
         "lineage_sha256": "35e52294057979e6191eaa05141a9476261d4b0ea75c9113128f780abda7a9ba",
         "terraform_version": "1.11.3",
-        "serial": 11,
-        "managed_resources": 9,
+        "serial": 39,
+        "managed_resources": 36,
         "managed_addresses": [
+          "google_billing_budget.staging",
           "google_billing_project_info.staging",
+          "google_iam_workload_identity_pool.github",
+          "google_iam_workload_identity_pool_provider.apply",
+          "google_iam_workload_identity_pool_provider.plan",
+          "google_project_iam_member.deployer[\"roles/cloudkms.admin\"]",
+          "google_project_iam_member.deployer[\"roles/datastore.owner\"]",
+          "google_project_iam_member.deployer[\"roles/secretmanager.admin\"]",
+          "google_project_iam_member.deployer[\"roles/serviceusage.serviceUsageAdmin\"]",
+          "google_project_iam_member.planner[\"roles/iam.securityReviewer\"]",
+          "google_project_iam_member.planner[\"roles/viewer\"]",
+          "google_project_iam_member.runtime[\"roles/datastore.user\"]",
+          "google_project_iam_member.runtime[\"roles/firebaseappcheck.tokenVerifier\"]",
+          "google_project_iam_member.runtime[\"roles/logging.logWriter\"]",
+          "google_project_iam_member.runtime[\"roles/monitoring.metricWriter\"]",
           "google_project_service.bootstrap[\"billingbudgets.googleapis.com\"]",
           "google_project_service.bootstrap[\"cloudbilling.googleapis.com\"]",
           "google_project_service.bootstrap[\"cloudresourcemanager.googleapis.com\"]",
@@ -391,13 +425,26 @@
           "google_project_service.bootstrap[\"iamcredentials.googleapis.com\"]",
           "google_project_service.bootstrap[\"serviceusage.googleapis.com\"]",
           "google_project_service.bootstrap[\"storage.googleapis.com\"]",
-          "google_project_service.bootstrap[\"sts.googleapis.com\"]"
+          "google_project_service.bootstrap[\"sts.googleapis.com\"]",
+          "google_service_account.control_plane",
+          "google_service_account.deployer",
+          "google_service_account.planner",
+          "google_service_account_iam_member.deployer_federation",
+          "google_service_account_iam_member.planner_federation",
+          "google_storage_bucket.components",
+          "google_storage_bucket.terraform_state",
+          "google_storage_bucket_iam_member.component_deployer",
+          "google_storage_bucket_iam_member.terraform_foundation_deployer",
+          "google_storage_bucket_iam_member.terraform_foundation_lock_writer",
+          "google_storage_bucket_iam_member.terraform_plan_creator",
+          "google_storage_bucket_iam_member.terraform_state_reader[\"deployer\"]",
+          "google_storage_bucket_iam_member.terraform_state_reader[\"planner\"]"
         ],
         "path_committed": false,
         "raw_contents_committed": false
       },
-      "local_recovery_preserved_on_failure": true,
-      "local_state_removed_only_after_reconciliation": true,
+      "source_state_preserved_on_failure": true,
+      "source_state_preserved_after_reconciliation": true,
       "authorized_plan_attempted": true,
       "attempts": [
         {
@@ -420,6 +467,17 @@
           "managed_resources_recorded": 9,
           "enabled_bootstrap_apis_recorded": 8,
           "recovery_state_sha256": "07fc7412e35efaff288e2efd30f786c2871d9fa836fb813a178d247ccb1efe5a",
+          "remote_state_migrated": false
+        },
+        {
+          "configuration_commit": "e9f410c58c8cbbf8f5f7a17170c9e8ed55a10501",
+          "execution_commit": "cbd8b63062b027eca762b0d23f234563760f846a",
+          "plan_sha256": "12927b270f2bfa78c8f8c8c7e7071ce9cfec18d5e848165c04b585260bd5f7da",
+          "attempted_on": "2026-09-03",
+          "result": "apply_complete_local_state_validation_mismatch_before_migration",
+          "managed_resources_recorded": 36,
+          "enabled_bootstrap_apis_recorded": 8,
+          "recovery_state_sha256": "c083e7a05f2ccf273abda98c0739584336d2cbaffd8ea836b65b0790f94833a2",
           "remote_state_migrated": false
         }
       ],
@@ -499,20 +557,21 @@
       "bootstrap_apis_no_op": true,
       "planning_state_artifacts_created": false,
       "recovery_state_unchanged": true,
-      "apply_authorized": false,
-      "apply_executed": false,
-      "state_migration_authorized": false,
+      "apply_authorized": true,
+      "apply_executed": true,
+      "state_migration_authorized": true,
       "state_migration_executed": false,
       "post_inspection_checks": [
         "billing-linked-to-approved-account",
         "repository-plan-and-state-artifacts-absent",
         "recovery-state-verified-unchanged",
-        "target-budget-absent",
+        "target-budget-present-once",
         "eight-bootstrap-apis-enabled",
-        "target-buckets-absent",
-        "target-service-accounts-absent",
-        "workload-identity-pool-absent",
-        "remote-state-absent"
+        "target-buckets-present-once",
+        "target-service-accounts-present-once",
+        "workload-identity-pool-and-providers-present-once",
+        "complete-local-state-verified",
+        "remote-state-object-absent"
       ]
     },
     "superseded_saved_plan_observation": {
@@ -576,8 +635,7 @@
       "migration-rehearsal",
       "production-function-entrypoint",
       "secret-version-lifecycle",
-      "remote-state-bootstrap-not-applied",
-      "keyless-plan-and-apply-identities-not-created",
+      "remote-bootstrap-state-not-migrated",
       "github-terraform-workflow-not-installed",
       "live-foundation-plan-not-reviewed"
     ]

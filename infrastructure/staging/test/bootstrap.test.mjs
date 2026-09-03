@@ -24,8 +24,11 @@ import { fileURLToPath } from 'node:url';
 import { validateBootstrapRoot } from '../bootstrap/guard.mjs';
 import {
   APPROVED_CONFIGURATION_COMMIT,
+  APPROVED_MIGRATION_CONFIGURATION_COMMIT,
   APPROVED_PLAN_SHA256,
   BUDGET_DISPLAY_NAME,
+  COMPLETED_STATE_SERIAL,
+  COMPLETED_STATE_SHA256,
   FOUNDATION_ACTIVATION,
   FOUNDATION_ACTIVATION_TYPE,
   STATE_BUCKET,
@@ -33,12 +36,16 @@ import {
   classifyStateBucket,
   createPrivateExecutionDirectory,
   executionAuthorization,
+  migrationAuthorization,
   reconcileBootstrapStates,
+  validateCompletedBootstrapState,
   validateExecutionAuthorization,
+  validateMigrationAuthorization,
   verifyAbsentTargetInventory,
   verifyBillingObservation,
   verifyEnabledBootstrapServices,
   verifyEmptyInventory,
+  verifyEmptyStateBucketInventory,
   verifyProjectObservation,
   verifyProvisionedTargetInventory,
   verifyRecoverableLocalStateFile,
@@ -77,6 +84,10 @@ const planScript = readFileSync(new URL('plan.sh', bootstrapRoot), 'utf8');
 const savePlanScript = readFileSync(new URL('save-plan.sh', bootstrapRoot), 'utf8');
 const inspectPlanScript = readFileSync(new URL('inspect-plan.sh', bootstrapRoot), 'utf8');
 const applyAndMigrateScript = readFileSync(new URL('apply-and-migrate.sh', bootstrapRoot), 'utf8');
+const migrateRecoveredStateScript = readFileSync(
+  new URL('migrate-recovered-state.sh', bootstrapRoot),
+  'utf8',
+);
 const bootstrapLock = readFileSync(new URL('.terraform.lock.hcl', bootstrapRoot), 'utf8');
 const foundationLock = readFileSync(new URL('../terraform/.terraform.lock.hcl', import.meta.url), 'utf8');
 const SYNTHETIC_BILLING_ACCOUNT_ID = 'AAAAAA-BBBBBB-CCCCCC';
@@ -216,14 +227,13 @@ function syntheticTerraformState(metadata, { additionalAddresses = [], complete 
   return {
     version: 4,
     terraform_version: '1.11.3',
-    serial: complete ? RECOVERY_STATE_SERIAL + 1 : RECOVERY_STATE_SERIAL,
+    serial: complete ? COMPLETED_STATE_SERIAL : RECOVERY_STATE_SERIAL,
     lineage: '12345678-1234-4123-8123-123456789abc',
     outputs: complete
       ? {
           foundation_activation: {
             value: structuredClone(FOUNDATION_ACTIVATION),
             type: structuredClone(FOUNDATION_ACTIVATION_TYPE),
-            sensitive: false,
           },
         }
       : {},
@@ -235,22 +245,18 @@ function writeExecutable(path, sourceText) {
   writeFileSync(path, sourceText, { mode: 0o700 });
 }
 
-function runSyntheticBootstrapExecution({
-  applyStatus = 0,
-  budgetCountAfterApply = 1,
-  budgetPreflightUnavailable = false,
-  budgetPostcheckUnavailable = false,
-  emergencyState = false,
-  emptyFailedState = false,
-  lockAlreadyHeld = false,
+function runSyntheticBootstrapMigration({
+  budgetMissing = false,
+  dirtyRepository = false,
+  divergentRemote = false,
   migrationFails = false,
   missingRecoveredService = false,
+  missingServiceAccount = false,
+  planLockAlreadyHeld = false,
   preexistingState = false,
-  recoveryLockAlreadyHeld = false,
-  stateBucketAbsentAfterApply = false,
-  divergentRemote = false,
+  stateLockAlreadyHeld = false,
 } = {}) {
-  const temporary = mkdtempSync(join(tmpdir(), 'miakapp-bootstrap-execution-test-'));
+  const temporary = mkdtempSync(join(tmpdir(), 'miakapp-bootstrap-migration-test-'));
   chmodSync(temporary, 0o700);
   const repositoryRoot = fileURLToPath(new URL('../../../', import.meta.url));
   const plan = syntheticTerraformPlan();
@@ -261,51 +267,38 @@ function runSyntheticBootstrapExecution({
     APPROVED_CONFIGURATION_COMMIT,
   );
   const completeState = syntheticTerraformState(metadata);
-  const recoveryState = syntheticTerraformState(metadata, { complete: false });
-  const partialState = syntheticTerraformState(metadata, {
-    additionalAddresses: ['google_storage_bucket.terraform_state'],
-    complete: false,
-  });
-  const emptyState = structuredClone(partialState);
-  emptyState.resources = [];
-  const selectedState = applyStatus === 0
-    ? completeState
-    : (emptyFailedState ? emptyState : (stateBucketAbsentAfterApply ? recoveryState : partialState));
-  const staleState = structuredClone(recoveryState);
-  staleState.resources = [];
-  const divergentState = structuredClone(selectedState);
+  const divergentState = structuredClone(completeState);
   divergentState.serial += 1;
 
   const bundle = createPrivateBundle(temporary, repositoryRoot);
-  const recoveryStatePath = join(temporary, 'recovery.tfstate');
+  const completedStatePath = join(temporary, 'completed.tfstate');
   writeFileSync(join(bundle, 'bootstrap.tfplan'), planBytes, { mode: 0o600 });
   writeSavedPlanMetadata(join(bundle, 'metadata.json'), metadata);
-  writeFileSync(recoveryStatePath, JSON.stringify(recoveryState), { mode: 0o600 });
-  if (lockAlreadyHeld) mkdirSync(`${bundle}.execution-lock`, { mode: 0o700 });
-  if (recoveryLockAlreadyHeld) mkdirSync(`${recoveryStatePath}.execution-lock`, { mode: 0o700 });
+  const completedStateBytes = JSON.stringify(completeState);
+  writeFileSync(completedStatePath, completedStateBytes, { mode: 0o600 });
+  if (planLockAlreadyHeld) mkdirSync(`${bundle}.migration-lock`, { mode: 0o700 });
+  if (stateLockAlreadyHeld) mkdirSync(`${completedStatePath}.migration-lock`, { mode: 0o700 });
   const planJsonPath = join(temporary, 'plan.json');
-  const statePath = join(temporary, 'state.json');
-  const staleStatePath = join(temporary, 'stale-state.json');
   const divergentStatePath = join(temporary, 'divergent-state.json');
   const remoteStatePath = join(temporary, 'remote-state.json');
   const callLogPath = join(temporary, 'calls.log');
-  const applyMarkerPath = join(temporary, 'apply.marker');
-  const budgetsAfterPath = join(temporary, 'budgets-after.json');
+  const budgetsPath = join(temporary, 'budgets.json');
   writeFileSync(planJsonPath, JSON.stringify(plan), { mode: 0o600 });
-  writeFileSync(statePath, JSON.stringify(selectedState), { mode: 0o600 });
-  writeFileSync(staleStatePath, JSON.stringify(staleState), { mode: 0o600 });
   writeFileSync(divergentStatePath, JSON.stringify(divergentState), { mode: 0o600 });
-  writeFileSync(budgetsAfterPath, JSON.stringify(Array.from(
-    { length: budgetCountAfterApply },
-    (_, index) => ({ displayName: BUDGET_DISPLAY_NAME, name: `budgets/${index + 1}` }),
-  )), { mode: 0o600 });
+  writeFileSync(budgetsPath, JSON.stringify(budgetMissing ? [] : [{
+    displayName: BUDGET_DISPLAY_NAME,
+    name: 'budgets/1',
+  }]), { mode: 0o600 });
 
   writeExecutable(join(temporary, 'git'), String.raw`#!/usr/bin/env bash
 set -euo pipefail
 case " $* " in
   *" rev-parse --show-toplevel "*) printf '%s\n' "$MIAKAPP_FAKE_REPOSITORY_ROOT" ;;
   *" rev-parse HEAD "*) printf '%s\n' 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' ;;
-  *" status "*) exit 0 ;;
+  *" status "*)
+    [[ "$MIAKAPP_FAKE_DIRTY_REPOSITORY" == true ]] && printf '%s\n' ' M synthetic'
+    exit 0
+    ;;
   *" merge-base --is-ancestor "*) exit 0 ;;
   *" diff --quiet "*) exit 0 ;;
   *) exit 91 ;;
@@ -317,28 +310,10 @@ if [[ "$1" == *'/saved-plan.mjs' && "$2" == 'verify' ]]; then
   exit 0
 fi
 if [[ "$1" == *'/saved-plan.mjs' && "$2" == 'sha256' ]]; then
-  if [[ "$3" == "$MIAKAPP_FAKE_RECOVERY_STATE" ]]; then
-    printf '%s' "$MIAKAPP_FAKE_RECOVERY_STATE_SHA256"
-  else
-    printf '%s' "$MIAKAPP_FAKE_APPROVED_PLAN_SHA256"
-  fi
+  printf '%s' "$MIAKAPP_FAKE_APPROVED_PLAN_SHA256"
   exit 0
 fi
-if [[ "$1" == *'/bootstrap-execution.mjs' && "$2" == 'verify-recovery-state' ]]; then
-  exit 0
-fi
-if [[ "$1" == *'/bootstrap-execution.mjs' && "$2" == 'verify-recovery-descendant-state' ]]; then
-  if [[ "$MIAKAPP_FAKE_INVALID_DESCENDANT" == true ]]; then
-    printf '%s\n' 'Bootstrap execution rejected: Terraform state does not descend from the exact preserved recovery state' >&2
-    exit 1
-  fi
-  exit 0
-fi
-if [[ "$1" == *'/bootstrap-execution.mjs' && "$2" == 'verify-applied-state' ]]; then
-  if [[ "$MIAKAPP_FAKE_INVALID_DESCENDANT" == true ]]; then
-    printf '%s\n' 'Bootstrap execution rejected: Terraform state does not descend from the exact preserved recovery state' >&2
-    exit 1
-  fi
+if [[ "$1" == *'/bootstrap-execution.mjs' && "$2" == 'verify-completed-state' ]]; then
   exit 0
 fi
 if [[ "$1" == *'/bootstrap-execution.mjs' && "$2" == 'reconcile-state' ]]; then
@@ -346,11 +321,7 @@ if [[ "$1" == *'/bootstrap-execution.mjs' && "$2" == 'reconcile-state' ]]; then
     printf '%s\n' 'Bootstrap execution rejected: Remote bootstrap state does not exactly match local state' >&2
     exit 1
   fi
-  if [[ "$6" == 'complete' ]]; then
-    printf '%s\n' 'Bootstrap state reconciled: complete; managed resources: 36; serial: 12'
-  else
-    printf '%s\n' 'Bootstrap state reconciled: partial; managed resources: 10; serial: 11'
-  fi
+  printf '%s\n' 'Bootstrap state reconciled: complete; managed resources: 36; serial: 39'
   exit 0
 fi
 if [[ "$1" == *'/bootstrap-execution.mjs' && "$2" == 'verify-billing-link' ]]; then
@@ -365,13 +336,11 @@ set -euo pipefail
 command_name=''
 working_directory=''
 migrate=false
-state_path=''
 for argument in "$@"; do
   case "$argument" in
     -chdir=*) working_directory="${'${argument#-chdir=}'}" ;;
     version|fmt|init|validate|show|apply|state) [[ -z "$command_name" ]] && command_name="$argument" ;;
     -migrate-state) migrate=true ;;
-    -state=*) state_path="${'${argument#-state=}'}" ;;
   esac
 done
 printf 'terraform:%s:%s\n' "$command_name" "$migrate" >>"$MIAKAPP_FAKE_CALL_LOG"
@@ -384,16 +353,7 @@ case "$command_name" in
   show)
     command cat "$MIAKAPP_FAKE_PLAN_JSON"
     ;;
-  apply)
-    if [[ "$MIAKAPP_FAKE_EMERGENCY_STATE" == true ]]; then
-      command cp "$MIAKAPP_FAKE_STALE_STATE" "$state_path"
-      command cp "$MIAKAPP_FAKE_LOCAL_STATE" "$working_directory/errored.tfstate"
-    else
-      command cp "$MIAKAPP_FAKE_LOCAL_STATE" "$state_path"
-    fi
-    command touch "$MIAKAPP_FAKE_APPLY_MARKER"
-    exit "$MIAKAPP_FAKE_APPLY_STATUS"
-    ;;
+  apply) exit 96 ;;
   init)
     if [[ "$migrate" == true ]]; then
       if [[ "$MIAKAPP_FAKE_MIGRATION_FAILS" == true ]]; then
@@ -423,16 +383,7 @@ case " $* " in
     printf '%s\n' '{"projectId":"miakapp-v4-staging","projectNumber":"1072737219170","name":"Miakapp V4 Staging","lifecycleState":"ACTIVE"}'
     ;;
   *" billing budgets list "*)
-    if [[ -e "$MIAKAPP_FAKE_APPLY_MARKER" ]]; then
-      if [[ "$MIAKAPP_FAKE_BUDGET_POSTCHECK_UNAVAILABLE" == true ]]; then
-        exit 88
-      fi
-      command cat "$MIAKAPP_FAKE_BUDGETS_AFTER"
-    elif [[ "$MIAKAPP_FAKE_BUDGET_PREFLIGHT_UNAVAILABLE" == true ]]; then
-      exit 87
-    else
-      printf '%s\n' '[]'
-    fi
+    command cat "$MIAKAPP_FAKE_BUDGETS"
     ;;
   *" services list --enabled "*)
     if [[ "$MIAKAPP_FAKE_MISSING_RECOVERED_SERVICE" == true ]]; then
@@ -442,20 +393,26 @@ case " $* " in
     fi
     ;;
   *" storage buckets list "*)
-    if [[ -e "$MIAKAPP_FAKE_APPLY_MARKER" && "$MIAKAPP_FAKE_STATE_BUCKET_ABSENT_AFTER_APPLY" != true ]]; then
-      printf '%s\n' '[{"name":"miakapp-v4-staging-components"},{"name":"miakapp-v4-staging-tfstate-1072737219170"}]'
+    printf '%s\n' '[{"name":"miakapp-v4-staging-components"},{"name":"miakapp-v4-staging-tfstate-1072737219170"}]'
+    ;;
+  *" iam service-accounts list "*)
+    if [[ "$MIAKAPP_FAKE_MISSING_SERVICE_ACCOUNT" == true ]]; then
+      printf '%s\n' '[{"email":"miakapp-tf-plan@miakapp-v4-staging.iam.gserviceaccount.com"},{"email":"miakapp-tf-apply@miakapp-v4-staging.iam.gserviceaccount.com"}]'
     else
-      printf '%s\n' '[]'
+      printf '%s\n' '[{"email":"miakapp-tf-plan@miakapp-v4-staging.iam.gserviceaccount.com"},{"email":"miakapp-tf-apply@miakapp-v4-staging.iam.gserviceaccount.com"},{"email":"miakapp-control-plane@miakapp-v4-staging.iam.gserviceaccount.com"}]'
     fi
     ;;
-  *" iam service-accounts list "*|*" iam workload-identity-pools list "*)
-    printf '%s\n' '[]'
+  *" iam workload-identity-pools providers list "*)
+    printf '%s\n' '[{"name":"projects/1072737219170/locations/global/workloadIdentityPools/miakapp-github/providers/staging-plan"},{"name":"projects/1072737219170/locations/global/workloadIdentityPools/miakapp-github/providers/staging-apply"}]'
+    ;;
+  *" iam workload-identity-pools list "*)
+    printf '%s\n' '[{"name":"projects/1072737219170/locations/global/workloadIdentityPools/miakapp-github"}]'
     ;;
   *" storage ls "*)
     if [[ "$MIAKAPP_FAKE_PREEXISTING_STATE" == true ]]; then
-      printf '%s\n' '[{"name":"terraform/bootstrap/default.tfstate"}]'
+      printf '%s\n' '[{"url":"gs://miakapp-v4-staging-tfstate-1072737219170/terraform/bootstrap/default.tfstate"}]'
     else
-      printf '%s\n' '[]'
+      printf '%s\n' '[{"url":"gs://miakapp-v4-staging-tfstate-1072737219170/"}]'
     fi
     ;;
   *" storage objects describe "*)
@@ -470,8 +427,8 @@ printf 'sleep:%s\n' "$*" >>"$MIAKAPP_FAKE_CALL_LOG"
 `);
 
   const result = spawnSync(
-    fileURLToPath(new URL('apply-and-migrate.sh', bootstrapRoot)),
-    [bundle, recoveryStatePath],
+    fileURLToPath(new URL('migrate-recovered-state.sh', bootstrapRoot)),
+    [bundle, completedStatePath],
     {
       cwd: fileURLToPath(bootstrapRoot),
       encoding: 'utf8',
@@ -481,27 +438,18 @@ printf 'sleep:%s\n' "$*" >>"$MIAKAPP_FAKE_CALL_LOG"
         MIAKAPP_REAL_NODE: process.execPath,
         MIAKAPP_FAKE_REPOSITORY_ROOT: repositoryRoot,
         MIAKAPP_FAKE_APPROVED_PLAN_SHA256: APPROVED_PLAN_SHA256,
-        MIAKAPP_FAKE_RECOVERY_STATE: recoveryStatePath,
-        MIAKAPP_FAKE_RECOVERY_STATE_SHA256: RECOVERY_STATE_SHA256,
         MIAKAPP_FAKE_PLAN_JSON: planJsonPath,
-        MIAKAPP_FAKE_LOCAL_STATE: statePath,
-        MIAKAPP_FAKE_STALE_STATE: staleStatePath,
         MIAKAPP_FAKE_DIVERGENT_STATE: divergentStatePath,
         MIAKAPP_FAKE_REMOTE_STATE: remoteStatePath,
         MIAKAPP_FAKE_CALL_LOG: callLogPath,
-        MIAKAPP_FAKE_APPLY_MARKER: applyMarkerPath,
-        MIAKAPP_FAKE_BUDGETS_AFTER: budgetsAfterPath,
-        MIAKAPP_FAKE_APPLY_STATUS: String(applyStatus),
-        MIAKAPP_FAKE_BUDGET_PREFLIGHT_UNAVAILABLE: String(budgetPreflightUnavailable),
-        MIAKAPP_FAKE_BUDGET_POSTCHECK_UNAVAILABLE: String(budgetPostcheckUnavailable),
-        MIAKAPP_FAKE_EMERGENCY_STATE: String(emergencyState),
-        MIAKAPP_FAKE_INVALID_DESCENDANT: String(emptyFailedState),
+        MIAKAPP_FAKE_BUDGETS: budgetsPath,
+        MIAKAPP_FAKE_DIRTY_REPOSITORY: String(dirtyRepository),
         MIAKAPP_FAKE_MIGRATION_FAILS: String(migrationFails),
         MIAKAPP_FAKE_MISSING_RECOVERED_SERVICE: String(missingRecoveredService),
+        MIAKAPP_FAKE_MISSING_SERVICE_ACCOUNT: String(missingServiceAccount),
         MIAKAPP_FAKE_PREEXISTING_STATE: String(preexistingState),
-        MIAKAPP_FAKE_STATE_BUCKET_ABSENT_AFTER_APPLY: String(stateBucketAbsentAfterApply),
         MIAKAPP_FAKE_DIVERGENT_REMOTE: String(divergentRemote),
-        MIAKAPP_STAGING_BOOTSTRAP_EXECUTION_AUTHORIZATION: executionAuthorization('b'.repeat(40)),
+        MIAKAPP_STAGING_BOOTSTRAP_MIGRATION_AUTHORIZATION: migrationAuthorization('b'.repeat(40)),
       },
     },
   );
@@ -510,9 +458,18 @@ printf 'sleep:%s\n' "$*" >>"$MIAKAPP_FAKE_CALL_LOG"
     .filter((name) => name.startsWith('miakapp-staging-bootstrap-execution-'))
     .map((name) => join(temporary, name));
   const executionLocks = readdirSync(temporary)
-    .filter((name) => name.endsWith('.execution-lock'))
+    .filter((name) => name.endsWith('.migration-lock'))
     .map((name) => join(temporary, name));
-  return { bundle, calls, executionDirectories, executionLocks, result, temporary };
+  return {
+    bundle,
+    calls,
+    completedStateBytes,
+    completedStatePath,
+    executionDirectories,
+    executionLocks,
+    result,
+    temporary,
+  };
 }
 
 test('keeps the bootstrap root closed and limited to bootstrap resource types', () => {
@@ -928,6 +885,16 @@ test('binds bootstrap execution to the exact reviewed plan and closed cloud obse
     () => executionAuthorization('not-a-commit'),
     /canonical repository commit/,
   );
+  const migration = migrationAuthorization(repositoryCommit);
+  assert.equal(validateMigrationAuthorization(migration, repositoryCommit), migration);
+  assert.equal(
+    migration,
+    `migrate-bootstrap-state:miakapp-v4-staging:${COMPLETED_STATE_SHA256}:${repositoryCommit}`,
+  );
+  assert.throws(
+    () => validateMigrationAuthorization(migration, 'c'.repeat(40)),
+    /exact preserved state and repository-commit authorization/,
+  );
 
   assert.doesNotThrow(() => verifyProjectObservation({
     projectId: 'miakapp-v4-staging',
@@ -967,6 +934,18 @@ test('binds bootstrap execution to the exact reviewed plan and closed cloud obse
 
   assert.doesNotThrow(() => verifyEmptyInventory([], 'state-bucket'));
   assert.throws(() => verifyEmptyInventory([{ name: STATE_OBJECT }], 'state-bucket'), /is not empty/);
+  assert.doesNotThrow(() => verifyEmptyStateBucketInventory([]));
+  assert.doesNotThrow(() => verifyEmptyStateBucketInventory([
+    { url: `gs://${STATE_BUCKET}/` },
+  ]));
+  assert.throws(
+    () => verifyEmptyStateBucketInventory([{ url: `gs://${STATE_BUCKET}/${STATE_OBJECT}` }]),
+    /is not empty/,
+  );
+  assert.throws(
+    () => verifyEmptyStateBucketInventory([{ url: `gs://${STATE_BUCKET}/`, size: '0' }]),
+    /is not empty/,
+  );
   assert.doesNotThrow(() => verifyAbsentTargetInventory([
     { email: 'firebase-adminsdk@example.test' },
   ], 'service-accounts'));
@@ -982,19 +961,28 @@ test('binds bootstrap execution to the exact reviewed plan and closed cloud obse
   ], 'budgets'));
   assert.throws(
     () => verifyProvisionedTargetInventory([], 'budgets'),
-    /must contain exactly one bootstrap target/,
+    /must contain exactly one of every bootstrap target/,
   );
   assert.throws(
     () => verifyProvisionedTargetInventory([
       { displayName: BUDGET_DISPLAY_NAME },
       { displayName: BUDGET_DISPLAY_NAME },
     ], 'budgets'),
-    /must contain exactly one bootstrap target/,
+    /must contain exactly one of every bootstrap target/,
   );
   assert.throws(
     () => verifyProvisionedTargetInventory([], 'service-accounts'),
-    /label is invalid/,
+    /exactly one of every bootstrap target/,
   );
+  assert.doesNotThrow(() => verifyProvisionedTargetInventory([
+    { name: STATE_BUCKET },
+    { name: 'miakapp-v4-staging-components' },
+  ], 'storage-buckets'));
+  assert.doesNotThrow(() => verifyProvisionedTargetInventory([
+    { email: 'miakapp-tf-plan@miakapp-v4-staging.iam.gserviceaccount.com' },
+    { email: 'miakapp-tf-apply@miakapp-v4-staging.iam.gserviceaccount.com' },
+    { email: 'miakapp-control-plane@miakapp-v4-staging.iam.gserviceaccount.com' },
+  ], 'service-accounts'));
   const bootstrapServices = [
     'billingbudgets.googleapis.com',
     'cloudbilling.googleapis.com',
@@ -1078,8 +1066,31 @@ test('reconciles exact complete or expected partial bootstrap state and rejects 
   ), {
     mode: 'complete',
     managedResources: 36,
-    serial: RECOVERY_STATE_SERIAL + 1,
+    serial: COMPLETED_STATE_SERIAL,
   });
+
+  assert.deepEqual(validateCompletedBootstrapState(
+    complete,
+    metadata,
+    SYNTHETIC_BILLING_ACCOUNT_SHA256,
+    lineageSha256,
+  ), {
+    mode: 'complete',
+    managedResources: 36,
+    serial: COMPLETED_STATE_SERIAL,
+  });
+
+  const unexpectedSensitiveFlag = structuredClone(complete);
+  unexpectedSensitiveFlag.outputs.foundation_activation.sensitive = false;
+  assert.throws(
+    () => validateCompletedBootstrapState(
+      unexpectedSensitiveFlag,
+      metadata,
+      SYNTHETIC_BILLING_ACCOUNT_SHA256,
+      lineageSha256,
+    ),
+    /must contain exactly the reviewed fields/,
+  );
   assert.deepEqual(reconcileBootstrapStates(
     partial,
     structuredClone(partial),
@@ -1439,111 +1450,104 @@ resource "terraform_data" "probe" {
   }
 });
 
-test('keeps the bootstrap execution wrapper dormant and recovery-first', () => {
-  assert.match(applyAndMigrateScript, new RegExp(APPROVED_PLAN_SHA256));
-  assert.match(applyAndMigrateScript, /verify-authorization/);
-  assert.match(applyAndMigrateScript, /mkdir -m 700 -- "\$execution_lock"/);
-  assert.match(applyAndMigrateScript, /mkdir -m 700 -- "\$recovery_lock"/);
-  assert.match(applyAndMigrateScript, /verify-absent-targets/);
-  assert.match(applyAndMigrateScript, /--billing-project=\$\{project_id\}/);
-  assert.match(applyAndMigrateScript, /verify-provisioned-targets budgets/);
-  assert.match(applyAndMigrateScript, /terraform[\s\S]*apply[\s\S]*-state="\$local_state"/);
-  assert.match(applyAndMigrateScript, /terraform -chdir="\$apply_root" apply/);
-  assert.doesNotMatch(applyAndMigrateScript, /terraform -chdir="\$bootstrap_root" apply/);
-  assert.match(applyAndMigrateScript, /\$\{apply_root\}\/errored\.tfstate/);
-  assert.match(applyAndMigrateScript, /init[\s\S]*-migrate-state[\s\S]*-force-copy/);
-  assert.match(applyAndMigrateScript, /reconcile-state/);
-  assert.match(applyAndMigrateScript, /verify-applied-state/);
-  assert.match(applyAndMigrateScript, /execution_complete=true/);
-  assert.match(applyAndMigrateScript, /private recovery material was preserved/);
-  assert.doesNotMatch(applyAndMigrateScript, /terraform\s+(?:destroy|import|state\s+push|force-unlock)/);
-  assert.doesNotMatch(applyAndMigrateScript, /firebase\s+deploy|gcloud\s+storage\s+(?:rm|cp|mv)/);
+test('retires the consumed apply path and keeps migration recovery dormant', () => {
+  assert.match(applyAndMigrateScript, /permanently retired/);
+  assert.doesNotMatch(applyAndMigrateScript, /terraform|gcloud/);
+  assert.match(migrateRecoveredStateScript, new RegExp(APPROVED_PLAN_SHA256));
+  assert.match(migrateRecoveredStateScript, new RegExp(COMPLETED_STATE_SHA256));
+  assert.match(migrateRecoveredStateScript, new RegExp(APPROVED_MIGRATION_CONFIGURATION_COMMIT));
+  assert.match(migrateRecoveredStateScript, /verify-migration-authorization/);
+  assert.match(migrateRecoveredStateScript, /mkdir -m 700 -- "\$bundle_lock"/);
+  assert.match(migrateRecoveredStateScript, /mkdir -m 700 -- "\$state_lock"/);
+  assert.match(migrateRecoveredStateScript, /verify-provisioned-targets/);
+  assert.match(migrateRecoveredStateScript, /verify-empty-state-bucket/);
+  assert.match(migrateRecoveredStateScript, /--billing-project=\$\{project_id\}/);
+  assert.match(migrateRecoveredStateScript, /init[\s\S]*-migrate-state[\s\S]*-force-copy/);
+  assert.match(migrateRecoveredStateScript, /reconcile-state/);
+  assert.match(migrateRecoveredStateScript, /verify-completed-state/);
+  assert.match(migrateRecoveredStateScript, /execution_complete=true/);
+  assert.match(migrateRecoveredStateScript, /source state remains unchanged/);
+  assert.doesNotMatch(migrateRecoveredStateScript, /terraform\s+(?:apply|destroy|import|state\s+push|force-unlock)/);
+  assert.doesNotMatch(migrateRecoveredStateScript, /firebase\s+deploy|gcloud\s+storage\s+(?:rm|cp|mv)/);
 });
 
-test('orchestrates one exact apply, migration, read-back, and verified cleanup without cloud access', () => {
-  const execution = runSyntheticBootstrapExecution();
+test('orchestrates migration-only read-back and verified cleanup without cloud access', () => {
+  const execution = runSyntheticBootstrapMigration();
   try {
     assert.equal(execution.result.status, 0, execution.result.stderr);
     assert.match(execution.result.stdout, /state was migrated and reconciled/);
     assert.match(execution.result.stdout, /managed resources: 36/);
     assert.equal(execution.executionDirectories.length, 0);
     assert.equal(execution.executionLocks.length, 0);
-    const applyIndex = execution.calls.indexOf('terraform:apply:false');
     const localInitIndex = execution.calls.indexOf('terraform:init:false');
     const migrateIndex = execution.calls.indexOf('terraform:init:true');
     const pullIndex = execution.calls.indexOf('terraform:state:false');
-    assert.equal(applyIndex >= 0, true);
-    assert.equal(localInitIndex >= 0 && localInitIndex < applyIndex, true);
-    assert.equal(migrateIndex > applyIndex, true);
+    assert.equal(localInitIndex >= 0, true);
+    assert.equal(migrateIndex > localInitIndex, true);
     assert.equal(pullIndex > migrateIndex, true);
-    assert.equal((execution.calls.match(/terraform:apply:false/g) ?? []).length, 1);
+    assert.doesNotMatch(execution.calls, /terraform:apply/);
+    assert.equal(
+      readFileSync(execution.completedStatePath, 'utf8'),
+      execution.completedStateBytes,
+    );
   } finally {
     rmSync(execution.temporary, { recursive: true });
   }
 });
 
-test('requires the recovered Budget API to be queryable before apply', () => {
-  const execution = runSyntheticBootstrapExecution({ budgetPreflightUnavailable: true });
+test('requires the provisioned bootstrap budget before migration', () => {
+  const execution = runSyntheticBootstrapMigration({ budgetMissing: true });
   try {
     assert.equal(execution.result.status, 1);
-    assert.match(execution.result.stderr, /Budget API could not be queried with the staging quota project/);
-    assert.doesNotMatch(execution.calls, /terraform:apply:false/);
+    assert.match(execution.result.stderr, /budgets must contain exactly one of every bootstrap target/);
+    assert.doesNotMatch(execution.calls, /terraform:init:true/);
     assert.equal(execution.executionDirectories.length, 1);
   } finally {
     rmSync(execution.temporary, { recursive: true });
   }
 });
 
-test('requires all eight preserved bootstrap APIs before apply', () => {
-  const execution = runSyntheticBootstrapExecution({ missingRecoveredService: true });
+test('requires all eight preserved bootstrap APIs before migration', () => {
+  const execution = runSyntheticBootstrapMigration({ missingRecoveredService: true });
   try {
     assert.equal(execution.result.status, 1);
     assert.match(execution.result.stderr, /missing a recovered bootstrap API/);
-    assert.doesNotMatch(execution.calls, /terraform:apply:false/);
+    assert.doesNotMatch(execution.calls, /terraform:init:true/);
     assert.equal(execution.executionDirectories.length, 1);
   } finally {
     rmSync(execution.temporary, { recursive: true });
   }
 });
 
-test('preserves reconciled recovery state when the target budget is absent or duplicated after apply', () => {
-  for (const budgetCountAfterApply of [0, 2]) {
-    const execution = runSyntheticBootstrapExecution({
-      budgetCountAfterApply,
-    });
-    try {
-      assert.equal(execution.result.status, 1);
-      assert.match(execution.result.stdout, /managed resources: 36/);
-      assert.match(execution.result.stderr, /Exactly one bootstrap budget could not be verified/);
-      assert.equal((execution.calls.match(/sleep:5/g) ?? []).length, 11);
-      assert.equal(execution.executionDirectories.length, 1);
-      assert.equal(existsSync(join(execution.executionDirectories[0], 'remote-bootstrap.tfstate')), true);
-    } finally {
-      rmSync(execution.temporary, { recursive: true });
-    }
-  }
-});
-
-test('preserves reconciled recovery state when the target budget cannot be inspected after apply', () => {
-  const execution = runSyntheticBootstrapExecution({
-    budgetPostcheckUnavailable: true,
-  });
+test('requires all three bootstrap service accounts before migration', () => {
+  const execution = runSyntheticBootstrapMigration({ missingServiceAccount: true });
   try {
     assert.equal(execution.result.status, 1);
-    assert.match(execution.result.stdout, /managed resources: 36/);
-    assert.match(execution.result.stderr, /Exactly one bootstrap budget could not be verified/);
-    assert.equal((execution.calls.match(/sleep:5/g) ?? []).length, 11);
+    assert.match(execution.result.stderr, /service-accounts must contain exactly one of every bootstrap target/);
+    assert.doesNotMatch(execution.calls, /terraform:init:true/);
     assert.equal(execution.executionDirectories.length, 1);
   } finally {
     rmSync(execution.temporary, { recursive: true });
   }
 });
 
-test('rejects concurrent execution of the same private bundle before cloud access', () => {
-  const execution = runSyntheticBootstrapExecution({ lockAlreadyHeld: true });
+test('rejects a dirty repository before cloud access', () => {
+  const execution = runSyntheticBootstrapMigration({ dirtyRepository: true });
   try {
     assert.equal(execution.result.status, 1);
-    assert.match(execution.result.stderr, /already has an active execution lock/);
+    assert.match(execution.result.stderr, /requires a clean Git checkout/);
+    assert.equal(execution.executionDirectories.length, 0);
+    assert.doesNotMatch(execution.calls, /gcloud:/);
+  } finally {
+    rmSync(execution.temporary, { recursive: true });
+  }
+});
+
+test('rejects concurrent migration of the same private bundle before cloud access', () => {
+  const execution = runSyntheticBootstrapMigration({ planLockAlreadyHeld: true });
+  try {
+    assert.equal(execution.result.status, 1);
+    assert.match(execution.result.stderr, /already has an active migration lock/);
     assert.equal(execution.executionDirectories.length, 0);
     assert.equal(execution.executionLocks.length, 1);
     assert.doesNotMatch(execution.calls, /terraform:|gcloud:/);
@@ -1552,73 +1556,65 @@ test('rejects concurrent execution of the same private bundle before cloud acces
   }
 });
 
-test('rejects concurrent use of the recovery state and releases the bundle lock', () => {
-  const execution = runSyntheticBootstrapExecution({ recoveryLockAlreadyHeld: true });
+test('rejects concurrent migration of the completed state and releases the bundle lock', () => {
+  const execution = runSyntheticBootstrapMigration({ stateLockAlreadyHeld: true });
   try {
     assert.equal(execution.result.status, 1);
-    assert.match(execution.result.stderr, /recovery state already has an active execution lock/);
+    assert.match(execution.result.stderr, /completed bootstrap state already has an active migration lock/);
     assert.equal(execution.executionDirectories.length, 0);
     assert.equal(execution.executionLocks.length, 1);
-    assert.equal(execution.executionLocks[0].endsWith('recovery.tfstate.execution-lock'), true);
+    assert.equal(execution.executionLocks[0].endsWith('completed.tfstate.migration-lock'), true);
     assert.doesNotMatch(execution.calls, /terraform:|gcloud:/);
   } finally {
     rmSync(execution.temporary, { recursive: true });
   }
 });
 
-test('preserves exact partial state after an apply failure and still migrates it', () => {
-  const execution = runSyntheticBootstrapExecution({ applyStatus: 1 });
+test('preserves the authoritative source state when cloud preflight fails', () => {
+  const execution = runSyntheticBootstrapMigration({ budgetMissing: true });
   try {
     assert.equal(execution.result.status, 1);
-    assert.match(execution.result.stdout, /managed resources: 10/);
-    assert.match(execution.result.stderr, /partial or failed/);
-    assert.equal(execution.executionDirectories.length, 1);
-    assert.equal(statSync(join(execution.executionDirectories[0], 'bootstrap.tfstate')).mode & 0o777, 0o600);
-    assert.match(execution.calls, /terraform:init:true/);
-    assert.match(execution.calls, /terraform:state:false/);
-  } finally {
-    rmSync(execution.temporary, { recursive: true });
-  }
-});
-
-test('preserves exact partial state locally when apply fails before the state bucket exists', () => {
-  const execution = runSyntheticBootstrapExecution({
-    applyStatus: 1,
-    stateBucketAbsentAfterApply: true,
-  });
-  try {
-    assert.equal(execution.result.status, 1);
-    assert.match(execution.result.stderr, /remained partial before the private state bucket existed/);
-    assert.equal(execution.executionDirectories.length, 1);
-    assert.equal(statSync(join(execution.executionDirectories[0], 'bootstrap.tfstate')).mode & 0o777, 0o600);
-    assert.doesNotMatch(execution.calls, /storage ls|terraform:init:true|terraform:state:false/);
-  } finally {
-    rmSync(execution.temporary, { recursive: true });
-  }
-});
-
-test('stops an empty failed apply before remote-state migration', () => {
-  const execution = runSyntheticBootstrapExecution({ applyStatus: 1, emptyFailedState: true });
-  try {
-    assert.equal(execution.result.status, 1);
-    assert.match(execution.result.stderr, /does not descend from the exact recovery baseline/);
     assert.match(execution.result.stderr, /private recovery material was preserved/);
     assert.equal(execution.executionDirectories.length, 1);
-    assert.doesNotMatch(execution.calls, /storage ls|terraform:init:true|terraform:state:false/);
+    assert.equal(readFileSync(execution.completedStatePath, 'utf8'), execution.completedStateBytes);
+    assert.equal(execution.executionLocks.length, 0);
   } finally {
     rmSync(execution.temporary, { recursive: true });
   }
 });
 
-test('confines Terraform emergency state to the private apply root and migrates it', () => {
-  const execution = runSyntheticBootstrapExecution({ applyStatus: 1, emergencyState: true });
+test('preserves the authoritative source state when backend migration fails', () => {
+  const execution = runSyntheticBootstrapMigration({ migrationFails: true });
   try {
     assert.equal(execution.result.status, 1);
-    assert.match(execution.result.stdout, /managed resources: 10/);
-    assert.match(execution.result.stderr, /partial or failed/);
+    assert.match(execution.result.stderr, /state migration failed/);
     assert.equal(execution.executionDirectories.length, 1);
-    const emergencyState = join(execution.executionDirectories[0], 'apply', 'errored.tfstate');
-    assert.equal(statSync(emergencyState).mode & 0o777, 0o600);
+    assert.equal(readFileSync(execution.completedStatePath, 'utf8'), execution.completedStateBytes);
+    assert.match(execution.calls, /terraform:init:true/);
+  } finally {
+    rmSync(execution.temporary, { recursive: true });
+  }
+});
+
+test('preserves the authoritative source state when remote read-back diverges', () => {
+  const execution = runSyntheticBootstrapMigration({ divergentRemote: true });
+  try {
+    assert.equal(execution.result.status, 1);
+    assert.match(execution.result.stderr, /does not exactly match local state/);
+    assert.match(execution.result.stderr, /private recovery material was preserved/);
+    assert.equal(execution.executionDirectories.length, 1);
+    assert.equal(readFileSync(execution.completedStatePath, 'utf8'), execution.completedStateBytes);
+    assert.match(execution.calls, /terraform:state:false/);
+  } finally {
+    rmSync(execution.temporary, { recursive: true });
+  }
+});
+
+test('never invokes an infrastructure apply during state recovery', () => {
+  const execution = runSyntheticBootstrapMigration();
+  try {
+    assert.equal(execution.result.status, 0, execution.result.stderr);
+    assert.doesNotMatch(execution.calls, /terraform:apply/);
     assert.match(execution.calls, /terraform:init:true/);
     assert.match(execution.calls, /terraform:state:false/);
   } finally {
@@ -1626,26 +1622,26 @@ test('confines Terraform emergency state to the private apply root and migrates 
   }
 });
 
-test('refuses a preexisting remote state and preserves the newly-created local state', () => {
-  const execution = runSyntheticBootstrapExecution({ preexistingState: true });
+test('refuses a preexisting remote state object and preserves the complete local state', () => {
+  const execution = runSyntheticBootstrapMigration({ preexistingState: true });
   try {
     assert.equal(execution.result.status, 1);
-    assert.match(execution.result.stderr, /state-bucket inventory is not empty/);
+    assert.match(execution.result.stderr, /State-bucket inventory is not empty/);
     assert.equal(execution.executionDirectories.length, 1);
-    assert.equal(statSync(join(execution.executionDirectories[0], 'bootstrap.tfstate')).size > 0, true);
+    assert.equal(readFileSync(execution.completedStatePath, 'utf8'), execution.completedStateBytes);
     assert.doesNotMatch(execution.calls, /terraform:init:true/);
   } finally {
     rmSync(execution.temporary, { recursive: true });
   }
 });
 
-test('preserves local recovery material when migration fails or remote read-back diverges', () => {
+test('releases migration locks after migration or reconciliation failures', () => {
   for (const options of [{ migrationFails: true }, { divergentRemote: true }]) {
-    const execution = runSyntheticBootstrapExecution(options);
+    const execution = runSyntheticBootstrapMigration(options);
     try {
       assert.equal(execution.result.status, 1);
       assert.equal(execution.executionDirectories.length, 1);
-      assert.equal(statSync(join(execution.executionDirectories[0], 'bootstrap.tfstate')).size > 0, true);
+      assert.equal(execution.executionLocks.length, 0);
       if (options.migrationFails) assert.match(execution.result.stderr, /state migration failed/);
       else assert.match(execution.result.stderr, /does not exactly match local state/);
     } finally {
@@ -1654,22 +1650,22 @@ test('preserves local recovery material when migration fails or remote read-back
   }
 });
 
-test('rejects a generic bootstrap execution approval before cloud access', () => {
+test('rejects a generic bootstrap migration approval before cloud access', () => {
   const result = spawnSync(
-    fileURLToPath(new URL('apply-and-migrate.sh', bootstrapRoot)),
-    ['/private/synthetic-plan', '/private/synthetic-recovery.tfstate'],
+    fileURLToPath(new URL('migrate-recovered-state.sh', bootstrapRoot)),
+    ['/private/synthetic-plan', '/private/synthetic-complete.tfstate'],
     {
       cwd: fileURLToPath(bootstrapRoot),
       encoding: 'utf8',
       env: {
         HOME: process.env.HOME,
         PATH: process.env.PATH,
-        MIAKAPP_STAGING_BOOTSTRAP_EXECUTION_AUTHORIZATION: 'miakapp-v4-staging',
+        MIAKAPP_STAGING_BOOTSTRAP_MIGRATION_AUTHORIZATION: 'miakapp-v4-staging',
       },
     },
   );
   assert.equal(result.status, 1);
-  assert.match(result.stderr, /exact reviewed plan and repository-commit authorization/);
+  assert.match(result.stderr, /exact preserved state and repository-commit authorization/);
 });
 
 test('rejects relative, symlinked, and publicly accessible private-plan parents', () => {

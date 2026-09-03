@@ -1,7 +1,7 @@
 # Miakapp 4 staging teardown rehearsal
 
-Status: non-executable rehearsal; bootstrap apply is partial with nine resources
-in private local state, no remote state exists, and the cloud workflow is dormant
+Status: non-executable rehearsal; bootstrap resources exist, their complete state
+is private and local pending remote migration, and the cloud workflow is dormant
 
 This runbook applies to the existing `miakapp-v4-staging` project. It must never
 be run against `miakapp-3`, `miakapp-v4`, or a `demo-*` project. A future
@@ -10,33 +10,30 @@ and must produce a plan before any destructive action.
 
 At the 2026-09-02 bootstrap boundary, Firebase reserved the default Hosting site
 namespace, created its project service identity and enabled its bootstrap APIs.
-The owner linked the reviewed billing account on 2026-09-03; that operation
-created no budget, App Engine application, Firebase app, database, bucket,
-Function, Cloud Run service, KMS key ring or secret. Deleting the whole project
-would permanently retire its globally unique ID; adding Firebase cannot
+The owner linked the reviewed billing account on 2026-09-03. The later bootstrap
+apply created the reviewed budget, two private buckets, three service accounts,
+Workload Identity pool and providers, and their IAM bindings. It created no App
+Engine application, Firebase app, database, Function, Cloud Run service, KMS key
+ring or secret. Deleting the whole project would permanently retire its globally
+unique ID; adding Firebase cannot
 otherwise be fully undone. Retaining this empty undeployed project, with the
 billing link removable during an authorized teardown, is therefore the default.
 
-The repository contains separate apply-capable bootstrap and foundation roots,
-a private versioned GCS backend design, keyless plan/apply identities and a
-dormant GitHub workflow blueprint. The first saved plan failed with zero managed
-resources. The next authorized plan imported the billing link and recorded all
-eight bootstrap APIs before the Budget API rejected the request because User ADC
-lacked a quota project. The target budget, buckets, service accounts and
-Workload Identity pool remain absent. Terraform preserved a private local state
-at serial 11 with exactly nine managed resources; its committed fingerprint is
-`07fc7412e35efaff288e2efd30f786c2871d9fa836fb813a178d247ccb1efe5a`,
-but its path and contents are not committed. Since the state bucket was not
-created, no migration was attempted. A replacement 27-create/nine-no-op recovery
-plan has been fully reviewed, but its application and state migration remain
-unauthorized. Local `.terraform/` provider caches are
+The repository contains separate bootstrap and foundation roots, a private
+versioned GCS backend, keyless plan/apply identities and a dormant GitHub
+workflow blueprint. Terraform completed the final 27-create/nine-no-op plan, but
+the wrapper rejected the complete state before migration because its output
+shape assumption differed from Terraform 1.11.3. The exact 36-resource state at
+serial 39 is preserved outside the repository with fingerprint
+`c083e7a05f2ccf273abda98c0739584336d2cbaffd8ea836b65b0790f94833a2`.
+The state bucket exists but contains no state object. Its migration-only recovery
+requires separate authorization. Local `.terraform/` provider caches are
 disposable and are not cloud inventory.
 
-If that wrapper ever reports failure, its printed private execution directory is
-part of the recovery inventory. Do not delete it or rerun the same saved plan.
-Determine whether a remote bootstrap generation exists,
-reconcile it with the preserved local state, and produce a new reviewed recovery
-plan before another mutation.
+If the migration-only wrapper reports failure, its printed private execution
+directory is part of the recovery inventory. Do not delete it or rerun the
+consumed saved plan. Determine whether a remote bootstrap generation exists and
+reconcile it with the preserved complete local state before another mutation.
 
 Infrastructure state or a successful destroy command is not sufficient evidence
 that spend has stopped. Managed Functions can leave Cloud Run revisions,

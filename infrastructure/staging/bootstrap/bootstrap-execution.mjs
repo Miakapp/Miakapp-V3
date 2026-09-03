@@ -21,6 +21,9 @@ import {
 export const APPROVED_CONFIGURATION_COMMIT = 'e9f410c58c8cbbf8f5f7a17170c9e8ed55a10501';
 export const APPROVED_PLAN_SHA256 = '12927b270f2bfa78c8f8c8c7e7071ce9cfec18d5e848165c04b585260bd5f7da';
 export const APPROVED_BILLING_ACCOUNT_SHA256 = '4557923f1be719b78ee844b14bfa4654be3eb3fa785a2cb5a2624c3f85d12270';
+export const COMPLETED_STATE_SHA256 = 'c083e7a05f2ccf273abda98c0739584336d2cbaffd8ea836b65b0790f94833a2';
+export const COMPLETED_STATE_SERIAL = 39;
+export const APPROVED_MIGRATION_CONFIGURATION_COMMIT = '0000000000000000000000000000000000000000';
 export const PROJECT_ID = 'miakapp-v4-staging';
 export const PROJECT_NUMBER = '1072737219170';
 export const PROJECT_DISPLAY_NAME = 'Miakapp V4 Staging';
@@ -145,6 +148,20 @@ export function validateExecutionAuthorization(value, repositoryCommit) {
   return value;
 }
 
+export function migrationAuthorization(repositoryCommit) {
+  if (typeof repositoryCommit !== 'string' || !COMMIT_PATTERN.test(repositoryCommit)) {
+    reject('Bootstrap state migration requires a canonical repository commit');
+  }
+  return `migrate-bootstrap-state:${PROJECT_ID}:${COMPLETED_STATE_SHA256}:${repositoryCommit}`;
+}
+
+export function validateMigrationAuthorization(value, repositoryCommit) {
+  if (value !== migrationAuthorization(repositoryCommit)) {
+    reject('Bootstrap state migration requires the exact preserved state and repository-commit authorization');
+  }
+  return value;
+}
+
 export function createPrivateExecutionDirectory(bundlePath, repositoryPath) {
   if (typeof bundlePath !== 'string' || !isAbsolute(bundlePath) || /[\0-\x1f\x7f]/.test(bundlePath)) {
     reject('Saved-plan bundle must be an absolute path without control characters');
@@ -199,6 +216,16 @@ export function verifyEmptyInventory(value, label) {
   if (value.length !== 0) reject(`${label} inventory is not empty`);
 }
 
+export function verifyEmptyStateBucketInventory(value) {
+  if (!Array.isArray(value)) reject('State-bucket inventory must be an array');
+  if (value.length === 0) return;
+  if (value.length === 1
+      && isPlainObject(value[0])
+      && isDeepStrictEqual(Object.keys(value[0]), ['url'])
+      && value[0].url === `gs://${STATE_BUCKET}/`) return;
+  reject('State-bucket inventory is not empty');
+}
+
 export function verifyAbsentTargetInventory(value, label) {
   if (!Array.isArray(value)) reject(`${label} inventory must be an array`);
   let containsTarget;
@@ -231,10 +258,39 @@ export function verifyAbsentTargetInventory(value, label) {
 
 export function verifyProvisionedTargetInventory(value, label) {
   if (!Array.isArray(value)) reject(`${label} inventory must be an array`);
-  if (label !== 'budgets') reject('Provisioned target inventory label is invalid');
-  const targetCount = value.filter((entry) => isPlainObject(entry)
-    && entry.displayName === BUDGET_DISPLAY_NAME).length;
-  if (targetCount !== 1) reject(`${label} must contain exactly one bootstrap target`);
+  let targetIdentities;
+  let identity;
+  switch (label) {
+    case 'budgets':
+      targetIdentities = [BUDGET_DISPLAY_NAME];
+      identity = (entry) => (isPlainObject(entry) ? entry.displayName : undefined);
+      break;
+    case 'storage-buckets':
+      targetIdentities = [STATE_BUCKET, FOUNDATION_ACTIVATION.component_bucket];
+      identity = (entry) => (isPlainObject(entry) ? entry.name : undefined);
+      break;
+    case 'service-accounts':
+      targetIdentities = [
+        FOUNDATION_ACTIVATION.planner_service_account,
+        FOUNDATION_ACTIVATION.deployer_service_account,
+        FOUNDATION_ACTIVATION.runtime_service_account,
+      ];
+      identity = (entry) => (isPlainObject(entry) ? entry.email : undefined);
+      break;
+    case 'workload-identity-pools':
+      targetIdentities = [`projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/miakapp-github`];
+      identity = (entry) => (isPlainObject(entry) ? entry.name : undefined);
+      break;
+    case 'workload-identity-providers':
+      targetIdentities = [FOUNDATION_ACTIVATION.plan_provider, FOUNDATION_ACTIVATION.apply_provider];
+      identity = (entry) => (isPlainObject(entry) ? entry.name : undefined);
+      break;
+    default:
+      reject('Provisioned target inventory label is invalid');
+  }
+  if (targetIdentities.some((target) => value.filter((entry) => identity(entry) === target).length !== 1)) {
+    reject(`${label} must contain exactly one of every bootstrap target`);
+  }
 }
 
 export function verifyEnabledBootstrapServices(value) {
@@ -404,14 +460,32 @@ function validateFoundationActivation(state) {
   );
   const activation = exactKeys(
     state.outputs.foundation_activation,
-    ['sensitive', 'type', 'value'],
+    ['type', 'value'],
     'Complete Terraform state foundation_activation output',
   );
-  if (activation.sensitive !== false
-      || !isDeepStrictEqual(activation.type, FOUNDATION_ACTIVATION_TYPE)
+  if (!isDeepStrictEqual(activation.type, FOUNDATION_ACTIVATION_TYPE)
       || !isDeepStrictEqual(activation.value, FOUNDATION_ACTIVATION)) {
     reject('Complete Terraform state foundation_activation output does not match the reviewed identity');
   }
+}
+
+export function validateCompletedBootstrapState(
+  state,
+  metadataValue,
+  expectedBillingAccountSha256 = APPROVED_BILLING_ACCOUNT_SHA256,
+  expectedLineageSha256 = RECOVERY_LINEAGE_SHA256,
+) {
+  const validated = validateAppliedBootstrapState(
+    state,
+    metadataValue,
+    'complete',
+    expectedLineageSha256,
+    expectedBillingAccountSha256,
+  );
+  if (state.serial !== COMPLETED_STATE_SERIAL) {
+    reject('Completed bootstrap state does not have the exact preserved serial');
+  }
+  return validated;
 }
 
 export function reconcileBootstrapStates(
@@ -474,6 +548,45 @@ export function validateAppliedBootstrapStateFile(localPath, metadataPath, mode)
   const localState = readPrivateJson(localPath, MAX_STATE_BYTES, 'Local bootstrap state');
   const metadata = readPrivateJson(metadataPath, MAX_OBSERVATION_BYTES, 'Saved-plan metadata');
   return validateAppliedBootstrapState(localState, metadata, mode);
+}
+
+export function verifyCompletedBootstrapStateFile(
+  localPath,
+  metadataPath,
+  repositoryPath,
+  expectedSha256 = COMPLETED_STATE_SHA256,
+) {
+  if (typeof localPath !== 'string' || !isAbsolute(localPath) || /[\0-\x1f\x7f]/.test(localPath)) {
+    reject('Completed bootstrap state must be an absolute path without control characters');
+  }
+  if (typeof repositoryPath !== 'string' || !isAbsolute(repositoryPath)) {
+    reject('Completed bootstrap state verification requires an absolute repository path');
+  }
+  if (expectedSha256 !== COMPLETED_STATE_SHA256) {
+    reject('Completed bootstrap state verification requires the exact preserved SHA-256');
+  }
+  if (lstatSync(localPath).isSymbolicLink()) {
+    reject('Completed bootstrap state must not be a symbolic link');
+  }
+  const canonicalPath = realpathSync(localPath);
+  const repository = realpathSync(repositoryPath);
+  if (containsPath(repository, canonicalPath)) {
+    reject('Completed bootstrap state must remain outside the repository');
+  }
+  assertPrivateEntry(dirname(canonicalPath), 'Completed bootstrap state parent', 'directory');
+  const entry = assertPrivateEntry(canonicalPath, 'Completed bootstrap state', 'file');
+  if (entry.size === 0 || entry.size > MAX_STATE_BYTES) {
+    reject('Completed bootstrap state has an invalid size');
+  }
+  const bytes = readFileSync(canonicalPath);
+  const actualSha256 = createHash('sha256').update(bytes).digest('hex');
+  if (actualSha256 !== expectedSha256) {
+    reject('Completed bootstrap state does not match the preserved state SHA-256');
+  }
+  const state = parseJson(bytes.toString('utf8'), 'Completed bootstrap state');
+  const metadata = readPrivateJson(metadataPath, MAX_OBSERVATION_BYTES, 'Saved-plan metadata');
+  const validated = validateCompletedBootstrapState(state, metadata);
+  return Object.freeze({ ...validated, sha256: actualSha256 });
 }
 
 export function reconcileBootstrapStateFiles(localPath, remotePath, metadataPath, mode) {
@@ -588,6 +701,10 @@ async function main() {
     validateExecutionAuthorization(args[0], args[1]);
     return;
   }
+  if (command === 'verify-migration-authorization' && args.length === 2) {
+    validateMigrationAuthorization(args[0], args[1]);
+    return;
+  }
   if (command === 'verify-project' && args.length === 0) {
     verifyProjectObservation(parseJson(await readBoundedStandardInput(), 'Project observation'));
     return;
@@ -601,6 +718,12 @@ async function main() {
   }
   if (command === 'verify-empty-inventory' && args.length === 1) {
     verifyEmptyInventory(parseJson(await readBoundedStandardInput(), `${args[0]} inventory`), args[0]);
+    return;
+  }
+  if (command === 'verify-empty-state-bucket' && args.length === 0) {
+    verifyEmptyStateBucketInventory(
+      parseJson(await readBoundedStandardInput(), 'State-bucket inventory'),
+    );
     return;
   }
   if (command === 'verify-absent-targets' && args.length === 1) {
@@ -657,12 +780,17 @@ async function main() {
     console.log(`Applied bootstrap state verified: ${result.mode}; managed resources: ${result.managedResources}; serial: ${result.serial}`);
     return;
   }
+  if (command === 'verify-completed-state' && args.length === 4) {
+    const result = verifyCompletedBootstrapStateFile(args[0], args[1], args[2], args[3]);
+    console.log(`Completed bootstrap state verified: managed resources: ${result.managedResources}; serial: ${result.serial}`);
+    return;
+  }
   if (command === 'reconcile-state' && args.length === 4) {
     const result = reconcileBootstrapStateFiles(args[0], args[1], args[2], args[3]);
     console.log(`Bootstrap state reconciled: ${result.mode}; managed resources: ${result.managedResources}; serial: ${result.serial}`);
     return;
   }
-  reject('Usage: bootstrap-execution.mjs <create-directory|verify-authorization|verify-project|verify-billing-link|verify-empty-inventory|verify-absent-targets|verify-provisioned-targets|verify-enabled-bootstrap-services|classify-state-bucket|verify-state-object|verify-recoverable-state|verify-recovery-state|verify-recovery-descendant-state|verify-applied-state|reconcile-state> ...');
+  reject('Usage: bootstrap-execution.mjs <create-directory|verify-authorization|verify-migration-authorization|verify-project|verify-billing-link|verify-empty-inventory|verify-empty-state-bucket|verify-absent-targets|verify-provisioned-targets|verify-enabled-bootstrap-services|classify-state-bucket|verify-state-object|verify-recoverable-state|verify-recovery-state|verify-recovery-descendant-state|verify-applied-state|verify-completed-state|reconcile-state> ...');
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

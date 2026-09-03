@@ -1,6 +1,6 @@
 # Staging Terraform bootstrap proposal
 
-Status: recovery plan reviewed; exact apply-and-migrate authorization pending
+Status: bootstrap apply complete; exact migration-only authorization pending
 
 This root owns the one-time resources required before the ordinary staging
 foundation can use remote state and keyless GitHub automation:
@@ -29,101 +29,63 @@ bucket administration only on the component bucket. It has no project IAM,
 service-account administration or project-wide Storage role with which to
 escape that boundary.
 
-## Circular state migration
+## Circular state migration recovery
 
-The GCS bucket does not exist and cannot back the operation that creates it.
-Consequently, this root has no active backend block. The diagnostic guarded plan
-uses the implicit local backend and reads the exact private recovery state without
-modifying it. The separate saved-plan wrapper stores only the plan binary and a
-closed summary beside that state, never inside the repository.
+The GCS bucket could not back the transaction that created it. The authorized
+plan therefore applied against protected local state. Terraform completed all
+27 remaining creations on 2026-09-03, leaving exactly 36 managed resources at
+serial 39 with SHA-256
+`c083e7a05f2ccf273abda98c0739584336d2cbaffd8ea836b65b0790f94833a2`.
+The path, raw state, plan contents, billing identifier, and logs remain private.
 
-[`backend.gcs.tf.example`](backend.gcs.tf.example) is the exact reviewed backend
-block for a later migration. Two earlier saved plans are superseded. The first
-stopped before recording resources. The second recorded a private partial state
-but stopped before creating the state bucket, so no remote migration was
-possible. The committed [`apply-and-migrate.sh`](apply-and-migrate.sh) wrapper
-must:
+The apply wrapper then stopped before migration because the local reducer
+expected a `sensitive` member in the persisted non-sensitive output. Terraform
+1.11.3 stores that output with exactly `type` and `value`. Read-only inventory
+confirmed all bootstrap targets exist exactly once and the state bucket returns
+only its root URL marker, with no state object.
 
-1. revalidate the exact recovery-state digest, lineage, serial and nine managed
-   addresses, the saved-plan digest, external GitHub policy, and cloud inventory;
-2. copy that recovery state into a protected temporary directory and apply the
-   exact plan only after a new explicit authorization;
-3. activate the backend template and run `terraform init -migrate-state` with
-   the exact bucket and `terraform/bootstrap` prefix, but only if the apply has
-   created the state bucket;
-4. initialize the empty `terraform/foundation` state with protected operator
-   credentials, then verify its exact generation before admitting CI planning;
-5. verify the remote bootstrap object generation and reconcile every managed
-   resource against the recovery lineage; and
-6. remove the protected local state copy only after both checks agree.
+[`apply-and-migrate.sh`](apply-and-migrate.sh) is permanently retired and cannot
+invoke Terraform or Google Cloud. It must not be restored or used to rerun the
+consumed plan. [`backend.gcs.tf.example`](backend.gcs.tf.example) remains the
+reviewed migration target and is activated only inside a disposable private
+working copy.
 
-On the second authorized attempt, Terraform imported the approved billing link
-and recorded all eight bootstrap APIs, then failed while creating the budget.
-User Application Default Credentials lacked a quota project for that API. The
-protected Terraform 1.11.3 state is serial 11 and contains exactly those nine
-managed resources. Its SHA-256 is
-`07fc7412e35efaff288e2efd30f786c2871d9fa836fb813a178d247ccb1efe5a`.
-The state path, contents and logs remain private. Independent inventory confirmed
-that the target budget, buckets, service accounts and Workload Identity pool are
-absent. Local state is sensitive and must never be committed or attached to a
-public issue.
+## Guarded migration-only recovery (awaiting authorization)
 
-## Guarded recovery apply and migration (awaiting authorization)
+[`migrate-recovered-state.sh`](migrate-recovered-state.sh) is bound to the exact
+complete-state digest, the reviewed private plan bundle, project
+`miakapp-v4-staging`, remote object
+`gs://miakapp-v4-staging-tfstate-1072737219170/terraform/bootstrap/default.tfstate`,
+and the clean repository commit that executes it. It has no infrastructure
+apply, import, destroy, state-push, or cloud-object copy path.
 
-The execution command is intentionally single-use and is bound to the reviewed
-recovery plan, the exact repository commit that executes it, the
-preserved state digest, project `miakapp-v4-staging`, and remote object
-`gs://miakapp-v4-staging-tfstate-1072737219170/terraform/bootstrap/default.tfstate`.
-The plan was created from configuration commit
-`e9f410c58c8cbbf8f5f7a17170c9e8ed55a10501` on 2026-09-03. Its SHA-256 is
-`12927b270f2bfa78c8f8c8c7e7071ce9cfec18d5e848165c04b585260bd5f7da`.
-The complete rendering was manually reviewed: exactly 27 resources are created,
-the billing link and eight API resources are no-op, and there is no import,
-update, or deletion. Fresh read-only inventory found every creation target and
-the remote state absent. No apply or state migration is authorized.
+Only one operator may use the private bundle and complete state at a time. The
+wrapper takes atomic sibling locks, rejects credential files and ambient Git,
+Terraform, endpoint, or proxy overrides, and then verifies:
 
-Only one operator may use an authoritative private bundle and recovery file at a
-time. The wrapper takes atomic sibling locks for both before reading cloud
-inventory or invoking Terraform. A surviving lock after an abrupt process or
-host failure must be investigated, not deleted reflexively or worked around with
-a copied bundle. After the owner separately authorizes this exact
-apply-and-migrate operation, the shape of the command is:
+1. the exact saved plan, Terraform source, complete-state digest, serial,
+   lineage, 36 managed addresses, and typed activation output;
+2. the active project and approved billing-account fingerprint;
+3. exactly one budget, both buckets, all three service accounts, the Workload
+   Identity pool and both providers, plus all eight bootstrap APIs; and
+4. an empty state bucket, accepting only `[]` or the exact bucket-root marker
+   emitted by `gcloud storage ls --json`.
+
+After a separate exact authorization, the command shape is:
 
 ```sh
-MIAKAPP_STAGING_BOOTSTRAP_EXECUTION_AUTHORIZATION='apply-and-migrate:miakapp-v4-staging:<64-hex-reviewed-plan>:<40-hex-reviewed-execution-commit>' \
-  ./infrastructure/staging/bootstrap/apply-and-migrate.sh \
+MIAKAPP_STAGING_BOOTSTRAP_MIGRATION_AUTHORIZATION='migrate-bootstrap-state:miakapp-v4-staging:<64-hex-complete-state>:<40-hex-execution-commit>' \
+  ./infrastructure/staging/bootstrap/migrate-recovered-state.sh \
   '/absolute/private/miakapp-staging-bootstrap-plan-...' \
-  '/absolute/private/bootstrap.tfstate'
+  '/absolute/private/complete-bootstrap.tfstate'
 ```
 
-Before mutation, the wrapper requires the authorization's repository commit to
-equal the clean checkout's current commit. It then revalidates the plan, its
-exact Terraform source, the active project and billing fingerprint, and the
-absence of the target budget, buckets, service accounts, and Workload Identity
-pool. The Budget API lookup must succeed through the staging quota project; it
-can no longer be deferred. The wrapper also proves that all eight state-recorded
-bootstrap APIs remain enabled. After a complete apply and state reconciliation,
-it retries the budget lookup and requires exactly one target budget. It rejects
-credential files, endpoint, proxy, Git, and Terraform overrides. The plan is
-applied once with state and logs confined beside the private bundle. The backend
-template is activated only in a separate private working copy; Terraform then
-migrates with locking and reads the state back. The helper requires structurally
-identical parsed state contents, the expected lineage/header, the exact 36
-managed addresses, and the sole typed non-secret activation output before the
-local copy is removed.
-
-If apply is partial and the state bucket exists, the wrapper attempts to migrate
-and reconcile only a state that retains every recovery baseline address and
-contains no address outside the reviewed plan. If the bucket does not yet exist,
-it preserves the validated descendant state locally and stops. Any apply,
-migration, read-back, inventory, reconciliation, or budget-postcondition failure
-leaves the private execution directory intact and prints only its location plus
-a bounded error.
-Terraform also runs from that private directory, so a higher-priority
-`errored.tfstate` produced after a persistence failure cannot land in the
-repository and is used for recovery instead of any older normal state.
-Do not rerun a saved plan after a partial apply; preserve the directory and
-create a recovery plan from the authoritative local or migrated state.
+Only after every preflight passes does Terraform run
+`init -migrate-state -force-copy`. The wrapper reads the remote object back,
+verifies its generation, and requires exact parsed-state equality. The
+authoritative source state remains byte-for-byte unchanged after both success
+and failure. A failure preserves the private execution directory and reports
+only its path plus a bounded error; a success removes only the disposable copy.
 
 ## Guarded diagnostic plan
 
@@ -175,17 +137,17 @@ Terraform import. The replacement plan was created from clean
 commit `6340bffbddcc4797067ef48170fc5c3524345bf2` on 2026-09-03. Its SHA-256 is
 `6fb0b0c15fa04338a40ab59de790c3a4a85f96b418377c4a70570a8dabd5d457`;
 the verified and manually reviewed result is exactly 35 creations, one import
-with a client-side update, and no deletion. Its authorized apply produced the
-nine-resource private state described above before the Budget API quota-project
-failure. Do not retry either previous digest.
+with a client-side update, and no deletion. Its authorized apply produced a
+nine-resource private state before the Budget API quota-project failure. Do not
+retry either previous digest.
 
 The recovery reducer accepts only the exact 36-address inventory with the
 nine preserved addresses as `no-op`, the remaining 27 as `create`, and no
 import, update or deletion. Both providers set `billing_project` to staging and
-enable user-project quota attribution. The reviewed plan above matches that
-closed inventory. The following command can reproduce a private state-bound
-plan, but does not authorize its application and will produce a different binary
-digest.
+enable user-project quota attribution. The consumed final plan matched that
+closed inventory and completed the bootstrap resources. Do not create or execute
+another bootstrap plan while its complete state awaits migration. The commands
+below remain as historical diagnostic tooling and cannot authorize mutation.
 
 To reproduce or refresh the plan, first create a persistent operator-owned directory
 outside the Git repository and remove every group/other permission from it. Then
