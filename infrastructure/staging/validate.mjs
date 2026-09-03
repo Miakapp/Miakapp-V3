@@ -132,6 +132,18 @@ const SUPERSEDED_SAVED_PLAN_POST_CHECKS = [
   'workload-identity-pool-absent',
 ];
 
+const CURRENT_SAVED_PLAN_POST_CHECKS = [
+  'billing-linked-to-approved-account',
+  'repository-plan-and-state-artifacts-absent',
+  'recovery-state-verified-unchanged',
+  'target-budget-absent',
+  'eight-bootstrap-apis-enabled',
+  'target-buckets-absent',
+  'target-service-accounts-absent',
+  'workload-identity-pool-absent',
+  'remote-state-absent',
+];
+
 const RECOVERY_MANAGED_ADDRESSES = [
   'google_billing_project_info.staging',
   'google_project_service.bootstrap["billingbudgets.googleapis.com"]',
@@ -708,7 +720,7 @@ function validateTerraform(value) {
   ]);
   exact(
     bootstrapExecution.state,
-    'recovery_configuration_committed_plan_pending',
+    'recovery_plan_reviewed_awaiting_exact_authorization',
     'terraform.bootstrap_execution.state',
   );
   exact(
@@ -723,12 +735,12 @@ function validateTerraform(value) {
   );
   exact(
     bootstrapExecution.approved_configuration_commit,
-    null,
+    'e9f410c58c8cbbf8f5f7a17170c9e8ed55a10501',
     'terraform.bootstrap_execution.approved_configuration_commit',
   );
   exact(
     bootstrapExecution.approved_plan_sha256,
-    null,
+    '12927b270f2bfa78c8f8c8c7e7071ce9cfec18d5e848165c04b585260bd5f7da',
     'terraform.bootstrap_execution.approved_plan_sha256',
   );
   exact(
@@ -939,11 +951,138 @@ function validateTerraform(value) {
     'terraform.local_plan_observation.post_plan_checks',
   );
 
-  exact(
+  const currentSavedPlanPath = 'terraform.local_saved_plan_observation';
+  const currentSavedPlan = record(
     terraform.local_saved_plan_observation,
-    null,
-    'terraform.local_saved_plan_observation',
+    currentSavedPlanPath,
+    [
+      'observed_on',
+      'created_at',
+      'configuration_commit',
+      'terraform_version',
+      'plan_sha256',
+      'backend',
+      'recovery_state',
+      'result',
+      'resource_counts',
+      'private_bundle_outside_repository',
+      'private_bundle_path_committed',
+      'planned_values_committed',
+      'raw_billing_account_identifier_committed',
+      'binary_digest_verified',
+      'binary_plan_matches_metadata',
+      'full_plan_reviewed',
+      'billing_link_no_op',
+      'bootstrap_apis_no_op',
+      'planning_state_artifacts_created',
+      'recovery_state_unchanged',
+      'apply_authorized',
+      'apply_executed',
+      'state_migration_authorized',
+      'state_migration_executed',
+      'post_inspection_checks',
+    ],
   );
+  exact(currentSavedPlan.observed_on, '2026-09-03', `${currentSavedPlanPath}.observed_on`);
+  exact(
+    currentSavedPlan.created_at,
+    '2026-09-03T11:47:02Z',
+    `${currentSavedPlanPath}.created_at`,
+  );
+  exact(
+    currentSavedPlan.configuration_commit,
+    'e9f410c58c8cbbf8f5f7a17170c9e8ed55a10501',
+    `${currentSavedPlanPath}.configuration_commit`,
+  );
+  exact(currentSavedPlan.terraform_version, '1.11.3', `${currentSavedPlanPath}.terraform_version`);
+  exact(
+    currentSavedPlan.plan_sha256,
+    '12927b270f2bfa78c8f8c8c7e7071ce9cfec18d5e848165c04b585260bd5f7da',
+    `${currentSavedPlanPath}.plan_sha256`,
+  );
+  exact(currentSavedPlan.backend, 'local', `${currentSavedPlanPath}.backend`);
+
+  const currentRecoveryPath = `${currentSavedPlanPath}.recovery_state`;
+  const currentRecovery = record(
+    currentSavedPlan.recovery_state,
+    currentRecoveryPath,
+    ['sha256', 'lineage_sha256', 'serial', 'managed_resources'],
+  );
+  exact(
+    currentRecovery.sha256,
+    '07fc7412e35efaff288e2efd30f786c2871d9fa836fb813a178d247ccb1efe5a',
+    `${currentRecoveryPath}.sha256`,
+  );
+  exact(
+    currentRecovery.lineage_sha256,
+    '35e52294057979e6191eaa05141a9476261d4b0ea75c9113128f780abda7a9ba',
+    `${currentRecoveryPath}.lineage_sha256`,
+  );
+  exact(currentRecovery.serial, 11, `${currentRecoveryPath}.serial`);
+  exact(currentRecovery.managed_resources, 9, `${currentRecoveryPath}.managed_resources`);
+
+  const currentResultPath = `${currentSavedPlanPath}.result`;
+  const currentResult = record(
+    currentSavedPlan.result,
+    currentResultPath,
+    ['create', 'no_op', 'import', 'update', 'delete'],
+  );
+  exact(currentResult.create, 27, `${currentResultPath}.create`);
+  exact(currentResult.no_op, 9, `${currentResultPath}.no_op`);
+  exact(currentResult.import, 0, `${currentResultPath}.import`);
+  exact(currentResult.update, 0, `${currentResultPath}.update`);
+  exact(currentResult.delete, 0, `${currentResultPath}.delete`);
+
+  const currentCountsPath = `${currentSavedPlanPath}.resource_counts`;
+  const currentCounts = record(
+    currentSavedPlan.resource_counts,
+    currentCountsPath,
+    [
+      'billing_and_budget',
+      'service_apis',
+      'storage_buckets',
+      'service_accounts',
+      'workload_identity_pool_and_providers',
+      'iam_bindings',
+    ],
+  );
+  exact(currentCounts.billing_and_budget, 2, `${currentCountsPath}.billing_and_budget`);
+  exact(currentCounts.service_apis, 8, `${currentCountsPath}.service_apis`);
+  exact(currentCounts.storage_buckets, 2, `${currentCountsPath}.storage_buckets`);
+  exact(currentCounts.service_accounts, 3, `${currentCountsPath}.service_accounts`);
+  exact(
+    currentCounts.workload_identity_pool_and_providers,
+    3,
+    `${currentCountsPath}.workload_identity_pool_and_providers`,
+  );
+  exact(currentCounts.iam_bindings, 18, `${currentCountsPath}.iam_bindings`);
+
+  const currentBooleanExpectations = {
+    private_bundle_outside_repository: true,
+    private_bundle_path_committed: false,
+    planned_values_committed: false,
+    raw_billing_account_identifier_committed: false,
+    binary_digest_verified: true,
+    binary_plan_matches_metadata: true,
+    full_plan_reviewed: true,
+    billing_link_no_op: true,
+    bootstrap_apis_no_op: true,
+    planning_state_artifacts_created: false,
+    recovery_state_unchanged: true,
+    apply_authorized: false,
+    apply_executed: false,
+    state_migration_authorized: false,
+    state_migration_executed: false,
+  };
+  for (const [field, expected] of Object.entries(currentBooleanExpectations)) {
+    exact(currentSavedPlan[field], expected, `${currentSavedPlanPath}.${field}`);
+  }
+  exactArray(
+    currentSavedPlan.post_inspection_checks,
+    CURRENT_SAVED_PLAN_POST_CHECKS,
+    `${currentSavedPlanPath}.post_inspection_checks`,
+  );
+
   const savedObservation = record(
     terraform.superseded_saved_plan_observation,
     'terraform.superseded_saved_plan_observation',
@@ -1214,10 +1353,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 19, 'manifest.revision');
+  exact(manifest.revision, 20, 'manifest.revision');
   exact(
     manifest.status,
-    'bootstrap_partial_state_preserved_recovery_plan_pending',
+    'bootstrap_recovery_plan_reviewed_awaiting_authorization',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');

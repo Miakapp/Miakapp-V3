@@ -1,6 +1,6 @@
 # Staging Terraform bootstrap proposal
 
-Status: nine-resource bootstrap state preserved privately; recovery plan pending
+Status: recovery plan reviewed; exact apply-and-migrate authorization pending
 
 This root owns the one-time resources required before the ordinary staging
 foundation can use remote state and keyless GitHub automation:
@@ -68,21 +68,26 @@ that the target budget, buckets, service accounts and Workload Identity pool are
 absent. Local state is sensitive and must never be committed or attached to a
 public issue.
 
-## Guarded recovery apply and migration (inactive)
+## Guarded recovery apply and migration (awaiting authorization)
 
-The execution command is intentionally single-use and will be bound to the next
-reviewed recovery plan, the exact repository commit that executes it, the
+The execution command is intentionally single-use and is bound to the reviewed
+recovery plan, the exact repository commit that executes it, the
 preserved state digest, project `miakapp-v4-staging`, and remote object
 `gs://miakapp-v4-staging-tfstate-1072737219170/terraform/bootstrap/default.tfstate`.
-Its plan-digest constant is currently a zero sentinel, so no real plan can pass.
-A new plan has not yet been created, reviewed, or authorized.
+The plan was created from configuration commit
+`e9f410c58c8cbbf8f5f7a17170c9e8ed55a10501` on 2026-09-03. Its SHA-256 is
+`12927b270f2bfa78c8f8c8c7e7071ce9cfec18d5e848165c04b585260bd5f7da`.
+The complete rendering was manually reviewed: exactly 27 resources are created,
+the billing link and eight API resources are no-op, and there is no import,
+update, or deletion. Fresh read-only inventory found every creation target and
+the remote state absent. No apply or state migration is authorized.
 
 Only one operator may use an authoritative private bundle and recovery file at a
 time. The wrapper takes atomic sibling locks for both before reading cloud
 inventory or invoking Terraform. A surviving lock after an abrupt process or
 host failure must be investigated, not deleted reflexively or worked around with
-a copied bundle. After a new plan is bound and the owner separately authorizes
-that exact apply-and-migrate operation, the shape of the command is:
+a copied bundle. After the owner separately authorizes this exact
+apply-and-migrate operation, the shape of the command is:
 
 ```sh
 MIAKAPP_STAGING_BOOTSTRAP_EXECUTION_AUTHORIZATION='apply-and-migrate:miakapp-v4-staging:<64-hex-reviewed-plan>:<40-hex-reviewed-execution-commit>' \
@@ -174,11 +179,13 @@ with a client-side update, and no deletion. Its authorized apply produced the
 nine-resource private state described above before the Budget API quota-project
 failure. Do not retry either previous digest.
 
-The recovery reducer now accepts only the exact 36-address inventory with the
+The recovery reducer accepts only the exact 36-address inventory with the
 nine preserved addresses as `no-op`, the remaining 27 as `create`, and no
 import, update or deletion. Both providers set `billing_project` to staging and
-enable user-project quota attribution. The following command can produce a new
-private state-bound plan, but does not authorize its application.
+enable user-project quota attribution. The reviewed plan above matches that
+closed inventory. The following command can reproduce a private state-bound
+plan, but does not authorize its application and will produce a different binary
+digest.
 
 To reproduce or refresh the plan, first create a persistent operator-owned directory
 outside the Git repository and remove every group/other permission from it. Then

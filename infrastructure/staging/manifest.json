@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 19,
-  "status": "bootstrap_partial_state_preserved_recovery_plan_pending",
+  "revision": 20,
+  "status": "bootstrap_recovery_plan_reviewed_awaiting_authorization",
   "environment": "staging",
   "project": {
     "project_id": "miakapp-v4-staging",
@@ -365,11 +365,11 @@
       "soft_delete_days": 7
     },
     "bootstrap_execution": {
-      "state": "recovery_configuration_committed_plan_pending",
+      "state": "recovery_plan_reviewed_awaiting_exact_authorization",
       "script": "bootstrap/apply-and-migrate.sh",
       "helper": "bootstrap/bootstrap-execution.mjs",
-      "approved_configuration_commit": null,
-      "approved_plan_sha256": null,
+      "approved_configuration_commit": "e9f410c58c8cbbf8f5f7a17170c9e8ed55a10501",
+      "approved_plan_sha256": "12927b270f2bfa78c8f8c8c7e7071ce9cfec18d5e848165c04b585260bd5f7da",
       "exact_authorization_required": true,
       "repository_commit_bound": true,
       "cloud_preflight_required": true,
@@ -460,7 +460,61 @@
         "workload-identity-pool-absent"
       ]
     },
-    "local_saved_plan_observation": null,
+    "local_saved_plan_observation": {
+      "observed_on": "2026-09-03",
+      "created_at": "2026-09-03T11:47:02Z",
+      "configuration_commit": "e9f410c58c8cbbf8f5f7a17170c9e8ed55a10501",
+      "terraform_version": "1.11.3",
+      "plan_sha256": "12927b270f2bfa78c8f8c8c7e7071ce9cfec18d5e848165c04b585260bd5f7da",
+      "backend": "local",
+      "recovery_state": {
+        "sha256": "07fc7412e35efaff288e2efd30f786c2871d9fa836fb813a178d247ccb1efe5a",
+        "lineage_sha256": "35e52294057979e6191eaa05141a9476261d4b0ea75c9113128f780abda7a9ba",
+        "serial": 11,
+        "managed_resources": 9
+      },
+      "result": {
+        "create": 27,
+        "no_op": 9,
+        "import": 0,
+        "update": 0,
+        "delete": 0
+      },
+      "resource_counts": {
+        "billing_and_budget": 2,
+        "service_apis": 8,
+        "storage_buckets": 2,
+        "service_accounts": 3,
+        "workload_identity_pool_and_providers": 3,
+        "iam_bindings": 18
+      },
+      "private_bundle_outside_repository": true,
+      "private_bundle_path_committed": false,
+      "planned_values_committed": false,
+      "raw_billing_account_identifier_committed": false,
+      "binary_digest_verified": true,
+      "binary_plan_matches_metadata": true,
+      "full_plan_reviewed": true,
+      "billing_link_no_op": true,
+      "bootstrap_apis_no_op": true,
+      "planning_state_artifacts_created": false,
+      "recovery_state_unchanged": true,
+      "apply_authorized": false,
+      "apply_executed": false,
+      "state_migration_authorized": false,
+      "state_migration_executed": false,
+      "post_inspection_checks": [
+        "billing-linked-to-approved-account",
+        "repository-plan-and-state-artifacts-absent",
+        "recovery-state-verified-unchanged",
+        "target-budget-absent",
+        "eight-bootstrap-apis-enabled",
+        "target-buckets-absent",
+        "target-service-accounts-absent",
+        "workload-identity-pool-absent",
+        "remote-state-absent"
+      ]
+    },
     "superseded_saved_plan_observation": {
       "observed_on": "2026-09-03",
       "created_at": "2026-09-03T01:00:18Z",

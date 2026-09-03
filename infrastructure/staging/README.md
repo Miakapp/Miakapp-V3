@@ -1,6 +1,6 @@
 # Miakapp 4 staging activation blueprint
 
-Status: nine-resource bootstrap state preserved privately; recovery plan pending
+Status: recovery plan reviewed; exact apply-and-migrate authorization pending
 
 This directory contains a closed, apply-capable description of the future
 `miakapp-v4-staging` foundation. It does not authorize or perform cloud
@@ -62,7 +62,12 @@ bootstrap APIs are active, while the target budget, both target buckets, three
 service accounts, and Workload Identity pool remain absent. The failed plan is
 superseded and must not be retried. Both Google providers now charge API quota
 to the staging project, and every planning/execution path is bound to the exact
-preserved state. No new recovery plan has yet been created, reviewed, or
+preserved state. The replacement plan was created from commit
+`e9f410c58c8cbbf8f5f7a17170c9e8ed55a10501`; its SHA-256 is
+`12927b270f2bfa78c8f8c8c7e7071ce9cfec18d5e848165c04b585260bd5f7da`.
+The complete plan was inspected and contains exactly 27 creations and nine
+no-op resources, with no import, update, or deletion. A second read-only
+inventory confirmed the same boundary. Neither apply nor state migration is
 authorized.
 
 Firebase-enabled APIs and its managed Admin SDK service account exist, but they
@@ -78,7 +83,7 @@ resources, install a cloud workflow, open ingress, apply, or destroy.
 
 | Path | Purpose | Current execution boundary |
 |---|---|---|
-| [`bootstrap/`](bootstrap/) | Imported billing link, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Nine-resource state preserved privately; recovery plan pending; no apply authorized |
+| [`bootstrap/`](bootstrap/) | Imported billing link, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Recovery plan reviewed against the private nine-resource state; exact authorization pending |
 | [`terraform/`](terraform/) | APIs, Firestore, KMS, empty Secret Manager containers, and resource-scoped runtime IAM | Mock-tested offline; live plan blocked until bootstrap state exists |
 | [`automation/`](automation/) | GitHub policy record, dormant plan/apply workflow, private-plan scripts, and operator inspection | Outside `.github/workflows`; cannot run |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
@@ -135,8 +140,9 @@ activates the backend template only in a private working copy, and deletes local
 state only after the remote generation and full state contents reconcile. The
 wrapper also verifies the exact recovery-state digest, lineage, serial and nine
 baseline addresses before planning or applying; a produced state must retain
-that lineage and inventory before migration. The plan digest remains deliberately
-disabled until a new state-bound plan is reviewed.
+that lineage and inventory before migration. The reviewed recovery-plan digest
+is bound in the wrapper, but no execution can pass without a separate exact
+authorization tied to the clean repository commit that runs it.
 
 The ordinary foundation root already points at `terraform/foundation` and reads
 the bootstrap output from `terraform/bootstrap`. A closed precondition checks
@@ -196,14 +202,13 @@ because workflow installation and cloud bootstrap remain unauthorized.
 The GitHub branch, environment and Actions prerequisite are configured. Before
 any additional cloud action, the recovery sequence must:
 
-1. create and fully inspect a new private plan from the exact preserved state;
-2. bind the reviewed plan digest and source commit in a clean follow-up commit;
-3. receive explicit operator authorization for that exact plan and execution
-   commit, then revalidate its state, digest, policy, and inventory before apply;
-4. migrate and reconcile bootstrap state before any foundation plan;
-5. install the cloud workflow only after its WIF providers and service accounts
+1. receive explicit operator authorization for the reviewed recovery plan and
+   exact clean execution commit;
+2. revalidate its state, digest, policy, and inventory before applying it;
+3. migrate and reconcile bootstrap state before any foundation plan;
+4. install the cloud workflow only after its WIF providers and service accounts
    exist; and
-6. review a live foundation plan before granting apply approval.
+5. review a live foundation plan before granting apply approval.
 
 The production Function entry point, exact FCM runtime permission, secret
 version lifecycle, ingress design, monitoring, real-service fault matrix,

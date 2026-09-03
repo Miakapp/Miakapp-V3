@@ -204,9 +204,13 @@ Independent inventory found the target budget, buckets, service accounts and
 Workload Identity pool absent. The digest is superseded and must not be retried.
 
 The providers now attribute API quota to `miakapp-v4-staging`, and the recovery
-tooling requires the exact private state fingerprint and lineage. A new plan
-must be created and reviewed from that state, then bound to a clean commit and
-separately authorized. Only after its state migration and reconciliation may the
+tooling requires the exact private state fingerprint and lineage. The replacement
+plan was created from commit `e9f410c58c8cbbf8f5f7a17170c9e8ed55a10501`,
+fully reviewed, and bound by SHA-256
+`12927b270f2bfa78c8f8c8c7e7071ce9cfec18d5e848165c04b585260bd5f7da`.
+It contains 27 creations, nine no-op resources and no import, update or deletion.
+Application and state migration still require a separate exact authorization.
+Only after its state migration and reconciliation may the
 operator initialize the empty foundation state with protected credentials,
 authorize and install the workflow, and review a separate foundation plan. The
 production Function entry point,

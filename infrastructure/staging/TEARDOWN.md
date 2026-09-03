@@ -27,8 +27,9 @@ Workload Identity pool remain absent. Terraform preserved a private local state
 at serial 11 with exactly nine managed resources; its committed fingerprint is
 `07fc7412e35efaff288e2efd30f786c2871d9fa836fb813a178d247ccb1efe5a`,
 but its path and contents are not committed. Since the state bucket was not
-created, no migration was attempted. The recovery plan is pending and every new
-authorization bit remains false. Local `.terraform/` provider caches are
+created, no migration was attempted. A replacement 27-create/nine-no-op recovery
+plan has been fully reviewed, but its application and state migration remain
+unauthorized. Local `.terraform/` provider caches are
 disposable and are not cloud inventory.
 
 If that wrapper ever reports failure, its printed private execution directory is
