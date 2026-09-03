@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { deleteApp, initializeApp } from 'firebase-admin/app';
 import {
@@ -42,6 +42,10 @@ import type {
 } from '../../../control-plane-contract/typescript/src/profile.js';
 import { loadAccessTokenFixture } from '../../../control-plane-contract/typescript/src/profile.js';
 import { verifyMiakappAccessToken } from '../../../control-plane-contract/typescript/src/token.js';
+import {
+  RANDOM_SUBJECT_ATTEMPTS,
+  reserveAdmissionSubjects,
+} from './admission-fixture.js';
 import {
   ALLOWED_ORIGIN,
   API_BASE,
@@ -140,12 +144,21 @@ async function createHomeKey(
   scopes: readonly string[] = ACCESS_SCOPES,
   homeId = 'synthetic-home',
 ): Promise<CreatedKeyResponse> {
-  const created = await apiRequest('POST', `/v1/homes/${homeId}/home-keys`, {
-    token: owner.idToken,
-    body: { label: 'Synthetic key', scopes },
-  });
-  expect(created.status).toBe(201);
-  return jsonResponse<CreatedKeyResponse>(created);
+  for (let attempt = 0; attempt < RANDOM_SUBJECT_ATTEMPTS; attempt += 1) {
+    const created = await apiRequest('POST', `/v1/homes/${homeId}/home-keys`, {
+      token: owner.idToken,
+      body: { label: 'Synthetic key', scopes },
+    });
+    expect(created.status).toBe(201);
+    const payload = await jsonResponse<CreatedKeyResponse>(created);
+    const parsed = parseCreatedHomeKey(payload.home_key);
+    if (payload.key.key_id !== parsed.keyId) throw new Error('Created Home Key identifier is inconsistent');
+    if (reserveAdmissionSubjects([{
+      budget: 'access.exchange.key',
+      subject: parsed.keyId,
+    }])) return payload;
+  }
+  throw new Error('Could not create a collision-free Home Key fixture');
 }
 
 function parseCreatedHomeKey(value: string): { readonly keyId: string; readonly secret: string } {
@@ -254,7 +267,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  await clearFirestore();
+  await clearFirestore(firestore);
 });
 
 afterAll(async () => {

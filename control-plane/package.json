@@ -12,7 +12,7 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test:unit": "bun test test/unit",
-    "test:emulator": "bun test test/emulator",
+    "test:emulator": "node ./node_modules/vitest/vitest.mjs run --no-file-parallelism test/emulator",
     "check": "./check.sh"
   },
   "dependencies": {
@@ -32,6 +32,7 @@
     "@types/node": "22.20.1",
     "firebase": "12.18.0",
     "firebase-tools": "15.28.2",
-    "typescript": "7.0.2"
+    "typescript": "7.0.2",
+    "vitest": "4.1.11"
   }
 }
