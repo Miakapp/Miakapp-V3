@@ -298,6 +298,16 @@ so this slice performs no deployment or staging mutation. Runtime configuration,
 secret versions, Firebase registration, live activation and all `STAGE-*`
 observations remain open.
 
+An eighth, still-unapplied activation-material slice adds the exact staging
+runtime-document builder and a commit/plan-digest-bound two-phase executor. It
+permits only one Firebase Web app and one initial 32-byte version in each of the
+five existing secret containers, reconciles ambiguous writes against a private
+resumable seed, and records no secret bytes in Git, logs, arguments, environment
+variables or Terraform state. It explicitly creates no Function, Cloud Run
+service, App Engine application or ingress. Live materialization and every
+`STAGE-*` observation therefore remain open until the guarded operation runs and
+its non-secret result is recorded.
+
 Deliverables:
 
 1. owner bootstrap and Home Key lifecycle;

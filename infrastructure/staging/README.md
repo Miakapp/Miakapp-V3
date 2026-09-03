@@ -108,6 +108,7 @@ removal.
 |---|---|---|
 | [`bootstrap/`](bootstrap/) | Billing link, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Complete; both recovery providers disabled, 37-resource serial-42 state reconciled, zero plan verified |
 | [`terraform/`](terraform/) | APIs, Firestore, KMS, empty Secret Manager containers, and resource-scoped runtime IAM | Complete; 33-resource state independently converged |
+| [`activation/`](activation/) | One Firebase Web app, five initial secret versions, and the closed non-secret runtime document | Guarded two-phase executor ready; not yet applied |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
 | [`TEARDOWN.md`](TEARDOWN.md) | Manual recovery and teardown rehearsal | Documentation only |
@@ -337,11 +338,15 @@ workload. Local code now provides the strict non-secret runtime loader, a pure
 four-phase configuration-reference transition validator, single-flight
 initialization and an undiscovered private Function entrypoint carrying
 `omit: true`. It does not yet create, enable, disable or destroy live Secret
-Manager versions, nor enforce those transitions during deployment. The next
-sequence is to provision the exact staging configuration and initial secret
-versions, authorize live Function activation behind a reviewed private
-admission path, and then run bounded synthetic staging validation before
-considering public ingress.
+Manager versions, nor enforce those transitions during deployment. A guarded
+two-hour plan and resumable activation executor now constrain the first live
+delta to one Firebase Web app and one 32-byte version in each existing secret
+container; the executor keeps payloads off arguments, environment variables,
+Git, logs and Terraform state, and still deploys no workload. The next sequence
+is to review and run that materialization, record its non-secret evidence,
+authorize live Function activation behind a reviewed private admission path,
+and then run bounded synthetic staging validation before considering public
+ingress.
 
 Live production-Function activation, exact FCM runtime permission, secret-version
 provisioning and rotation evidence, ingress design, monitoring, real-service
