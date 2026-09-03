@@ -38,6 +38,7 @@ import {
   verifyEmptyInventory,
   verifyProjectObservation,
   verifyProvisionedTargetInventory,
+  verifyRecoverableLocalStateFile,
   verifyRemoteStateObject,
 } from '../bootstrap/bootstrap-execution.mjs';
 import {
@@ -202,6 +203,7 @@ function runSyntheticBootstrapExecution({
   budgetPostcheckUnavailable = false,
   deferBudgetPreflight = false,
   emergencyState = false,
+  emptyFailedState = false,
   lockAlreadyHeld = false,
   migrationFails = false,
   preexistingState = false,
@@ -219,7 +221,11 @@ function runSyntheticBootstrapExecution({
   );
   const completeState = syntheticTerraformState(metadata);
   const partialState = syntheticTerraformState(metadata, { complete: false });
-  const selectedState = applyStatus === 0 ? completeState : partialState;
+  const emptyState = structuredClone(partialState);
+  emptyState.resources = [];
+  const selectedState = applyStatus === 0
+    ? completeState
+    : (emptyFailedState ? emptyState : partialState);
   const staleState = structuredClone(partialState);
   staleState.resources = [];
   const divergentState = structuredClone(selectedState);
@@ -912,6 +918,31 @@ test('reconciles exact complete or expected partial bootstrap state and rejects 
   );
 });
 
+test('requires failed local state to contain a managed resource before migration', () => {
+  const planBytes = Buffer.from('synthetic-plan');
+  const metadata = metadataForPlan(planBytes);
+  const partial = syntheticTerraformState(metadata, { complete: false });
+  const temporary = mkdtempSync(join(tmpdir(), 'miakapp-bootstrap-state-test-'));
+  chmodSync(temporary, 0o700);
+  try {
+    const statePath = join(temporary, 'state.json');
+    writeFileSync(statePath, JSON.stringify(partial), { mode: 0o600 });
+    assert.deepEqual(verifyRecoverableLocalStateFile(statePath), {
+      managedResources: 1,
+      serial: 1,
+    });
+    const empty = structuredClone(partial);
+    empty.resources = [];
+    writeFileSync(statePath, JSON.stringify(empty), { mode: 0o600 });
+    assert.throws(
+      () => verifyRecoverableLocalStateFile(statePath),
+      /contains no managed resources to migrate/,
+    );
+  } finally {
+    rmSync(temporary, { recursive: true });
+  }
+});
+
 test('Terraform 1.11.3 preserves the exact local state across a non-interactive backend migration', () => {
   const temporary = mkdtempSync(join(tmpdir(), 'miakapp-bootstrap-migration-probe-'));
   chmodSync(temporary, 0o700);
@@ -999,6 +1030,7 @@ test('keeps the bootstrap execution wrapper dormant and recovery-first', () => {
   assert.match(applyAndMigrateScript, /\$\{apply_root\}\/errored\.tfstate/);
   assert.match(applyAndMigrateScript, /init[\s\S]*-migrate-state[\s\S]*-force-copy/);
   assert.match(applyAndMigrateScript, /reconcile-state/);
+  assert.match(applyAndMigrateScript, /verify-recoverable-state/);
   assert.match(applyAndMigrateScript, /execution_complete=true/);
   assert.match(applyAndMigrateScript, /private recovery material was preserved/);
   assert.doesNotMatch(applyAndMigrateScript, /terraform\s+(?:destroy|import|state\s+push|force-unlock)/);
@@ -1116,6 +1148,19 @@ test('preserves exact partial state after an apply failure and still migrates it
     assert.equal(statSync(join(execution.executionDirectories[0], 'bootstrap.tfstate')).mode & 0o777, 0o600);
     assert.match(execution.calls, /terraform:init:true/);
     assert.match(execution.calls, /terraform:state:false/);
+  } finally {
+    rmSync(execution.temporary, { recursive: true });
+  }
+});
+
+test('stops an empty failed apply before remote-state migration', () => {
+  const execution = runSyntheticBootstrapExecution({ applyStatus: 1, emptyFailedState: true });
+  try {
+    assert.equal(execution.result.status, 1);
+    assert.match(execution.result.stderr, /failed before creating resources/);
+    assert.match(execution.result.stderr, /private recovery material was preserved/);
+    assert.equal(execution.executionDirectories.length, 1);
+    assert.doesNotMatch(execution.calls, /storage ls|terraform:init:true|terraform:state:false/);
   } finally {
     rmSync(execution.temporary, { recursive: true });
   }

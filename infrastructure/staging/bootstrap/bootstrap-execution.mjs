@@ -317,6 +317,14 @@ export function reconcileBootstrapStateFiles(localPath, remotePath, metadataPath
   return reconcileBootstrapStates(localState, remoteState, metadata, mode);
 }
 
+export function verifyRecoverableLocalStateFile(localPath) {
+  const localState = readPrivateJson(localPath, MAX_STATE_BYTES, 'Local bootstrap state');
+  validateStateHeader(localState, 'Local bootstrap state');
+  const managedResources = managedStateAddresses(localState).length;
+  if (managedResources === 0) reject('Failed bootstrap state contains no managed resources to migrate');
+  return Object.freeze({ managedResources, serial: localState.serial });
+}
+
 async function main() {
   const [command, ...args] = process.argv.slice(2);
   if (command === 'create-directory' && args.length === 2) {
@@ -363,12 +371,17 @@ async function main() {
     console.log(`Remote bootstrap state generation: ${observation.generation}; bytes: ${observation.size}`);
     return;
   }
+  if (command === 'verify-recoverable-state' && args.length === 1) {
+    const result = verifyRecoverableLocalStateFile(args[0]);
+    console.log(`Recoverable bootstrap state: managed resources: ${result.managedResources}; serial: ${result.serial}`);
+    return;
+  }
   if (command === 'reconcile-state' && args.length === 4) {
     const result = reconcileBootstrapStateFiles(args[0], args[1], args[2], args[3]);
     console.log(`Bootstrap state reconciled: ${result.mode}; managed resources: ${result.managedResources}; serial: ${result.serial}`);
     return;
   }
-  reject('Usage: bootstrap-execution.mjs <create-directory|verify-authorization|verify-project|verify-billing-link|verify-empty-inventory|verify-absent-targets|verify-provisioned-targets|verify-state-object|reconcile-state> ...');
+  reject('Usage: bootstrap-execution.mjs <create-directory|verify-authorization|verify-project|verify-billing-link|verify-empty-inventory|verify-absent-targets|verify-provisioned-targets|verify-state-object|verify-recoverable-state|reconcile-state> ...');
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

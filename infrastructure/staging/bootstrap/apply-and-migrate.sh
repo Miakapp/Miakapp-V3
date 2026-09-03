@@ -255,6 +255,11 @@ chmod 600 "$local_state"
 if [[ -e "$local_state_backup" && ! -L "$local_state_backup" ]]; then
   chmod 600 "$local_state_backup"
 fi
+if [[ "$apply_status" -ne 0 ]] \
+  && ! node "$execution_helper" verify-recoverable-state "$local_state"; then
+  echo "Terraform apply failed before creating resources; no remote state migration is possible." >&2
+  exit 1
+fi
 
 if [[ "$local_state" != "${apply_root}/terraform.tfstate" ]]; then
   cp -p -- "$local_state" "${apply_root}/terraform.tfstate"
