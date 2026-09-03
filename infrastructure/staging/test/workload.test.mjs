@@ -58,11 +58,13 @@ function plannedValue(address) {
       return {
         ...common,
         name: 'miakapp-v4-staging-function-source-1072737219170',
-        location: 'europe-west9',
+        location: 'EUROPE-WEST9',
         storage_class: 'STANDARD',
         uniform_bucket_level_access: true,
         public_access_prevention: 'enforced',
         force_destroy: false,
+        effective_labels: { product: 'miakapp-v4' },
+        terraform_labels: { product: 'miakapp-v4' },
       };
     case 'google_artifact_registry_repository.function':
       return {
@@ -226,6 +228,21 @@ test('rejects updates, public principals, foreign resources and wider ingress', 
     const plan = syntheticPlan();
     mutate(plan);
     assert.throws(() => validateSyntheticPlan(plan));
+  }
+});
+
+test('allows the reviewed product label but rejects production project references elsewhere', () => {
+  assert.doesNotThrow(() => validateSyntheticPlan());
+  for (const forbidden of [
+    'miakapp-v4',
+    'projects/miakapp-v4/locations/europe-west9',
+    'service-account@miakapp-v4.iam.gserviceaccount.com',
+    'projects/miakapp-3/locations/europe-west9',
+    'projects/demo-miakapp-v4/locations/europe-west9',
+  ]) {
+    const plan = syntheticPlan();
+    plannedResource(plan, 'google_storage_bucket.source').unreviewed_reference = forbidden;
+    assert.throws(() => validateSyntheticPlan(plan), /forbidden principal or project/);
   }
 });
 
