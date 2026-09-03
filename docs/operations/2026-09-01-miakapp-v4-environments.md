@@ -77,10 +77,10 @@ cloud cost**. The billing association enables future metered services but does
 not itself create one.
 It runs against local Auth, Firestore, Functions and Storage emulators and cannot
 load as a production Function. The staging project currently has the approved
-billing link, but the link operation created no budget, registered Firebase app,
-App Engine application, database, bucket or deployed workload. Firebase enabled
-its bootstrap APIs and reserved a Hosting site namespace, but no application was
-deployed to it.
+billing link and all eight Terraform bootstrap APIs are enabled. No target
+budget, registered Firebase app, App Engine application, database, bucket or
+deployed workload exists. Firebase also reserved a Hosting site namespace, but
+no application was deployed to it.
 
 For a low-volume staging project, the intended initial posture is:
 
@@ -190,27 +190,25 @@ verification. On 2026-09-02, the repository's actual
 re-observed against that policy. The existing `miakapi` environment and default
 repository OIDC subject were left unchanged. The workflow remains outside
 `.github/workflows`, and its policy job rejects the current cloud-inactive
-record. No WIF identity, bucket or state exists.
+record. No WIF identity, bucket or remote state exists.
 
-The 2026-09-03 non-saved diagnostic plan again reported 36 additions, no changes,
-and no destroys; it performed no apply and created no state. The untracked but
-already-active billing association consequently still appears as an addition in
-that state-free diagnostic. The subsequent private saved plan from commit
-`c192f97959833f53a19d4e6dc50b26292c88b3b5` was digest-verified and fully
-reviewed with the same 36/0/0 result. After exact owner authorization, its first
-action attempted to rewrite the already-correct billing association and Cloud
-Billing rejected it on the association-change quota. Terraform recorded zero
-managed resources, and independent inventory confirmed that no target was
-created. The digest is superseded. An import-based recovery configuration now
-models the active link without another association write. Its replacement plan,
-created from commit `6340bffbddcc4797067ef48170fc5c3524345bf2`, was fully
-inspected with 35 creations, one import with a client-side update, and no
-deletion; its SHA-256 is
-`6fb0b0c15fa04338a40ab59de790c3a4a85f96b418377c4a70570a8dabd5d457`.
-It still requires separate exact authorization. The operator must then run the
-guarded sequence, initialize and verify the empty foundation state with
-protected operator credentials, then authorize and install the workflow. A
-separate reviewed foundation plan is required before apply approval. The
+The first private saved plan was superseded after Cloud Billing rejected a
+redundant billing-association write before Terraform recorded resources. The
+next plan, from commit `6340bffbddcc4797067ef48170fc5c3524345bf2` with SHA-256
+`6fb0b0c15fa04338a40ab59de790c3a4a85f96b418377c4a70570a8dabd5d457`,
+used an import and was separately authorized. It recorded the billing link and
+all eight bootstrap APIs before budget creation failed because User ADC lacked a
+quota project. Terraform preserved a private local state at serial 11 with nine
+managed resources; no state bucket existed, so migration could not start.
+Independent inventory found the target budget, buckets, service accounts and
+Workload Identity pool absent. The digest is superseded and must not be retried.
+
+The providers now attribute API quota to `miakapp-v4-staging`, and the recovery
+tooling requires the exact private state fingerprint and lineage. A new plan
+must be created and reviewed from that state, then bound to a clean commit and
+separately authorized. Only after its state migration and reconciliation may the
+operator initialize the empty foundation state with protected credentials,
+authorize and install the workflow, and review a separate foundation plan. The
 production Function entry point,
 exact FCM permission, quotas, alerts and teardown evidence remain blockers.
 Deployment, public ingress and active CI authentication remain disabled. Passing

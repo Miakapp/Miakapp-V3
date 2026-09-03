@@ -2,14 +2,15 @@
 set -euo pipefail
 umask 077
 
-if [[ "$#" -ne 1 ]]; then
-  echo "Usage: MIAKAPP_STAGING_BOOTSTRAP_INSPECTION_CONFIRMATION=miakapp-v4-staging ./inspect-plan.sh <private-plan-bundle>" >&2
+if [[ "$#" -ne 2 ]]; then
+  echo "Usage: MIAKAPP_STAGING_BOOTSTRAP_INSPECTION_CONFIRMATION=miakapp-v4-staging ./inspect-plan.sh <private-plan-bundle> <private-recovery-state>" >&2
   exit 2
 fi
 
 bootstrap_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 repository_root="$(cd "${bootstrap_root}/../../.." && pwd -P)"
 bundle_helper="${bootstrap_root}/saved-plan.mjs"
+execution_helper="${bootstrap_root}/bootstrap-execution.mjs"
 
 if [[ "${MIAKAPP_STAGING_BOOTSTRAP_INSPECTION_CONFIRMATION:-}" != "miakapp-v4-staging" ]]; then
   echo "Set MIAKAPP_STAGING_BOOTSTRAP_INSPECTION_CONFIRMATION=miakapp-v4-staging before rendering the sensitive bootstrap plan." >&2
@@ -59,7 +60,10 @@ if [[ "$terraform_version" != "1.11.3" ]]; then
   exit 1
 fi
 
-node "$bundle_helper" verify "$1" "$configuration_commit"
+node "$execution_helper" verify-recovery-state "$2" "$repository_root" >/dev/null
+recovery_state="$(cd "$(dirname "$2")" && pwd -P)/$(basename "$2")"
+recovery_state_sha256="$(node "$bundle_helper" sha256 "$recovery_state")"
+node "$bundle_helper" verify "$1" "$configuration_commit" "$recovery_state_sha256"
 bundle="$(cd "$1" && pwd -P)"
 inspection_root="$(mktemp -d "${TMPDIR:-/tmp}/miakapp-bootstrap-inspection.XXXXXXXX")"
 mkdir -m 700 "${inspection_root}/terraform-data"
@@ -82,6 +86,10 @@ fi
 if ! terraform -chdir="$bootstrap_root" show -json "${bundle}/bootstrap.tfplan" 2>/dev/null \
   | node "$bundle_helper" verify-plan "${bundle}/metadata.json"; then
   echo "The Terraform plan binary does not match its reviewed metadata." >&2
+  exit 1
+fi
+if [[ "$(node "$bundle_helper" sha256 "$recovery_state")" != "$recovery_state_sha256" ]]; then
+  echo "Terraform changed the preserved recovery state while inspecting the plan." >&2
   exit 1
 fi
 echo "The complete plan below is sensitive and must not be copied to a public log or artifact." >&2
