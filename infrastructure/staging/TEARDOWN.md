@@ -1,8 +1,8 @@
 # Miakapp 4 staging teardown rehearsal
 
-Status: non-executable rehearsal; bootstrap and partial foundation resources
-exist, protected recovery evidence remains private, and exact eight-IAM
-foundation recovery is authorized
+Status: non-executable rehearsal; bootstrap and complete foundation resources
+exist, protected recovery evidence remains private, and one-shot recovery
+automation and its WIF exchange are retired
 
 This runbook applies to the existing `miakapp-v4-staging` project. It must never
 be run against `miakapp-3`, `miakapp-v4`, or a `demo-*` project. A future
@@ -23,8 +23,8 @@ otherwise be fully undone. Retaining this empty undeployed project, with the
 billing link removable during an authorized teardown, is therefore the default.
 
 The repository contains separate bootstrap and foundation roots, a private
-versioned GCS backend, keyless plan/apply identities and a hash-bound protected
-GitHub workflow. Terraform completed the final
+versioned GCS backend, keyless plan/apply identities and a retained historical
+workflow blueprint. Terraform completed the final
 27-create/nine-no-op plan, but
 the wrapper rejected the complete state before migration because its output
 shape assumption differed from Terraform 1.11.3. The exact 36-resource state at
@@ -36,12 +36,32 @@ the serial increased once, the two `check_results` entries were permuted, and
 every other value remained exactly equal. Terraform's foundation backend
 created and guarded execution commit
 `ab6f26bd5dd076a79847f989615e7fddf93f2a07` reconciled canonical empty state
-generation `1788443136082489` at serial 1 without mutation. Protected run
-`33776569977` later replaced it with partial generation `1788452068422403` at
-serial 4 containing 25 managed resources. The missing inventory is limited to
-one KMS, five Secret Manager and two component-bucket IAM members. Object
-Versioning retains recovery generations. Local `.terraform/` provider caches
-are disposable and are not cloud inventory.
+generation `1788443136082489` at serial 1 without mutation. The already-live
+planner quota member was later imported without changing project IAM;
+generation `1788457646215552` at serial 41 with 37 managed resources preserves
+that adoption history. PR #30 configuration commit
+`ee457535a64355cd8133410d9c8c43f039608928` then changed only the two recovery
+provider `disabled` attributes from `false` to `true`. Its exact private
+25,925-byte plan had SHA-256
+`8f570dfe5450b704112d484f058fc6dfcd39069a92c8bb483c5029027183e888`
+and contained 35 no-ops and two updates. Apply reported `0 added, 2 changed, 0
+destroyed`; a follow-up plan reported no changes. Current bootstrap generation
+`1788460174191027` is 61,864 bytes at serial 42 with 37 managed resources, two
+data resources and one output, and SHA-256
+`288d947d35f5d5a278aaff210ea878a9dab817f594b4c3161ed117bb2e30e26d`.
+Protected run `33776569977` replaced empty foundation state with partial
+generation `1788452068422403` at serial 4 containing 25 managed resources.
+Recovery run `33784785967` then created the exact remaining eight IAM members;
+current foundation generation `1788456706865449` is serial 6 with 33 managed
+resources and independently plans to zero changes. GitHub workflow `349440747`
+is `disabled_manually`, its active source is absent, and both recovery WIF
+providers are disabled while the pool remains enabled and retained. Object
+Versioning retains recovery generations. Local `.terraform/`
+provider caches are disposable and are not cloud inventory.
+
+The planner/deployer service accounts and IAM roles remain. Closing the reviewed
+GitHub OIDC route does not disprove impersonation by another administrator, so
+teardown must still inventory and revoke every such authority explicitly.
 
 If the migration-only wrapper reports failure, its printed private execution
 directory is part of the recovery inventory. Do not delete it or rerun the
@@ -77,10 +97,11 @@ cannot be deleted; and billing can report late usage.
 
 ## Ordered teardown
 
-1. Disable test traffic, scheduled work, triggers and public invocation. Disable
-   every active plan or deployment workflow, both GitHub environments and both
-   WIF
-   providers before revoking temporary human, CI and test-client access.
+1. Verify the retired recovery workflow remains absent and both recovery WIF
+   providers remain disabled. Then disable test traffic, scheduled work,
+   triggers, public invocation, every other active plan or deployment workflow,
+   both GitHub environments and any other federation route before revoking
+   temporary human, CI and test-client access.
 2. Remove the Function and inspect Cloud Run, Eventarc and Artifact Registry for
    resources that outlive the deployment abstraction.
 3. Inventory the component bucket by live generations and soft-deleted objects.
@@ -92,10 +113,10 @@ cannot be deleted; and billing can report late usage.
 6. Disable KMS key versions, stop any rotation schedule and schedule version
    destruction according to the reviewed recovery window. Record the
    non-deletable key ring as a permanent residual resource.
-7. Remove runtime IAM, the conditional state/plan bucket grants and WIF
-   impersonation grants. Delete the runtime, planner and deployer service
-   accounts and WIF pool only after confirming no resource still depends on
-   them.
+7. Remove runtime IAM, including the planner Service Usage Consumer member, the
+   conditional state/plan bucket grants and WIF impersonation grants. Delete the
+   runtime, planner and deployer service accounts and WIF pool only after
+   confirming no resource still depends on them.
 8. Capture the final bootstrap/foundation state generations and independently
    reconcile the cloud inventory. Securely retain the minimum teardown evidence;
    never publish a state or saved plan.

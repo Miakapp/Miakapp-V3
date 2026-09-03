@@ -106,7 +106,6 @@ const REQUIRED_BLOCKERS = [
   'migration-rehearsal',
   'production-function-entrypoint',
   'secret-version-lifecycle',
-  'staging-foundation-recovery-not-applied',
 ];
 
 const STAGING_ROWS = [
@@ -225,7 +224,7 @@ function validateProject(value) {
   }
   exact(
     project.lifecycle,
-    'firebase_enabled_billing_linked_bootstrap_and_partial_foundation_created_undeployed',
+    'firebase_enabled_billing_linked_bootstrap_and_foundation_created_undeployed',
     'project.lifecycle',
   );
   exact(project.creation_authorized, false, 'project.creation_authorized');
@@ -259,6 +258,7 @@ function validateBootstrap(value) {
     'budget_display_names',
     'workload_identity_pools',
     'workload_identity_providers',
+    'workload_identity_provider_states',
     'enabled_service_apis',
   ]);
   exact(bootstrap.observed_on, '2026-09-03', 'bootstrap.observed_on');
@@ -318,6 +318,21 @@ function validateBootstrap(value) {
       'projects/1072737219170/locations/global/workloadIdentityPools/miakapp-github/providers/staging-plan',
     ],
     'bootstrap.workload_identity_providers',
+  );
+  const workloadIdentityProviderStates = record(
+    bootstrap.workload_identity_provider_states,
+    'bootstrap.workload_identity_provider_states',
+    ['staging-apply', 'staging-plan'],
+  );
+  exact(
+    workloadIdentityProviderStates['staging-apply'],
+    'disabled',
+    'bootstrap.workload_identity_provider_states.staging-apply',
+  );
+  exact(
+    workloadIdentityProviderStates['staging-plan'],
+    'disabled',
+    'bootstrap.workload_identity_provider_states.staging-plan',
   );
   exactArray(bootstrap.enabled_service_apis, ENABLED_SERVICE_APIS, 'bootstrap.enabled_service_apis');
 }
@@ -482,7 +497,7 @@ function validateSecurity(value) {
   exact(iam.runtime_identity_state, 'created_not_deployed', 'security.iam.runtime_identity_state');
   exact(
     iam.foundation_resource_bindings_state,
-    'partial_eight_recovery_bindings_missing',
+    'complete_eight_recovery_bindings_present',
     'security.iam.foundation_resource_bindings_state',
   );
   exact(iam.broad_project_roles_forbidden, true, 'security.iam.broad_project_roles_forbidden');
@@ -576,6 +591,7 @@ function validateTerraform(value) {
     'foundation_saved_plan_observation',
     'foundation_apply_observation',
     'foundation_recovery_plan_observation',
+    'foundation_recovery_apply_observation',
     'apply_authorized',
     'destroy_authorized',
     'function_deployment_included',
@@ -586,21 +602,21 @@ function validateTerraform(value) {
     'local_saved_plan_observation',
     'superseded_saved_plan_observation',
   ]);
-  exact(terraform.state, 'foundation_partial_apply_recovery_authorized', 'terraform.state');
+  exact(terraform.state, 'foundation_complete_recovery_retired', 'terraform.state');
   exact(
     terraform.supported_workflow,
-    'credential_free_validation_and_manual_keyless_partial_recovery',
+    'credential_free_validation_and_manual_read_only_plan',
     'terraform.supported_workflow',
   );
   exact(terraform.configuration_apply_capable, true, 'terraform.configuration_apply_capable');
   exact(
     terraform.active_cloud_workflow,
-    '.github/workflows/staging-terraform.yml',
+    null,
     'terraform.active_cloud_workflow',
   );
   exact(
     terraform.workflow_blueprint_state,
-    'installed_exact_partial_recovery_copy',
+    'retired_recovery_blueprint_retained_as_evidence',
     'terraform.workflow_blueprint_state',
   );
   exact(terraform.bootstrap_root, 'bootstrap', 'terraform.bootstrap_root');
@@ -632,7 +648,7 @@ function validateTerraform(value) {
   exact(backend.type, 'gcs', 'terraform.backend.type');
   exact(
     backend.state,
-    'bootstrap_and_partial_foundation_state_present',
+    'bootstrap_and_complete_foundation_state_present',
     'terraform.backend.state',
   );
   exact(backend.bucket, 'miakapp-v4-staging-tfstate-1072737219170', 'terraform.backend.bucket');
@@ -655,6 +671,10 @@ function validateTerraform(value) {
   const identity = record(terraform.identity, 'terraform.identity', [
     'state',
     'workload_identity_pool',
+    'workload_identity_pool_state',
+    'plan_provider_state',
+    'apply_provider_state',
+    'reviewed_github_oidc_exchange_allowed',
     'planner_service_account',
     'deployer_service_account',
     'runtime_service_account',
@@ -678,10 +698,22 @@ function validateTerraform(value) {
   ]);
   exact(
     identity.state,
-    'planner_and_deployer_exercised_recovery_authorized',
+    'planner_and_deployer_exercised_recovery_wif_providers_disabled',
     'terraform.identity.state',
   );
   exact(identity.workload_identity_pool, 'miakapp-github', 'terraform.identity.workload_identity_pool');
+  exact(
+    identity.workload_identity_pool_state,
+    'enabled_retained',
+    'terraform.identity.workload_identity_pool_state',
+  );
+  exact(identity.plan_provider_state, 'disabled', 'terraform.identity.plan_provider_state');
+  exact(identity.apply_provider_state, 'disabled', 'terraform.identity.apply_provider_state');
+  exact(
+    identity.reviewed_github_oidc_exchange_allowed,
+    false,
+    'terraform.identity.reviewed_github_oidc_exchange_allowed',
+  );
   exact(
     identity.planner_service_account,
     'miakapp-tf-plan@miakapp-v4-staging.iam.gserviceaccount.com',
@@ -711,7 +743,7 @@ function validateTerraform(value) {
   );
   exact(
     identity.planner_service_usage_consumer_state,
-    'live_binding_created_bootstrap_state_reconciliation_pending',
+    'managed_in_reconciled_remote_bootstrap_state',
     'terraform.identity.planner_service_usage_consumer_state',
   );
   exact(
@@ -778,7 +810,7 @@ function validateTerraform(value) {
   ]);
   exact(
     savedPlan.state,
-    'partial_foundation_apply_bundle_retained_as_recovery_evidence',
+    'consumed_recovery_plan_soft_deleted_recoverable',
     'terraform.saved_plan.state',
   );
   exact(savedPlan.public_artifacts_allowed, false, 'terraform.saved_plan.public_artifacts_allowed');
@@ -806,6 +838,8 @@ function validateTerraform(value) {
     'apply_entry_point_retired',
     'recovery_state',
     'remote_state',
+    'planner_role_adoption_observation',
+    'recovery_federation_retirement_observation',
     'source_state_preserved_on_failure',
     'source_state_preserved_after_reconciliation',
     'authorized_plan_attempted',
@@ -815,7 +849,7 @@ function validateTerraform(value) {
   ]);
   exact(
     bootstrapExecution.state,
-    'bootstrap_complete_state_migrated_and_reconciled',
+    'bootstrap_complete_state_reconciled_planner_role_adopted_and_recovery_wif_disabled',
     'terraform.bootstrap_execution.state',
   );
   exact(
@@ -953,15 +987,19 @@ function validateTerraform(value) {
       'terraform_version',
       'serial',
       'managed_resources',
+      'data_resources',
+      'outputs',
       'lineage_sha256',
-      'canonical_serial_increment',
-      'check_results_exact_permutation',
-      'remainder_exactly_equal',
+      'initial_migration_reconciliation',
       'initialization_generation',
       'raw_contents_committed',
     ],
   );
-  exact(remoteState.state, 'migrated_and_reconciled', 'terraform.bootstrap_execution.remote_state.state');
+  exact(
+    remoteState.state,
+    'migrated_reconciled_planner_role_adopted_and_recovery_wif_disabled',
+    'terraform.bootstrap_execution.remote_state.state',
+  );
   exact(
     remoteState.bucket,
     'miakapp-v4-staging-tfstate-1072737219170',
@@ -974,38 +1012,59 @@ function validateTerraform(value) {
   );
   exact(
     remoteState.generation,
-    '1788439334043522',
+    '1788460174191027',
     'terraform.bootstrap_execution.remote_state.generation',
   );
   exact(
     remoteState.sha256,
-    '8753dcceaa848ba8734d9892dbec6f2445fbf6b3fbead7da375cc37f0702d3bf',
+    '288d947d35f5d5a278aaff210ea878a9dab817f594b4c3161ed117bb2e30e26d',
     'terraform.bootstrap_execution.remote_state.sha256',
   );
-  exact(remoteState.size_bytes, 60909, 'terraform.bootstrap_execution.remote_state.size_bytes');
+  exact(remoteState.size_bytes, 61864, 'terraform.bootstrap_execution.remote_state.size_bytes');
   exact(remoteState.terraform_version, '1.11.3', 'terraform.bootstrap_execution.remote_state.terraform_version');
-  exact(remoteState.serial, 40, 'terraform.bootstrap_execution.remote_state.serial');
-  exact(remoteState.managed_resources, 36, 'terraform.bootstrap_execution.remote_state.managed_resources');
+  exact(remoteState.serial, 42, 'terraform.bootstrap_execution.remote_state.serial');
+  exact(remoteState.managed_resources, 37, 'terraform.bootstrap_execution.remote_state.managed_resources');
+  exact(remoteState.data_resources, 2, 'terraform.bootstrap_execution.remote_state.data_resources');
+  exact(remoteState.outputs, 1, 'terraform.bootstrap_execution.remote_state.outputs');
   exact(
     remoteState.lineage_sha256,
     '35e52294057979e6191eaa05141a9476261d4b0ea75c9113128f780abda7a9ba',
     'terraform.bootstrap_execution.remote_state.lineage_sha256',
   );
-  exact(
-    remoteState.canonical_serial_increment,
-    1,
-    'terraform.bootstrap_execution.remote_state.canonical_serial_increment',
+  const initialMigrationPath = 'terraform.bootstrap_execution.remote_state.initial_migration_reconciliation';
+  const initialMigration = record(
+    remoteState.initial_migration_reconciliation,
+    initialMigrationPath,
+    [
+      'state',
+      'generation',
+      'sha256',
+      'size_bytes',
+      'terraform_version',
+      'serial',
+      'managed_resources',
+      'source_recovery_serial',
+      'canonical_serial_increment',
+      'check_results_exact_permutation',
+      'remainder_exactly_equal',
+    ],
   );
-  exact(
-    remoteState.check_results_exact_permutation,
-    true,
-    'terraform.bootstrap_execution.remote_state.check_results_exact_permutation',
-  );
-  exact(
-    remoteState.remainder_exactly_equal,
-    true,
-    'terraform.bootstrap_execution.remote_state.remainder_exactly_equal',
-  );
+  const initialMigrationExpectations = {
+    state: 'initial_bootstrap_migration_reconciled',
+    generation: '1788439334043522',
+    sha256: '8753dcceaa848ba8734d9892dbec6f2445fbf6b3fbead7da375cc37f0702d3bf',
+    size_bytes: 60909,
+    terraform_version: '1.11.3',
+    serial: 40,
+    managed_resources: 36,
+    source_recovery_serial: 39,
+    canonical_serial_increment: 1,
+    check_results_exact_permutation: true,
+    remainder_exactly_equal: true,
+  };
+  for (const [field, expected] of Object.entries(initialMigrationExpectations)) {
+    exact(initialMigration[field], expected, `${initialMigrationPath}.${field}`);
+  }
   const initializationGeneration = record(
     remoteState.initialization_generation,
     'terraform.bootstrap_execution.remote_state.initialization_generation',
@@ -1059,6 +1118,254 @@ function validateTerraform(value) {
     false,
     'terraform.bootstrap_execution.remote_state.raw_contents_committed',
   );
+
+  const plannerAdoptionPath = 'terraform.bootstrap_execution.planner_role_adoption_observation';
+  const plannerAdoption = record(
+    bootstrapExecution.planner_role_adoption_observation,
+    plannerAdoptionPath,
+    [
+      'observed_on',
+      'configuration_commit',
+      'terraform_version',
+      'backend',
+      'import_address',
+      'import_id',
+      'private_plan_sha256',
+      'private_plan_size_bytes',
+      'result',
+      'state_before',
+      'state_after',
+      'project_iam_etag_before',
+      'project_iam_etag_after',
+      'project_iam_canonical_sha256_before',
+      'project_iam_canonical_sha256_after',
+      'project_iam_unchanged',
+      'set_iam_policy_audit_entries',
+      'normalized_state_remainder_sha256_before',
+      'normalized_state_remainder_sha256_after',
+      'check_results_exact_permutation',
+      'state_remainder_exactly_equal',
+      'follow_up_plan_exit_code',
+      'follow_up_plan_result',
+      'temporary_lock_released',
+      'raw_plan_committed',
+      'raw_state_committed',
+    ],
+  );
+  const plannerAdoptionExpectations = {
+    observed_on: '2026-09-03',
+    configuration_commit: 'c5ff539af5598f4cc91eef9753ff90bfa5502974',
+    terraform_version: '1.11.3',
+    backend: 'gcs',
+    import_address: 'google_project_iam_member.planner["roles/serviceusage.serviceUsageConsumer"]',
+    import_id: 'miakapp-v4-staging roles/serviceusage.serviceUsageConsumer serviceAccount:miakapp-tf-plan@miakapp-v4-staging.iam.gserviceaccount.com',
+    private_plan_sha256: '0bab71811fa5dc8d084c47e3938accb8cf4421da4264edb8665bee1989895d6f',
+    private_plan_size_bytes: 24405,
+    project_iam_etag_before: 'BwZalzR1TWY=',
+    project_iam_etag_after: 'BwZalzR1TWY=',
+    project_iam_canonical_sha256_before: '5aa86bdfc2df0f42627afbd4822f56ad1f7e889a6bcab7271858691421ee6b5d',
+    project_iam_canonical_sha256_after: '5aa86bdfc2df0f42627afbd4822f56ad1f7e889a6bcab7271858691421ee6b5d',
+    project_iam_unchanged: true,
+    set_iam_policy_audit_entries: 0,
+    normalized_state_remainder_sha256_before: '1869481d2084c66d3db043d24b0667788ae9c10ffde272c3154bd9f1167e9de3',
+    normalized_state_remainder_sha256_after: '1869481d2084c66d3db043d24b0667788ae9c10ffde272c3154bd9f1167e9de3',
+    check_results_exact_permutation: true,
+    state_remainder_exactly_equal: true,
+    follow_up_plan_exit_code: 0,
+    follow_up_plan_result: 'no_changes',
+    temporary_lock_released: true,
+    raw_plan_committed: false,
+    raw_state_committed: false,
+  };
+  for (const [field, expected] of Object.entries(plannerAdoptionExpectations)) {
+    exact(plannerAdoption[field], expected, `${plannerAdoptionPath}.${field}`);
+  }
+  const plannerAdoptionResult = record(
+    plannerAdoption.result,
+    `${plannerAdoptionPath}.result`,
+    ['import', 'add', 'change', 'destroy'],
+  );
+  for (const [field, expected] of Object.entries({
+    import: 1, add: 0, change: 0, destroy: 0,
+  })) {
+    exact(plannerAdoptionResult[field], expected, `${plannerAdoptionPath}.result.${field}`);
+  }
+  const adoptionStateKeys = [
+    'generation',
+    'sha256',
+    'size_bytes',
+    'serial',
+    'managed_resources',
+    'data_resources',
+    'outputs',
+  ];
+  const adoptionStateExpectations = {
+    state_before: {
+      generation: '1788439334043522',
+      sha256: '8753dcceaa848ba8734d9892dbec6f2445fbf6b3fbead7da375cc37f0702d3bf',
+      size_bytes: 60909,
+      serial: 40,
+      managed_resources: 36,
+      data_resources: 2,
+      outputs: 1,
+    },
+    state_after: {
+      generation: '1788457646215552',
+      sha256: '7833a4a298ba87c9a116cfcf2c48d4a82b1babd706516e35162d358397136544',
+      size_bytes: 61910,
+      serial: 41,
+      managed_resources: 37,
+      data_resources: 2,
+      outputs: 1,
+    },
+  };
+  for (const [stateName, expectations] of Object.entries(adoptionStateExpectations)) {
+    const statePath = `${plannerAdoptionPath}.${stateName}`;
+    const state = record(plannerAdoption[stateName], statePath, adoptionStateKeys);
+    for (const [field, expected] of Object.entries(expectations)) {
+      exact(state[field], expected, `${statePath}.${field}`);
+    }
+  }
+
+  const federationRetirementPath = 'terraform.bootstrap_execution.recovery_federation_retirement_observation';
+  const federationRetirement = record(
+    bootstrapExecution.recovery_federation_retirement_observation,
+    federationRetirementPath,
+    [
+      'observed_on',
+      'configuration_commit',
+      'terraform_version',
+      'backend',
+      'private_plan_sha256',
+      'private_plan_size_bytes',
+      'plan_result',
+      'changes',
+      'only_disabled_attribute_changed',
+      'workload_identity_pool_state_after',
+      'apply_completed',
+      'apply_result',
+      'state_before',
+      'state_after',
+      'state_lineage_sha256_before',
+      'state_lineage_sha256_after',
+      'state_lineage_unchanged',
+      'iam_hash_profile',
+      'project_iam_normalized_sha256_before',
+      'project_iam_normalized_sha256_after',
+      'planner_service_account_iam_normalized_sha256_before',
+      'planner_service_account_iam_normalized_sha256_after',
+      'deployer_service_account_iam_normalized_sha256_before',
+      'deployer_service_account_iam_normalized_sha256_after',
+      'project_iam_unchanged',
+      'planner_service_account_iam_unchanged',
+      'deployer_service_account_iam_unchanged',
+      'follow_up_plan_exit_code',
+      'follow_up_plan_result',
+      'temporary_lock_released',
+      'raw_plan_committed',
+      'raw_state_committed',
+    ],
+  );
+  const federationRetirementExpectations = {
+    observed_on: '2026-09-03',
+    configuration_commit: 'ee457535a64355cd8133410d9c8c43f039608928',
+    terraform_version: '1.11.3',
+    backend: 'gcs',
+    private_plan_sha256: '8f570dfe5450b704112d484f058fc6dfcd39069a92c8bb483c5029027183e888',
+    private_plan_size_bytes: 25925,
+    only_disabled_attribute_changed: true,
+    workload_identity_pool_state_after: 'enabled_retained',
+    apply_completed: true,
+    state_lineage_sha256_before: '35e52294057979e6191eaa05141a9476261d4b0ea75c9113128f780abda7a9ba',
+    state_lineage_sha256_after: '35e52294057979e6191eaa05141a9476261d4b0ea75c9113128f780abda7a9ba',
+    state_lineage_unchanged: true,
+    iam_hash_profile: 'jq_compact_key_sorted_json_without_etag',
+    project_iam_normalized_sha256_before: '7aeffa3819cb67be2a241bdf1e29f04fc3e9a7af9e412786ae7174eb00859f10',
+    project_iam_normalized_sha256_after: '7aeffa3819cb67be2a241bdf1e29f04fc3e9a7af9e412786ae7174eb00859f10',
+    planner_service_account_iam_normalized_sha256_before: '0123aa229345a8351d737f9e140bd0891c6a6bd5be177df9c93520f9cd3347b4',
+    planner_service_account_iam_normalized_sha256_after: '0123aa229345a8351d737f9e140bd0891c6a6bd5be177df9c93520f9cd3347b4',
+    deployer_service_account_iam_normalized_sha256_before: 'fe1c653a9602756b3625cc2b34e838bd00217f635acf4adea4b1b98af0e06e8b',
+    deployer_service_account_iam_normalized_sha256_after: 'fe1c653a9602756b3625cc2b34e838bd00217f635acf4adea4b1b98af0e06e8b',
+    project_iam_unchanged: true,
+    planner_service_account_iam_unchanged: true,
+    deployer_service_account_iam_unchanged: true,
+    follow_up_plan_exit_code: 0,
+    follow_up_plan_result: 'no_changes',
+    temporary_lock_released: true,
+    raw_plan_committed: false,
+    raw_state_committed: false,
+  };
+  for (const [field, expected] of Object.entries(federationRetirementExpectations)) {
+    exact(federationRetirement[field], expected, `${federationRetirementPath}.${field}`);
+  }
+  const federationPlanResult = record(
+    federationRetirement.plan_result,
+    `${federationRetirementPath}.plan_result`,
+    ['no_op', 'import', 'add', 'change', 'destroy'],
+  );
+  for (const [field, expected] of Object.entries({
+    no_op: 35,
+    import: 0,
+    add: 0,
+    change: 2,
+    destroy: 0,
+  })) {
+    exact(federationPlanResult[field], expected, `${federationRetirementPath}.plan_result.${field}`);
+  }
+  const expectedFederationChanges = [
+    'google_iam_workload_identity_pool_provider.apply',
+    'google_iam_workload_identity_pool_provider.plan',
+  ];
+  if (!Array.isArray(federationRetirement.changes)
+      || federationRetirement.changes.length !== expectedFederationChanges.length) {
+    reject(
+      `${federationRetirementPath}.changes`,
+      `must contain exactly ${expectedFederationChanges.length} entries`,
+    );
+  }
+  federationRetirement.changes.forEach((value, index) => {
+    const path = `${federationRetirementPath}.changes[${index}]`;
+    const change = record(value, path, ['address', 'attribute', 'before', 'after']);
+    exact(change.address, expectedFederationChanges[index], `${path}.address`);
+    exact(change.attribute, 'disabled', `${path}.attribute`);
+    exact(change.before, false, `${path}.before`);
+    exact(change.after, true, `${path}.after`);
+  });
+  const federationApplyResult = record(
+    federationRetirement.apply_result,
+    `${federationRetirementPath}.apply_result`,
+    ['add', 'change', 'destroy'],
+  );
+  for (const [field, expected] of Object.entries({ add: 0, change: 2, destroy: 0 })) {
+    exact(federationApplyResult[field], expected, `${federationRetirementPath}.apply_result.${field}`);
+  }
+  const federationStateExpectations = {
+    state_before: {
+      generation: '1788457646215552',
+      sha256: '7833a4a298ba87c9a116cfcf2c48d4a82b1babd706516e35162d358397136544',
+      size_bytes: 61910,
+      serial: 41,
+      managed_resources: 37,
+      data_resources: 2,
+      outputs: 1,
+    },
+    state_after: {
+      generation: '1788460174191027',
+      sha256: '288d947d35f5d5a278aaff210ea878a9dab817f594b4c3161ed117bb2e30e26d',
+      size_bytes: 61864,
+      serial: 42,
+      managed_resources: 37,
+      data_resources: 2,
+      outputs: 1,
+    },
+  };
+  for (const [stateName, expectations] of Object.entries(federationStateExpectations)) {
+    const statePath = `${federationRetirementPath}.${stateName}`;
+    const state = record(federationRetirement[stateName], statePath, adoptionStateKeys);
+    for (const [field, expected] of Object.entries(expectations)) {
+      exact(state[field], expected, `${statePath}.${field}`);
+    }
+  }
   exact(
     bootstrapExecution.source_state_preserved_on_failure,
     true,
@@ -1791,7 +2098,192 @@ function validateTerraform(value) {
     'secret-empty-map-normalization',
   ], `${recoveryPlanPath}.provider_refresh_drift_types`);
 
-  exact(terraform.apply_authorized, true, 'terraform.apply_authorized');
+  const recoveryApplyPath = 'terraform.foundation_recovery_apply_observation';
+  const recoveryApply = record(
+    terraform.foundation_recovery_apply_observation,
+    recoveryApplyPath,
+    [
+      'observed_on',
+      'configuration_commit',
+      'workflow_run_id',
+      'workflow_run_attempt',
+      'workflow_result',
+      'environment_approval',
+      'terraform_version',
+      'backend',
+      'plan_object',
+      'plan_generation',
+      'plan_size_bytes',
+      'plan_sha256',
+      'strict_validation_profile',
+      'strict_validation_passed',
+      'requested_result',
+      'resource_counts',
+      'contains_workload',
+      'contains_public_ingress',
+      'contains_secret_versions',
+      'contains_billing_resource',
+      'apply_attempted',
+      'apply_completed',
+      'workflow_failure_stage',
+      'workflow_failure_cause',
+      'state_before',
+      'state_after',
+      'independent_convergence',
+      'live_inventory',
+      'plan_live_generation_present',
+      'plan_soft_deleted_recoverable',
+      'temporary_lock_released',
+      'raw_planned_values_committed',
+      'recovery_required',
+    ],
+  );
+  const recoveryApplyExpectations = {
+    observed_on: '2026-09-03',
+    configuration_commit: 'd6e2a40064091d803cca79126cf91a75992cec1f',
+    workflow_run_id: '33784785967',
+    workflow_run_attempt: 1,
+    workflow_result: 'failure_after_successful_apply_during_follow_up_plan',
+    environment_approval: 'approved',
+    terraform_version: '1.11.3',
+    backend: 'gcs',
+    plan_object: 'gs://miakapp-v4-staging-tfstate-1072737219170/plans/d6e2a40064091d803cca79126cf91a75992cec1f/33784785967/1/foundation.tfplan',
+    plan_generation: '1788456590438484',
+    plan_size_bytes: 18924,
+    plan_sha256: 'd68d4d6748e03691cb1d103a0ab593413110349ba4b39b0ea4efb9be381f1a1f',
+    strict_validation_profile: 'partial-foundation-recovery',
+    strict_validation_passed: true,
+    contains_workload: false,
+    contains_public_ingress: false,
+    contains_secret_versions: false,
+    contains_billing_resource: false,
+    apply_attempted: true,
+    apply_completed: true,
+    workflow_failure_stage: 'post_apply_convergence_plan',
+    workflow_failure_cause: 'deployer_identity_lacks_planner_read_surface',
+    plan_live_generation_present: false,
+    plan_soft_deleted_recoverable: true,
+    temporary_lock_released: true,
+    raw_planned_values_committed: false,
+    recovery_required: false,
+  };
+  for (const [field, expected] of Object.entries(recoveryApplyExpectations)) {
+    exact(recoveryApply[field], expected, `${recoveryApplyPath}.${field}`);
+  }
+  const recoveryApplyResult = record(
+    recoveryApply.requested_result,
+    `${recoveryApplyPath}.requested_result`,
+    ['create', 'no_op', 'update', 'delete'],
+  );
+  for (const [field, expected] of Object.entries({
+    create: 8, no_op: 25, update: 0, delete: 0,
+  })) {
+    exact(recoveryApplyResult[field], expected, `${recoveryApplyPath}.requested_result.${field}`);
+  }
+  const recoveryApplyResources = record(
+    recoveryApply.resource_counts,
+    `${recoveryApplyPath}.resource_counts`,
+    ['kms_iam_bindings', 'secret_iam_bindings', 'component_bucket_iam_bindings'],
+  );
+  for (const [field, expected] of Object.entries({
+    kms_iam_bindings: 1,
+    secret_iam_bindings: 5,
+    component_bucket_iam_bindings: 2,
+  })) {
+    exact(recoveryApplyResources[field], expected, `${recoveryApplyPath}.resource_counts.${field}`);
+  }
+  const recoveryStateExpectations = {
+    state_before: {
+      object: 'terraform/foundation/default.tfstate',
+      generation: '1788452068422403',
+      sha256: '7729ee35a104ce04f918faa05cd47d4d37731baac96def6e8531b17175f721bb',
+      size_bytes: 42621,
+      terraform_version: '1.11.3',
+      serial: 4,
+      managed_resources: 25,
+      data_resources: 2,
+      outputs: 0,
+    },
+    state_after: {
+      object: 'terraform/foundation/default.tfstate',
+      generation: '1788456706865449',
+      sha256: 'e2eca5fc0934a51a4c9a56650665285717772fd350b59e87d18b1ec2da04d8b0',
+      size_bytes: 53619,
+      lineage_sha256: '113390906103bdbefa4bac8b5d9549f7d867c38e8e9c4bef989977a12222c7d4',
+      terraform_version: '1.11.3',
+      serial: 6,
+      managed_resources: 33,
+      data_resources: 3,
+      outputs: 1,
+    },
+  };
+  for (const [stateName, expectations] of Object.entries(recoveryStateExpectations)) {
+    const statePath = `${recoveryApplyPath}.${stateName}`;
+    const state = record(recoveryApply[stateName], statePath, Object.keys(expectations));
+    for (const [field, expected] of Object.entries(expectations)) {
+      exact(state[field], expected, `${statePath}.${field}`);
+    }
+  }
+  const convergencePath = `${recoveryApplyPath}.independent_convergence`;
+  const convergence = record(recoveryApply.independent_convergence, convergencePath, [
+    'authentication',
+    'plan_sha256',
+    'plan_size_bytes',
+    'exit_code',
+    'result',
+    'managed_no_op',
+    'applyable',
+    'complete',
+    'errored',
+    'raw_plan_committed',
+  ]);
+  const convergenceExpectations = {
+    authentication: 'user_adc',
+    plan_sha256: 'd63373c1c59b7bd6c797a7ff5f94e7f5361bd27552c78ab86f9215727441ef34',
+    plan_size_bytes: 20008,
+    exit_code: 0,
+    result: 'no_changes',
+    managed_no_op: 33,
+    applyable: false,
+    complete: true,
+    errored: false,
+    raw_plan_committed: false,
+  };
+  for (const [field, expected] of Object.entries(convergenceExpectations)) {
+    exact(convergence[field], expected, `${convergencePath}.${field}`);
+  }
+  const inventoryPath = `${recoveryApplyPath}.live_inventory`;
+  const inventory = record(recoveryApply.live_inventory, inventoryPath, [
+    'foundation_resource_iam_bindings',
+    'foundation_resource_iam_bindings_exact',
+    'secret_containers',
+    'secret_versions',
+    'firestore_ttl_fields_active',
+    'kms_primary_version',
+    'kms_primary_version_state',
+    'kms_protection_level',
+    'kms_algorithm',
+    'cloud_run_services',
+    'cloud_functions',
+  ]);
+  const inventoryExpectations = {
+    foundation_resource_iam_bindings: 8,
+    foundation_resource_iam_bindings_exact: true,
+    secret_containers: 5,
+    secret_versions: 0,
+    firestore_ttl_fields_active: 3,
+    kms_primary_version: 1,
+    kms_primary_version_state: 'ENABLED',
+    kms_protection_level: 'SOFTWARE',
+    kms_algorithm: 'EC_SIGN_ED25519',
+    cloud_run_services: 0,
+    cloud_functions: 0,
+  };
+  for (const [field, expected] of Object.entries(inventoryExpectations)) {
+    exact(inventory[field], expected, `${inventoryPath}.${field}`);
+  }
+
+  exact(terraform.apply_authorized, false, 'terraform.apply_authorized');
   exact(terraform.destroy_authorized, false, 'terraform.destroy_authorized');
   exact(terraform.function_deployment_included, false, 'terraform.function_deployment_included');
   exact(terraform.offline_check_uses_mock_providers, true, 'terraform.offline_check_uses_mock_providers');
@@ -2169,16 +2661,16 @@ function validateTerraform(value) {
 
 function validateReadiness(value) {
   const readiness = record(value, 'readiness', [
-    'plan_only_cloud_actions_authorized',
+    'manual_read_only_cloud_plan_authorized',
     'foundation_apply_authorized',
     'required_blockers',
   ]);
   exact(
-    readiness.plan_only_cloud_actions_authorized,
+    readiness.manual_read_only_cloud_plan_authorized,
     true,
-    'readiness.plan_only_cloud_actions_authorized',
+    'readiness.manual_read_only_cloud_plan_authorized',
   );
-  exact(readiness.foundation_apply_authorized, true, 'readiness.foundation_apply_authorized');
+  exact(readiness.foundation_apply_authorized, false, 'readiness.foundation_apply_authorized');
   exactArray(readiness.required_blockers, REQUIRED_BLOCKERS, 'readiness.required_blockers');
 }
 
@@ -2194,10 +2686,13 @@ function validateEvidence(value) {
     'github_policy_observation_verified',
     'credential_free_validation',
     'manual_live_plan_requires_user_adc',
-    'ci_plan_uses_keyless_oidc',
+    'historical_ci_plan_used_keyless_oidc',
     'persistent_ci_credentials_allowed',
     'active_plan_workflow_present',
     'active_apply_workflow_present',
+    'recovery_workflow_retired',
+    'staging_wif_providers_disabled',
+    'retired_recovery_workflow',
     'staging_rows',
     'fault_matrix',
     'production_security_boundary',
@@ -2222,14 +2717,40 @@ function validateEvidence(value) {
     true,
     'evidence.manual_live_plan_requires_user_adc',
   );
-  exact(evidence.ci_plan_uses_keyless_oidc, true, 'evidence.ci_plan_uses_keyless_oidc');
+  exact(
+    evidence.historical_ci_plan_used_keyless_oidc,
+    true,
+    'evidence.historical_ci_plan_used_keyless_oidc',
+  );
   exact(
     evidence.persistent_ci_credentials_allowed,
     false,
     'evidence.persistent_ci_credentials_allowed',
   );
-  exact(evidence.active_plan_workflow_present, true, 'evidence.active_plan_workflow_present');
-  exact(evidence.active_apply_workflow_present, true, 'evidence.active_apply_workflow_present');
+  exact(evidence.active_plan_workflow_present, false, 'evidence.active_plan_workflow_present');
+  exact(evidence.active_apply_workflow_present, false, 'evidence.active_apply_workflow_present');
+  exact(evidence.recovery_workflow_retired, true, 'evidence.recovery_workflow_retired');
+  exact(
+    evidence.staging_wif_providers_disabled,
+    true,
+    'evidence.staging_wif_providers_disabled',
+  );
+  const retiredRecoveryWorkflow = record(
+    evidence.retired_recovery_workflow,
+    'evidence.retired_recovery_workflow',
+    ['id', 'state', 'active_file_present'],
+  );
+  exact(retiredRecoveryWorkflow.id, '349440747', 'evidence.retired_recovery_workflow.id');
+  exact(
+    retiredRecoveryWorkflow.state,
+    'disabled_manually',
+    'evidence.retired_recovery_workflow.state',
+  );
+  exact(
+    retiredRecoveryWorkflow.active_file_present,
+    false,
+    'evidence.retired_recovery_workflow.active_file_present',
+  );
   exactArray(evidence.staging_rows, STAGING_ROWS, 'evidence.staging_rows');
   exact(evidence.fault_matrix, '../../control-plane/FAULT-MATRIX.md', 'evidence.fault_matrix');
   exact(
@@ -2282,10 +2803,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 30, 'manifest.revision');
+  exact(manifest.revision, 32, 'manifest.revision');
   exact(
     manifest.status,
-    'foundation_partial_apply_recovery_authorized',
+    'foundation_complete_recovery_retired',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -2340,7 +2861,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; manual keyless partial-foundation recovery is authorized.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; staging foundation is complete and recovery automation is retired.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';

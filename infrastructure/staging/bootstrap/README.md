@@ -1,9 +1,10 @@
-# Staging Terraform bootstrap proposal
+# Staging Terraform bootstrap
 
-Status: bootstrap complete; remote state migrated and canonically reconciled
+Status: bootstrap complete; recovery WIF providers disabled and state reconciled
 
-This root owns the one-time resources required before the ordinary staging
-foundation can use remote state and keyless GitHub automation:
+This root owns the one-time resources that were required before the ordinary
+staging foundation could use remote state and the now-retired keyless GitHub
+recovery automation:
 
 - import of the exact approved billing association and one project-filtered EUR 10 budget
   with current-spend alerts at EUR 2, EUR 5, and EUR 10;
@@ -11,14 +12,17 @@ foundation can use remote state and keyless GitHub automation:
 - one private, versioned Paris GCS bucket for state and short-lived saved plans;
 - the private Paris component bucket and dedicated runtime service account;
 - separate planner and deployer service accounts without keys;
-- one Workload Identity Pool and separate plan/apply GitHub OIDC providers; and
+- one retained Workload Identity Pool and separate, now-disabled plan/apply
+  GitHub OIDC providers; and
 - additive project, bucket, and service-account IAM bindings.
 
-The OIDC providers require numeric repository ID `354682190`, numeric owner ID
-`83046838`, `refs/heads/main`, the exact workflow reference, and the matching
-GitHub environment. The planner receives project reads plus Service Usage
-Consumer so quota-attributed provider reads can execute; the deployer receives
-only service-scoped roles needed to mutate the reviewed foundation. The
+When enabled, the OIDC providers require numeric repository ID `354682190`,
+numeric owner ID `83046838`, `refs/heads/main`, the exact workflow reference,
+and the matching GitHub environment. Both providers are now disabled, closing that reviewed
+GitHub exchange route while retaining the pool. The planner service account
+retains project reads plus Service Usage Consumer so quota-attributed provider
+reads can execute after valid impersonation; the deployer retains only
+service-scoped roles needed to mutate the reviewed foundation. The
 escalation-capable project IAM, service-account creation and bucket creation
 stay in this human-operated bootstrap root.
 
@@ -54,6 +58,33 @@ verified the 36-resource remote state. Its raw contents remain private; only
 its generation and SHA-256 evidence are recorded in the closed manifest. Object
 Versioning also retains Terraform's noncurrent 181-byte initialization state;
 it contains no resources or outputs and is recorded separately by fingerprint.
+
+The planner's already-live Service Usage Consumer member was later adopted by
+the declarative import in [`imports.tf`](imports.tf). Its private plan contained
+one import and no add, change, or destroy. Project IAM etag and canonical policy
+digest remained identical, no `SetIamPolicy` audit entry appeared, and the state
+remainder was exactly equal after removing the imported instance. The resulting
+remote state generation `1788457646215552` at serial 41 retained 37 managed
+resources; it remains the historical planner-role adoption record.
+
+## Completed recovery-federation retirement
+
+PR #30 configuration commit
+`ee457535a64355cd8133410d9c8c43f039608928` changed only the two provider
+`disabled` attributes from `false` to `true`. The exact private 25,925-byte plan
+had SHA-256
+`8f570dfe5450b704112d484f058fc6dfcd39069a92c8bb483c5029027183e888`
+and contained 35 no-ops, two updates, no import, addition or deletion. Apply
+reported `0 added, 2 changed, 0 destroyed`.
+
+Current remote state generation `1788460174191027` is 61,864 bytes at serial 42
+with 37 managed resources, two data resources and one output. Its SHA-256 is
+`288d947d35f5d5a278aaff210ea878a9dab817f594b4c3161ed117bb2e30e26d`;
+lineage is unchanged and a follow-up full plan reports no changes. The pool
+remains enabled and retained. Project IAM and both service-account IAM policies
+had the same normalized hashes before and after, so the planner/deployer service
+accounts and their grants remain. This evidence closes the reviewed GitHub OIDC
+route only; it does not disprove impersonation by another administrator.
 
 [`apply-and-migrate.sh`](apply-and-migrate.sh) is permanently retired and cannot
 invoke Terraform or Google Cloud. It must not be restored or used to rerun the
@@ -150,9 +181,7 @@ no destroys. Its authorized apply stopped at the redundant billing-link write
 before creating any resource. Do not retry that digest.
 
 [`imports.tf`](imports.tf) declares the preexisting billing link as an idempotent
-Terraform import. It also adopts the already-live, non-mutating Service Usage
-Consumer binding for the planner so the new binding can enter bootstrap state
-without another IAM policy write. The replacement plan was created from clean
+Terraform import. The replacement resource-creation plan was created from clean
 commit `6340bffbddcc4797067ef48170fc5c3524345bf2` on 2026-09-03. Its SHA-256 is
 `6fb0b0c15fa04338a40ab59de790c3a4a85f96b418377c4a70570a8dabd5d457`;
 the verified and manually reviewed result is exactly 35 creations, one import
@@ -160,20 +189,28 @@ with a client-side update, and no deletion. Its authorized apply produced a
 nine-resource private state before the Budget API quota-project failure. Do not
 retry either previous digest.
 
+The same file now also declares the already-live, non-mutating Service Usage
+Consumer binding for the planner. Configuration commit
+`c5ff539af5598f4cc91eef9753ff90bfa5502974` imported that exact member into
+remote state without another IAM policy write. The private import plan SHA-256
+was `0bab71811fa5dc8d084c47e3938accb8cf4421da4264edb8665bee1989895d6f`;
+it is consumed evidence and must not be replayed.
+
 The recovery reducer accepts only the exact 36-address inventory with the
 nine preserved addresses as `no-op`, the remaining 27 as `create`, and no
-import, update or deletion. Both providers set `billing_project` to staging and
-enable user-project quota attribution. The consumed final plan matched that
+import, update or deletion. Both Terraform Google provider configurations set
+`billing_project` to staging and enable user-project quota attribution. The
+consumed final plan matched that
 closed inventory and completed the bootstrap resources. Do not create or execute
 another bootstrap resource-creation plan; its complete state has been migrated
-and reconciled. The only subsequent bootstrap operation is the exact declarative
-import above, which adopts one already-live binding and must otherwise be empty.
+and reconciled. The exact declarative import above is also complete.
 The commands below remain as historical diagnostic tooling and cannot authorize
 mutation.
 
-To reproduce or refresh the plan, first create a persistent operator-owned directory
-outside the Git repository and remove every group/other permission from it. Then
-run:
+The invocation below is retained strictly as historical audit documentation. It
+cannot reproduce the consumed plan from current source: the planner role is now
+imported and both recovery providers are disabled, so the closed reducer rejects
+the evolved plan. Do not run it as a current workflow.
 
 ```sh
 private_parent='/absolute/private/miakapp-bootstrap-plans'
@@ -185,11 +222,12 @@ MIAKAPP_STAGING_BOOTSTRAP_CONFIRMATION='miakapp-v4-staging' \
 ./save-plan.sh "$private_parent" '/absolute/private/bootstrap.tfstate'
 ```
 
-The wrapper rejects a dirty checkout, Git/Terraform/Google overrides, credential
+The historical wrapper contract rejected a dirty checkout,
+Git/Terraform/Google overrides, credential
 files, a foreign billing-account fingerprint, local state in the source tree,
 an altered recovery state, and any plan other than the exact reviewed 27 creates
 plus nine no-op resources. It uses a fresh bundle-local Terraform data directory so stale backend metadata
-cannot be reused, removes that directory after planning, and leaves a unique
+could not be reused, removed that directory after planning, and left a unique
 mode-0700 bundle containing only:
 
 - `bootstrap.tfplan`, the sensitive mode-0600 Terraform binary; and
@@ -197,13 +235,13 @@ mode-0700 bundle containing only:
   SHA-256, exact resource addresses, and explicit false apply/migration
   authorization bits.
 
-Planned values and the raw billing-account identifier never enter the metadata.
-Terraform JSON is streamed into the bounded reducer and is not persisted. The
-private diagnostic log is deleted on success, and every known partial artifact
-is deleted on failure. The bundle must not be moved, renamed, committed,
+Planned values and the raw billing-account identifier never entered the metadata.
+Terraform JSON was streamed into the bounded reducer and was not persisted. The
+private diagnostic log was deleted on success, and every known partial artifact
+was deleted on failure. The bundle must not be moved, renamed, committed,
 uploaded to a public artifact service, or copied into an issue or pull request.
 
-Inspect it only from the same clean commit:
+The consumed bundle could be inspected only from the same clean commit:
 
 ```sh
 MIAKAPP_STAGING_BOOTSTRAP_INSPECTION_CONFIRMATION='miakapp-v4-staging' \
@@ -212,8 +250,8 @@ MIAKAPP_STAGING_BOOTSTRAP_INSPECTION_CONFIRMATION='miakapp-v4-staging' \
   '/absolute/private/bootstrap.tfstate'
 ```
 
-Inspection verifies the private file modes and exact two-file inventory, source
+Inspection verified the private file modes and exact two-file inventory, source
 commit, SHA-256 digest, and a newly derived binary-plan summary before rendering
 the full plan. The final rendering is sensitive and must remain in the local
-operator terminal. Neither command can apply, import, destroy, migrate state, or
+operator terminal. Neither command could apply, import, destroy, migrate state, or
 authorize a later mutation.
