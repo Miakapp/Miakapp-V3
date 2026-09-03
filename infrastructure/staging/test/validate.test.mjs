@@ -30,7 +30,7 @@ function rejects(mutator, pattern) {
 
 test('accepts the completed bootstrap with reconciled remote state', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 23);
+  assert.equal(validated.revision, 24);
   assert.equal(
     validated.status,
     'bootstrap_complete_remote_state_reconciled',
@@ -146,7 +146,7 @@ test('accepts the completed bootstrap with reconciled remote state', () => {
   );
   assert.equal(execution.migration_attempts[1].remote_state_migrated, true);
   const initialization = validated.terraform.foundation_state_initialization;
-  assert.equal(initialization.state, 'guarded_initializer_implemented_pending_commit_binding');
+  assert.equal(initialization.state, 'guarded_initializer_reviewed_awaiting_exact_authorization');
   assert.equal(initialization.script, 'terraform/initialize-state.sh');
   assert.equal(initialization.helper, 'terraform/foundation-state.mjs');
   assert.equal(
@@ -155,7 +155,7 @@ test('accepts the completed bootstrap with reconciled remote state', () => {
   );
   assert.equal(
     initialization.approved_initialization_configuration_commit,
-    '0000000000000000000000000000000000000000',
+    '052f6c92d76f93ec222ffd03e4d34ba7a927495b',
   );
   assert.equal(initialization.authorization_bootstrap_generation, '1788439334043522');
   assert.equal(initialization.expected_bootstrap_state.serial, 40);

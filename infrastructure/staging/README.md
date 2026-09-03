@@ -136,8 +136,9 @@ requires an exact canonical empty state at serial 1, and rejects every other
 bucket object. A valid preexisting empty state is reconciled without planning or
 mutation, so recovery after an uncertain client result cannot overwrite it.
 Failure preserves private diagnostics; success removes them. The implementation
-is deliberately disabled by an unbound commit sentinel until a separately
-reviewed binding commit and exact authorization exist.
+is bound to reviewed implementation commit
+`052f6c92d76f93ec222ffd03e4d34ba7a927495b` and remains disabled until a
+separate exact authorization names the clean execution commit.
 
 The plan and apply acquire and release Terraform's temporary `.tflock` object.
 The only durable new live object is the roughly 181-byte empty state; Object
@@ -197,7 +198,7 @@ because workflow installation and foundation deployment remain unauthorized.
 The GitHub branch, environment and Actions prerequisite are configured. Before
 any additional cloud action, the recovery sequence must:
 
-1. bind, authorize, initialize, and verify the empty foundation state before admitting CI;
+1. authorize, initialize, and verify the empty foundation state before admitting CI;
 2. install the cloud workflow only after the state boundary is proven; and
 3. review a live foundation plan before granting apply approval.
 

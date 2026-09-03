@@ -1,6 +1,6 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 23,
+  "revision": 24,
   "status": "bootstrap_complete_remote_state_reconciled",
   "environment": "staging",
   "project": {
@@ -528,11 +528,11 @@
       "bootstrap_completed": true
     },
     "foundation_state_initialization": {
-      "state": "guarded_initializer_implemented_pending_commit_binding",
+      "state": "guarded_initializer_reviewed_awaiting_exact_authorization",
       "script": "terraform/initialize-state.sh",
       "helper": "terraform/foundation-state.mjs",
       "approved_foundation_configuration_commit": "efa8778f2bdc3cb6ab488281253d56eadcbe89dc",
-      "approved_initialization_configuration_commit": "0000000000000000000000000000000000000000",
+      "approved_initialization_configuration_commit": "052f6c92d76f93ec222ffd03e4d34ba7a927495b",
       "exact_authorization_required": true,
       "authorization_bootstrap_generation": "1788439334043522",
       "repository_commit_bound": true,

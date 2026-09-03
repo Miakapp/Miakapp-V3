@@ -60,10 +60,11 @@ provider registry to download or verify the pinned provider binaries.
 foundation state. It requires User ADC, a clean checkout, a private
 operator-owned directory outside the repository, the exact reconciled bootstrap
 generation, and an authorization bound to the clean execution commit. The
-implementation remains fail-closed behind an unbound commit sentinel until its
-follow-up binding commit has been reviewed.
+implementation is bound to reviewed commit
+`052f6c92d76f93ec222ffd03e4d34ba7a927495b` and remains fail-closed until a
+separate exact authorization names the clean execution commit.
 
-The command shape after that binding is:
+The authorized command shape is:
 
 ```sh
 MIAKAPP_STAGING_FOUNDATION_STATE_AUTHORIZATION='initialize-foundation-state:miakapp-v4-staging:1788439334043522:<40-hex-execution-commit>' \
