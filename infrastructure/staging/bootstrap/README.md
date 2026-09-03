@@ -101,7 +101,9 @@ managed addresses, and the sole typed non-secret activation output before the
 local copy is removed.
 
 If apply is partial, the wrapper still attempts to migrate and reconcile the
-partial subset so already-created resources are not orphaned. Any apply,
+non-empty partial subset so already-created resources are not orphaned. A
+failed apply that created no managed resource stops before looking for a state
+bucket that cannot exist yet. Any apply,
 migration, read-back, inventory, reconciliation, or budget-postcondition failure
 leaves the private execution directory intact and prints only its location plus
 a bounded error.
