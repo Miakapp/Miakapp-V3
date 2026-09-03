@@ -62,7 +62,7 @@ foundation state. It requires User ADC, a clean checkout, a private
 operator-owned directory outside the repository, the exact reconciled bootstrap
 generation, and an authorization bound to the clean execution commit. The
 implementation is bound to reviewed commit
-`f820b9004052863d0f9dee5ef203844dec0d4374` and remains fail-closed until a
+`626dc16637ba843f6d1543156aba99e7b551e705` and remains fail-closed until a
 separate exact authorization names the clean execution commit.
 
 The authorized command shape is:

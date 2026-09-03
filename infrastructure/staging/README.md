@@ -142,7 +142,7 @@ without planning or mutation, so recovery after an uncertain client result
 cannot overwrite it.
 Failure preserves private diagnostics; success removes them. The implementation
 is bound to reviewed implementation commit
-`f820b9004052863d0f9dee5ef203844dec0d4374` and remains disabled until a
+`626dc16637ba843f6d1543156aba99e7b551e705` and remains disabled until a
 separate exact authorization names the clean execution commit.
 
 Backend initialization and planning acquire and release Terraform's temporary
