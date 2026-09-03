@@ -10,7 +10,7 @@ fi
 terraform_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 repository_root="$(cd "${terraform_root}/../../.." && pwd -P)"
 helper="${terraform_root}/foundation-state.mjs"
-approved_foundation_configuration_commit="efa8778f2bdc3cb6ab488281253d56eadcbe89dc"
+approved_foundation_configuration_commit="efa877835dde2f5eedc3d950b2e4c514e606751d"
 approved_initialization_configuration_commit="052f6c92d76f93ec222ffd03e4d34ba7a927495b"
 project_id="miakapp-v4-staging"
 state_bucket="miakapp-v4-staging-tfstate-1072737219170"
@@ -193,6 +193,7 @@ if [[ "$before_state" == "absent" ]]; then
     -lock-timeout=5m \
     -no-color \
     -out="$empty_plan" >>"$terraform_log" 2>&1
+  plan_fingerprint="$(node "$helper" fingerprint-plan "$empty_plan")"
   if ! terraform -chdir="$initializer_root" show -json "$empty_plan" 2>>"$terraform_log" \
     | node "$helper" verify-empty-plan >/dev/null; then
     echo "The foundation-state initialization plan was not exactly empty; no state was written." >&2
@@ -203,6 +204,10 @@ if [[ "$before_state" == "absent" ]]; then
   preapply_state="$(node -e 'const value = JSON.parse(process.argv[1]); process.stdout.write(value.state);' "$preapply_inventory")"
   if [[ "$preapply_state" != "absent" ]]; then
     echo "Foundation state appeared after planning; the saved empty plan was not applied." >&2
+    exit 1
+  fi
+  if [[ "$(node "$helper" fingerprint-plan "$empty_plan")" != "$plan_fingerprint" ]]; then
+    echo "The verified empty plan changed before apply; the plan was not applied." >&2
     exit 1
   fi
   if ! terraform -chdir="$initializer_root" apply \
@@ -249,6 +254,17 @@ reconciliation="$(node "$helper" reconcile-empty-states "$pulled_state" "$object
 reconciled_size="$(node -e 'const value = JSON.parse(process.argv[1]); process.stdout.write(String(value.size));' "$reconciliation")"
 if [[ "$reconciled_size" != "$foundation_size" ]]; then
   echo "Foundation state size differs between GCS inventory and the reconciled object." >&2
+  exit 1
+fi
+
+final_inventory="$(run_state_inventory "${execution}/state-bucket-final.json")"
+final_state="$(node -e 'const value = JSON.parse(process.argv[1]); process.stdout.write(value.state);' "$final_inventory")"
+final_generation="$(node -e 'const value = JSON.parse(process.argv[1]); process.stdout.write(value.generation ?? "");' "$final_inventory")"
+final_size="$(node -e 'const value = JSON.parse(process.argv[1]); process.stdout.write(String(value.size ?? ""));' "$final_inventory")"
+if [[ "$final_state" != "present" \
+  || "$final_generation" != "$foundation_generation" \
+  || "$final_size" != "$foundation_size" ]]; then
+  echo "Foundation state changed during final reconciliation." >&2
   exit 1
 fi
 

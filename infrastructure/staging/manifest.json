@@ -531,7 +531,7 @@
       "state": "guarded_initializer_reviewed_awaiting_exact_authorization",
       "script": "terraform/initialize-state.sh",
       "helper": "terraform/foundation-state.mjs",
-      "approved_foundation_configuration_commit": "efa8778f2bdc3cb6ab488281253d56eadcbe89dc",
+      "approved_foundation_configuration_commit": "efa877835dde2f5eedc3d950b2e4c514e606751d",
       "approved_initialization_configuration_commit": "052f6c92d76f93ec222ffd03e4d34ba7a927495b",
       "exact_authorization_required": true,
       "authorization_bootstrap_generation": "1788439334043522",
@@ -559,11 +559,13 @@
         "raw_contents_committed": false
       },
       "refresh_only_saved_plan_required": true,
+      "saved_plan_fingerprint_required": true,
       "verified_plan_apply_only": true,
       "temporary_lock_object_lifecycle_required": true,
       "manual_state_push_allowed": false,
       "overwrite_existing_state_allowed": false,
       "read_only_reconciliation_of_existing_exact_state_allowed": true,
+      "final_generation_recheck_required": true,
       "initialization_authorized": false,
       "initialization_executed": false
     },

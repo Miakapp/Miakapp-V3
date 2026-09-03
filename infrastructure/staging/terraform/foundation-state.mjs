@@ -24,6 +24,7 @@ export const FOUNDATION_STATE_OBJECT = 'terraform/foundation/default.tfstate';
 
 const TERRAFORM_VERSION = '1.11.3';
 const MAX_OBSERVATION_BYTES = 1024 * 1024;
+const MAX_PLAN_BYTES = 16 * 1024 * 1024;
 const MAX_STATE_BYTES = 64 * 1024 * 1024;
 const COMMIT_PATTERN = /^[0-9a-f]{40}$/;
 const LINEAGE_PATTERN = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/;
@@ -84,7 +85,7 @@ function containsPath(parent, candidate) {
   return path === '' || (!path.startsWith('..') && !isAbsolute(path));
 }
 
-function readPrivateState(path, kind) {
+function readPrivateFile(path, kind, maxBytes) {
   if (typeof path !== 'string' || !isAbsolute(path) || /[\0-\x1f\x7f]/.test(path)) {
     reject(`${kind} must have an absolute path without control characters`);
   }
@@ -92,12 +93,19 @@ function readPrivateState(path, kind) {
   const canonicalPath = realpathSync(path);
   assertPrivateEntry(dirname(canonicalPath), `${kind} parent`, 'directory');
   const entry = assertPrivateEntry(canonicalPath, kind, 'file');
-  if (entry.size === 0 || entry.size > MAX_STATE_BYTES) reject(`${kind} has an invalid size`);
+  if (entry.size === 0 || entry.size > maxBytes) reject(`${kind} has an invalid size`);
   const bytes = readFileSync(canonicalPath);
   return Object.freeze({
     bytes,
     sha256: createHash('sha256').update(bytes).digest('hex'),
-    state: parseJson(bytes.toString('utf8'), kind),
+  });
+}
+
+function readPrivateState(path, kind) {
+  const observed = readPrivateFile(path, kind, MAX_STATE_BYTES);
+  return Object.freeze({
+    ...observed,
+    state: parseJson(observed.bytes.toString('utf8'), kind),
   });
 }
 
@@ -332,6 +340,14 @@ export function validateEmptyFoundationPlan(value) {
   return Object.freeze({ managedResources: 0, applyable: false });
 }
 
+export function fingerprintSavedFoundationPlan(path) {
+  const observed = readPrivateFile(path, 'Saved foundation-state plan', MAX_PLAN_BYTES);
+  return Object.freeze({
+    sha256: observed.sha256,
+    size: observed.bytes.length,
+  });
+}
+
 export function validateEmptyFoundationState(state) {
   validateStateHeader(state, 'Foundation Terraform state');
   if (state.serial !== 1
@@ -403,6 +419,10 @@ async function main() {
     )));
     return;
   }
+  if (command === 'fingerprint-plan' && args.length === 1) {
+    process.stdout.write(JSON.stringify(fingerprintSavedFoundationPlan(args[0])));
+    return;
+  }
   if (command === 'verify-empty-state' && args.length === 1) {
     process.stdout.write(JSON.stringify(verifyEmptyFoundationStateFile(args[0])));
     return;
@@ -411,7 +431,7 @@ async function main() {
     process.stdout.write(JSON.stringify(reconcileEmptyFoundationStateFiles(args[0], args[1])));
     return;
   }
-  reject('Usage: foundation-state.mjs <create-directory|verify-authorization|verify-project|inspect-bucket|verify-bootstrap-state|verify-empty-plan|verify-empty-state|reconcile-empty-states> ...');
+  reject('Usage: foundation-state.mjs <create-directory|verify-authorization|verify-project|inspect-bucket|verify-bootstrap-state|verify-empty-plan|fingerprint-plan|verify-empty-state|reconcile-empty-states> ...');
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

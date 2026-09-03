@@ -74,14 +74,15 @@ MIAKAPP_STAGING_FOUNDATION_STATE_AUTHORIZATION='initialize-foundation-state:miak
 The script copies only `versions.tf`, `.terraform.lock.hcl`, and
 `terraform-cli.tfrc` into its private root. It saves a `-refresh-only` plan,
 requires the exact Terraform 1.11.3 empty-plan JSON shape, and then applies that
-same plan. No foundation resource or provider configuration is present. It does
-not call `terraform state push`, create a cloud object directly, or permit an
-existing state to be overwritten. Terraform and the exact current GCS
-generation are read back and must agree on a canonical serial-1 state containing
-no output, resource, or check result. A valid preexisting state is reconciled
-without mutation. The mutating path necessarily creates and releases Terraform's
-temporary `.tflock`; only the tiny empty state remains live afterward, while
-bucket recovery policies may briefly retain noncurrent bytes.
+same fingerprinted plan. No foundation resource or provider configuration is
+present. It does not call `terraform state push`, create a cloud object directly,
+or permit an existing state to be overwritten. Terraform and the exact current
+GCS generation are read back and must agree on a canonical serial-1 state
+containing no output, resource, or check result, after which the generation is
+checked once more as the current object. A valid preexisting state is reconciled
+without mutation. The mutating path necessarily creates and releases
+Terraform's temporary `.tflock`; only the tiny empty state remains live
+afterward, while bucket recovery policies may briefly retain noncurrent bytes.
 
 ## Guarded local plan
 
