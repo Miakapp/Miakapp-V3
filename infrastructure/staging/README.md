@@ -61,6 +61,15 @@ creates and 25 no-ops. The closed `partial-foundation-recovery` profile and its
 one-shot protected workflow are now authorized. Workload deployment, public
 ingress and destroy remain explicitly unauthorized.
 
+The first protected recovery refresh exposed that the planner lacked
+`serviceusage.services.use`, because quota attribution had not been exercised
+while the initial plan deferred its cloud reads. The narrow Service Usage
+Consumer binding is now live and declared in the bootstrap source; its bootstrap
+state reconciliation remains pending. A subsequent fresh plan also showed that
+Firestore's retention-window timestamp advances alongside its opaque etag. The
+recovery validator accepts only a valid nondecreasing timestamp and otherwise
+keeps the drift schema closed.
+
 ## Repository layout
 
 | Path | Purpose | Current execution boundary |
@@ -88,8 +97,9 @@ contain private data and must never be committed or uploaded to public Actions
 artifacts.
 
 The planner and deployer identities now exist and are keyless and separate.
-Both may read the private bucket. The planner may manage only `.tflock` objects and create
-saved plans; it cannot create or replace state. The empty foundation state was
+Both may read the private bucket. The planner may consume project quota for
+provider reads, manage only `.tflock` objects, and create saved plans; it cannot
+create or replace state. The empty foundation state was
 initialized and reconciled with protected operator credentials, satisfying the
 state prerequisite for CI. Only the deployer may write foundation state;
 neither may mutate the bootstrap

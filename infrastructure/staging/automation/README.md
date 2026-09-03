@@ -13,8 +13,9 @@ The infrastructure reserves two separately admitted GitHub environments and
 two separate Google service accounts. Both OIDC providers require the immutable
 numeric
 repository and owner IDs, `main`, the exact workflow reference, and the expected
-environment claim. The planner can read infrastructure, manage only `.tflock`
-objects, and create private saved plans; it cannot create or replace state. Only
+environment claim. The planner can read infrastructure, consume project quota
+for those reads, manage only `.tflock` objects, and create private saved plans;
+it cannot create or replace state. Only
 the deployer receives resource mutation roles, and those exclude
 project IAM, service-account administration and project-wide Storage so the
 deployer cannot rewrite its own trust boundary or the bootstrap state.

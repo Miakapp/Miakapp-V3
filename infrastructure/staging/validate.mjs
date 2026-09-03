@@ -661,6 +661,8 @@ function validateTerraform(value) {
     'component_bucket',
     'service_account_keys_allowed',
     'bootstrap_state_write_allowed',
+    'planner_service_usage_consumer_allowed',
+    'planner_service_usage_consumer_state',
     'deployer_project_iam_mutation_allowed',
     'deployer_service_account_administration_allowed',
     'deployer_project_wide_storage_administration_allowed',
@@ -702,6 +704,16 @@ function validateTerraform(value) {
   );
   exact(identity.service_account_keys_allowed, false, 'terraform.identity.service_account_keys_allowed');
   exact(identity.bootstrap_state_write_allowed, false, 'terraform.identity.bootstrap_state_write_allowed');
+  exact(
+    identity.planner_service_usage_consumer_allowed,
+    true,
+    'terraform.identity.planner_service_usage_consumer_allowed',
+  );
+  exact(
+    identity.planner_service_usage_consumer_state,
+    'live_binding_created_bootstrap_state_reconciliation_pending',
+    'terraform.identity.planner_service_usage_consumer_state',
+  );
   exact(
     identity.deployer_project_iam_mutation_allowed,
     false,
@@ -2270,7 +2282,7 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 29, 'manifest.revision');
+  exact(manifest.revision, 30, 'manifest.revision');
   exact(
     manifest.status,
     'foundation_partial_apply_recovery_authorized',

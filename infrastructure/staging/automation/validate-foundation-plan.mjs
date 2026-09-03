@@ -17,9 +17,9 @@ const STATE_BUCKET = 'miakapp-v4-staging-tfstate-1072737219170';
 const KMS_KEY_RING = `projects/${PROJECT_ID}/locations/${REGION}/keyRings/${PROJECT_ID}`;
 const SIGNING_KEY = `${KMS_KEY_RING}/cryptoKeys/access-token-signing`;
 const ADDRESS_PATTERN = /^[A-Za-z0-9_./[\]"-]{1,256}$/;
-const ISO_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/;
+const ISO_TIMESTAMP_PATTERN = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,9}))?Z$/;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-const ETAG_PATTERN = /^[A-Za-z0-9_-]{8,128}$/;
+const ETAG_PATTERN = /^[A-Za-z0-9_+/=-]{8,128}$/;
 
 const LABELS = Object.freeze({
   environment: 'staging',
@@ -882,8 +882,33 @@ function expectedSchemaVersion(expected) {
 }
 
 function validateTimestamp(value, path) {
-  matches(value, ISO_TIMESTAMP_PATTERN, path);
-  if (Number.isNaN(Date.parse(value))) reject(`${path} is not a valid timestamp`);
+  if (typeof value !== 'string') reject(`${path} must match the reviewed format`);
+  const match = ISO_TIMESTAMP_PATTERN.exec(value);
+  if (match === null) reject(`${path} must match the reviewed format`);
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText, fraction = ''] = match;
+  const [year, month, day, hour, minute, second] = [
+    yearText,
+    monthText,
+    dayText,
+    hourText,
+    minuteText,
+    secondText,
+  ].map(Number);
+  const instant = new Date(0);
+  instant.setUTCFullYear(year, month - 1, day);
+  instant.setUTCHours(hour, minute, second, 0);
+  if (year === 0
+      || instant.getUTCFullYear() !== year
+      || instant.getUTCMonth() !== month - 1
+      || instant.getUTCDate() !== day
+      || instant.getUTCHours() !== hour
+      || instant.getUTCMinutes() !== minute
+      || instant.getUTCSeconds() !== second) {
+    reject(`${path} is not a valid timestamp`);
+  }
+  const wholeSecondNanos = BigInt(instant.getTime()) * 1_000_000n;
+  const fractionalNanos = BigInt(fraction.padEnd(9, '0'));
+  return wholeSecondNanos + fractionalNanos;
 }
 
 function validateRecoveryValue(expected, value, path) {
@@ -1436,8 +1461,23 @@ function validateRecoveryDrift(plan, changes) {
       if (change.before.etag === change.after.etag) {
         reject(`${path}.change.etag must contain the reviewed refresh-only difference`);
       }
+      const beforeEarliestVersionTime = validateTimestamp(
+        change.before.earliest_version_time,
+        `${path}.change.before.earliest_version_time`,
+      );
+      const afterEarliestVersionTime = validateTimestamp(
+        change.after.earliest_version_time,
+        `${path}.change.after.earliest_version_time`,
+      );
+      if (beforeEarliestVersionTime > afterEarliestVersionTime) {
+        reject(`${path}.change.earliest_version_time must not move backwards`);
+      }
       exactDeep(
-        { ...change.before, etag: change.after.etag },
+        {
+          ...change.before,
+          earliest_version_time: change.after.earliest_version_time,
+          etag: change.after.etag,
+        },
         change.after,
         `${path}.change.before`,
       );
@@ -1543,8 +1583,8 @@ function validateRecoveryChecks(plan) {
   ], 'Terraform recovery checks');
 }
 
-function validateRecoveryRelevantAttributes(plan) {
-  exactDeep(plan.relevant_attributes, [
+export function validateRecoveryRelevantAttributes(plan) {
+  const expected = [
     {
       resource: 'data.google_service_account.control_plane',
       attribute: ['member'],
@@ -1569,7 +1609,26 @@ function validateRecoveryRelevantAttributes(plan) {
       resource: 'google_secret_manager_secret.runtime',
       attribute: [],
     },
-  ], 'Terraform recovery relevant attributes');
+  ];
+  if (!Array.isArray(plan.relevant_attributes)
+      || plan.relevant_attributes.length !== expected.length) {
+    reject('Terraform recovery relevant attributes must contain exactly the reviewed entries');
+  }
+  const canonical = (entry, index) => {
+    exactKeys(
+      entry,
+      ['resource', 'attribute'],
+      `Terraform recovery relevant attribute ${index}`,
+    );
+    if (typeof entry.resource !== 'string' || !ADDRESS_PATTERN.test(entry.resource)
+        || !Array.isArray(entry.attribute)) {
+      reject(`Terraform recovery relevant attribute ${index} is invalid`);
+    }
+    return JSON.stringify([entry.resource, entry.attribute]);
+  };
+  const actualEntries = plan.relevant_attributes.map(canonical).sort();
+  const expectedEntries = expected.map(canonical).sort();
+  exactDeep(actualEntries, expectedEntries, 'Terraform recovery relevant attributes');
 }
 
 export function validatePartialFoundationRecoveryPlan(plan) {
