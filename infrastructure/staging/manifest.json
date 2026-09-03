@@ -1233,7 +1233,7 @@
     "staging_wif_providers_disabled": true,
     "retired_recovery_workflow": {
       "id": "349440747",
-      "state": "disabled_manually",
+      "state": "deleted",
       "active_file_present": false
     },
     "staging_rows": [
