@@ -39,10 +39,10 @@ function security() {
     schema: 'miakapp.production-security/1',
     environment: 'staging',
     project_id: 'miakapp-v4-staging',
-    region: 'europe-west1',
+    region: 'europe-west9',
     issuer: 'https://control.staging.miakapp.com',
     signing: {
-      key_version_name: 'projects/miakapp-v4-staging/locations/europe-west1/keyRings/miakapp-v4-staging/cryptoKeys/access-token-signing/cryptoKeyVersions/1',
+      key_version_name: 'projects/miakapp-v4-staging/locations/europe-west9/keyRings/miakapp-v4-staging/cryptoKeys/access-token-signing/cryptoKeyVersions/1',
       public_jwk: publicJwk,
       rpc_timeout_ms: 2_000,
     },

@@ -1,9 +1,12 @@
 # Miakapp control-plane emulator slice
 
 This package is the first deployed-shape implementation slice of
-[RFC 0004](../docs/rfcs/0004-platform-control-plane.md). It runs only against
-the Firebase Local Emulator Suite and the exact `demo-miakapp-v4` project. It
-cannot be loaded as a production Function.
+[RFC 0004](../docs/rfcs/0004-platform-control-plane.md). Its active Firebase
+codebase runs only against the Local Emulator Suite and the exact
+`demo-miakapp-v4` project. A separate production activation contract compiles
+locally. Its endpoint is not exported from the package main and carries
+`omit: true`, so no production Function is discovered or deployed through the
+active codebase.
 
 The slice implements:
 
@@ -181,8 +184,9 @@ An inactive production-security boundary lives in
 [`src/production-config.ts`](src/production-config.ts),
 [`src/cloud-security.ts`](src/cloud-security.ts), and
 [`src/google-cloud-clients.ts`](src/google-cloud-clients.ts). It accepts only the
-explicit staging or production project, numeric Secret Manager versions and one
-full Ed25519 KMS key-version name. Initialization reads each declared 32-byte
+explicit staging or production project, the reviewed Paris `europe-west9`
+region, numeric Secret Manager versions and one full Ed25519 KMS key-version
+name. Initialization reads each declared 32-byte
 secret once, checks the returned resource name and CRC32C, then binds the KMS
 public key to the configured JWKS key. The staging and production project IDs
 are also bound respectively to `https://control.staging.miakapp.com` and
@@ -217,20 +221,55 @@ and transactional admission controls provide the request-level replay boundary
 without the extra limited-use-token round trip and provider quota. This policy
 still requires real attestation and wrong-app tests in `STAGE-03`.
 
-None of those modules is imported by [`src/index.ts`](src/index.ts), which
-remains the demo-emulator entry point. Production composition occurs only when
-`createProductionControlPlane()` is called explicitly; importing its module
-does not construct a client or read a secret. Unit tests use injected clients and
-make no ADC, network or cloud-resource call. The
+[`src/production-runtime-loader.ts`](src/production-runtime-loader.ts) reads one
+required `MIAKAPP_RUNTIME_CONFIG_JSON` value, rejects inputs over 16 KiB, uses
+the duplicate-key-safe JSON parser, validates the closed runtime schema, and
+requires the expected deployment environment. The document may contain only
+public configuration, a public JWK and pinned numeric resource names; raw secret
+bytes and private JWK fields are rejected.
+
+[`src/production-secret-lifecycle.ts`](src/production-secret-lifecycle.ts)
+defines a pure offline validator for four-phase configuration-reference
+transitions. An initialization snapshot contains one current pinned reference
+per purpose; a prepare snapshot adds one later pinned reference without
+switching; activate changes the current pointer within that same two-reference
+set; and a retire snapshot removes only the non-current reference. Outside
+initialization, at most one of the five secret purposes may change per
+transition. Replacements, mutable versions, phase skipping and combined
+rotation are rejected. This validator does not create, enable, disable or
+destroy Secret Manager versions, and it is not yet wired into deployment
+enforcement.
+
+[`src/production-function-runtime.ts`](src/production-function-runtime.ts)
+single-flights initialization for each instance. Concurrent requests therefore
+perform one configuration load, one pass over the configured pinned secret
+versions and one KMS public-key read. An initialization failure is latched and
+every later request receives the same redacted, non-cacheable `503` without
+another cloud attempt.
+
+[`src/production-entrypoint.ts`](src/production-entrypoint.ts) is a reviewable,
+staging-bound Gen 2 adapter. It registers `onInit()`, pins Paris, zero minimum
+and one maximum instance, concurrency 16, a 30-second timeout, the dedicated
+runtime service account and a private invoker. It deliberately selects no
+ingress mode, mounts no Function secret, and sets `omit: true`.
+
+None of the production modules is imported or re-exported by
+[`src/index.ts`](src/index.ts), which remains the demo-emulator entry point and
+the sole Function discovered through the package main selected by
+`firebase.json`. The inactive source may still be compiled and packaged, but its
+endpoint is absent from `lib/index.js` and also carries `omit: true`. Importing
+the inactive adapter constructs no client, reads no configuration or secret,
+and makes no ADC, network or cloud-resource call. Unit tests use injected
+clients. The
 concrete Google adapter is exercised with injected transports to prove that the
 generated clients receive fresh extensible call options while preserving the
 bounded timeout and `retry: null`; no real client method runs in that test. The
 private fixture JWK remains confined to the emulator-specific configuration
-subtype. This is local composition evidence only: there is still no deployed
-production entry point, `onInit()` activation, provisioned IAM binding, live
-JWKS publication/rotation, provisioned key or secret, deployment authorization
-or `STAGE-01` acceptance result. This change creates no project, resource or
-billable operation.
+subtype. This is local activation-contract evidence only: there is still no
+exported or deployed production Function, live `onInit()` execution, runtime
+configuration value, provisioned secret version, live JWKS rotation, deployment
+authorization or `STAGE-01` acceptance result. This change creates no project,
+resource or billable operation.
 
 Passing this slice does **not** close RFC 0004's complete emulator or production
 gate. Push registration and sending have only synthetic local service evidence;
