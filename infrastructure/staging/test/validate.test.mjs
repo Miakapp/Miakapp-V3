@@ -30,7 +30,7 @@ function rejects(mutator, pattern) {
 
 test('accepts the completed bootstrap with reconciled remote state', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 22);
+  assert.equal(validated.revision, 23);
   assert.equal(
     validated.status,
     'bootstrap_complete_remote_state_reconciled',
@@ -145,6 +145,31 @@ test('accepts the completed bootstrap with reconciled remote state', () => {
     '107bb23e8b546aca283105f4a9584343985576f6',
   );
   assert.equal(execution.migration_attempts[1].remote_state_migrated, true);
+  const initialization = validated.terraform.foundation_state_initialization;
+  assert.equal(initialization.state, 'guarded_initializer_implemented_pending_commit_binding');
+  assert.equal(initialization.script, 'terraform/initialize-state.sh');
+  assert.equal(initialization.helper, 'terraform/foundation-state.mjs');
+  assert.equal(
+    initialization.approved_foundation_configuration_commit,
+    'efa8778f2bdc3cb6ab488281253d56eadcbe89dc',
+  );
+  assert.equal(
+    initialization.approved_initialization_configuration_commit,
+    '0000000000000000000000000000000000000000',
+  );
+  assert.equal(initialization.authorization_bootstrap_generation, '1788439334043522');
+  assert.equal(initialization.expected_bootstrap_state.serial, 40);
+  assert.equal(initialization.expected_bootstrap_state.managed_resources, 36);
+  assert.equal(initialization.expected_foundation_state.initial_state, 'absent');
+  assert.equal(initialization.expected_foundation_state.serial, 1);
+  assert.equal(initialization.expected_foundation_state.managed_resources, 0);
+  assert.equal(initialization.refresh_only_saved_plan_required, true);
+  assert.equal(initialization.verified_plan_apply_only, true);
+  assert.equal(initialization.temporary_lock_object_lifecycle_required, true);
+  assert.equal(initialization.manual_state_push_allowed, false);
+  assert.equal(initialization.overwrite_existing_state_allowed, false);
+  assert.equal(initialization.initialization_authorized, false);
+  assert.equal(initialization.initialization_executed, false);
   assert.equal(validated.terraform.apply_authorized, false);
   assert.equal(validated.terraform.local_plan_executed, true);
   assert.deepEqual(validated.terraform.local_plan_observation.result, {
@@ -330,6 +355,18 @@ test('rejects every cloud-action authorization bit and bootstrap completion drif
   rejects((candidate) => {
     candidate.terraform.bootstrap_execution.migration_attempts[1].remote_state_migrated = false;
   }, /terraform\.bootstrap_execution\.migration_attempts\[1\]\.remote_state_migrated/);
+  rejects((candidate) => {
+    candidate.terraform.foundation_state_initialization.initialization_authorized = true;
+  }, /terraform\.foundation_state_initialization\.initialization_authorized/);
+  rejects((candidate) => {
+    candidate.terraform.foundation_state_initialization.manual_state_push_allowed = true;
+  }, /terraform\.foundation_state_initialization\.manual_state_push_allowed/);
+  rejects((candidate) => {
+    candidate.terraform.foundation_state_initialization.expected_bootstrap_state.generation = '1';
+  }, /terraform\.foundation_state_initialization\.expected_bootstrap_state\.generation/);
+  rejects((candidate) => {
+    candidate.terraform.foundation_state_initialization.expected_foundation_state.managed_resources = 1;
+  }, /terraform\.foundation_state_initialization\.expected_foundation_state\.managed_resources/);
 });
 
 test('requires explicit targeting and forbids a staging Firebase alias', () => {

@@ -44,8 +44,8 @@ contains no apply path and refuses to overwrite the existing state object. No
 foundation resource or workload has been planned yet.
 
 All current authorization bits for additional cloud actions remain false.
-Passing the local gate is evidence, never authorization to migrate state, install
-a workflow, deploy a workload, open ingress, apply, or destroy.
+Passing the local gate is evidence, never authorization to initialize state,
+install a workflow, deploy a workload, open ingress, apply, or destroy.
 
 ## Repository layout
 
@@ -119,6 +119,31 @@ the exact project, region, both buckets, identity providers, all service
 accounts, and numeric GitHub repository IDs before any foundation resource can
 proceed.
 
+## Guarded foundation-state initialization
+
+[`terraform/initialize-state.sh`](terraform/initialize-state.sh) is the only
+supported path for creating the initial foundation state. It operates in a
+private directory outside the repository and copies only the reviewed backend,
+provider lock, and CLI configuration. It first requires the exact reconciled
+bootstrap generation and proves that the foundation object is absent. It then
+creates a saved `-refresh-only` plan, rejects any plan containing a resource,
+output, variable, module, provider configuration, or action, and applies only
+that verified empty plan through Terraform's locking GCS backend.
+
+The initializer never uses `terraform state push` or a direct cloud-object
+write. It reads both Terraform's view and the exact current GCS generation back,
+requires an exact canonical empty state at serial 1, and rejects every other
+bucket object. A valid preexisting empty state is reconciled without planning or
+mutation, so recovery after an uncertain client result cannot overwrite it.
+Failure preserves private diagnostics; success removes them. The implementation
+is deliberately disabled by an unbound commit sentinel until a separately
+reviewed binding commit and exact authorization exist.
+
+The plan and apply acquire and release Terraform's temporary `.tflock` object.
+The only durable new live object is the roughly 181-byte empty state; Object
+Versioning and soft delete may temporarily retain tiny noncurrent state or lock
+generations as recovery evidence.
+
 ## Dormant GitHub automation
 
 [`automation/github-policy.json`](automation/github-policy.json) captures both
@@ -159,8 +184,9 @@ The gate validates bounded closed manifests, all three reviewed inventories,
 the absent active workflow, pinned actions and providers, exact locks for macOS
 ARM64 and Linux AMD64, both Terraform roots with mock providers, script syntax,
 private-plan handling, the complete simulated migration-only recovery state
-machine, and hostile environment inputs. It initializes Terraform with
-`-backend=false` and never reads credentials or contacts staging.
+machine, the simulated guarded foundation-state initializer, and hostile
+environment inputs. It initializes Terraform with `-backend=false` and never
+reads credentials or contacts staging.
 
 The active validation workflow has only `contents: read`; it has no OIDC or
 secret permission. The dormant workflow deliberately fails its first policy job
@@ -171,7 +197,7 @@ because workflow installation and foundation deployment remain unauthorized.
 The GitHub branch, environment and Actions prerequisite are configured. Before
 any additional cloud action, the recovery sequence must:
 
-1. initialize and verify the empty foundation state before admitting CI;
+1. bind, authorize, initialize, and verify the empty foundation state before admitting CI;
 2. install the cloud workflow only after the state boundary is proven; and
 3. review a live foundation plan before granting apply approval.
 

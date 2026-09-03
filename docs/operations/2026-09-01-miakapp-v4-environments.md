@@ -191,8 +191,8 @@ verification. On 2026-09-02, the repository's actual
 re-observed against that policy. The existing `miakapi` environment and default
 repository OIDC subject were left unchanged. The workflow remains outside
 `.github/workflows`, and its policy job rejects the current cloud-inactive
-record. The WIF identities and buckets now exist, but no remote bootstrap state
-object or active workflow exists.
+record. The WIF identities, buckets, and reconciled remote bootstrap state now
+exist, but no foundation state object or active workflow exists.
 
 The first private saved plan was superseded after Cloud Billing rejected a
 redundant billing-association write before Terraform recorded resources. The
@@ -214,11 +214,13 @@ no-op resources. Terraform preserved an exact 36-resource state at serial 39
 with SHA-256
 `c083e7a05f2ccf273abda98c0739584336d2cbaffd8ea836b65b0790f94833a2`.
 The original wrapper then rejected Terraform's real output representation before
-backend migration, so the state bucket remains empty. The apply entry point is
-retired; a new migration-only wrapper requires separate state-and-commit-bound
-authorization and cannot apply infrastructure. Only after state migration and reconciliation may the
-operator initialize the empty foundation state with protected credentials,
-authorize and install the workflow, and review a separate foundation plan. The
+backend migration. A migration-only wrapper later created and reconciled remote
+bootstrap state generation `1788439334043522` at serial 40 without applying
+infrastructure. The protected serial-39 source remains independent recovery
+evidence. A guarded, currently commit-unbound initializer now describes the next
+mutation: create and verify only an empty serial-1 foundation state with
+protected credentials. Only after its separate exact authorization may the
+operator authorize and install the workflow and review a foundation plan. The
 production Function entry point,
 exact FCM permission, quotas, alerts and teardown evidence remain blockers.
 Deployment, public ingress and active CI authentication remain disabled. Passing
