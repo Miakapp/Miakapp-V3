@@ -500,6 +500,58 @@ export function reconcileBootstrapStates(
   expectedLineageSha256,
   expectedBillingAccountSha256,
 ) {
+  if (mode === 'migrated-complete') {
+    const localValidation = validateCompletedBootstrapState(
+      localState,
+      metadataValue,
+      expectedBillingAccountSha256,
+      expectedLineageSha256,
+    );
+    validateAppliedBootstrapState(
+      remoteState,
+      metadataValue,
+      'complete',
+      expectedLineageSha256,
+      expectedBillingAccountSha256,
+    );
+    if (remoteState.serial !== localState.serial + 1) {
+      reject('Migrated bootstrap state does not have the exact canonical serial increment');
+    }
+    const {
+      check_results: localCheckResults,
+      serial: localSerial,
+      ...localRemainder
+    } = localState;
+    const {
+      check_results: remoteCheckResults,
+      serial: remoteSerial,
+      ...remoteRemainder
+    } = remoteState;
+    if (!Array.isArray(localCheckResults) || !Array.isArray(remoteCheckResults)
+        || localCheckResults.length !== remoteCheckResults.length
+        || !isDeepStrictEqual(localRemainder, remoteRemainder)) {
+      reject('Migrated bootstrap state differs beyond canonical serialization');
+    }
+    const unmatchedRemoteChecks = [...remoteCheckResults];
+    for (const localCheck of localCheckResults) {
+      const match = unmatchedRemoteChecks.findIndex((remoteCheck) => (
+        isDeepStrictEqual(localCheck, remoteCheck)
+      ));
+      if (match === -1) {
+        reject('Migrated bootstrap state check results are not an exact permutation');
+      }
+      unmatchedRemoteChecks.splice(match, 1);
+    }
+    if (unmatchedRemoteChecks.length !== 0) {
+      reject('Migrated bootstrap state check results are not an exact permutation');
+    }
+    return Object.freeze({
+      ...localValidation,
+      mode,
+      sourceSerial: localSerial,
+      serial: remoteSerial,
+    });
+  }
   const validation = validateAppliedBootstrapState(
     localState,
     metadataValue,
