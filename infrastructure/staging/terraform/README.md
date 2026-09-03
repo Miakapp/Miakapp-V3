@@ -36,8 +36,9 @@ Before any foundation resource can proceed, a closed precondition compares the
 remote output with the exact project ID and number, Paris region, state bucket
 and prefixes, plan/apply providers, all three service accounts, component
 bucket, and numeric GitHub repository IDs. Missing, local, stale, or foreign
-bootstrap state fails closed. The buckets and remote state do not exist yet; a
-partial bootstrap state is preserved privately outside the repository.
+bootstrap state fails closed. Both buckets exist, but the bootstrap state object
+does not; the exact complete bootstrap state is preserved privately outside the
+repository pending migration.
 
 ## Credential-free validation
 
@@ -65,7 +66,7 @@ MIAKAPP_STAGING_PLAN_CONFIRMATION='miakapp-v4-staging' ./plan.sh
 The wrapper rejects credential files, explicit tokens, impersonation, custom
 endpoints, and all Terraform or Google environment overrides. It uses the real
 GCS backend with locking. It has not been run and cannot currently succeed
-because the bucket and remote bootstrap state are absent.
+because the remote bootstrap state has not yet been migrated and reconciled.
 
 The dormant keyless workflow in [`../automation/`](../automation/) is the
 intended activation path after bootstrap. It creates a private, create-only
@@ -78,5 +79,6 @@ workflow is not installed or authorized.
 Terraform source is inherently apply-capable. Repository guards and supported
 wrappers do not prevent a privileged operator from bypassing them, so direct
 Terraform mutation remains unauthorized. No active CI workflow has cloud
-credentials, the WIF resources do not exist, no live plan has been reviewed,
-and every manifest authorization bit remains false.
+credentials, the WIF resources are not used by an active workflow, no live
+foundation plan has been reviewed, and every current manifest authorization bit
+remains false.

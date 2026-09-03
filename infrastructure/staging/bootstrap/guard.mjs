@@ -14,6 +14,7 @@ const ALLOWED_FILES = Object.freeze([
   'imports.tf',
   'inspect-plan.sh',
   'locals.tf',
+  'migrate-recovered-state.sh',
   'outputs.tf',
   'plan.sh',
   'providers.tf',

@@ -28,40 +28,49 @@ function rejects(mutator, pattern) {
   );
 }
 
-test('accepts the reviewed recovery plan without an apply authorization', () => {
+test('accepts the completed bootstrap apply with migration recovery pending', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 20);
+  assert.equal(validated.revision, 21);
   assert.equal(
     validated.status,
-    'bootstrap_recovery_plan_reviewed_awaiting_authorization',
+    'bootstrap_apply_complete_state_migration_recovery_pending',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
-  assert.equal(validated.project.lifecycle, 'firebase_enabled_billing_linked_undeployed');
+  assert.equal(
+    validated.project.lifecycle,
+    'firebase_enabled_billing_linked_bootstrap_created_undeployed',
+  );
   assert.equal(validated.bootstrap.billing_enabled, true);
   assert.equal(validated.bootstrap.firebase_apps, 0);
   assert.equal(validated.bootstrap.hosting_site, 'miakapp-v4-staging');
-  assert.deepEqual(validated.bootstrap.storage_buckets, []);
+  assert.deepEqual(validated.bootstrap.storage_buckets, [
+    'miakapp-v4-staging-components',
+    'miakapp-v4-staging-tfstate-1072737219170',
+  ]);
   assert.equal(validated.locations.primary, 'europe-west9');
   assert.equal(validated.locations.immutable_choice_reviewed, true);
   assert.equal(validated.cost.billing_account.selection_state, 'approved');
   assert.equal(validated.cost.billing_account.link_state, 'linked_to_approved_account');
   assert.equal(
     validated.cost.billing_account.terraform_management_state,
-    'preserved_in_private_local_recovery_state',
+    'managed_in_private_complete_local_state_pending_remote_migration',
   );
-  assert.equal(validated.terraform.state, 'bootstrap_foundation_and_automation_blueprint');
+  assert.equal(validated.terraform.state, 'bootstrap_applied_state_migration_pending');
   assert.equal(
     validated.terraform.supported_workflow,
-    'credential_free_validation_and_guarded_bootstrap_execution',
+    'credential_free_validation_and_guarded_state_migration',
   );
   assert.equal(validated.terraform.configuration_apply_capable, true);
   assert.equal(validated.terraform.active_cloud_workflow, 'none');
   assert.equal(validated.terraform.workflow_blueprint_state, 'dormant_not_installed');
   assert.equal(validated.terraform.backend.type, 'gcs');
-  assert.equal(validated.terraform.backend.state, 'configured_bucket_not_created');
-  assert.equal(validated.terraform.backend.bootstrap_migration_state, 'template_not_activated');
-  assert.equal(validated.terraform.identity.state, 'configured_not_created');
+  assert.equal(validated.terraform.backend.state, 'bucket_created_state_object_absent');
+  assert.equal(
+    validated.terraform.backend.bootstrap_migration_state,
+    'complete_local_state_pending_migration',
+  );
+  assert.equal(validated.terraform.identity.state, 'created_not_used_by_active_workflow');
   assert.equal(
     validated.terraform.identity.runtime_service_account,
     'miakapp-control-plane@miakapp-v4-staging.iam.gserviceaccount.com',
@@ -79,10 +88,13 @@ test('accepts the reviewed recovery plan without an apply authorization', () => 
   assert.equal(validated.terraform.identity.deployer_foundation_state_replacement_allowed, true);
   assert.deepEqual(validated.terraform.identity.planner_write_prefixes, ['terraform/foundation/*.tflock', 'plans/']);
   assert.deepEqual(validated.terraform.identity.deployer_write_prefixes, ['terraform/foundation/']);
-  assert.equal(validated.terraform.saved_plan.state, 'private_gcs_blueprint_not_active');
+  assert.equal(
+    validated.terraform.saved_plan.state,
+    'applied_private_bundle_retained_for_state_migration',
+  );
   assert.equal(validated.terraform.saved_plan.public_artifacts_allowed, false);
   const execution = validated.terraform.bootstrap_execution;
-  assert.equal(execution.state, 'recovery_plan_reviewed_awaiting_exact_authorization');
+  assert.equal(execution.state, 'apply_complete_state_migration_recovery_unbound');
   assert.equal(
     execution.approved_configuration_commit,
     'e9f410c58c8cbbf8f5f7a17170c9e8ed55a10501',
@@ -94,32 +106,21 @@ test('accepts the reviewed recovery plan without an apply authorization', () => 
   assert.equal(execution.budget_preflight_requires_quota_project, true);
   assert.equal(execution.authorized_plan_attempted, true);
   assert.equal(execution.bootstrap_completed, false);
-  assert.deepEqual(execution.recovery_state, {
-    state: 'preserved_private_local',
-    sha256: '07fc7412e35efaff288e2efd30f786c2871d9fa836fb813a178d247ccb1efe5a',
-    lineage_sha256: '35e52294057979e6191eaa05141a9476261d4b0ea75c9113128f780abda7a9ba',
-    terraform_version: '1.11.3',
-    serial: 11,
-    managed_resources: 9,
-    managed_addresses: [
-      'google_billing_project_info.staging',
-      'google_project_service.bootstrap["billingbudgets.googleapis.com"]',
-      'google_project_service.bootstrap["cloudbilling.googleapis.com"]',
-      'google_project_service.bootstrap["cloudresourcemanager.googleapis.com"]',
-      'google_project_service.bootstrap["iam.googleapis.com"]',
-      'google_project_service.bootstrap["iamcredentials.googleapis.com"]',
-      'google_project_service.bootstrap["serviceusage.googleapis.com"]',
-      'google_project_service.bootstrap["storage.googleapis.com"]',
-      'google_project_service.bootstrap["sts.googleapis.com"]',
-    ],
-    path_committed: false,
-    raw_contents_committed: false,
-  });
-  assert.equal(execution.attempts.length, 2);
-  assert.equal(execution.attempts[1].execution_commit, 'c3028c74d582c4f405f93e15ae0cf60898181728');
-  assert.equal(execution.attempts[1].managed_resources_recorded, 9);
-  assert.equal(execution.attempts[1].enabled_bootstrap_apis_recorded, 8);
-  assert.equal(execution.attempts[1].remote_state_migrated, false);
+  assert.equal(execution.recovery_state.state, 'preserved_private_complete_local');
+  assert.equal(
+    execution.recovery_state.sha256,
+    'c083e7a05f2ccf273abda98c0739584336d2cbaffd8ea836b65b0790f94833a2',
+  );
+  assert.equal(execution.recovery_state.serial, 39);
+  assert.equal(execution.recovery_state.managed_resources, 36);
+  assert.equal(execution.recovery_state.managed_addresses.length, 36);
+  assert.equal(execution.recovery_state.path_committed, false);
+  assert.equal(execution.recovery_state.raw_contents_committed, false);
+  assert.equal(execution.attempts.length, 3);
+  assert.equal(execution.attempts[2].execution_commit, 'cbd8b63062b027eca762b0d23f234563760f846a');
+  assert.equal(execution.attempts[2].managed_resources_recorded, 36);
+  assert.equal(execution.attempts[2].enabled_bootstrap_apis_recorded, 8);
+  assert.equal(execution.attempts[2].remote_state_migrated, false);
   assert.equal(validated.terraform.apply_authorized, false);
   assert.equal(validated.terraform.local_plan_executed, true);
   assert.deepEqual(validated.terraform.local_plan_observation.result, {
@@ -164,7 +165,9 @@ test('accepts the reviewed recovery plan without an apply authorization', () => 
   });
   assert.equal(validated.terraform.local_saved_plan_observation.full_plan_reviewed, true);
   assert.equal(validated.terraform.local_saved_plan_observation.recovery_state_unchanged, true);
-  assert.equal(validated.terraform.local_saved_plan_observation.apply_authorized, false);
+  assert.equal(validated.terraform.local_saved_plan_observation.apply_authorized, true);
+  assert.equal(validated.terraform.local_saved_plan_observation.apply_executed, true);
+  assert.equal(validated.terraform.local_saved_plan_observation.state_migration_authorized, true);
   assert.equal(
     validated.terraform.superseded_saved_plan_observation.plan_sha256,
     '6fb0b0c15fa04338a40ab59de790c3a4a85f96b418377c4a70570a8dabd5d457',
@@ -268,22 +271,22 @@ test('rejects every cloud-action authorization bit', () => {
     candidate.terraform.bootstrap_execution.repository_commit_bound = false;
   }, /terraform\.bootstrap_execution\.repository_commit_bound/);
   rejects((candidate) => {
-    candidate.terraform.bootstrap_execution.local_recovery_preserved_on_failure = false;
-  }, /terraform\.bootstrap_execution\.local_recovery_preserved_on_failure/);
+    candidate.terraform.bootstrap_execution.source_state_preserved_on_failure = false;
+  }, /terraform\.bootstrap_execution\.source_state_preserved_on_failure/);
   rejects((candidate) => {
     candidate.terraform.bootstrap_execution.budget_preflight_requires_quota_project = false;
   }, /terraform\.bootstrap_execution\.budget_preflight_requires_quota_project/);
   rejects((candidate) => {
-    candidate.terraform.bootstrap_execution.budget_postcondition_required = false;
-  }, /terraform\.bootstrap_execution\.budget_postcondition_required/);
+    candidate.terraform.bootstrap_execution.provisioned_target_preflight_required = false;
+  }, /terraform\.bootstrap_execution\.provisioned_target_preflight_required/);
   rejects((candidate) => {
-    candidate.terraform.bootstrap_execution.attempts[1].managed_resources_recorded = 8;
-  }, /terraform\.bootstrap_execution\.attempts\[1\]\.managed_resources_recorded/);
+    candidate.terraform.bootstrap_execution.attempts[2].managed_resources_recorded = 35;
+  }, /terraform\.bootstrap_execution\.attempts\[2\]\.managed_resources_recorded/);
   rejects((candidate) => {
     candidate.terraform.bootstrap_execution.attempts[1].remote_state_migrated = true;
   }, /terraform\.bootstrap_execution\.attempts\[1\]\.remote_state_migrated/);
   rejects((candidate) => {
-    candidate.terraform.bootstrap_execution.recovery_state.serial = 12;
+    candidate.terraform.bootstrap_execution.recovery_state.serial = 38;
   }, /terraform\.bootstrap_execution\.recovery_state\.serial/);
 });
 
@@ -527,7 +530,7 @@ test('rejects incomplete or mutated bootstrap plan evidence', () => {
     candidate.terraform.local_saved_plan_observation.billing_link_no_op = false;
   }, /terraform\.local_saved_plan_observation\.billing_link_no_op/);
   rejects((candidate) => {
-    candidate.terraform.local_saved_plan_observation.apply_authorized = true;
+    candidate.terraform.local_saved_plan_observation.apply_authorized = false;
   }, /terraform\.local_saved_plan_observation\.apply_authorized/);
   rejects((candidate) => {
     candidate.terraform.local_saved_plan_observation.post_inspection_checks.pop();

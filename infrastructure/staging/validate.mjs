@@ -2,6 +2,8 @@ import { readFileSync, statSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 
+import { BOOTSTRAP_RESOURCE_ADDRESSES } from './bootstrap/saved-plan.mjs';
+
 const MAX_MANIFEST_BYTES = 64 * 1024;
 
 const SERVICE_IDS = [
@@ -93,8 +95,7 @@ const REQUIRED_BLOCKERS = [
   'migration-rehearsal',
   'production-function-entrypoint',
   'secret-version-lifecycle',
-  'remote-state-bootstrap-not-applied',
-  'keyless-plan-and-apply-identities-not-created',
+  'remote-bootstrap-state-not-migrated',
   'github-terraform-workflow-not-installed',
   'live-foundation-plan-not-reviewed',
 ];
@@ -136,24 +137,13 @@ const CURRENT_SAVED_PLAN_POST_CHECKS = [
   'billing-linked-to-approved-account',
   'repository-plan-and-state-artifacts-absent',
   'recovery-state-verified-unchanged',
-  'target-budget-absent',
+  'target-budget-present-once',
   'eight-bootstrap-apis-enabled',
-  'target-buckets-absent',
-  'target-service-accounts-absent',
-  'workload-identity-pool-absent',
-  'remote-state-absent',
-];
-
-const RECOVERY_MANAGED_ADDRESSES = [
-  'google_billing_project_info.staging',
-  'google_project_service.bootstrap["billingbudgets.googleapis.com"]',
-  'google_project_service.bootstrap["cloudbilling.googleapis.com"]',
-  'google_project_service.bootstrap["cloudresourcemanager.googleapis.com"]',
-  'google_project_service.bootstrap["iam.googleapis.com"]',
-  'google_project_service.bootstrap["iamcredentials.googleapis.com"]',
-  'google_project_service.bootstrap["serviceusage.googleapis.com"]',
-  'google_project_service.bootstrap["storage.googleapis.com"]',
-  'google_project_service.bootstrap["sts.googleapis.com"]',
+  'target-buckets-present-once',
+  'target-service-accounts-present-once',
+  'workload-identity-pool-and-providers-present-once',
+  'complete-local-state-verified',
+  'remote-state-object-absent',
 ];
 
 const TEARDOWN_INVENTORY = [
@@ -223,7 +213,11 @@ function validateProject(value) {
   if (typeof project.project_id === 'string' && project.project_id.startsWith('demo-')) {
     reject('project.project_id', 'must not use a demo namespace');
   }
-  exact(project.lifecycle, 'firebase_enabled_billing_linked_undeployed', 'project.lifecycle');
+  exact(
+    project.lifecycle,
+    'firebase_enabled_billing_linked_bootstrap_created_undeployed',
+    'project.lifecycle',
+  );
   exact(project.creation_authorized, false, 'project.creation_authorized');
   exact(project.billing_link_authorized, false, 'project.billing_link_authorized');
   exact(project.deployment_authorized, false, 'project.deployment_authorized');
@@ -252,6 +246,9 @@ function validateBootstrap(value) {
     'kms_key_rings',
     'secrets',
     'project_service_accounts',
+    'budget_display_names',
+    'workload_identity_pools',
+    'workload_identity_providers',
     'enabled_service_apis',
   ]);
   exact(bootstrap.observed_on, '2026-09-03', 'bootstrap.observed_on');
@@ -261,7 +258,6 @@ function validateBootstrap(value) {
   exact(bootstrap.app_engine_application, false, 'bootstrap.app_engine_application');
   for (const field of [
     'firestore_databases',
-    'storage_buckets',
     'cloud_functions',
     'cloud_run_services',
     'kms_key_rings',
@@ -270,9 +266,37 @@ function validateBootstrap(value) {
     exactArray(bootstrap[field], [], `bootstrap.${field}`);
   }
   exactArray(
+    bootstrap.storage_buckets,
+    ['miakapp-v4-staging-components', 'miakapp-v4-staging-tfstate-1072737219170'],
+    'bootstrap.storage_buckets',
+  );
+  exactArray(
     bootstrap.project_service_accounts,
-    ['firebase-adminsdk-fbsvc@miakapp-v4-staging.iam.gserviceaccount.com'],
+    [
+      'firebase-adminsdk-fbsvc@miakapp-v4-staging.iam.gserviceaccount.com',
+      'miakapp-control-plane@miakapp-v4-staging.iam.gserviceaccount.com',
+      'miakapp-tf-apply@miakapp-v4-staging.iam.gserviceaccount.com',
+      'miakapp-tf-plan@miakapp-v4-staging.iam.gserviceaccount.com',
+    ],
     'bootstrap.project_service_accounts',
+  );
+  exactArray(
+    bootstrap.budget_display_names,
+    ['Miakapp V4 staging monthly'],
+    'bootstrap.budget_display_names',
+  );
+  exactArray(
+    bootstrap.workload_identity_pools,
+    ['projects/1072737219170/locations/global/workloadIdentityPools/miakapp-github'],
+    'bootstrap.workload_identity_pools',
+  );
+  exactArray(
+    bootstrap.workload_identity_providers,
+    [
+      'projects/1072737219170/locations/global/workloadIdentityPools/miakapp-github/providers/staging-apply',
+      'projects/1072737219170/locations/global/workloadIdentityPools/miakapp-github/providers/staging-plan',
+    ],
+    'bootstrap.workload_identity_providers',
   );
   exactArray(bootstrap.enabled_service_apis, ENABLED_SERVICE_APIS, 'bootstrap.enabled_service_apis');
 }
@@ -433,7 +457,7 @@ function validateSecurity(value) {
     'resource_bindings',
     'unresolved_permissions',
   ]);
-  exact(iam.runtime_identity_state, 'not_created', 'security.iam.runtime_identity_state');
+  exact(iam.runtime_identity_state, 'created_not_deployed', 'security.iam.runtime_identity_state');
   exact(iam.broad_project_roles_forbidden, true, 'security.iam.broad_project_roles_forbidden');
   exact(iam.human_runtime_bindings_forbidden, true, 'security.iam.human_runtime_bindings_forbidden');
   if (!Array.isArray(iam.resource_bindings)) reject('security.iam.resource_bindings', 'must be an array');
@@ -483,7 +507,7 @@ function validateCost(value) {
   );
   exact(
     billingAccount.terraform_management_state,
-    'preserved_in_private_local_recovery_state',
+    'managed_in_private_complete_local_state_pending_remote_migration',
     'cost.billing_account.terraform_management_state',
   );
   exact(cost.currency, 'EUR', 'cost.currency');
@@ -530,10 +554,10 @@ function validateTerraform(value) {
     'local_saved_plan_observation',
     'superseded_saved_plan_observation',
   ]);
-  exact(terraform.state, 'bootstrap_foundation_and_automation_blueprint', 'terraform.state');
+  exact(terraform.state, 'bootstrap_applied_state_migration_pending', 'terraform.state');
   exact(
     terraform.supported_workflow,
-    'credential_free_validation_and_guarded_bootstrap_execution',
+    'credential_free_validation_and_guarded_state_migration',
     'terraform.supported_workflow',
   );
   exact(terraform.configuration_apply_capable, true, 'terraform.configuration_apply_capable');
@@ -566,7 +590,7 @@ function validateTerraform(value) {
     'public_access_prevention',
   ]);
   exact(backend.type, 'gcs', 'terraform.backend.type');
-  exact(backend.state, 'configured_bucket_not_created', 'terraform.backend.state');
+  exact(backend.state, 'bucket_created_state_object_absent', 'terraform.backend.state');
   exact(backend.bucket, 'miakapp-v4-staging-tfstate-1072737219170', 'terraform.backend.bucket');
   exact(backend.bootstrap_prefix, 'terraform/bootstrap', 'terraform.backend.bootstrap_prefix');
   exact(backend.foundation_prefix, 'terraform/foundation', 'terraform.backend.foundation_prefix');
@@ -577,7 +601,7 @@ function validateTerraform(value) {
   );
   exact(
     backend.bootstrap_migration_state,
-    'template_not_activated',
+    'complete_local_state_pending_migration',
     'terraform.backend.bootstrap_migration_state',
   );
   exact(backend.locking_enabled, true, 'terraform.backend.locking_enabled');
@@ -606,7 +630,7 @@ function validateTerraform(value) {
     'github_repository_id',
     'github_repository_owner_id',
   ]);
-  exact(identity.state, 'configured_not_created', 'terraform.identity.state');
+  exact(identity.state, 'created_not_used_by_active_workflow', 'terraform.identity.state');
   exact(identity.workload_identity_pool, 'miakapp-github', 'terraform.identity.workload_identity_pool');
   exact(
     identity.planner_service_account,
@@ -692,7 +716,11 @@ function validateTerraform(value) {
     'archived_retention_days',
     'soft_delete_days',
   ]);
-  exact(savedPlan.state, 'private_gcs_blueprint_not_active', 'terraform.saved_plan.state');
+  exact(
+    savedPlan.state,
+    'applied_private_bundle_retained_for_state_migration',
+    'terraform.saved_plan.state',
+  );
   exact(savedPlan.public_artifacts_allowed, false, 'terraform.saved_plan.public_artifacts_allowed');
   exact(savedPlan.create_only, true, 'terraform.saved_plan.create_only');
   exact(savedPlan.sha256_verified_before_apply, true, 'terraform.saved_plan.sha256_verified_before_apply');
@@ -703,30 +731,39 @@ function validateTerraform(value) {
   const bootstrapExecution = record(terraform.bootstrap_execution, 'terraform.bootstrap_execution', [
     'state',
     'script',
+    'retired_apply_script',
     'helper',
     'approved_configuration_commit',
     'approved_plan_sha256',
+    'migration_configuration_commit',
     'exact_authorization_required',
     'repository_commit_bound',
     'cloud_preflight_required',
     'budget_preflight_requires_quota_project',
-    'budget_postcondition_required',
+    'provisioned_target_preflight_required',
+    'migration_only',
+    'apply_entry_point_retired',
     'recovery_state',
-    'local_recovery_preserved_on_failure',
-    'local_state_removed_only_after_reconciliation',
+    'source_state_preserved_on_failure',
+    'source_state_preserved_after_reconciliation',
     'authorized_plan_attempted',
     'attempts',
     'bootstrap_completed',
   ]);
   exact(
     bootstrapExecution.state,
-    'recovery_plan_reviewed_awaiting_exact_authorization',
+    'apply_complete_state_migration_recovery_unbound',
     'terraform.bootstrap_execution.state',
   );
   exact(
     bootstrapExecution.script,
-    'bootstrap/apply-and-migrate.sh',
+    'bootstrap/migrate-recovered-state.sh',
     'terraform.bootstrap_execution.script',
+  );
+  exact(
+    bootstrapExecution.retired_apply_script,
+    'bootstrap/apply-and-migrate.sh',
+    'terraform.bootstrap_execution.retired_apply_script',
   );
   exact(
     bootstrapExecution.helper,
@@ -742,6 +779,11 @@ function validateTerraform(value) {
     bootstrapExecution.approved_plan_sha256,
     '12927b270f2bfa78c8f8c8c7e7071ce9cfec18d5e848165c04b585260bd5f7da',
     'terraform.bootstrap_execution.approved_plan_sha256',
+  );
+  exact(
+    bootstrapExecution.migration_configuration_commit,
+    '0000000000000000000000000000000000000000',
+    'terraform.bootstrap_execution.migration_configuration_commit',
   );
   exact(
     bootstrapExecution.exact_authorization_required,
@@ -764,9 +806,15 @@ function validateTerraform(value) {
     'terraform.bootstrap_execution.budget_preflight_requires_quota_project',
   );
   exact(
-    bootstrapExecution.budget_postcondition_required,
+    bootstrapExecution.provisioned_target_preflight_required,
     true,
-    'terraform.bootstrap_execution.budget_postcondition_required',
+    'terraform.bootstrap_execution.provisioned_target_preflight_required',
+  );
+  exact(bootstrapExecution.migration_only, true, 'terraform.bootstrap_execution.migration_only');
+  exact(
+    bootstrapExecution.apply_entry_point_retired,
+    true,
+    'terraform.bootstrap_execution.apply_entry_point_retired',
   );
   const recoveryState = record(
     bootstrapExecution.recovery_state,
@@ -785,12 +833,12 @@ function validateTerraform(value) {
   );
   exact(
     recoveryState.state,
-    'preserved_private_local',
+    'preserved_private_complete_local',
     'terraform.bootstrap_execution.recovery_state.state',
   );
   exact(
     recoveryState.sha256,
-    '07fc7412e35efaff288e2efd30f786c2871d9fa836fb813a178d247ccb1efe5a',
+    'c083e7a05f2ccf273abda98c0739584336d2cbaffd8ea836b65b0790f94833a2',
     'terraform.bootstrap_execution.recovery_state.sha256',
   );
   exact(
@@ -803,15 +851,15 @@ function validateTerraform(value) {
     '1.11.3',
     'terraform.bootstrap_execution.recovery_state.terraform_version',
   );
-  exact(recoveryState.serial, 11, 'terraform.bootstrap_execution.recovery_state.serial');
+  exact(recoveryState.serial, 39, 'terraform.bootstrap_execution.recovery_state.serial');
   exact(
     recoveryState.managed_resources,
-    9,
+    36,
     'terraform.bootstrap_execution.recovery_state.managed_resources',
   );
   exactArray(
     recoveryState.managed_addresses,
-    RECOVERY_MANAGED_ADDRESSES,
+    BOOTSTRAP_RESOURCE_ADDRESSES,
     'terraform.bootstrap_execution.recovery_state.managed_addresses',
   );
   exact(
@@ -825,22 +873,22 @@ function validateTerraform(value) {
     'terraform.bootstrap_execution.recovery_state.raw_contents_committed',
   );
   exact(
-    bootstrapExecution.local_recovery_preserved_on_failure,
+    bootstrapExecution.source_state_preserved_on_failure,
     true,
-    'terraform.bootstrap_execution.local_recovery_preserved_on_failure',
+    'terraform.bootstrap_execution.source_state_preserved_on_failure',
   );
   exact(
-    bootstrapExecution.local_state_removed_only_after_reconciliation,
+    bootstrapExecution.source_state_preserved_after_reconciliation,
     true,
-    'terraform.bootstrap_execution.local_state_removed_only_after_reconciliation',
+    'terraform.bootstrap_execution.source_state_preserved_after_reconciliation',
   );
   exact(
     bootstrapExecution.authorized_plan_attempted,
     true,
     'terraform.bootstrap_execution.authorized_plan_attempted',
   );
-  if (!Array.isArray(bootstrapExecution.attempts) || bootstrapExecution.attempts.length !== 2) {
-    reject('terraform.bootstrap_execution.attempts', 'must contain exactly 2 entries');
+  if (!Array.isArray(bootstrapExecution.attempts) || bootstrapExecution.attempts.length !== 3) {
+    reject('terraform.bootstrap_execution.attempts', 'must contain exactly 3 entries');
   }
   const expectedAttempts = [
     {
@@ -863,6 +911,17 @@ function validateTerraform(value) {
       managed_resources_recorded: 9,
       enabled_bootstrap_apis_recorded: 8,
       recovery_state_sha256: '07fc7412e35efaff288e2efd30f786c2871d9fa836fb813a178d247ccb1efe5a',
+      remote_state_migrated: false,
+    },
+    {
+      configuration_commit: 'e9f410c58c8cbbf8f5f7a17170c9e8ed55a10501',
+      execution_commit: 'cbd8b63062b027eca762b0d23f234563760f846a',
+      plan_sha256: '12927b270f2bfa78c8f8c8c7e7071ce9cfec18d5e848165c04b585260bd5f7da',
+      attempted_on: '2026-09-03',
+      result: 'apply_complete_local_state_validation_mismatch_before_migration',
+      managed_resources_recorded: 36,
+      enabled_bootstrap_apis_recorded: 8,
+      recovery_state_sha256: 'c083e7a05f2ccf273abda98c0739584336d2cbaffd8ea836b65b0790f94833a2',
       remote_state_migrated: false,
     },
   ];
@@ -1069,9 +1128,9 @@ function validateTerraform(value) {
     bootstrap_apis_no_op: true,
     planning_state_artifacts_created: false,
     recovery_state_unchanged: true,
-    apply_authorized: false,
-    apply_executed: false,
-    state_migration_authorized: false,
+    apply_authorized: true,
+    apply_executed: true,
+    state_migration_authorized: true,
     state_migration_executed: false,
   };
   for (const [field, expected] of Object.entries(currentBooleanExpectations)) {
@@ -1353,10 +1412,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 20, 'manifest.revision');
+  exact(manifest.revision, 21, 'manifest.revision');
   exact(
     manifest.status,
-    'bootstrap_recovery_plan_reviewed_awaiting_authorization',
+    'bootstrap_apply_complete_state_migration_recovery_pending',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
