@@ -938,8 +938,17 @@ test('binds bootstrap execution to the exact reviewed plan and closed cloud obse
   assert.doesNotThrow(() => verifyEmptyStateBucketInventory([
     { url: `gs://${STATE_BUCKET}/` },
   ]));
+  assert.doesNotThrow(() => verifyEmptyStateBucketInventory([
+    { type: 'unknown', url: `gs://${STATE_BUCKET}/` },
+  ]));
   assert.throws(
     () => verifyEmptyStateBucketInventory([{ url: `gs://${STATE_BUCKET}/${STATE_OBJECT}` }]),
+    /is not empty/,
+  );
+  assert.throws(
+    () => verifyEmptyStateBucketInventory([
+      { type: 'object', url: `gs://${STATE_BUCKET}/` },
+    ]),
     /is not empty/,
   );
   assert.throws(

@@ -219,10 +219,14 @@ export function verifyEmptyInventory(value, label) {
 export function verifyEmptyStateBucketInventory(value) {
   if (!Array.isArray(value)) reject('State-bucket inventory must be an array');
   if (value.length === 0) return;
+  const rootMarker = value[0];
   if (value.length === 1
-      && isPlainObject(value[0])
-      && isDeepStrictEqual(Object.keys(value[0]), ['url'])
-      && value[0].url === `gs://${STATE_BUCKET}/`) return;
+      && isPlainObject(rootMarker)
+      && rootMarker.url === `gs://${STATE_BUCKET}/`) {
+    const keys = Object.keys(rootMarker).sort();
+    if (isDeepStrictEqual(keys, ['url'])
+        || (isDeepStrictEqual(keys, ['type', 'url']) && rootMarker.type === 'unknown')) return;
+  }
   reject('State-bucket inventory is not empty');
 }
 
