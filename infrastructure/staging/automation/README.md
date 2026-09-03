@@ -1,17 +1,19 @@
-# Dormant staging Terraform automation
+# Plan-only staging Terraform automation
 
-Status: GitHub security configured; blueprint not installed under
-`.github/workflows`; cannot run
+Status: manual keyless planning authorized; protected merge to `main` required
+before dispatch
 
-The YAML and scripts in this directory describe the supported future keyless
-plan/apply path. They are deliberately outside GitHub's active workflow
-directory. `github-policy.json` now records the independently observed branch,
-environment and Actions configuration. The initialized foundation state is now
-fully reconciled and a non-saving live foundation plan has been reviewed;
-workflow installation is the remaining activation boundary.
+The YAML and scripts in this directory describe the reviewed keyless plan path
+and a separately dormant future apply path. The active workflow candidate at
+`.github/workflows/staging-terraform.yml` is byte-identical to this blueprint
+and bound to policy SHA-256
+`13fd21ad1fa1fdbfec88cefc4af048643eb7a2078d8f33eb0e840c54a3238336`.
+It becomes dispatchable only after the protected pull request is merged to
+`main`.
 
-The blueprint uses two separately admitted GitHub environments and two separate
-Google service accounts. Both OIDC providers require the immutable numeric
+The infrastructure reserves two separately admitted GitHub environments and
+two separate Google service accounts. Both OIDC providers require the immutable
+numeric
 repository and owner IDs, `main`, the exact workflow reference, and the expected
 environment claim. The planner can read infrastructure, manage only `.tflock`
 objects, and create private saved plans; it cannot create or replace state. Only
@@ -19,19 +21,24 @@ the deployer receives resource mutation roles, and those exclude
 project IAM, service-account administration and project-wide Storage so the
 deployer cannot rewrite its own trust boundary or the bootstrap state.
 
-The plan job writes a saved plan to the private state bucket with a create-only
+The installed workflow contains only policy and plan jobs. The plan job writes
+a saved plan to the private state bucket with a create-only
 object precondition and a planner identity that lacks delete/replace authority
 for `plans/`. Public logs contain only bounded action counts and resource
-addresses, never planned values. The apply job starts only after the
-apply-environment approval, downloads the exact object from the same workflow
-run, verifies its SHA-256 digest, and applies that saved plan. Terraform rejects
-it if another operation made its state stale.
+addresses, never planned values. It contains no apply job and cannot request the
+deployer identity.
+
+`apply.sh` is retained as reviewed future code, but it is not referenced by an
+active workflow and now requires the separate
+`foundation_apply_authorized` policy bit. That bit is false. The policy CLI
+therefore rejects apply before credential-file validation or any Terraform or
+Google API access, even under an otherwise valid GitHub context.
 
 `inspect-plan.sh` is the separate operator inspection path. It downloads and
 verifies the private plan, then renders it locally. It is read-only but requires
 authorized local Google credentials and has not been run.
 
-The required policy currently records one explicit reviewer and allows that
+The required future apply policy records one explicit reviewer and allows that
 reviewer to approve their own manually dispatched run because the repository has
 only one human administrator. This is a deliberate two-step operator check, not
 independent four-eyes approval. Administrator bypass must still be disabled.
@@ -41,8 +48,8 @@ days and its archived version after one further day; seven-day bucket soft delet
 can retain recoverable bytes longer. The workflow never uses public GitHub
 artifact storage.
 
-Activation requires a reviewed policy-record change authorizing workflow
-installation and then copying this YAML into
-`.github/workflows/staging-terraform.yml`. Merely copying the file is
-insufficient: its policy job deliberately rejects the current cloud-inactive
-record before requesting OIDC credentials.
+`github-policy.json` preserves the independently observed pre-installation
+GitHub settings while separately authorizing only workflow installation and
+manual cloud planning. Its policy job verifies the active file, blueprint, and
+digest before the plan job can request OIDC credentials. Foundation apply
+requires another reviewed policy transition after the private plan is inspected.

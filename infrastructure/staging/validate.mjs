@@ -95,7 +95,7 @@ const REQUIRED_BLOCKERS = [
   'migration-rehearsal',
   'production-function-entrypoint',
   'secret-version-lifecycle',
-  'github-terraform-workflow-not-installed',
+  'private-foundation-plan-not-reviewed',
 ];
 
 const STAGING_ROWS = [
@@ -558,12 +558,20 @@ function validateTerraform(value) {
   exact(terraform.state, 'foundation_live_plan_reviewed', 'terraform.state');
   exact(
     terraform.supported_workflow,
-    'credential_free_validation_and_guarded_workflow_installation',
+    'credential_free_validation_and_manual_keyless_planning',
     'terraform.supported_workflow',
   );
   exact(terraform.configuration_apply_capable, true, 'terraform.configuration_apply_capable');
-  exact(terraform.active_cloud_workflow, 'none', 'terraform.active_cloud_workflow');
-  exact(terraform.workflow_blueprint_state, 'dormant_not_installed', 'terraform.workflow_blueprint_state');
+  exact(
+    terraform.active_cloud_workflow,
+    '.github/workflows/staging-terraform.yml',
+    'terraform.active_cloud_workflow',
+  );
+  exact(
+    terraform.workflow_blueprint_state,
+    'installed_exact_plan_only_copy',
+    'terraform.workflow_blueprint_state',
+  );
   exact(terraform.bootstrap_root, 'bootstrap', 'terraform.bootstrap_root');
   exact(terraform.foundation_root, 'terraform', 'terraform.foundation_root');
   exact(terraform.automation_root, 'automation', 'terraform.automation_root');
@@ -1788,8 +1796,17 @@ function validateTerraform(value) {
 }
 
 function validateReadiness(value) {
-  const readiness = record(value, 'readiness', ['cloud_actions_enabled', 'required_blockers']);
-  exact(readiness.cloud_actions_enabled, false, 'readiness.cloud_actions_enabled');
+  const readiness = record(value, 'readiness', [
+    'plan_only_cloud_actions_authorized',
+    'foundation_apply_authorized',
+    'required_blockers',
+  ]);
+  exact(
+    readiness.plan_only_cloud_actions_authorized,
+    true,
+    'readiness.plan_only_cloud_actions_authorized',
+  );
+  exact(readiness.foundation_apply_authorized, false, 'readiness.foundation_apply_authorized');
   exactArray(readiness.required_blockers, REQUIRED_BLOCKERS, 'readiness.required_blockers');
 }
 
@@ -1803,10 +1820,12 @@ function validateEvidence(value) {
     'automation_blueprint',
     'github_policy',
     'github_policy_observation_verified',
-    'cloud_credentials_required',
-    'live_plan_cloud_credentials_required',
-    'ci_may_authenticate',
-    'active_cloud_workflow_present',
+    'credential_free_validation',
+    'manual_live_plan_requires_user_adc',
+    'ci_plan_uses_keyless_oidc',
+    'persistent_ci_credentials_allowed',
+    'active_plan_workflow_present',
+    'active_apply_workflow_present',
     'staging_rows',
     'fault_matrix',
     'production_security_boundary',
@@ -1825,14 +1844,20 @@ function validateEvidence(value) {
     true,
     'evidence.github_policy_observation_verified',
   );
-  exact(evidence.cloud_credentials_required, false, 'evidence.cloud_credentials_required');
+  exact(evidence.credential_free_validation, true, 'evidence.credential_free_validation');
   exact(
-    evidence.live_plan_cloud_credentials_required,
+    evidence.manual_live_plan_requires_user_adc,
     true,
-    'evidence.live_plan_cloud_credentials_required',
+    'evidence.manual_live_plan_requires_user_adc',
   );
-  exact(evidence.ci_may_authenticate, false, 'evidence.ci_may_authenticate');
-  exact(evidence.active_cloud_workflow_present, false, 'evidence.active_cloud_workflow_present');
+  exact(evidence.ci_plan_uses_keyless_oidc, true, 'evidence.ci_plan_uses_keyless_oidc');
+  exact(
+    evidence.persistent_ci_credentials_allowed,
+    false,
+    'evidence.persistent_ci_credentials_allowed',
+  );
+  exact(evidence.active_plan_workflow_present, true, 'evidence.active_plan_workflow_present');
+  exact(evidence.active_apply_workflow_present, false, 'evidence.active_apply_workflow_present');
   exactArray(evidence.staging_rows, STAGING_ROWS, 'evidence.staging_rows');
   exact(evidence.fault_matrix, '../../control-plane/FAULT-MATRIX.md', 'evidence.fault_matrix');
   exact(
@@ -1885,10 +1910,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 26, 'manifest.revision');
+  exact(manifest.revision, 27, 'manifest.revision');
   exact(
     manifest.status,
-    'foundation_live_plan_reviewed_workflow_installation_pending',
+    'manual_keyless_plan_workflow_authorized',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -1942,7 +1967,9 @@ if (invokedPath === import.meta.url) {
   } else {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
-      process.stdout.write(`Validated ${manifest.schema} for ${manifest.project.project_id}; cloud actions remain disabled.\n`);
+      process.stdout.write(
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; manual keyless planning is authorized and foundation apply remains disabled.\n`,
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';
       process.stderr.write(`Staging manifest rejected: ${message}\n`);

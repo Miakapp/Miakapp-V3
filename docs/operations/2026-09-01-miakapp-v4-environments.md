@@ -3,8 +3,8 @@
 Date: 2026-09-01
 
 Status: accepted direction; staging bootstrap and empty foundation state
-reconciled and live foundation plan reviewed on 2026-09-03; project remains
-application-undeployed
+reconciled, live foundation plan reviewed, and manual keyless plan workflow
+authorized on 2026-09-03; project remains application-undeployed
 
 ## Decision
 
@@ -31,8 +31,9 @@ The `miakapp-v4-staging` Firebase project was created manually on 2026-09-02;
 `miakapp-v4` does not exist. Paris (`europe-west9`) is the reviewed immutable
 regional location, and the owner selected an existing EUR billing account whose
 identifier is represented publicly only by a SHA-256 fingerprint. The account
-was linked on 2026-09-03. The repository workflow still creates or deploys
-neither environment. The local package rejects execution outside the exact
+was linked on 2026-09-03. The repository's proposed manual plan workflow can
+create only a private staging plan after protected merge; it deploys neither
+environment. The local package rejects execution outside the exact
 `demo-*` namespace, and the root Firebase default remains the legacy project.
 
 References:
@@ -71,10 +72,12 @@ warns that a staging application must not use production project credentials.
 
 ## Cost posture
 
-The merged local control-plane work, Terraform source, dormant cloud workflow
-blueprint, and active credential-free validation add **no Firebase usage and no
-cloud cost**. The billing association enables future metered services but does
-not itself create one.
+The merged local control-plane work, Terraform source, workflow definition, and
+active credential-free validation add **no Firebase usage and no cloud cost**
+until the manual plan workflow is dispatched. A plan run adds bounded API reads,
+a temporary lock, and a small private object, but no foundation resource. The
+billing association enables future metered services but does not itself create
+one.
 It runs against local Auth, Firestore, Functions and Storage emulators and cannot
 load as a production Function. The staging project currently has the approved
 billing link, alert budget, all eight Terraform bootstrap APIs, two private
@@ -99,13 +102,14 @@ For a low-volume staging project, the intended initial posture is:
   load-balancer/edge-policy baseline must be priced and accepted explicitly.
 
 The private Terraform bucket stores small state objects and will hold
-short-lived saved plans after workflow activation. Object Versioning and
+short-lived saved plans after the first workflow dispatch. Object Versioning and
 seven-day soft delete deliberately retain recovery bytes longer than the
 two-day live-plan window, so the cost is
 usage-metered rather than literally zero after activation. The planner/deployer,
 Workload Identity Federation, and GitHub OIDC exchanges have no always-on
-compute instance. These bootstrap resources now exist, but no active workflow
-uses them.
+compute instance. These bootstrap resources now exist. After protected merge,
+only the manual plan workflow may use the planner identity; no workflow may use
+the deployer identity.
 
 At personal-home traffic, the usage-metered services are expected to remain near
 their free tiers or cost cents, but that is an estimate rather than a guarantee.
@@ -185,19 +189,21 @@ backend template defines the immediate migration target. The foundation already
 uses the private GCS backend and refuses to proceed unless the remote bootstrap
 output matches every exact project, region, identity and repository value.
 
-A GitHub policy record and dormant workflow blueprint define separate numeric-
+A GitHub policy record and hash-bound plan-only workflow define separate numeric-
 claim WIF providers and service accounts, protected plan/apply environments,
-SHA-pinned selected actions, a private create-only saved plan and same-run digest
-verification. On 2026-09-02, the repository's actual
+SHA-pinned selected actions, and a private create-only saved plan. On 2026-09-03,
+the repository's actual
 `main`/environment/Actions settings were configured and independently
 re-observed against that policy. The existing `miakapi` environment and default
-repository OIDC subject were left unchanged. The workflow remains outside
-`.github/workflows`, and its policy job rejects the current cloud-inactive
-record. The WIF identities, buckets, and reconciled remote bootstrap state now
+repository OIDC subject were left unchanged. This revision adds the exact
+plan-only workflow under `.github/workflows`; its policy and SHA-256 checks must
+pass before it requests the planner OIDC identity. It contains no apply job, and
+the dormant apply script rejects the separate false apply authorization bit.
+The WIF identities, buckets, and reconciled remote bootstrap state now
 exist. Terraform's GCS backend also created a canonical empty foundation state
 during its guarded initialization attempt, and a subsequent guarded execution
-reconciled that exact generation without mutation. The active workflow remains
-uninstalled.
+reconciled that exact generation without mutation. GitHub will expose the
+manual plan workflow only after protected merge to `main`.
 
 The first private saved plan was superseded after Cloud Billing rejected a
 redundant billing-association write before Terraform recorded resources. The
@@ -233,12 +239,12 @@ the inspection-only plan contains no resource action. Clean execution commit
 without planning or mutation. A subsequent non-saving live plan from commit
 `363d017ebdc85af1285e38c5742365fd0a2a4395` was fully reviewed: `33 to add, 0
 to change, 0 to destroy`, with no workload, public ingress, secret version, or
-state change. The next steps are to install the reviewed workflow and inspect
-its private saved plan before any apply. The
+state change. The next steps are to merge the exact plan-only workflow, dispatch
+it manually, and inspect its private saved plan before any apply transition. The
 production Function entry point,
 exact FCM permission, quotas, alerts and teardown evidence remain blockers.
-Deployment, public ingress and active CI authentication remain disabled. Passing
-the manifest check is evidence, not authorization.
+Deployment, public ingress and CI apply authentication remain disabled. Passing
+the manifest check is evidence, not additional authorization.
 
 Create or attach `miakapp-v4` only after the staging migration rehearsal produces:
 
