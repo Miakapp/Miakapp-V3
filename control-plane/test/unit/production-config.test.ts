@@ -35,11 +35,11 @@ function candidate(): Record<string, any> {
     schema: 'miakapp.production-security/1',
     environment: 'staging',
     project_id: 'miakapp-v4-staging',
-    region: 'europe-west1',
+    region: 'europe-west9',
     issuer: 'https://control.staging.miakapp.com',
     signing: {
-      key_version_name: 'projects/miakapp-v4-staging/locations/europe-west1/keyRings/miakapp-v4-staging/cryptoKeys/access-token-signing/cryptoKeyVersions/1',
-      public_jwk: publicJwk,
+      key_version_name: 'projects/miakapp-v4-staging/locations/europe-west9/keyRings/miakapp-v4-staging/cryptoKeys/access-token-signing/cryptoKeyVersions/1',
+      public_jwk: { ...publicJwk },
       rpc_timeout_ms: 2_000,
     },
     secret_manager: {
@@ -74,7 +74,7 @@ describe('production security configuration', () => {
     expect(parsed).toMatchObject({
       environment: 'staging',
       projectId: 'miakapp-v4-staging',
-      region: 'europe-west1',
+      region: 'europe-west9',
       issuer: 'https://control.staging.miakapp.com',
       signing: {
         rpcTimeoutMilliseconds: 2_000,
@@ -93,7 +93,7 @@ describe('production security configuration', () => {
     production.environment = 'production';
     production.project_id = 'miakapp-v4';
     production.issuer = 'https://control.miakapp.com';
-    production.signing.key_version_name = 'projects/miakapp-v4/locations/europe-west1/keyRings/miakapp-v4/cryptoKeys/access-token-signing/cryptoKeyVersions/9';
+    production.signing.key_version_name = 'projects/miakapp-v4/locations/europe-west9/keyRings/miakapp-v4/cryptoKeys/access-token-signing/cryptoKeyVersions/9';
     for (const [purpose, entry] of Object.entries(production.secret_manager.keyrings)) {
       const typed = entry as ReturnType<typeof keyring>;
       typed.versions[0]!.resource_name = typed.versions[0]!.resource_name
@@ -152,6 +152,15 @@ describe('production security configuration', () => {
     });
   });
 
+  test('binds the runtime and signing key to the reviewed Paris region', () => {
+    expect(parseProductionSecurityConfig(candidate()).region).toBe('europe-west9');
+    expectInvalid((value) => { value.region = 'europe-west1'; });
+    expectInvalid((value) => {
+      value.signing.key_version_name = value.signing.key_version_name
+        .replace('/locations/europe-west9/', '/locations/europe-west1/');
+    });
+  });
+
   test('rejects ambiguous keyrings and unbounded RPC settings', () => {
     expectInvalid((value) => {
       value.secret_manager.keyrings.homeKeyPepper.current_version = 'missing';
@@ -186,7 +195,7 @@ describe('production security configuration', () => {
     expectInvalid((value) => { value.signing.public_jwk.alg = 'RS256'; });
   });
 
-  test('keeps the Firebase Function entry point emulator-only', () => {
+  test('keeps the active Firebase Function entry point emulator-only', () => {
     const source = readFileSync(new URL('../../src/index.ts', import.meta.url), 'utf8');
     expect(source).toContain('loadEmulatorConfig');
     expect(source).not.toContain('parseProductionSecurityConfig');

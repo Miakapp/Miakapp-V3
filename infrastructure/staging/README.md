@@ -333,11 +333,17 @@ No persistent credential or repository secret is used.
 
 The bootstrap and foundation are complete, both current states are reconciled,
 the recovery workflow is retired, and staging still contains no deployed
-workload. The next sequence is to close the runtime configuration and secret
-lifecycle contracts, add the production Function entrypoint behind private
-admission, and then run bounded synthetic staging validation before considering
-public ingress.
+workload. Local code now provides the strict non-secret runtime loader, a pure
+four-phase configuration-reference transition validator, single-flight
+initialization and an undiscovered private Function entrypoint carrying
+`omit: true`. It does not yet create, enable, disable or destroy live Secret
+Manager versions, nor enforce those transitions during deployment. The next
+sequence is to provision the exact staging configuration and initial secret
+versions, authorize live Function activation behind a reviewed private
+admission path, and then run bounded synthetic staging validation before
+considering public ingress.
 
-The production Function entry point, exact FCM runtime permission, secret
-version lifecycle, ingress design, monitoring, real-service fault matrix,
-migration rehearsal, and every `STAGE-*` observation remain open blockers.
+Live production-Function activation, exact FCM runtime permission, secret-version
+provisioning and rotation evidence, ingress design, monitoring, real-service
+fault matrix, migration rehearsal, and every `STAGE-*` observation remain open
+blockers.

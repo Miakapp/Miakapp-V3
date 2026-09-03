@@ -285,6 +285,19 @@ a follow-up plan reports no changes. This closes the reviewed GitHub OIDC
 exchange route but does not disprove impersonation by another administrator.
 All real staging rows and application deployment gates remain open.
 
+A seventh local-only activation-contract slice binds runtime and KMS references
+to Paris, loads one bounded duplicate-key-safe non-secret configuration value,
+and formalizes `initialize`, `prepare`, `activate` and `retire`
+configuration-reference transitions for the five pinned Secret Manager
+keyrings. The pure validator does not create, enable, disable or destroy cloud
+secret versions. Instance initialization is single-flight and failures latch
+behind a fixed non-cacheable `503`. A private, scale-to-zero Gen 2 staging entry
+point now exists as reviewable source with `omit: true`, no selected ingress and
+no Function secret mounts. It is not exported by the active Firebase codebase,
+so this slice performs no deployment or staging mutation. Runtime configuration,
+secret versions, Firebase registration, live activation and all `STAGE-*`
+observations remain open.
+
 Deliverables:
 
 1. owner bootstrap and Home Key lifecycle;
