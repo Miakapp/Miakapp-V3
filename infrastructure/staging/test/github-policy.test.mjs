@@ -375,7 +375,7 @@ test('summarizes only bounded Terraform action metadata', () => {
   const plan = {
     resource_changes: [
       {
-        address: 'google_secret_manager_secret.runtime["safe"]',
+        address: 'google_storage_bucket_iam_member.component_objects["roles/storage.objectCreator"]',
         change: {
           actions: ['create'],
           before: { secret_data: 'must-not-appear' },
@@ -390,7 +390,10 @@ test('summarizes only bounded Terraform action metadata', () => {
     encoding: 'utf8',
   });
   assert.equal(result.status, 0);
-  assert.match(result.stdout, /create: google_secret_manager_secret\.runtime\["safe"\]/);
+  assert.match(
+    result.stdout,
+    /create: google_storage_bucket_iam_member\.component_objects\["roles\/storage\.objectCreator"\]/,
+  );
   assert.doesNotMatch(result.stdout, /must-not-appear|also-private|secret_data/);
 
   const hostile = spawnSync(process.execPath, [summaryPath], {
@@ -399,6 +402,15 @@ test('summarizes only bounded Terraform action metadata', () => {
   });
   assert.notEqual(hostile.status, 0);
   assert.doesNotMatch(hostile.stdout, /secret/);
+
+  const hostileAddress = spawnSync(process.execPath, [summaryPath], {
+    input: JSON.stringify({
+      resource_changes: [{ address: 'safe\nsecret', change: { actions: ['create'] } }],
+    }),
+    encoding: 'utf8',
+  });
+  assert.notEqual(hostileAddress.status, 0);
+  assert.doesNotMatch(hostileAddress.stdout, /secret/);
 
   const oversizedCollection = spawnSync(process.execPath, [summaryPath], {
     input: JSON.stringify({
