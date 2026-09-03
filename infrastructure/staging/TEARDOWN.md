@@ -29,10 +29,12 @@ serial 39 is preserved outside the repository with fingerprint
 The guarded migration created bootstrap state generation `1788439334043522` at
 serial 40. A fresh private read reconciled it with the protected serial-39 source:
 the serial increased once, the two `check_results` entries were permuted, and
-every other value remained exactly equal. The foundation state is not yet
-initialized. Object Versioning also retains the noncurrent 181-byte empty state
-that Terraform created during backend initialization. Local `.terraform/`
-provider caches are disposable and are not cloud inventory.
+every other value remained exactly equal. Terraform's foundation backend has
+created an independently verified canonical empty state at serial 1, but its
+guarded reconciliation record is not yet complete. Object Versioning also
+retains the noncurrent 181-byte empty state that Terraform created during
+bootstrap backend initialization. Local `.terraform/` provider caches are
+disposable and are not cloud inventory.
 
 If the migration-only wrapper reports failure, its printed private execution
 directory is part of the recovery inventory. Do not delete it or rerun the

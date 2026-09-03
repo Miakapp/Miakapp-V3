@@ -1,6 +1,6 @@
 # Staging Terraform foundation proposal
 
-Status: apply-capable configuration; mock-tested offline; blocked on foundation-state initialization
+Status: apply-capable configuration; empty backend state created; guarded reconciliation pending
 
 This root describes the ordinary protected foundation for the existing,
 billing-linked but undeployed `miakapp-v4-staging` project. Billing management,
@@ -37,8 +37,9 @@ remote output with the exact project ID and number, Paris region, state bucket
 and prefixes, plan/apply providers, all three service accounts, component
 bucket, and numeric GitHub repository IDs. Missing, local, stale, or foreign
 bootstrap state fails closed. The bootstrap state is present remotely at serial
-40 and was reconciled against the protected serial-39 source state. The
-foundation prefix remains empty.
+40 and was reconciled against the protected serial-39 source state. Terraform's
+GCS backend created the empty foundation state at serial 1; guarded
+reconciliation remains pending.
 
 ## Credential-free validation
 
@@ -72,17 +73,24 @@ MIAKAPP_STAGING_FOUNDATION_STATE_AUTHORIZATION='initialize-foundation-state:miak
 ```
 
 The script copies only `versions.tf`, `.terraform.lock.hcl`, and
-`terraform-cli.tfrc` into its private root. It saves a `-refresh-only` plan,
-requires the exact Terraform 1.11.3 empty-plan JSON shape, and then applies that
-same fingerprinted plan. No foundation resource or provider configuration is
-present. It does not call `terraform state push`, create a cloud object directly,
-or permit an existing state to be overwritten. Terraform and the exact current
-GCS generation are read back and must agree on a canonical serial-1 state
-containing no output, resource, or check result, after which the generation is
-checked once more as the current object. A valid preexisting state is reconciled
-without mutation. The mutating path necessarily creates and releases
-Terraform's temporary `.tflock`; only the tiny empty state remains live
-afterward, while bucket recovery policies may briefly retain noncurrent bytes.
+`terraform-cli.tfrc` into its private root. On an absent GCS backend, Terraform
+1.11.3 creates the canonical empty state during `terraform init`; that backend
+initialization is the script's only state-writing operation. The script
+immediately reconciles Terraform's view with the exact current GCS generation.
+It then saves and fingerprints a post-initialization `-refresh-only` plan and
+accepts only the exact two implicit locked providers with no resource, output,
+module, variable, expression, provider block, or action. The plan is never
+applied.
+
+The script does not call `terraform state push`, write a cloud object directly,
+or permit an existing state to be overwritten. A valid preexisting state is
+reconciled without planning or mutation. Backend initialization and planning
+create and release temporary `.tflock` objects; only the tiny empty state remains
+live afterward, while bucket recovery policies may briefly retain noncurrent
+bytes. A first authorized run created generation `1788443136082489` before its
+conservative plan-shape check rejected Terraform's implicit provider metadata.
+The state and preserved plan have since been independently verified; the guarded
+reconciliation path remains to be completed.
 
 ## Guarded local plan
 

@@ -186,36 +186,19 @@ terraform -chdir="$initializer_root" init \
   -no-color >"$terraform_log" 2>&1
 terraform -chdir="$initializer_root" validate -no-color >>"$terraform_log" 2>&1
 
-if [[ "$before_state" == "absent" ]]; then
-  terraform -chdir="$initializer_root" plan \
-    -refresh-only \
-    -input=false \
-    -lock-timeout=5m \
-    -no-color \
-    -out="$empty_plan" >>"$terraform_log" 2>&1
-  plan_fingerprint="$(node "$helper" fingerprint-plan "$empty_plan")"
-  if ! terraform -chdir="$initializer_root" show -json "$empty_plan" 2>>"$terraform_log" \
-    | node "$helper" verify-empty-plan >/dev/null; then
-    echo "The foundation-state initialization plan was not exactly empty; no state was written." >&2
-    exit 1
-  fi
-
-  preapply_inventory="$(run_state_inventory "${execution}/state-bucket-preapply.json")"
-  preapply_state="$(node -e 'const value = JSON.parse(process.argv[1]); process.stdout.write(value.state);' "$preapply_inventory")"
-  if [[ "$preapply_state" != "absent" ]]; then
-    echo "Foundation state appeared after planning; the saved empty plan was not applied." >&2
-    exit 1
-  fi
-  if [[ "$(node "$helper" fingerprint-plan "$empty_plan")" != "$plan_fingerprint" ]]; then
-    echo "The verified empty plan changed before apply; the plan was not applied." >&2
-    exit 1
-  fi
-  if ! terraform -chdir="$initializer_root" apply \
-    -input=false \
-    -lock-timeout=5m \
-    -no-color \
-    "$empty_plan" >>"$terraform_log" 2>&1; then
-    echo "The verified empty foundation-state plan could not be applied." >&2
+post_init_inventory="$(run_state_inventory "${execution}/state-bucket-post-init.json")"
+post_init_state="$(node -e 'const value = JSON.parse(process.argv[1]); process.stdout.write(value.state);' "$post_init_inventory")"
+if [[ "$post_init_state" != "present" ]]; then
+  echo "Terraform backend initialization did not create the canonical empty foundation state." >&2
+  exit 1
+fi
+foundation_generation="$(node -e 'const value = JSON.parse(process.argv[1]); process.stdout.write(value.generation);' "$post_init_inventory")"
+foundation_size="$(node -e 'const value = JSON.parse(process.argv[1]); process.stdout.write(String(value.size));' "$post_init_inventory")"
+if [[ "$before_state" == "present" ]]; then
+  before_generation="$(node -e 'const value = JSON.parse(process.argv[1]); process.stdout.write(value.generation);' "$before_inventory")"
+  before_size="$(node -e 'const value = JSON.parse(process.argv[1]); process.stdout.write(String(value.size));' "$before_inventory")"
+  if [[ "$foundation_generation" != "$before_generation" || "$foundation_size" != "$before_size" ]]; then
+    echo "Existing foundation state changed during backend initialization." >&2
     exit 1
   fi
 fi
@@ -229,18 +212,13 @@ node "$helper" verify-empty-state "$pulled_state" >/dev/null
 
 after_inventory="$(run_state_inventory "${execution}/state-bucket-after.json")"
 after_state="$(node -e 'const value = JSON.parse(process.argv[1]); process.stdout.write(value.state);' "$after_inventory")"
-if [[ "$after_state" != "present" ]]; then
-  echo "The canonical empty foundation state was not present after initialization." >&2
+after_generation="$(node -e 'const value = JSON.parse(process.argv[1]); process.stdout.write(value.generation ?? "");' "$after_inventory")"
+after_size="$(node -e 'const value = JSON.parse(process.argv[1]); process.stdout.write(String(value.size ?? ""));' "$after_inventory")"
+if [[ "$after_state" != "present" \
+  || "$after_generation" != "$foundation_generation" \
+  || "$after_size" != "$foundation_size" ]]; then
+  echo "Foundation state changed during Terraform read-back." >&2
   exit 1
-fi
-foundation_generation="$(node -e 'const value = JSON.parse(process.argv[1]); process.stdout.write(value.generation);' "$after_inventory")"
-foundation_size="$(node -e 'const value = JSON.parse(process.argv[1]); process.stdout.write(String(value.size));' "$after_inventory")"
-if [[ "$before_state" == "present" ]]; then
-  before_generation="$(node -e 'const value = JSON.parse(process.argv[1]); process.stdout.write(value.generation);' "$before_inventory")"
-  if [[ "$foundation_generation" != "$before_generation" ]]; then
-    echo "Existing foundation state changed during read-only reconciliation." >&2
-    exit 1
-  fi
 fi
 
 if ! gcloud storage cat \
@@ -255,6 +233,36 @@ reconciled_size="$(node -e 'const value = JSON.parse(process.argv[1]); process.s
 if [[ "$reconciled_size" != "$foundation_size" ]]; then
   echo "Foundation state size differs between GCS inventory and the reconciled object." >&2
   exit 1
+fi
+
+if [[ "$before_state" == "absent" ]]; then
+  terraform -chdir="$initializer_root" plan \
+    -refresh-only \
+    -input=false \
+    -lock-timeout=5m \
+    -no-color \
+    -out="$empty_plan" >>"$terraform_log" 2>&1
+  plan_fingerprint="$(node "$helper" fingerprint-plan "$empty_plan")"
+  if ! terraform -chdir="$initializer_root" show -json "$empty_plan" 2>>"$terraform_log" \
+    | node "$helper" verify-empty-plan >/dev/null; then
+    echo "The post-initialization plan was not exactly empty; the initialized state requires review." >&2
+    exit 1
+  fi
+
+  post_plan_inventory="$(run_state_inventory "${execution}/state-bucket-post-plan.json")"
+  post_plan_state="$(node -e 'const value = JSON.parse(process.argv[1]); process.stdout.write(value.state);' "$post_plan_inventory")"
+  post_plan_generation="$(node -e 'const value = JSON.parse(process.argv[1]); process.stdout.write(value.generation ?? "");' "$post_plan_inventory")"
+  post_plan_size="$(node -e 'const value = JSON.parse(process.argv[1]); process.stdout.write(String(value.size ?? ""));' "$post_plan_inventory")"
+  if [[ "$post_plan_state" != "present" \
+    || "$post_plan_generation" != "$foundation_generation" \
+    || "$post_plan_size" != "$foundation_size" ]]; then
+    echo "Foundation state changed while verifying the post-initialization plan." >&2
+    exit 1
+  fi
+  if [[ "$(node "$helper" fingerprint-plan "$empty_plan")" != "$plan_fingerprint" ]]; then
+    echo "The verified post-initialization plan changed during inspection." >&2
+    exit 1
+  fi
 fi
 
 final_inventory="$(run_state_inventory "${execution}/state-bucket-final.json")"
@@ -279,7 +287,8 @@ foundation_sha256="$(node -e 'const value = JSON.parse(process.argv[1]); process
 foundation_lineage_sha256="$(node -e 'const value = JSON.parse(process.argv[1]); process.stdout.write(value.lineageSha256);' "$reconciliation")"
 execution_complete=true
 if [[ "$before_state" == "absent" ]]; then
-  echo "The canonical empty staging foundation state was initialized and reconciled."
+  echo "Terraform initialized and reconciled the canonical empty staging foundation state."
+  echo "The post-initialization refresh-only plan was verified and was not applied."
 else
   echo "The existing canonical empty staging foundation state was reconciled without mutation."
 fi

@@ -318,9 +318,29 @@ export function validateEmptyFoundationPlan(value) {
   );
   const configuration = exactKeys(
     plan.configuration,
-    ['root_module'],
+    ['provider_config', 'root_module'],
     'Foundation-state initialization configuration',
   );
+  const providerConfiguration = exactKeys(
+    configuration.provider_config,
+    ['google', 'google-beta'],
+    'Foundation-state initialization provider configuration',
+  );
+  for (const [name, fullName] of [
+    ['google', 'registry.terraform.io/hashicorp/google'],
+    ['google-beta', 'registry.terraform.io/hashicorp/google-beta'],
+  ]) {
+    const provider = exactKeys(
+      providerConfiguration[name],
+      ['full_name', 'name', 'version_constraint'],
+      `Foundation-state initialization ${name} provider`,
+    );
+    if (provider.name !== name
+        || provider.full_name !== fullName
+        || provider.version_constraint !== '8.1.0') {
+      reject(`Foundation-state initialization ${name} provider is not the reviewed implicit provider`);
+    }
+  }
   const configurationRoot = exactKeys(
     configuration.root_module,
     [],
@@ -337,7 +357,7 @@ export function validateEmptyFoundationPlan(value) {
       || Object.keys(configurationRoot).length !== 0) {
     reject('Foundation-state initialization plan is not the exact empty refresh-only plan');
   }
-  return Object.freeze({ managedResources: 0, applyable: false });
+  return Object.freeze({ implicitProviders: 2, managedResources: 0, applyable: false });
 }
 
 export function fingerprintSavedFoundationPlan(path) {

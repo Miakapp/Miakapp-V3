@@ -52,7 +52,7 @@ install a workflow, deploy a workload, open ingress, apply, or destroy.
 | Path | Purpose | Current execution boundary |
 |---|---|---|
 | [`bootstrap/`](bootstrap/) | Billing link, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Complete; remote state reconciled with protected local recovery evidence |
-| [`terraform/`](terraform/) | APIs, Firestore, KMS, empty Secret Manager containers, and resource-scoped runtime IAM | Mock-tested offline; live plan blocked until empty foundation state is initialized and verified |
+| [`terraform/`](terraform/) | APIs, Firestore, KMS, empty Secret Manager containers, and resource-scoped runtime IAM | Empty state created by the GCS backend; guarded reconciliation pending before a live plan |
 | [`automation/`](automation/) | GitHub policy record, dormant plan/apply workflow, private-plan scripts, and operator inspection | Outside `.github/workflows`; cannot run |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
 | [`TEARDOWN.md`](TEARDOWN.md) | Manual recovery and teardown rehearsal | Documentation only |
@@ -85,9 +85,9 @@ project-wide Storage or IAM role capable of bypassing the state boundary. They
 are not used by any active workflow.
 
 This repository change itself costs nothing. The state bucket currently stores
-one 60,909-byte bootstrap state plus Terraform's recoverable 181-byte initial
-empty generation, and will later hold bounded foundation state and short-lived
-plan objects. Storage
+one 60,909-byte bootstrap state and one current 181-byte empty foundation state,
+plus tiny recoverable state and lock generations. It will later hold bounded
+foundation state and short-lived plan objects. Storage
 operations and retained versions are usage-metered. Budget alerts at EUR 2, EUR
 5, and EUR 10 are alarms rather than hard caps. The software KMS key version is
 the principal planned idle fixed cost; actual staging measurements must replace
@@ -126,24 +126,27 @@ supported path for creating the initial foundation state. It operates in a
 private directory outside the repository and copies only the reviewed backend,
 provider lock, and CLI configuration. It first requires the exact reconciled
 bootstrap generation and proves that the foundation object is either absent or
-already the exact canonical empty state. Only the absent path creates a saved
-`-refresh-only` plan; it rejects any plan containing a resource, output,
-variable, module, provider configuration, or action, and applies only that
-verified empty plan through Terraform's locking GCS backend. The saved binary
-plan is fingerprinted before inspection and again immediately before apply.
+already the exact canonical empty state. Terraform 1.11.3 initializes an absent
+GCS backend by creating its canonical serial-1 empty state during
+`terraform init`; this is the only state-writing operation in the path.
 
 The initializer never uses `terraform state push` or a direct cloud-object
 write. It reads both Terraform's view and the exact current GCS generation back,
 requires an exact canonical empty state at serial 1, and rejects every other
-bucket object. It then rechecks that the reconciled generation is still current.
-A valid preexisting empty state is reconciled without planning or mutation, so
-recovery after an uncertain client result cannot overwrite it.
+bucket object. Only after that reconciliation does the absent path create and
+fingerprint a saved `-refresh-only` plan. It accepts only the two implicit locked
+providers with no resource, output, variable, module, expression, provider
+block, or action; the plan is never applied. It then rechecks that the reconciled
+generation is still current. A valid preexisting empty state is reconciled
+without planning or mutation, so recovery after an uncertain client result
+cannot overwrite it.
 Failure preserves private diagnostics; success removes them. The implementation
 is bound to reviewed implementation commit
 `f820b9004052863d0f9dee5ef203844dec0d4374` and remains disabled until a
 separate exact authorization names the clean execution commit.
 
-The plan and apply acquire and release Terraform's temporary `.tflock` object.
+Backend initialization and planning acquire and release Terraform's temporary
+`.tflock` object.
 The only durable new live object is the roughly 181-byte empty state; Object
 Versioning and soft delete may temporarily retain tiny noncurrent state or lock
 generations as recovery evidence.
@@ -201,7 +204,8 @@ because workflow installation and foundation deployment remain unauthorized.
 The GitHub branch, environment and Actions prerequisite are configured. Before
 any additional cloud action, the recovery sequence must:
 
-1. authorize, initialize, and verify the empty foundation state before admitting CI;
+1. complete guarded reconciliation of the initialized empty foundation state
+   before admitting CI;
 2. install the cloud workflow only after the state boundary is proven; and
 3. review a live foundation plan before granting apply approval.
 

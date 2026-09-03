@@ -47,7 +47,21 @@ function emptyPlan() {
     format_version: '1.2',
     terraform_version: '1.11.3',
     planned_values: { root_module: {} },
-    configuration: { root_module: {} },
+    configuration: {
+      provider_config: {
+        google: {
+          name: 'google',
+          full_name: 'registry.terraform.io/hashicorp/google',
+          version_constraint: '8.1.0',
+        },
+        'google-beta': {
+          name: 'google-beta',
+          full_name: 'registry.terraform.io/hashicorp/google-beta',
+          version_constraint: '8.1.0',
+        },
+      },
+      root_module: {},
+    },
     timestamp: '2026-09-03T13:04:06Z',
     applyable: false,
     complete: true,
@@ -113,15 +127,15 @@ function writeExecutable(path, contents) {
 }
 
 function runSyntheticInitialization({
-  applyFails = false,
+  backendInitializationFails = false,
   dirtyRepository = false,
   divergentObject = false,
   invalidAuthorization = false,
   nonEmptyPlan = false,
-  planTamperedBeforeApply = false,
+  planTamperedDuringInspection = false,
   preexistingState = false,
-  stateAppearsBeforeApply = false,
   stateChangesAfterReadback = false,
+  stateChangesDuringPlan = false,
   stateChangesDuringReconciliation = false,
   unexpectedInventory = false,
 } = {}) {
@@ -197,16 +211,25 @@ done
 printf 'terraform:%s:%s\n' "$command_name" "$*" >>"$MIAKAPP_FAKE_CALL_LOG"
 case "$command_name" in
   version) printf '%s\n' '{"terraform_version":"1.11.3"}' ;;
-  fmt|init|validate) ;;
+  fmt|validate) ;;
+  init)
+    if [[ "$MIAKAPP_FAKE_BACKEND_INITIALIZATION_FAILS" != true \
+      && ! -f "$MIAKAPP_FAKE_REMOTE_MARKER" ]]; then
+      printf '' >"$MIAKAPP_FAKE_REMOTE_MARKER"
+    fi
+    ;;
   plan)
     printf '%s' 'synthetic-empty-plan' >"$plan_output"
     printf '%s' "$plan_output" >"$MIAKAPP_FAKE_SAVED_PLAN_PATH"
     ;;
-  show) command cat "$MIAKAPP_FAKE_PLAN_JSON" ;;
-  apply)
-    [[ "$MIAKAPP_FAKE_APPLY_FAILS" == true ]] && exit 92
-    printf '' >"$MIAKAPP_FAKE_REMOTE_MARKER"
+  show)
+    command cat "$MIAKAPP_FAKE_PLAN_JSON"
+    if [[ "$MIAKAPP_FAKE_TAMPER_PLAN" == true ]]; then
+      saved_plan="$(command cat "$MIAKAPP_FAKE_SAVED_PLAN_PATH")"
+      printf '%s' '-tampered' >>"$saved_plan"
+    fi
     ;;
+  apply) exit 95 ;;
   state) command cat "$MIAKAPP_FAKE_STATE_JSON" ;;
   *) exit 93 ;;
 esac
@@ -225,12 +248,6 @@ case " $* " in
     fi
     inventory_count=$((inventory_count + 1))
     printf '%s' "$inventory_count" >"$MIAKAPP_FAKE_INVENTORY_COUNT"
-    if [[ "$MIAKAPP_FAKE_TAMPER_PLAN" == true \
-      && "$inventory_count" -eq 2 \
-      && -f "$MIAKAPP_FAKE_SAVED_PLAN_PATH" ]]; then
-      saved_plan="$(command cat "$MIAKAPP_FAKE_SAVED_PLAN_PATH")"
-      printf '%s' '-tampered' >>"$saved_plan"
-    fi
     if [[ -f "$MIAKAPP_FAKE_REMOTE_MARKER" ]]; then
       if [[ "$MIAKAPP_FAKE_STATE_CHANGE_AT" -gt 0 \
         && "$inventory_count" -ge "$MIAKAPP_FAKE_STATE_CHANGE_AT" ]]; then
@@ -238,8 +255,6 @@ case " $* " in
       else
         command cat "$MIAKAPP_FAKE_PRESENT_INVENTORY"
       fi
-    elif [[ "$MIAKAPP_FAKE_STATE_APPEARS_PREAPPLY" == true && "$inventory_count" -ge 2 ]]; then
-      command cat "$MIAKAPP_FAKE_PRESENT_INVENTORY"
     else
       command cat "$MIAKAPP_FAKE_ABSENT_INVENTORY"
     fi
@@ -268,7 +283,7 @@ esac
         HOME: process.env.HOME,
         PATH: `${temporary}:${process.env.PATH}`,
         MIAKAPP_FAKE_ABSENT_INVENTORY: absentInventoryPath,
-        MIAKAPP_FAKE_APPLY_FAILS: String(applyFails),
+        MIAKAPP_FAKE_BACKEND_INITIALIZATION_FAILS: String(backendInitializationFails),
         MIAKAPP_FAKE_CALL_LOG: callLog,
         MIAKAPP_FAKE_CHANGED_INVENTORY: changedInventoryPath,
         MIAKAPP_FAKE_DIRTY_REPOSITORY: String(dirtyRepository),
@@ -285,12 +300,13 @@ esac
         MIAKAPP_FAKE_STATE_CHANGE_AT: String(
           stateChangesDuringReconciliation
             ? 2
-            : stateChangesAfterReadback
-              ? (preexistingState ? 3 : 4)
-              : 0,
+            : stateChangesDuringPlan
+              ? 4
+              : stateChangesAfterReadback
+                ? (preexistingState ? 4 : 5)
+                : 0,
         ),
-        MIAKAPP_FAKE_STATE_APPEARS_PREAPPLY: String(stateAppearsBeforeApply),
-        MIAKAPP_FAKE_TAMPER_PLAN: String(planTamperedBeforeApply),
+        MIAKAPP_FAKE_TAMPER_PLAN: String(planTamperedDuringInspection),
         MIAKAPP_REAL_NODE: process.execPath,
         MIAKAPP_STAGING_FOUNDATION_STATE_AUTHORIZATION: invalidAuthorization
           ? PROJECT_ID
@@ -368,6 +384,7 @@ test('accepts only the reviewed project and exact current state-bucket boundary'
 
 test('accepts only an exact empty Terraform 1.11.3 refresh-only plan', () => {
   assert.deepEqual(validateEmptyFoundationPlan(emptyPlan()), {
+    implicitProviders: 2,
     managedResources: 0,
     applyable: false,
   });
@@ -380,6 +397,12 @@ test('accepts only an exact empty Terraform 1.11.3 refresh-only plan', () => {
   const applyable = emptyPlan();
   applyable.applyable = true;
   assert.throws(() => validateEmptyFoundationPlan(applyable), /exact empty refresh-only plan/);
+  const configuredProvider = emptyPlan();
+  configuredProvider.configuration.provider_config.google.expressions = {};
+  assert.throws(
+    () => validateEmptyFoundationPlan(configuredProvider),
+    /google provider must contain exactly the reviewed fields/,
+  );
 });
 
 test('accepts and reconciles only the exact canonical empty foundation state', () => {
@@ -474,24 +497,25 @@ test('Terraform 1.11.3 rejects the saved empty plan if another operation creates
   }
 });
 
-test('initializes and reconciles an absent state through one verified empty saved plan', () => {
+test('reconciles backend initialization before verifying an inspection-only plan', () => {
   const execution = runSyntheticInitialization();
   try {
     assert.equal(execution.result.status, 0, execution.result.stderr);
     assert.equal(execution.remoteCreated, true);
     assert.equal(execution.executionDirectories.length, 0);
     assert.match(execution.result.stdout, /initialized and reconciled/);
+    assert.match(execution.result.stdout, /was not applied/);
     assert.match(execution.result.stdout, /managed resources: 0/);
+    const initIndex = execution.calls.indexOf('terraform:init:');
     const planIndex = execution.calls.indexOf('terraform:plan:');
     const showIndex = execution.calls.indexOf('terraform:show:');
-    const applyIndex = execution.calls.indexOf('terraform:apply:');
     const pullIndex = execution.calls.indexOf('terraform:state:');
-    assert.equal(planIndex >= 0, true);
+    assert.equal(initIndex >= 0, true);
+    assert.equal(pullIndex > initIndex, true);
+    assert.equal(planIndex > pullIndex, true);
     assert.equal(showIndex > planIndex, true);
-    assert.equal(applyIndex > showIndex, true);
-    assert.equal(pullIndex > applyIndex, true);
     assert.match(execution.calls, /terraform:plan:[^\n]*-refresh-only/);
-    assert.equal((execution.calls.match(/terraform:apply:/g) ?? []).length, 1);
+    assert.doesNotMatch(execution.calls, /terraform:apply:/);
   } finally {
     rmSync(execution.temporary, { recursive: true });
   }
@@ -510,16 +534,24 @@ test('reconciles a preexisting exact empty state without plan or mutation', () =
   }
 });
 
-test('fails closed before apply for an unexpected object or non-empty plan', () => {
-  for (const options of [
-    { unexpectedInventory: true },
-    { nonEmptyPlan: true },
-    { planTamperedBeforeApply: true },
-  ]) {
+test('rejects an unexpected bucket object before backend initialization', () => {
+  const execution = runSyntheticInitialization({ unexpectedInventory: true });
+  try {
+    assert.equal(execution.result.status, 1);
+    assert.equal(execution.remoteCreated, false);
+    assert.doesNotMatch(execution.calls, /terraform:init:/);
+    assert.equal(execution.executionDirectories.length, 1);
+  } finally {
+    rmSync(execution.temporary, { recursive: true });
+  }
+});
+
+test('preserves an initialized state when the inspection-only plan is invalid or changes', () => {
+  for (const options of [{ nonEmptyPlan: true }, { planTamperedDuringInspection: true }]) {
     const execution = runSyntheticInitialization(options);
     try {
       assert.equal(execution.result.status, 1);
-      assert.equal(execution.remoteCreated, false);
+      assert.equal(execution.remoteCreated, true);
       assert.doesNotMatch(execution.calls, /terraform:apply:/);
       assert.equal(execution.executionDirectories.length, 1);
     } finally {
@@ -533,7 +565,7 @@ test('fails closed if the current generation changes after object reconciliation
   try {
     assert.equal(execution.result.status, 1);
     assert.equal(execution.remoteCreated, true);
-    assert.match(execution.calls, /terraform:apply:/);
+    assert.doesNotMatch(execution.calls, /terraform:apply:/);
     assert.match(execution.result.stderr, /changed during final reconciliation/);
     assert.equal(execution.executionDirectories.length, 1);
   } finally {
@@ -541,20 +573,20 @@ test('fails closed if the current generation changes after object reconciliation
   }
 });
 
-test('fails closed when state appears before apply or changes during reconciliation', () => {
+test('fails closed when backend initialization or plan inspection changes state', () => {
   for (const options of [
-    { stateAppearsBeforeApply: true },
     { preexistingState: true, stateChangesDuringReconciliation: true },
+    { stateChangesDuringPlan: true },
   ]) {
     const execution = runSyntheticInitialization(options);
     try {
       assert.equal(execution.result.status, 1);
       assert.doesNotMatch(execution.calls, /terraform:apply:/);
       assert.equal(execution.executionDirectories.length, 1);
-      if (options.stateAppearsBeforeApply) {
-        assert.match(execution.result.stderr, /appeared after planning/);
+      if (options.stateChangesDuringPlan) {
+        assert.match(execution.result.stderr, /changed while verifying the post-initialization plan/);
       } else {
-        assert.match(execution.result.stderr, /changed during read-only reconciliation/);
+        assert.match(execution.result.stderr, /changed during backend initialization/);
       }
     } finally {
       rmSync(execution.temporary, { recursive: true });
@@ -562,14 +594,14 @@ test('fails closed when state appears before apply or changes during reconciliat
   }
 });
 
-test('preserves private diagnostics when apply or post-write reconciliation fails', () => {
-  for (const options of [{ applyFails: true }, { divergentObject: true }]) {
+test('preserves private diagnostics when backend initialization or reconciliation fails', () => {
+  for (const options of [{ backendInitializationFails: true }, { divergentObject: true }]) {
     const execution = runSyntheticInitialization(options);
     try {
       assert.equal(execution.result.status, 1);
       assert.match(execution.result.stderr, /private diagnostic material was preserved/);
       assert.equal(execution.executionDirectories.length, 1);
-      if (options.applyFails) assert.equal(execution.remoteCreated, false);
+      if (options.backendInitializationFails) assert.equal(execution.remoteCreated, false);
       else assert.equal(execution.remoteCreated, true);
     } finally {
       rmSync(execution.temporary, { recursive: true });
@@ -609,7 +641,7 @@ test('rejects authorization, repository, and environment drift before cloud muta
   }
 });
 
-test('keeps the initializer limited to a verified refresh-only empty-state write', () => {
+test('keeps the initializer limited to backend initialization and inspection-only planning', () => {
   assert.match(
     initializeStateScript,
     /approved_foundation_configuration_commit="efa877835dde2f5eedc3d950b2e4c514e606751d"/,
@@ -622,9 +654,8 @@ test('keeps the initializer limited to a verified refresh-only empty-state write
   assert.match(initializeStateScript, /show -json[\s\S]*verify-empty-plan/);
   assert.match(initializeStateScript, /fingerprint-plan/);
   assert.match(initializeStateScript, /reconcile-empty-states/);
-  assert.match(initializeStateScript, /terraform[\s\S]* apply /);
   assert.doesNotMatch(
     initializeStateScript,
-    /terraform\s+(?:destroy|import|state\s+push|force-unlock)|gcloud\s+storage\s+(?:cp|rm|mv)/,
+    /terraform[\s\S]* apply |terraform\s+(?:destroy|import|state\s+push|force-unlock)|gcloud\s+storage\s+(?:cp|rm|mv)/,
   );
 });
