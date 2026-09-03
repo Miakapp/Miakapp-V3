@@ -53,6 +53,39 @@ function exact(value, expected, path) {
   if (!isDeepStrictEqual(value, expected)) reject(`${path} does not match the reviewed value`);
 }
 
+function isReviewedProductLabel(path, value) {
+  if (value !== 'miakapp-v4' || path.at(-1) !== 'product') return false;
+  return ['labels', 'effective_labels', 'terraform_labels'].includes(path.at(-2));
+}
+
+function referencesForbiddenProject(value, projectId) {
+  return value === projectId
+    || value.includes(`projects/${projectId}/`)
+    || value.includes(`@${projectId}.`)
+    || value.startsWith(`${projectId}.`);
+}
+
+function rejectForbiddenIdentities(value, path = []) {
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => rejectForbiddenIdentities(entry, [...path, index]));
+    return;
+  }
+  if (plainObject(value)) {
+    for (const [key, entry] of Object.entries(value)) {
+      rejectForbiddenIdentities(entry, [...path, key]);
+    }
+    return;
+  }
+  if (typeof value !== 'string') return;
+  if (value === 'allUsers' || value === 'allAuthenticatedUsers'
+    || referencesForbiddenProject(value, 'miakapp-3')
+    || referencesForbiddenProject(value, 'demo-miakapp-v4')
+    || (referencesForbiddenProject(value, 'miakapp-v4')
+      && !isReviewedProductLabel(path, value))) {
+    reject('Terraform workload plan contains a forbidden principal or project');
+  }
+}
+
 function resourceConfiguration(plan) {
   const configuration = plan.configuration;
   if (!plainObject(configuration) || !plainObject(configuration.root_module)
@@ -123,7 +156,7 @@ function validateChangeValues(change, input, operatorUserSha256) {
       break;
     case 'google_storage_bucket.source':
       exact(after.name, SOURCE_BUCKET, `${address}.name`);
-      exact(after.location, REGION, `${address}.location`);
+      exact(after.location, REGION.toUpperCase(), `${address}.location`);
       exact(after.storage_class, 'STANDARD', `${address}.storage_class`);
       exact(after.uniform_bucket_level_access, true, `${address}.uniform access`);
       exact(after.public_access_prevention, 'enforced', `${address}.public access prevention`);
@@ -258,10 +291,7 @@ export function validateWorkloadPlanAgainstPolicy(plan, input, policy) {
   validateVariables(plan, input, policy.operatorUserSha256);
   resourceConfiguration(plan);
   validateResourceChanges(plan, input, policy.operatorUserSha256);
-  const serialized = JSON.stringify(plan);
-  for (const forbidden of ['allUsers', 'allAuthenticatedUsers', 'miakapp-3', '"miakapp-v4"']) {
-    if (serialized.includes(forbidden)) reject('Terraform workload plan contains a forbidden principal or project');
-  }
+  rejectForbiddenIdentities(plan);
   return Object.freeze({
     create: Object.keys(MANAGED_RESOURCES).length,
     update: 0,
