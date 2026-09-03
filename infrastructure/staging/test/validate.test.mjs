@@ -28,18 +28,18 @@ function rejects(mutator, pattern) {
   );
 }
 
-test('accepts materialized activation inputs with no deployed workload', () => {
+test('accepts the authorized private workload contract with no deployed workload', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 33);
+  assert.equal(validated.revision, 34);
   assert.equal(
     validated.status,
-    'activation_material_complete_undeployed',
+    'private_workload_contract_ready_undeployed',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
   assert.equal(
     validated.project.lifecycle,
-    'firebase_enabled_billing_linked_foundation_and_activation_material_created_undeployed',
+    'firebase_enabled_billing_linked_private_workload_authorized_undeployed',
   );
   assert.equal(validated.bootstrap.billing_enabled, true);
   assert.equal(validated.bootstrap.firebase_apps, 1);
@@ -74,11 +74,11 @@ test('accepts materialized activation inputs with no deployed workload', () => {
     'api_enabled_no_staging_identity_test',
     'firebase_app_created_provider_not_configured',
     'foundation_created_no_staging_test',
-    'not_deployed',
+    'private_deployment_contract_ready_not_deployed',
     'private_bucket_created_no_staging_test',
     'signing_key_version_enabled_no_staging_signature',
     'five_initial_versions_enabled_no_staging_access_test',
-    'api_enabled_runtime_permission_unresolved',
+    'api_enabled_least_privilege_role_declared_not_applied',
     'api_enabled_no_deployed_runtime',
     'api_enabled_no_deployed_runtime',
   ]);
@@ -94,13 +94,13 @@ test('accepts materialized activation inputs with no deployed workload', () => {
     validated.cost.billing_account.terraform_management_state,
     'managed_in_reconciled_remote_bootstrap_state',
   );
-  assert.equal(validated.terraform.state, 'foundation_complete_recovery_retired');
+  assert.equal(validated.terraform.state, 'foundation_complete_private_workload_contract_ready');
   assert.equal(
     validated.terraform.supported_workflow,
-    'credential_free_validation_and_manual_read_only_plan',
+    'guarded_private_saved_plan_and_exact_apply',
   );
   assert.equal(validated.terraform.configuration_apply_capable, true);
-  assert.equal(validated.terraform.active_cloud_workflow, null);
+  assert.equal(validated.terraform.active_cloud_workflow, 'workload/plan.sh');
   assert.equal(
     validated.terraform.workflow_blueprint_state,
     'retired_recovery_blueprint_retained_as_evidence',
@@ -459,7 +459,10 @@ test('accepts materialized activation inputs with no deployed workload', () => {
   assert.equal(recoveryApply.plan_soft_deleted_recoverable, true);
   assert.equal(recoveryApply.temporary_lock_released, true);
   assert.equal(recoveryApply.recovery_required, false);
-  assert.equal(validated.terraform.apply_authorized, false);
+  assert.equal(validated.terraform.apply_authorized, true);
+  assert.equal(validated.terraform.function_deployment_included, true);
+  assert.equal(validated.terraform.workload_root, 'workload');
+  assert.equal(validated.terraform.backend.workload_prefix, 'terraform/workload');
   assert.equal(validated.terraform.local_plan_executed, true);
   assert.deepEqual(validated.terraform.local_plan_observation.result, {
     add: 36,
@@ -640,17 +643,19 @@ test('rejects drift from the observed billing-linked undeployed bootstrap invent
   }, /bootstrap must contain exactly/);
 });
 
-test('rejects apply authorization and bootstrap completion drift', () => {
+test('rejects authorization and bootstrap completion drift', () => {
   for (const field of [
     'creation_authorized',
     'billing_link_authorized',
-    'deployment_authorized',
     'public_ingress_authorized',
   ]) {
     rejects((candidate) => {
       candidate.project[field] = true;
     }, new RegExp(`project\\.${field}`));
   }
+  rejects((candidate) => {
+    candidate.project.deployment_authorized = false;
+  }, /project\.deployment_authorized/);
   rejects((candidate) => {
     candidate.readiness.manual_read_only_cloud_plan_authorized = false;
   }, /readiness\.manual_read_only_cloud_plan_authorized/);
@@ -1179,13 +1184,13 @@ test('rejects Terraform activation, identity, state, provider, and deployment dr
     candidate.terraform.saved_plan.create_only = false;
   }, /terraform\.saved_plan\.create_only/);
   rejects((candidate) => {
-    candidate.terraform.apply_authorized = true;
+    candidate.terraform.apply_authorized = false;
   }, /terraform\.apply_authorized/);
   rejects((candidate) => {
     candidate.terraform.destroy_authorized = true;
   }, /terraform\.destroy_authorized/);
   rejects((candidate) => {
-    candidate.terraform.function_deployment_included = true;
+    candidate.terraform.function_deployment_included = false;
   }, /terraform\.function_deployment_included/);
   rejects((candidate) => {
     candidate.terraform.providers[0].version = 'latest';

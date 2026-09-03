@@ -274,7 +274,7 @@ TTL fields, a software Ed25519 key, five Secret Manager containers and exact
 resource IAM. Guarded activation then registered exactly one Firebase Web app
 and one enabled initial version in each secret container. It still has no App
 Engine application, Function, Cloud Run service, public ingress or deployed
-workload. Credential-free checks validate both Terraform roots with mock
+workload. Credential-free checks validate all three Terraform roots with mock
 providers.
 
 The one-shot protected recovery is complete and its active workflow is removed.
@@ -293,11 +293,12 @@ configuration-reference transitions for the five pinned Secret Manager
 keyrings. The pure validator does not create, enable, disable or destroy cloud
 secret versions. Instance initialization is single-flight and failures latch
 behind a fixed non-cacheable `503`. A private, scale-to-zero Gen 2 staging entry
-point now exists as reviewable source with `omit: true`, no selected ingress and
-no Function secret mounts. It is not exported by the active Firebase codebase,
-so this slice performs no deployment. The runtime configuration, initial secret
-versions and Firebase registration are now materialized; Function activation,
-live App Check provider policy and all `STAGE-*` observations remain open.
+point now exists as reviewable source with no Function secret mounts. It is
+absent from the emulator codebase and enabled only by the separate deterministic
+production package; the workload Terraform root selects internal-only ingress.
+The runtime configuration, initial secret versions and Firebase registration are
+materialized; Function activation, live App Check provider policy and all
+`STAGE-*` observations remain open.
 
 An eighth activation-material slice adds the exact staging runtime-document
 builder and a commit/plan-digest-bound two-phase executor. It permits only one
@@ -310,6 +311,15 @@ without mutation and its private seed was deleted. Digest-pinned non-secret
 result and runtime evidence are committed. Independent inventory confirms no
 Function, Cloud Run service, App Engine application or ingress. Every
 `STAGE-*` observation therefore remains open.
+
+A ninth slice defines the deployment boundary without making a request. A
+deterministic source archive selects only the production module graph. A third,
+workload-only Terraform state permits exactly 14 creates: private source and
+image storage, dedicated keyless build and probe identities, a scale-to-zero
+internal-only Gen 2 Function, and a custom runtime role containing only
+`cloudmessaging.messages.create`. Its exact saved-plan apply is commit-, digest-
+and operator-bound, followed by zero-change convergence and independent cloud
+inventory. Public ingress and synthetic invocation remain later decisions.
 
 Deliverables:
 

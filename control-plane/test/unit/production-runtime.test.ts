@@ -135,7 +135,7 @@ function fakeCloud(counters: { secretReads: number; publicKeyReads: number }): {
   };
 }
 
-describe('inactive production composition root', () => {
+describe('isolated production composition root', () => {
   test('assembles every dependency once with injected offline clients', async () => {
     const counters = {
       identity: 0,

@@ -23,11 +23,11 @@ const SERVICE_STATES = [
   'api_enabled_no_staging_identity_test',
   'firebase_app_created_provider_not_configured',
   'foundation_created_no_staging_test',
-  'not_deployed',
+  'private_deployment_contract_ready_not_deployed',
   'private_bucket_created_no_staging_test',
   'signing_key_version_enabled_no_staging_signature',
   'five_initial_versions_enabled_no_staging_access_test',
-  'api_enabled_runtime_permission_unresolved',
+  'api_enabled_least_privilege_role_declared_not_applied',
   'api_enabled_no_deployed_runtime',
   'api_enabled_no_deployed_runtime',
 ];
@@ -235,12 +235,12 @@ function validateProject(value) {
   }
   exact(
     project.lifecycle,
-    'firebase_enabled_billing_linked_foundation_and_activation_material_created_undeployed',
+    'firebase_enabled_billing_linked_private_workload_authorized_undeployed',
     'project.lifecycle',
   );
   exact(project.creation_authorized, false, 'project.creation_authorized');
   exact(project.billing_link_authorized, false, 'project.billing_link_authorized');
-  exact(project.deployment_authorized, false, 'project.deployment_authorized');
+  exact(project.deployment_authorized, true, 'project.deployment_authorized');
   exact(project.public_ingress_authorized, false, 'project.public_ingress_authorized');
   exact(project.explicit_project_required, true, 'project.explicit_project_required');
   exact(project.firebase_alias_allowed, false, 'project.firebase_alias_allowed');
@@ -401,7 +401,7 @@ function validateRuntime(value) {
     'runtime.dedicated_service_account',
   );
   exact(runtime.allow_unauthenticated, false, 'runtime.allow_unauthenticated');
-  exact(runtime.ingress, 'not_configured', 'runtime.ingress');
+  exact(runtime.ingress, 'ALLOW_INTERNAL_ONLY', 'runtime.ingress');
 }
 
 function validateData(value) {
@@ -511,7 +511,11 @@ function validateSecurity(value) {
     'resource_bindings',
     'unresolved_permissions',
   ]);
-  exact(iam.runtime_identity_state, 'created_not_deployed', 'security.iam.runtime_identity_state');
+  exact(
+    iam.runtime_identity_state,
+    'created_private_deployment_declared',
+    'security.iam.runtime_identity_state',
+  );
   exact(
     iam.foundation_resource_bindings_state,
     'complete_eight_recovery_bindings_present',
@@ -597,6 +601,7 @@ function validateTerraform(value) {
     'bootstrap_root',
     'foundation_root',
     'automation_root',
+    'workload_root',
     'terraform_version',
     'providers',
     'backend',
@@ -619,16 +624,20 @@ function validateTerraform(value) {
     'local_saved_plan_observation',
     'superseded_saved_plan_observation',
   ]);
-  exact(terraform.state, 'foundation_complete_recovery_retired', 'terraform.state');
+  exact(
+    terraform.state,
+    'foundation_complete_private_workload_contract_ready',
+    'terraform.state',
+  );
   exact(
     terraform.supported_workflow,
-    'credential_free_validation_and_manual_read_only_plan',
+    'guarded_private_saved_plan_and_exact_apply',
     'terraform.supported_workflow',
   );
   exact(terraform.configuration_apply_capable, true, 'terraform.configuration_apply_capable');
   exact(
     terraform.active_cloud_workflow,
-    null,
+    'workload/plan.sh',
     'terraform.active_cloud_workflow',
   );
   exact(
@@ -639,6 +648,7 @@ function validateTerraform(value) {
   exact(terraform.bootstrap_root, 'bootstrap', 'terraform.bootstrap_root');
   exact(terraform.foundation_root, 'terraform', 'terraform.foundation_root');
   exact(terraform.automation_root, 'automation', 'terraform.automation_root');
+  exact(terraform.workload_root, 'workload', 'terraform.workload_root');
   exact(terraform.terraform_version, '1.11.3', 'terraform.terraform_version');
   if (!Array.isArray(terraform.providers)) reject('terraform.providers', 'must be an array');
   if (terraform.providers.length !== 2) reject('terraform.providers', 'must contain exactly 2 entries');
@@ -656,6 +666,7 @@ function validateTerraform(value) {
     'bucket',
     'bootstrap_prefix',
     'foundation_prefix',
+    'workload_prefix',
     'bootstrap_migration_template',
     'bootstrap_migration_state',
     'locking_enabled',
@@ -671,6 +682,7 @@ function validateTerraform(value) {
   exact(backend.bucket, 'miakapp-v4-staging-tfstate-1072737219170', 'terraform.backend.bucket');
   exact(backend.bootstrap_prefix, 'terraform/bootstrap', 'terraform.backend.bootstrap_prefix');
   exact(backend.foundation_prefix, 'terraform/foundation', 'terraform.backend.foundation_prefix');
+  exact(backend.workload_prefix, 'terraform/workload', 'terraform.backend.workload_prefix');
   exact(
     backend.bootstrap_migration_template,
     'bootstrap/backend.gcs.tf.example',
@@ -2300,9 +2312,9 @@ function validateTerraform(value) {
     exact(inventory[field], expected, `${inventoryPath}.${field}`);
   }
 
-  exact(terraform.apply_authorized, false, 'terraform.apply_authorized');
+  exact(terraform.apply_authorized, true, 'terraform.apply_authorized');
   exact(terraform.destroy_authorized, false, 'terraform.destroy_authorized');
-  exact(terraform.function_deployment_included, false, 'terraform.function_deployment_included');
+  exact(terraform.function_deployment_included, true, 'terraform.function_deployment_included');
   exact(terraform.offline_check_uses_mock_providers, true, 'terraform.offline_check_uses_mock_providers');
   exact(
     terraform.local_plan_requires_operator_confirmation,
@@ -2871,10 +2883,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 33, 'manifest.revision');
+  exact(manifest.revision, 34, 'manifest.revision');
   exact(
     manifest.status,
-    'activation_material_complete_undeployed',
+    'private_workload_contract_ready_undeployed',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -2929,7 +2941,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; initial activation material is independently revalidated and the application workload remains undeployed.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; the private workload contract is ready and the application workload remains undeployed.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';

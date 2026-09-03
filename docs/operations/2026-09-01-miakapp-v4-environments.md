@@ -3,8 +3,8 @@
 Date: 2026-09-01
 
 Status: accepted direction; staging bootstrap and foundation complete, exact
-keyless recovery workflow and WIF exchange retired on 2026-09-03, and project
-application-undeployed
+keyless recovery workflow and WIF exchange retired on 2026-09-03, private
+workload deployment contract ready, and project application-undeployed
 
 ## Decision
 
@@ -293,9 +293,10 @@ inventory found no workload or ingress, and the private seed was deleted. The
 committed non-secret result and runtime document are digest-pinned in
 [`../../infrastructure/staging/activation/`](../../infrastructure/staging/activation/).
 
-Production Function deployment, exact FCM permission, quotas, alerts, rotation
-and teardown evidence remain blockers. Workload deployment and public ingress
-remain absent.
+The private workload contract now packages only the production module graph and
+permits a scale-to-zero, internal-only Function plus a one-permission FCM role.
+Its deployment, independent inventory, quotas, alerts, rotation and teardown
+evidence remain blockers. Workload deployment and public ingress remain absent.
 Passing the manifest check is evidence, not additional authorization.
 
 Create or attach `miakapp-v4` only after the staging migration rehearsal produces:
