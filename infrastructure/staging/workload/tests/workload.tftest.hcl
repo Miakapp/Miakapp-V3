@@ -70,11 +70,11 @@ run "accepts_the_exact_foundation_and_private_workload_shape" {
           component_bucket        = "miakapp-v4-staging-components"
           signing_key             = "projects/miakapp-v4-staging/locations/europe-west9/keyRings/miakapp-v4-staging/cryptoKeys/access-token-signing"
           secret_ids = [
-            "miakapp-audit-hmac",
-            "miakapp-component-hmac",
-            "miakapp-home-key-pepper",
-            "miakapp-network-hmac",
             "miakapp-push-hmac",
+            "miakapp-network-hmac",
+            "miakapp-home-key-pepper",
+            "miakapp-component-hmac",
+            "miakapp-audit-hmac",
           ]
         }
       }
