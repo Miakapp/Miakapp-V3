@@ -1,6 +1,6 @@
 # Staging Terraform foundation proposal
 
-Status: apply-capable configuration; live foundation plan reviewed; no apply
+Status: apply-capable configuration; private foundation plan strictly reviewed; no apply
 
 This root describes the ordinary protected foundation for the existing,
 billing-linked but undeployed `miakapp-v4-staging` project. Billing management,
@@ -117,15 +117,18 @@ lock object.
 The manual keyless workflow in [`../automation/`](../automation/) is the
 authorized planning path after bootstrap. Its exact active copy creates a
 private, create-only saved plan and emits only bounded action/address metadata.
-It becomes dispatchable after protected merge to `main`. It contains no apply
-job; the separate apply script and deployer identity remain dormant.
+Run `33772429693` successfully created and then fully inspected such a plan from
+protected commit `acfcee42e202cdb4f08ada75ad81b1ad8a88951e`. The exact binary
+passed the closed `initial-foundation` validator with 33 creates, two reads, and
+no update or delete. It contains no apply job; the separate apply script and
+deployer identity remain dormant.
 
 ## Explicit non-authorization
 
 Terraform source is inherently apply-capable. Repository guards and supported
 wrappers do not prevent a privileged operator from bypassing them, so direct
 Terraform mutation remains unauthorized. The plan workflow may use short-lived
-keyless planner credentials after protected merge, but it cannot write
-foundation state or request the deployer identity. No private saved foundation
-plan exists yet, no active apply workflow exists, and the apply and destroy
+keyless planner credentials, but it cannot write foundation state or request the
+deployer identity. A short-lived private saved foundation plan exists as
+inspection evidence; no active apply workflow exists, and the apply and destroy
 authorization bits remain false.
