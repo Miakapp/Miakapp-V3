@@ -73,8 +73,10 @@ resource "google_iam_workload_identity_pool_provider" "plan" {
   workload_identity_pool_provider_id = local.plan_provider_id
   display_name                       = "Staging Terraform plan"
   description                        = "Main-branch plan workflow in the protected staging plan environment."
-  disabled                           = false
-  deletion_policy                    = "PREVENT"
+  # Recovery automation is retired. Keep the reviewed trust definition in
+  # state, but prevent historical workflow reruns from minting credentials.
+  disabled        = true
+  deletion_policy = "PREVENT"
 
   attribute_mapping = local.github_attribute_mapping
   attribute_condition = join(" && ", [
@@ -96,8 +98,10 @@ resource "google_iam_workload_identity_pool_provider" "apply" {
   workload_identity_pool_provider_id = local.apply_provider_id
   display_name                       = "Staging Terraform apply"
   description                        = "Main-branch apply workflow in the reviewed staging apply environment."
-  disabled                           = false
-  deletion_policy                    = "PREVENT"
+  # Recovery automation is retired. Keep the reviewed trust definition in
+  # state, but prevent historical workflow reruns from minting credentials.
+  disabled        = true
+  deletion_policy = "PREVENT"
 
   attribute_mapping = local.github_attribute_mapping
   attribute_condition = join(" && ", [
