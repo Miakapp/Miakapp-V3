@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 25,
-  "status": "bootstrap_and_foundation_state_reconciled",
+  "revision": 26,
+  "status": "foundation_live_plan_reviewed_workflow_installation_pending",
   "environment": "staging",
   "project": {
     "project_id": "miakapp-v4-staging",
@@ -313,8 +313,8 @@
     }
   },
   "terraform": {
-    "state": "bootstrap_and_empty_foundation_state_reconciled",
-    "supported_workflow": "credential_free_validation_and_guarded_live_planning",
+    "state": "foundation_live_plan_reviewed",
+    "supported_workflow": "credential_free_validation_and_guarded_workflow_installation",
     "configuration_apply_capable": true,
     "active_cloud_workflow": "none",
     "workflow_blueprint_state": "dormant_not_installed",
@@ -608,6 +608,43 @@
         }
       ]
     },
+    "foundation_live_plan_observation": {
+      "observed_on": "2026-09-03",
+      "configuration_commit": "363d017ebdc85af1285e38c5742365fd0a2a4395",
+      "terraform_version": "1.11.3",
+      "backend": "gcs",
+      "result": {
+        "create": 33,
+        "update": 0,
+        "delete": 0
+      },
+      "data_reads": 2,
+      "resource_counts": {
+        "bootstrap_guard": 1,
+        "service_apis": 13,
+        "firestore_database": 1,
+        "firestore_ttl_fields": 3,
+        "kms_key_ring_and_key": 2,
+        "kms_iam_bindings": 1,
+        "secret_containers": 5,
+        "secret_iam_bindings": 5,
+        "component_bucket_iam_bindings": 2
+      },
+      "contains_workload": false,
+      "contains_public_ingress": false,
+      "contains_secret_versions": false,
+      "contains_billing_resource": false,
+      "saved_plan_created": false,
+      "apply_executed": false,
+      "state_generation_before": "1788443136082489",
+      "state_generation_after": "1788443136082489",
+      "state_sha256_before": "8a69b37495a7d11b1091a03e7659297adcb62ce853475ab032071888530e30cd",
+      "state_sha256_after": "8a69b37495a7d11b1091a03e7659297adcb62ce853475ab032071888530e30cd",
+      "state_unchanged": true,
+      "temporary_lock_released": true,
+      "full_plan_reviewed": true,
+      "raw_planned_values_committed": false
+    },
     "apply_authorized": false,
     "destroy_authorized": false,
     "function_deployment_included": false,
@@ -761,8 +798,7 @@
       "migration-rehearsal",
       "production-function-entrypoint",
       "secret-version-lifecycle",
-      "github-terraform-workflow-not-installed",
-      "live-foundation-plan-not-reviewed"
+      "github-terraform-workflow-not-installed"
     ]
   },
   "evidence": {

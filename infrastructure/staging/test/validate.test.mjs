@@ -28,12 +28,12 @@ function rejects(mutator, pattern) {
   );
 }
 
-test('accepts the reconciled bootstrap and empty foundation state', () => {
+test('accepts reconciled state and the reviewed live foundation plan', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 25);
+  assert.equal(validated.revision, 26);
   assert.equal(
     validated.status,
-    'bootstrap_and_foundation_state_reconciled',
+    'foundation_live_plan_reviewed_workflow_installation_pending',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
@@ -56,10 +56,10 @@ test('accepts the reconciled bootstrap and empty foundation state', () => {
     validated.cost.billing_account.terraform_management_state,
     'managed_in_reconciled_remote_bootstrap_state',
   );
-  assert.equal(validated.terraform.state, 'bootstrap_and_empty_foundation_state_reconciled');
+  assert.equal(validated.terraform.state, 'foundation_live_plan_reviewed');
   assert.equal(
     validated.terraform.supported_workflow,
-    'credential_free_validation_and_guarded_live_planning',
+    'credential_free_validation_and_guarded_workflow_installation',
   );
   assert.equal(validated.terraform.configuration_apply_capable, true);
   assert.equal(validated.terraform.active_cloud_workflow, 'none');
@@ -211,6 +211,33 @@ test('accepts the reconciled bootstrap and empty foundation state', () => {
   );
   assert.equal(initialization.attempts[1].state_reconciled, true);
   assert.equal(initialization.attempts[1].plan_applied, false);
+  const foundationPlan = validated.terraform.foundation_live_plan_observation;
+  assert.equal(foundationPlan.configuration_commit, '363d017ebdc85af1285e38c5742365fd0a2a4395');
+  assert.deepEqual(foundationPlan.result, { create: 33, update: 0, delete: 0 });
+  assert.equal(foundationPlan.data_reads, 2);
+  assert.deepEqual(foundationPlan.resource_counts, {
+    bootstrap_guard: 1,
+    service_apis: 13,
+    firestore_database: 1,
+    firestore_ttl_fields: 3,
+    kms_key_ring_and_key: 2,
+    kms_iam_bindings: 1,
+    secret_containers: 5,
+    secret_iam_bindings: 5,
+    component_bucket_iam_bindings: 2,
+  });
+  assert.equal(foundationPlan.contains_workload, false);
+  assert.equal(foundationPlan.contains_public_ingress, false);
+  assert.equal(foundationPlan.contains_secret_versions, false);
+  assert.equal(foundationPlan.contains_billing_resource, false);
+  assert.equal(foundationPlan.saved_plan_created, false);
+  assert.equal(foundationPlan.apply_executed, false);
+  assert.equal(foundationPlan.state_generation_before, '1788443136082489');
+  assert.equal(foundationPlan.state_generation_after, '1788443136082489');
+  assert.equal(foundationPlan.state_unchanged, true);
+  assert.equal(foundationPlan.temporary_lock_released, true);
+  assert.equal(foundationPlan.full_plan_reviewed, true);
+  assert.equal(foundationPlan.raw_planned_values_committed, false);
   assert.equal(validated.terraform.apply_authorized, false);
   assert.equal(validated.terraform.local_plan_executed, true);
   assert.deepEqual(validated.terraform.local_plan_observation.result, {
@@ -277,6 +304,7 @@ test('accepts the reconciled bootstrap and empty foundation state', () => {
   assert.equal(validated.evidence.active_cloud_workflow_present, false);
   assert.equal(validated.readiness.required_blockers.includes('github-terraform-workflow-not-installed'), true);
   assert.equal(validated.readiness.required_blockers.includes('foundation-state-not-initialized'), false);
+  assert.equal(validated.readiness.required_blockers.includes('live-foundation-plan-not-reviewed'), false);
   assert.equal(validated.readiness.required_blockers.includes('remote-bootstrap-state-not-migrated'), false);
   assert.equal(
     validated.readiness.required_blockers.includes('github-branch-environment-and-actions-policy-not-configured'),
@@ -443,6 +471,27 @@ test('rejects every cloud-action authorization bit and bootstrap completion drif
   rejects((candidate) => {
     candidate.terraform.foundation_state_initialization.attempts[1].remote_generation = '1';
   }, /terraform\.foundation_state_initialization\.attempts\[1\]\.remote_generation/);
+  rejects((candidate) => {
+    candidate.terraform.foundation_live_plan_observation.result.create = 32;
+  }, /terraform\.foundation_live_plan_observation\.result\.create/);
+  rejects((candidate) => {
+    candidate.terraform.foundation_live_plan_observation.resource_counts.service_apis = 12;
+  }, /terraform\.foundation_live_plan_observation\.resource_counts\.service_apis/);
+  rejects((candidate) => {
+    candidate.terraform.foundation_live_plan_observation.contains_public_ingress = true;
+  }, /terraform\.foundation_live_plan_observation\.contains_public_ingress/);
+  rejects((candidate) => {
+    candidate.terraform.foundation_live_plan_observation.contains_billing_resource = true;
+  }, /terraform\.foundation_live_plan_observation\.contains_billing_resource/);
+  rejects((candidate) => {
+    candidate.terraform.foundation_live_plan_observation.apply_executed = true;
+  }, /terraform\.foundation_live_plan_observation\.apply_executed/);
+  rejects((candidate) => {
+    candidate.terraform.foundation_live_plan_observation.state_generation_after = '1';
+  }, /terraform\.foundation_live_plan_observation\.state_generation_after/);
+  rejects((candidate) => {
+    candidate.terraform.foundation_live_plan_observation.temporary_lock_released = false;
+  }, /terraform\.foundation_live_plan_observation\.temporary_lock_released/);
 });
 
 test('requires explicit targeting and forbids a staging Firebase alias', () => {

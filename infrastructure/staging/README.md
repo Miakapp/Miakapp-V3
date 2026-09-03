@@ -1,6 +1,6 @@
 # Miakapp 4 staging activation blueprint
 
-Status: bootstrap and empty foundation state reconciled; live foundation plan pending
+Status: live foundation plan reviewed; cloud workflow installation pending
 
 This directory contains a closed, apply-capable description of the future
 `miakapp-v4-staging` foundation. It does not authorize or perform cloud
@@ -40,8 +40,9 @@ evidence outside the repository.
 The consumed [`bootstrap/apply-and-migrate.sh`](bootstrap/apply-and-migrate.sh)
 entry point is permanently retired. The replacement
 [`bootstrap/migrate-recovered-state.sh`](bootstrap/migrate-recovered-state.sh)
-contains no apply path and refuses to overwrite the existing state object. No
-foundation resource or workload has been planned yet.
+contains no apply path and refuses to overwrite the existing state object. A
+guarded live foundation plan has now been reviewed, but no foundation resource
+or workload has been applied.
 
 All current authorization bits for additional cloud actions remain false.
 Passing the local gate is evidence, never authorization to initialize state,
@@ -52,7 +53,7 @@ install a workflow, deploy a workload, open ingress, apply, or destroy.
 | Path | Purpose | Current execution boundary |
 |---|---|---|
 | [`bootstrap/`](bootstrap/) | Billing link, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Complete; remote state reconciled with protected local recovery evidence |
-| [`terraform/`](terraform/) | APIs, Firestore, KMS, empty Secret Manager containers, and resource-scoped runtime IAM | Empty state created by the GCS backend and reconciled; live plan pending |
+| [`terraform/`](terraform/) | APIs, Firestore, KMS, empty Secret Manager containers, and resource-scoped runtime IAM | Empty state reconciled; live plan reviewed; no apply |
 | [`automation/`](automation/) | GitHub policy record, dormant plan/apply workflow, private-plan scripts, and operator inspection | Outside `.github/workflows`; cannot run |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
 | [`TEARDOWN.md`](TEARDOWN.md) | Manual recovery and teardown rehearsal | Documentation only |
@@ -155,6 +156,21 @@ The only durable new live object is the roughly 181-byte empty state; Object
 Versioning and soft delete may temporarily retain tiny noncurrent state or lock
 generations as recovery evidence.
 
+## Guarded live foundation plan
+
+The non-saving local wrapper was run from clean configuration commit
+`363d017ebdc85af1285e38c5742365fd0a2a4395` with User ADC. Terraform 1.11.3
+reported exactly `33 to add, 0 to change, 0 to destroy` plus two apply-time data
+reads. The reviewed graph contains thirteen APIs, the bootstrap guard, one
+regional Firestore database and three TTL fields, one software KMS key ring and
+signing key, one key IAM member, five empty secret containers and their five IAM
+members, and two component-bucket IAM members. It contains no workload, secret
+version, public ingress, or billing resource.
+
+The wrapper created no saved plan and ran no apply. A post-plan read proved that
+foundation state generation `1788443136082489` and its SHA-256 remained
+unchanged, and no `.tflock` object remained current.
+
 ## Dormant GitHub automation
 
 [`automation/github-policy.json`](automation/github-policy.json) captures both
@@ -209,7 +225,7 @@ The GitHub branch, environment and Actions prerequisite are configured, and the
 foundation state boundary is reconciled. The next sequence is:
 
 1. install the cloud workflow with the proven state boundary; and
-2. review a live foundation plan before any foundation apply.
+2. create and inspect its private saved plan before any foundation apply.
 
 The production Function entry point, exact FCM runtime permission, secret
 version lifecycle, ingress design, monitoring, real-service fault matrix,

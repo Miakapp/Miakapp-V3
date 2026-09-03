@@ -2,8 +2,9 @@
 
 Date: 2026-09-01
 
-Status: accepted direction; staging bootstrap resources and reconciled remote
-state created on 2026-09-03; project remains application-undeployed
+Status: accepted direction; staging bootstrap and empty foundation state
+reconciled and live foundation plan reviewed on 2026-09-03; project remains
+application-undeployed
 
 ## Decision
 
@@ -97,9 +98,10 @@ For a low-volume staging project, the intended initial posture is:
 - no silently enabled fixed-price edge product. The ingress design and its full
   load-balancer/edge-policy baseline must be priced and accepted explicitly.
 
-The private Terraform bucket will store small state objects and short-lived
-saved plans after the pending migration. Object Versioning and seven-day soft delete deliberately retain
-recovery bytes longer than the two-day live-plan window, so the cost is
+The private Terraform bucket stores small state objects and will hold
+short-lived saved plans after workflow activation. Object Versioning and
+seven-day soft delete deliberately retain recovery bytes longer than the
+two-day live-plan window, so the cost is
 usage-metered rather than literally zero after activation. The planner/deployer,
 Workload Identity Federation, and GitHub OIDC exchanges have no always-on
 compute instance. These bootstrap resources now exist, but no active workflow
@@ -228,8 +230,11 @@ rejected Terraform's deterministic implicit provider metadata before any apply.
 Independent reads have verified that the state is canonical and empty and that
 the inspection-only plan contains no resource action. Clean execution commit
 `ab6f26bd5dd076a79847f989615e7fddf93f2a07` then reconciled the same generation
-without planning or mutation. The next steps are to install the reviewed
-workflow and review a live foundation plan before any apply. The
+without planning or mutation. A subsequent non-saving live plan from commit
+`363d017ebdc85af1285e38c5742365fd0a2a4395` was fully reviewed: `33 to add, 0
+to change, 0 to destroy`, with no workload, public ingress, secret version, or
+state change. The next steps are to install the reviewed workflow and inspect
+its private saved plan before any apply. The
 production Function entry point,
 exact FCM permission, quotas, alerts and teardown evidence remain blockers.
 Deployment, public ingress and active CI authentication remain disabled. Passing
