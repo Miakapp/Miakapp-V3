@@ -254,7 +254,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  await clearFirestore();
+  await clearFirestore(firestore);
 });
 
 afterAll(async () => {

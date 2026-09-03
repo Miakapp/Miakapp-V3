@@ -251,7 +251,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   userSequence += 1;
-  await clearFirestore();
+  await clearFirestore(firestore);
   const [files] = await bucket.getFiles();
   await Promise.all(files.map((file) => file.delete({ ignoreNotFound: true })));
   owner = await signUp(`component-owner-${userSequence}@example.test`);
