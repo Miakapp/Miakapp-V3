@@ -30,7 +30,7 @@ function rejects(mutator, pattern) {
 
 test('accepts the reviewed private bootstrap plan without deployment authorization', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 14);
+  assert.equal(validated.revision, 15);
   assert.equal(
     validated.status,
     'bootstrap_saved_plan_reviewed_billing_linked_undeployed',
@@ -89,6 +89,8 @@ test('accepts the reviewed private bootstrap plan without deployment authorizati
     approved_plan_sha256: '0918d21c4677ce0958be9ccc43057d8d76a33857fdfbea066120ba953e30b5c1',
     exact_authorization_required: true,
     cloud_preflight_required: true,
+    budget_preflight_deferred_only_when_api_disabled: true,
+    budget_postcondition_required: true,
     partial_state_migration_attempted: true,
     local_recovery_preserved_on_failure: true,
     local_state_removed_only_after_reconciliation: true,
@@ -237,6 +239,12 @@ test('rejects every cloud-action authorization bit', () => {
   rejects((candidate) => {
     candidate.terraform.bootstrap_execution.local_recovery_preserved_on_failure = false;
   }, /terraform\.bootstrap_execution\.local_recovery_preserved_on_failure/);
+  rejects((candidate) => {
+    candidate.terraform.bootstrap_execution.budget_preflight_deferred_only_when_api_disabled = false;
+  }, /terraform\.bootstrap_execution\.budget_preflight_deferred_only_when_api_disabled/);
+  rejects((candidate) => {
+    candidate.terraform.bootstrap_execution.budget_postcondition_required = false;
+  }, /terraform\.bootstrap_execution\.budget_postcondition_required/);
 });
 
 test('requires explicit targeting and forbids a staging Firebase alias', () => {

@@ -21,6 +21,7 @@ export const STATE_BUCKET = 'miakapp-v4-staging-tfstate-1072737219170';
 export const STATE_PREFIX = 'terraform/bootstrap';
 export const STATE_OBJECT = `${STATE_PREFIX}/default.tfstate`;
 export const EXECUTION_AUTHORIZATION = `apply-and-migrate:${PROJECT_ID}:${APPROVED_PLAN_SHA256}`;
+export const BUDGET_DISPLAY_NAME = 'Miakapp V4 staging monthly';
 
 const MAX_OBSERVATION_BYTES = 1024 * 1024;
 const MAX_STATE_BYTES = 64 * 1024 * 1024;
@@ -180,7 +181,7 @@ export function verifyAbsentTargetInventory(value, label) {
   switch (label) {
     case 'budgets':
       containsTarget = value.some((entry) => isPlainObject(entry)
-        && entry.displayName === 'Miakapp V4 staging monthly');
+        && entry.displayName === BUDGET_DISPLAY_NAME);
       break;
     case 'storage-buckets':
       containsTarget = value.some((entry) => isPlainObject(entry)
@@ -202,6 +203,14 @@ export function verifyAbsentTargetInventory(value, label) {
       reject('Target inventory label is invalid');
   }
   if (containsTarget) reject(`${label} already contains a bootstrap target`);
+}
+
+export function verifyProvisionedTargetInventory(value, label) {
+  if (!Array.isArray(value)) reject(`${label} inventory must be an array`);
+  if (label !== 'budgets') reject('Provisioned target inventory label is invalid');
+  const targetCount = value.filter((entry) => isPlainObject(entry)
+    && entry.displayName === BUDGET_DISPLAY_NAME).length;
+  if (targetCount !== 1) reject(`${label} must contain exactly one bootstrap target`);
 }
 
 export function verifyRemoteStateObject(value) {
@@ -340,6 +349,13 @@ async function main() {
     );
     return;
   }
+  if (command === 'verify-provisioned-targets' && args.length === 1) {
+    verifyProvisionedTargetInventory(
+      parseJson(await readBoundedStandardInput(), `${args[0]} inventory`),
+      args[0],
+    );
+    return;
+  }
   if (command === 'verify-state-object' && args.length === 0) {
     const observation = verifyRemoteStateObject(
       parseJson(await readBoundedStandardInput(), 'Remote state object observation'),
@@ -352,7 +368,7 @@ async function main() {
     console.log(`Bootstrap state reconciled: ${result.mode}; managed resources: ${result.managedResources}; serial: ${result.serial}`);
     return;
   }
-  reject('Usage: bootstrap-execution.mjs <create-directory|verify-authorization|verify-project|verify-billing-link|verify-empty-inventory|verify-absent-targets|verify-state-object|reconcile-state> ...');
+  reject('Usage: bootstrap-execution.mjs <create-directory|verify-authorization|verify-project|verify-billing-link|verify-empty-inventory|verify-absent-targets|verify-provisioned-targets|verify-state-object|reconcile-state> ...');
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

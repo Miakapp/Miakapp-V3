@@ -105,9 +105,11 @@ The bootstrap root now contains guarded commands that can save an exact plan to
 a mode-0700 directory outside the repository, inspect it locally, and—only after
 a separate exact authorization—apply and migrate it. The execution wrapper is
 bound to the recorded source commit and digest, performs read-only target
-inventory checks, keeps all transient state outside the repository, activates
-the backend template only in a private working copy, and deletes local state only
-after the remote generation and full state contents reconcile. It is committed
+inventory checks, defers the budget lookup only when Service Usage proves its
+API is disabled, and requires exactly one target budget after a complete apply.
+It keeps all transient state outside the repository, activates the backend
+template only in a private working copy, and deletes local state only after the
+remote generation and full state contents reconcile. It is committed
 but has not been authorized or executed.
 
 The ordinary foundation root already points at `terraform/foundation` and reads
