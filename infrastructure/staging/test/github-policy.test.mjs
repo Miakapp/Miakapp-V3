@@ -1,13 +1,12 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import {
+  existsSync,
   mkdtempSync,
   mkdirSync,
   readFileSync,
   readdirSync,
   rmSync,
-  statSync,
-  symlinkSync,
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
@@ -21,7 +20,7 @@ import { validateRecoveryRelevantAttributes } from '../automation/validate-found
 import {
   readGitHubPolicy,
   validateGitHubPolicy,
-  verifyInstalledWorkflow,
+  verifyRetiredWorkflow,
 } from '../automation/validate-policy.mjs';
 
 const repositoryRoot = new URL('../../../', import.meta.url);
@@ -29,10 +28,6 @@ const automationRoot = new URL('../automation/', import.meta.url);
 const policyPath = fileURLToPath(new URL('github-policy.json', automationRoot));
 const policy = readGitHubPolicy(policyPath);
 const workflow = readFileSync(new URL('staging-terraform.yml', automationRoot), 'utf8');
-const activeWorkflow = readFileSync(
-  new URL('../../../.github/workflows/staging-terraform.yml', import.meta.url),
-  'utf8',
-);
 const planScript = readFileSync(new URL('plan.sh', automationRoot), 'utf8');
 const applyScript = readFileSync(new URL('apply.sh', automationRoot), 'utf8');
 const inspectScript = readFileSync(new URL('inspect-plan.sh', automationRoot), 'utf8');
@@ -40,7 +35,6 @@ const summaryPath = fileURLToPath(new URL('summarize-plan.mjs', automationRoot))
 const foundationPlanValidatorPath = fileURLToPath(
   new URL('validate-foundation-plan.mjs', automationRoot),
 );
-const checkScript = readFileSync(new URL('../check.sh', import.meta.url), 'utf8');
 
 function clone(value) {
   return structuredClone(value);
@@ -62,24 +56,6 @@ function runScript(name, environment, args = []) {
       ...environment,
     },
   });
-}
-
-function exactGitHubEnvironment(kind) {
-  const environment = {
-    GITHUB_ACTIONS: 'true',
-    GITHUB_REPOSITORY: 'Miakapp/Miakapp-V3',
-    GITHUB_REPOSITORY_ID: '354682190',
-    GITHUB_REPOSITORY_OWNER_ID: '83046838',
-    GITHUB_REF: 'refs/heads/main',
-    GITHUB_WORKFLOW_REF: 'Miakapp/Miakapp-V3/.github/workflows/staging-terraform.yml@refs/heads/main',
-    GITHUB_SHA: 'a'.repeat(40),
-    GITHUB_RUN_ID: '123456789',
-    GITHUB_RUN_ATTEMPT: '1',
-    MIAKAPP_GITHUB_ENVIRONMENT: `miakapp-v4-staging-${kind}`,
-  };
-  environment.CLOUDSDK_METRICS_ENVIRONMENT = 'github-actions-setup-gcloud';
-  environment.CLOUDSDK_METRICS_ENVIRONMENT_VERSION = '3.0.1';
-  return environment;
 }
 
 const recoveryProject = 'miakapp-v4-staging';
@@ -589,9 +565,9 @@ test('treats recovery relevant attributes as an exact order-independent set', ()
   );
 });
 
-test('authorizes only the hash-bound manual partial-recovery workflow after verified GitHub posture', () => {
-  assert.equal(policy.status, 'manual_keyless_partial_foundation_recovery_authorized');
-  assert.equal(policy.observation_context, 'default_branch_before_this_change');
+test('accepts only the retired partial-recovery policy after verified GitHub posture', () => {
+  assert.equal(policy.status, 'manual_keyless_partial_foundation_recovery_retired');
+  assert.equal(policy.observation_context, 'default_branch_after_this_change');
   assert.deepEqual(policy.observed.main_branch, policy.required.main_branch);
   assert.deepEqual(policy.observed.environment_names, [
     'miakapi',
@@ -605,28 +581,33 @@ test('authorizes only the hash-bound manual partial-recovery workflow after veri
   assert.equal(policy.observed.cloud_authentication_enabled, false);
   assert.deepEqual(policy.activation, {
     policy_observation_verified: true,
-    workflow_install_authorized: true,
-    cloud_plan_authorized: true,
-    foundation_apply_authorized: true,
+    workflow_install_authorized: false,
+    cloud_plan_authorized: false,
+    foundation_apply_authorized: false,
     active_workflow_path: '.github/workflows/staging-terraform.yml',
     blueprint_path: 'infrastructure/staging/automation/staging-terraform.yml',
     workflow_sha256: '701891a221ee949c5b1f0d67e537911fc7fa1476f46c5e670593eb341f2cae2e',
   });
   assert.equal(
-    statSync(new URL('../../../.github/workflows/staging-terraform.yml', import.meta.url)).isFile(),
-    true,
+    existsSync(new URL('../../../.github/workflows/staging-terraform.yml', import.meta.url)),
+    false,
   );
-  assert.equal(activeWorkflow, workflow);
-  assert.match(checkScript, /--require-apply-activation/);
   assert.equal(
-    verifyInstalledWorkflow(fileURLToPath(repositoryRoot), policy),
+    verifyRetiredWorkflow(fileURLToPath(repositoryRoot), policy),
     policy.activation.workflow_sha256,
   );
-  assert.doesNotThrow(() => validateGitHubPolicy(policy, { requirePlanActivation: true }));
-  assert.doesNotThrow(() => validateGitHubPolicy(policy, { requireApplyActivation: true }));
+  assert.doesNotThrow(() => validateGitHubPolicy(policy));
+  assert.throws(
+    () => validateGitHubPolicy(policy, { requirePlanActivation: true }),
+    /workflow_install_authorized/,
+  );
+  assert.throws(
+    () => validateGitHubPolicy(policy, { requireApplyActivation: true }),
+    /workflow_install_authorized/,
+  );
 });
 
-test('rejects policy weakening, broader activation, and unknown fields', () => {
+test('rejects policy drift, reactivation, and unknown fields', () => {
   rejects((candidate) => { candidate.observation_context = 'after-installation'; }, /observation_context/);
   rejects((candidate) => { candidate.observed.main_branch.protected = false; }, /observed\.main_branch\.protected/);
   rejects((candidate) => {
@@ -644,36 +625,49 @@ test('rejects policy weakening, broader activation, and unknown fields', () => {
   rejects((candidate) => { candidate.required.actions.sha_pinning_required = false; }, /sha_pinning_required/);
   rejects((candidate) => { candidate.required.actions.allowed_actions = 'all'; }, /allowed_actions/);
   rejects((candidate) => { candidate.required.oidc.repository_id_claim = 'Miakapp/Miakapp-V3'; }, /repository_id_claim/);
-  rejects((candidate) => { candidate.activation.workflow_install_authorized = false; }, /workflow_install_authorized/);
-  rejects((candidate) => { candidate.activation.cloud_plan_authorized = false; }, /cloud_plan_authorized/);
-  rejects((candidate) => { candidate.activation.foundation_apply_authorized = false; }, /foundation_apply_authorized/);
+  rejects((candidate) => { candidate.activation.workflow_install_authorized = true; }, /workflow_install_authorized/);
+  rejects((candidate) => { candidate.activation.cloud_plan_authorized = true; }, /cloud_plan_authorized/);
+  rejects((candidate) => { candidate.activation.foundation_apply_authorized = true; }, /foundation_apply_authorized/);
   rejects((candidate) => { candidate.activation.workflow_sha256 = '0'.repeat(64); }, /workflow_sha256/);
   rejects((candidate) => { candidate.unreviewed = true; }, /must contain exactly/);
 });
 
-test('the policy CLI accepts both explicitly activated modes without a stack trace', () => {
+test('the policy CLI accepts retirement and rejects both activation modes without a stack trace', () => {
+  const retiredResult = spawnSync(process.execPath, [
+    fileURLToPath(new URL('validate-policy.mjs', automationRoot)),
+    policyPath,
+  ], { encoding: 'utf8' });
+  assert.equal(retiredResult.status, 0, retiredResult.stderr);
+  assert.match(retiredResult.stdout, /manual keyless partial-foundation recovery is retired/);
+  assert.equal(retiredResult.stderr, '');
+
   const planResult = spawnSync(process.execPath, [
     fileURLToPath(new URL('validate-policy.mjs', automationRoot)),
     '--require-plan-activation',
     policyPath,
   ], { encoding: 'utf8' });
-  assert.equal(planResult.status, 0, planResult.stderr);
-  assert.match(planResult.stdout, /manual keyless partial-foundation recovery is authorized/);
-  assert.equal(planResult.stderr, '');
+  assert.equal(planResult.status, 1);
+  assert.equal(planResult.stdout, '');
+  assert.match(planResult.stderr, /workflow_install_authorized must equal true/);
+  assert.doesNotMatch(planResult.stderr, /\n\s+at /);
 
   const applyResult = spawnSync(process.execPath, [
     fileURLToPath(new URL('validate-policy.mjs', automationRoot)),
     '--require-apply-activation',
     policyPath,
   ], { encoding: 'utf8' });
-  assert.equal(applyResult.status, 0, applyResult.stderr);
-  assert.match(applyResult.stdout, /manual keyless partial-foundation recovery is authorized/);
-  assert.equal(applyResult.stderr, '');
+  assert.equal(applyResult.status, 1);
+  assert.equal(applyResult.stdout, '');
+  assert.match(applyResult.stderr, /workflow_install_authorized must equal true/);
+  assert.doesNotMatch(applyResult.stderr, /\n\s+at /);
 });
 
-test('keeps the installed partial-recovery workflow manual, reviewed, and least-permission', () => {
+test('keeps the retired workflow blueprint as immutable least-permission evidence', () => {
   assert.doesNotThrow(() => validateAutomationRoot(automationRoot));
-  assert.equal(activeWorkflow, workflow);
+  assert.equal(
+    existsSync(new URL('../../../.github/workflows/staging-terraform.yml', import.meta.url)),
+    false,
+  );
   assert.match(workflow, /^name: Staging Terraform foundation recovery/m);
   assert.match(workflow, /^on:\n  workflow_dispatch:/m);
   assert.doesNotMatch(workflow, /pull_request:|\npush:/);
@@ -695,7 +689,7 @@ test('keeps the installed partial-recovery workflow manual, reviewed, and least-
   assert.doesNotMatch(workflow, /pull-requests:\s*write|contents:\s*write|actions:\s*write/);
 });
 
-test('pins every active or blueprint action and limits action origins to policy', () => {
+test('pins every active or historical-blueprint action and limits action origins to policy', () => {
   const workflowUrls = readdirSync(new URL('../../../.github/workflows/', import.meta.url))
     .filter((name) => /\.ya?ml$/.test(name))
     .map((name) => new URL(`../../../.github/workflows/${name}`, import.meta.url));
@@ -711,58 +705,28 @@ test('pins every active or blueprint action and limits action origins to policy'
   }
 });
 
-test('passes the exact create-only private plan to the separately admitted apply job', () => {
-  assert.match(planScript, /plans\/\$\{GITHUB_SHA\}\/\$\{GITHUB_RUN_ID\}\/\$\{GITHUB_RUN_ATTEMPT\}\/foundation\.tfplan/);
-  assert.match(planScript, /--if-generation-match=0/);
-  assert.match(planScript, /plan-sha256/);
-  assert.match(planScript, /foundation-plan\.failure\.log/);
-  assert.match(planScript, /private diagnostic/);
-  assert.match(planScript, /wc -c/);
-  assert.match(planScript, /1048576/);
-  assert.equal((planScript.match(/--if-generation-match=0/g) ?? []).length, 2);
-  assert.match(planScript, /summarize-plan\.mjs/);
-  assert.match(planScript, /validate-foundation-plan\.mjs/);
-  assert.match(
-    planScript,
-    /validate-foundation-plan\.mjs" \\\n    --profile partial-foundation-recovery/,
-  );
-  assert.ok(
-    planScript.indexOf('validate-foundation-plan.mjs') < planScript.indexOf('summarize-plan.mjs'),
-  );
-  const savedPlanUpload = planScript.indexOf('"$plan_file" \\\n  "$plan_object"');
-  assert.notEqual(savedPlanUpload, -1);
-  assert.ok(planScript.indexOf('validate-foundation-plan.mjs') < savedPlanUpload);
-  assert.doesNotMatch(`${workflow}\n${planScript}\n${applyScript}`, /upload-artifact|download-artifact/);
-  assert.match(applyScript, /expected_object="gs:\/\/miakapp-v4-staging-tfstate-1072737219170\/plans/);
-  assert.match(applyScript, /actual_sha256/);
-  assert.match(applyScript, /\$actual_sha256" != "\$MIAKAPP_PLAN_SHA256/);
-  assert.match(applyScript, /terraform -chdir="\$terraform_root" apply/);
-  assert.match(applyScript, /-parallelism=1/);
-  assert.match(applyScript, /--require-apply-activation/);
-  assert.match(applyScript, /validate-foundation-plan\.mjs/);
-  assert.match(
-    applyScript,
-    /validate-foundation-plan\.mjs" \\\n    --profile partial-foundation-recovery/,
-  );
-  assert.ok(
-    applyScript.indexOf('validate-foundation-plan.mjs')
-      < applyScript.indexOf('terraform -chdir="$terraform_root" apply'),
-  );
-  assert.doesNotMatch(planScript, /terraform -chdir="\$terraform_root" apply/);
-  assert.match(workflow, /apply\.sh/);
-  assert.match(applyScript, /-detailed-exitcode/);
-  assert.ok(
-    applyScript.indexOf('terraform -chdir="$terraform_root" apply')
-      < applyScript.indexOf('-detailed-exitcode'),
-  );
-  for (const script of [planScript, applyScript]) {
-    assert.match(script, /CLOUDSDK_METRICS_ENVIRONMENT:-.*github-actions-setup-gcloud/);
-    assert.match(script, /CLOUDSDK_METRICS_ENVIRONMENT_VERSION:-.*3\.0\.1/);
+test('keeps both consumed entrypoints inert before any cloud or tool access', () => {
+  for (const [name, source] of [['plan.sh', planScript], ['apply.sh', applyScript]]) {
+    assert.match(source, /one-shot staging foundation recovery .* entrypoint is retired/);
+    assert.doesNotMatch(source, /\b(?:gcloud|terraform|node|curl|wget)\b/i);
+
+    const result = runScript(name, {
+      GOOGLE_APPLICATION_CREDENTIALS: '/tmp/must-not-be-read',
+      TF_VAR_must_not_be_read: 'synthetic',
+    });
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, '');
+    assert.match(result.stderr, /entrypoint is retired/);
+
+    const withArgument = runScript(name, {}, ['unexpected']);
+    assert.equal(withArgument.status, 2);
+    assert.equal(withArgument.stdout, '');
+    assert.match(withArgument.stderr, /Usage: (?:plan|apply)\.sh\n/);
   }
 });
 
-test('rejects drift between the active workflow, blueprint, and policy digest', () => {
-  const temporary = mkdtempSync(join(tmpdir(), 'miakapp-workflow-installation-test-'));
+test('requires the active workflow to remain absent and preserves the historical digest', () => {
+  const temporary = mkdtempSync(join(tmpdir(), 'miakapp-workflow-retirement-test-'));
   const activeDirectory = join(temporary, '.github', 'workflows');
   const blueprintDirectory = join(temporary, 'infrastructure', 'staging', 'automation');
   mkdirSync(activeDirectory, { recursive: true, mode: 0o700 });
@@ -770,206 +734,22 @@ test('rejects drift between the active workflow, blueprint, and policy digest', 
   const activePath = join(activeDirectory, 'staging-terraform.yml');
   const blueprintPath = join(blueprintDirectory, 'staging-terraform.yml');
   try {
-    writeFileSync(activePath, workflow, { mode: 0o600 });
     writeFileSync(blueprintPath, workflow, { mode: 0o600 });
-    assert.equal(verifyInstalledWorkflow(temporary, policy), policy.activation.workflow_sha256);
-    writeFileSync(activePath, `${workflow}\n# drift\n`, { mode: 0o600 });
+    assert.equal(verifyRetiredWorkflow(temporary, policy), policy.activation.workflow_sha256);
+
+    writeFileSync(activePath, workflow, { mode: 0o600 });
     assert.throws(
-      () => verifyInstalledWorkflow(temporary, policy),
-      /must exactly match the reviewed blueprint/,
+      () => verifyRetiredWorkflow(temporary, policy),
+      /retired workflow must be absent/,
     );
-    writeFileSync(blueprintPath, `${workflow}\n# drift\n`, { mode: 0o600 });
+    unlinkSync(activePath);
+
+    writeFileSync(blueprintPath, workflow + '\n# drift\n', { mode: 0o600 });
     assert.throws(
-      () => verifyInstalledWorkflow(temporary, policy),
-      /active workflow SHA-256/,
+      () => verifyRetiredWorkflow(temporary, policy),
+      /historical workflow blueprint SHA-256/,
     );
   } finally {
-    rmSync(temporary, { recursive: true });
-  }
-});
-
-test('rejects wrong GitHub context and non-canonical run identifiers before credentials', () => {
-  for (const [name, value] of [
-    ['GITHUB_REPOSITORY_ID', '1'],
-    ['GITHUB_REPOSITORY_OWNER_ID', '1'],
-    ['GITHUB_REF', 'refs/heads/feature'],
-    ['GITHUB_WORKFLOW_REF', 'Miakapp/Miakapp-V3/.github/workflows/other.yml@refs/heads/main'],
-    ['MIAKAPP_GITHUB_ENVIRONMENT', 'miakapp-v4-staging-apply'],
-  ]) {
-    const result = runScript('plan.sh', { ...exactGitHubEnvironment('plan'), [name]: value });
-    assert.equal(result.status, 1, name);
-    assert.match(result.stderr, /plan context does not match/);
-  }
-  const result = runScript('plan.sh', { ...exactGitHubEnvironment('plan'), GITHUB_SHA: '../escape' });
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /run identifiers are not canonical/);
-});
-
-test('rejects credential symlinks and ambient provider or gcloud overrides', () => {
-  const temporary = mkdtempSync(join(tmpdir(), 'miakapp-staging-automation-'));
-  const commands = join(temporary, 'commands');
-  const output = join(temporary, 'github-output');
-  const credential = fileURLToPath(new URL(`../../../gha-creds-test-${process.pid}.json`, import.meta.url));
-  mkdirSync(commands, { mode: 0o700 });
-  writeFileSync(output, '', { mode: 0o600 });
-  writeFileSync(credential, '{}\n', { flag: 'wx', mode: 0o600 });
-  for (const command of ['gcloud', 'terraform']) {
-    writeFileSync(join(commands, command), '#!/usr/bin/env bash\nexit 0\n', { mode: 0o700 });
-  }
-  writeFileSync(join(commands, 'node'), '#!/usr/bin/env bash\nexit 71\n', { mode: 0o700 });
-  const base = {
-    ...exactGitHubEnvironment('plan'),
-    GITHUB_OUTPUT: output,
-    GOOGLE_APPLICATION_CREDENTIALS: credential,
-    CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE: credential,
-    GOOGLE_GHA_CREDS_PATH: credential,
-  };
-  try {
-    const exactSetupGcloud = runScript('plan.sh', {
-      ...base,
-      PATH: `${commands}:${process.env.PATH}`,
-    });
-    assert.equal(exactSetupGcloud.status, 71);
-    assert.doesNotMatch(exactSetupGcloud.stderr, /Unreviewed Terraform or Google overrides/);
-
-    for (const [name, value] of [
-      ['CLOUDSDK_METRICS_ENVIRONMENT', 'unreviewed-action'],
-      ['CLOUDSDK_METRICS_ENVIRONMENT_VERSION', '999.0.0'],
-    ]) {
-      const result = runScript('plan.sh', { ...base, [name]: value });
-      assert.equal(result.status, 1, name);
-      assert.match(result.stderr, /setup-gcloud identity does not match/);
-    }
-    for (const [name, value] of [
-      ['TF_DATA_DIR', '/tmp/unreviewed'],
-      ['TF_VAR_unreviewed', 'value'],
-      ['GOOGLE_FIRESTORE_CUSTOM_ENDPOINT', 'https://attacker.example.test'],
-      ['GOOGLE_OAUTH_ACCESS_TOKEN', 'synthetic-token'],
-      ['CLOUDSDK_CONFIG', '/tmp/unreviewed'],
-    ]) {
-      const result = runScript('plan.sh', { ...base, [name]: value });
-      assert.equal(result.status, 1, name);
-      assert.match(result.stderr, /Unreviewed Terraform or Google overrides are forbidden/);
-    }
-    const wrongProject = runScript('plan.sh', { ...base, GOOGLE_CLOUD_PROJECT: 'miakapp-3' });
-    assert.equal(wrongProject.status, 1);
-    assert.match(wrongProject.stderr, /project environment does not match/);
-  } finally {
-    unlinkSync(credential);
-    rmSync(temporary, { recursive: true });
-  }
-
-  const target = join(tmpdir(), `miakapp-synthetic-credential-${process.pid}.json`);
-  const link = fileURLToPath(new URL(`../../../gha-creds-link-${process.pid}.json`, import.meta.url));
-  writeFileSync(target, '{}\n', { flag: 'wx', mode: 0o600 });
-  symlinkSync(target, link);
-  const secondTemporary = mkdtempSync(join(tmpdir(), 'miakapp-staging-output-'));
-  const secondOutput = join(secondTemporary, 'github-output');
-  writeFileSync(secondOutput, '', { mode: 0o600 });
-  try {
-    const result = runScript('plan.sh', {
-      ...exactGitHubEnvironment('plan'),
-      GITHUB_OUTPUT: secondOutput,
-      GOOGLE_APPLICATION_CREDENTIALS: link,
-      CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE: link,
-      GOOGLE_GHA_CREDS_PATH: link,
-    });
-    assert.equal(result.status, 1);
-    assert.match(result.stderr, /credential file is missing/);
-  } finally {
-    unlinkSync(link);
-    unlinkSync(target);
-    rmSync(secondTemporary, { recursive: true });
-  }
-});
-
-test('rejects a foreign plan object before the apply job can use credentials', () => {
-  const environment = {
-    ...exactGitHubEnvironment('apply'),
-    MIAKAPP_PLAN_OBJECT: 'gs://attacker.example/foundation.tfplan',
-    MIAKAPP_PLAN_SHA256: 'b'.repeat(64),
-  };
-  const result = runScript('apply.sh', environment);
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /exact plan produced by this workflow attempt/);
-});
-
-test('accepts a canonical apply policy then rejects missing keyless credentials before cloud access', () => {
-  const github = exactGitHubEnvironment('apply');
-  const planObject = [
-    'gs://miakapp-v4-staging-tfstate-1072737219170/plans',
-    github.GITHUB_SHA,
-    github.GITHUB_RUN_ID,
-    github.GITHUB_RUN_ATTEMPT,
-    'foundation.tfplan',
-  ].join('/');
-  const result = runScript('apply.sh', {
-    ...github,
-    MIAKAPP_PLAN_OBJECT: planObject,
-    MIAKAPP_PLAN_SHA256: 'b'.repeat(64),
-  });
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /keyless Google credential file is missing/);
-  assert.doesNotMatch(result.stderr, /activation\.foundation_apply_authorized/);
-});
-
-test('retains bounded plan failures only in the private create-only prefix', () => {
-  const temporary = mkdtempSync(join(tmpdir(), 'miakapp-staging-plan-failure-'));
-  const commands = join(temporary, 'commands');
-  const runner = join(temporary, 'runner');
-  const output = join(temporary, 'github-output');
-  const commandLog = join(temporary, 'gcloud-commands');
-  const credential = fileURLToPath(
-    new URL(`../../../gha-creds-plan-failure-${process.pid}.json`, import.meta.url),
-  );
-  mkdirSync(commands, { mode: 0o700 });
-  mkdirSync(runner, { mode: 0o700 });
-  writeFileSync(output, '', { mode: 0o600 });
-  writeFileSync(commandLog, '', { mode: 0o600 });
-  writeFileSync(credential, '{}\n', { flag: 'wx', mode: 0o600 });
-  writeFileSync(join(commands, 'terraform'), [
-    '#!/usr/bin/env bash',
-    'for argument in "$@"; do',
-    '  if [[ "$argument" == "plan" ]]; then',
-    '    echo "synthetic private provider detail" >&2',
-    '    exit 1',
-    '  fi',
-    'done',
-    'exit 0',
-    '',
-  ].join('\n'), { mode: 0o700 });
-  writeFileSync(join(commands, 'gcloud'), [
-    '#!/usr/bin/env bash',
-    'printf "%s\\n" "$*" >>"$COMMAND_LOG"',
-    'exit 0',
-    '',
-  ].join('\n'), { mode: 0o700 });
-  try {
-    const result = runScript('plan.sh', {
-      ...exactGitHubEnvironment('plan'),
-      PATH: `${commands}:${process.env.PATH}`,
-      RUNNER_TEMP: runner,
-      GITHUB_OUTPUT: output,
-      COMMAND_LOG: commandLog,
-      GOOGLE_APPLICATION_CREDENTIALS: credential,
-      CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE: credential,
-      GOOGLE_GHA_CREDS_PATH: credential,
-    });
-    assert.equal(result.status, 1);
-    assert.match(result.stderr, /Terraform plan failed; private diagnostic:/);
-    assert.match(
-      result.stderr,
-      /plans\/a{40}\/123456789\/1\/foundation-plan\.failure\.log/,
-    );
-    assert.match(result.stderr, /SHA-256: [0-9a-f]{64}/);
-    assert.doesNotMatch(result.stderr, /synthetic private provider detail/);
-    const gcloudCommands = readFileSync(commandLog, 'utf8');
-    assert.match(gcloudCommands, /foundation-plan\.failure\.log/);
-    assert.match(gcloudCommands, /--if-generation-match=0/);
-    assert.doesNotMatch(gcloudCommands, /foundation\.tfplan/);
-    assert.equal(readdirSync(runner).length, 0);
-  } finally {
-    unlinkSync(credential);
     rmSync(temporary, { recursive: true });
   }
 });

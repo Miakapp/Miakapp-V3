@@ -1,6 +1,6 @@
-# Staging Terraform foundation proposal
+# Staging Terraform foundation
 
-Status: partial foundation present; exact eight-IAM recovery authorized
+Status: foundation complete; recovery workflow and WIF exchange retired
 
 This root describes the ordinary protected foundation for the existing,
 billing-linked but undeployed `miakapp-v4-staging` project. Billing management,
@@ -9,7 +9,7 @@ the runtime service account and its project IAM, remote-state storage, Workload
 Identity Federation, and CI identities belong to
 [`../bootstrap/`](../bootstrap/), not this root.
 
-The foundation proposes:
+The foundation contains:
 
 - the exact APIs required by the eventual staging control plane;
 - the Standard default Firestore database with deletion protection and three
@@ -37,11 +37,17 @@ remote output with the exact project ID and number, Paris region, state bucket
 and prefixes, plan/apply providers, all three service accounts, component
 bucket, and numeric GitHub repository IDs. Missing, local, stale, or foreign
 bootstrap state fails closed. The bootstrap state is present remotely at serial
-40 and was reconciled against the protected serial-39 source state. Terraform's
+42 with 37 managed resources. Its original serial-40 migration was reconciled
+against the protected serial-39 source state; generation `1788457646215552` at
+serial 41 records adoption of the already-live planner quota member without an
+IAM write. The serial-42 state records only disabling both recovery WIF
+providers. Terraform's
 GCS backend initially created empty foundation state at serial 1. Protected run
-`33776569977` later persisted 25 managed resources. Current generation
-`1788452068422403` is healthy at serial 4; the bootstrap guard, APIs, Firestore,
-TTL fields, KMS key material and five empty secret containers are present.
+`33776569977` later persisted 25 managed resources. Recovery run `33784785967`
+completed the remaining eight IAM members. Current generation
+`1788456706865449` is healthy at serial 6 with all 33 managed resources; the
+bootstrap guard, APIs, Firestore, TTL fields, KMS key material, five empty secret
+containers and their exact resource IAM are present.
 
 ## Credential-free validation
 
@@ -57,17 +63,18 @@ HCL, and exercises the bootstrap guard through mock providers. It reads no
 Google credential and calls no Google Cloud API. Terraform may contact the
 provider registry to download or verify the pinned provider binaries.
 
-## Guarded initial state
+## Historical guarded initial state
 
-[`initialize-state.sh`](initialize-state.sh) creates only the initial empty
-foundation state. It requires User ADC, a clean checkout, a private
-operator-owned directory outside the repository, the exact reconciled bootstrap
-generation, and an authorization bound to the clean execution commit. The
-implementation is bound to reviewed commit
-`626dc16637ba843f6d1543156aba99e7b551e705` and remains fail-closed until a
-separate exact authorization names the clean execution commit.
+[`initialize-state.sh`](initialize-state.sh) created only the initial empty
+foundation state. The section below is retained as historical audit evidence,
+not as an active procedure. Do not run this command: the current non-empty,
+complete foundation state makes the script fail closed. The historical path
+required User ADC, a clean checkout, a private operator-owned directory outside
+the repository, the exact reconciled bootstrap generation, and an authorization
+bound to the clean execution commit. The implementation was bound to reviewed
+commit `626dc16637ba843f6d1543156aba99e7b551e705`.
 
-The authorized command shape is:
+The historical authorized command shape was:
 
 ```sh
 MIAKAPP_STAGING_FOUNDATION_STATE_AUTHORIZATION='initialize-foundation-state:miakapp-v4-staging:1788439334043522:<40-hex-execution-commit>' \
@@ -115,14 +122,14 @@ ingress, and no secret version. No saved plan was created and no apply ran.
 Post-plan checks found the exact same state generation and digest and no current
 lock object.
 
-The manual keyless workflow in [`../automation/`](../automation/) is the
-authorized path after bootstrap. Its plan job creates a private, create-only
+The historical manual keyless workflow in [`../automation/`](../automation/)
+was the authorized recovery path. Its plan job created a private, create-only
 saved plan and emits only bounded action/address metadata. Run `33774848684`
 successfully created and fully inspected such a plan from protected commit
 `66869a3564788ba725049cc91326b17eb239ddaf`. The exact binary passed the closed
 `initial-foundation` validator with 33 creates, two reads, and no update or
 delete. A following protected revision admitted that binary boundary into a
-separate environment-protected apply job with a required zero-change
+separate environment-protected apply job with an intended zero-change
 convergence check.
 
 That protected apply recorded 25 managed resources before its command failed.
@@ -134,13 +141,33 @@ A fresh private plan contains those exact eight creates and 25 no-ops. Seven
 normalization of empty KMS/Secret Manager maps; none is a configuration update.
 The `partial-foundation-recovery` validator closes over the complete resource,
 prior-state, planned-value, drift, output, check and relevant-attribute shapes.
+Run `33784785967` applied that exact eight-create plan. Its overall conclusion
+was failure only because the final convergence plan used the deliberately
+narrower deployer identity, which lacks planner reads. A separate User-ADC plan
+reported all 33 resources as no-ops and zero changes. The consumed private plan
+generation was deleted, the active workflow was removed, and the retained
+`plan.sh` and `apply.sh` compatibility entrypoints fail immediately.
+
+The remaining recovery exchange was retired from PR #30 configuration commit
+`ee457535a64355cd8133410d9c8c43f039608928`. Its exact private 25,925-byte plan,
+SHA-256
+`8f570dfe5450b704112d484f058fc6dfcd39069a92c8bb483c5029027183e888`,
+contained 35 no-ops and two updates: only the plan/apply provider `disabled`
+attributes changed from `false` to `true`. Apply reported `0 added, 2 changed, 0
+destroyed`, and the follow-up plan reported zero changes. Bootstrap state
+generation `1788460174191027` is 61,864 bytes at serial 42 with 37 managed
+resources, two data resources and one output; its SHA-256 is
+`288d947d35f5d5a278aaff210ea878a9dab817f594b4c3161ed117bb2e30e26d`.
+The pool remains enabled and retained.
 
 ## Explicit boundaries
 
 Terraform source is inherently apply-capable. Repository guards and supported
 wrappers do not prevent a privileged operator from bypassing them, so direct
-Terraform mutation remains unauthorized. The plan job may use only short-lived
-planner credentials and cannot write foundation state. The apply job may use
-only the separately admitted deployer identity after environment approval, and
-only for the exact closed partial-foundation recovery plan. Workload deployment,
-public ingress, direct apply, and destroy remain unauthorized.
+Terraform mutation remains unauthorized. The one-shot CI plan/apply workflow is
+retired and absent, both provider resources are disabled, and the reviewed
+GitHub OIDC exchange route is closed. The service accounts and IAM roles remain;
+this evidence does not disprove impersonation by another administrator. The
+manual operator plan remains read-only, requires User ADC and exact staging
+confirmation, and uses the locking backend. Workload deployment, public ingress,
+direct apply, and destroy remain unauthorized.

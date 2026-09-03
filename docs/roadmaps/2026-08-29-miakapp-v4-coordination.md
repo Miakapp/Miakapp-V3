@@ -266,18 +266,24 @@ standard Firebase Admin App Check verification, FID-targeted FCM transport,
 production Storage binding and an explicit dependency-injected composition root.
 It rejects emulator and credential-file environments and is not imported by the
 Firebase Emulator Function entry point. Its tests use only injected clients and
-never contact staging. The `miakapp-v4-staging` Firebase project now has its
-approved billing link, but it has no registered app, regional data resource,
-runtime identity, key, secret or deployment. Paris (`europe-west9`) and the
-fingerprinted billing account remain reviewed inputs. Credential-free checks now
-validate separate apply-capable bootstrap and foundation Terraform roots with
-mock providers. A private versioned GCS state design, separate keyless plan/apply
-identities, numeric-claim WIF conditions and a protected same-plan automation
-blueprint are closed in code. They remain unapplied: the GCS bucket, state,
-and cloud identities do not exist. The GitHub branch, environments and Actions
-policy were configured and re-observed on 2026-09-02, but the workflow is
-deliberately outside `.github/workflows` and no Function resource is included.
-All staging rows remain open.
+never contact staging. The billing-linked `miakapp-v4-staging` project now has a
+complete 37-resource bootstrap and 33-resource foundation in Paris
+(`europe-west9`): private state and component buckets, runtime/planner/deployer
+identities, the declared APIs, deletion-protected Firestore with three active
+TTL fields, a software Ed25519 key, five empty secret containers and exact
+resource IAM. It still has no registered Firebase app, App Engine application,
+Function, Cloud Run service, secret version, public ingress or deployed
+workload. Credential-free checks validate both Terraform roots with mock
+providers.
+
+The one-shot protected recovery is complete and its active workflow is removed.
+PR #30 configuration commit
+`ee457535a64355cd8133410d9c8c43f039608928` applied a 35-no-op/two-update plan
+that changed only both recovery WIF providers from enabled to disabled; the pool,
+service accounts and IAM roles remain. Current bootstrap state is serial 42 and
+a follow-up plan reports no changes. This closes the reviewed GitHub OIDC
+exchange route but does not disprove impersonation by another administrator.
+All real staging rows and application deployment gates remain open.
 
 Deliverables:
 
@@ -394,42 +400,33 @@ current consumer.
    slice in isolated local Firebase Auth, Functions and Firestore emulators,
    including separate Firestore/Storage client Rules and independent token
    verification.
-8. **In progress 2026-09-03** — the emulator implementation now covers closed FID
+8. **In progress 2026-09-03** — the emulator implementation covers closed FID
    registration, grants and semantic sends with synthetic App Check/FCM evidence,
    plus local component publication/read-back, immutable releases, reconciliation,
    concurrent CAS, quarantine and rollback, and fixed-slot audit/rate/cost
-   admission. Its deterministic application/dependency fault matrix is now
-   explicit and executable. An inactive offline production composition now binds
-   the real SDK seams without importing or deploying them. A closed,
-   credential-free staging manifest fixes
-   the isolated target, initial resource/IAM/cost posture and teardown inventory
-   without enabling deployment. The staging Firebase project was claimed on
-   2026-09-02 and linked to the approved billing account on 2026-09-03; its
-   bootstrap inventory has no registered app, database, bucket or deployed
-   workload. Paris and the billing-account choice are reviewed. Provider-pinned
-   bootstrap and foundation roots describe
-   private versioned state, separate keyless plan/apply identities and the
-   regional foundation. Escalation-capable project IAM, service-account creation
-   and both buckets remain human-bootstrap resources, so the apply identity
-   cannot rewrite its own trust boundary or the bootstrap state. A dormant,
-   SHA-pinned workflow binds a private saved plan to a protected apply job,
-   while a closed policy record now proves that the branch, environment and
-   Actions settings were configured and re-observed without activating cloud
-   resources or installing the workflow. A fresh non-saved diagnostic and the
-   first digest-verified private saved bootstrap plan both reported 36 additions,
-   no changes and no destroys. Its authorized execution stopped on the redundant
-   billing-association update before any resource was created. A replacement
-   plan now imports that existing association and contains exactly 35 creations,
-   one client-side import update and no deletion. A single-use, recovery-first
-   wrapper binds preflight, apply, state migration, remote read-back and exact
-   reconciliation to the replacement digest and exact executing repository
-   commit; it is committed but inactive. Next
-   obtain explicit mutation authorization for that exact digest, execute the
-   guarded bootstrap sequence, initialize and verify an empty
-   foundation state with protected operator credentials, authorize workflow
-   installation, then review the foundation plan. The production entry point
-   and exact runtime IAM expansion remain required before closing
-   relay-integration and staging-only RFC 0004 Section 18 gates.
+   admission. Its deterministic application/dependency fault matrix is explicit
+   and executable. An inactive offline production composition binds the real SDK
+   seams without importing or deploying them. The isolated, billing-linked Paris
+   staging project now has a reconciled 37-resource bootstrap and complete
+   33-resource foundation: private state and component buckets, separate keyless
+   identities, the declared APIs, deletion-protected Firestore with three active
+   TTL fields, a software Ed25519 key, five empty secret containers, and exact
+   resource-scoped runtime IAM. It still has no Firebase app, App Engine
+   application, Function, Cloud Run service, secret version, public ingress or
+   deployed workload. The already-live planner quota member was adopted through
+   an import-only Terraform plan without changing project IAM; its serial-41
+   generation remains historical evidence. The one-shot protected recovery
+   completed, GitHub workflow `349440747` was disabled manually, its active
+   source was removed, and its cloud-plan/apply activation flags and scripts fail
+   closed. Both recovery WIF providers were then disabled through PR #30 commit
+   `ee457535a64355cd8133410d9c8c43f039608928`; the enabled pool, service accounts
+   and IAM roles remain. Current 37-resource bootstrap state is serial 42 and both
+   roots plan to zero changes. The reviewed GitHub OIDC exchange is closed, but
+   other administrator impersonation is not disproved. The production
+   configuration loader, secret lifecycle, Function
+   entry point, exact FCM runtime permission, source/edge admission, monitoring,
+   migration rehearsal and real staging fault evidence remain required before
+   closing relay-integration and staging-only RFC 0004 Section 18 gates.
 
 ## 9. Evidence that would change this plan
 

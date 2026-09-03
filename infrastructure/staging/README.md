@@ -1,23 +1,23 @@
-# Miakapp 4 staging activation blueprint
+# Miakapp 4 staging foundation
 
-Status: protected keyless partial-foundation recovery authorized
+Status: foundation complete; recovery workflow and WIF exchange retired
 
 This directory contains the closed description and observed state of the
-`miakapp-v4-staging` foundation. This revision authorizes one bounded manual
-recovery from protected `main`: exactly eight missing resource-scoped IAM
-members on top of the reviewed partial state. It does not authorize workload
-deployment, public ingress, destroy, or production changes.
+`miakapp-v4-staging` foundation. The bounded recovery has completed; its active
+workflow, apply authorization and reviewed GitHub OIDC exchange are retired.
+This revision does not authorize workload deployment, public ingress, destroy,
+or production changes.
 
 ## Current truth
 
 Project `miakapp-v4-staging` (`1072737219170`) remains application-undeployed:
 there is no Firebase app, App Engine application, Function, Cloud Run service,
-secret version, or public ingress. The bootstrap is complete. A protected
-foundation apply on 2026-09-03 also created all thirteen declared APIs, the
+secret version, or public ingress. The bootstrap is complete. Protected
+foundation applies on 2026-09-03 created all thirteen declared APIs, the
 deletion-protected Paris Firestore database and three active TTL fields, one
 software Ed25519 signing key, and five empty Secret Manager containers. The
-eight KMS, Secret Manager and component-bucket runtime IAM members remain
-absent.
+eight KMS, Secret Manager and component-bucket runtime IAM members are present
+with the exact declared principals and roles.
 
 The earlier authorized bootstrap apply completed:
 
@@ -25,7 +25,8 @@ The earlier authorized bootstrap apply completed:
 - all eight bootstrap APIs;
 - the private component and versioned Terraform-state buckets in Paris;
 - the runtime, planner, and deployer service accounts;
-- the Workload Identity pool and its two GitHub providers; and
+- the retained Workload Identity pool and its two now-disabled GitHub
+  providers; and
 - the reviewed project, bucket, and service-account IAM bindings.
 
 Terraform reported `27 added, 0 changed, 0 destroyed` on top of the nine
@@ -44,12 +45,32 @@ generation `1788439334043522` proved that every other parsed value is exactly
 equal. The original serial-39 state remains protected as independent recovery
 evidence outside the repository.
 
+The planner's already-live Service Usage Consumer member was then adopted with
+a configuration-driven Terraform import. The plan contained exactly one import
+and no add, change, or destroy. Project IAM retained etag `BwZalzR1TWY=` and the
+same canonical policy digest, and no `SetIamPolicy` audit entry appeared. The
+resulting bootstrap state generation `1788457646215552` at serial 41 had 37
+managed resources and remains the historical planner-role adoption record.
+
+PR #30 configuration commit
+`ee457535a64355cd8133410d9c8c43f039608928` then disabled exactly the plan and
+apply Workload Identity providers. Its exact private 25,925-byte plan had
+SHA-256
+`8f570dfe5450b704112d484f058fc6dfcd39069a92c8bb483c5029027183e888`
+and contained 35 no-ops plus two updates, each limited to `disabled: false` to
+`true`. Apply reported `0 added, 2 changed, 0 destroyed`; a follow-up full plan
+reported no changes. Current bootstrap state generation `1788460174191027` is
+61,864 bytes at serial 42 with 37 managed resources, two data resources and one
+output. Its SHA-256 is
+`288d947d35f5d5a278aaff210ea878a9dab817f594b4c3161ed117bb2e30e26d`.
+The pool remains enabled and retained.
+
 The consumed [`bootstrap/apply-and-migrate.sh`](bootstrap/apply-and-migrate.sh)
 entry point is permanently retired. The replacement
 [`bootstrap/migrate-recovered-state.sh`](bootstrap/migrate-recovered-state.sh)
 contains no apply path and refuses to overwrite the existing state object. A
-guarded live foundation plan has now been reviewed, but no foundation resource
-or workload had been applied at that point.
+guarded live foundation plan was reviewed before any foundation resource or
+workload had been applied.
 
 Run `33776569977` later applied that plan through the separate deployer identity
 after normal environment approval. Terraform recorded 25 managed foundation
@@ -57,49 +78,60 @@ resources before the command failed; the private detailed log was intentionally
 discarded, so no exact failure cause is claimed. State generation
 `1788452068422403` is healthy at serial 4, all TTL operations completed
 successfully, and no lock remains. A fresh private plan reports exactly eight
-creates and 25 no-ops. The closed `partial-foundation-recovery` profile and its
-one-shot protected workflow are now authorized. Workload deployment, public
-ingress and destroy remain explicitly unauthorized.
+creates and 25 no-ops.
 
 The first protected recovery refresh exposed that the planner lacked
 `serviceusage.services.use`, because quota attribution had not been exercised
 while the initial plan deferred its cloud reads. The narrow Service Usage
 Consumer binding is now live and declared in the bootstrap source; its bootstrap
-state reconciliation remains pending. A subsequent fresh plan also showed that
+state reconciliation is complete. A subsequent fresh plan also showed that
 Firestore's retention-window timestamp advances alongside its opaque etag. The
 recovery validator accepts only a valid nondecreasing timestamp and otherwise
 keeps the drift schema closed.
+
+Protected run `33784785967` passed that validator, applied the exact eight IAM
+members, and wrote complete state generation `1788456706865449` at serial 6.
+The workflow's final step failed because it attempted its follow-up provider
+reads with the deliberately narrower deployer identity. An independent User-ADC
+plan then reported all 33 managed resources as no-ops and zero changes. Cloud
+inventory confirmed the eight exact IAM members, five secret containers with no
+versions, three active TTL fields, enabled software Ed25519 key version 1, no
+workload, and no live lock. The consumed plan generation is deleted and remains
+only within the private bucket's soft-delete window. The active recovery workflow
+has been removed and its plan/apply entrypoints now fail immediately. GitHub
+workflow `349440747` was observed in state `disabled_manually` before source
+removal.
 
 ## Repository layout
 
 | Path | Purpose | Current execution boundary |
 |---|---|---|
-| [`bootstrap/`](bootstrap/) | Billing link, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Complete; remote state reconciled with protected local recovery evidence |
-| [`terraform/`](terraform/) | APIs, Firestore, KMS, empty Secret Manager containers, and resource-scoped runtime IAM | 25 managed resources present; exact eight-IAM recovery authorized |
-| [`automation/`](automation/) | GitHub policy record, hash-bound recovery workflow, strict plan validator, and operator inspection | Exact active copy installed under `.github/workflows` after protected merge |
+| [`bootstrap/`](bootstrap/) | Billing link, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Complete; both recovery providers disabled, 37-resource serial-42 state reconciled, zero plan verified |
+| [`terraform/`](terraform/) | APIs, Firestore, KMS, empty Secret Manager containers, and resource-scoped runtime IAM | Complete; 33-resource state independently converged |
+| [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
 | [`TEARDOWN.md`](TEARDOWN.md) | Manual recovery and teardown rehearsal | Documentation only |
 
 ## Safety and cost posture
 
-The proposed foundation fixes every regional resource to Paris, keeps the
+The foundation fixes every regional resource to Paris, keeps the
 Function at `minInstances=0` and `maxInstances=1`, and includes no load balancer,
 Cloud Armor policy, VPC connector, Cloud NAT, Analytics property, or deployed
 compute. The component bucket is private, has Public Access Prevention and no
 CORS origin. No secret value or service-account key is represented.
 
 The remote-state bucket uses uniform access, Public Access Prevention, Object
-Versioning, and a seven-day soft-delete window. Foundation state will retain
+Versioning, and a seven-day soft-delete window. Foundation state retains
 recovery history. Live saved plans expire after
 two days, their archived generation after one further day, and deleted bytes may
 remain recoverable during the bucket soft-delete window. Plans and state may
 contain private data and must never be committed or uploaded to public Actions
 artifacts.
 
-The planner and deployer identities now exist and are keyless and separate.
-Both may read the private bucket. The planner may consume project quota for
-provider reads, manage only `.tflock` objects, and create saved plans; it cannot
-create or replace state. The empty foundation state was
+The planner and deployer identities and their IAM grants remain keyless and
+separate. A successfully impersonated identity may read the private bucket. The
+planner may consume project quota for provider reads, manage only `.tflock`
+objects, and create saved plans; it cannot create or replace state. The empty foundation state was
 initialized and reconciled with protected operator credentials, satisfying the
 state prerequisite for CI. Only the deployer may write foundation state;
 neither may mutate the bootstrap
@@ -107,13 +139,18 @@ state prefix. Escalation-capable project IAM, service-account creation and bucke
 creation remain human-bootstrap operations. The deployer has only service-scoped
 foundation roles plus administration of the separate component bucket; it has no
 project-wide Storage or IAM role capable of bypassing the state boundary. The
-planner is usable only by the exact manual workflow on protected `main` and has
-now completed two successful runs. The deployer is admitted only by the apply
-environment and the exact same workflow after its plan job succeeds.
+planner and deployer were exercised only through the exact historical workflow.
+That workflow is no longer installed, both cloud-plan and apply activation
+flags are false, and both recovery provider resources are disabled. This closes
+the reviewed GitHub OIDC exchange route while retaining the enabled pool. It
+does not prove that another administrator cannot impersonate either service
+account; that access remains part of the security and teardown inventory. The
+manual operator plan remains read-only and requires User ADC plus an exact
+staging confirmation.
 
 Repository validation itself costs nothing. Planning adds only bounded API
 reads, temporary locks, and short-lived private saved-plan objects. The state
-bucket currently stores the 60,909-byte bootstrap state, the 42,621-byte partial
+bucket currently stores the 61,864-byte bootstrap state, the 53,619-byte complete
 foundation state, and recovery generations. The live Firestore database is the
 project's free-tier database; five secret containers have zero versions. The
 software KMS key version is the principal idle fixed cost. Storage operations
@@ -138,7 +175,11 @@ transform: one serial increment and an exact permutation of `check_results`,
 with strict equality everywhere else. Both success and failure leave the
 authoritative source state unchanged; failures also retain the private execution
 directory for diagnosis. The migration has completed and the existing object
-makes this path fail closed on replay.
+makes this path fail closed on replay. The later import-only adoption preserved
+that initial migration evidence while advancing generation `1788457646215552`
+to serial 41 with the planner quota member as its sole additional managed
+resource. The WIF-provider retirement then advanced current state to serial 42
+without changing the 37-resource inventory.
 
 The ordinary foundation root already points at `terraform/foundation` and reads
 the bootstrap output from `terraform/bootstrap`. A closed precondition checks
@@ -197,7 +238,7 @@ The wrapper created no saved plan and ran no apply. A post-plan read proved that
 foundation state generation `1788443136082489` and its SHA-256 remained
 unchanged, and no `.tflock` object remained current.
 
-The installed GitHub workflow most recently completed run `33774848684` from
+The now-retired GitHub workflow historically completed run `33774848684` from
 protected configuration commit `66869a3564788ba725049cc91326b17eb239ddaf`.
 Its private 11,000-byte plan has generation `1788450586606804` and SHA-256
 `5def42ea3f598a5f2c59d9456814646c1b526526c6b96acf20a0db7626bc36da`.
@@ -217,7 +258,14 @@ contains exactly eight creates, 25 no-ops and seven refresh-only provider
 normalizations. It passed the closed `partial-foundation-recovery` validator and
 was removed after review.
 
-## Protected partial-recovery GitHub automation
+The final recovery used private plan generation `1788456590438484` with SHA-256
+`d68d4d6748e03691cb1d103a0ab593413110349ba4b39b0ea4efb9be381f1a1f`.
+Terraform completed all eight creates. Current state contains 33 managed
+resources, three data resources and one output, and the independent no-change
+plan proves configuration convergence. The failed overall Actions conclusion
+records only the underprivileged follow-up plan, not an incomplete apply.
+
+## Retired partial-recovery GitHub automation and federation
 
 [`automation/github-policy.json`](automation/github-policy.json) captures both
 the observed GitHub settings and the settings required before activation. On
@@ -227,11 +275,11 @@ Actions were restricted to the reviewed SHA-pinned integrations with read-only
 default permissions. The unrelated `miakapi` environment was left unchanged.
 Repository OIDC customization remains at its default because the Google
 provider, not GitHub's repository subject template, enforces the immutable
-numeric and workflow claims. The hash-bound recovery copy becomes active
-only through protected merge, and its planning half has already exercised those
-claims.
+numeric and workflow claims. The hash-bound recovery copy ran only from
+protected `main`. Workflow `349440747` was set to `disabled_manually`, and its
+active source has now been removed from `.github/workflows/`.
 
-The workflow and its byte-identical blueprint require:
+The retained historical blueprint required:
 
 - protected `main` with the credential-free staging gate required;
 - SHA-pinned selected actions and read-only default workflow permissions;
@@ -239,15 +287,23 @@ The workflow and its byte-identical blueprint require:
   environments, with explicit approval on the latter;
 - OIDC conditions over immutable repository/owner IDs, `main`, the exact
   workflow reference, and the exact environment; and
-- a hash-bound active file and blueprint before OIDC can be requested;
+- a hash-bound active file and blueprint before OIDC could be requested;
 - the exact private object and SHA-256 emitted by the same workflow attempt;
 - the closed `partial-foundation-recovery` validator immediately before apply;
-- a private, non-saving post-apply plan that must report zero changes.
+- a private, non-saving post-apply plan intended to report zero changes.
 
 There is one known human administrator. The desired apply environment therefore
 records that administrator as reviewer while allowing self-approval. This is an
 explicit operator checkpoint, not independent four-eyes review. Administrator
-bypass remains forbidden.
+bypass remains forbidden. The policy record now sets workflow installation,
+cloud planning and foundation apply authorization to false. Both historical
+entrypoint scripts exit before credential, Terraform or cloud access. Reusing
+the blueprint requires a new reviewed activation change.
+
+The plan/apply WIF providers are also disabled. Only their `disabled` attribute
+changed; the pool, service accounts and IAM bindings were deliberately retained.
+Consequently the reviewed GitHub exchange cannot mint either CI identity, but
+the evidence does not rule out impersonation by another administrator.
 
 ## Validate locally
 
@@ -257,8 +313,8 @@ Node.js 22 and Terraform 1.11.3 are required:
 npm run test:staging-manifest
 ```
 
-The gate validates bounded closed manifests, all three reviewed inventories,
-the exact partial-recovery workflow and blueprint, pinned actions and providers,
+The gate validates bounded closed manifests, all reviewed inventories,
+the retired recovery policy and historical blueprint, pinned actions and providers,
 exact locks for macOS
 ARM64 and Linux AMD64, both Terraform roots with mock providers, script syntax,
 private-plan handling, the exact recovery addresses, actions, planned values,
@@ -269,22 +325,18 @@ environment inputs. It initializes Terraform with `-backend=false` and never
 reads credentials or contacts staging.
 
 The active validation workflow has only `contents: read`; it has no OIDC or
-secret permission. In the manually dispatched workflow, the plan job may request
-only the planner identity. The apply job runs only after both earlier jobs, uses
-the separate deployer identity, and remains behind the reviewed environment
-checkpoint. Neither job uses a persistent credential or repository secret.
+secret permission. With both recovery providers disabled, the reviewed GitHub
+OIDC route cannot exchange credentials for the planner or deployer identity.
+No persistent credential or repository secret is used.
 
 ## Next staging gate
 
-The GitHub branch, environment and Actions prerequisites are configured, the
-partial foundation state is reconciled, and the eight-create recovery plan
-passed full inspection. The next sequence is:
-
-1. merge this exact recovery activation through protected `main`;
-2. dispatch with the exact `recover-miakapp-v4-staging` confirmation;
-3. approve the normal `miakapp-v4-staging-apply` environment checkpoint; and
-4. verify exact resource inventory, remote state, empty convergence plan, and
-   observed idle cost before any workload stage.
+The bootstrap and foundation are complete, both current states are reconciled,
+the recovery workflow is retired, and staging still contains no deployed
+workload. The next sequence is to close the runtime configuration and secret
+lifecycle contracts, add the production Function entrypoint behind private
+admission, and then run bounded synthetic staging validation before considering
+public ingress.
 
 The production Function entry point, exact FCM runtime permission, secret
 version lifecycle, ingress design, monitoring, real-service fault matrix,
