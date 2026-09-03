@@ -79,7 +79,7 @@ describe('Firebase deployment configuration', () => {
     expect(manifest.scripts['test:emulator']).toBe(
       'node ./node_modules/vitest/vitest.mjs run --no-file-parallelism test/emulator',
     );
-    expect(manifest.engines.node).toBe('>=22.12.0 <23');
+    expect(manifest.engines.node).toBe('22');
     expect(manifest.devDependencies.vitest).toBe('4.1.11');
     expect(checkScript).toContain('major === 22 && minor >= 12');
     expect(checkScript).toContain('node ./node_modules/vitest/vitest.mjs run --no-file-parallelism');

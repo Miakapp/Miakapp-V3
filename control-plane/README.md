@@ -64,6 +64,10 @@ On Apple Silicon with Homebrew, the check automatically discovers the keg-only
 `openjdk@21` installation. Other systems can provide Java 21 through `PATH` or
 `JAVA_HOME`.
 
+Firebase Functions accepts only a major Node version in `package.json`, so the
+deployment manifest retains `"node": "22"`. The executable preflight enforces
+the narrower Node 22.12+ test-runner requirement before installing packages.
+
 The runner installs the pinned lockfile, type-checks, runs unit tests, builds the
 Function, starts Auth, Firestore, Functions, and Storage emulators, and executes
 the integration and Rules corpus. Unit tests remain on the pinned Bun runtime;
