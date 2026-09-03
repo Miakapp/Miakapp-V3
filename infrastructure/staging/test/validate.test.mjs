@@ -94,7 +94,7 @@ test('accepts the completed bootstrap apply with migration recovery pending', ()
   );
   assert.equal(validated.terraform.saved_plan.public_artifacts_allowed, false);
   const execution = validated.terraform.bootstrap_execution;
-  assert.equal(execution.state, 'apply_complete_state_migration_recovery_unbound');
+  assert.equal(execution.state, 'apply_complete_state_migration_awaiting_exact_authorization');
   assert.equal(
     execution.approved_configuration_commit,
     'e9f410c58c8cbbf8f5f7a17170c9e8ed55a10501',

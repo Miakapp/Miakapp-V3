@@ -166,13 +166,12 @@ because workflow installation and foundation deployment remain unauthorized.
 The GitHub branch, environment and Actions prerequisite are configured. Before
 any additional cloud action, the recovery sequence must:
 
-1. bind the migration-only recovery wrapper to its reviewed clean commit;
-2. receive explicit authorization for that commit and the exact complete-state
+1. receive explicit authorization for the reviewed migration commit and exact complete-state
    digest;
-3. migrate and reconcile bootstrap state without applying infrastructure;
-4. initialize and verify the empty foundation state before admitting CI;
-5. install the cloud workflow only after the state boundary is proven; and
-6. review a live foundation plan before granting apply approval.
+2. migrate and reconcile bootstrap state without applying infrastructure;
+3. initialize and verify the empty foundation state before admitting CI;
+4. install the cloud workflow only after the state boundary is proven; and
+5. review a live foundation plan before granting apply approval.
 
 The production Function entry point, exact FCM runtime permission, secret
 version lifecycle, ingress design, monitoring, real-service fault matrix,
