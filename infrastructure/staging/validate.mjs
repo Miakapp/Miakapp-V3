@@ -752,7 +752,7 @@ function validateTerraform(value) {
   ]);
   exact(
     bootstrapExecution.state,
-    'apply_complete_state_migration_recovery_unbound',
+    'apply_complete_state_migration_awaiting_exact_authorization',
     'terraform.bootstrap_execution.state',
   );
   exact(
@@ -782,7 +782,7 @@ function validateTerraform(value) {
   );
   exact(
     bootstrapExecution.migration_configuration_commit,
-    '0000000000000000000000000000000000000000',
+    '610922de705565d5ab1a7b7d37b0b6c8da9b8fb1',
     'terraform.bootstrap_execution.migration_configuration_commit',
   );
   exact(

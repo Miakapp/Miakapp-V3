@@ -381,13 +381,13 @@
       "soft_delete_days": 7
     },
     "bootstrap_execution": {
-      "state": "apply_complete_state_migration_recovery_unbound",
+      "state": "apply_complete_state_migration_awaiting_exact_authorization",
       "script": "bootstrap/migrate-recovered-state.sh",
       "retired_apply_script": "bootstrap/apply-and-migrate.sh",
       "helper": "bootstrap/bootstrap-execution.mjs",
       "approved_configuration_commit": "e9f410c58c8cbbf8f5f7a17170c9e8ed55a10501",
       "approved_plan_sha256": "12927b270f2bfa78c8f8c8c7e7071ce9cfec18d5e848165c04b585260bd5f7da",
-      "migration_configuration_commit": "0000000000000000000000000000000000000000",
+      "migration_configuration_commit": "610922de705565d5ab1a7b7d37b0b6c8da9b8fb1",
       "exact_authorization_required": true,
       "repository_commit_bound": true,
       "cloud_preflight_required": true,

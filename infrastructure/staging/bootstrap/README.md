@@ -58,6 +58,9 @@ complete-state digest, the reviewed private plan bundle, project
 `gs://miakapp-v4-staging-tfstate-1072737219170/terraform/bootstrap/default.tfstate`,
 and the clean repository commit that executes it. It has no infrastructure
 apply, import, destroy, state-push, or cloud-object copy path.
+Its reviewed migration implementation is commit
+`610922de705565d5ab1a7b7d37b0b6c8da9b8fb1`; execution still requires an exact
+authorization tied to the clean commit that runs the wrapper.
 
 Only one operator may use the private bundle and complete state at a time. The
 wrapper takes atomic sibling locks, rejects credential files and ambient Git,
