@@ -166,6 +166,10 @@ test('keeps the local live workflow plan-only and uses the real locking backend'
   assert.doesNotMatch(planScript, /terraform\s+(apply|destroy|import)|firebase\s+deploy|\s-out(?:=|\s)/);
   assert.match(planScript, /terraform init -reconfigure -input=false -lockfile=readonly/);
   assert.match(planScript, /terraform plan -input=false -lock-timeout=5m -no-color -detailed-exitcode/);
+  assert.match(planScript, /mktemp -d/);
+  assert.match(planScript, /export TF_DATA_DIR="\$terraform_data"/);
+  assert.match(planScript, /rm -rf -- "\$terraform_data"/);
+  assert.match(planScript, /Terraform working data must remain outside the repository/);
   assert.doesNotMatch(planScript, /-lock=false|-backend=false/);
   assert.match(planScript, /Credential-file environment variables are forbidden/);
   assert.match(planScript, /Terraform override environment variables are forbidden/);
