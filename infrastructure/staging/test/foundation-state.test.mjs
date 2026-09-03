@@ -342,6 +342,7 @@ test('binds foundation-state authorization to the bootstrap generation and execu
 test('requires private execution material outside the repository', () => {
   const temporary = mkdtempSync(join(tmpdir(), 'miakapp-foundation-state-private-test-'));
   chmodSync(temporary, 0o700);
+  mkdirSync(join(repositoryRoot, '.context'), { recursive: true, mode: 0o700 });
   const privateRepositoryDirectory = mkdtempSync(join(repositoryRoot, '.context', 'foundation-state-private-'));
   chmodSync(privateRepositoryDirectory, 0o700);
   try {
