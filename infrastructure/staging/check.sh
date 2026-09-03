@@ -32,6 +32,7 @@ node infrastructure/staging/bootstrap/guard.mjs \
   "${repository_root}/infrastructure/staging/bootstrap"
 node --check infrastructure/staging/bootstrap/bootstrap-execution.mjs
 node --check infrastructure/staging/bootstrap/saved-plan.mjs
+node --check infrastructure/staging/terraform/foundation-state.mjs
 node infrastructure/staging/terraform/guard.mjs \
   "${repository_root}/infrastructure/staging/terraform"
 bash -n \
@@ -42,9 +43,11 @@ bash -n \
   infrastructure/staging/bootstrap/inspect-plan.sh \
   infrastructure/staging/bootstrap/plan.sh \
   infrastructure/staging/bootstrap/save-plan.sh \
+  infrastructure/staging/terraform/initialize-state.sh \
   infrastructure/staging/terraform/plan.sh
 node --test \
   infrastructure/staging/test/bootstrap.test.mjs \
+  infrastructure/staging/test/foundation-state.test.mjs \
   infrastructure/staging/test/github-policy.test.mjs \
   infrastructure/staging/test/validate.test.mjs \
   infrastructure/staging/test/terraform.test.mjs

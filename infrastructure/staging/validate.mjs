@@ -545,6 +545,7 @@ function validateTerraform(value) {
     'identity',
     'saved_plan',
     'bootstrap_execution',
+    'foundation_state_initialization',
     'apply_authorized',
     'destroy_authorized',
     'function_deployment_included',
@@ -1098,6 +1099,131 @@ function validateTerraform(value) {
     'terraform.bootstrap_execution.bootstrap_completed',
   );
 
+  const foundationStateInitialization = record(
+    terraform.foundation_state_initialization,
+    'terraform.foundation_state_initialization',
+    [
+      'state',
+      'script',
+      'helper',
+      'approved_foundation_configuration_commit',
+      'approved_initialization_configuration_commit',
+      'exact_authorization_required',
+      'authorization_bootstrap_generation',
+      'repository_commit_bound',
+      'clean_checkout_required',
+      'private_execution_parent_required',
+      'user_adc_required',
+      'cloud_preflight_required',
+      'expected_bootstrap_state',
+      'expected_foundation_state',
+      'refresh_only_saved_plan_required',
+      'verified_plan_apply_only',
+      'temporary_lock_object_lifecycle_required',
+      'manual_state_push_allowed',
+      'overwrite_existing_state_allowed',
+      'read_only_reconciliation_of_existing_exact_state_allowed',
+      'initialization_authorized',
+      'initialization_executed',
+    ],
+  );
+  const foundationStatePath = 'terraform.foundation_state_initialization';
+  exact(
+    foundationStateInitialization.state,
+    'guarded_initializer_implemented_pending_commit_binding',
+    `${foundationStatePath}.state`,
+  );
+  exact(
+    foundationStateInitialization.script,
+    'terraform/initialize-state.sh',
+    `${foundationStatePath}.script`,
+  );
+  exact(
+    foundationStateInitialization.helper,
+    'terraform/foundation-state.mjs',
+    `${foundationStatePath}.helper`,
+  );
+  exact(
+    foundationStateInitialization.approved_foundation_configuration_commit,
+    'efa8778f2bdc3cb6ab488281253d56eadcbe89dc',
+    `${foundationStatePath}.approved_foundation_configuration_commit`,
+  );
+  exact(
+    foundationStateInitialization.approved_initialization_configuration_commit,
+    '0000000000000000000000000000000000000000',
+    `${foundationStatePath}.approved_initialization_configuration_commit`,
+  );
+  for (const field of [
+    'exact_authorization_required',
+    'repository_commit_bound',
+    'clean_checkout_required',
+    'private_execution_parent_required',
+    'user_adc_required',
+    'cloud_preflight_required',
+    'refresh_only_saved_plan_required',
+    'verified_plan_apply_only',
+    'temporary_lock_object_lifecycle_required',
+    'read_only_reconciliation_of_existing_exact_state_allowed',
+  ]) {
+    exact(foundationStateInitialization[field], true, `${foundationStatePath}.${field}`);
+  }
+  for (const field of [
+    'manual_state_push_allowed',
+    'overwrite_existing_state_allowed',
+    'initialization_authorized',
+    'initialization_executed',
+  ]) {
+    exact(foundationStateInitialization[field], false, `${foundationStatePath}.${field}`);
+  }
+  exact(
+    foundationStateInitialization.authorization_bootstrap_generation,
+    '1788439334043522',
+    `${foundationStatePath}.authorization_bootstrap_generation`,
+  );
+  const expectedBootstrapState = record(
+    foundationStateInitialization.expected_bootstrap_state,
+    `${foundationStatePath}.expected_bootstrap_state`,
+    ['object', 'generation', 'sha256', 'size_bytes', 'serial', 'managed_resources'],
+  );
+  const bootstrapStateExpectations = {
+    object: 'terraform/bootstrap/default.tfstate',
+    generation: '1788439334043522',
+    sha256: '8753dcceaa848ba8734d9892dbec6f2445fbf6b3fbead7da375cc37f0702d3bf',
+    size_bytes: 60909,
+    serial: 40,
+    managed_resources: 36,
+  };
+  for (const [field, expected] of Object.entries(bootstrapStateExpectations)) {
+    exact(expectedBootstrapState[field], expected, `${foundationStatePath}.expected_bootstrap_state.${field}`);
+  }
+  const expectedFoundationState = record(
+    foundationStateInitialization.expected_foundation_state,
+    `${foundationStatePath}.expected_foundation_state`,
+    [
+      'object',
+      'initial_state',
+      'terraform_version',
+      'serial',
+      'managed_resources',
+      'outputs',
+      'check_results',
+      'raw_contents_committed',
+    ],
+  );
+  const foundationStateExpectations = {
+    object: 'terraform/foundation/default.tfstate',
+    initial_state: 'absent',
+    terraform_version: '1.11.3',
+    serial: 1,
+    managed_resources: 0,
+    outputs: 0,
+    check_results: null,
+    raw_contents_committed: false,
+  };
+  for (const [field, expected] of Object.entries(foundationStateExpectations)) {
+    exact(expectedFoundationState[field], expected, `${foundationStatePath}.expected_foundation_state.${field}`);
+  }
+
   exact(terraform.apply_authorized, false, 'terraform.apply_authorized');
   exact(terraform.destroy_authorized, false, 'terraform.destroy_authorized');
   exact(terraform.function_deployment_included, false, 'terraform.function_deployment_included');
@@ -1572,7 +1698,7 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 22, 'manifest.revision');
+  exact(manifest.revision, 23, 'manifest.revision');
   exact(
     manifest.status,
     'bootstrap_complete_remote_state_reconciled',

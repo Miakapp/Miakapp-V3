@@ -7,7 +7,7 @@ The YAML and scripts in this directory describe the supported future keyless
 plan/apply path. They are deliberately outside GitHub's active workflow
 directory. `github-policy.json` now records the independently observed branch,
 environment and Actions configuration, but copying the blueprint remains
-unauthorized until the cloud bootstrap and workflow-installation gates are
+unauthorized until the foundation-state and workflow-installation gates are
 separately approved.
 
 The blueprint uses two separately admitted GitHub environments and two separate
@@ -41,10 +41,9 @@ days and its archived version after one further day; seven-day bucket soft delet
 can retain recoverable bytes longer. The workflow never uses public GitHub
 artifact storage.
 
-Activation requires a separate reviewed change: apply and migrate the bootstrap
-state, initialize and verify the empty foundation state with protected operator
-credentials, authorize workflow installation in the policy record, and only then
-copy this YAML into
+Activation requires separate reviewed changes: initialize and verify the empty
+foundation state with protected operator credentials, authorize workflow
+installation in the policy record, and only then copy this YAML into
 `.github/workflows/staging-terraform.yml`. Merely copying the file is
 insufficient: its policy job deliberately rejects the current cloud-inactive
 record before requesting OIDC credentials.

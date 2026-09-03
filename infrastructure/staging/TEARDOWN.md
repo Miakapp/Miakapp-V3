@@ -39,6 +39,11 @@ directory is part of the recovery inventory. Do not delete it or rerun the
 consumed saved plan. Determine whether a remote bootstrap generation exists and
 reconcile it with the preserved complete local state before another mutation.
 
+The foundation-state initializer follows the same fail-closed recovery rule. If
+it reports failure, retain its private diagnostic directory and inspect the
+current foundation generation before another mutation. Re-running the guarded
+path may only reconcile an exact empty state; it never replaces one.
+
 Infrastructure state or a successful destroy command is not sufficient evidence
 that spend has stopped. Managed Functions can leave Cloud Run revisions,
 Artifact Registry images and Eventarc resources; Storage can retain soft-deleted

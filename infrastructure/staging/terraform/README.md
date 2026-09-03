@@ -54,6 +54,34 @@ HCL, and exercises the bootstrap guard through mock providers. It reads no
 Google credential and calls no Google Cloud API. Terraform may contact the
 provider registry to download or verify the pinned provider binaries.
 
+## Guarded initial state
+
+[`initialize-state.sh`](initialize-state.sh) creates only the initial empty
+foundation state. It requires User ADC, a clean checkout, a private
+operator-owned directory outside the repository, the exact reconciled bootstrap
+generation, and an authorization bound to the clean execution commit. The
+implementation remains fail-closed behind an unbound commit sentinel until its
+follow-up binding commit has been reviewed.
+
+The command shape after that binding is:
+
+```sh
+MIAKAPP_STAGING_FOUNDATION_STATE_AUTHORIZATION='initialize-foundation-state:miakapp-v4-staging:1788439334043522:<40-hex-execution-commit>' \
+  ./initialize-state.sh '/absolute/private/execution-parent'
+```
+
+The script copies only `versions.tf`, `.terraform.lock.hcl`, and
+`terraform-cli.tfrc` into its private root. It saves a `-refresh-only` plan,
+requires the exact Terraform 1.11.3 empty-plan JSON shape, and then applies that
+same plan. No foundation resource or provider configuration is present. It does
+not call `terraform state push`, create a cloud object directly, or permit an
+existing state to be overwritten. Terraform and the exact current GCS
+generation are read back and must agree on a canonical serial-1 state containing
+no output, resource, or check result. A valid preexisting state is reconciled
+without mutation. The mutating path necessarily creates and releases Terraform's
+temporary `.tflock`; only the tiny empty state remains live afterward, while
+bucket recovery policies may briefly retain noncurrent bytes.
+
 ## Guarded local plan
 
 After initialization and independent verification of the empty foundation
