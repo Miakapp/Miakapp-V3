@@ -25,7 +25,7 @@ for (const change of changes) {
   if (change === null || typeof change !== 'object' || Array.isArray(change)) {
     throw new Error('Terraform resource change must be an object');
   }
-  if (typeof change.address !== 'string' || !/^[A-Za-z0-9_.\[\]"-]{1,256}$/.test(change.address)) {
+  if (typeof change.address !== 'string' || !/^[A-Za-z0-9_.\[\]"/-]{1,256}$/.test(change.address)) {
     throw new Error('Terraform resource address is invalid');
   }
   const actions = change.change?.actions;
