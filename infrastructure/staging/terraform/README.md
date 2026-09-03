@@ -1,6 +1,6 @@
 # Staging Terraform foundation proposal
 
-Status: apply-capable configuration; private foundation plan strictly reviewed; no apply
+Status: partial foundation present; exact eight-IAM recovery authorized
 
 This root describes the ordinary protected foundation for the existing,
 billing-linked but undeployed `miakapp-v4-staging` project. Billing management,
@@ -38,9 +38,10 @@ and prefixes, plan/apply providers, all three service accounts, component
 bucket, and numeric GitHub repository IDs. Missing, local, stale, or foreign
 bootstrap state fails closed. The bootstrap state is present remotely at serial
 40 and was reconciled against the protected serial-39 source state. Terraform's
-GCS backend created the empty foundation state at serial 1. Exact reads through
-Terraform and GCS reconciled current generation `1788443136082489` as the same
-canonical empty state.
+GCS backend initially created empty foundation state at serial 1. Protected run
+`33776569977` later persisted 25 managed resources. Current generation
+`1788452068422403` is healthy at serial 4; the bootstrap guard, APIs, Firestore,
+TTL fields, KMS key material and five empty secret containers are present.
 
 ## Credential-free validation
 
@@ -120,9 +121,19 @@ saved plan and emits only bounded action/address metadata. Run `33774848684`
 successfully created and fully inspected such a plan from protected commit
 `66869a3564788ba725049cc91326b17eb239ddaf`. The exact binary passed the closed
 `initial-foundation` validator with 33 creates, two reads, and no update or
-delete. This revision admits that same validator and binary boundary into a
-separate environment-protected apply job, followed by a required zero-change
-convergence plan.
+delete. A following protected revision admitted that binary boundary into a
+separate environment-protected apply job with a required zero-change
+convergence check.
+
+That protected apply recorded 25 managed resources before its command failed.
+The detailed runner log was discarded by design, so the repository does not
+claim an exact cause. Independent state and cloud reads found only the expected
+KMS signer, five secret accessor and two component-bucket IAM members missing.
+A fresh private plan contains those exact eight creates and 25 no-ops. Seven
+`resource_drift` entries are limited to a changing Firestore etag and provider
+normalization of empty KMS/Secret Manager maps; none is a configuration update.
+The `partial-foundation-recovery` validator closes over the complete resource,
+prior-state, planned-value, drift, output, check and relevant-attribute shapes.
 
 ## Explicit boundaries
 
@@ -131,5 +142,5 @@ wrappers do not prevent a privileged operator from bypassing them, so direct
 Terraform mutation remains unauthorized. The plan job may use only short-lived
 planner credentials and cannot write foundation state. The apply job may use
 only the separately admitted deployer identity after environment approval, and
-only for the exact closed initial-foundation plan. Workload deployment, public
-ingress, direct apply, and destroy remain unauthorized.
+only for the exact closed partial-foundation recovery plan. Workload deployment,
+public ingress, direct apply, and destroy remain unauthorized.

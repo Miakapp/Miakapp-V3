@@ -119,13 +119,15 @@ terraform -chdir="$terraform_root" fmt -check -recursive
 terraform -chdir="$terraform_root" init -reconfigure -input=false -lockfile=readonly -no-color
 terraform -chdir="$terraform_root" validate -no-color
 terraform -chdir="$terraform_root" show -json "$plan_file" \
-  | node "${automation_root}/validate-foundation-plan.mjs"
+  | node "${automation_root}/validate-foundation-plan.mjs" \
+    --profile partial-foundation-recovery
 terraform -chdir="$terraform_root" show -json "$plan_file" \
   | node "${automation_root}/summarize-plan.mjs"
 if ! terraform -chdir="$terraform_root" apply \
   -input=false \
   -lock-timeout=5m \
   -no-color \
+  -parallelism=1 \
   "$plan_file" >"$apply_log" 2>&1; then
   echo "Terraform apply failed; detailed output remains private to the discarded runner file." >&2
   exit 1

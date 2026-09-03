@@ -1,10 +1,10 @@
-name: Staging Terraform plan and apply
+name: Staging Terraform foundation recovery
 
 on:
   workflow_dispatch:
     inputs:
       confirmation:
-        description: Type apply-miakapp-v4-staging
+        description: Type recover-miakapp-v4-staging
         required: true
         type: string
 
@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   policy:
-    name: Verify plan-and-apply activation policy
+    name: Verify partial-recovery activation policy
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -29,17 +29,17 @@ jobs:
         with:
           node-version: 22.22.0
           package-manager-cache: false
-      - name: Require the exact target and independently authorized apply
+      - name: Require the exact target and authorized partial recovery
         env:
           CONFIRMATION: ${{ inputs.confirmation }}
         run: |
-          test "$CONFIRMATION" = 'apply-miakapp-v4-staging'
+          test "$CONFIRMATION" = 'recover-miakapp-v4-staging'
           node infrastructure/staging/automation/validate-policy.mjs \
             --require-apply-activation \
             infrastructure/staging/automation/github-policy.json
 
   plan:
-    name: Create private foundation plan
+    name: Create private partial-recovery plan
     needs: policy
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -69,14 +69,14 @@ jobs:
         with:
           terraform_version: 1.11.3
           terraform_wrapper: false
-      - name: Create, summarize and privately store the exact plan
+      - name: Create, validate and privately store the recovery plan
         id: plan
         env:
           MIAKAPP_GITHUB_ENVIRONMENT: miakapp-v4-staging-plan
         run: infrastructure/staging/automation/plan.sh
 
   apply:
-    name: Apply exact private foundation plan
+    name: Apply exact private partial-recovery plan
     needs:
       - policy
       - plan
@@ -105,7 +105,7 @@ jobs:
         with:
           terraform_version: 1.11.3
           terraform_wrapper: false
-      - name: Apply the exact admitted plan and verify convergence
+      - name: Apply the exact recovery plan and verify convergence
         env:
           MIAKAPP_GITHUB_ENVIRONMENT: miakapp-v4-staging-apply
           MIAKAPP_PLAN_OBJECT: ${{ needs.plan.outputs['plan-object'] }}

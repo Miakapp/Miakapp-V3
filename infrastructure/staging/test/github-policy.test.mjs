@@ -81,8 +81,454 @@ function exactGitHubEnvironment(kind) {
   return environment;
 }
 
-test('authorizes only the hash-bound manual plan-and-apply workflow after verified GitHub posture', () => {
-  assert.equal(policy.status, 'manual_keyless_plan_apply_workflow_authorized');
+const recoveryProject = 'miakapp-v4-staging';
+const recoveryProjectNumber = '1072737219170';
+const recoveryRegion = 'europe-west9';
+const recoveryRuntime = `miakapp-control-plane@${recoveryProject}.iam.gserviceaccount.com`;
+const recoveryMember = `serviceAccount:${recoveryRuntime}`;
+const recoveryBucket = 'miakapp-v4-staging-components';
+const recoveryKeyRing = `projects/${recoveryProject}/locations/${recoveryRegion}/keyRings/${recoveryProject}`;
+const recoverySigningKey = `${recoveryKeyRing}/cryptoKeys/access-token-signing`;
+const recoveryLabels = {
+  environment: 'staging',
+  'goog-terraform-provisioned': 'true',
+  'managed-by': 'terraform',
+  product: 'miakapp-v4',
+};
+const recoveryServices = [
+  'artifactregistry.googleapis.com',
+  'cloudbuild.googleapis.com',
+  'cloudfunctions.googleapis.com',
+  'cloudkms.googleapis.com',
+  'eventarc.googleapis.com',
+  'fcm.googleapis.com',
+  'firebaseappcheck.googleapis.com',
+  'firestore.googleapis.com',
+  'logging.googleapis.com',
+  'monitoring.googleapis.com',
+  'pubsub.googleapis.com',
+  'run.googleapis.com',
+  'secretmanager.googleapis.com',
+];
+const recoverySecrets = [
+  'miakapp-audit-hmac',
+  'miakapp-component-hmac',
+  'miakapp-home-key-pepper',
+  'miakapp-network-hmac',
+  'miakapp-push-hmac',
+];
+const recoveryActivation = {
+  apply_provider: `projects/${recoveryProjectNumber}/locations/global/workloadIdentityPools/miakapp-github/providers/staging-apply`,
+  bootstrap_prefix: 'terraform/bootstrap',
+  component_bucket: recoveryBucket,
+  deployer_service_account: `miakapp-tf-apply@${recoveryProject}.iam.gserviceaccount.com`,
+  foundation_prefix: 'terraform/foundation',
+  github_repository_id: '354682190',
+  github_repository_owner_id: '83046838',
+  plan_provider: `projects/${recoveryProjectNumber}/locations/global/workloadIdentityPools/miakapp-github/providers/staging-plan`,
+  planner_service_account: `miakapp-tf-plan@${recoveryProject}.iam.gserviceaccount.com`,
+  project_id: recoveryProject,
+  project_number: recoveryProjectNumber,
+  region: recoveryRegion,
+  runtime_service_account: recoveryRuntime,
+  schema: 'miakapp.staging-bootstrap/1',
+  state_bucket: 'miakapp-v4-staging-tfstate-1072737219170',
+};
+
+function recoverySensitive(type) {
+  if (type === 'google_firestore_database') return { cmek_config: [] };
+  if (type === 'google_firestore_field') {
+    return { index_config: [{ indexes: [] }], ttl_config: [{}] };
+  }
+  if (type === 'google_kms_crypto_key') {
+    return {
+      effective_labels: {},
+      labels: {},
+      primary: [],
+      terraform_labels: {},
+      version_template: [{}],
+    };
+  }
+  if (type === 'google_secret_manager_secret') {
+    return {
+      annotations: {},
+      effective_annotations: {},
+      effective_labels: {},
+      labels: {},
+      replication: [{ auto: [{ customer_managed_encryption: [] }], user_managed: [] }],
+      rotation: [],
+      terraform_labels: {},
+      topics: [],
+      version_aliases: {},
+    };
+  }
+  if (type === 'terraform_data') return { input: {}, output: {} };
+  return {};
+}
+
+function noOpRecoveryChange(address, type, name, after, index) {
+  const resource = {
+    address,
+    mode: 'managed',
+    type,
+    name,
+    provider_name: type === 'terraform_data'
+      ? 'terraform.io/builtin/terraform'
+      : 'registry.terraform.io/hashicorp/google',
+    change: {
+      actions: ['no-op'],
+      before: structuredClone(after),
+      after,
+      after_unknown: {},
+      before_sensitive: recoverySensitive(type),
+      after_sensitive: recoverySensitive(type),
+    },
+  };
+  if (index !== undefined) resource.index = index;
+  return resource;
+}
+
+function createRecoveryChange(address, type, name, after, index) {
+  const resource = {
+    address,
+    mode: 'managed',
+    type,
+    name,
+    provider_name: 'registry.terraform.io/hashicorp/google',
+    change: {
+      actions: ['create'],
+      before: null,
+      after,
+      after_unknown: { condition: [], etag: true, id: true },
+      before_sensitive: false,
+      after_sensitive: { condition: [] },
+    },
+  };
+  if (index !== undefined) resource.index = index;
+  return resource;
+}
+
+function recoveryResourceChanges() {
+  const firestore = {
+    app_engine_integration_mode: 'DISABLED',
+    cmek_config: [],
+    concurrency_mode: 'PESSIMISTIC',
+    create_time: '2026-09-03T16:08:26Z',
+    database_edition: 'STANDARD',
+    delete_protection_state: 'DELETE_PROTECTION_ENABLED',
+    deletion_policy: 'ABANDON',
+    earliest_version_time: '2026-09-03T16:08:26Z',
+    etag: 'reviewed_etag_value',
+    firestore_data_access_mode: '',
+    id: `projects/${recoveryProject}/databases/(default)`,
+    key_prefix: '',
+    location_id: recoveryRegion,
+    mongodb_compatible_data_access_mode: '',
+    name: '(default)',
+    point_in_time_recovery_enablement: 'POINT_IN_TIME_RECOVERY_DISABLED',
+    project: recoveryProject,
+    realtime_updates_mode: 'REALTIME_UPDATES_MODE_ENABLED',
+    tags: null,
+    timeouts: null,
+    type: 'FIRESTORE_NATIVE',
+    uid: '5165f58b-597a-4cea-af30-d13eb4214111',
+    update_time: '2026-09-03T16:08:26Z',
+    version_retention_period: '3600s',
+  };
+  const changes = [
+    noOpRecoveryChange(
+      'google_firestore_database.default',
+      'google_firestore_database',
+      'default',
+      firestore,
+    ),
+  ];
+  for (const collection of ['controlAdmissionBuckets', 'controlAudit', 'pushChallenges']) {
+    const fieldName = [
+      `projects/${recoveryProject}/databases/(default)/collectionGroups`,
+      `${collection}/fields/expires_at`,
+    ].join('/');
+    changes.push(noOpRecoveryChange(
+      `google_firestore_field.ttl["${collection}"]`,
+      'google_firestore_field',
+      'ttl',
+      {
+        collection,
+        database: '(default)',
+        deletion_policy: 'DELETE',
+        field: 'expires_at',
+        id: fieldName,
+        index_config: [{ indexes: [] }],
+        name: fieldName,
+        project: recoveryProject,
+        skip_wait: false,
+        timeouts: null,
+        ttl_config: [{ expiration_offset: '', state: 'ACTIVE' }],
+      },
+      collection,
+    ));
+  }
+  changes.push(
+    noOpRecoveryChange(
+      'google_kms_crypto_key.access_token_signing',
+      'google_kms_crypto_key',
+      'access_token_signing',
+      {
+        crypto_key_backend: '',
+        deletion_policy: 'PREVENT',
+        destroy_scheduled_duration: '2592000s',
+        effective_labels: recoveryLabels,
+        id: recoverySigningKey,
+        import_only: false,
+        key_ring: recoveryKeyRing,
+        labels: {},
+        name: 'access-token-signing',
+        primary: [],
+        purpose: 'ASYMMETRIC_SIGN',
+        rotation_period: '',
+        skip_initial_version_creation: false,
+        terraform_labels: recoveryLabels,
+        timeouts: null,
+        version_template: [{ algorithm: 'EC_SIGN_ED25519', protection_level: 'SOFTWARE' }],
+      },
+    ),
+    createRecoveryChange(
+      'google_kms_crypto_key_iam_member.access_token_signer',
+      'google_kms_crypto_key_iam_member',
+      'access_token_signer',
+      {
+        condition: [],
+        crypto_key_id: recoverySigningKey,
+        member: recoveryMember,
+        role: 'roles/cloudkms.signerVerifier',
+      },
+    ),
+    noOpRecoveryChange(
+      'google_kms_key_ring.access_tokens',
+      'google_kms_key_ring',
+      'access_tokens',
+      {
+        id: recoveryKeyRing,
+        location: recoveryRegion,
+        name: recoveryProject,
+        project: recoveryProject,
+        timeouts: null,
+      },
+    ),
+  );
+  for (const service of recoveryServices) {
+    changes.push(noOpRecoveryChange(
+      `google_project_service.required["${service}"]`,
+      'google_project_service',
+      'required',
+      {
+        deletion_policy: 'PREVENT',
+        disable_dependent_services: false,
+        disable_on_destroy: false,
+        id: `${recoveryProject}/${service}`,
+        project: recoveryProject,
+        service,
+        timeouts: null,
+      },
+      service,
+    ));
+  }
+  for (const secret of recoverySecrets) {
+    changes.push(
+      noOpRecoveryChange(
+        `google_secret_manager_secret.runtime["${secret}"]`,
+        'google_secret_manager_secret',
+        'runtime',
+        {
+          annotations: {},
+          create_time: '2026-09-03T16:08:23Z',
+          deletion_policy: 'DELETE',
+          deletion_protection: true,
+          effective_annotations: {},
+          effective_labels: recoveryLabels,
+          expire_time: '',
+          id: `projects/${recoveryProject}/secrets/${secret}`,
+          labels: {},
+          name: `projects/${recoveryProjectNumber}/secrets/${secret}`,
+          project: recoveryProject,
+          replication: [{ auto: [{ customer_managed_encryption: [] }], user_managed: [] }],
+          rotation: [],
+          secret_id: secret,
+          tags: null,
+          terraform_labels: recoveryLabels,
+          timeouts: null,
+          topics: [],
+          ttl: null,
+          version_aliases: {},
+          version_destroy_ttl: '',
+        },
+        secret,
+      ),
+      createRecoveryChange(
+        `google_secret_manager_secret_iam_member.runtime["${secret}"]`,
+        'google_secret_manager_secret_iam_member',
+        'runtime',
+        {
+          condition: [],
+          member: recoveryMember,
+          project: recoveryProject,
+          role: 'roles/secretmanager.secretAccessor',
+          secret_id: secret,
+        },
+        secret,
+      ),
+    );
+  }
+  for (const role of ['roles/storage.objectCreator', 'roles/storage.objectViewer']) {
+    changes.push(createRecoveryChange(
+      `google_storage_bucket_iam_member.component_objects["${role}"]`,
+      'google_storage_bucket_iam_member',
+      'component_objects',
+      {
+        bucket: recoveryBucket,
+        condition: [],
+        member: recoveryMember,
+        role,
+        timeouts: null,
+      },
+      role,
+    ));
+  }
+  changes.push(noOpRecoveryChange(
+    'terraform_data.bootstrap_guard',
+    'terraform_data',
+    'bootstrap_guard',
+    {
+      id: 'a4547b36-2f2f-d48b-9f34-e6cb97260306',
+      input: recoveryActivation,
+      output: recoveryActivation,
+      triggers_replace: null,
+    },
+  ));
+  return changes;
+}
+
+function recoveryDrifts(resourceChanges) {
+  const byAddress = new Map(resourceChanges.map((resource) => [resource.address, resource]));
+  const drift = (address, before, beforeSensitive) => {
+    const resource = byAddress.get(address);
+    const result = {
+      address: resource.address,
+      mode: resource.mode,
+      type: resource.type,
+      name: resource.name,
+      provider_name: resource.provider_name,
+      change: {
+        actions: ['update'],
+        before,
+        after: structuredClone(resource.change.after),
+        after_unknown: {},
+        before_sensitive: beforeSensitive,
+        after_sensitive: structuredClone(resource.change.after_sensitive),
+      },
+    };
+    if (resource.index !== undefined) result.index = resource.index;
+    return result;
+  };
+  const firestoreAddress = 'google_firestore_database.default';
+  const firestore = byAddress.get(firestoreAddress);
+  const drifts = [drift(
+    firestoreAddress,
+    { ...structuredClone(firestore.change.after), etag: 'previous_etag_value' },
+    { cmek_config: [] },
+  )];
+  const keyAddress = 'google_kms_crypto_key.access_token_signing';
+  const key = byAddress.get(keyAddress);
+  const keyBeforeSensitive = structuredClone(key.change.after_sensitive);
+  delete keyBeforeSensitive.labels;
+  drifts.push(drift(
+    keyAddress,
+    { ...structuredClone(key.change.after), labels: null },
+    keyBeforeSensitive,
+  ));
+  for (const secret of recoverySecrets) {
+    const address = `google_secret_manager_secret.runtime["${secret}"]`;
+    const resource = byAddress.get(address);
+    const beforeSensitive = structuredClone(resource.change.after_sensitive);
+    delete beforeSensitive.annotations;
+    delete beforeSensitive.labels;
+    delete beforeSensitive.version_aliases;
+    drifts.push(drift(address, {
+      ...structuredClone(resource.change.after),
+      annotations: null,
+      labels: null,
+      version_aliases: null,
+    }, beforeSensitive));
+  }
+  return drifts;
+}
+
+function recoveryPlanUntilPriorState() {
+  const outputValue = {
+    component_bucket: recoveryBucket,
+    firestore_database: '(default)',
+    project_id: recoveryProject,
+    project_number: recoveryProjectNumber,
+    region: recoveryRegion,
+    runtime_service_account: recoveryRuntime,
+    secret_ids: recoverySecrets,
+    signing_key: recoverySigningKey,
+  };
+  const resourceChanges = recoveryResourceChanges();
+  return {
+    format_version: '1.2',
+    terraform_version: '1.11.3',
+    applyable: true,
+    complete: true,
+    errored: false,
+    timestamp: '2026-09-03T16:18:31Z',
+    resource_changes: resourceChanges,
+    output_changes: {
+      staging_foundation: {
+        actions: ['create'],
+        before: null,
+        after: outputValue,
+        after_unknown: false,
+        before_sensitive: false,
+        after_sensitive: false,
+      },
+    },
+    resource_drift: recoveryDrifts(resourceChanges),
+    prior_state: {
+      format_version: '1.0',
+      terraform_version: '1.11.3',
+      values: {
+        outputs: {
+          staging_foundation: {
+            sensitive: false,
+            value: outputValue,
+            type: [
+              'object',
+              {
+                component_bucket: 'string',
+                firestore_database: 'string',
+                project_id: 'string',
+                project_number: 'string',
+                region: 'string',
+                runtime_service_account: 'string',
+                secret_ids: ['list', 'string'],
+                signing_key: 'string',
+              },
+            ],
+          },
+        },
+        root_module: { resources: [] },
+      },
+    },
+    planned_values: {},
+    configuration: {},
+    relevant_attributes: [],
+    checks: [],
+  };
+}
+
+test('authorizes only the hash-bound manual partial-recovery workflow after verified GitHub posture', () => {
+  assert.equal(policy.status, 'manual_keyless_partial_foundation_recovery_authorized');
   assert.equal(policy.observation_context, 'default_branch_before_this_change');
   assert.deepEqual(policy.observed.main_branch, policy.required.main_branch);
   assert.deepEqual(policy.observed.environment_names, [
@@ -102,7 +548,7 @@ test('authorizes only the hash-bound manual plan-and-apply workflow after verifi
     foundation_apply_authorized: true,
     active_workflow_path: '.github/workflows/staging-terraform.yml',
     blueprint_path: 'infrastructure/staging/automation/staging-terraform.yml',
-    workflow_sha256: 'b506f7561dd5fb6ddb9e9c1d525f11cfe31cfce68e2cbabd544f068d0bfc8d32',
+    workflow_sha256: '701891a221ee949c5b1f0d67e537911fc7fa1476f46c5e670593eb341f2cae2e',
   });
   assert.equal(
     statSync(new URL('../../../.github/workflows/staging-terraform.yml', import.meta.url)).isFile(),
@@ -150,7 +596,7 @@ test('the policy CLI accepts both explicitly activated modes without a stack tra
     policyPath,
   ], { encoding: 'utf8' });
   assert.equal(planResult.status, 0, planResult.stderr);
-  assert.match(planResult.stdout, /manual keyless planning and foundation apply are authorized/);
+  assert.match(planResult.stdout, /manual keyless partial-foundation recovery is authorized/);
   assert.equal(planResult.stderr, '');
 
   const applyResult = spawnSync(process.execPath, [
@@ -159,19 +605,19 @@ test('the policy CLI accepts both explicitly activated modes without a stack tra
     policyPath,
   ], { encoding: 'utf8' });
   assert.equal(applyResult.status, 0, applyResult.stderr);
-  assert.match(applyResult.stdout, /manual keyless planning and foundation apply are authorized/);
+  assert.match(applyResult.stdout, /manual keyless partial-foundation recovery is authorized/);
   assert.equal(applyResult.stderr, '');
 });
 
-test('keeps the installed plan-and-apply workflow manual, reviewed, and least-permission', () => {
+test('keeps the installed partial-recovery workflow manual, reviewed, and least-permission', () => {
   assert.doesNotThrow(() => validateAutomationRoot(automationRoot));
   assert.equal(activeWorkflow, workflow);
-  assert.match(workflow, /^name: Staging Terraform plan and apply/m);
+  assert.match(workflow, /^name: Staging Terraform foundation recovery/m);
   assert.match(workflow, /^on:\n  workflow_dispatch:/m);
   assert.doesNotMatch(workflow, /pull_request:|\npush:/);
   assert.match(workflow, /^permissions: \{\}$/m);
   assert.match(workflow, /node infrastructure\/staging\/automation\/validate-policy\.mjs \\\n            --require-apply-activation/);
-  assert.match(workflow, /test "\$CONFIRMATION" = 'apply-miakapp-v4-staging'/);
+  assert.match(workflow, /test "\$CONFIRMATION" = 'recover-miakapp-v4-staging'/);
   assert.match(workflow, /environment: miakapp-v4-staging-plan/);
   assert.match(workflow, /environment: miakapp-v4-staging-apply/);
   assert.match(workflow, /MIAKAPP_PLAN_OBJECT: \$\{\{ needs\.plan\.outputs\['plan-object'\] \}\}/);
@@ -209,6 +655,10 @@ test('passes the exact create-only private plan to the separately admitted apply
   assert.match(planScript, /plan-sha256/);
   assert.match(planScript, /summarize-plan\.mjs/);
   assert.match(planScript, /validate-foundation-plan\.mjs/);
+  assert.match(
+    planScript,
+    /validate-foundation-plan\.mjs" \\\n    --profile partial-foundation-recovery/,
+  );
   assert.ok(
     planScript.indexOf('validate-foundation-plan.mjs') < planScript.indexOf('summarize-plan.mjs'),
   );
@@ -218,8 +668,13 @@ test('passes the exact create-only private plan to the separately admitted apply
   assert.match(applyScript, /actual_sha256/);
   assert.match(applyScript, /\$actual_sha256" != "\$MIAKAPP_PLAN_SHA256/);
   assert.match(applyScript, /terraform -chdir="\$terraform_root" apply/);
+  assert.match(applyScript, /-parallelism=1/);
   assert.match(applyScript, /--require-apply-activation/);
   assert.match(applyScript, /validate-foundation-plan\.mjs/);
+  assert.match(
+    applyScript,
+    /validate-foundation-plan\.mjs" \\\n    --profile partial-foundation-recovery/,
+  );
   assert.ok(
     applyScript.indexOf('validate-foundation-plan.mjs')
       < applyScript.indexOf('terraform -chdir="$terraform_root" apply'),
@@ -507,6 +962,68 @@ test('rejects destructive, altered, and unreviewed initial foundation plans with
   assert.equal(hostileAddress.status, 1);
   assert.match(hostileAddress.stderr, /invalid address/);
   assert.doesNotMatch(`${hostileAddress.stdout}${hostileAddress.stderr}`, /private-value/);
+});
+
+test('rejects destructive, public, unreviewed, and state-inconsistent recovery plans', () => {
+  const runValidator = (plan) => spawnSync(process.execPath, [
+    foundationPlanValidatorPath,
+    '--profile',
+    'partial-foundation-recovery',
+  ], {
+    input: JSON.stringify(plan),
+    encoding: 'utf8',
+  });
+
+  const destructivePlan = recoveryPlanUntilPriorState();
+  const kmsBinding = destructivePlan.resource_changes.find((resource) => (
+    resource.address === 'google_kms_crypto_key_iam_member.access_token_signer'
+  ));
+  kmsBinding.change.actions = ['delete'];
+  const destructive = runValidator(destructivePlan);
+  assert.equal(destructive.status, 1);
+  assert.match(destructive.stderr, /change\.actions does not match the reviewed value/);
+
+  const publicPlan = recoveryPlanUntilPriorState();
+  const publicBinding = publicPlan.resource_changes.find((resource) => (
+    resource.address === 'google_kms_crypto_key_iam_member.access_token_signer'
+  ));
+  publicBinding.change.after.member = 'allUsers';
+  const publicResult = runValidator(publicPlan);
+  assert.equal(publicResult.status, 1);
+  assert.match(publicResult.stderr, /change\.after does not match the reviewed value/);
+  assert.doesNotMatch(`${publicResult.stdout}${publicResult.stderr}`, /allUsers/);
+
+  const extraResourcePlan = recoveryPlanUntilPriorState();
+  extraResourcePlan.resource_changes[0].address = 'google_compute_network.unreviewed';
+  const extraResource = runValidator(extraResourcePlan);
+  assert.equal(extraResource.status, 1);
+  assert.match(extraResource.stderr, /unreviewed resource address/);
+
+  const wrongPriorInventory = runValidator(recoveryPlanUntilPriorState());
+  assert.equal(wrongPriorInventory.status, 1);
+  assert.match(wrongPriorInventory.stderr, /prior state must contain exactly 28 resources/);
+
+  const destructiveDriftPlan = recoveryPlanUntilPriorState();
+  destructiveDriftPlan.resource_drift[0].change.actions = ['delete'];
+  const destructiveDrift = runValidator(destructiveDriftPlan);
+  assert.equal(destructiveDrift.status, 1);
+  assert.match(destructiveDrift.stderr, /drift .*change\.actions does not match/);
+
+  const extraDriftPlan = recoveryPlanUntilPriorState();
+  extraDriftPlan.resource_drift[0].address = 'google_kms_crypto_key_iam_member.access_token_signer';
+  const extraDrift = runValidator(extraDriftPlan);
+  assert.equal(extraDrift.status, 1);
+  assert.match(extraDrift.stderr, /unreviewed resource drift/);
+});
+
+test('requires an explicit supported foundation plan profile', () => {
+  const result = spawnSync(process.execPath, [
+    foundationPlanValidatorPath,
+    '--profile',
+    'unreviewed-profile',
+  ], { input: '{}', encoding: 'utf8' });
+  assert.equal(result.status, 2);
+  assert.match(result.stderr, /partial-foundation-recovery/);
 });
 
 test('keeps local plan inspection read-only and scoped to canonical private objects', () => {

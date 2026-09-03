@@ -1,12 +1,12 @@
-# Guarded staging Terraform plan-and-apply automation
+# Guarded staging Terraform partial-recovery automation
 
-Status: protected manual keyless foundation apply authorized; not yet executed
+Status: protected manual keyless partial-foundation recovery authorized
 
-The YAML and scripts in this directory describe the complete reviewed path for
-the initial staging foundation. The active workflow at
+The YAML and scripts in this directory describe the bounded recovery path after
+the initial staging foundation apply stopped with partial state. The active workflow at
 `.github/workflows/staging-terraform.yml` is byte-identical to this blueprint
 and bound to policy SHA-256
-`b506f7561dd5fb6ddb9e9c1d525f11cfe31cfce68e2cbabd544f068d0bfc8d32`.
+`701891a221ee949c5b1f0d67e537911fc7fa1476f46c5e670593eb341f2cae2e`.
 It becomes active only through protected `main`.
 
 The infrastructure reserves two separately admitted GitHub environments and
@@ -23,25 +23,26 @@ The workflow has policy, plan, and apply jobs. The plan job writes a saved plan
 to the private state bucket with a create-only
 object precondition and a planner identity that lacks delete/replace authority
 for `plans/`. Public logs contain only bounded action counts and resource
-addresses, never planned values. Before upload, the plan must also pass the
-closed `initial-foundation` policy, including its exact graph, actions, planned
-values, prior bootstrap output, critical unknown-value references and Terraform
-checks. The plan job cannot request the deployer identity.
+addresses, never planned values. Before upload, the plan must pass the closed
+`partial-foundation-recovery` policy: exactly 25 no-ops and eight additive IAM
+creates, the exact partial prior-state inventory, seven accepted refresh-only
+provider normalizations, fully known targets, critical references and passing
+Terraform checks. The plan job cannot request the deployer identity.
 
 The apply job depends on both earlier jobs and on explicit approval in the
 `miakapp-v4-staging-apply` environment. `apply.sh` accepts only the exact private
 object path and SHA-256 emitted by the same workflow attempt, repeats the closed
 plan validation immediately before Terraform, and applies that saved binary
-without replanning. It then runs a private, non-saving plan and succeeds only if
-Terraform reports complete convergence. Detailed plans and apply logs remain in
-discarded runner files.
+without replanning. The eight IAM writes are serialized to avoid competing
+read-modify-write operations on the same policy. It then runs a private,
+non-saving plan and succeeds only if Terraform reports complete convergence.
+Detailed plans and apply logs remain in discarded runner files.
 
-`inspect-plan.sh` is the separate operator inspection path. It downloads and
-verifies the private plan, initializes only the pinned local provider schemas,
-runs the same closed plan policy, then renders it locally from the Terraform
-root. It is read-only against Google Cloud and successfully inspected the latest
-plan from run `33774848684`, SHA-256
-`5def42ea3f598a5f2c59d9456814646c1b526526c6b96acf20a0db7626bc36da`.
+`inspect-plan.sh` remains the read-only operator path for historical initial
+plans. The partial recovery was independently planned and fully reviewed from
+state generation `1788452068422403`: exactly eight creates, 25 no-ops and no
+configuration update or delete. Its temporary local saved plan passed the new
+profile and was removed after validation.
 
 The apply environment records one explicit reviewer and allows that reviewer to
 approve their own manually dispatched run because the repository has
@@ -54,7 +55,8 @@ can retain recoverable bytes longer. The workflow never uses public GitHub
 artifact storage.
 
 `github-policy.json` preserves the independently observed GitHub settings and
-authorizes this exact initial-foundation workflow. Its policy job verifies the
+authorizes this exact one-shot recovery workflow. Its policy job verifies the
 active file, blueprint, digest, and apply authorization before either cloud job
-can request OIDC credentials. The closed initial plan shape means that after the
-foundation exists, another dispatch fails before uploading or applying a plan.
+can request OIDC credentials. Any resource inventory or action change fails
+before a plan can be uploaded or applied; after successful convergence, this
+authorization is retired in a separate protected change.

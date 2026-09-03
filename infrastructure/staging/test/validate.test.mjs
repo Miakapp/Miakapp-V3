@@ -28,18 +28,18 @@ function rejects(mutator, pattern) {
   );
 }
 
-test('accepts the reviewed keyless foundation apply workflow', () => {
+test('accepts the reviewed keyless partial-foundation recovery workflow', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 28);
+  assert.equal(validated.revision, 29);
   assert.equal(
     validated.status,
-    'foundation_apply_workflow_authorized',
+    'foundation_partial_apply_recovery_authorized',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
   assert.equal(
     validated.project.lifecycle,
-    'firebase_enabled_billing_linked_bootstrap_created_undeployed',
+    'firebase_enabled_billing_linked_bootstrap_and_partial_foundation_created_undeployed',
   );
   assert.equal(validated.bootstrap.billing_enabled, true);
   assert.equal(validated.bootstrap.firebase_apps, 0);
@@ -48,6 +48,24 @@ test('accepts the reviewed keyless foundation apply workflow', () => {
     'miakapp-v4-staging-components',
     'miakapp-v4-staging-tfstate-1072737219170',
   ]);
+  assert.deepEqual(validated.bootstrap.firestore_databases, ['(default)']);
+  assert.equal(validated.bootstrap.kms_key_rings.length, 1);
+  assert.deepEqual(validated.bootstrap.secrets, [
+    'miakapp-audit-hmac',
+    'miakapp-component-hmac',
+    'miakapp-home-key-pepper',
+    'miakapp-network-hmac',
+    'miakapp-push-hmac',
+  ]);
+  assert.equal(validated.security.kms.state, 'created_initial_version_enabled');
+  assert.equal(
+    validated.security.secrets.every((secret) => secret.state === 'container_created_no_versions'),
+    true,
+  );
+  assert.equal(
+    validated.security.iam.foundation_resource_bindings_state,
+    'partial_eight_recovery_bindings_missing',
+  );
   assert.equal(validated.locations.primary, 'europe-west9');
   assert.equal(validated.locations.immutable_choice_reviewed, true);
   assert.equal(validated.cost.billing_account.selection_state, 'approved');
@@ -56,24 +74,27 @@ test('accepts the reviewed keyless foundation apply workflow', () => {
     validated.cost.billing_account.terraform_management_state,
     'managed_in_reconciled_remote_bootstrap_state',
   );
-  assert.equal(validated.terraform.state, 'foundation_apply_workflow_authorized');
+  assert.equal(validated.terraform.state, 'foundation_partial_apply_recovery_authorized');
   assert.equal(
     validated.terraform.supported_workflow,
-    'credential_free_validation_and_manual_keyless_plan_apply',
+    'credential_free_validation_and_manual_keyless_partial_recovery',
   );
   assert.equal(validated.terraform.configuration_apply_capable, true);
   assert.equal(
     validated.terraform.active_cloud_workflow,
     '.github/workflows/staging-terraform.yml',
   );
-  assert.equal(validated.terraform.workflow_blueprint_state, 'installed_exact_plan_apply_copy');
+  assert.equal(validated.terraform.workflow_blueprint_state, 'installed_exact_partial_recovery_copy');
   assert.equal(validated.terraform.backend.type, 'gcs');
-  assert.equal(validated.terraform.backend.state, 'bootstrap_and_empty_foundation_state_present');
+  assert.equal(validated.terraform.backend.state, 'bootstrap_and_partial_foundation_state_present');
   assert.equal(
     validated.terraform.backend.bootstrap_migration_state,
     'complete_remote_state_reconciled',
   );
-  assert.equal(validated.terraform.identity.state, 'planner_exercised_deployer_authorized_unused');
+  assert.equal(
+    validated.terraform.identity.state,
+    'planner_and_deployer_exercised_recovery_authorized',
+  );
   assert.equal(
     validated.terraform.identity.runtime_service_account,
     'miakapp-control-plane@miakapp-v4-staging.iam.gserviceaccount.com',
@@ -93,7 +114,7 @@ test('accepts the reviewed keyless foundation apply workflow', () => {
   assert.deepEqual(validated.terraform.identity.deployer_write_prefixes, ['terraform/foundation/']);
   assert.equal(
     validated.terraform.saved_plan.state,
-    'applied_private_bundle_retained_as_recovery_evidence',
+    'partial_foundation_apply_bundle_retained_as_recovery_evidence',
   );
   assert.equal(validated.terraform.saved_plan.public_artifacts_allowed, false);
   const execution = validated.terraform.bootstrap_execution;
@@ -255,6 +276,41 @@ test('accepts the reviewed keyless foundation apply workflow', () => {
   assert.equal(foundationPlan.temporary_lock_released, true);
   assert.equal(foundationPlan.full_plan_reviewed, true);
   assert.equal(foundationPlan.raw_planned_values_committed, false);
+  const foundationApply = validated.terraform.foundation_apply_observation;
+  assert.equal(foundationApply.workflow_run_id, '33776569977');
+  assert.equal(foundationApply.workflow_result, 'failure');
+  assert.equal(foundationApply.environment_approval, 'approved');
+  assert.equal(foundationApply.strict_validation_profile, 'initial-foundation');
+  assert.equal(foundationApply.strict_validation_passed, true);
+  assert.deepEqual(foundationApply.requested_result, { create: 33, update: 0, delete: 0 });
+  assert.equal(foundationApply.apply_attempted, true);
+  assert.equal(foundationApply.apply_completed, false);
+  assert.equal(foundationApply.failure_cause_known, false);
+  assert.equal(foundationApply.detailed_apply_log_retained, false);
+  assert.equal(foundationApply.state_before.serial, 1);
+  assert.equal(foundationApply.state_before.managed_resources, 0);
+  assert.equal(foundationApply.state_after.generation, '1788452068422403');
+  assert.equal(foundationApply.state_after.serial, 4);
+  assert.equal(foundationApply.state_after.managed_resources, 25);
+  assert.equal(foundationApply.state_after.data_resources, 2);
+  assert.equal(foundationApply.state_changed, true);
+  assert.equal(foundationApply.temporary_lock_released, true);
+  assert.equal(foundationApply.firestore_ttl_operations_successful, true);
+  assert.equal(foundationApply.recovery_required, true);
+  const recoveryPlan = validated.terraform.foundation_recovery_plan_observation;
+  assert.equal(recoveryPlan.configuration_commit, 'fe41490ec978722dabecbe50a183b7994a247648');
+  assert.deepEqual(recoveryPlan.result, { create: 8, no_op: 25, update: 0, delete: 0 });
+  assert.deepEqual(recoveryPlan.resource_counts, {
+    kms_iam_bindings: 1,
+    secret_iam_bindings: 5,
+    component_bucket_iam_bindings: 2,
+  });
+  assert.equal(recoveryPlan.provider_refresh_drift_count, 7);
+  assert.equal(recoveryPlan.strict_validation_profile, 'partial-foundation-recovery');
+  assert.equal(recoveryPlan.strict_validation_passed, true);
+  assert.equal(recoveryPlan.private_saved_plan_removed_after_validation, true);
+  assert.equal(recoveryPlan.apply_executed, false);
+  assert.equal(recoveryPlan.state_unchanged, true);
   assert.equal(validated.terraform.apply_authorized, true);
   assert.equal(validated.terraform.local_plan_executed, true);
   assert.deepEqual(validated.terraform.local_plan_observation.result, {
@@ -326,7 +382,11 @@ test('accepts the reviewed keyless foundation apply workflow', () => {
   assert.equal(validated.evidence.persistent_ci_credentials_allowed, false);
   assert.equal(validated.evidence.active_plan_workflow_present, true);
   assert.equal(validated.evidence.active_apply_workflow_present, true);
-  assert.equal(validated.readiness.required_blockers.includes('staging-foundation-not-applied'), true);
+  assert.equal(
+    validated.readiness.required_blockers.includes('staging-foundation-recovery-not-applied'),
+    true,
+  );
+  assert.equal(validated.readiness.required_blockers.includes('staging-foundation-not-applied'), false);
   assert.equal(validated.readiness.required_blockers.includes('private-foundation-plan-not-reviewed'), false);
   assert.equal(validated.readiness.required_blockers.includes('github-terraform-workflow-not-installed'), false);
   assert.equal(validated.readiness.required_blockers.includes('foundation-state-not-initialized'), false);
@@ -533,6 +593,27 @@ test('rejects apply authorization and bootstrap completion drift', () => {
   rejects((candidate) => {
     candidate.terraform.foundation_saved_plan_observation.strict_validation_passed = false;
   }, /terraform\.foundation_saved_plan_observation\.strict_validation_passed/);
+  rejects((candidate) => {
+    candidate.terraform.foundation_apply_observation.apply_completed = true;
+  }, /terraform\.foundation_apply_observation\.apply_completed/);
+  rejects((candidate) => {
+    candidate.terraform.foundation_apply_observation.failure_cause_known = true;
+  }, /terraform\.foundation_apply_observation\.failure_cause_known/);
+  rejects((candidate) => {
+    candidate.terraform.foundation_apply_observation.state_after.managed_resources = 33;
+  }, /terraform\.foundation_apply_observation\.state_after\.managed_resources/);
+  rejects((candidate) => {
+    candidate.terraform.foundation_recovery_plan_observation.result.delete = 1;
+  }, /terraform\.foundation_recovery_plan_observation\.result\.delete/);
+  rejects((candidate) => {
+    candidate.terraform.foundation_recovery_plan_observation.resource_counts.secret_iam_bindings = 4;
+  }, /terraform\.foundation_recovery_plan_observation\.resource_counts\.secret_iam_bindings/);
+  rejects((candidate) => {
+    candidate.terraform.foundation_recovery_plan_observation.contains_public_ingress = true;
+  }, /terraform\.foundation_recovery_plan_observation\.contains_public_ingress/);
+  rejects((candidate) => {
+    candidate.terraform.foundation_recovery_plan_observation.strict_validation_passed = false;
+  }, /terraform\.foundation_recovery_plan_observation\.strict_validation_passed/);
 });
 
 test('requires explicit targeting and forbids a staging Firebase alias', () => {
