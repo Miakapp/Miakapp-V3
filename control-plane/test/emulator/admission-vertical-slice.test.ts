@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { once } from 'node:events';
 
@@ -214,11 +214,14 @@ describe('bounded control-plane admission and audit vertical slice', () => {
     const controller = new AdmissionController(firestore, profileConfig({
       'component.upload.issue_bytes.home': { maximum: 5, windowMilliseconds: 1_000 },
     }), clock);
-    const tickets = await Promise.all([1, 2, 3].map((index) => controller.open({
-      requestId: identifier(index),
-      operation: 'component.upload.issue',
-      source: '192.0.2.50',
-    })));
+    const tickets: AdmissionTicket[] = [];
+    for (let index = 1; index <= 3; index += 1) {
+      tickets.push(await controller.open({
+        requestId: identifier(index),
+        operation: 'component.upload.issue',
+        source: '192.0.2.50',
+      }));
+    }
     await tickets[0]?.consume([{
       budget: 'component.upload.issue_bytes.home',
       subject: 'byte-home',
@@ -231,6 +234,10 @@ describe('bounded control-plane admission and audit vertical slice', () => {
       units: 2,
     }]);
     await tickets[1]?.finish('ok');
+    const fullBucket = (await firestore.collection(ADMISSION_BUCKET_COLLECTION).get()).docs.find((snapshot) => (
+      snapshot.get('budget') === 'component.upload.issue_bytes.home'
+    ));
+    expect(fullBucket?.get('used')).toBe(5);
     await expect(tickets[2]?.consume([{
       budget: 'component.upload.issue_bytes.home',
       subject: 'byte-home',

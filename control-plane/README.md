@@ -44,7 +44,7 @@ Firebase project, `.firebaserc`, Firestore rules, or web application.
 Requirements:
 
 - Bun 1.2.23;
-- Node.js 22;
+- Node.js 22.12 or newer within major 22;
 - Java 21; and
 - Bash.
 
@@ -66,15 +66,22 @@ On Apple Silicon with Homebrew, the check automatically discovers the keg-only
 
 The runner installs the pinned lockfile, type-checks, runs unit tests, builds the
 Function, starts Auth, Firestore, Functions, and Storage emulators, and executes
-the integration and Rules corpus. Firestore Emulator 1.19.4 is pinned while
+the integration and Rules corpus. Unit tests remain on the pinned Bun runtime;
+Firestore integration tests run through Vitest on Node 22.12+ because
+[firebase-tools#8226](https://github.com/firebase/firebase-tools/issues/8226)
+tracks random Bun `node:http2` failures against the emulator, including on
+GitHub Actions. Firestore Emulator 1.19.4 is pinned while
 [firebase-tools#10518](https://github.com/firebase/firebase-tools/issues/10518)
 tracks intermittent transaction-lock failures observed in later releases. The
 runner downloads the JAR into the ignored `.firebase/emulators` cache and
 verifies its exact byte size and SHA-256 digest before executing it. Every
 admission scenario and each remaining stateful test file run behind a fresh
-emulator process boundary. Concurrent operations inside a scenario remain
-unchanged, while emulator-only transaction locks cannot contaminate later
-evidence. Tests also clear documents collection by collection instead of using
+emulator process boundary. Concurrency remains inside scenarios that assert its
+exact boundary, while emulator-only transaction locks cannot contaminate later
+evidence. Randomized fixtures reserve non-colliding fixed-table admission slots
+before exercising an asserted success path; they never retry a production
+mutation after its intentional fail-closed `429`. Tests also clear documents
+collection by collection instead of using
 the emulator-wide reset endpoint, so a failed scenario cannot turn later
 cleanup into a cascade of HTTP 409 responses. Every Firebase invocation uses
 the fixed `demo-*` project; attempts to load the Function outside that emulator
