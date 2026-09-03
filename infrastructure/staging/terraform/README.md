@@ -1,6 +1,6 @@
 # Staging Terraform foundation proposal
 
-Status: apply-capable configuration; empty backend state created; guarded reconciliation pending
+Status: apply-capable configuration; empty backend state initialized and reconciled; live plan pending
 
 This root describes the ordinary protected foundation for the existing,
 billing-linked but undeployed `miakapp-v4-staging` project. Billing management,
@@ -38,8 +38,9 @@ and prefixes, plan/apply providers, all three service accounts, component
 bucket, and numeric GitHub repository IDs. Missing, local, stale, or foreign
 bootstrap state fails closed. The bootstrap state is present remotely at serial
 40 and was reconciled against the protected serial-39 source state. Terraform's
-GCS backend created the empty foundation state at serial 1; guarded
-reconciliation remains pending.
+GCS backend created the empty foundation state at serial 1. Exact reads through
+Terraform and GCS reconciled current generation `1788443136082489` as the same
+canonical empty state.
 
 ## Credential-free validation
 
@@ -89,8 +90,10 @@ create and release temporary `.tflock` objects; only the tiny empty state remain
 live afterward, while bucket recovery policies may briefly retain noncurrent
 bytes. A first authorized run created generation `1788443136082489` before its
 conservative plan-shape check rejected Terraform's implicit provider metadata.
-The state and preserved plan have since been independently verified; the guarded
-reconciliation path remains to be completed.
+The state and preserved plan were independently verified. After the checker was
+updated to model only that exact provider metadata, clean execution commit
+`ab6f26bd5dd076a79847f989615e7fddf93f2a07` reconciled the existing generation
+without planning, applying, or otherwise mutating it.
 
 ## Guarded local plan
 
@@ -103,8 +106,8 @@ MIAKAPP_STAGING_PLAN_CONFIRMATION='miakapp-v4-staging' ./plan.sh
 
 The wrapper rejects credential files, explicit tokens, impersonation, custom
 endpoints, and all Terraform or Google environment overrides. It uses the real
-GCS backend with locking. It has not been run and remains blocked until the
-foundation-state initialization boundary is reviewed and completed.
+GCS backend with locking. It has not been run; the reconciled state boundary now
+allows that read-only planning step to proceed.
 
 The dormant keyless workflow in [`../automation/`](../automation/) is the
 intended activation path after bootstrap. It creates a private, create-only
