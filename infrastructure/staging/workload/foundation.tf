@@ -55,7 +55,8 @@ resource "terraform_data" "deployment_guard" {
         data.terraform_remote_state.foundation.outputs.staging_foundation.firestore_database == "(default)" &&
         data.terraform_remote_state.foundation.outputs.staging_foundation.component_bucket == "miakapp-v4-staging-components" &&
         data.terraform_remote_state.foundation.outputs.staging_foundation.signing_key == "projects/${local.project_id}/locations/${local.region}/keyRings/${local.project_id}/cryptoKeys/access-token-signing" &&
-        data.terraform_remote_state.foundation.outputs.staging_foundation.secret_ids == local.expected_foundation_secret_ids,
+        length(data.terraform_remote_state.foundation.outputs.staging_foundation.secret_ids) == length(local.expected_foundation_secret_ids) &&
+        toset(data.terraform_remote_state.foundation.outputs.staging_foundation.secret_ids) == toset(local.expected_foundation_secret_ids),
         false,
       )
       error_message = "The remote foundation state does not match the reviewed staging workload boundary."
