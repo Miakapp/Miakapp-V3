@@ -2,9 +2,9 @@
 
 Date: 2026-09-01
 
-Status: accepted direction; staging bootstrap and empty foundation state
-reconciled, live foundation plan reviewed, and manual keyless plan workflow
-authorized on 2026-09-03; project remains application-undeployed
+Status: accepted direction; staging bootstrap complete, partial foundation
+reconciled, and exact keyless recovery authorized on 2026-09-03; project remains
+application-undeployed
 
 ## Decision
 
@@ -31,8 +31,8 @@ The `miakapp-v4-staging` Firebase project was created manually on 2026-09-02;
 `miakapp-v4` does not exist. Paris (`europe-west9`) is the reviewed immutable
 regional location, and the owner selected an existing EUR billing account whose
 identifier is represented publicly only by a SHA-256 fingerprint. The account
-was linked on 2026-09-03. The repository's proposed manual plan workflow can
-create only a private staging plan after protected merge; it deploys neither
+was linked on 2026-09-03. Protected staging automation now admits only an exact
+private foundation recovery plan after protected merge; it cannot target another
 environment. The local package rejects execution outside the exact
 `demo-*` namespace, and the root Firebase default remains the legacy project.
 
@@ -72,19 +72,15 @@ warns that a staging application must not use production project credentials.
 
 ## Cost posture
 
-The merged local control-plane work, Terraform source, workflow definition, and
-active credential-free validation add **no Firebase usage and no cloud cost**
-until the manual plan workflow is dispatched. A plan run adds bounded API reads,
-a temporary lock, and a small private object, but no foundation resource. The
-billing association enables future metered services but does not itself create
-one.
-It runs against local Auth, Firestore, Functions and Storage emulators and cannot
-load as a production Function. The staging project currently has the approved
-billing link, alert budget, all eight Terraform bootstrap APIs, two private
-buckets, three bootstrap service accounts, and Workload Identity Federation. No
-registered Firebase app, App Engine application, database, Function, Cloud Run
-service, or deployed workload exists. Firebase also reserved a Hosting site
-namespace, but no application was deployed to it.
+Local control-plane tests and credential-free validation add no Firebase usage.
+A live plan adds bounded API reads, a temporary lock, and a small private object.
+The staging project now has the approved billing link, alert budget, bootstrap
+resources, thirteen foundation APIs, a deletion-protected Firestore database
+with active TTL fields, one software KMS signing-key version and five empty
+Secret Manager containers. No registered Firebase app, App Engine application,
+Function, Cloud Run service, secret version, public ingress, or deployed
+workload exists. Firebase also reserved a Hosting site namespace, but no
+application was deployed to it.
 
 For a low-volume staging project, the intended initial posture is:
 
@@ -101,15 +97,15 @@ For a low-volume staging project, the intended initial posture is:
 - no silently enabled fixed-price edge product. The ingress design and its full
   load-balancer/edge-policy baseline must be priced and accepted explicitly.
 
-The private Terraform bucket stores small state objects and will hold
-short-lived saved plans after the first workflow dispatch. Object Versioning and
+The private Terraform bucket stores small state objects and short-lived saved
+plans. Object Versioning and
 seven-day soft delete deliberately retain recovery bytes longer than the
 two-day live-plan window, so the cost is
 usage-metered rather than literally zero after activation. The planner/deployer,
 Workload Identity Federation, and GitHub OIDC exchanges have no always-on
-compute instance. These bootstrap resources now exist. After protected merge,
-only the manual plan workflow may use the planner identity; no workflow may use
-the deployer identity.
+compute instance. These bootstrap resources now exist. The recovery workflow may
+use the planner identity and may request the separately protected deployer
+identity only after normal environment approval.
 
 At personal-home traffic, the usage-metered services are expected to remain near
 their free tiers or cost cents, but that is an estimate rather than a guarantee.
@@ -189,21 +185,16 @@ backend template defines the immediate migration target. The foundation already
 uses the private GCS backend and refuses to proceed unless the remote bootstrap
 output matches every exact project, region, identity and repository value.
 
-A GitHub policy record and hash-bound plan-only workflow define separate numeric-
-claim WIF providers and service accounts, protected plan/apply environments,
-SHA-pinned selected actions, and a private create-only saved plan. On 2026-09-03,
-the repository's actual
-`main`/environment/Actions settings were configured and independently
-re-observed against that policy. The existing `miakapi` environment and default
-repository OIDC subject were left unchanged. This revision adds the exact
-plan-only workflow under `.github/workflows`; its policy and SHA-256 checks must
-pass before it requests the planner OIDC identity. It contains no apply job, and
-the dormant apply script rejects the separate false apply authorization bit.
-The WIF identities, buckets, and reconciled remote bootstrap state now
-exist. Terraform's GCS backend also created a canonical empty foundation state
-during its guarded initialization attempt, and a subsequent guarded execution
-reconciled that exact generation without mutation. GitHub will expose the
-manual plan workflow only after protected merge to `main`.
+A GitHub policy record and hash-bound workflow define separate numeric-claim WIF
+providers and service accounts, protected plan/apply environments, SHA-pinned
+selected actions, and private create-only saved-plan storage. On 2026-09-03, the
+repository's actual `main`/environment/Actions settings were configured and
+independently re-observed against that policy. The existing `miakapi`
+environment and default repository OIDC subject were left unchanged. The active
+workflow evolved through protected merges from plan-only inspection to the
+initial apply and now to exact partial recovery. Each revision verifies its
+active file, blueprint and SHA-256 before requesting either short-lived OIDC
+identity.
 
 The first private saved plan was superseded after Cloud Billing rejected a
 redundant billing-association write before Terraform recorded resources. The
@@ -239,12 +230,24 @@ the inspection-only plan contains no resource action. Clean execution commit
 without planning or mutation. A subsequent non-saving live plan from commit
 `363d017ebdc85af1285e38c5742365fd0a2a4395` was fully reviewed: `33 to add, 0
 to change, 0 to destroy`, with no workload, public ingress, secret version, or
-state change. The next steps are to merge the exact plan-only workflow, dispatch
-it manually, and inspect its private saved plan before any apply transition. The
-production Function entry point,
-exact FCM permission, quotas, alerts and teardown evidence remain blockers.
-Deployment, public ingress and CI apply authentication remain disabled. Passing
-the manifest check is evidence, not additional authorization.
+state change. Protected run `33776569977` subsequently validated and attempted that exact
+33-create plan after normal environment approval. Terraform persisted 25
+managed resources before the command failed. Because the private detailed log
+was discarded as designed, no precise failure cause is claimed. Independent
+reads verified all APIs, Firestore and its three active TTL fields, the KMS key
+and enabled initial version, and five secret containers with zero versions. The
+one KMS, five secret and two component-bucket runtime IAM bindings were absent.
+
+Foundation state generation `1788452068422403` is healthy at serial 4 with 25
+managed and two data resources. A fresh private plan from the unchanged
+Terraform configuration reports exactly eight creates, 25 no-ops, no update or
+delete, and seven bounded refresh-only provider normalizations. It passed the
+closed `partial-foundation-recovery` profile and was removed after review. The
+next step is the protected one-shot recovery followed by zero-change convergence
+and immediate retirement of its apply authorization. The production Function
+entry point, exact FCM permission, quotas, alerts and teardown evidence remain
+blockers. Workload deployment and public ingress remain disabled. Passing the
+manifest check is evidence, not additional authorization.
 
 Create or attach `miakapp-v4` only after the staging migration rehearsal produces:
 

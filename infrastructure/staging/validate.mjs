@@ -22,7 +22,7 @@ const SERVICE_IDS = [
 const ENABLED_SERVICE_APIS = [
   'analyticshub.googleapis.com',
   'appengine.googleapis.com',
-  'billingbudgets.googleapis.com',
+  'artifactregistry.googleapis.com',
   'bigquery.googleapis.com',
   'bigqueryconnection.googleapis.com',
   'bigquerydatapolicy.googleapis.com',
@@ -30,30 +30,41 @@ const ENABLED_SERVICE_APIS = [
   'bigquerymigration.googleapis.com',
   'bigqueryreservation.googleapis.com',
   'bigquerystorage.googleapis.com',
-  'cloudbilling.googleapis.com',
+  'billingbudgets.googleapis.com',
   'cloudapis.googleapis.com',
+  'cloudbilling.googleapis.com',
+  'cloudbuild.googleapis.com',
+  'cloudfunctions.googleapis.com',
+  'cloudkms.googleapis.com',
   'cloudresourcemanager.googleapis.com',
   'cloudtrace.googleapis.com',
+  'containerregistry.googleapis.com',
   'dataform.googleapis.com',
   'dataplex.googleapis.com',
   'datastore.googleapis.com',
+  'eventarc.googleapis.com',
   'fcm.googleapis.com',
   'firebase.googleapis.com',
+  'firebaseappcheck.googleapis.com',
   'firebasehosting.googleapis.com',
   'firebaseinstallations.googleapis.com',
   'firebaseremoteconfig.googleapis.com',
   'firebaseremoteconfigrealtime.googleapis.com',
   'firebaserules.googleapis.com',
+  'firestore.googleapis.com',
   'identitytoolkit.googleapis.com',
   'iam.googleapis.com',
   'iamcredentials.googleapis.com',
   'logging.googleapis.com',
   'monitoring.googleapis.com',
   'pubsub.googleapis.com',
+  'run.googleapis.com',
   'runtimeconfig.googleapis.com',
+  'secretmanager.googleapis.com',
   'securetoken.googleapis.com',
   'servicemanagement.googleapis.com',
   'serviceusage.googleapis.com',
+  'source.googleapis.com',
   'sql-component.googleapis.com',
   'storage-api.googleapis.com',
   'storage-component.googleapis.com',
@@ -95,7 +106,7 @@ const REQUIRED_BLOCKERS = [
   'migration-rehearsal',
   'production-function-entrypoint',
   'secret-version-lifecycle',
-  'staging-foundation-not-applied',
+  'staging-foundation-recovery-not-applied',
 ];
 
 const STAGING_ROWS = [
@@ -214,7 +225,7 @@ function validateProject(value) {
   }
   exact(
     project.lifecycle,
-    'firebase_enabled_billing_linked_bootstrap_created_undeployed',
+    'firebase_enabled_billing_linked_bootstrap_and_partial_foundation_created_undeployed',
     'project.lifecycle',
   );
   exact(project.creation_authorized, false, 'project.creation_authorized');
@@ -255,15 +266,26 @@ function validateBootstrap(value) {
   exact(bootstrap.firebase_apps, 0, 'bootstrap.firebase_apps');
   exact(bootstrap.hosting_site, 'miakapp-v4-staging', 'bootstrap.hosting_site');
   exact(bootstrap.app_engine_application, false, 'bootstrap.app_engine_application');
-  for (const field of [
-    'firestore_databases',
-    'cloud_functions',
-    'cloud_run_services',
-    'kms_key_rings',
-    'secrets',
-  ]) {
+  for (const field of ['cloud_functions', 'cloud_run_services']) {
     exactArray(bootstrap[field], [], `bootstrap.${field}`);
   }
+  exactArray(bootstrap.firestore_databases, ['(default)'], 'bootstrap.firestore_databases');
+  exactArray(
+    bootstrap.kms_key_rings,
+    ['projects/miakapp-v4-staging/locations/europe-west9/keyRings/miakapp-v4-staging'],
+    'bootstrap.kms_key_rings',
+  );
+  exactArray(
+    bootstrap.secrets,
+    [
+      'miakapp-audit-hmac',
+      'miakapp-component-hmac',
+      'miakapp-home-key-pepper',
+      'miakapp-network-hmac',
+      'miakapp-push-hmac',
+    ],
+    'bootstrap.secrets',
+  );
   exactArray(
     bootstrap.storage_buckets,
     ['miakapp-v4-staging-components', 'miakapp-v4-staging-tfstate-1072737219170'],
@@ -418,7 +440,7 @@ function validateSecurity(value) {
     'automatic_rotation',
     'key_ring_deletion_supported',
   ]);
-  exact(kms.state, 'not_created', 'security.kms.state');
+  exact(kms.state, 'created_initial_version_enabled', 'security.kms.state');
   exact(kms.location, 'europe-west9', 'security.kms.location');
   exact(kms.key_ring, 'miakapp-v4-staging', 'security.kms.key_ring');
   exact(kms.key, 'access-token-signing', 'security.kms.key');
@@ -442,7 +464,7 @@ function validateSecurity(value) {
       'consumer',
     ]);
     exact(secret.id, id, `security.secrets[${index}].id`);
-    exact(secret.state, 'not_created', `security.secrets[${index}].state`);
+    exact(secret.state, 'container_created_no_versions', `security.secrets[${index}].state`);
     exact(secret.replication, 'automatic', `security.secrets[${index}].replication`);
     exact(secret.version_policy_state, 'not_implemented', `security.secrets[${index}].version_policy_state`);
     exact(secret.maximum_active_versions, 2, `security.secrets[${index}].maximum_active_versions`);
@@ -451,12 +473,18 @@ function validateSecurity(value) {
 
   const iam = record(security.iam, 'security.iam', [
     'runtime_identity_state',
+    'foundation_resource_bindings_state',
     'broad_project_roles_forbidden',
     'human_runtime_bindings_forbidden',
     'resource_bindings',
     'unresolved_permissions',
   ]);
   exact(iam.runtime_identity_state, 'created_not_deployed', 'security.iam.runtime_identity_state');
+  exact(
+    iam.foundation_resource_bindings_state,
+    'partial_eight_recovery_bindings_missing',
+    'security.iam.foundation_resource_bindings_state',
+  );
   exact(iam.broad_project_roles_forbidden, true, 'security.iam.broad_project_roles_forbidden');
   exact(iam.human_runtime_bindings_forbidden, true, 'security.iam.human_runtime_bindings_forbidden');
   if (!Array.isArray(iam.resource_bindings)) reject('security.iam.resource_bindings', 'must be an array');
@@ -546,6 +574,8 @@ function validateTerraform(value) {
     'foundation_state_initialization',
     'foundation_live_plan_observation',
     'foundation_saved_plan_observation',
+    'foundation_apply_observation',
+    'foundation_recovery_plan_observation',
     'apply_authorized',
     'destroy_authorized',
     'function_deployment_included',
@@ -556,10 +586,10 @@ function validateTerraform(value) {
     'local_saved_plan_observation',
     'superseded_saved_plan_observation',
   ]);
-  exact(terraform.state, 'foundation_apply_workflow_authorized', 'terraform.state');
+  exact(terraform.state, 'foundation_partial_apply_recovery_authorized', 'terraform.state');
   exact(
     terraform.supported_workflow,
-    'credential_free_validation_and_manual_keyless_plan_apply',
+    'credential_free_validation_and_manual_keyless_partial_recovery',
     'terraform.supported_workflow',
   );
   exact(terraform.configuration_apply_capable, true, 'terraform.configuration_apply_capable');
@@ -570,7 +600,7 @@ function validateTerraform(value) {
   );
   exact(
     terraform.workflow_blueprint_state,
-    'installed_exact_plan_apply_copy',
+    'installed_exact_partial_recovery_copy',
     'terraform.workflow_blueprint_state',
   );
   exact(terraform.bootstrap_root, 'bootstrap', 'terraform.bootstrap_root');
@@ -600,7 +630,11 @@ function validateTerraform(value) {
     'public_access_prevention',
   ]);
   exact(backend.type, 'gcs', 'terraform.backend.type');
-  exact(backend.state, 'bootstrap_and_empty_foundation_state_present', 'terraform.backend.state');
+  exact(
+    backend.state,
+    'bootstrap_and_partial_foundation_state_present',
+    'terraform.backend.state',
+  );
   exact(backend.bucket, 'miakapp-v4-staging-tfstate-1072737219170', 'terraform.backend.bucket');
   exact(backend.bootstrap_prefix, 'terraform/bootstrap', 'terraform.backend.bootstrap_prefix');
   exact(backend.foundation_prefix, 'terraform/foundation', 'terraform.backend.foundation_prefix');
@@ -642,7 +676,7 @@ function validateTerraform(value) {
   ]);
   exact(
     identity.state,
-    'planner_exercised_deployer_authorized_unused',
+    'planner_and_deployer_exercised_recovery_authorized',
     'terraform.identity.state',
   );
   exact(identity.workload_identity_pool, 'miakapp-github', 'terraform.identity.workload_identity_pool');
@@ -732,7 +766,7 @@ function validateTerraform(value) {
   ]);
   exact(
     savedPlan.state,
-    'applied_private_bundle_retained_as_recovery_evidence',
+    'partial_foundation_apply_bundle_retained_as_recovery_evidence',
     'terraform.saved_plan.state',
   );
   exact(savedPlan.public_artifacts_allowed, false, 'terraform.saved_plan.public_artifacts_allowed');
@@ -1519,6 +1553,232 @@ function validateTerraform(value) {
     );
   }
 
+  const foundationApplyPath = 'terraform.foundation_apply_observation';
+  const foundationApply = record(
+    terraform.foundation_apply_observation,
+    foundationApplyPath,
+    [
+      'observed_on',
+      'configuration_commit',
+      'workflow_run_id',
+      'workflow_run_attempt',
+      'workflow_result',
+      'environment_approval',
+      'terraform_version',
+      'backend',
+      'plan_object',
+      'plan_generation',
+      'plan_size_bytes',
+      'plan_sha256',
+      'strict_validation_profile',
+      'strict_validation_passed',
+      'requested_result',
+      'data_reads',
+      'resource_counts',
+      'contains_workload',
+      'contains_public_ingress',
+      'contains_secret_versions',
+      'contains_billing_resource',
+      'apply_attempted',
+      'apply_completed',
+      'failure_cause_known',
+      'detailed_apply_log_retained',
+      'state_before',
+      'state_after',
+      'state_changed',
+      'temporary_lock_released',
+      'firestore_ttl_operations_successful',
+      'recovery_required',
+    ],
+  );
+  const foundationApplyExpectations = {
+    observed_on: '2026-09-03',
+    configuration_commit: 'fe41490ec978722dabecbe50a183b7994a247648',
+    workflow_run_id: '33776569977',
+    workflow_run_attempt: 1,
+    workflow_result: 'failure',
+    environment_approval: 'approved',
+    terraform_version: '1.11.3',
+    backend: 'gcs',
+    plan_object: 'gs://miakapp-v4-staging-tfstate-1072737219170/plans/fe41490ec978722dabecbe50a183b7994a247648/33776569977/1/foundation.tfplan',
+    plan_generation: '1788451608568024',
+    plan_size_bytes: 11001,
+    plan_sha256: 'd7113280cfb86519c3fce4f68734a7733c1b0b766a677a1f50f0fd5fce98bf78',
+    strict_validation_profile: 'initial-foundation',
+    strict_validation_passed: true,
+    data_reads: 2,
+    contains_workload: false,
+    contains_public_ingress: false,
+    contains_secret_versions: false,
+    contains_billing_resource: false,
+    apply_attempted: true,
+    apply_completed: false,
+    failure_cause_known: false,
+    detailed_apply_log_retained: false,
+    state_changed: true,
+    temporary_lock_released: true,
+    firestore_ttl_operations_successful: true,
+    recovery_required: true,
+  };
+  for (const [field, expected] of Object.entries(foundationApplyExpectations)) {
+    exact(foundationApply[field], expected, `${foundationApplyPath}.${field}`);
+  }
+  const requestedResult = record(
+    foundationApply.requested_result,
+    `${foundationApplyPath}.requested_result`,
+    ['create', 'update', 'delete'],
+  );
+  for (const [field, expected] of Object.entries({ create: 33, update: 0, delete: 0 })) {
+    exact(requestedResult[field], expected, `${foundationApplyPath}.requested_result.${field}`);
+  }
+  const foundationApplyResourceCounts = record(
+    foundationApply.resource_counts,
+    `${foundationApplyPath}.resource_counts`,
+    Object.keys(foundationLivePlanResourceExpectations),
+  );
+  for (const [field, expected] of Object.entries(foundationLivePlanResourceExpectations)) {
+    exact(
+      foundationApplyResourceCounts[field],
+      expected,
+      `${foundationApplyPath}.resource_counts.${field}`,
+    );
+  }
+  const stateBeforeExpectations = {
+    object: 'terraform/foundation/default.tfstate',
+    generation: '1788443136082489',
+    sha256: '8a69b37495a7d11b1091a03e7659297adcb62ce853475ab032071888530e30cd',
+    size_bytes: 181,
+    terraform_version: '1.11.3',
+    serial: 1,
+    managed_resources: 0,
+    data_resources: 0,
+    outputs: 0,
+  };
+  const stateBefore = record(
+    foundationApply.state_before,
+    `${foundationApplyPath}.state_before`,
+    Object.keys(stateBeforeExpectations),
+  );
+  for (const [field, expected] of Object.entries(stateBeforeExpectations)) {
+    exact(stateBefore[field], expected, `${foundationApplyPath}.state_before.${field}`);
+  }
+  const stateAfterExpectations = {
+    object: 'terraform/foundation/default.tfstate',
+    generation: '1788452068422403',
+    sha256: '7729ee35a104ce04f918faa05cd47d4d37731baac96def6e8531b17175f721bb',
+    size_bytes: 42621,
+    lineage: '43307835-c5c6-d6b0-fdcc-af92fafde3c3',
+    terraform_version: '1.11.3',
+    serial: 4,
+    managed_resources: 25,
+    data_resources: 2,
+    outputs: 0,
+  };
+  const stateAfter = record(
+    foundationApply.state_after,
+    `${foundationApplyPath}.state_after`,
+    Object.keys(stateAfterExpectations),
+  );
+  for (const [field, expected] of Object.entries(stateAfterExpectations)) {
+    exact(stateAfter[field], expected, `${foundationApplyPath}.state_after.${field}`);
+  }
+
+  const recoveryPlanPath = 'terraform.foundation_recovery_plan_observation';
+  const recoveryPlan = record(
+    terraform.foundation_recovery_plan_observation,
+    recoveryPlanPath,
+    [
+      'observed_on',
+      'configuration_commit',
+      'terraform_version',
+      'backend',
+      'private_plan_sha256',
+      'private_plan_size_bytes',
+      'result',
+      'data_reads',
+      'resource_counts',
+      'provider_refresh_drift_count',
+      'provider_refresh_drift_types',
+      'strict_validation_profile',
+      'strict_validation_passed',
+      'contains_workload',
+      'contains_public_ingress',
+      'contains_secret_versions',
+      'contains_billing_resource',
+      'private_saved_plan_created',
+      'private_saved_plan_removed_after_validation',
+      'apply_executed',
+      'state_generation_before',
+      'state_generation_after',
+      'state_sha256_before',
+      'state_sha256_after',
+      'state_unchanged',
+      'temporary_lock_released',
+      'full_plan_reviewed',
+      'raw_planned_values_committed',
+    ],
+  );
+  const recoveryPlanExpectations = {
+    observed_on: '2026-09-03',
+    configuration_commit: 'fe41490ec978722dabecbe50a183b7994a247648',
+    terraform_version: '1.11.3',
+    backend: 'gcs',
+    private_plan_sha256: 'b22920a8fd933ecc05298c9fd8f2565ed01cd5b33b96bf08b223360f3390b54a',
+    private_plan_size_bytes: 18893,
+    data_reads: 0,
+    provider_refresh_drift_count: 7,
+    strict_validation_profile: 'partial-foundation-recovery',
+    strict_validation_passed: true,
+    contains_workload: false,
+    contains_public_ingress: false,
+    contains_secret_versions: false,
+    contains_billing_resource: false,
+    private_saved_plan_created: true,
+    private_saved_plan_removed_after_validation: true,
+    apply_executed: false,
+    state_generation_before: '1788452068422403',
+    state_generation_after: '1788452068422403',
+    state_sha256_before: '7729ee35a104ce04f918faa05cd47d4d37731baac96def6e8531b17175f721bb',
+    state_sha256_after: '7729ee35a104ce04f918faa05cd47d4d37731baac96def6e8531b17175f721bb',
+    state_unchanged: true,
+    temporary_lock_released: true,
+    full_plan_reviewed: true,
+    raw_planned_values_committed: false,
+  };
+  for (const [field, expected] of Object.entries(recoveryPlanExpectations)) {
+    exact(recoveryPlan[field], expected, `${recoveryPlanPath}.${field}`);
+  }
+  const recoveryResult = record(
+    recoveryPlan.result,
+    `${recoveryPlanPath}.result`,
+    ['create', 'no_op', 'update', 'delete'],
+  );
+  for (const [field, expected] of Object.entries({
+    create: 8,
+    no_op: 25,
+    update: 0,
+    delete: 0,
+  })) {
+    exact(recoveryResult[field], expected, `${recoveryPlanPath}.result.${field}`);
+  }
+  const recoveryResourceCounts = record(
+    recoveryPlan.resource_counts,
+    `${recoveryPlanPath}.resource_counts`,
+    ['kms_iam_bindings', 'secret_iam_bindings', 'component_bucket_iam_bindings'],
+  );
+  for (const [field, expected] of Object.entries({
+    kms_iam_bindings: 1,
+    secret_iam_bindings: 5,
+    component_bucket_iam_bindings: 2,
+  })) {
+    exact(recoveryResourceCounts[field], expected, `${recoveryPlanPath}.resource_counts.${field}`);
+  }
+  exactArray(recoveryPlan.provider_refresh_drift_types, [
+    'firestore-etag',
+    'kms-empty-label-map',
+    'secret-empty-map-normalization',
+  ], `${recoveryPlanPath}.provider_refresh_drift_types`);
+
   exact(terraform.apply_authorized, true, 'terraform.apply_authorized');
   exact(terraform.destroy_authorized, false, 'terraform.destroy_authorized');
   exact(terraform.function_deployment_included, false, 'terraform.function_deployment_included');
@@ -2010,10 +2270,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 28, 'manifest.revision');
+  exact(manifest.revision, 29, 'manifest.revision');
   exact(
     manifest.status,
-    'foundation_apply_workflow_authorized',
+    'foundation_partial_apply_recovery_authorized',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -2068,7 +2328,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; manual keyless foundation plan and apply are authorized.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; manual keyless partial-foundation recovery is authorized.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';

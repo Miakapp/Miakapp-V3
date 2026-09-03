@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-github-policy/1",
-  "revision": 4,
-  "status": "manual_keyless_plan_apply_workflow_authorized",
+  "revision": 5,
+  "status": "manual_keyless_partial_foundation_recovery_authorized",
   "observed_on": "2026-09-03",
   "observation_context": "default_branch_before_this_change",
   "repository": {
@@ -150,6 +150,6 @@
     "foundation_apply_authorized": true,
     "active_workflow_path": ".github/workflows/staging-terraform.yml",
     "blueprint_path": "infrastructure/staging/automation/staging-terraform.yml",
-    "workflow_sha256": "b506f7561dd5fb6ddb9e9c1d525f11cfe31cfce68e2cbabd544f068d0bfc8d32"
+    "workflow_sha256": "701891a221ee949c5b1f0d67e537911fc7fa1476f46c5e670593eb341f2cae2e"
   }
 }

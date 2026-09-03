@@ -115,7 +115,8 @@ if ! terraform -chdir="$terraform_root" plan \
 fi
 
 terraform -chdir="$terraform_root" show -json "$plan_file" \
-  | node "${automation_root}/validate-foundation-plan.mjs"
+  | node "${automation_root}/validate-foundation-plan.mjs" \
+    --profile partial-foundation-recovery
 terraform -chdir="$terraform_root" show -json "$plan_file" \
   | node "${automation_root}/summarize-plan.mjs"
 
