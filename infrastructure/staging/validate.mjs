@@ -545,6 +545,7 @@ function validateTerraform(value) {
     'bootstrap_execution',
     'foundation_state_initialization',
     'foundation_live_plan_observation',
+    'foundation_saved_plan_observation',
     'apply_authorized',
     'destroy_authorized',
     'function_deployment_included',
@@ -555,7 +556,7 @@ function validateTerraform(value) {
     'local_saved_plan_observation',
     'superseded_saved_plan_observation',
   ]);
-  exact(terraform.state, 'foundation_live_plan_reviewed', 'terraform.state');
+  exact(terraform.state, 'foundation_saved_plan_strictly_reviewed', 'terraform.state');
   exact(
     terraform.supported_workflow,
     'credential_free_validation_and_manual_keyless_planning',
@@ -639,7 +640,11 @@ function validateTerraform(value) {
     'github_repository_id',
     'github_repository_owner_id',
   ]);
-  exact(identity.state, 'created_not_used_by_active_workflow', 'terraform.identity.state');
+  exact(
+    identity.state,
+    'planner_identity_exercised_deployer_unused',
+    'terraform.identity.state',
+  );
   exact(identity.workload_identity_pool, 'miakapp-github', 'terraform.identity.workload_identity_pool');
   exact(
     identity.planner_service_account,
@@ -1416,6 +1421,101 @@ function validateTerraform(value) {
       foundationLivePlanResourceCounts[field],
       expected,
       `${foundationLivePlanPath}.resource_counts.${field}`,
+    );
+  }
+
+  const foundationSavedPlanPath = 'terraform.foundation_saved_plan_observation';
+  const foundationSavedPlan = record(
+    terraform.foundation_saved_plan_observation,
+    foundationSavedPlanPath,
+    [
+      'observed_on',
+      'configuration_commit',
+      'workflow_run_id',
+      'workflow_run_attempt',
+      'workflow_result',
+      'terraform_version',
+      'backend',
+      'plan_object',
+      'plan_generation',
+      'plan_size_bytes',
+      'plan_sha256',
+      'result',
+      'data_reads',
+      'resource_counts',
+      'contains_workload',
+      'contains_public_ingress',
+      'contains_secret_versions',
+      'contains_billing_resource',
+      'saved_plan_created',
+      'saved_plan_private',
+      'create_only_upload',
+      'strict_validation_profile',
+      'strict_validation_passed',
+      'apply_executed',
+      'state_generation_before',
+      'state_generation_after',
+      'state_sha256_before',
+      'state_sha256_after',
+      'state_unchanged',
+      'temporary_lock_released',
+      'full_plan_reviewed',
+      'raw_planned_values_committed',
+    ],
+  );
+  const foundationSavedPlanExpectations = {
+    observed_on: '2026-09-03',
+    configuration_commit: 'acfcee42e202cdb4f08ada75ad81b1ad8a88951e',
+    workflow_run_id: '33772429693',
+    workflow_run_attempt: 1,
+    workflow_result: 'success',
+    terraform_version: '1.11.3',
+    backend: 'gcs',
+    plan_object: 'gs://miakapp-v4-staging-tfstate-1072737219170/plans/acfcee42e202cdb4f08ada75ad81b1ad8a88951e/33772429693/1/foundation.tfplan',
+    plan_generation: '1788449123427734',
+    plan_size_bytes: 11005,
+    plan_sha256: 'd90f4d2243a7754372c059f1fcd5297a23c317cbcdc9b9ff734c66575f347d3f',
+    data_reads: 2,
+    contains_workload: false,
+    contains_public_ingress: false,
+    contains_secret_versions: false,
+    contains_billing_resource: false,
+    saved_plan_created: true,
+    saved_plan_private: true,
+    create_only_upload: true,
+    strict_validation_profile: 'initial-foundation',
+    strict_validation_passed: true,
+    apply_executed: false,
+    state_generation_before: '1788443136082489',
+    state_generation_after: '1788443136082489',
+    state_sha256_before: '8a69b37495a7d11b1091a03e7659297adcb62ce853475ab032071888530e30cd',
+    state_sha256_after: '8a69b37495a7d11b1091a03e7659297adcb62ce853475ab032071888530e30cd',
+    state_unchanged: true,
+    temporary_lock_released: true,
+    full_plan_reviewed: true,
+    raw_planned_values_committed: false,
+  };
+  for (const [field, expected] of Object.entries(foundationSavedPlanExpectations)) {
+    exact(foundationSavedPlan[field], expected, `${foundationSavedPlanPath}.${field}`);
+  }
+  const foundationSavedPlanResult = record(
+    foundationSavedPlan.result,
+    `${foundationSavedPlanPath}.result`,
+    ['create', 'update', 'delete'],
+  );
+  for (const [field, expected] of Object.entries({ create: 33, update: 0, delete: 0 })) {
+    exact(foundationSavedPlanResult[field], expected, `${foundationSavedPlanPath}.result.${field}`);
+  }
+  const foundationSavedPlanResourceCounts = record(
+    foundationSavedPlan.resource_counts,
+    `${foundationSavedPlanPath}.resource_counts`,
+    Object.keys(foundationLivePlanResourceExpectations),
+  );
+  for (const [field, expected] of Object.entries(foundationLivePlanResourceExpectations)) {
+    exact(
+      foundationSavedPlanResourceCounts[field],
+      expected,
+      `${foundationSavedPlanPath}.resource_counts.${field}`,
     );
   }
 

@@ -10,6 +10,7 @@ const ALLOWED_FILES = Object.freeze([
   'plan.sh',
   'staging-terraform.yml',
   'summarize-plan.mjs',
+  'validate-foundation-plan.mjs',
   'validate-policy.mjs',
 ]);
 

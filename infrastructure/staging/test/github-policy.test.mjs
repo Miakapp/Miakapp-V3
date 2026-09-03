@@ -36,6 +36,9 @@ const planScript = readFileSync(new URL('plan.sh', automationRoot), 'utf8');
 const applyScript = readFileSync(new URL('apply.sh', automationRoot), 'utf8');
 const inspectScript = readFileSync(new URL('inspect-plan.sh', automationRoot), 'utf8');
 const summaryPath = fileURLToPath(new URL('summarize-plan.mjs', automationRoot));
+const foundationPlanValidatorPath = fileURLToPath(
+  new URL('validate-foundation-plan.mjs', automationRoot),
+);
 const checkScript = readFileSync(new URL('../check.sh', import.meta.url), 'utf8');
 
 function clone(value) {
@@ -73,10 +76,8 @@ function exactGitHubEnvironment(kind) {
     GITHUB_RUN_ATTEMPT: '1',
     MIAKAPP_GITHUB_ENVIRONMENT: `miakapp-v4-staging-${kind}`,
   };
-  if (kind === 'plan') {
-    environment.CLOUDSDK_METRICS_ENVIRONMENT = 'github-actions-setup-gcloud';
-    environment.CLOUDSDK_METRICS_ENVIRONMENT_VERSION = '3.0.1';
-  }
+  environment.CLOUDSDK_METRICS_ENVIRONMENT = 'github-actions-setup-gcloud';
+  environment.CLOUDSDK_METRICS_ENVIRONMENT_VERSION = '3.0.1';
   return environment;
 }
 
@@ -209,14 +210,28 @@ test('stores a create-only private plan and keeps apply dormant behind separate 
   assert.match(planScript, /--if-generation-match=0/);
   assert.match(planScript, /plan-sha256/);
   assert.match(planScript, /summarize-plan\.mjs/);
+  assert.match(planScript, /validate-foundation-plan\.mjs/);
+  assert.ok(
+    planScript.indexOf('validate-foundation-plan.mjs') < planScript.indexOf('summarize-plan.mjs'),
+  );
+  assert.ok(planScript.indexOf('validate-foundation-plan.mjs') < planScript.indexOf('gcloud storage cp'));
   assert.doesNotMatch(`${workflow}\n${planScript}\n${applyScript}`, /upload-artifact|download-artifact/);
   assert.match(applyScript, /expected_object="gs:\/\/miakapp-v4-staging-tfstate-1072737219170\/plans/);
   assert.match(applyScript, /actual_sha256/);
   assert.match(applyScript, /\$actual_sha256" != "\$MIAKAPP_PLAN_SHA256/);
   assert.match(applyScript, /terraform -chdir="\$terraform_root" apply/);
   assert.match(applyScript, /--require-apply-activation/);
+  assert.match(applyScript, /validate-foundation-plan\.mjs/);
+  assert.ok(
+    applyScript.indexOf('validate-foundation-plan.mjs')
+      < applyScript.indexOf('terraform -chdir="$terraform_root" apply'),
+  );
   assert.doesNotMatch(planScript, /terraform -chdir="\$terraform_root" apply/);
   assert.doesNotMatch(workflow, /apply\.sh|plan-and-apply/);
+  for (const script of [planScript, applyScript]) {
+    assert.match(script, /CLOUDSDK_METRICS_ENVIRONMENT:-.*github-actions-setup-gcloud/);
+    assert.match(script, /CLOUDSDK_METRICS_ENVIRONMENT_VERSION:-.*3\.0\.1/);
+  }
 });
 
 test('rejects drift between the active workflow, blueprint, and policy digest', () => {
@@ -424,9 +439,77 @@ test('summarizes only bounded Terraform action metadata', () => {
   assert.notEqual(oversizedCollection.status, 0);
 });
 
+test('rejects destructive, altered, and unreviewed initial foundation plans without leaking values', () => {
+  const remainingChanges = Array.from({ length: 34 }, (_, index) => ({
+    address: `terraform_data.synthetic["${index}"]`,
+    mode: 'managed',
+    type: 'terraform_data',
+    name: 'synthetic',
+    provider_name: 'terraform.io/builtin/terraform',
+    index: `${index}`,
+    change: { actions: ['create'], before: null, after: {} },
+  }));
+  const planWith = (firstChange) => ({
+    format_version: '1.2',
+    terraform_version: '1.11.3',
+    applyable: true,
+    complete: true,
+    errored: false,
+    resource_changes: [firstChange, ...remainingChanges],
+  });
+  const runValidator = (plan) => spawnSync(process.execPath, [foundationPlanValidatorPath], {
+    input: JSON.stringify(plan),
+    encoding: 'utf8',
+  });
+  const firestoreChange = {
+    address: 'google_firestore_database.default',
+    mode: 'managed',
+    type: 'google_firestore_database',
+    name: 'default',
+    provider_name: 'registry.terraform.io/hashicorp/google',
+    change: { actions: ['delete'], before: { private_value: 'do-not-log' }, after: null },
+  };
+
+  const destructive = runValidator(planWith(firestoreChange));
+  assert.equal(destructive.status, 1);
+  assert.match(destructive.stderr, /change\.actions does not match the reviewed value/);
+  assert.doesNotMatch(`${destructive.stdout}${destructive.stderr}`, /do-not-log/);
+
+  const altered = runValidator(planWith({
+    ...firestoreChange,
+    change: {
+      actions: ['create'],
+      before: null,
+      after: { member: 'allUsers', private_value: 'also-do-not-log' },
+    },
+  }));
+  assert.equal(altered.status, 1);
+  assert.match(altered.stderr, /change\.after does not match the reviewed value/);
+  assert.doesNotMatch(`${altered.stdout}${altered.stderr}`, /allUsers|also-do-not-log/);
+
+  const unreviewed = runValidator(planWith({
+    ...firestoreChange,
+    address: 'google_secret_manager_secret_version.unreviewed',
+    type: 'google_secret_manager_secret_version',
+    name: 'unreviewed',
+    change: { actions: ['create'], before: null, after: {} },
+  }));
+  assert.equal(unreviewed.status, 1);
+  assert.match(unreviewed.stderr, /unreviewed resource address/);
+
+  const hostileAddress = runValidator(planWith({
+    ...firestoreChange,
+    address: 'safe\nprivate-value',
+  }));
+  assert.equal(hostileAddress.status, 1);
+  assert.match(hostileAddress.stderr, /invalid address/);
+  assert.doesNotMatch(`${hostileAddress.stdout}${hostileAddress.stderr}`, /private-value/);
+});
+
 test('keeps local plan inspection read-only and scoped to canonical private objects', () => {
   assert.match(inspectScript, /\^gs:\/\/miakapp-v4-staging-tfstate-1072737219170\/plans\//);
-  assert.match(inspectScript, /terraform show -no-color/);
+  assert.match(inspectScript, /terraform -chdir="\$terraform_root" show -no-color/);
+  assert.match(inspectScript, /validate-foundation-plan\.mjs/);
   assert.doesNotMatch(inspectScript, /terraform (apply|destroy)|gcloud storage (rm|mv)/);
   const result = runScript('inspect-plan.sh', {}, ['gs://attacker.example/plan', 'a'.repeat(64)]);
   assert.equal(result.status, 1);
