@@ -782,7 +782,7 @@ function validateTerraform(value) {
   );
   exact(
     bootstrapExecution.migration_configuration_commit,
-    '610922de705565d5ab1a7b7d37b0b6c8da9b8fb1',
+    'b2daada96d4f5f669bb80fd3cdfc0e0f9fb48286',
     'terraform.bootstrap_execution.migration_configuration_commit',
   );
   exact(

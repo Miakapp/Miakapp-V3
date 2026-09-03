@@ -59,7 +59,7 @@ complete-state digest, the reviewed private plan bundle, project
 and the clean repository commit that executes it. It has no infrastructure
 apply, import, destroy, state-push, or cloud-object copy path.
 Its reviewed migration implementation is commit
-`610922de705565d5ab1a7b7d37b0b6c8da9b8fb1`; execution still requires an exact
+`b2daada96d4f5f669bb80fd3cdfc0e0f9fb48286`; execution still requires an exact
 authorization tied to the clean commit that runs the wrapper.
 
 Only one operator may use the private bundle and complete state at a time. The
