@@ -653,6 +653,11 @@ test('passes the exact create-only private plan to the separately admitted apply
   assert.match(planScript, /plans\/\$\{GITHUB_SHA\}\/\$\{GITHUB_RUN_ID\}\/\$\{GITHUB_RUN_ATTEMPT\}\/foundation\.tfplan/);
   assert.match(planScript, /--if-generation-match=0/);
   assert.match(planScript, /plan-sha256/);
+  assert.match(planScript, /foundation-plan\.failure\.log/);
+  assert.match(planScript, /private diagnostic/);
+  assert.match(planScript, /wc -c/);
+  assert.match(planScript, /1048576/);
+  assert.equal((planScript.match(/--if-generation-match=0/g) ?? []).length, 2);
   assert.match(planScript, /summarize-plan\.mjs/);
   assert.match(planScript, /validate-foundation-plan\.mjs/);
   assert.match(
@@ -662,7 +667,9 @@ test('passes the exact create-only private plan to the separately admitted apply
   assert.ok(
     planScript.indexOf('validate-foundation-plan.mjs') < planScript.indexOf('summarize-plan.mjs'),
   );
-  assert.ok(planScript.indexOf('validate-foundation-plan.mjs') < planScript.indexOf('gcloud storage cp'));
+  const savedPlanUpload = planScript.indexOf('"$plan_file" \\\n  "$plan_object"');
+  assert.notEqual(savedPlanUpload, -1);
+  assert.ok(planScript.indexOf('validate-foundation-plan.mjs') < savedPlanUpload);
   assert.doesNotMatch(`${workflow}\n${planScript}\n${applyScript}`, /upload-artifact|download-artifact/);
   assert.match(applyScript, /expected_object="gs:\/\/miakapp-v4-staging-tfstate-1072737219170\/plans/);
   assert.match(applyScript, /actual_sha256/);
@@ -842,6 +849,67 @@ test('accepts a canonical apply policy then rejects missing keyless credentials 
   assert.equal(result.status, 1);
   assert.match(result.stderr, /keyless Google credential file is missing/);
   assert.doesNotMatch(result.stderr, /activation\.foundation_apply_authorized/);
+});
+
+test('retains bounded plan failures only in the private create-only prefix', () => {
+  const temporary = mkdtempSync(join(tmpdir(), 'miakapp-staging-plan-failure-'));
+  const commands = join(temporary, 'commands');
+  const runner = join(temporary, 'runner');
+  const output = join(temporary, 'github-output');
+  const commandLog = join(temporary, 'gcloud-commands');
+  const credential = fileURLToPath(
+    new URL(`../../../gha-creds-plan-failure-${process.pid}.json`, import.meta.url),
+  );
+  mkdirSync(commands, { mode: 0o700 });
+  mkdirSync(runner, { mode: 0o700 });
+  writeFileSync(output, '', { mode: 0o600 });
+  writeFileSync(commandLog, '', { mode: 0o600 });
+  writeFileSync(credential, '{}\n', { flag: 'wx', mode: 0o600 });
+  writeFileSync(join(commands, 'terraform'), [
+    '#!/usr/bin/env bash',
+    'for argument in "$@"; do',
+    '  if [[ "$argument" == "plan" ]]; then',
+    '    echo "synthetic private provider detail" >&2',
+    '    exit 1',
+    '  fi',
+    'done',
+    'exit 0',
+    '',
+  ].join('\n'), { mode: 0o700 });
+  writeFileSync(join(commands, 'gcloud'), [
+    '#!/usr/bin/env bash',
+    'printf "%s\\n" "$*" >>"$COMMAND_LOG"',
+    'exit 0',
+    '',
+  ].join('\n'), { mode: 0o700 });
+  try {
+    const result = runScript('plan.sh', {
+      ...exactGitHubEnvironment('plan'),
+      PATH: `${commands}:${process.env.PATH}`,
+      RUNNER_TEMP: runner,
+      GITHUB_OUTPUT: output,
+      COMMAND_LOG: commandLog,
+      GOOGLE_APPLICATION_CREDENTIALS: credential,
+      CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE: credential,
+      GOOGLE_GHA_CREDS_PATH: credential,
+    });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /Terraform plan failed; private diagnostic:/);
+    assert.match(
+      result.stderr,
+      /plans\/a{40}\/123456789\/1\/foundation-plan\.failure\.log/,
+    );
+    assert.match(result.stderr, /SHA-256: [0-9a-f]{64}/);
+    assert.doesNotMatch(result.stderr, /synthetic private provider detail/);
+    const gcloudCommands = readFileSync(commandLog, 'utf8');
+    assert.match(gcloudCommands, /foundation-plan\.failure\.log/);
+    assert.match(gcloudCommands, /--if-generation-match=0/);
+    assert.doesNotMatch(gcloudCommands, /foundation\.tfplan/);
+    assert.equal(readdirSync(runner).length, 0);
+  } finally {
+    unlinkSync(credential);
+    rmSync(temporary, { recursive: true });
+  }
 });
 
 test('summarizes only bounded Terraform action metadata', () => {
