@@ -266,13 +266,14 @@ standard Firebase Admin App Check verification, FID-targeted FCM transport,
 production Storage binding and an explicit dependency-injected composition root.
 It rejects emulator and credential-file environments and is not imported by the
 Firebase Emulator Function entry point. Its tests use only injected clients and
-never contact staging. The billing-linked `miakapp-v4-staging` project now has a
+never contact staging. The billing-linked `miakapp-v4-staging` project has a
 complete 37-resource bootstrap and 33-resource foundation in Paris
 (`europe-west9`): private state and component buckets, runtime/planner/deployer
 identities, the declared APIs, deletion-protected Firestore with three active
-TTL fields, a software Ed25519 key, five empty secret containers and exact
-resource IAM. It still has no registered Firebase app, App Engine application,
-Function, Cloud Run service, secret version, public ingress or deployed
+TTL fields, a software Ed25519 key, five Secret Manager containers and exact
+resource IAM. Guarded activation then registered exactly one Firebase Web app
+and one enabled initial version in each secret container. It still has no App
+Engine application, Function, Cloud Run service, public ingress or deployed
 workload. Credential-free checks validate both Terraform roots with mock
 providers.
 
@@ -294,19 +295,21 @@ secret versions. Instance initialization is single-flight and failures latch
 behind a fixed non-cacheable `503`. A private, scale-to-zero Gen 2 staging entry
 point now exists as reviewable source with `omit: true`, no selected ingress and
 no Function secret mounts. It is not exported by the active Firebase codebase,
-so this slice performs no deployment or staging mutation. Runtime configuration,
-secret versions, Firebase registration, live activation and all `STAGE-*`
-observations remain open.
+so this slice performs no deployment. The runtime configuration, initial secret
+versions and Firebase registration are now materialized; Function activation,
+live App Check provider policy and all `STAGE-*` observations remain open.
 
-An eighth, still-unapplied activation-material slice adds the exact staging
-runtime-document builder and a commit/plan-digest-bound two-phase executor. It
-permits only one Firebase Web app and one initial 32-byte version in each of the
-five existing secret containers, reconciles ambiguous writes against a private
-resumable seed, and records no secret bytes in Git, logs, arguments, environment
-variables or Terraform state. It explicitly creates no Function, Cloud Run
-service, App Engine application or ingress. Live materialization and every
-`STAGE-*` observation therefore remain open until the guarded operation runs and
-its non-secret result is recorded.
+An eighth activation-material slice adds the exact staging runtime-document
+builder and a commit/plan-digest-bound two-phase executor. It permits only one
+Firebase Web app and one initial 32-byte version in each of the five existing
+secret containers, reconciles ambiguous writes against a private resumable
+seed, and records no secret bytes in Git, logs, arguments, environment variables
+or Terraform state. The guarded operation completed from merge commit
+`101e4231d452423bafa2ae1efd051e51faeff3c8`; its exact plan replay reconciled
+without mutation and its private seed was deleted. Digest-pinned non-secret
+result and runtime evidence are committed. Independent inventory confirms no
+Function, Cloud Run service, App Engine application or ingress. Every
+`STAGE-*` observation therefore remains open.
 
 Deliverables:
 
@@ -423,7 +426,7 @@ current consumer.
    slice in isolated local Firebase Auth, Functions and Firestore emulators,
    including separate Firestore/Storage client Rules and independent token
    verification.
-8. **In progress 2026-09-03** — the emulator implementation covers closed FID
+8. **In progress 2026-09-04** — the emulator implementation covers closed FID
    registration, grants and semantic sends with synthetic App Check/FCM evidence,
    plus local component publication/read-back, immutable releases, reconciliation,
    concurrent CAS, quarantine and rollback, and fixed-slot audit/rate/cost
@@ -433,9 +436,10 @@ current consumer.
    staging project now has a reconciled 37-resource bootstrap and complete
    33-resource foundation: private state and component buckets, separate keyless
    identities, the declared APIs, deletion-protected Firestore with three active
-   TTL fields, a software Ed25519 key, five empty secret containers, and exact
-   resource-scoped runtime IAM. It still has no Firebase app, App Engine
-   application, Function, Cloud Run service, secret version, public ingress or
+   TTL fields, a software Ed25519 key, five Secret Manager containers, and exact
+   resource-scoped runtime IAM. Guarded activation registered exactly one
+   Firebase Web app and enabled version `1` in each of those containers. It still
+   has no App Engine application, Function, Cloud Run service, public ingress or
    deployed workload. The already-live planner quota member was adopted through
    an import-only Terraform plan without changing project IAM; its serial-41
    generation remains historical evidence. The one-shot protected recovery
@@ -445,11 +449,12 @@ current consumer.
    `ee457535a64355cd8133410d9c8c43f039608928`; the enabled pool, service accounts
    and IAM roles remain. Current 37-resource bootstrap state is serial 42 and both
    roots plan to zero changes. The reviewed GitHub OIDC exchange is closed, but
-   other administrator impersonation is not disproved. The production
-   configuration loader, secret lifecycle, Function
-   entry point, exact FCM runtime permission, source/edge admission, monitoring,
-   migration rehearsal and real staging fault evidence remain required before
-   closing relay-integration and staging-only RFC 0004 Section 18 gates.
+   other administrator impersonation is not disproved. The production runtime
+   document and initial secret lifecycle are now materialized and digest-pinned;
+   Function deployment, ongoing secret rotation, exact FCM runtime permission,
+   App Check provider/replay policy, source/edge admission, monitoring, migration
+   rehearsal and real staging fault evidence remain required before closing
+   relay-integration and staging-only RFC 0004 Section 18 gates.
 
 ## 9. Evidence that would change this plan
 

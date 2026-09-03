@@ -1,0 +1,61 @@
+{
+  "schema": "miakapp.staging-activation-result/1",
+  "operation": "materialize-initial-runtime-inputs",
+  "project_id": "miakapp-v4-staging",
+  "project_number": "1072737219170",
+  "region": "europe-west9",
+  "repository_commit": "101e4231d452423bafa2ae1efd051e51faeff3c8",
+  "plan_sha256": "f3c29e250cca705a76d3337ec2e1fe7aac40ee9d244e9b9b09cbe083778ad87e",
+  "completed_at": "2026-09-03T22:04:21.219Z",
+  "firebase_app": {
+    "appId": "1:1072737219170:web:5053ca93bf25d7373cd73b",
+    "displayName": "Miakapp V4 Staging Web",
+    "platform": "WEB",
+    "state": "ACTIVE"
+  },
+  "secret_versions": [
+    {
+      "purpose": "homeKeyPepper",
+      "secret_id": "miakapp-home-key-pepper",
+      "resource_name": "projects/miakapp-v4-staging/secrets/miakapp-home-key-pepper/versions/1",
+      "state": "ENABLED",
+      "payload_bytes": 32
+    },
+    {
+      "purpose": "componentHmac",
+      "secret_id": "miakapp-component-hmac",
+      "resource_name": "projects/miakapp-v4-staging/secrets/miakapp-component-hmac/versions/1",
+      "state": "ENABLED",
+      "payload_bytes": 32
+    },
+    {
+      "purpose": "pushHmac",
+      "secret_id": "miakapp-push-hmac",
+      "resource_name": "projects/miakapp-v4-staging/secrets/miakapp-push-hmac/versions/1",
+      "state": "ENABLED",
+      "payload_bytes": 32
+    },
+    {
+      "purpose": "auditHmac",
+      "secret_id": "miakapp-audit-hmac",
+      "resource_name": "projects/miakapp-v4-staging/secrets/miakapp-audit-hmac/versions/1",
+      "state": "ENABLED",
+      "payload_bytes": 32
+    },
+    {
+      "purpose": "networkHmac",
+      "secret_id": "miakapp-network-hmac",
+      "resource_name": "projects/miakapp-v4-staging/secrets/miakapp-network-hmac/versions/1",
+      "state": "ENABLED",
+      "payload_bytes": 32
+    }
+  ],
+  "runtime_config_sha256": "b794181400bf5ace6aaa9ffc4be00e4c4f6a59519284baa7f73bca3c042c4ff8",
+  "workload_delta": {
+    "app_engine_applications": 0,
+    "cloud_functions": 0,
+    "cloud_run_services": 0,
+    "public_ingress": 0,
+    "minimum_instances": 0
+  }
+}

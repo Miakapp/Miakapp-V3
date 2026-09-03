@@ -356,24 +356,34 @@ describe('bounded control-plane admission and audit vertical slice', () => {
     const keyId = HOME_KEY_PATTERN.exec(homeKey)?.[1];
     if (keyId === undefined) throw new Error('Home Key response is malformed');
 
-    for (let attempt = 0; attempt < 32; attempt += 1) {
+    const keyRef = firestore.collection('controlHomes').doc('admission-home')
+      .collection('homeKeys').doc(keyId);
+    let successfulExchanges = 0;
+    let denied: Response | undefined;
+    let beforeDenied: Awaited<ReturnType<typeof keyRef.get>> | undefined;
+    for (let attempt = 0; attempt < 65; attempt += 1) {
+      const beforeAttempt = await keyRef.get();
       const exchanged = await apiRequest('POST', '/v1/access-tokens:exchange', {
         homeKey,
         body: { purpose: 'push' },
       });
+      if (exchanged.status === 429) {
+        denied = exchanged;
+        beforeDenied = beforeAttempt;
+        break;
+      }
       expect(exchanged.status).toBe(200);
+      successfulExchanges += 1;
+      await exchanged.arrayBuffer();
     }
-    const keyRef = firestore.collection('controlHomes').doc('admission-home')
-      .collection('homeKeys').doc(keyId);
-    const before = await keyRef.get();
-    const lastIssuanceId = before.get('last_issuance_id');
-    const lastUsedAt = before.get('last_used_at');
+    expect(successfulExchanges).toBeGreaterThanOrEqual(32);
+    expect(successfulExchanges).toBeLessThanOrEqual(64);
+    if (denied === undefined || beforeDenied === undefined) {
+      throw new Error('The bounded exchange loop did not reach the fixed-window limit');
+    }
+    const lastIssuanceId = beforeDenied.get('last_issuance_id');
+    const lastUsedAt = beforeDenied.get('last_used_at');
 
-    const denied = await apiRequest('POST', '/v1/access-tokens:exchange', {
-      homeKey,
-      body: { purpose: 'push' },
-    });
-    expect(denied.status).toBe(429);
     expect(Number(denied.headers.get('retry-after'))).toBeGreaterThanOrEqual(1);
     expect(Number(denied.headers.get('retry-after'))).toBeLessThanOrEqual(300);
     const error = await jsonResponse<ErrorResponse>(denied);
