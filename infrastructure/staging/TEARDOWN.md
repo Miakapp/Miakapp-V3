@@ -1,7 +1,8 @@
 # Miakapp 4 staging teardown rehearsal
 
-Status: non-executable rehearsal; neither Terraform root has been applied, the
-cloud workflow is dormant, and only the approved billing link is active
+Status: non-executable rehearsal; bootstrap resources and both reconciled remote
+states exist, protected local recovery evidence remains private, and only a
+manual plan workflow is authorized
 
 This runbook applies to the existing `miakapp-v4-staging` project. It must never
 be run against `miakapp-3`, `miakapp-v4`, or a `demo-*` project. A future
@@ -10,20 +11,43 @@ and must produce a plan before any destructive action.
 
 At the 2026-09-02 bootstrap boundary, Firebase reserved the default Hosting site
 namespace, created its project service identity and enabled its bootstrap APIs.
-The owner linked the reviewed billing account on 2026-09-03; that operation
-created no budget, App Engine application, Firebase app, database, bucket,
-Function, Cloud Run service, KMS key ring or secret. Deleting the whole project
-would permanently retire its globally unique ID; adding Firebase cannot
+The owner linked the reviewed billing account on 2026-09-03. The later bootstrap
+apply created the reviewed budget, two private buckets, three service accounts,
+Workload Identity pool and providers, and their IAM bindings. It created no App
+Engine application, Firebase app, database, Function, Cloud Run service, KMS key
+ring or secret. Deleting the whole project would permanently retire its globally
+unique ID; adding Firebase cannot
 otherwise be fully undone. Retaining this empty undeployed project, with the
 billing link removable during an authorized teardown, is therefore the default.
 
-The repository now contains separate apply-capable bootstrap and foundation
-roots, a private versioned GCS backend design, keyless plan/apply identities and
-a dormant GitHub workflow blueprint. None exists in the cloud. The circular
-bootstrap uses protected temporary local state first, then the reviewed GCS
-migration template. Private saved-plan preparation and inspection commands are
-present but have not been run; no apply or migration command is committed. Local
-`.terraform/` provider caches are disposable and are not cloud inventory.
+The repository contains separate bootstrap and foundation roots, a private
+versioned GCS backend, keyless plan/apply identities and a hash-bound plan-only
+GitHub workflow awaiting protected merge. Terraform completed the final
+27-create/nine-no-op plan, but
+the wrapper rejected the complete state before migration because its output
+shape assumption differed from Terraform 1.11.3. The exact 36-resource state at
+serial 39 is preserved outside the repository with fingerprint
+`c083e7a05f2ccf273abda98c0739584336d2cbaffd8ea836b65b0790f94833a2`.
+The guarded migration created bootstrap state generation `1788439334043522` at
+serial 40. A fresh private read reconciled it with the protected serial-39 source:
+the serial increased once, the two `check_results` entries were permuted, and
+every other value remained exactly equal. Terraform's foundation backend
+created and guarded execution commit
+`ab6f26bd5dd076a79847f989615e7fddf93f2a07` reconciled canonical empty state
+generation `1788443136082489` at serial 1 without mutation. Object Versioning also
+retains the noncurrent 181-byte empty state that Terraform created during
+bootstrap backend initialization. Local `.terraform/` provider caches are
+disposable and are not cloud inventory.
+
+If the migration-only wrapper reports failure, its printed private execution
+directory is part of the recovery inventory. Do not delete it or rerun the
+consumed saved plan. Determine whether a remote bootstrap generation exists and
+reconcile it with the preserved complete local state before another mutation.
+
+The foundation-state initializer follows the same fail-closed recovery rule. If
+it reports failure, retain its private diagnostic directory and inspect the
+current foundation generation before another mutation. Re-running the guarded
+path may only reconcile an exact empty state; it never replaces one.
 
 Infrastructure state or a successful destroy command is not sufficient evidence
 that spend has stopped. Managed Functions can leave Cloud Run revisions,
@@ -50,7 +74,8 @@ cannot be deleted; and billing can report late usage.
 ## Ordered teardown
 
 1. Disable test traffic, scheduled work, triggers and public invocation. Disable
-   the active deployment workflow, both GitHub environments and both WIF
+   every active plan or deployment workflow, both GitHub environments and both
+   WIF
    providers before revoking temporary human, CI and test-client access.
 2. Remove the Function and inspect Cloud Run, Eventarc and Artifact Registry for
    resources that outlive the deployment abstraction.

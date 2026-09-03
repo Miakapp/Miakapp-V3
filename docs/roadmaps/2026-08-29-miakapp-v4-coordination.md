@@ -415,14 +415,21 @@ current consumer.
    SHA-pinned workflow binds a private saved plan to a protected apply job,
    while a closed policy record now proves that the branch, environment and
    Actions settings were configured and re-observed without activating cloud
-   resources or installing the workflow. A fresh non-saved diagnostic bootstrap
-   plan reports 36 additions, no changes and no destroys. Next create and review
-   an exact saved plan, obtain separate mutation authorization, migrate bootstrap
-   state, initialize and verify an empty foundation state with protected operator
-   credentials,
-   authorize workflow installation, then review the foundation plan. The production entry point and exact
-   runtime IAM expansion remain required before closing relay-integration and
-   staging-only RFC 0004 Section 18 gates.
+   resources or installing the workflow. A fresh non-saved diagnostic and the
+   first digest-verified private saved bootstrap plan both reported 36 additions,
+   no changes and no destroys. Its authorized execution stopped on the redundant
+   billing-association update before any resource was created. A replacement
+   plan now imports that existing association and contains exactly 35 creations,
+   one client-side import update and no deletion. A single-use, recovery-first
+   wrapper binds preflight, apply, state migration, remote read-back and exact
+   reconciliation to the replacement digest and exact executing repository
+   commit; it is committed but inactive. Next
+   obtain explicit mutation authorization for that exact digest, execute the
+   guarded bootstrap sequence, initialize and verify an empty
+   foundation state with protected operator credentials, authorize workflow
+   installation, then review the foundation plan. The production entry point
+   and exact runtime IAM expansion remain required before closing
+   relay-integration and staging-only RFC 0004 Section 18 gates.
 
 ## 9. Evidence that would change this plan
 

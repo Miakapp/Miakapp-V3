@@ -13,10 +13,9 @@ import {
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const PLAN_SCHEMA = 'miakapp.staging-bootstrap-plan/1';
+const PLAN_SCHEMA = 'miakapp.staging-bootstrap-plan/3';
 const PLAN_FILE = 'bootstrap.tfplan';
 const METADATA_FILE = 'metadata.json';
-const STATE_FILE = 'bootstrap.tfstate';
 const TERRAFORM_VERSION = '1.11.3';
 const MAX_PLAN_JSON_BYTES = 16 * 1024 * 1024;
 const MAX_PLAN_FILE_BYTES = 32 * 1024 * 1024;
@@ -25,6 +24,56 @@ const ADDRESS_PATTERN = /^[A-Za-z0-9_./[\]"-]{1,256}$/;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 const COMMIT_PATTERN = /^[0-9a-f]{40}$/;
 const TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+export const RECOVERY_STATE_SHA256 = '07fc7412e35efaff288e2efd30f786c2871d9fa836fb813a178d247ccb1efe5a';
+export const RECOVERY_LINEAGE_SHA256 = '35e52294057979e6191eaa05141a9476261d4b0ea75c9113128f780abda7a9ba';
+export const RECOVERY_STATE_SERIAL = 11;
+export const RECOVERY_SOURCE_PLAN_SHA256 = '6fb0b0c15fa04338a40ab59de790c3a4a85f96b418377c4a70570a8dabd5d457';
+export const RECOVERY_SOURCE_EXECUTION_COMMIT = 'c3028c74d582c4f405f93e15ae0cf60898181728';
+
+export const RECOVERY_MANAGED_ADDRESSES = Object.freeze([
+  'google_billing_project_info.staging',
+  'google_project_service.bootstrap["billingbudgets.googleapis.com"]',
+  'google_project_service.bootstrap["cloudbilling.googleapis.com"]',
+  'google_project_service.bootstrap["cloudresourcemanager.googleapis.com"]',
+  'google_project_service.bootstrap["iam.googleapis.com"]',
+  'google_project_service.bootstrap["iamcredentials.googleapis.com"]',
+  'google_project_service.bootstrap["serviceusage.googleapis.com"]',
+  'google_project_service.bootstrap["storage.googleapis.com"]',
+  'google_project_service.bootstrap["sts.googleapis.com"]',
+]);
+
+export const BOOTSTRAP_RESOURCE_ADDRESSES = Object.freeze([
+  'google_billing_budget.staging',
+  ...RECOVERY_MANAGED_ADDRESSES,
+  'google_iam_workload_identity_pool.github',
+  'google_iam_workload_identity_pool_provider.apply',
+  'google_iam_workload_identity_pool_provider.plan',
+  'google_project_iam_member.deployer["roles/cloudkms.admin"]',
+  'google_project_iam_member.deployer["roles/datastore.owner"]',
+  'google_project_iam_member.deployer["roles/secretmanager.admin"]',
+  'google_project_iam_member.deployer["roles/serviceusage.serviceUsageAdmin"]',
+  'google_project_iam_member.planner["roles/iam.securityReviewer"]',
+  'google_project_iam_member.planner["roles/viewer"]',
+  'google_project_iam_member.runtime["roles/datastore.user"]',
+  'google_project_iam_member.runtime["roles/firebaseappcheck.tokenVerifier"]',
+  'google_project_iam_member.runtime["roles/logging.logWriter"]',
+  'google_project_iam_member.runtime["roles/monitoring.metricWriter"]',
+  'google_service_account.control_plane',
+  'google_service_account.deployer',
+  'google_service_account.planner',
+  'google_service_account_iam_member.deployer_federation',
+  'google_service_account_iam_member.planner_federation',
+  'google_storage_bucket.components',
+  'google_storage_bucket.terraform_state',
+  'google_storage_bucket_iam_member.component_deployer',
+  'google_storage_bucket_iam_member.terraform_foundation_deployer',
+  'google_storage_bucket_iam_member.terraform_foundation_lock_writer',
+  'google_storage_bucket_iam_member.terraform_plan_creator',
+  'google_storage_bucket_iam_member.terraform_state_reader["deployer"]',
+  'google_storage_bucket_iam_member.terraform_state_reader["planner"]',
+].sort());
+const EXPECTED_RESOURCE_ADDRESS_SET = new Set(BOOTSTRAP_RESOURCE_ADDRESSES);
+const RECOVERY_MANAGED_ADDRESS_SET = new Set(RECOVERY_MANAGED_ADDRESSES);
 
 const EXPECTED_RESOURCE_TYPE_COUNTS = Object.freeze({
   google_billing_budget: 1,
@@ -98,23 +147,36 @@ function canonicalResourceChanges(plan) {
     }
     if (seen.has(change.address)) reject(`Terraform resource address ${change.address} is duplicated`);
     seen.add(change.address);
-    exact(change.mode, 'managed', `Terraform resource change ${change.address}.mode`);
-    if (!isPlainObject(change.change) || JSON.stringify(change.change.actions) !== '["create"]') {
-      reject(`Terraform resource change ${change.address} must be create-only`);
+    if (!EXPECTED_RESOURCE_ADDRESS_SET.has(change.address)) {
+      reject(`Terraform resource change ${change.address} is not in the reviewed bootstrap inventory`);
     }
+    exact(change.mode, 'managed', `Terraform resource change ${change.address}.mode`);
+    if (!isPlainObject(change.change)) reject(`Terraform resource change ${change.address}.change must be an object`);
     const resourceType = change.type;
     if (typeof resourceType !== 'string'
         || !Object.hasOwn(EXPECTED_RESOURCE_TYPE_COUNTS, resourceType)) {
       reject(`Terraform resource change ${change.address} has an unexpected type`);
     }
     typeCounts.set(resourceType, (typeCounts.get(resourceType) ?? 0) + 1);
-    return Object.freeze({ address: change.address, actions: Object.freeze(['create']) });
+    const expectedAction = RECOVERY_MANAGED_ADDRESS_SET.has(change.address) ? 'no-op' : 'create';
+    if (JSON.stringify(change.change.actions) !== JSON.stringify([expectedAction])
+        || change.change.importing !== undefined) {
+      reject(`Terraform resource change ${change.address} must be ${expectedAction}`);
+    }
+    return Object.freeze({
+      address: change.address,
+      actions: Object.freeze([expectedAction]),
+    });
   });
 
   for (const [type, expected] of Object.entries(EXPECTED_RESOURCE_TYPE_COUNTS)) {
     if (typeCounts.get(type) !== expected) {
       reject(`Terraform bootstrap plan must contain exactly ${expected} ${type} changes`);
     }
+  }
+  if (seen.size !== BOOTSTRAP_RESOURCE_ADDRESSES.length
+      || BOOTSTRAP_RESOURCE_ADDRESSES.some((address) => !seen.has(address))) {
+    reject('Terraform bootstrap plan does not contain the exact reviewed resource addresses');
   }
 
   return changes.sort((left, right) => {
@@ -125,13 +187,18 @@ function canonicalResourceChanges(plan) {
 }
 
 export function buildSavedPlanMetadata(plan, context) {
-  const values = exactKeys(context, ['configurationCommit', 'createdAt', 'planSha256'], 'Context');
+  const values = exactKeys(
+    context,
+    ['configurationCommit', 'createdAt', 'planSha256', 'recoveryStateSha256'],
+    'Context',
+  );
   if (typeof values.configurationCommit !== 'string' || !COMMIT_PATTERN.test(values.configurationCommit)) {
     reject('Context configurationCommit must be a canonical Git commit');
   }
   if (typeof values.planSha256 !== 'string' || !SHA256_PATTERN.test(values.planSha256)) {
     reject('Context planSha256 must be a lowercase SHA-256 digest');
   }
+  exact(values.recoveryStateSha256, RECOVERY_STATE_SHA256, 'Context recoveryStateSha256');
   const changes = canonicalResourceChanges(plan);
 
   return {
@@ -141,14 +208,22 @@ export function buildSavedPlanMetadata(plan, context) {
     configuration_commit: values.configurationCommit,
     terraform_version: TERRAFORM_VERSION,
     created_at: canonicalTimestamp(values.createdAt, 'Context createdAt'),
+    recovery: {
+      state_sha256: RECOVERY_STATE_SHA256,
+      lineage_sha256: RECOVERY_LINEAGE_SHA256,
+      serial: RECOVERY_STATE_SERIAL,
+      managed_resources: RECOVERY_MANAGED_ADDRESSES.length,
+      source_plan_sha256: RECOVERY_SOURCE_PLAN_SHA256,
+      source_execution_commit: RECOVERY_SOURCE_EXECUTION_COMMIT,
+    },
     plan: {
       file: PLAN_FILE,
       sha256: values.planSha256,
       backend: 'local',
-      state_file: STATE_FILE,
-      state_created: false,
       change_summary: {
-        create: changes.length,
+        create: BOOTSTRAP_RESOURCE_ADDRESSES.length - RECOVERY_MANAGED_ADDRESSES.length,
+        no_op: RECOVERY_MANAGED_ADDRESSES.length,
+        import: 0,
         update: 0,
         delete: 0,
       },
@@ -169,6 +244,7 @@ export function validateSavedPlanMetadata(value) {
     'configuration_commit',
     'terraform_version',
     'created_at',
+    'recovery',
     'plan',
     'authorization',
   ], 'Saved-plan metadata');
@@ -182,28 +258,53 @@ export function validateSavedPlanMetadata(value) {
   }
   canonicalTimestamp(metadata.created_at, 'Saved-plan metadata.created_at');
 
+  const recovery = exactKeys(metadata.recovery, [
+    'state_sha256',
+    'lineage_sha256',
+    'serial',
+    'managed_resources',
+    'source_plan_sha256',
+    'source_execution_commit',
+  ], 'Saved-plan metadata.recovery');
+  exact(recovery.state_sha256, RECOVERY_STATE_SHA256, 'Saved-plan metadata.recovery.state_sha256');
+  exact(recovery.lineage_sha256, RECOVERY_LINEAGE_SHA256, 'Saved-plan metadata.recovery.lineage_sha256');
+  exact(recovery.serial, RECOVERY_STATE_SERIAL, 'Saved-plan metadata.recovery.serial');
+  exact(
+    recovery.managed_resources,
+    RECOVERY_MANAGED_ADDRESSES.length,
+    'Saved-plan metadata.recovery.managed_resources',
+  );
+  exact(
+    recovery.source_plan_sha256,
+    RECOVERY_SOURCE_PLAN_SHA256,
+    'Saved-plan metadata.recovery.source_plan_sha256',
+  );
+  exact(
+    recovery.source_execution_commit,
+    RECOVERY_SOURCE_EXECUTION_COMMIT,
+    'Saved-plan metadata.recovery.source_execution_commit',
+  );
+
   const plan = exactKeys(metadata.plan, [
     'file',
     'sha256',
     'backend',
-    'state_file',
-    'state_created',
     'change_summary',
     'resource_changes',
   ], 'Saved-plan metadata.plan');
   exact(plan.file, PLAN_FILE, 'Saved-plan metadata.plan.file');
   exact(plan.backend, 'local', 'Saved-plan metadata.plan.backend');
-  exact(plan.state_file, STATE_FILE, 'Saved-plan metadata.plan.state_file');
-  exact(plan.state_created, false, 'Saved-plan metadata.plan.state_created');
   if (typeof plan.sha256 !== 'string' || !SHA256_PATTERN.test(plan.sha256)) {
     reject('Saved-plan metadata.plan.sha256 must be a lowercase SHA-256 digest');
   }
   const summary = exactKeys(
     plan.change_summary,
-    ['create', 'update', 'delete'],
+    ['create', 'no_op', 'import', 'update', 'delete'],
     'Saved-plan metadata.plan.change_summary',
   );
-  exact(summary.create, 36, 'Saved-plan metadata.plan.change_summary.create');
+  exact(summary.create, 27, 'Saved-plan metadata.plan.change_summary.create');
+  exact(summary.no_op, 9, 'Saved-plan metadata.plan.change_summary.no_op');
+  exact(summary.import, 0, 'Saved-plan metadata.plan.change_summary.import');
   exact(summary.update, 0, 'Saved-plan metadata.plan.change_summary.update');
   exact(summary.delete, 0, 'Saved-plan metadata.plan.change_summary.delete');
   if (!Array.isArray(plan.resource_changes) || plan.resource_changes.length !== 36) {
@@ -222,12 +323,16 @@ export function validateSavedPlanMetadata(value) {
     }
     previousAddress = change.address;
     addresses.add(change.address);
-    if (JSON.stringify(change.actions) !== '["create"]') {
-      reject(`Saved-plan metadata.plan.resource_changes[${index}] must be create-only`);
+    if (!EXPECTED_RESOURCE_ADDRESS_SET.has(change.address)) {
+      reject(`Saved-plan metadata.plan.resource_changes[${index}] has an unexpected address`);
     }
     const type = change.address.split('.')[0];
     if (!Object.hasOwn(EXPECTED_RESOURCE_TYPE_COUNTS, type)) {
       reject(`Saved-plan metadata.plan.resource_changes[${index}] has an unexpected type`);
+    }
+    const expectedAction = RECOVERY_MANAGED_ADDRESS_SET.has(change.address) ? 'no-op' : 'create';
+    if (JSON.stringify(change.actions) !== JSON.stringify([expectedAction])) {
+      reject(`Saved-plan metadata.plan.resource_changes[${index}] must be ${expectedAction}`);
     }
     typeCounts.set(type, (typeCounts.get(type) ?? 0) + 1);
   }
@@ -235,6 +340,10 @@ export function validateSavedPlanMetadata(value) {
     if (typeCounts.get(type) !== expected) {
       reject(`Saved-plan metadata must contain exactly ${expected} ${type} changes`);
     }
+  }
+  if (addresses.size !== BOOTSTRAP_RESOURCE_ADDRESSES.length
+      || BOOTSTRAP_RESOURCE_ADDRESSES.some((address) => !addresses.has(address))) {
+    reject('Saved-plan metadata does not contain the exact reviewed resource addresses');
   }
 
   const authorization = exactKeys(
@@ -309,13 +418,18 @@ export async function sha256File(path) {
   return digest.digest('hex');
 }
 
-export async function inspectPrivateBundle(bundlePath, expectedCommit) {
+export async function inspectPrivateBundle(bundlePath, expectedCommit, expectedRecoveryStateSha256) {
   if (typeof bundlePath !== 'string' || !isAbsolute(bundlePath) || /[\0-\x1f\x7f]/.test(bundlePath)) {
     reject('Saved-plan bundle must be an absolute path without control characters');
   }
   if (typeof expectedCommit !== 'string' || !COMMIT_PATTERN.test(expectedCommit)) {
     reject('Expected commit must be a canonical Git commit');
   }
+  exact(
+    expectedRecoveryStateSha256,
+    RECOVERY_STATE_SHA256,
+    'Expected recovery state SHA-256',
+  );
   assertPrivateEntry(bundlePath, 'Saved-plan bundle', 'directory');
   const bundle = realpathSync(bundlePath);
   const entries = readdirSync(bundle).sort();
@@ -332,6 +446,11 @@ export async function inspectPrivateBundle(bundlePath, expectedCommit) {
     parseJson(readFileSync(metadataPath, 'utf8'), 'Saved-plan metadata'),
   );
   exact(metadata.configuration_commit, expectedCommit, 'Saved-plan metadata.configuration_commit');
+  exact(
+    metadata.recovery.state_sha256,
+    expectedRecoveryStateSha256,
+    'Saved-plan metadata.recovery.state_sha256',
+  );
   const actualDigest = await sha256File(planPath);
   exact(actualDigest, metadata.plan.sha256, 'Saved Terraform plan SHA-256');
   return metadata;
@@ -354,8 +473,11 @@ function printSummary(metadata) {
   console.log(`Terraform version: ${metadata.terraform_version}`);
   console.log(`Created at: ${metadata.created_at}`);
   console.log(`SHA-256: ${metadata.plan.sha256}`);
-  console.log('Changes: 36 create, 0 update, 0 delete');
-  for (const change of metadata.plan.resource_changes) console.log(`create: ${change.address}`);
+  console.log('Recovery state: 9 managed resources; exact SHA-256 verified separately');
+  console.log('Changes: 27 create, 9 no-op, 0 import, 0 update, 0 delete');
+  for (const change of metadata.plan.resource_changes) {
+    console.log(`${change.actions[0]}: ${change.address}`);
+  }
   console.log('Apply authorized: no');
   console.log('State migration authorized: no');
 }
@@ -378,13 +500,14 @@ async function main() {
     process.stdout.write(await sha256File(resolve(args[0])));
     return;
   }
-  if (command === 'create-metadata' && args.length === 4) {
-    const [metadataPath, planSha256, configurationCommit, createdAt] = args;
+  if (command === 'create-metadata' && args.length === 5) {
+    const [metadataPath, planSha256, configurationCommit, createdAt, recoveryStateSha256] = args;
     const plan = parseJson(await readBoundedStandardInput(), 'Terraform plan JSON');
     const metadata = buildSavedPlanMetadata(plan, {
       configurationCommit,
       createdAt,
       planSha256,
+      recoveryStateSha256,
     });
     writeSavedPlanMetadata(resolve(metadataPath), metadata);
     printSummary(metadata);
@@ -395,8 +518,8 @@ async function main() {
     validatePlanAgainstMetadata(plan, readMetadataFile(resolve(args[0])));
     return;
   }
-  if (command === 'verify' && args.length === 2) {
-    const metadata = await inspectPrivateBundle(args[0], args[1]);
+  if (command === 'verify' && args.length === 3) {
+    const metadata = await inspectPrivateBundle(args[0], args[1], args[2]);
     printSummary(metadata);
     return;
   }
