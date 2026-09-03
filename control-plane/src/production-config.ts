@@ -8,7 +8,7 @@ const EXPECTED_ISSUERS = Object.freeze({
   staging: 'https://control.staging.miakapp.com',
   production: 'https://control.miakapp.com',
 } as const);
-const REGION = 'europe-west1';
+export const PRODUCTION_CONTROL_PLANE_REGION = 'europe-west9';
 const LOGICAL_VERSION = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 const RESOURCE_PART = /^[a-z][a-z0-9-]{0,62}$/;
 const GRAPHIC_ASCII = /^[\x21-\x7e]+$/;
@@ -42,7 +42,7 @@ export interface ProductionSecurityConfig {
   readonly schema: 'miakapp.production-security/1';
   readonly environment: ProductionEnvironment;
   readonly projectId: string;
-  readonly region: typeof REGION;
+  readonly region: typeof PRODUCTION_CONTROL_PLANE_REGION;
   readonly issuer: string;
   readonly signing: Readonly<{
     keyVersionName: string;
@@ -141,7 +141,7 @@ function kmsVersionName(value: unknown, projectId: string): string {
   const name = boundedString(value, 512);
   const match = /^projects\/([^/]+)\/locations\/([^/]+)\/keyRings\/([^/]+)\/cryptoKeys\/([^/]+)\/cryptoKeyVersions\/([1-9][0-9]*)$/.exec(name);
   if (match?.[1] !== projectId
-    || match[2] !== REGION
+    || match[2] !== PRODUCTION_CONTROL_PLANE_REGION
     || match[3] !== projectId
     || match[4] !== 'access-token-signing'
     || !RESOURCE_PART.test(match[1])
@@ -204,7 +204,7 @@ export function parseProductionSecurityConfig(input: unknown): ProductionSecurit
   const environment = config.environment;
   const projectId = boundedString(config.project_id, 63);
   if (projectId !== EXPECTED_PROJECTS[environment]
-    || config.region !== REGION
+    || config.region !== PRODUCTION_CONTROL_PLANE_REGION
     || projectId.startsWith('demo-')) {
     fail();
   }
@@ -231,7 +231,7 @@ export function parseProductionSecurityConfig(input: unknown): ProductionSecurit
     schema: 'miakapp.production-security/1',
     environment,
     projectId,
-    region: REGION,
+    region: PRODUCTION_CONTROL_PLANE_REGION,
     issuer: issuer(config.issuer, environment),
     signing: Object.freeze({
       keyVersionName: kmsVersionName(signing.key_version_name, projectId),
