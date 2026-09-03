@@ -192,7 +192,9 @@ re-observed against that policy. The existing `miakapi` environment and default
 repository OIDC subject were left unchanged. The workflow remains outside
 `.github/workflows`, and its policy job rejects the current cloud-inactive
 record. The WIF identities, buckets, and reconciled remote bootstrap state now
-exist, but no foundation state object or active workflow exists.
+exist. Terraform's GCS backend also created a canonical empty foundation state
+during its guarded initialization attempt, but its reconciliation record and the
+active workflow remain incomplete.
 
 The first private saved plan was superseded after Cloud Billing rejected a
 redundant billing-association write before Terraform recorded resources. The
@@ -218,10 +220,13 @@ backend migration. A migration-only wrapper later created and reconciled remote
 bootstrap state generation `1788439334043522` at serial 40 without applying
 infrastructure. The protected serial-39 source remains independent recovery
 evidence. A guarded initializer bound to reviewed commit
-`f820b9004052863d0f9dee5ef203844dec0d4374` now describes the next mutation:
-create and verify only an empty serial-1 foundation state with protected
-credentials. Only after its separate exact authorization may the
-operator authorize and install the workflow and review a foundation plan. The
+`f820b9004052863d0f9dee5ef203844dec0d4374` created foundation state generation
+`1788443136082489` at serial 1 during `terraform init`. Its plan-shape guard then
+rejected Terraform's deterministic implicit provider metadata before any apply.
+Independent reads have verified that the state is canonical and empty and that
+the inspection-only plan contains no resource action. Guarded reconciliation is
+the remaining state step. Only afterward may the operator authorize and install
+the workflow and review a foundation plan. The
 production Function entry point,
 exact FCM permission, quotas, alerts and teardown evidence remain blockers.
 Deployment, public ingress and active CI authentication remain disabled. Passing
