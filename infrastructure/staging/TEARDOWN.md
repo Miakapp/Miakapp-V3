@@ -1,8 +1,8 @@
 # Miakapp 4 staging teardown rehearsal
 
 Status: non-executable rehearsal; bootstrap resources and both reconciled remote
-states exist, protected local recovery evidence remains private, and only a
-manual plan workflow is authorized
+states exist, protected local recovery evidence remains private, and the exact
+initial-foundation apply is authorized but has not yet run
 
 This runbook applies to the existing `miakapp-v4-staging` project. It must never
 be run against `miakapp-3`, `miakapp-v4`, or a `demo-*` project. A future
@@ -21,8 +21,8 @@ otherwise be fully undone. Retaining this empty undeployed project, with the
 billing link removable during an authorized teardown, is therefore the default.
 
 The repository contains separate bootstrap and foundation roots, a private
-versioned GCS backend, keyless plan/apply identities and a hash-bound plan-only
-GitHub workflow awaiting protected merge. Terraform completed the final
+versioned GCS backend, keyless plan/apply identities and a hash-bound protected
+GitHub workflow. Terraform completed the final
 27-create/nine-no-op plan, but
 the wrapper rejected the complete state before migration because its output
 shape assumption differed from Terraform 1.11.3. The exact 36-resource state at

@@ -132,10 +132,10 @@ export function validateGitHubPolicy(value, options = {}) {
     'activation',
   ]);
   exact(policy.schema, 'miakapp.staging-github-policy/1', 'policy.schema');
-  exact(policy.revision, 3, 'policy.revision');
+  exact(policy.revision, 4, 'policy.revision');
   exact(
     policy.status,
-    'manual_keyless_plan_workflow_authorized',
+    'manual_keyless_plan_apply_workflow_authorized',
     'policy.status',
   );
   exact(policy.observed_on, '2026-09-03', 'policy.observed_on');
@@ -230,7 +230,7 @@ export function validateGitHubPolicy(value, options = {}) {
   exact(activation.policy_observation_verified, true, 'activation.policy_observation_verified');
   exact(activation.workflow_install_authorized, true, 'activation.workflow_install_authorized');
   exact(activation.cloud_plan_authorized, true, 'activation.cloud_plan_authorized');
-  exact(activation.foundation_apply_authorized, false, 'activation.foundation_apply_authorized');
+  exact(activation.foundation_apply_authorized, true, 'activation.foundation_apply_authorized');
   exact(activation.active_workflow_path, '.github/workflows/staging-terraform.yml', 'activation.active_workflow_path');
   exact(
     activation.blueprint_path,
@@ -239,7 +239,7 @@ export function validateGitHubPolicy(value, options = {}) {
   );
   exact(
     activation.workflow_sha256,
-    '13fd21ad1fa1fdbfec88cefc4af048643eb7a2078d8f33eb0e840c54a3238336',
+    'b506f7561dd5fb6ddb9e9c1d525f11cfe31cfce68e2cbabd544f068d0bfc8d32',
     'activation.workflow_sha256',
   );
 
@@ -317,7 +317,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       if (mode !== undefined) {
         verifyInstalledWorkflow(resolve(dirname(path), '../../..'), policy);
       }
-      console.log(`Validated ${policy.schema}; manual keyless planning is authorized and foundation apply remains disabled.`);
+      console.log(`Validated ${policy.schema}; manual keyless planning and foundation apply are authorized.`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';
       console.error(`GitHub policy rejected: ${message}`);
