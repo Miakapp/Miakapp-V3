@@ -140,7 +140,7 @@ A valid preexisting empty state is reconciled without planning or mutation, so
 recovery after an uncertain client result cannot overwrite it.
 Failure preserves private diagnostics; success removes them. The implementation
 is bound to reviewed implementation commit
-`052f6c92d76f93ec222ffd03e4d34ba7a927495b` and remains disabled until a
+`f820b9004052863d0f9dee5ef203844dec0d4374` and remains disabled until a
 separate exact authorization names the clean execution commit.
 
 The plan and apply acquire and release Terraform's temporary `.tflock` object.

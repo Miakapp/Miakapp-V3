@@ -532,7 +532,7 @@
       "script": "terraform/initialize-state.sh",
       "helper": "terraform/foundation-state.mjs",
       "approved_foundation_configuration_commit": "efa877835dde2f5eedc3d950b2e4c514e606751d",
-      "approved_initialization_configuration_commit": "052f6c92d76f93ec222ffd03e4d34ba7a927495b",
+      "approved_initialization_configuration_commit": "f820b9004052863d0f9dee5ef203844dec0d4374",
       "exact_authorization_required": true,
       "authorization_bootstrap_generation": "1788439334043522",
       "repository_commit_bound": true,

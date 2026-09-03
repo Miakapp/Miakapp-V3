@@ -1152,7 +1152,7 @@ function validateTerraform(value) {
   );
   exact(
     foundationStateInitialization.approved_initialization_configuration_commit,
-    '052f6c92d76f93ec222ffd03e4d34ba7a927495b',
+    'f820b9004052863d0f9dee5ef203844dec0d4374',
     `${foundationStatePath}.approved_initialization_configuration_commit`,
   );
   for (const field of [
