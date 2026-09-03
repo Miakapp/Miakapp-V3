@@ -1,7 +1,6 @@
 # Miakapp 4 staging activation blueprint
 
-Status: approved billing link active; import-based recovery plan reviewed;
-guarded wrapper committed but inactive
+Status: nine-resource bootstrap state preserved privately; recovery plan pending
 
 This directory contains a closed, apply-capable description of the future
 `miakapp-v4-staging` foundation. It does not authorize or perform cloud
@@ -13,14 +12,13 @@ The one-shot Firebase bootstrap on 2026-09-02 reserved project
 `miakapp-v4-staging` (`1072737219170`) and its default Hosting site name. The
 dated inventory in [`manifest.json`](manifest.json) records:
 
-- the approved EUR billing link is active; the link operation created no budget
-  or billing export;
+- the approved EUR billing link is active and recorded in the preserved local
+  Terraform state; no target budget or billing export exists;
 - no registered Firebase app, App Engine application, Firestore database,
   Storage bucket, Function, Cloud Run service, KMS key ring, or secret;
 - no staging runtime, planner, or deployer identity; and
-- the failed plan, its zero-resource recovery state, and the reviewed replacement
-  plan remain only in private operator directories outside the repository; no
-  remote Terraform state exists.
+- no remote Terraform state exists. The only authoritative bootstrap state is a
+  mode-0600 private local recovery file outside the repository.
 
 On 2026-09-03, after the separately authorized billing link, the guarded
 bootstrap command ran against configuration commit
@@ -46,14 +44,26 @@ Billing association-change quota. Terraform stopped with zero managed resources;
 independent inventory confirmed that every proposed cloud target remained absent.
 That plan is superseded and must not be retried.
 
-The recovery configuration now imports the existing billing association into
-Terraform state and permits only its client-side deletion policy to change from
-`DELETE` to `PREVENT`. It therefore avoids a second billing-association API write.
-The replacement plan was created and fully inspected from commit
+The import recovery plan was created and fully inspected from commit
 `6340bffbddcc4797067ef48170fc5c3524345bf2`; its SHA-256 is
 `6fb0b0c15fa04338a40ab59de790c3a4a85f96b418377c4a70570a8dabd5d457`,
 with exactly 35 creations, one import with a client-side update, and no deletion.
-It has not been authorized or applied.
+The owner authorized that exact plan at execution commit
+`c3028c74d582c4f405f93e15ae0cf60898181728`. Terraform imported the billing
+link and recorded all eight bootstrap APIs before budget creation failed: User
+Application Default Credentials had no quota project for the Budget API. The
+failed run preserved a valid Terraform 1.11.3 state at serial 11 with exactly
+nine managed resources. Its SHA-256 is
+`07fc7412e35efaff288e2efd30f786c2871d9fa836fb813a178d247ccb1efe5a`;
+the file path and contents remain private and are not committed.
+
+Fresh read-only inventory confirmed that the approved billing link and all eight
+bootstrap APIs are active, while the target budget, both target buckets, three
+service accounts, and Workload Identity pool remain absent. The failed plan is
+superseded and must not be retried. Both Google providers now charge API quota
+to the staging project, and every planning/execution path is bound to the exact
+preserved state. No new recovery plan has yet been created, reviewed, or
+authorized.
 
 Firebase-enabled APIs and its managed Admin SDK service account exist, but they
 are not evidence of a deployed or metered workload. Paris (`europe-west9`) and
@@ -68,7 +78,7 @@ resources, install a cloud workflow, open ingress, apply, or destroy.
 
 | Path | Purpose | Current execution boundary |
 |---|---|---|
-| [`bootstrap/`](bootstrap/) | Imported billing link, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Exact import recovery plan reviewed; guarded wrapper inactive; no recovery apply authorized |
+| [`bootstrap/`](bootstrap/) | Imported billing link, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Nine-resource state preserved privately; recovery plan pending; no apply authorized |
 | [`terraform/`](terraform/) | APIs, Firestore, KMS, empty Secret Manager containers, and resource-scoped runtime IAM | Mock-tested offline; live plan blocked until bootstrap state exists |
 | [`automation/`](automation/) | GitHub policy record, dormant plan/apply workflow, private-plan scripts, and operator inspection | Outside `.github/workflows`; cannot run |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
@@ -115,17 +125,18 @@ bootstrap root therefore has no active backend block and its guarded plan uses
 the implicit local backend. [`bootstrap/backend.gcs.tf.example`](bootstrap/backend.gcs.tf.example)
 is the exact migration target, not an active Terraform file.
 
-The bootstrap root now contains guarded commands that can save an exact plan to
+The bootstrap root contains guarded commands that can save an exact plan to
 a mode-0700 directory outside the repository, inspect it locally, and—only after
 a separate exact authorization—apply and migrate it. The execution wrapper
-performs read-only target inventory checks, defers the budget lookup only when
-Service Usage proves its API is disabled, and requires exactly one target budget
-after a complete apply. It keeps all transient state outside the repository,
+requires the Budget API preflight to succeed through the staging quota project,
+proves the eight state-recorded APIs are still enabled, and requires exactly one
+target budget after a complete apply. It keeps all transient state outside the repository,
 activates the backend template only in a private working copy, and deletes local
 state only after the remote generation and full state contents reconcile. The
-wrapper is bound to the new reviewed source commit and plan digest, and its
-authorization must also name the exact clean repository commit that executes it.
-The replacement plan has not been authorized or executed.
+wrapper also verifies the exact recovery-state digest, lineage, serial and nine
+baseline addresses before planning or applying; a produced state must retain
+that lineage and inventory before migration. The plan digest remains deliberately
+disabled until a new state-bound plan is reviewed.
 
 The ordinary foundation root already points at `terraform/foundation` and reads
 the bootstrap output from `terraform/bootstrap`. A closed precondition checks
@@ -182,18 +193,17 @@ because workflow installation and cloud bootstrap remain unauthorized.
 
 ## Next authorization gate
 
-The GitHub branch, environment and Actions prerequisite are configured. The
-approved billing link, non-saved diagnostic, and exact private saved-plan review
-were completed on 2026-09-03 without installing a cloud workflow or creating any
-other resource. Before any additional cloud action, a separate reviewed pass
-must:
+The GitHub branch, environment and Actions prerequisite are configured. Before
+any additional cloud action, the recovery sequence must:
 
-1. receive explicit operator authorization for the exact recorded plan, then
-   revalidate its digest, external policy, and cloud inventory before applying;
-2. migrate and reconcile bootstrap state before any foundation plan;
-3. install the cloud workflow only after its WIF providers and service accounts
+1. create and fully inspect a new private plan from the exact preserved state;
+2. bind the reviewed plan digest and source commit in a clean follow-up commit;
+3. receive explicit operator authorization for that exact plan and execution
+   commit, then revalidate its state, digest, policy, and inventory before apply;
+4. migrate and reconcile bootstrap state before any foundation plan;
+5. install the cloud workflow only after its WIF providers and service accounts
    exist; and
-4. review a live foundation plan before granting apply approval.
+6. review a live foundation plan before granting apply approval.
 
 The production Function entry point, exact FCM runtime permission, secret
 version lifecycle, ingress design, monitoring, real-service fault matrix,

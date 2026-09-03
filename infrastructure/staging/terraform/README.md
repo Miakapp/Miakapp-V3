@@ -36,7 +36,8 @@ Before any foundation resource can proceed, a closed precondition compares the
 remote output with the exact project ID and number, Paris region, state bucket
 and prefixes, plan/apply providers, all three service accounts, component
 bucket, and numeric GitHub repository IDs. Missing, local, stale, or foreign
-bootstrap state fails closed. The buckets and state do not exist yet.
+bootstrap state fails closed. The buckets and remote state do not exist yet; a
+partial bootstrap state is preserved privately outside the repository.
 
 ## Credential-free validation
 
@@ -64,7 +65,7 @@ MIAKAPP_STAGING_PLAN_CONFIRMATION='miakapp-v4-staging' ./plan.sh
 The wrapper rejects credential files, explicit tokens, impersonation, custom
 endpoints, and all Terraform or Google environment overrides. It uses the real
 GCS backend with locking. It has not been run and cannot currently succeed
-because the bucket and bootstrap state are absent.
+because the bucket and remote bootstrap state are absent.
 
 The dormant keyless workflow in [`../automation/`](../automation/) is the
 intended activation path after bootstrap. It creates a private, create-only

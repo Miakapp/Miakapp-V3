@@ -2,8 +2,8 @@
 set -euo pipefail
 umask 077
 
-if [[ "$#" -ne 1 ]]; then
-  echo "Usage: MIAKAPP_STAGING_BOOTSTRAP_EXECUTION_AUTHORIZATION=... ./apply-and-migrate.sh <private-plan-bundle>" >&2
+if [[ "$#" -ne 2 ]]; then
+  echo "Usage: MIAKAPP_STAGING_BOOTSTRAP_EXECUTION_AUTHORIZATION=... ./apply-and-migrate.sh <private-plan-bundle> <private-recovery-state>" >&2
   exit 2
 fi
 
@@ -12,7 +12,8 @@ repository_root="$(cd "${bootstrap_root}/../../.." && pwd -P)"
 bundle_helper="${bootstrap_root}/saved-plan.mjs"
 execution_helper="${bootstrap_root}/bootstrap-execution.mjs"
 approved_configuration_commit="6340bffbddcc4797067ef48170fc5c3524345bf2"
-approved_plan_sha256="6fb0b0c15fa04338a40ab59de790c3a4a85f96b418377c4a70570a8dabd5d457"
+approved_plan_sha256="0000000000000000000000000000000000000000000000000000000000000000"
+approved_recovery_state_sha256="07fc7412e35efaff288e2efd30f786c2871d9fa836fb813a178d247ccb1efe5a"
 project_id="miakapp-v4-staging"
 state_bucket="miakapp-v4-staging-tfstate-1072737219170"
 state_object="terraform/bootstrap/default.tfstate"
@@ -113,11 +114,22 @@ node "${repository_root}/infrastructure/staging/validate.mjs" \
   "${repository_root}/infrastructure/staging/manifest.json"
 node "${bootstrap_root}/guard.mjs" "$bootstrap_root"
 
-node "$bundle_helper" verify "$1" "$approved_configuration_commit" >/dev/null
+node "$execution_helper" verify-recovery-state "$2" "$repository_root" >/dev/null
+recovery_state="$(cd "$(dirname "$2")" && pwd -P)/$(basename "$2")"
+node "$bundle_helper" verify \
+  "$1" \
+  "$approved_configuration_commit" \
+  "$approved_recovery_state_sha256" >/dev/null
 bundle="$(cd "$1" && pwd -P)"
 execution_lock="${bundle}.execution-lock"
 if ! mkdir -m 700 -- "$execution_lock" 2>/dev/null; then
   echo "This exact private bootstrap bundle already has an active execution lock." >&2
+  exit 1
+fi
+recovery_lock="${recovery_state}.execution-lock"
+if ! mkdir -m 700 -- "$recovery_lock" 2>/dev/null; then
+  rmdir -- "$execution_lock"
+  echo "The exact recovery state already has an active execution lock." >&2
   exit 1
 fi
 
@@ -132,6 +144,9 @@ cleanup() {
   fi
   if ! rmdir -- "$execution_lock" 2>/dev/null; then
     echo "The private bootstrap execution lock could not be removed; inspect ${execution_lock} before another run." >&2
+  fi
+  if ! rmdir -- "$recovery_lock" 2>/dev/null; then
+    echo "The private recovery-state lock could not be removed; inspect ${recovery_lock} before another run." >&2
   fi
 }
 trap cleanup EXIT
@@ -162,6 +177,9 @@ local_state_backup="${execution}/bootstrap.tfstate.backup"
 remote_state="${execution}/remote-bootstrap.tfstate"
 apply_root="${execution}/apply"
 mkdir -m 700 "$provider_data" "$apply_root"
+cp -p -- "$recovery_state" "$local_state"
+chmod 600 "$local_state"
+node "$execution_helper" verify-recovery-state "$local_state" "$repository_root" >/dev/null
 
 run_gcloud_json() {
   local output_file="$1"
@@ -177,22 +195,19 @@ node "$execution_helper" verify-project <"${execution}/project.json"
 run_gcloud_json "${execution}/billing.json" billing projects describe "$project_id"
 billing_account_id="$(node "$execution_helper" verify-billing-link <"${execution}/billing.json")"
 
-budget_preflight_deferred=false
-if gcloud billing budgets list \
+if ! gcloud billing budgets list \
   "--billing-account=${billing_account_id}" \
   "--billing-project=${project_id}" \
   --format=json \
   --quiet >"${execution}/budgets-before.json" 2>>"$cloud_log"; then
-  node "$execution_helper" verify-absent-targets budgets <"${execution}/budgets-before.json"
-else
-  run_gcloud_json "${execution}/billing-budget-api-before.json" services list \
-    --enabled \
-    "--project=${project_id}" \
-    --filter=config.name=billingbudgets.googleapis.com
-  node "$execution_helper" verify-empty-inventory billing-budget-api \
-    <"${execution}/billing-budget-api-before.json"
-  budget_preflight_deferred=true
+  echo "The recovered Budget API could not be queried with the staging quota project." >&2
+  exit 1
 fi
+node "$execution_helper" verify-absent-targets budgets <"${execution}/budgets-before.json"
+run_gcloud_json "${execution}/services.json" services list \
+  --enabled \
+  "--project=${project_id}"
+node "$execution_helper" verify-enabled-bootstrap-services <"${execution}/services.json"
 run_gcloud_json "${execution}/buckets.json" storage buckets list "--project=${project_id}"
 node "$execution_helper" verify-absent-targets storage-buckets <"${execution}/buckets.json"
 run_gcloud_json "${execution}/service-accounts.json" iam service-accounts list "--project=${project_id}"
@@ -265,9 +280,15 @@ chmod 600 "$local_state"
 if [[ -e "$local_state_backup" && ! -L "$local_state_backup" ]]; then
   chmod 600 "$local_state_backup"
 fi
-if [[ "$apply_status" -ne 0 ]] \
-  && ! node "$execution_helper" verify-recoverable-state "$local_state"; then
-  echo "Terraform apply failed before creating resources; no remote state migration is possible." >&2
+reconciliation_mode=complete
+if [[ "$apply_status" -ne 0 ]]; then
+  reconciliation_mode=partial
+fi
+if ! node "$execution_helper" verify-applied-state \
+  "$local_state" \
+  "$metadata_file" \
+  "$reconciliation_mode"; then
+  echo "Terraform apply produced state that does not descend from the exact recovery baseline; no remote state migration was attempted." >&2
   exit 1
 fi
 
@@ -276,6 +297,18 @@ if [[ "$local_state" != "${apply_root}/terraform.tfstate" ]]; then
 fi
 chmod 600 "${apply_root}/terraform.tfstate"
 
+run_gcloud_json "${execution}/buckets-after.json" storage buckets list "--project=${project_id}"
+state_bucket_presence="$(node "$execution_helper" classify-state-bucket \
+  <"${execution}/buckets-after.json")"
+if [[ "$state_bucket_presence" != "present" ]]; then
+  if [[ "$apply_status" -eq 0 ]]; then
+    echo "Terraform reported success without creating the private state bucket." >&2
+  else
+    echo "Terraform apply remained partial before the private state bucket existed; recovery state was preserved locally." >&2
+  fi
+  exit 1
+fi
+
 if ! gcloud storage ls \
   --recursive \
   --json \
@@ -283,6 +316,7 @@ if ! gcloud storage ls \
   echo "The private state bucket could not be inspected before migration." >&2
   exit 1
 fi
+unset state_bucket_presence
 node "$execution_helper" verify-empty-inventory state-bucket \
   <"${execution}/state-bucket-before.json"
 
@@ -307,10 +341,6 @@ run_gcloud_json "${execution}/state-object.json" storage objects describe \
   "gs://${state_bucket}/${state_object}"
 node "$execution_helper" verify-state-object <"${execution}/state-object.json"
 
-reconciliation_mode=complete
-if [[ "$apply_status" -ne 0 ]]; then
-  reconciliation_mode=partial
-fi
 node "$execution_helper" reconcile-state \
   "$local_state" \
   "$remote_state" \
@@ -340,6 +370,7 @@ if [[ "$apply_status" -eq 0 ]]; then
   fi
 fi
 unset billing_account_id
+node "$execution_helper" verify-recovery-state "$recovery_state" "$repository_root" >/dev/null
 
 if [[ -n "$(git -C "$repository_root" status --porcelain=v1 --untracked-files=all)" ]] \
   || find "${repository_root}/infrastructure/staging" -type f \
@@ -355,7 +386,4 @@ fi
 
 execution_complete=true
 echo "The exact reviewed bootstrap plan was applied and its state was migrated and reconciled in the private GCS backend."
-if [[ "$budget_preflight_deferred" == true ]]; then
-  echo "Budget absence was deferred while its API was disabled; exactly one target budget was verified after apply."
-fi
 echo "The verified temporary local state and private execution logs were removed."

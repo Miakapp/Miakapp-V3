@@ -1,8 +1,7 @@
 # Miakapp 4 staging teardown rehearsal
 
-Status: non-executable rehearsal; neither Terraform root has been applied, the
-cloud workflow is dormant, only the approved billing link is active in cloud,
-and the reviewed local plan has not been authorized
+Status: non-executable rehearsal; bootstrap apply is partial with nine resources
+in private local state, no remote state exists, and the cloud workflow is dormant
 
 This runbook applies to the existing `miakapp-v4-staging` project. It must never
 be run against `miakapp-3`, `miakapp-v4`, or a `demo-*` project. A future
@@ -18,17 +17,19 @@ would permanently retire its globally unique ID; adding Firebase cannot
 otherwise be fully undone. Retaining this empty undeployed project, with the
 billing link removable during an authorized teardown, is therefore the default.
 
-The repository now contains separate apply-capable bootstrap and foundation
-roots, a private versioned GCS backend design, keyless plan/apply identities and
-a dormant GitHub workflow blueprint. None exists in the cloud. The circular
-bootstrap uses protected temporary local state first, then the reviewed GCS
-migration template. The first saved plan failed with zero resources after exact
-authorization; its private recovery evidence was retained. A replacement import
-plan has been prepared and inspected in a private local bundle outside the
-repository; it contains no state and has not been authorized or applied. A
-digest-bound recovery-first apply/migration command is committed but inactive
-and every authorization bit remains false. Local `.terraform/` provider caches
-are disposable and are not cloud inventory.
+The repository contains separate apply-capable bootstrap and foundation roots,
+a private versioned GCS backend design, keyless plan/apply identities and a
+dormant GitHub workflow blueprint. The first saved plan failed with zero managed
+resources. The next authorized plan imported the billing link and recorded all
+eight bootstrap APIs before the Budget API rejected the request because User ADC
+lacked a quota project. The target budget, buckets, service accounts and
+Workload Identity pool remain absent. Terraform preserved a private local state
+at serial 11 with exactly nine managed resources; its committed fingerprint is
+`07fc7412e35efaff288e2efd30f786c2871d9fa836fb813a178d247ccb1efe5a`,
+but its path and contents are not committed. Since the state bucket was not
+created, no migration was attempted. The recovery plan is pending and every new
+authorization bit remains false. Local `.terraform/` provider caches are
+disposable and are not cloud inventory.
 
 If that wrapper ever reports failure, its printed private execution directory is
 part of the recovery inventory. Do not delete it or rerun the same saved plan.

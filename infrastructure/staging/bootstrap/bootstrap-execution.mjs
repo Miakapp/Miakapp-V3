@@ -9,10 +9,17 @@ import { isDeepStrictEqual } from 'node:util';
 import { dirname, isAbsolute, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { validateSavedPlanMetadata } from './saved-plan.mjs';
+import {
+  BOOTSTRAP_RESOURCE_ADDRESSES,
+  RECOVERY_LINEAGE_SHA256,
+  RECOVERY_MANAGED_ADDRESSES,
+  RECOVERY_STATE_SERIAL,
+  RECOVERY_STATE_SHA256,
+  validateSavedPlanMetadata,
+} from './saved-plan.mjs';
 
 export const APPROVED_CONFIGURATION_COMMIT = '6340bffbddcc4797067ef48170fc5c3524345bf2';
-export const APPROVED_PLAN_SHA256 = '6fb0b0c15fa04338a40ab59de790c3a4a85f96b418377c4a70570a8dabd5d457';
+export const APPROVED_PLAN_SHA256 = '0000000000000000000000000000000000000000000000000000000000000000';
 export const APPROVED_BILLING_ACCOUNT_SHA256 = '4557923f1be719b78ee844b14bfa4654be3eb3fa785a2cb5a2624c3f85d12270';
 export const PROJECT_ID = 'miakapp-v4-staging';
 export const PROJECT_NUMBER = '1072737219170';
@@ -25,8 +32,18 @@ export const BUDGET_DISPLAY_NAME = 'Miakapp V4 staging monthly';
 const MAX_OBSERVATION_BYTES = 1024 * 1024;
 const MAX_STATE_BYTES = 64 * 1024 * 1024;
 const COMMIT_PATTERN = /^[0-9a-f]{40}$/;
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+const TERRAFORM_LINEAGE_PATTERN = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/;
 const BILLING_ACCOUNT_PATTERN = /^[0-9A-F]{6}-[0-9A-F]{6}-[0-9A-F]{6}$/;
+const BOOTSTRAP_SERVICE_APIS = Object.freeze([
+  'billingbudgets.googleapis.com',
+  'cloudbilling.googleapis.com',
+  'cloudresourcemanager.googleapis.com',
+  'iam.googleapis.com',
+  'iamcredentials.googleapis.com',
+  'serviceusage.googleapis.com',
+  'storage.googleapis.com',
+  'sts.googleapis.com',
+]);
 
 export const FOUNDATION_ACTIVATION = Object.freeze({
   schema: 'miakapp.staging-bootstrap/1',
@@ -132,8 +149,8 @@ export function createPrivateExecutionDirectory(bundlePath, repositoryPath) {
   if (typeof bundlePath !== 'string' || !isAbsolute(bundlePath) || /[\0-\x1f\x7f]/.test(bundlePath)) {
     reject('Saved-plan bundle must be an absolute path without control characters');
   }
+  assertPrivateEntry(bundlePath, 'Saved-plan bundle', 'directory');
   const bundle = realpathSync(bundlePath);
-  assertPrivateEntry(bundle, 'Saved-plan bundle', 'directory');
   const parent = realpathSync(dirname(bundle));
   assertPrivateEntry(parent, 'Private execution parent', 'directory');
   const repository = realpathSync(repositoryPath);
@@ -220,6 +237,26 @@ export function verifyProvisionedTargetInventory(value, label) {
   if (targetCount !== 1) reject(`${label} must contain exactly one bootstrap target`);
 }
 
+export function verifyEnabledBootstrapServices(value) {
+  if (!Array.isArray(value)) reject('Enabled-service inventory must be an array');
+  const enabled = new Set(value.map((entry) => (
+    isPlainObject(entry) && isPlainObject(entry.config) ? entry.config.name : undefined
+  )).filter((name) => typeof name === 'string'));
+  if (BOOTSTRAP_SERVICE_APIS.some((name) => !enabled.has(name))) {
+    reject('Enabled-service inventory is missing a recovered bootstrap API');
+  }
+  return Object.freeze({ bootstrapServices: BOOTSTRAP_SERVICE_APIS.length });
+}
+
+export function classifyStateBucket(value) {
+  if (!Array.isArray(value)) reject('State-bucket inventory must be an array');
+  const targetCount = value.filter((entry) => (
+    isPlainObject(entry) && entry.name === STATE_BUCKET
+  )).length;
+  if (targetCount > 1) reject('State-bucket inventory contains a duplicate target');
+  return targetCount === 1 ? 'present' : 'absent';
+}
+
 export function verifyRemoteStateObject(value) {
   if (!isPlainObject(value)
       || value.bucket !== STATE_BUCKET
@@ -265,6 +302,88 @@ function managedStateAddresses(state) {
   return addresses;
 }
 
+function managedStateInstances(state) {
+  const instances = new Map();
+  if (!Array.isArray(state.resources)) reject('Terraform state resources must be an array');
+  for (const resource of state.resources) {
+    if (!isPlainObject(resource)) reject('Terraform state resource is malformed');
+    if (resource.mode !== 'managed') continue;
+    if (!Array.isArray(resource.instances) || resource.instances.length === 0) {
+      reject('Terraform state managed resource must contain instances');
+    }
+    for (const instance of resource.instances) {
+      const address = instanceAddress(resource, instance, instances.size);
+      if (instances.has(address)) reject('Terraform state contains duplicate managed addresses');
+      instances.set(address, { instance, resource });
+    }
+  }
+  return instances;
+}
+
+function validateRecoveryManagedIdentities(
+  state,
+  expectedBillingAccountSha256 = APPROVED_BILLING_ACCOUNT_SHA256,
+) {
+  if (typeof expectedBillingAccountSha256 !== 'string'
+      || !/^[0-9a-f]{64}$/.test(expectedBillingAccountSha256)) {
+    reject('Expected recovery billing-account SHA-256 is invalid');
+  }
+  const instances = managedStateInstances(state);
+  const billing = instances.get('google_billing_project_info.staging');
+  if (billing === undefined
+      || billing.instance.schema_version !== 0
+      || billing.resource.provider !== 'provider["registry.terraform.io/hashicorp/google-beta"]') {
+    reject('Recovery Terraform state billing-link identity is invalid');
+  }
+  const billingAttributes = exactKeys(
+    billing.instance.attributes,
+    ['billing_account', 'deletion_policy', 'id', 'project', 'timeouts'],
+    'Recovery Terraform state billing-link attributes',
+  );
+  if (billingAttributes.id !== `projects/${PROJECT_ID}`
+      || billingAttributes.project !== PROJECT_ID
+      || billingAttributes.deletion_policy !== 'PREVENT'
+      || billingAttributes.timeouts !== null
+      || typeof billingAttributes.billing_account !== 'string'
+      || !BILLING_ACCOUNT_PATTERN.test(billingAttributes.billing_account)
+      || createHash('sha256').update(billingAttributes.billing_account).digest('hex')
+        !== expectedBillingAccountSha256) {
+    reject('Recovery Terraform state billing-link attributes are invalid');
+  }
+
+  for (const service of BOOTSTRAP_SERVICE_APIS) {
+    const address = `google_project_service.bootstrap[${JSON.stringify(service)}]`;
+    const entry = instances.get(address);
+    if (entry === undefined
+        || entry.instance.schema_version !== 0
+        || entry.resource.provider !== 'provider["registry.terraform.io/hashicorp/google"]') {
+      reject(`Recovery Terraform state service identity is invalid for ${service}`);
+    }
+    const attributes = exactKeys(
+      entry.instance.attributes,
+      [
+        'deletion_policy',
+        'disable_dependent_services',
+        'disable_on_destroy',
+        'id',
+        'project',
+        'service',
+        'timeouts',
+      ],
+      `Recovery Terraform state service attributes for ${service}`,
+    );
+    if (attributes.deletion_policy !== 'PREVENT'
+        || attributes.disable_dependent_services !== false
+        || attributes.disable_on_destroy !== false
+        || attributes.id !== `${PROJECT_ID}/${service}`
+        || attributes.project !== PROJECT_ID
+        || attributes.service !== service
+        || attributes.timeouts !== null) {
+      reject(`Recovery Terraform state service attributes are invalid for ${service}`);
+    }
+  }
+}
+
 function validateStateHeader(state, path) {
   if (!isPlainObject(state)
       || state.version !== 4
@@ -272,7 +391,7 @@ function validateStateHeader(state, path) {
       || !Number.isSafeInteger(state.serial)
       || state.serial < 1
       || typeof state.lineage !== 'string'
-      || !UUID_PATTERN.test(state.lineage)) {
+      || !TERRAFORM_LINEAGE_PATTERN.test(state.lineage)) {
     reject(`${path} is not a canonical Terraform 1.11.3 state`);
   }
 }
@@ -295,26 +414,66 @@ function validateFoundationActivation(state) {
   }
 }
 
-export function reconcileBootstrapStates(localState, remoteState, metadataValue, mode) {
-  const metadata = validateSavedPlanMetadata(metadataValue);
-  if (mode !== 'complete' && mode !== 'partial') reject('State reconciliation mode is invalid');
-  validateStateHeader(localState, 'Local bootstrap state');
+export function reconcileBootstrapStates(
+  localState,
+  remoteState,
+  metadataValue,
+  mode,
+  expectedLineageSha256,
+  expectedBillingAccountSha256,
+) {
+  const validation = validateAppliedBootstrapState(
+    localState,
+    metadataValue,
+    mode,
+    expectedLineageSha256,
+    expectedBillingAccountSha256,
+  );
   validateStateHeader(remoteState, 'Remote bootstrap state');
   if (!isDeepStrictEqual(localState, remoteState)) reject('Remote bootstrap state does not exactly match local state');
+  return validation;
+}
+
+export function validateAppliedBootstrapState(
+  state,
+  metadataValue,
+  mode,
+  expectedLineageSha256,
+  expectedBillingAccountSha256,
+) {
+  const metadata = validateSavedPlanMetadata(metadataValue);
+  if (mode !== 'complete' && mode !== 'partial') reject('State reconciliation mode is invalid');
+  validateStateHeader(state, 'Local bootstrap state');
+  if (state.serial < metadata.recovery.serial) {
+    reject('Terraform state does not descend from the reviewed recovery state');
+  }
+  const lineageSha256 = createHash('sha256').update(state.lineage).digest('hex');
+  if (lineageSha256 !== (expectedLineageSha256 ?? metadata.recovery.lineage_sha256)) {
+    reject('Terraform state does not retain the reviewed recovery lineage');
+  }
+  validateRecoveryManagedIdentities(state, expectedBillingAccountSha256);
 
   const expected = metadata.plan.resource_changes.map(({ address }) => address).sort();
-  const actual = managedStateAddresses(localState);
+  const actual = managedStateAddresses(state);
   if (mode === 'complete') {
     if (!isDeepStrictEqual(actual, expected)) {
       reject('Complete Terraform state does not contain the exact reviewed resource inventory');
     }
-    validateFoundationActivation(localState);
+    validateFoundationActivation(state);
   } else {
-    if (actual.length === 0 || actual.some((address) => !expected.includes(address))) {
-      reject('Partial Terraform state contains an empty or unexpected managed inventory');
+    if (actual.some((address) => !expected.includes(address))
+        || RECOVERY_MANAGED_ADDRESSES.some((address) => !actual.includes(address))) {
+      reject('Partial Terraform state lost recovery resources or contains unexpected inventory');
     }
+    exactKeys(state.outputs, [], 'Partial Terraform state outputs');
   }
-  return Object.freeze({ mode, managedResources: actual.length, serial: localState.serial });
+  return Object.freeze({ mode, managedResources: actual.length, serial: state.serial });
+}
+
+export function validateAppliedBootstrapStateFile(localPath, metadataPath, mode) {
+  const localState = readPrivateJson(localPath, MAX_STATE_BYTES, 'Local bootstrap state');
+  const metadata = readPrivateJson(metadataPath, MAX_OBSERVATION_BYTES, 'Saved-plan metadata');
+  return validateAppliedBootstrapState(localState, metadata, mode);
 }
 
 export function reconcileBootstrapStateFiles(localPath, remotePath, metadataPath, mode) {
@@ -330,6 +489,93 @@ export function verifyRecoverableLocalStateFile(localPath) {
   const managedResources = managedStateAddresses(localState).length;
   if (managedResources === 0) reject('Failed bootstrap state contains no managed resources to migrate');
   return Object.freeze({ managedResources, serial: localState.serial });
+}
+
+export function validateRecoveryState(
+  state,
+  expectedLineageSha256 = RECOVERY_LINEAGE_SHA256,
+  expectedBillingAccountSha256 = APPROVED_BILLING_ACCOUNT_SHA256,
+) {
+  if (typeof expectedLineageSha256 !== 'string' || !/^[0-9a-f]{64}$/.test(expectedLineageSha256)) {
+    reject('Expected recovery lineage SHA-256 is invalid');
+  }
+  validateStateHeader(state, 'Recovery Terraform state');
+  if (state.serial !== RECOVERY_STATE_SERIAL
+      || createHash('sha256').update(state.lineage).digest('hex') !== expectedLineageSha256
+      || !isPlainObject(state.outputs)
+      || Object.keys(state.outputs).length !== 0
+      || !isDeepStrictEqual(managedStateAddresses(state), [...RECOVERY_MANAGED_ADDRESSES].sort())) {
+    reject('Recovery Terraform state does not contain the exact preserved partial inventory');
+  }
+  validateRecoveryManagedIdentities(state, expectedBillingAccountSha256);
+  return Object.freeze({
+    managedResources: RECOVERY_MANAGED_ADDRESSES.length,
+    serial: state.serial,
+  });
+}
+
+export function validateRecoveryDescendantState(
+  state,
+  expectedLineageSha256 = RECOVERY_LINEAGE_SHA256,
+  expectedBillingAccountSha256 = APPROVED_BILLING_ACCOUNT_SHA256,
+) {
+  if (typeof expectedLineageSha256 !== 'string' || !/^[0-9a-f]{64}$/.test(expectedLineageSha256)) {
+    reject('Expected recovery lineage SHA-256 is invalid');
+  }
+  validateStateHeader(state, 'Recovery-descendant Terraform state');
+  const actualLineageSha256 = createHash('sha256').update(state.lineage).digest('hex');
+  const actual = managedStateAddresses(state);
+  if (state.serial < RECOVERY_STATE_SERIAL
+      || actualLineageSha256 !== expectedLineageSha256
+      || !isPlainObject(state.outputs)
+      || actual.some((address) => !BOOTSTRAP_RESOURCE_ADDRESSES.includes(address))
+      || RECOVERY_MANAGED_ADDRESSES.some((address) => !actual.includes(address))) {
+    reject('Terraform state does not descend from the exact preserved recovery state');
+  }
+  validateRecoveryManagedIdentities(state, expectedBillingAccountSha256);
+  return Object.freeze({ managedResources: actual.length, serial: state.serial });
+}
+
+export function verifyRecoveryDescendantStateFile(localPath) {
+  const localState = readPrivateJson(
+    localPath,
+    MAX_STATE_BYTES,
+    'Recovery-descendant Terraform state',
+  );
+  return validateRecoveryDescendantState(localState);
+}
+
+export function verifyRecoveryStateFile(localPath, repositoryPath) {
+  if (typeof localPath !== 'string' || !isAbsolute(localPath) || /[\0-\x1f\x7f]/.test(localPath)) {
+    reject('Recovery Terraform state must be an absolute path without control characters');
+  }
+  if (typeof repositoryPath !== 'string' || !isAbsolute(repositoryPath)) {
+    reject('Recovery Terraform state verification requires an absolute repository path');
+  }
+  if (lstatSync(localPath).isSymbolicLink()) {
+    reject('Recovery Terraform state must not be a symbolic link');
+  }
+  const canonicalPath = realpathSync(localPath);
+  const repository = realpathSync(repositoryPath);
+  if (containsPath(repository, canonicalPath)) {
+    reject('Recovery Terraform state must remain outside the repository');
+  }
+  assertPrivateEntry(dirname(canonicalPath), 'Recovery Terraform state parent', 'directory');
+  const entry = assertPrivateEntry(canonicalPath, 'Recovery Terraform state', 'file');
+  if (entry.size === 0 || entry.size > MAX_STATE_BYTES) {
+    reject('Recovery Terraform state has an invalid size');
+  }
+  const bytes = readFileSync(canonicalPath);
+  const actualSha256 = createHash('sha256').update(bytes).digest('hex');
+  if (actualSha256 !== RECOVERY_STATE_SHA256) {
+    reject('Recovery Terraform state does not match the preserved state SHA-256');
+  }
+  const state = parseJson(bytes.toString('utf8'), 'Recovery Terraform state');
+  const validated = validateRecoveryState(state);
+  return Object.freeze({
+    ...validated,
+    sha256: actualSha256,
+  });
 }
 
 async function main() {
@@ -371,6 +617,19 @@ async function main() {
     );
     return;
   }
+  if (command === 'verify-enabled-bootstrap-services' && args.length === 0) {
+    const result = verifyEnabledBootstrapServices(
+      parseJson(await readBoundedStandardInput(), 'Enabled-service inventory'),
+    );
+    console.log(`Recovered bootstrap services enabled: ${result.bootstrapServices}`);
+    return;
+  }
+  if (command === 'classify-state-bucket' && args.length === 0) {
+    process.stdout.write(classifyStateBucket(
+      parseJson(await readBoundedStandardInput(), 'State-bucket inventory'),
+    ));
+    return;
+  }
   if (command === 'verify-state-object' && args.length === 0) {
     const observation = verifyRemoteStateObject(
       parseJson(await readBoundedStandardInput(), 'Remote state object observation'),
@@ -383,12 +642,27 @@ async function main() {
     console.log(`Recoverable bootstrap state: managed resources: ${result.managedResources}; serial: ${result.serial}`);
     return;
   }
+  if (command === 'verify-recovery-state' && args.length === 2) {
+    const result = verifyRecoveryStateFile(args[0], args[1]);
+    console.log(`Recovery bootstrap state verified: managed resources: ${result.managedResources}; serial: ${result.serial}`);
+    return;
+  }
+  if (command === 'verify-recovery-descendant-state' && args.length === 1) {
+    const result = verifyRecoveryDescendantStateFile(args[0]);
+    console.log(`Recovery-descendant bootstrap state verified: managed resources: ${result.managedResources}; serial: ${result.serial}`);
+    return;
+  }
+  if (command === 'verify-applied-state' && args.length === 3) {
+    const result = validateAppliedBootstrapStateFile(args[0], args[1], args[2]);
+    console.log(`Applied bootstrap state verified: ${result.mode}; managed resources: ${result.managedResources}; serial: ${result.serial}`);
+    return;
+  }
   if (command === 'reconcile-state' && args.length === 4) {
     const result = reconcileBootstrapStateFiles(args[0], args[1], args[2], args[3]);
     console.log(`Bootstrap state reconciled: ${result.mode}; managed resources: ${result.managedResources}; serial: ${result.serial}`);
     return;
   }
-  reject('Usage: bootstrap-execution.mjs <create-directory|verify-authorization|verify-project|verify-billing-link|verify-empty-inventory|verify-absent-targets|verify-provisioned-targets|verify-state-object|verify-recoverable-state|reconcile-state> ...');
+  reject('Usage: bootstrap-execution.mjs <create-directory|verify-authorization|verify-project|verify-billing-link|verify-empty-inventory|verify-absent-targets|verify-provisioned-targets|verify-enabled-bootstrap-services|classify-state-bucket|verify-state-object|verify-recoverable-state|verify-recovery-state|verify-recovery-descendant-state|verify-applied-state|reconcile-state> ...');
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

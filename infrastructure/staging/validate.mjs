@@ -20,6 +20,7 @@ const SERVICE_IDS = [
 const ENABLED_SERVICE_APIS = [
   'analyticshub.googleapis.com',
   'appengine.googleapis.com',
+  'billingbudgets.googleapis.com',
   'bigquery.googleapis.com',
   'bigqueryconnection.googleapis.com',
   'bigquerydatapolicy.googleapis.com',
@@ -27,6 +28,7 @@ const ENABLED_SERVICE_APIS = [
   'bigquerymigration.googleapis.com',
   'bigqueryreservation.googleapis.com',
   'bigquerystorage.googleapis.com',
+  'cloudbilling.googleapis.com',
   'cloudapis.googleapis.com',
   'cloudresourcemanager.googleapis.com',
   'cloudtrace.googleapis.com',
@@ -41,6 +43,8 @@ const ENABLED_SERVICE_APIS = [
   'firebaseremoteconfigrealtime.googleapis.com',
   'firebaserules.googleapis.com',
   'identitytoolkit.googleapis.com',
+  'iam.googleapis.com',
+  'iamcredentials.googleapis.com',
   'logging.googleapis.com',
   'monitoring.googleapis.com',
   'pubsub.googleapis.com',
@@ -52,6 +56,7 @@ const ENABLED_SERVICE_APIS = [
   'storage-api.googleapis.com',
   'storage-component.googleapis.com',
   'storage.googleapis.com',
+  'sts.googleapis.com',
   'telemetry.googleapis.com',
   'testing.googleapis.com',
 ];
@@ -116,13 +121,27 @@ const LOCAL_PLAN_POST_CHECKS = [
   'workload-identity-pool-absent',
 ];
 
-const LOCAL_SAVED_PLAN_POST_CHECKS = [
+const SUPERSEDED_SAVED_PLAN_POST_CHECKS = [
   'billing-linked-to-approved-account',
   'repository-plan-and-state-artifacts-absent',
-  'budget-api-disabled-and-preflight-deferred',
+  'recovery-state-preserved-private',
+  'target-budget-absent',
+  'eight-bootstrap-apis-enabled',
   'target-buckets-absent',
   'target-service-accounts-absent',
   'workload-identity-pool-absent',
+];
+
+const RECOVERY_MANAGED_ADDRESSES = [
+  'google_billing_project_info.staging',
+  'google_project_service.bootstrap["billingbudgets.googleapis.com"]',
+  'google_project_service.bootstrap["cloudbilling.googleapis.com"]',
+  'google_project_service.bootstrap["cloudresourcemanager.googleapis.com"]',
+  'google_project_service.bootstrap["iam.googleapis.com"]',
+  'google_project_service.bootstrap["iamcredentials.googleapis.com"]',
+  'google_project_service.bootstrap["serviceusage.googleapis.com"]',
+  'google_project_service.bootstrap["storage.googleapis.com"]',
+  'google_project_service.bootstrap["sts.googleapis.com"]',
 ];
 
 const TEARDOWN_INVENTORY = [
@@ -452,7 +471,7 @@ function validateCost(value) {
   );
   exact(
     billingAccount.terraform_management_state,
-    'active_outside_terraform_state',
+    'preserved_in_private_local_recovery_state',
     'cost.billing_account.terraform_management_state',
   );
   exact(cost.currency, 'EUR', 'cost.currency');
@@ -497,6 +516,7 @@ function validateTerraform(value) {
     'local_plan_executed',
     'local_plan_observation',
     'local_saved_plan_observation',
+    'superseded_saved_plan_observation',
   ]);
   exact(terraform.state, 'bootstrap_foundation_and_automation_blueprint', 'terraform.state');
   exact(
@@ -677,18 +697,18 @@ function validateTerraform(value) {
     'exact_authorization_required',
     'repository_commit_bound',
     'cloud_preflight_required',
-    'budget_preflight_deferred_only_when_api_disabled',
+    'budget_preflight_requires_quota_project',
     'budget_postcondition_required',
-    'partial_state_migration_attempted',
+    'recovery_state',
     'local_recovery_preserved_on_failure',
     'local_state_removed_only_after_reconciliation',
     'authorized_plan_attempted',
-    'prior_attempt',
-    'executed',
+    'attempts',
+    'bootstrap_completed',
   ]);
   exact(
     bootstrapExecution.state,
-    'guarded_import_wrapper_committed_inactive',
+    'recovery_configuration_committed_plan_pending',
     'terraform.bootstrap_execution.state',
   );
   exact(
@@ -703,12 +723,12 @@ function validateTerraform(value) {
   );
   exact(
     bootstrapExecution.approved_configuration_commit,
-    '6340bffbddcc4797067ef48170fc5c3524345bf2',
+    null,
     'terraform.bootstrap_execution.approved_configuration_commit',
   );
   exact(
     bootstrapExecution.approved_plan_sha256,
-    '6fb0b0c15fa04338a40ab59de790c3a4a85f96b418377c4a70570a8dabd5d457',
+    null,
     'terraform.bootstrap_execution.approved_plan_sha256',
   );
   exact(
@@ -727,19 +747,70 @@ function validateTerraform(value) {
     'terraform.bootstrap_execution.cloud_preflight_required',
   );
   exact(
-    bootstrapExecution.budget_preflight_deferred_only_when_api_disabled,
+    bootstrapExecution.budget_preflight_requires_quota_project,
     true,
-    'terraform.bootstrap_execution.budget_preflight_deferred_only_when_api_disabled',
+    'terraform.bootstrap_execution.budget_preflight_requires_quota_project',
   );
   exact(
     bootstrapExecution.budget_postcondition_required,
     true,
     'terraform.bootstrap_execution.budget_postcondition_required',
   );
+  const recoveryState = record(
+    bootstrapExecution.recovery_state,
+    'terraform.bootstrap_execution.recovery_state',
+    [
+      'state',
+      'sha256',
+      'lineage_sha256',
+      'terraform_version',
+      'serial',
+      'managed_resources',
+      'managed_addresses',
+      'path_committed',
+      'raw_contents_committed',
+    ],
+  );
   exact(
-    bootstrapExecution.partial_state_migration_attempted,
-    true,
-    'terraform.bootstrap_execution.partial_state_migration_attempted',
+    recoveryState.state,
+    'preserved_private_local',
+    'terraform.bootstrap_execution.recovery_state.state',
+  );
+  exact(
+    recoveryState.sha256,
+    '07fc7412e35efaff288e2efd30f786c2871d9fa836fb813a178d247ccb1efe5a',
+    'terraform.bootstrap_execution.recovery_state.sha256',
+  );
+  exact(
+    recoveryState.lineage_sha256,
+    '35e52294057979e6191eaa05141a9476261d4b0ea75c9113128f780abda7a9ba',
+    'terraform.bootstrap_execution.recovery_state.lineage_sha256',
+  );
+  exact(
+    recoveryState.terraform_version,
+    '1.11.3',
+    'terraform.bootstrap_execution.recovery_state.terraform_version',
+  );
+  exact(recoveryState.serial, 11, 'terraform.bootstrap_execution.recovery_state.serial');
+  exact(
+    recoveryState.managed_resources,
+    9,
+    'terraform.bootstrap_execution.recovery_state.managed_resources',
+  );
+  exactArray(
+    recoveryState.managed_addresses,
+    RECOVERY_MANAGED_ADDRESSES,
+    'terraform.bootstrap_execution.recovery_state.managed_addresses',
+  );
+  exact(
+    recoveryState.path_committed,
+    false,
+    'terraform.bootstrap_execution.recovery_state.path_committed',
+  );
+  exact(
+    recoveryState.raw_contents_committed,
+    false,
+    'terraform.bootstrap_execution.recovery_state.raw_contents_committed',
   );
   exact(
     bootstrapExecution.local_recovery_preserved_on_failure,
@@ -753,48 +824,48 @@ function validateTerraform(value) {
   );
   exact(
     bootstrapExecution.authorized_plan_attempted,
-    false,
+    true,
     'terraform.bootstrap_execution.authorized_plan_attempted',
   );
-  const priorAttempt = record(
-    bootstrapExecution.prior_attempt,
-    'terraform.bootstrap_execution.prior_attempt',
-    [
-      'configuration_commit',
-      'plan_sha256',
-      'attempted_on',
-      'result',
-      'cloud_resources_created',
-      'remote_state_migrated',
-    ],
-  );
+  if (!Array.isArray(bootstrapExecution.attempts) || bootstrapExecution.attempts.length !== 2) {
+    reject('terraform.bootstrap_execution.attempts', 'must contain exactly 2 entries');
+  }
+  const expectedAttempts = [
+    {
+      configuration_commit: 'c192f97959833f53a19d4e6dc50b26292c88b3b5',
+      execution_commit: null,
+      plan_sha256: '0918d21c4677ce0958be9ccc43057d8d76a33857fdfbea066120ba953e30b5c1',
+      attempted_on: '2026-09-03',
+      result: 'billing_association_quota_before_resource_creation',
+      managed_resources_recorded: 0,
+      enabled_bootstrap_apis_recorded: 0,
+      recovery_state_sha256: null,
+      remote_state_migrated: false,
+    },
+    {
+      configuration_commit: '6340bffbddcc4797067ef48170fc5c3524345bf2',
+      execution_commit: 'c3028c74d582c4f405f93e15ae0cf60898181728',
+      plan_sha256: '6fb0b0c15fa04338a40ab59de790c3a4a85f96b418377c4a70570a8dabd5d457',
+      attempted_on: '2026-09-03',
+      result: 'budget_quota_project_missing_after_partial_apply',
+      managed_resources_recorded: 9,
+      enabled_bootstrap_apis_recorded: 8,
+      recovery_state_sha256: '07fc7412e35efaff288e2efd30f786c2871d9fa836fb813a178d247ccb1efe5a',
+      remote_state_migrated: false,
+    },
+  ];
+  bootstrapExecution.attempts.forEach((value, index) => {
+    const path = `terraform.bootstrap_execution.attempts[${index}]`;
+    const attempt = record(value, path, Object.keys(expectedAttempts[index]));
+    for (const [field, expected] of Object.entries(expectedAttempts[index])) {
+      exact(attempt[field], expected, `${path}.${field}`);
+    }
+  });
   exact(
-    priorAttempt.configuration_commit,
-    'c192f97959833f53a19d4e6dc50b26292c88b3b5',
-    'terraform.bootstrap_execution.prior_attempt.configuration_commit',
-  );
-  exact(
-    priorAttempt.plan_sha256,
-    '0918d21c4677ce0958be9ccc43057d8d76a33857fdfbea066120ba953e30b5c1',
-    'terraform.bootstrap_execution.prior_attempt.plan_sha256',
-  );
-  exact(priorAttempt.attempted_on, '2026-09-03', 'terraform.bootstrap_execution.prior_attempt.attempted_on');
-  exact(
-    priorAttempt.result,
-    'billing_association_quota_before_resource_creation',
-    'terraform.bootstrap_execution.prior_attempt.result',
-  );
-  exact(
-    priorAttempt.cloud_resources_created,
-    0,
-    'terraform.bootstrap_execution.prior_attempt.cloud_resources_created',
-  );
-  exact(
-    priorAttempt.remote_state_migrated,
+    bootstrapExecution.bootstrap_completed,
     false,
-    'terraform.bootstrap_execution.prior_attempt.remote_state_migrated',
+    'terraform.bootstrap_execution.bootstrap_completed',
   );
-  exact(bootstrapExecution.executed, false, 'terraform.bootstrap_execution.executed');
 
   exact(terraform.apply_authorized, false, 'terraform.apply_authorized');
   exact(terraform.destroy_authorized, false, 'terraform.destroy_authorized');
@@ -868,9 +939,14 @@ function validateTerraform(value) {
     'terraform.local_plan_observation.post_plan_checks',
   );
 
-  const savedObservation = record(
+  exact(
     terraform.local_saved_plan_observation,
+    null,
     'terraform.local_saved_plan_observation',
+  );
+  const savedObservation = record(
+    terraform.superseded_saved_plan_observation,
+    'terraform.superseded_saved_plan_observation',
     [
       'observed_on',
       'created_at',
@@ -1018,14 +1094,14 @@ function validateTerraform(value) {
   );
   exact(
     savedObservation.local_state_artifacts_created,
-    false,
+    true,
     'terraform.local_saved_plan_observation.local_state_artifacts_created',
   );
-  exact(savedObservation.apply_authorized, false, 'terraform.local_saved_plan_observation.apply_authorized');
-  exact(savedObservation.apply_executed, false, 'terraform.local_saved_plan_observation.apply_executed');
+  exact(savedObservation.apply_authorized, true, 'terraform.local_saved_plan_observation.apply_authorized');
+  exact(savedObservation.apply_executed, true, 'terraform.local_saved_plan_observation.apply_executed');
   exact(
     savedObservation.state_migration_authorized,
-    false,
+    true,
     'terraform.local_saved_plan_observation.state_migration_authorized',
   );
   exact(
@@ -1035,7 +1111,7 @@ function validateTerraform(value) {
   );
   exactArray(
     savedObservation.post_inspection_checks,
-    LOCAL_SAVED_PLAN_POST_CHECKS,
+    SUPERSEDED_SAVED_PLAN_POST_CHECKS,
     'terraform.local_saved_plan_observation.post_inspection_checks',
   );
 }
@@ -1138,10 +1214,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 18, 'manifest.revision');
+  exact(manifest.revision, 19, 'manifest.revision');
   exact(
     manifest.status,
-    'bootstrap_import_plan_reviewed_billing_linked_undeployed',
+    'bootstrap_partial_state_preserved_recovery_plan_pending',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');

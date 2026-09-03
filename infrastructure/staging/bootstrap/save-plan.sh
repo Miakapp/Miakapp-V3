@@ -2,14 +2,15 @@
 set -euo pipefail
 umask 077
 
-if [[ "$#" -ne 1 ]]; then
-  echo "Usage: MIAKAPP_STAGING_BILLING_ACCOUNT_ID=... MIAKAPP_STAGING_BOOTSTRAP_CONFIRMATION=miakapp-v4-staging ./save-plan.sh <private-parent-directory>" >&2
+if [[ "$#" -ne 2 ]]; then
+  echo "Usage: MIAKAPP_STAGING_BILLING_ACCOUNT_ID=... MIAKAPP_STAGING_BOOTSTRAP_CONFIRMATION=miakapp-v4-staging ./save-plan.sh <private-parent-directory> <private-recovery-state>" >&2
   exit 2
 fi
 
 bootstrap_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 repository_root="$(cd "${bootstrap_root}/../../.." && pwd -P)"
 bundle_helper="${bootstrap_root}/saved-plan.mjs"
+execution_helper="${bootstrap_root}/bootstrap-execution.mjs"
 
 if [[ "${MIAKAPP_STAGING_BOOTSTRAP_CONFIRMATION:-}" != "miakapp-v4-staging" ]]; then
   echo "Set MIAKAPP_STAGING_BOOTSTRAP_CONFIRMATION=miakapp-v4-staging to acknowledge the exact bootstrap target." >&2
@@ -94,6 +95,9 @@ done
 node "${repository_root}/infrastructure/staging/validate.mjs" \
   "${repository_root}/infrastructure/staging/manifest.json"
 node "${bootstrap_root}/guard.mjs" "$bootstrap_root"
+node "$execution_helper" verify-recovery-state "$2" "$repository_root" >/dev/null
+recovery_state="$(cd "$(dirname "$2")" && pwd -P)/$(basename "$2")"
+recovery_state_sha256="$(node "$bundle_helper" sha256 "$recovery_state")"
 
 terraform_version="$(terraform version -json | node -e 'let value=""; process.stdin.on("data", (chunk) => { value += chunk; }); process.stdin.on("end", () => { const parsed = JSON.parse(value); process.stdout.write(typeof parsed.terraform_version === "string" ? parsed.terraform_version : ""); });')"
 if [[ "$terraform_version" != "1.11.3" ]]; then
@@ -104,7 +108,6 @@ fi
 bundle="$(node "$bundle_helper" create-bundle "$1" "$repository_root")"
 plan_file="${bundle}/bootstrap.tfplan"
 metadata_file="${bundle}/metadata.json"
-state_file="${bundle}/bootstrap.tfstate"
 private_log="${bundle}/terraform.log"
 terraform_data_dir="${bundle}/terraform-data"
 completed=false
@@ -112,7 +115,7 @@ cleanup() {
   rm -f -- "$private_log"
   rm -rf -- "$terraform_data_dir"
   if [[ "$completed" != true ]]; then
-    rm -f -- "$metadata_file" "$plan_file" "$state_file" "${state_file}.backup"
+    rm -f -- "$metadata_file" "$plan_file"
     rmdir -- "$bundle" 2>/dev/null || true
   fi
 }
@@ -134,7 +137,7 @@ terraform -chdir="$bootstrap_root" plan \
   -lock=false \
   -no-color \
   -detailed-exitcode \
-  -state="$state_file" \
+  -state="$recovery_state" \
   -out="$plan_file" >"$private_log" 2>&1
 plan_status="$?"
 set -e
@@ -143,8 +146,8 @@ if [[ "$plan_status" -ne 0 && "$plan_status" -ne 2 ]]; then
   echo "Terraform bootstrap planning failed; detailed output was discarded with the private bundle." >&2
   exit 1
 fi
-if [[ -e "$state_file" || -L "$state_file" || -e "${state_file}.backup" || -L "${state_file}.backup" ]]; then
-  echo "Terraform unexpectedly created local state while planning; the private bundle was discarded." >&2
+if [[ "$(node "$bundle_helper" sha256 "$recovery_state")" != "$recovery_state_sha256" ]]; then
+  echo "Terraform changed the preserved recovery state while planning; the private bundle was discarded." >&2
   exit 1
 fi
 if [[ ! -f "$plan_file" || -L "$plan_file" ]]; then
@@ -160,8 +163,9 @@ if ! terraform -chdir="$bootstrap_root" show -json "$plan_file" 2>>"$private_log
     "$metadata_file" \
     "$plan_sha256" \
     "$configuration_commit" \
-    "$created_at" >/dev/null; then
-  echo "The saved bootstrap plan does not match the reviewed import-and-create inventory; the private bundle was discarded." >&2
+    "$created_at" \
+    "$recovery_state_sha256" >/dev/null; then
+  echo "The saved bootstrap plan does not match the reviewed recovery inventory; the private bundle was discarded." >&2
   exit 1
 fi
 
@@ -174,7 +178,10 @@ fi
 rm -f -- "$private_log"
 rm -rf -- "$terraform_data_dir"
 unset TF_DATA_DIR
-summary="$(node "$bundle_helper" verify "$bundle" "$configuration_commit")"
+summary="$(node "$bundle_helper" verify \
+  "$bundle" \
+  "$configuration_commit" \
+  "$recovery_state_sha256")"
 completed=true
 printf '%s\n' "$summary"
 printf 'Private bundle: %s\n' "$bundle"
