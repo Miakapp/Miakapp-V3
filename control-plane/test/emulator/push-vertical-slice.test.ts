@@ -1,10 +1,15 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { createPrivateKey, sign, type JsonWebKey } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
 import { deleteApp, initializeApp } from 'firebase-admin/app';
 import { Timestamp, getFirestore } from 'firebase-admin/firestore';
 
+import { parseHomeKey } from '../../src/crypto.js';
+import {
+  RANDOM_SUBJECT_ATTEMPTS,
+  reserveAdmissionSubjects,
+} from './admission-fixture.js';
 import {
   apiRequest,
   clearFirestore,
@@ -130,12 +135,20 @@ async function createHome(homeId: string): Promise<void> {
 }
 
 async function createPushKey(homeId: string): Promise<string> {
-  const response = await apiRequest('POST', `/v1/homes/${homeId}/home-keys`, {
-    token: owner.idToken,
-    body: { label: 'Push key', scopes: ['push:send'] },
-  });
-  expect(response.status).toBe(201);
-  return (await jsonResponse<KeyResponse>(response)).home_key;
+  for (let attempt = 0; attempt < RANDOM_SUBJECT_ATTEMPTS; attempt += 1) {
+    const response = await apiRequest('POST', `/v1/homes/${homeId}/home-keys`, {
+      token: owner.idToken,
+      body: { label: 'Push key', scopes: ['push:send'] },
+    });
+    expect(response.status).toBe(201);
+    const homeKey = (await jsonResponse<KeyResponse>(response)).home_key;
+    const keyId = parseHomeKey(homeKey).keyId;
+    if (reserveAdmissionSubjects([
+      { budget: 'access.exchange.key', subject: keyId },
+      { budget: 'push.send.key', subject: keyId },
+    ])) return homeKey;
+  }
+  throw new Error('Could not create a collision-free push Home Key fixture');
 }
 
 async function exchangePushToken(homeKey: string): Promise<string> {
@@ -206,25 +219,35 @@ async function registerDestination(fid: string): Promise<DestinationMetadata> {
   return payload.destination;
 }
 
-async function createGrant(homeId: string, destinationId: string): Promise<GrantMetadata> {
-  const response = await apiRequest('POST', `/v1/homes/${homeId}/push-grants`, {
-    token: owner.idToken,
-    body: { destination_id: destinationId },
-  });
-  expect(response.status).toBe(201);
-  const payload = await jsonResponse<GrantResponse>(response);
-  expect(payload).toEqual({
-    schema: 'miakapp.push-grant/1',
-    grant: {
-      grant_id: expect.stringMatching(/^[A-Za-z0-9_-]{22}$/),
-      home_id: homeId,
-      destination_id: destinationId,
-      created_at: expect.any(String),
-      expires_at: expect.any(String),
-      revoked_at: null,
-    },
-  });
-  return payload.grant;
+async function createGrant(
+  homeId: string,
+  destinationId: string,
+  reserveForPush = true,
+): Promise<GrantMetadata> {
+  for (let attempt = 0; attempt < RANDOM_SUBJECT_ATTEMPTS; attempt += 1) {
+    const response = await apiRequest('POST', `/v1/homes/${homeId}/push-grants`, {
+      token: owner.idToken,
+      body: { destination_id: destinationId },
+    });
+    expect(response.status).toBe(201);
+    const payload = await jsonResponse<GrantResponse>(response);
+    expect(payload).toEqual({
+      schema: 'miakapp.push-grant/1',
+      grant: {
+        grant_id: expect.stringMatching(/^[A-Za-z0-9_-]{22}$/),
+        home_id: homeId,
+        destination_id: destinationId,
+        created_at: expect.any(String),
+        expires_at: expect.any(String),
+        revoked_at: null,
+      },
+    });
+    if (!reserveForPush || reserveAdmissionSubjects([{
+      budget: 'push.send.grant',
+      subject: payload.grant.grant_id,
+    }])) return payload.grant;
+  }
+  throw new Error('Could not create a collision-free push grant fixture');
 }
 
 function seededGrantId(index: number): string {
@@ -285,7 +308,7 @@ beforeAll(async () => {
   ]);
 });
 
-beforeEach(clearFirestore);
+beforeEach(() => clearFirestore(firestore));
 
 afterAll(async () => {
   await deleteApp(admin);
@@ -560,7 +583,7 @@ describe('Firebase Emulator FID-to-semantic-push vertical slice', () => {
     expect(challengeOverflow.status).toBe(413);
     expect(await errorCode(challengeOverflow)).toBe('limit_exceeded');
 
-    await clearFirestore();
+    await clearFirestore(firestore);
     for (let index = 0; index < 16; index += 1) {
       await registerDestination(`destination-fid-${String(index).padStart(2, '0')}`);
     }
@@ -681,7 +704,7 @@ describe('Firebase Emulator FID-to-semantic-push vertical slice', () => {
     expect(Buffer.byteLength(maximumListText, 'utf8')).toBeLessThanOrEqual(96 * 1_024);
     expect((JSON.parse(maximumListText) as { readonly grants: readonly unknown[] }).grants).toHaveLength(256);
 
-    const replacement = await createGrant(retentionHomeId, destination.destination_id);
+    const replacement = await createGrant(retentionHomeId, destination.destination_id, false);
     const ownerRef = firestore.collection('controlHomes').doc(retentionHomeId)
       .collection('pushGrantOwners').doc(owner.userId);
     const [ownerState, grants, oldActive, invalidatedGrant] = await Promise.all([
@@ -707,7 +730,7 @@ describe('Firebase Emulator FID-to-semantic-push vertical slice', () => {
         created_at: expiredCreatedAt,
       }),
     ]);
-    const afterExpiredPredecessor = await createGrant(retentionHomeId, destination.destination_id);
+    const afterExpiredPredecessor = await createGrant(retentionHomeId, destination.destination_id, false);
     const [expiredGrant, expiredIndex, afterExpiryGrants] = await Promise.all([
       ownerRef.collection('grants').doc(replacement.grant_id).get(),
       firestore.collection('pushGrantIndex').doc(replacement.grant_id).get(),
