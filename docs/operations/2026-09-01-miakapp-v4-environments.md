@@ -2,9 +2,8 @@
 
 Date: 2026-09-01
 
-Status: accepted direction; staging bootstrap resources created on 2026-09-03;
-complete state preserved locally pending remote migration; project remains
-application-undeployed
+Status: accepted direction; staging bootstrap resources and reconciled remote
+state created on 2026-09-03; project remains application-undeployed
 
 ## Decision
 

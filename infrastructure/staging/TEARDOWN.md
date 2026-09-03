@@ -1,7 +1,7 @@
 # Miakapp 4 staging teardown rehearsal
 
-Status: non-executable rehearsal; bootstrap resources exist, their complete state
-is private and local pending remote migration, and the cloud workflow is dormant
+Status: non-executable rehearsal; bootstrap resources and reconciled remote state
+exist, protected local recovery evidence remains private, and the cloud workflow is dormant
 
 This runbook applies to the existing `miakapp-v4-staging` project. It must never
 be run against `miakapp-3`, `miakapp-v4`, or a `demo-*` project. A future
@@ -26,9 +26,13 @@ the wrapper rejected the complete state before migration because its output
 shape assumption differed from Terraform 1.11.3. The exact 36-resource state at
 serial 39 is preserved outside the repository with fingerprint
 `c083e7a05f2ccf273abda98c0739584336d2cbaffd8ea836b65b0790f94833a2`.
-The state bucket exists but contains no state object. Its migration-only recovery
-requires separate authorization. Local `.terraform/` provider caches are
-disposable and are not cloud inventory.
+The guarded migration created bootstrap state generation `1788439334043522` at
+serial 40. A fresh private read reconciled it with the protected serial-39 source:
+the serial increased once, the two `check_results` entries were permuted, and
+every other value remained exactly equal. The foundation state is not yet
+initialized. Object Versioning also retains the noncurrent 181-byte empty state
+that Terraform created during backend initialization. Local `.terraform/`
+provider caches are disposable and are not cloud inventory.
 
 If the migration-only wrapper reports failure, its printed private execution
 directory is part of the recovery inventory. Do not delete it or rerun the

@@ -28,12 +28,12 @@ function rejects(mutator, pattern) {
   );
 }
 
-test('accepts the completed bootstrap apply with migration recovery pending', () => {
+test('accepts the completed bootstrap with reconciled remote state', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 21);
+  assert.equal(validated.revision, 22);
   assert.equal(
     validated.status,
-    'bootstrap_apply_complete_state_migration_recovery_pending',
+    'bootstrap_complete_remote_state_reconciled',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
@@ -54,21 +54,21 @@ test('accepts the completed bootstrap apply with migration recovery pending', ()
   assert.equal(validated.cost.billing_account.link_state, 'linked_to_approved_account');
   assert.equal(
     validated.cost.billing_account.terraform_management_state,
-    'managed_in_private_complete_local_state_pending_remote_migration',
+    'managed_in_reconciled_remote_bootstrap_state',
   );
-  assert.equal(validated.terraform.state, 'bootstrap_applied_state_migration_pending');
+  assert.equal(validated.terraform.state, 'bootstrap_complete_foundation_initialization_pending');
   assert.equal(
     validated.terraform.supported_workflow,
-    'credential_free_validation_and_guarded_state_migration',
+    'credential_free_validation_and_guarded_foundation_initialization',
   );
   assert.equal(validated.terraform.configuration_apply_capable, true);
   assert.equal(validated.terraform.active_cloud_workflow, 'none');
   assert.equal(validated.terraform.workflow_blueprint_state, 'dormant_not_installed');
   assert.equal(validated.terraform.backend.type, 'gcs');
-  assert.equal(validated.terraform.backend.state, 'bucket_created_state_object_absent');
+  assert.equal(validated.terraform.backend.state, 'bootstrap_state_present_foundation_state_absent');
   assert.equal(
     validated.terraform.backend.bootstrap_migration_state,
-    'complete_local_state_pending_migration',
+    'complete_remote_state_reconciled',
   );
   assert.equal(validated.terraform.identity.state, 'created_not_used_by_active_workflow');
   assert.equal(
@@ -90,11 +90,11 @@ test('accepts the completed bootstrap apply with migration recovery pending', ()
   assert.deepEqual(validated.terraform.identity.deployer_write_prefixes, ['terraform/foundation/']);
   assert.equal(
     validated.terraform.saved_plan.state,
-    'applied_private_bundle_retained_for_state_migration',
+    'applied_private_bundle_retained_as_recovery_evidence',
   );
   assert.equal(validated.terraform.saved_plan.public_artifacts_allowed, false);
   const execution = validated.terraform.bootstrap_execution;
-  assert.equal(execution.state, 'apply_complete_state_migration_awaiting_exact_authorization');
+  assert.equal(execution.state, 'bootstrap_complete_state_migrated_and_reconciled');
   assert.equal(
     execution.approved_configuration_commit,
     'e9f410c58c8cbbf8f5f7a17170c9e8ed55a10501',
@@ -105,7 +105,7 @@ test('accepts the completed bootstrap apply with migration recovery pending', ()
   );
   assert.equal(execution.budget_preflight_requires_quota_project, true);
   assert.equal(execution.authorized_plan_attempted, true);
-  assert.equal(execution.bootstrap_completed, false);
+  assert.equal(execution.bootstrap_completed, true);
   assert.equal(execution.recovery_state.state, 'preserved_private_complete_local');
   assert.equal(
     execution.recovery_state.sha256,
@@ -116,11 +116,35 @@ test('accepts the completed bootstrap apply with migration recovery pending', ()
   assert.equal(execution.recovery_state.managed_addresses.length, 36);
   assert.equal(execution.recovery_state.path_committed, false);
   assert.equal(execution.recovery_state.raw_contents_committed, false);
+  assert.equal(execution.remote_state.state, 'migrated_and_reconciled');
+  assert.equal(execution.remote_state.generation, '1788439334043522');
+  assert.equal(
+    execution.remote_state.sha256,
+    '8753dcceaa848ba8734d9892dbec6f2445fbf6b3fbead7da375cc37f0702d3bf',
+  );
+  assert.equal(execution.remote_state.serial, 40);
+  assert.equal(execution.remote_state.managed_resources, 36);
+  assert.equal(execution.remote_state.canonical_serial_increment, 1);
+  assert.equal(execution.remote_state.check_results_exact_permutation, true);
+  assert.equal(execution.remote_state.remainder_exactly_equal, true);
+  assert.equal(
+    execution.remote_state.initialization_generation.state,
+    'noncurrent_recoverable_empty_state',
+  );
+  assert.equal(execution.remote_state.initialization_generation.size_bytes, 181);
+  assert.equal(execution.remote_state.initialization_generation.managed_resources, 0);
+  assert.equal(execution.remote_state.raw_contents_committed, false);
   assert.equal(execution.attempts.length, 3);
   assert.equal(execution.attempts[2].execution_commit, 'cbd8b63062b027eca762b0d23f234563760f846a');
   assert.equal(execution.attempts[2].managed_resources_recorded, 36);
   assert.equal(execution.attempts[2].enabled_bootstrap_apis_recorded, 8);
   assert.equal(execution.attempts[2].remote_state_migrated, false);
+  assert.equal(execution.migration_attempts.length, 2);
+  assert.equal(
+    execution.migration_attempts[1].execution_commit,
+    '107bb23e8b546aca283105f4a9584343985576f6',
+  );
+  assert.equal(execution.migration_attempts[1].remote_state_migrated, true);
   assert.equal(validated.terraform.apply_authorized, false);
   assert.equal(validated.terraform.local_plan_executed, true);
   assert.deepEqual(validated.terraform.local_plan_observation.result, {
@@ -168,6 +192,7 @@ test('accepts the completed bootstrap apply with migration recovery pending', ()
   assert.equal(validated.terraform.local_saved_plan_observation.apply_authorized, true);
   assert.equal(validated.terraform.local_saved_plan_observation.apply_executed, true);
   assert.equal(validated.terraform.local_saved_plan_observation.state_migration_authorized, true);
+  assert.equal(validated.terraform.local_saved_plan_observation.state_migration_executed, true);
   assert.equal(
     validated.terraform.superseded_saved_plan_observation.plan_sha256,
     '6fb0b0c15fa04338a40ab59de790c3a4a85f96b418377c4a70570a8dabd5d457',
@@ -185,6 +210,8 @@ test('accepts the completed bootstrap apply with migration recovery pending', ()
   assert.equal(validated.evidence.github_policy_observation_verified, true);
   assert.equal(validated.evidence.active_cloud_workflow_present, false);
   assert.equal(validated.readiness.required_blockers.includes('github-terraform-workflow-not-installed'), true);
+  assert.equal(validated.readiness.required_blockers.includes('foundation-state-not-initialized'), true);
+  assert.equal(validated.readiness.required_blockers.includes('remote-bootstrap-state-not-migrated'), false);
   assert.equal(
     validated.readiness.required_blockers.includes('github-branch-environment-and-actions-policy-not-configured'),
     false,
@@ -244,7 +271,7 @@ test('rejects drift from the observed billing-linked undeployed bootstrap invent
   }, /bootstrap must contain exactly/);
 });
 
-test('rejects every cloud-action authorization bit', () => {
+test('rejects every cloud-action authorization bit and bootstrap completion drift', () => {
   for (const field of [
     'creation_authorized',
     'billing_link_authorized',
@@ -259,7 +286,7 @@ test('rejects every cloud-action authorization bit', () => {
     candidate.readiness.cloud_actions_enabled = true;
   }, /readiness\.cloud_actions_enabled/);
   rejects((candidate) => {
-    candidate.terraform.bootstrap_execution.bootstrap_completed = true;
+    candidate.terraform.bootstrap_execution.bootstrap_completed = false;
   }, /terraform\.bootstrap_execution\.bootstrap_completed/);
   rejects((candidate) => {
     candidate.terraform.bootstrap_execution.state = 'authorized';
@@ -273,6 +300,9 @@ test('rejects every cloud-action authorization bit', () => {
   rejects((candidate) => {
     candidate.terraform.bootstrap_execution.source_state_preserved_on_failure = false;
   }, /terraform\.bootstrap_execution\.source_state_preserved_on_failure/);
+  rejects((candidate) => {
+    candidate.terraform.bootstrap_execution.source_state_preserved_after_reconciliation = false;
+  }, /terraform\.bootstrap_execution\.source_state_preserved_after_reconciliation/);
   rejects((candidate) => {
     candidate.terraform.bootstrap_execution.budget_preflight_requires_quota_project = false;
   }, /terraform\.bootstrap_execution\.budget_preflight_requires_quota_project/);
@@ -288,6 +318,18 @@ test('rejects every cloud-action authorization bit', () => {
   rejects((candidate) => {
     candidate.terraform.bootstrap_execution.recovery_state.serial = 38;
   }, /terraform\.bootstrap_execution\.recovery_state\.serial/);
+  rejects((candidate) => {
+    candidate.terraform.bootstrap_execution.remote_state.generation = '1788439334043523';
+  }, /terraform\.bootstrap_execution\.remote_state\.generation/);
+  rejects((candidate) => {
+    candidate.terraform.bootstrap_execution.remote_state.remainder_exactly_equal = false;
+  }, /terraform\.bootstrap_execution\.remote_state\.remainder_exactly_equal/);
+  rejects((candidate) => {
+    candidate.terraform.bootstrap_execution.remote_state.initialization_generation.managed_resources = 1;
+  }, /terraform\.bootstrap_execution\.remote_state\.initialization_generation\.managed_resources/);
+  rejects((candidate) => {
+    candidate.terraform.bootstrap_execution.migration_attempts[1].remote_state_migrated = false;
+  }, /terraform\.bootstrap_execution\.migration_attempts\[1\]\.remote_state_migrated/);
 });
 
 test('requires explicit targeting and forbids a staging Firebase alias', () => {

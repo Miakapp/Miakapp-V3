@@ -1,6 +1,6 @@
 # Staging Terraform foundation proposal
 
-Status: apply-capable configuration; mock-tested offline; blocked on bootstrap
+Status: apply-capable configuration; mock-tested offline; blocked on foundation-state initialization
 
 This root describes the ordinary protected foundation for the existing,
 billing-linked but undeployed `miakapp-v4-staging` project. Billing management,
@@ -36,9 +36,9 @@ Before any foundation resource can proceed, a closed precondition compares the
 remote output with the exact project ID and number, Paris region, state bucket
 and prefixes, plan/apply providers, all three service accounts, component
 bucket, and numeric GitHub repository IDs. Missing, local, stale, or foreign
-bootstrap state fails closed. Both buckets exist, but the bootstrap state object
-does not; the exact complete bootstrap state is preserved privately outside the
-repository pending migration.
+bootstrap state fails closed. The bootstrap state is present remotely at serial
+40 and was reconciled against the protected serial-39 source state. The
+foundation prefix remains empty.
 
 ## Credential-free validation
 
@@ -56,8 +56,8 @@ provider registry to download or verify the pinned provider binaries.
 
 ## Guarded local plan
 
-After an authorized bootstrap and verified state migration, an operator may run
-the non-saving local plan wrapper with User ADC:
+After initialization and independent verification of the empty foundation
+state, an operator may run the non-saving local plan wrapper with User ADC:
 
 ```sh
 MIAKAPP_STAGING_PLAN_CONFIRMATION='miakapp-v4-staging' ./plan.sh
@@ -65,8 +65,8 @@ MIAKAPP_STAGING_PLAN_CONFIRMATION='miakapp-v4-staging' ./plan.sh
 
 The wrapper rejects credential files, explicit tokens, impersonation, custom
 endpoints, and all Terraform or Google environment overrides. It uses the real
-GCS backend with locking. It has not been run and cannot currently succeed
-because the remote bootstrap state has not yet been migrated and reconciled.
+GCS backend with locking. It has not been run and remains blocked until the
+foundation-state initialization boundary is reviewed and completed.
 
 The dormant keyless workflow in [`../automation/`](../automation/) is the
 intended activation path after bootstrap. It creates a private, create-only
