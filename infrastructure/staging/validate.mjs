@@ -19,6 +19,19 @@ const SERVICE_IDS = [
   'cloud-monitoring',
 ];
 
+const SERVICE_STATES = [
+  'api_enabled_no_staging_identity_test',
+  'firebase_app_created_provider_not_configured',
+  'foundation_created_no_staging_test',
+  'not_deployed',
+  'private_bucket_created_no_staging_test',
+  'signing_key_version_enabled_no_staging_signature',
+  'five_initial_versions_enabled_no_staging_access_test',
+  'api_enabled_runtime_permission_unresolved',
+  'api_enabled_no_deployed_runtime',
+  'api_enabled_no_deployed_runtime',
+];
+
 const ENABLED_SERVICE_APIS = [
   'analyticshub.googleapis.com',
   'appengine.googleapis.com',
@@ -94,18 +107,15 @@ const IAM_BINDINGS = [
 ];
 
 const REQUIRED_BLOCKERS = [
-  'production-config-loader',
-  'kms-signer-and-jwks-rotation',
-  'firebase-auth-rs256-verifier',
-  'app-check-verifier-and-replay-policy',
-  'fcm-fid-transport',
-  'production-storage-and-readback',
+  'private-production-function-deployment',
+  'fcm-least-privilege-runtime-iam',
+  'app-check-live-provider-and-replay-policy',
   'relay-token-refresh-integration',
   'trusted-source-and-edge-admission',
-  'monitoring-and-billing-alerts',
+  'live-managed-service-fault-matrix',
+  'monitoring-and-billing-alert-validation',
+  'secret-and-signing-key-rotation-rehearsal',
   'migration-rehearsal',
-  'production-function-entrypoint',
-  'secret-version-lifecycle',
 ];
 
 const STAGING_ROWS = [
@@ -158,6 +168,7 @@ const CURRENT_SAVED_PLAN_POST_CHECKS = [
 const TEARDOWN_INVENTORY = [
   'cloud-functions-and-cloud-run-revisions',
   'eventarc-triggers',
+  'firebase-app-registrations-and-app-check-providers',
   'artifact-registry-images',
   'firestore-database-and-ttl-policies',
   'component-storage-live-and-soft-deleted-objects',
@@ -224,7 +235,7 @@ function validateProject(value) {
   }
   exact(
     project.lifecycle,
-    'firebase_enabled_billing_linked_bootstrap_and_foundation_created_undeployed',
+    'firebase_enabled_billing_linked_foundation_and_activation_material_created_undeployed',
     'project.lifecycle',
   );
   exact(project.creation_authorized, false, 'project.creation_authorized');
@@ -261,9 +272,9 @@ function validateBootstrap(value) {
     'workload_identity_provider_states',
     'enabled_service_apis',
   ]);
-  exact(bootstrap.observed_on, '2026-09-03', 'bootstrap.observed_on');
+  exact(bootstrap.observed_on, '2026-09-04', 'bootstrap.observed_on');
   exact(bootstrap.billing_enabled, true, 'bootstrap.billing_enabled');
-  exact(bootstrap.firebase_apps, 0, 'bootstrap.firebase_apps');
+  exact(bootstrap.firebase_apps, 1, 'bootstrap.firebase_apps');
   exact(bootstrap.hosting_site, 'miakapp-v4-staging', 'bootstrap.hosting_site');
   exact(bootstrap.app_engine_application, false, 'bootstrap.app_engine_application');
   for (const field of ['cloud_functions', 'cloud_run_services']) {
@@ -360,7 +371,7 @@ function validateServices(value) {
   SERVICE_IDS.forEach((id, index) => {
     const service = record(value[index], `services[${index}]`, ['id', 'state']);
     exact(service.id, id, `services[${index}].id`);
-    exact(service.state, 'planned', `services[${index}].state`);
+    exact(service.state, SERVICE_STATES[index], `services[${index}].state`);
   });
 }
 
@@ -473,15 +484,21 @@ function validateSecurity(value) {
     const secret = record(security.secrets[index], `security.secrets[${index}]`, [
       'id',
       'state',
+      'enabled_versions',
       'replication',
       'version_policy_state',
       'maximum_active_versions',
       'consumer',
     ]);
     exact(secret.id, id, `security.secrets[${index}].id`);
-    exact(secret.state, 'container_created_no_versions', `security.secrets[${index}].state`);
+    exact(secret.state, 'initial_version_1_enabled', `security.secrets[${index}].state`);
+    exactArray(secret.enabled_versions, [1], `security.secrets[${index}].enabled_versions`);
     exact(secret.replication, 'automatic', `security.secrets[${index}].replication`);
-    exact(secret.version_policy_state, 'not_implemented', `security.secrets[${index}].version_policy_state`);
+    exact(
+      secret.version_policy_state,
+      'initialized_rotation_not_implemented',
+      `security.secrets[${index}].version_policy_state`,
+    );
     exact(secret.maximum_active_versions, 2, `security.secrets[${index}].maximum_active_versions`);
     exact(secret.consumer, 'control-plane-runtime', `security.secrets[${index}].consumer`);
   });
@@ -2692,6 +2709,7 @@ function validateEvidence(value) {
     'active_apply_workflow_present',
     'recovery_workflow_retired',
     'staging_wif_providers_disabled',
+    'activation_material',
     'retired_recovery_workflow',
     'staging_rows',
     'fault_matrix',
@@ -2735,6 +2753,56 @@ function validateEvidence(value) {
     true,
     'evidence.staging_wif_providers_disabled',
   );
+  const activation = record(evidence.activation_material, 'evidence.activation_material', [
+    'state',
+    'observed_at',
+    'executor_repository_commit',
+    'plan_sha256',
+    'result_path',
+    'result_sha256',
+    'runtime_config_path',
+    'runtime_config_sha256',
+    'firebase_app_id',
+    'enabled_secret_versions',
+    'secret_payload_bytes_each',
+    'runtime_parser',
+    'secret_lifecycle_transition',
+    'seed_deleted',
+    'private_plan_committed',
+    'secret_payloads_committed',
+    'workloads',
+  ]);
+  const expectedActivation = {
+    state: 'materialized_and_independently_revalidated',
+    observed_at: '2026-09-03T22:06:49.000Z',
+    executor_repository_commit: '101e4231d452423bafa2ae1efd051e51faeff3c8',
+    plan_sha256: 'f3c29e250cca705a76d3337ec2e1fe7aac40ee9d244e9b9b09cbe083778ad87e',
+    result_path: 'activation/result.json',
+    result_sha256: '290c7cedb500d9f6844b49a45737ed920b3fe2e6ada6ed95b754a795768ccbdf',
+    runtime_config_path: 'activation/runtime-config.json',
+    runtime_config_sha256: 'b794181400bf5ace6aaa9ffc4be00e4c4f6a59519284baa7f73bca3c042c4ff8',
+    firebase_app_id: '1:1072737219170:web:5053ca93bf25d7373cd73b',
+    enabled_secret_versions: 5,
+    secret_payload_bytes_each: 32,
+    runtime_parser: 'production',
+    secret_lifecycle_transition: 'initialize',
+    seed_deleted: true,
+    private_plan_committed: false,
+    secret_payloads_committed: false,
+  };
+  for (const [field, expected] of Object.entries(expectedActivation)) {
+    exact(activation[field], expected, `evidence.activation_material.${field}`);
+  }
+  const workloads = record(activation.workloads, 'evidence.activation_material.workloads', [
+    'app_engine_applications',
+    'cloud_functions',
+    'cloud_run_services',
+    'public_ingress',
+    'minimum_instances',
+  ]);
+  for (const field of Object.keys(workloads)) {
+    exact(workloads[field], 0, `evidence.activation_material.workloads.${field}`);
+  }
   const retiredRecoveryWorkflow = record(
     evidence.retired_recovery_workflow,
     'evidence.retired_recovery_workflow',
@@ -2803,10 +2871,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 32, 'manifest.revision');
+  exact(manifest.revision, 33, 'manifest.revision');
   exact(
     manifest.status,
-    'foundation_complete_recovery_retired',
+    'activation_material_complete_undeployed',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -2861,7 +2929,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; staging foundation is complete and recovery automation is retired.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; initial activation material is independently revalidated and the application workload remains undeployed.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';

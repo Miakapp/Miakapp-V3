@@ -1,6 +1,10 @@
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+
 import { describe, expect, test } from 'bun:test';
 
 import { ProductionConfigurationError } from '../../src/production-config.js';
+import { parseRequestJson } from '../../src/json.js';
 import {
   buildInitialStagingRuntimeDocument,
   validateInitialStagingRuntimeDocument,
@@ -24,6 +28,21 @@ function candidate(): Record<string, any> {
 }
 
 describe('initial staging runtime document', () => {
+  test('accepts the exact activated public runtime document committed as evidence', () => {
+    const bytes = readFileSync(new URL(
+      '../../../infrastructure/staging/activation/runtime-config.json',
+      import.meta.url,
+    ));
+    expect(createHash('sha256').update(bytes).digest('hex'))
+      .toBe('b794181400bf5ace6aaa9ffc4be00e4c4f6a59519284baa7f73bca3c042c4ff8');
+    const runtime = validateInitialStagingRuntimeDocument(parseRequestJson(bytes));
+    expect(runtime.appCheckAppId).toBe('1:1072737219170:web:5053ca93bf25d7373cd73b');
+    expect(runtime.security.signing.publicJwk.x)
+      .toBe('eINmaVIFYgARhSMf1pBb9yRstrT_6LfO5d12WFL5Dsw');
+    expect(runtime.security.secretManager.keyrings.homeKeyPepper.versions[0]?.resourceName)
+      .toBe('projects/miakapp-v4-staging/secrets/miakapp-home-key-pepper/versions/1');
+  });
+
   test('builds the exact non-secret production runtime profile with numeric references', () => {
     const document = buildInitialStagingRuntimeDocument(candidate());
     const runtime = validateInitialStagingRuntimeDocument(document);

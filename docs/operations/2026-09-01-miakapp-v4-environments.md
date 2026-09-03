@@ -257,10 +257,11 @@ with the exact eight IAM creates. Terraform wrote current foundation generation
 `1788456706865449` at serial 6 with 33 managed resources. The overall workflow
 failed only when its final convergence plan used the intentionally narrower
 deployer identity; a separate User-ADC plan then reported all 33 resources as
-no-ops and zero changes. Live inventory confirmed the exact eight IAM members,
-three active TTL fields, five secret containers with no versions, enabled
-software Ed25519 key version 1, no workload and no lock. The consumed private
-plan generation was deleted under the bucket's soft-delete policy.
+no-ops and zero changes. At that pre-activation boundary, live inventory
+confirmed the exact eight IAM members, three active TTL fields, five secret
+containers with no versions, enabled software Ed25519 key version 1, no
+workload and no lock. The consumed private plan generation was deleted under
+the bucket's soft-delete policy.
 
 The already-live planner Service Usage Consumer member was also adopted into
 bootstrap state through a one-import/no-change Terraform plan. Project IAM etag
@@ -284,9 +285,17 @@ Project and service-account IAM normalized hashes were unchanged: the recovery
 service accounts and roles remain, so other administrator impersonation is not
 disproved even though the reviewed GitHub exchange is closed.
 
-The production Function entry point, exact FCM permission, quotas, alerts and
-teardown evidence remain blockers. Workload deployment, secret versions and
-public ingress remain absent.
+Guarded activation from merge commit
+`101e4231d452423bafa2ae1efd051e51faeff3c8` subsequently registered exactly one
+Firebase Web app and one enabled initial version in each of the five secret
+containers. Its exact plan replay reconciled without another write; independent
+inventory found no workload or ingress, and the private seed was deleted. The
+committed non-secret result and runtime document are digest-pinned in
+[`../../infrastructure/staging/activation/`](../../infrastructure/staging/activation/).
+
+Production Function deployment, exact FCM permission, quotas, alerts, rotation
+and teardown evidence remain blockers. Workload deployment and public ingress
+remain absent.
 Passing the manifest check is evidence, not additional authorization.
 
 Create or attach `miakapp-v4` only after the staging migration rehearsal produces:

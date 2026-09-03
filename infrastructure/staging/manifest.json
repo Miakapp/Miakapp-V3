@@ -1,13 +1,13 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 32,
-  "status": "foundation_complete_recovery_retired",
+  "revision": 33,
+  "status": "activation_material_complete_undeployed",
   "environment": "staging",
   "project": {
     "project_id": "miakapp-v4-staging",
     "project_number": "1072737219170",
     "display_name": "Miakapp V4 Staging",
-    "lifecycle": "firebase_enabled_billing_linked_bootstrap_and_foundation_created_undeployed",
+    "lifecycle": "firebase_enabled_billing_linked_foundation_and_activation_material_created_undeployed",
     "creation_authorized": false,
     "billing_link_authorized": false,
     "deployment_authorized": false,
@@ -22,9 +22,9 @@
     ]
   },
   "bootstrap": {
-    "observed_on": "2026-09-03",
+    "observed_on": "2026-09-04",
     "billing_enabled": true,
-    "firebase_apps": 0,
+    "firebase_apps": 1,
     "hosting_site": "miakapp-v4-staging",
     "app_engine_application": false,
     "firestore_databases": [
@@ -133,43 +133,43 @@
   "services": [
     {
       "id": "firebase-auth",
-      "state": "planned"
+      "state": "api_enabled_no_staging_identity_test"
     },
     {
       "id": "firebase-app-check",
-      "state": "planned"
+      "state": "firebase_app_created_provider_not_configured"
     },
     {
       "id": "firestore",
-      "state": "planned"
+      "state": "foundation_created_no_staging_test"
     },
     {
       "id": "cloud-functions-gen2",
-      "state": "planned"
+      "state": "not_deployed"
     },
     {
       "id": "cloud-storage",
-      "state": "planned"
+      "state": "private_bucket_created_no_staging_test"
     },
     {
       "id": "cloud-kms",
-      "state": "planned"
+      "state": "signing_key_version_enabled_no_staging_signature"
     },
     {
       "id": "secret-manager",
-      "state": "planned"
+      "state": "five_initial_versions_enabled_no_staging_access_test"
     },
     {
       "id": "firebase-cloud-messaging",
-      "state": "planned"
+      "state": "api_enabled_runtime_permission_unresolved"
     },
     {
       "id": "cloud-logging",
-      "state": "planned"
+      "state": "api_enabled_no_deployed_runtime"
     },
     {
       "id": "cloud-monitoring",
-      "state": "planned"
+      "state": "api_enabled_no_deployed_runtime"
     }
   ],
   "runtime": {
@@ -227,41 +227,56 @@
     "secrets": [
       {
         "id": "miakapp-home-key-pepper",
-        "state": "container_created_no_versions",
+        "state": "initial_version_1_enabled",
+        "enabled_versions": [
+          1
+        ],
         "replication": "automatic",
-        "version_policy_state": "not_implemented",
+        "version_policy_state": "initialized_rotation_not_implemented",
         "maximum_active_versions": 2,
         "consumer": "control-plane-runtime"
       },
       {
         "id": "miakapp-component-hmac",
-        "state": "container_created_no_versions",
+        "state": "initial_version_1_enabled",
+        "enabled_versions": [
+          1
+        ],
         "replication": "automatic",
-        "version_policy_state": "not_implemented",
+        "version_policy_state": "initialized_rotation_not_implemented",
         "maximum_active_versions": 2,
         "consumer": "control-plane-runtime"
       },
       {
         "id": "miakapp-push-hmac",
-        "state": "container_created_no_versions",
+        "state": "initial_version_1_enabled",
+        "enabled_versions": [
+          1
+        ],
         "replication": "automatic",
-        "version_policy_state": "not_implemented",
+        "version_policy_state": "initialized_rotation_not_implemented",
         "maximum_active_versions": 2,
         "consumer": "control-plane-runtime"
       },
       {
         "id": "miakapp-audit-hmac",
-        "state": "container_created_no_versions",
+        "state": "initial_version_1_enabled",
+        "enabled_versions": [
+          1
+        ],
         "replication": "automatic",
-        "version_policy_state": "not_implemented",
+        "version_policy_state": "initialized_rotation_not_implemented",
         "maximum_active_versions": 2,
         "consumer": "control-plane-runtime"
       },
       {
         "id": "miakapp-network-hmac",
-        "state": "container_created_no_versions",
+        "state": "initial_version_1_enabled",
+        "enabled_versions": [
+          1
+        ],
         "replication": "automatic",
-        "version_policy_state": "not_implemented",
+        "version_policy_state": "initialized_rotation_not_implemented",
         "maximum_active_versions": 2,
         "consumer": "control-plane-runtime"
       }
@@ -1200,18 +1215,15 @@
     "manual_read_only_cloud_plan_authorized": true,
     "foundation_apply_authorized": false,
     "required_blockers": [
-      "production-config-loader",
-      "kms-signer-and-jwks-rotation",
-      "firebase-auth-rs256-verifier",
-      "app-check-verifier-and-replay-policy",
-      "fcm-fid-transport",
-      "production-storage-and-readback",
+      "private-production-function-deployment",
+      "fcm-least-privilege-runtime-iam",
+      "app-check-live-provider-and-replay-policy",
       "relay-token-refresh-integration",
       "trusted-source-and-edge-admission",
-      "monitoring-and-billing-alerts",
-      "migration-rehearsal",
-      "production-function-entrypoint",
-      "secret-version-lifecycle"
+      "live-managed-service-fault-matrix",
+      "monitoring-and-billing-alert-validation",
+      "secret-and-signing-key-rotation-rehearsal",
+      "migration-rehearsal"
     ]
   },
   "evidence": {
@@ -1231,6 +1243,31 @@
     "active_apply_workflow_present": false,
     "recovery_workflow_retired": true,
     "staging_wif_providers_disabled": true,
+    "activation_material": {
+      "state": "materialized_and_independently_revalidated",
+      "observed_at": "2026-09-03T22:06:49.000Z",
+      "executor_repository_commit": "101e4231d452423bafa2ae1efd051e51faeff3c8",
+      "plan_sha256": "f3c29e250cca705a76d3337ec2e1fe7aac40ee9d244e9b9b09cbe083778ad87e",
+      "result_path": "activation/result.json",
+      "result_sha256": "290c7cedb500d9f6844b49a45737ed920b3fe2e6ada6ed95b754a795768ccbdf",
+      "runtime_config_path": "activation/runtime-config.json",
+      "runtime_config_sha256": "b794181400bf5ace6aaa9ffc4be00e4c4f6a59519284baa7f73bca3c042c4ff8",
+      "firebase_app_id": "1:1072737219170:web:5053ca93bf25d7373cd73b",
+      "enabled_secret_versions": 5,
+      "secret_payload_bytes_each": 32,
+      "runtime_parser": "production",
+      "secret_lifecycle_transition": "initialize",
+      "seed_deleted": true,
+      "private_plan_committed": false,
+      "secret_payloads_committed": false,
+      "workloads": {
+        "app_engine_applications": 0,
+        "cloud_functions": 0,
+        "cloud_run_services": 0,
+        "public_ingress": 0,
+        "minimum_instances": 0
+      }
+    },
     "retired_recovery_workflow": {
       "id": "349440747",
       "state": "deleted",
@@ -1259,6 +1296,7 @@
     "inventory_after_teardown": [
       "cloud-functions-and-cloud-run-revisions",
       "eventarc-triggers",
+      "firebase-app-registrations-and-app-check-providers",
       "artifact-registry-images",
       "firestore-database-and-ttl-policies",
       "component-storage-live-and-soft-deleted-objects",
