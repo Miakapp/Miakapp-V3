@@ -1,6 +1,6 @@
 # Miakapp 4 staging activation blueprint
 
-Status: bootstrap complete; remote state migrated and reconciled; foundation initialization pending
+Status: bootstrap and empty foundation state reconciled; live foundation plan pending
 
 This directory contains a closed, apply-capable description of the future
 `miakapp-v4-staging` foundation. It does not authorize or perform cloud
@@ -52,7 +52,7 @@ install a workflow, deploy a workload, open ingress, apply, or destroy.
 | Path | Purpose | Current execution boundary |
 |---|---|---|
 | [`bootstrap/`](bootstrap/) | Billing link, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Complete; remote state reconciled with protected local recovery evidence |
-| [`terraform/`](terraform/) | APIs, Firestore, KMS, empty Secret Manager containers, and resource-scoped runtime IAM | Empty state created by the GCS backend; guarded reconciliation pending before a live plan |
+| [`terraform/`](terraform/) | APIs, Firestore, KMS, empty Secret Manager containers, and resource-scoped runtime IAM | Empty state created by the GCS backend and reconciled; live plan pending |
 | [`automation/`](automation/) | GitHub policy record, dormant plan/apply workflow, private-plan scripts, and operator inspection | Outside `.github/workflows`; cannot run |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
 | [`TEARDOWN.md`](TEARDOWN.md) | Manual recovery and teardown rehearsal | Documentation only |
@@ -75,9 +75,9 @@ artifacts.
 
 The planner and deployer identities now exist and are keyless and separate. Both may read
 the private bucket. The planner may manage only `.tflock` objects and create
-saved plans; it cannot create or replace state. The empty foundation state must
-be initialized and verified with protected operator credentials before CI is
-admitted. Only the deployer may write foundation state; neither may mutate the bootstrap
+saved plans; it cannot create or replace state. The empty foundation state was
+initialized and reconciled with protected operator credentials, satisfying the
+state prerequisite for CI. Only the deployer may write foundation state; neither may mutate the bootstrap
 state prefix. Escalation-capable project IAM, service-account creation and bucket
 creation remain human-bootstrap operations. The deployer has only service-scoped
 foundation roles plus administration of the separate component bucket; it has no
@@ -142,8 +142,12 @@ without planning or mutation, so recovery after an uncertain client result
 cannot overwrite it.
 Failure preserves private diagnostics; success removes them. The implementation
 is bound to reviewed implementation commit
-`626dc16637ba843f6d1543156aba99e7b551e705` and remains disabled until a
-separate exact authorization names the clean execution commit.
+`626dc16637ba843f6d1543156aba99e7b551e705`. The first execution created
+generation `1788443136082489`, then stopped before apply when its conservative
+plan-shape check rejected Terraform's implicit provider metadata. After that
+metadata was modeled exactly, clean execution commit
+`ab6f26bd5dd076a79847f989615e7fddf93f2a07` reconciled the same canonical
+empty generation without mutation. No initialization plan was ever applied.
 
 Backend initialization and planning acquire and release Terraform's temporary
 `.tflock` object.
@@ -199,15 +203,13 @@ The active validation workflow has only `contents: read`; it has no OIDC or
 secret permission. The dormant workflow deliberately fails its first policy job
 because workflow installation and foundation deployment remain unauthorized.
 
-## Next authorization gate
+## Next staging gate
 
-The GitHub branch, environment and Actions prerequisite are configured. Before
-any additional cloud action, the recovery sequence must:
+The GitHub branch, environment and Actions prerequisite are configured, and the
+foundation state boundary is reconciled. The next sequence is:
 
-1. complete guarded reconciliation of the initialized empty foundation state
-   before admitting CI;
-2. install the cloud workflow only after the state boundary is proven; and
-3. review a live foundation plan before granting apply approval.
+1. install the cloud workflow with the proven state boundary; and
+2. review a live foundation plan before any foundation apply.
 
 The production Function entry point, exact FCM runtime permission, secret
 version lifecycle, ingress design, monitoring, real-service fault matrix,

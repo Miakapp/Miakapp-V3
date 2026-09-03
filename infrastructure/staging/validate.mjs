@@ -95,7 +95,6 @@ const REQUIRED_BLOCKERS = [
   'migration-rehearsal',
   'production-function-entrypoint',
   'secret-version-lifecycle',
-  'foundation-state-not-initialized',
   'github-terraform-workflow-not-installed',
   'live-foundation-plan-not-reviewed',
 ];
@@ -556,10 +555,10 @@ function validateTerraform(value) {
     'local_saved_plan_observation',
     'superseded_saved_plan_observation',
   ]);
-  exact(terraform.state, 'bootstrap_complete_foundation_initialization_pending', 'terraform.state');
+  exact(terraform.state, 'bootstrap_and_empty_foundation_state_reconciled', 'terraform.state');
   exact(
     terraform.supported_workflow,
-    'credential_free_validation_and_guarded_foundation_initialization',
+    'credential_free_validation_and_guarded_live_planning',
     'terraform.supported_workflow',
   );
   exact(terraform.configuration_apply_capable, true, 'terraform.configuration_apply_capable');
@@ -592,7 +591,7 @@ function validateTerraform(value) {
     'public_access_prevention',
   ]);
   exact(backend.type, 'gcs', 'terraform.backend.type');
-  exact(backend.state, 'bootstrap_state_present_foundation_state_absent', 'terraform.backend.state');
+  exact(backend.state, 'bootstrap_and_empty_foundation_state_present', 'terraform.backend.state');
   exact(backend.bucket, 'miakapp-v4-staging-tfstate-1072737219170', 'terraform.backend.bucket');
   exact(backend.bootstrap_prefix, 'terraform/bootstrap', 'terraform.backend.bootstrap_prefix');
   exact(backend.foundation_prefix, 'terraform/foundation', 'terraform.backend.foundation_prefix');
@@ -1116,10 +1115,13 @@ function validateTerraform(value) {
       'user_adc_required',
       'cloud_preflight_required',
       'expected_bootstrap_state',
-      'expected_foundation_state',
+      'observed_foundation_state',
+      'initialization_method',
+      'backend_initialization_state_write_expected',
+      'post_initialization_plan',
       'refresh_only_saved_plan_required',
       'saved_plan_fingerprint_required',
-      'verified_plan_apply_only',
+      'saved_plan_apply_allowed',
       'temporary_lock_object_lifecycle_required',
       'manual_state_push_allowed',
       'overwrite_existing_state_allowed',
@@ -1127,12 +1129,14 @@ function validateTerraform(value) {
       'final_generation_recheck_required',
       'initialization_authorized',
       'initialization_executed',
+      'reconciliation_executed',
+      'attempts',
     ],
   );
   const foundationStatePath = 'terraform.foundation_state_initialization';
   exact(
     foundationStateInitialization.state,
-    'guarded_initializer_reviewed_awaiting_exact_authorization',
+    'initialized_and_reconciled',
     `${foundationStatePath}.state`,
   );
   exact(
@@ -1162,20 +1166,22 @@ function validateTerraform(value) {
     'private_execution_parent_required',
     'user_adc_required',
     'cloud_preflight_required',
+    'backend_initialization_state_write_expected',
     'refresh_only_saved_plan_required',
     'saved_plan_fingerprint_required',
-    'verified_plan_apply_only',
     'temporary_lock_object_lifecycle_required',
     'read_only_reconciliation_of_existing_exact_state_allowed',
     'final_generation_recheck_required',
+    'initialization_executed',
+    'reconciliation_executed',
   ]) {
     exact(foundationStateInitialization[field], true, `${foundationStatePath}.${field}`);
   }
   for (const field of [
     'manual_state_push_allowed',
     'overwrite_existing_state_allowed',
+    'saved_plan_apply_allowed',
     'initialization_authorized',
-    'initialization_executed',
   ]) {
     exact(foundationStateInitialization[field], false, `${foundationStatePath}.${field}`);
   }
@@ -1200,12 +1206,15 @@ function validateTerraform(value) {
   for (const [field, expected] of Object.entries(bootstrapStateExpectations)) {
     exact(expectedBootstrapState[field], expected, `${foundationStatePath}.expected_bootstrap_state.${field}`);
   }
-  const expectedFoundationState = record(
-    foundationStateInitialization.expected_foundation_state,
-    `${foundationStatePath}.expected_foundation_state`,
+  const observedFoundationState = record(
+    foundationStateInitialization.observed_foundation_state,
+    `${foundationStatePath}.observed_foundation_state`,
     [
       'object',
-      'initial_state',
+      'generation',
+      'sha256',
+      'size_bytes',
+      'lineage_sha256',
       'terraform_version',
       'serial',
       'managed_resources',
@@ -1216,7 +1225,10 @@ function validateTerraform(value) {
   );
   const foundationStateExpectations = {
     object: 'terraform/foundation/default.tfstate',
-    initial_state: 'absent',
+    generation: '1788443136082489',
+    sha256: '8a69b37495a7d11b1091a03e7659297adcb62ce853475ab032071888530e30cd',
+    size_bytes: 181,
+    lineage_sha256: '113390906103bdbefa4bac8b5d9549f7d867c38e8e9c4bef989977a12222c7d4',
     terraform_version: '1.11.3',
     serial: 1,
     managed_resources: 0,
@@ -1225,8 +1237,85 @@ function validateTerraform(value) {
     raw_contents_committed: false,
   };
   for (const [field, expected] of Object.entries(foundationStateExpectations)) {
-    exact(expectedFoundationState[field], expected, `${foundationStatePath}.expected_foundation_state.${field}`);
+    exact(observedFoundationState[field], expected, `${foundationStatePath}.observed_foundation_state.${field}`);
   }
+  exact(
+    foundationStateInitialization.initialization_method,
+    'terraform_init_gcs_backend',
+    `${foundationStatePath}.initialization_method`,
+  );
+
+  const postInitializationPlan = record(
+    foundationStateInitialization.post_initialization_plan,
+    `${foundationStatePath}.post_initialization_plan`,
+    [
+      'execution_commit',
+      'validated_with_implementation_commit',
+      'sha256',
+      'size_bytes',
+      'terraform_version',
+      'implicit_providers',
+      'managed_resources',
+      'applyable',
+      'apply_executed',
+      'raw_contents_committed',
+    ],
+  );
+  const postInitializationPlanExpectations = {
+    execution_commit: '2a612d62f16dbed4c05a677c1b7d43c00ed4e46f',
+    validated_with_implementation_commit: '626dc16637ba843f6d1543156aba99e7b551e705',
+    sha256: '5ef77e9f2107ea3a7b20b7c6dce865c6553cba51396e64e169a4418bb0e93859',
+    size_bytes: 2869,
+    terraform_version: '1.11.3',
+    managed_resources: 0,
+    applyable: false,
+    apply_executed: false,
+    raw_contents_committed: false,
+  };
+  for (const [field, expected] of Object.entries(postInitializationPlanExpectations)) {
+    exact(postInitializationPlan[field], expected, `${foundationStatePath}.post_initialization_plan.${field}`);
+  }
+  exactArray(
+    postInitializationPlan.implicit_providers,
+    [
+      'registry.terraform.io/hashicorp/google@8.1.0',
+      'registry.terraform.io/hashicorp/google-beta@8.1.0',
+    ],
+    `${foundationStatePath}.post_initialization_plan.implicit_providers`,
+  );
+
+  const expectedInitializationAttempts = [
+    {
+      execution_commit: '2a612d62f16dbed4c05a677c1b7d43c00ed4e46f',
+      attempted_on: '2026-09-03',
+      result: 'backend_initialized_state_plan_schema_rejected_before_apply',
+      remote_generation: '1788443136082489',
+      state_reconciled: false,
+      plan_applied: false,
+    },
+    {
+      execution_commit: 'ab6f26bd5dd076a79847f989615e7fddf93f2a07',
+      attempted_on: '2026-09-03',
+      result: 'preexisting_exact_state_reconciled_without_mutation',
+      remote_generation: '1788443136082489',
+      state_reconciled: true,
+      plan_applied: false,
+    },
+  ];
+  if (!Array.isArray(foundationStateInitialization.attempts)
+      || foundationStateInitialization.attempts.length !== expectedInitializationAttempts.length) {
+    reject(
+      `${foundationStatePath}.attempts`,
+      `must contain exactly ${expectedInitializationAttempts.length} entries`,
+    );
+  }
+  foundationStateInitialization.attempts.forEach((value, index) => {
+    const path = `${foundationStatePath}.attempts[${index}]`;
+    const attempt = record(value, path, Object.keys(expectedInitializationAttempts[index]));
+    for (const [field, expected] of Object.entries(expectedInitializationAttempts[index])) {
+      exact(attempt[field], expected, `${path}.${field}`);
+    }
+  });
 
   exact(terraform.apply_authorized, false, 'terraform.apply_authorized');
   exact(terraform.destroy_authorized, false, 'terraform.destroy_authorized');
@@ -1702,10 +1791,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 24, 'manifest.revision');
+  exact(manifest.revision, 25, 'manifest.revision');
   exact(
     manifest.status,
-    'bootstrap_complete_remote_state_reconciled',
+    'bootstrap_and_foundation_state_reconciled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');

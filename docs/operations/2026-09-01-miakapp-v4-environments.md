@@ -193,8 +193,9 @@ repository OIDC subject were left unchanged. The workflow remains outside
 `.github/workflows`, and its policy job rejects the current cloud-inactive
 record. The WIF identities, buckets, and reconciled remote bootstrap state now
 exist. Terraform's GCS backend also created a canonical empty foundation state
-during its guarded initialization attempt, but its reconciliation record and the
-active workflow remain incomplete.
+during its guarded initialization attempt, and a subsequent guarded execution
+reconciled that exact generation without mutation. The active workflow remains
+uninstalled.
 
 The first private saved plan was superseded after Cloud Billing rejected a
 redundant billing-association write before Terraform recorded resources. The
@@ -225,9 +226,10 @@ that produced foundation state generation `1788443136082489` at serial 1 during
 `terraform init`. Its original plan-shape guard then
 rejected Terraform's deterministic implicit provider metadata before any apply.
 Independent reads have verified that the state is canonical and empty and that
-the inspection-only plan contains no resource action. Guarded reconciliation is
-the remaining state step. Only afterward may the operator authorize and install
-the workflow and review a foundation plan. The
+the inspection-only plan contains no resource action. Clean execution commit
+`ab6f26bd5dd076a79847f989615e7fddf93f2a07` then reconciled the same generation
+without planning or mutation. The next steps are to install the reviewed
+workflow and review a live foundation plan before any apply. The
 production Function entry point,
 exact FCM permission, quotas, alerts and teardown evidence remain blockers.
 Deployment, public ingress and active CI authentication remain disabled. Passing

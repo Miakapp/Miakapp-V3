@@ -1,7 +1,7 @@
 # Miakapp 4 staging teardown rehearsal
 
-Status: non-executable rehearsal; bootstrap resources and reconciled remote state
-exist, protected local recovery evidence remains private, and the cloud workflow is dormant
+Status: non-executable rehearsal; bootstrap resources and both reconciled remote
+states exist, protected local recovery evidence remains private, and the cloud workflow is dormant
 
 This runbook applies to the existing `miakapp-v4-staging` project. It must never
 be run against `miakapp-3`, `miakapp-v4`, or a `demo-*` project. A future
@@ -29,9 +29,10 @@ serial 39 is preserved outside the repository with fingerprint
 The guarded migration created bootstrap state generation `1788439334043522` at
 serial 40. A fresh private read reconciled it with the protected serial-39 source:
 the serial increased once, the two `check_results` entries were permuted, and
-every other value remained exactly equal. Terraform's foundation backend has
-created an independently verified canonical empty state at serial 1, but its
-guarded reconciliation record is not yet complete. Object Versioning also
+every other value remained exactly equal. Terraform's foundation backend
+created and guarded execution commit
+`ab6f26bd5dd076a79847f989615e7fddf93f2a07` reconciled canonical empty state
+generation `1788443136082489` at serial 1 without mutation. Object Versioning also
 retains the noncurrent 181-byte empty state that Terraform created during
 bootstrap backend initialization. Local `.terraform/` provider caches are
 disposable and are not cloud inventory.
