@@ -33,6 +33,7 @@ node infrastructure/staging/bootstrap/guard.mjs \
   "${repository_root}/infrastructure/staging/bootstrap"
 node --check infrastructure/staging/bootstrap/bootstrap-execution.mjs
 node --check infrastructure/staging/bootstrap/saved-plan.mjs
+node --check infrastructure/staging/automation/validate-foundation-plan.mjs
 node --check infrastructure/staging/terraform/foundation-state.mjs
 node infrastructure/staging/terraform/guard.mjs \
   "${repository_root}/infrastructure/staging/terraform"
