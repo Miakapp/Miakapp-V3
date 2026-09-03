@@ -38,7 +38,11 @@ node --check infrastructure/staging/automation/validate-foundation-plan.mjs
 node --check infrastructure/staging/activation/apply.mjs
 node --check infrastructure/staging/activation/cloud.mjs
 node --check infrastructure/staging/activation/contract.mjs
+node --check infrastructure/staging/activation/evidence.mjs
 node --check infrastructure/staging/activation/plan.mjs
+node infrastructure/staging/activation/evidence.mjs \
+  infrastructure/staging/activation/result.json \
+  infrastructure/staging/activation/runtime-config.json
 node --check infrastructure/staging/terraform/foundation-state.mjs
 node infrastructure/staging/terraform/guard.mjs \
   "${repository_root}/infrastructure/staging/terraform"

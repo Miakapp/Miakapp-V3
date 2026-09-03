@@ -17,13 +17,16 @@ The foundation contains:
 - the existing private Paris component bucket and runtime service account,
   both verified through the bootstrap state;
 - one software Ed25519 KMS signing key without automatic rotation;
-- five empty Secret Manager containers, never payload versions; and
+- five Secret Manager containers, never payload-version resources; and
 - additive resource IAM members for create/read-only component objects, the
   signing key and the declared secrets.
 
-There is no Function, Cloud Run service, public ingress, Firebase app, relay,
-App Engine application, load balancer, VPC connector, NAT, Cloud Armor policy,
-secret value, service-account key, or billing resource.
+This Terraform root contains no Function, Cloud Run service, public ingress,
+Firebase app, relay, App Engine application, load balancer, VPC connector, NAT,
+Cloud Armor policy, secret value, service-account key, or billing resource. The
+guarded non-Terraform activation boundary has since registered one Firebase Web
+app and added one enabled version to each container; it did not change this
+foundation state.
 
 ## Bootstrap-state guard
 

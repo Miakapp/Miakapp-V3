@@ -106,9 +106,12 @@ complete merely because a fake returned the expected error. The reviewable
 binds all nine staging rows to the existing isolated, billing-linked project in
 Paris. Its separate bootstrap and foundation Terraform roots are applied and
 reconciled in private remote state; the one-shot keyless recovery workflow has
-been removed and both WIF providers are disabled. A guarded activation boundary
-is reviewable but has not yet created its Firebase app or five initial secret
-versions. Active credential-free CI uses mock providers and fails closed if a
-change claims credentials, public ingress, Function deployment or fixed-cost
-edge services. Neither the manifest, historical cloud evidence nor a
+been removed and both WIF providers are disabled. The guarded activation
+materialized exactly one Firebase Web app and five enabled initial secret
+versions, then reconciled the same plan without another write. Its committed
+evidence contains no secret payload and independent inventory still reports no
+deployed workload or public ingress. Active credential-free CI uses mock
+providers and fails closed if a change claims credentials, public ingress,
+Function deployment or fixed-cost edge services. This activation alone closes
+no `STAGE-*` row: neither the manifest, historical cloud evidence nor a
 mock-provider check satisfies any staging row by itself.
