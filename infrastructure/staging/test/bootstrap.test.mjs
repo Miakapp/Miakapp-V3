@@ -529,6 +529,15 @@ test('pins the billing target, bootstrap APIs, budget, and non-secret output', (
   assert.doesNotMatch(source, /\b[0-9A-F]{6}-[0-9A-F]{6}-[0-9A-F]{6}\b/);
   assert.match(importsSource, /to = google_billing_project_info\.staging/);
   assert.match(importsSource, /id = "projects\/miakapp-v4-staging"/);
+  assert.match(
+    importsSource,
+    /to = google_project_iam_member\.planner\["roles\/serviceusage\.serviceUsageConsumer"\]/,
+  );
+  assert.match(
+    importsSource,
+    /id = "miakapp-v4-staging roles\/serviceusage\.serviceUsageConsumer serviceAccount:miakapp-tf-plan@miakapp-v4-staging\.iam\.gserviceaccount\.com"/,
+  );
+  assert.equal((importsSource.match(/^import \{/gm) ?? []).length, 2);
   assert.deepEqual(localSet('bootstrap_service_apis'), [
     'billingbudgets.googleapis.com',
     'cloudbilling.googleapis.com',
