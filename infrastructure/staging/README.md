@@ -54,7 +54,7 @@ resources, install a cloud workflow, open ingress, apply, or destroy.
 
 | Path | Purpose | Current execution boundary |
 |---|---|---|
-| [`bootstrap/`](bootstrap/) | Billing, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Exact private 36/0/0 plan reviewed; never applied |
+| [`bootstrap/`](bootstrap/) | Billing, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Exact private 36/0/0 plan reviewed; guarded apply/migration wrapper committed but inactive |
 | [`terraform/`](terraform/) | APIs, Firestore, KMS, empty Secret Manager containers, and resource-scoped runtime IAM | Mock-tested offline; live plan blocked until bootstrap state exists |
 | [`automation/`](automation/) | GitHub policy record, dormant plan/apply workflow, private-plan scripts, and operator inspection | Outside `.github/workflows`; cannot run |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
@@ -102,14 +102,13 @@ the implicit local backend. [`bootstrap/backend.gcs.tf.example`](bootstrap/backe
 is the exact migration target, not an active Terraform file.
 
 The bootstrap root now contains guarded commands that can save an exact plan to
-a mode-0700 directory outside the repository and inspect it locally after
-verifying its source commit, digest and create-only resource inventory. Those
-commands produced and inspected the authoritative plan recorded above. A future
-separately authorized step must apply that exact plan from its
-protected local-state path, activate the backend template, migrate that exact
-state to `terraform/bootstrap`, and independently reconcile the remote
-generation before deleting any local copy. There is deliberately still no apply
-or migration wrapper in this revision.
+a mode-0700 directory outside the repository, inspect it locally, and—only after
+a separate exact authorization—apply and migrate it. The execution wrapper is
+bound to the recorded source commit and digest, performs read-only target
+inventory checks, keeps all transient state outside the repository, activates
+the backend template only in a private working copy, and deletes local state only
+after the remote generation and full state contents reconcile. It is committed
+but has not been authorized or executed.
 
 The ordinary foundation root already points at `terraform/foundation` and reads
 the bootstrap output from `terraform/bootstrap`. A closed precondition checks
@@ -156,8 +155,9 @@ npm run test:staging-manifest
 The gate validates bounded closed manifests, all three reviewed inventories,
 the absent active workflow, pinned actions and providers, exact locks for macOS
 ARM64 and Linux AMD64, both Terraform roots with mock providers, script syntax,
-private-plan handling, and hostile environment inputs. It initializes Terraform
-with `-backend=false` and never reads credentials or contacts staging.
+private-plan handling, the complete simulated apply/migration/recovery state
+machine, and hostile environment inputs. It initializes Terraform with
+`-backend=false` and never reads credentials or contacts staging.
 
 The active validation workflow has only `contents: read`; it has no OIDC or
 secret permission. The dormant workflow deliberately fails its first policy job

@@ -488,6 +488,7 @@ function validateTerraform(value) {
     'backend',
     'identity',
     'saved_plan',
+    'bootstrap_execution',
     'apply_authorized',
     'destroy_authorized',
     'function_deployment_included',
@@ -500,7 +501,7 @@ function validateTerraform(value) {
   exact(terraform.state, 'bootstrap_foundation_and_automation_blueprint', 'terraform.state');
   exact(
     terraform.supported_workflow,
-    'credential_free_validation_and_local_plan_only',
+    'credential_free_validation_and_guarded_bootstrap_execution',
     'terraform.supported_workflow',
   );
   exact(terraform.configuration_apply_capable, true, 'terraform.configuration_apply_capable');
@@ -666,6 +667,71 @@ function validateTerraform(value) {
   exact(savedPlan.live_retention_days, 2, 'terraform.saved_plan.live_retention_days');
   exact(savedPlan.archived_retention_days, 1, 'terraform.saved_plan.archived_retention_days');
   exact(savedPlan.soft_delete_days, 7, 'terraform.saved_plan.soft_delete_days');
+
+  const bootstrapExecution = record(terraform.bootstrap_execution, 'terraform.bootstrap_execution', [
+    'state',
+    'script',
+    'helper',
+    'approved_configuration_commit',
+    'approved_plan_sha256',
+    'exact_authorization_required',
+    'cloud_preflight_required',
+    'partial_state_migration_attempted',
+    'local_recovery_preserved_on_failure',
+    'local_state_removed_only_after_reconciliation',
+    'executed',
+  ]);
+  exact(
+    bootstrapExecution.state,
+    'guarded_wrapper_committed_inactive',
+    'terraform.bootstrap_execution.state',
+  );
+  exact(
+    bootstrapExecution.script,
+    'bootstrap/apply-and-migrate.sh',
+    'terraform.bootstrap_execution.script',
+  );
+  exact(
+    bootstrapExecution.helper,
+    'bootstrap/bootstrap-execution.mjs',
+    'terraform.bootstrap_execution.helper',
+  );
+  exact(
+    bootstrapExecution.approved_configuration_commit,
+    'c192f97959833f53a19d4e6dc50b26292c88b3b5',
+    'terraform.bootstrap_execution.approved_configuration_commit',
+  );
+  exact(
+    bootstrapExecution.approved_plan_sha256,
+    '0918d21c4677ce0958be9ccc43057d8d76a33857fdfbea066120ba953e30b5c1',
+    'terraform.bootstrap_execution.approved_plan_sha256',
+  );
+  exact(
+    bootstrapExecution.exact_authorization_required,
+    true,
+    'terraform.bootstrap_execution.exact_authorization_required',
+  );
+  exact(
+    bootstrapExecution.cloud_preflight_required,
+    true,
+    'terraform.bootstrap_execution.cloud_preflight_required',
+  );
+  exact(
+    bootstrapExecution.partial_state_migration_attempted,
+    true,
+    'terraform.bootstrap_execution.partial_state_migration_attempted',
+  );
+  exact(
+    bootstrapExecution.local_recovery_preserved_on_failure,
+    true,
+    'terraform.bootstrap_execution.local_recovery_preserved_on_failure',
+  );
+  exact(
+    bootstrapExecution.local_state_removed_only_after_reconciliation,
+    true,
+    'terraform.bootstrap_execution.local_state_removed_only_after_reconciliation',
+  );
+  exact(bootstrapExecution.executed, false, 'terraform.bootstrap_execution.executed');
 
   exact(terraform.apply_authorized, false, 'terraform.apply_authorized');
   exact(terraform.destroy_authorized, false, 'terraform.destroy_authorized');
@@ -995,7 +1061,7 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 13, 'manifest.revision');
+  exact(manifest.revision, 14, 'manifest.revision');
   exact(
     manifest.status,
     'bootstrap_saved_plan_reviewed_billing_linked_undeployed',
