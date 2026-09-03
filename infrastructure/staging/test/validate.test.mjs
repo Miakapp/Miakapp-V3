@@ -30,7 +30,7 @@ function rejects(mutator, pattern) {
 
 test('accepts the reviewed keyless partial-foundation recovery workflow', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 29);
+  assert.equal(validated.revision, 30);
   assert.equal(
     validated.status,
     'foundation_partial_apply_recovery_authorized',
@@ -102,6 +102,11 @@ test('accepts the reviewed keyless partial-foundation recovery workflow', () => 
   assert.equal(validated.terraform.identity.component_bucket, 'miakapp-v4-staging-components');
   assert.equal(validated.terraform.identity.service_account_keys_allowed, false);
   assert.equal(validated.terraform.identity.bootstrap_state_write_allowed, false);
+  assert.equal(validated.terraform.identity.planner_service_usage_consumer_allowed, true);
+  assert.equal(
+    validated.terraform.identity.planner_service_usage_consumer_state,
+    'live_binding_created_bootstrap_state_reconciliation_pending',
+  );
   assert.equal(validated.terraform.identity.deployer_project_iam_mutation_allowed, false);
   assert.equal(validated.terraform.identity.deployer_service_account_administration_allowed, false);
   assert.equal(validated.terraform.identity.deployer_project_wide_storage_administration_allowed, false);
@@ -768,6 +773,12 @@ test('rejects Terraform activation, identity, state, provider, and deployment dr
   rejects((candidate) => {
     candidate.terraform.identity.bootstrap_state_write_allowed = true;
   }, /terraform\.identity\.bootstrap_state_write_allowed/);
+  rejects((candidate) => {
+    candidate.terraform.identity.planner_service_usage_consumer_allowed = false;
+  }, /terraform\.identity\.planner_service_usage_consumer_allowed/);
+  rejects((candidate) => {
+    candidate.terraform.identity.planner_service_usage_consumer_state = 'unmanaged';
+  }, /terraform\.identity\.planner_service_usage_consumer_state/);
   rejects((candidate) => {
     candidate.terraform.identity.deployer_project_iam_mutation_allowed = true;
   }, /terraform\.identity\.deployer_project_iam_mutation_allowed/);

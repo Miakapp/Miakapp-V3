@@ -1,6 +1,6 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 29,
+  "revision": 30,
   "status": "foundation_partial_apply_recovery_authorized",
   "environment": "staging",
   "project": {
@@ -375,6 +375,8 @@
       "component_bucket": "miakapp-v4-staging-components",
       "service_account_keys_allowed": false,
       "bootstrap_state_write_allowed": false,
+      "planner_service_usage_consumer_allowed": true,
+      "planner_service_usage_consumer_state": "live_binding_created_bootstrap_state_reconciliation_pending",
       "deployer_project_iam_mutation_allowed": false,
       "deployer_service_account_administration_allowed": false,
       "deployer_project_wide_storage_administration_allowed": false,

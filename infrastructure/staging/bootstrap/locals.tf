@@ -46,6 +46,7 @@ locals {
 
   planner_project_roles = toset([
     "roles/iam.securityReviewer",
+    "roles/serviceusage.serviceUsageConsumer",
     "roles/viewer",
   ])
 

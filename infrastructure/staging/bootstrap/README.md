@@ -16,7 +16,8 @@ foundation can use remote state and keyless GitHub automation:
 
 The OIDC providers require numeric repository ID `354682190`, numeric owner ID
 `83046838`, `refs/heads/main`, the exact workflow reference, and the matching
-GitHub environment. The planner receives project reads; the deployer receives
+GitHub environment. The planner receives project reads plus Service Usage
+Consumer so quota-attributed provider reads can execute; the deployer receives
 only service-scoped roles needed to mutate the reviewed foundation. The
 escalation-capable project IAM, service-account creation and bucket creation
 stay in this human-operated bootstrap root.

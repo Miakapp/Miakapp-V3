@@ -598,6 +598,7 @@ test('separates numeric-claim plan and apply federation identities', () => {
 test('keeps state and project IAM outside the deployer mutation boundary', () => {
   assert.deepEqual(localSet('planner_project_roles'), [
     'roles/iam.securityReviewer',
+    'roles/serviceusage.serviceUsageConsumer',
     'roles/viewer',
   ]);
   assert.deepEqual(localSet('deployer_project_roles'), [
