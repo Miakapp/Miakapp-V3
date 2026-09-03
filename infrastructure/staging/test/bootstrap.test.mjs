@@ -102,6 +102,35 @@ function localSet(name) {
   return [...match[1].matchAll(/"([^"]+)"/g)].map((value) => value[1]).sort();
 }
 
+function hclResourceBody(input, type, name) {
+  const escape = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = new RegExp(
+    `^resource "${escape(type)}" "${escape(name)}" \\{\\n([\\s\\S]*?)^\\}$`,
+    'm',
+  ).exec(input);
+  assert.notEqual(match, null, `${type}.${name}`);
+  return match[1];
+}
+
+function assertFederationProvidersDisabled(input) {
+  const pool = hclResourceBody(input, 'google_iam_workload_identity_pool', 'github');
+  assert.match(pool, /^\s*disabled\s+=\s+false\s*$/m, 'the retained pool must remain enabled');
+
+  for (const provider of ['plan', 'apply']) {
+    const body = hclResourceBody(
+      input,
+      'google_iam_workload_identity_pool_provider',
+      provider,
+    );
+    assert.match(
+      body,
+      /^\s*disabled\s+=\s+true\s*$/m,
+      `the ${provider} provider must remain disabled`,
+    );
+    assert.doesNotMatch(body, /^\s*disabled\s+=\s+false\s*$/m);
+  }
+}
+
 function guardedPlan(environment) {
   return spawnSync(fileURLToPath(new URL('plan.sh', bootstrapRoot)), ['/tmp/recovery.tfstate'], {
     cwd: fileURLToPath(bootstrapRoot),
@@ -587,6 +616,7 @@ test('creates the private component bucket outside the deployer trust boundary',
 test('separates numeric-claim plan and apply federation identities', () => {
   assert.equal((identitySource.match(/resource "google_iam_workload_identity_pool_provider"/g) ?? []).length, 2);
   assert.equal((identitySource.match(/roles\/iam\.workloadIdentityUser/g) ?? []).length, 2);
+  assertFederationProvidersDisabled(identitySource);
   for (const claim of [
     'assertion.repository_id',
     'assertion.repository_owner_id',
@@ -602,6 +632,18 @@ test('separates numeric-claim plan and apply federation identities', () => {
   assert.match(localsSource, /github_workflow_ref\s+= "Miakapp\/Miakapp-V3\/\.github\/workflows\/staging-terraform\.yml@refs\/heads\/main"/);
   assert.match(identitySource, /principalSet:\/\/iam\.googleapis\.com\/\$\{google_iam_workload_identity_pool\.github\.name\}\/attribute\.environment\/\$\{local\.github_plan_environment\}/);
   assert.match(identitySource, /principalSet:\/\/iam\.googleapis\.com\/\$\{google_iam_workload_identity_pool\.github\.name\}\/attribute\.environment\/\$\{local\.github_apply_environment\}/);
+});
+
+test('rejects enabled federation providers hidden behind matching comments', () => {
+  const enabledWithSpoofedComments = identitySource.replace(
+    /^(\s*disabled\s+=\s+)true\s*$/gm,
+    '$1false\n  # disabled = true',
+  );
+  assert.equal((enabledWithSpoofedComments.match(/^\s*# disabled = true$/gm) ?? []).length, 2);
+  assert.throws(
+    () => assertFederationProvidersDisabled(enabledWithSpoofedComments),
+    /provider must remain disabled/,
+  );
 });
 
 test('keeps state and project IAM outside the deployer mutation boundary', () => {
