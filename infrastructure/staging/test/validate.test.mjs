@@ -518,7 +518,7 @@ test('accepts the completed foundation with retired recovery automation', () => 
   assert.equal(validated.evidence.staging_wif_providers_disabled, true);
   assert.deepEqual(validated.evidence.retired_recovery_workflow, {
     id: '349440747',
-    state: 'disabled_manually',
+    state: 'deleted',
     active_file_present: false,
   });
   assert.equal(

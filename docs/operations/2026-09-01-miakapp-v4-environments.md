@@ -105,8 +105,9 @@ two-day live-plan window, so the cost is
 usage-metered rather than literally zero after activation. The planner/deployer,
 Workload Identity Federation, and GitHub OIDC exchanges have no always-on
 compute instance. These bootstrap resources now exist. The recovery workflow is
-absent, GitHub workflow `349440747` is `disabled_manually`, both activation
-modes fail closed, and both provider resources are disabled. The reviewed
+absent, GitHub workflow `349440747` was observed as `deleted` after its source
+was removed from `main`, both activation modes fail closed, and both provider
+resources are disabled. The reviewed
 GitHub OIDC route therefore cannot request either cloud identity. The service
 accounts and IAM grants remain, and this evidence does not disprove
 impersonation by another administrator.
