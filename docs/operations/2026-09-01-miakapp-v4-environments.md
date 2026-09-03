@@ -220,8 +220,9 @@ backend migration. A migration-only wrapper later created and reconciled remote
 bootstrap state generation `1788439334043522` at serial 40 without applying
 infrastructure. The protected serial-39 source remains independent recovery
 evidence. A guarded initializer bound to reviewed commit
-`f820b9004052863d0f9dee5ef203844dec0d4374` created foundation state generation
-`1788443136082489` at serial 1 during `terraform init`. Its plan-shape guard then
+`626dc16637ba843f6d1543156aba99e7b551e705` models the initialization behavior
+that produced foundation state generation `1788443136082489` at serial 1 during
+`terraform init`. Its original plan-shape guard then
 rejected Terraform's deterministic implicit provider metadata before any apply.
 Independent reads have verified that the state is canonical and empty and that
 the inspection-only plan contains no resource action. Guarded reconciliation is
