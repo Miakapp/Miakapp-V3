@@ -2,8 +2,8 @@
 
 Date: 2026-09-01
 
-Status: accepted direction; staging bootstrap complete, partial foundation
-reconciled, and exact keyless recovery authorized on 2026-09-03; project remains
+Status: accepted direction; staging bootstrap and foundation complete, exact
+keyless recovery workflow and WIF exchange retired on 2026-09-03, and project
 application-undeployed
 
 ## Decision
@@ -31,9 +31,10 @@ The `miakapp-v4-staging` Firebase project was created manually on 2026-09-02;
 `miakapp-v4` does not exist. Paris (`europe-west9`) is the reviewed immutable
 regional location, and the owner selected an existing EUR billing account whose
 identifier is represented publicly only by a SHA-256 fingerprint. The account
-was linked on 2026-09-03. Protected staging automation now admits only an exact
-private foundation recovery plan after protected merge; it cannot target another
-environment. The local package rejects execution outside the exact
+was linked on 2026-09-03. The exact private foundation recovery ran through
+protected staging automation, then its active workflow and apply authorization
+were retired. Both recovery WIF providers are disabled, while their pool is
+retained. The local package rejects execution outside the exact
 `demo-*` namespace, and the root Firebase default remains the legacy project.
 
 References:
@@ -103,9 +104,12 @@ seven-day soft delete deliberately retain recovery bytes longer than the
 two-day live-plan window, so the cost is
 usage-metered rather than literally zero after activation. The planner/deployer,
 Workload Identity Federation, and GitHub OIDC exchanges have no always-on
-compute instance. These bootstrap resources now exist. The recovery workflow may
-use the planner identity and may request the separately protected deployer
-identity only after normal environment approval.
+compute instance. These bootstrap resources now exist. The recovery workflow is
+absent, GitHub workflow `349440747` is `disabled_manually`, both activation
+modes fail closed, and both provider resources are disabled. The reviewed
+GitHub OIDC route therefore cannot request either cloud identity. The service
+accounts and IAM grants remain, and this evidence does not disprove
+impersonation by another administrator.
 
 At personal-home traffic, the usage-metered services are expected to remain near
 their free tiers or cost cents, but that is an estimate rather than a guarantee.
@@ -185,16 +189,18 @@ backend template defines the immediate migration target. The foundation already
 uses the private GCS backend and refuses to proceed unless the remote bootstrap
 output matches every exact project, region, identity and repository value.
 
-A GitHub policy record and hash-bound workflow define separate numeric-claim WIF
+A GitHub policy record and retained hash-bound blueprint document separate numeric-claim WIF
 providers and service accounts, protected plan/apply environments, SHA-pinned
 selected actions, and private create-only saved-plan storage. On 2026-09-03, the
 repository's actual `main`/environment/Actions settings were configured and
 independently re-observed against that policy. The existing `miakapi`
-environment and default repository OIDC subject were left unchanged. The active
-workflow evolved through protected merges from plan-only inspection to the
-initial apply and now to exact partial recovery. Each revision verifies its
-active file, blueprint and SHA-256 before requesting either short-lived OIDC
-identity.
+environment and default repository OIDC subject were left unchanged. The
+one-shot workflow evolved through protected merges from plan-only inspection to
+the initial apply and exact partial recovery. Each active revision verified its
+file, blueprint and SHA-256 before requesting either short-lived OIDC identity.
+After convergence, the active file was removed and all three activation flags
+were set to false. GitHub workflow `349440747` was independently observed in
+state `disabled_manually` before source removal.
 
 The first private saved plan was superseded after Cloud Billing rejected a
 redundant billing-association write before Terraform recorded resources. The
@@ -207,8 +213,9 @@ managed resources; no state bucket existed, so migration could not start.
 Independent inventory found the target budget, buckets, service accounts and
 Workload Identity pool absent. The digest is superseded and must not be retried.
 
-The providers now attribute API quota to `miakapp-v4-staging`. The final plan
-was created from commit `e9f410c58c8cbbf8f5f7a17170c9e8ed55a10501`, fully
+The Terraform `google` and `google-beta` provider configurations now attribute
+API quota to `miakapp-v4-staging`. The final plan was created from commit
+`e9f410c58c8cbbf8f5f7a17170c9e8ed55a10501`, fully
 reviewed, and bound by SHA-256
 `12927b270f2bfa78c8f8c8c7e7071ce9cfec18d5e848165c04b585260bd5f7da`.
 Its authorized execution completed all 27 creations on top of the nine recovered
@@ -238,16 +245,48 @@ reads verified all APIs, Firestore and its three active TTL fields, the KMS key
 and enabled initial version, and five secret containers with zero versions. The
 one KMS, five secret and two component-bucket runtime IAM bindings were absent.
 
-Foundation state generation `1788452068422403` is healthy at serial 4 with 25
-managed and two data resources. A fresh private plan from the unchanged
+Partial foundation state generation `1788452068422403` was healthy at serial 4
+with 25 managed and two data resources. A fresh private plan from the unchanged
 Terraform configuration reports exactly eight creates, 25 no-ops, no update or
 delete, and seven bounded refresh-only provider normalizations. It passed the
-closed `partial-foundation-recovery` profile and was removed after review. The
-next step is the protected one-shot recovery followed by zero-change convergence
-and immediate retirement of its apply authorization. The production Function
-entry point, exact FCM permission, quotas, alerts and teardown evidence remain
-blockers. Workload deployment and public ingress remain disabled. Passing the
-manifest check is evidence, not additional authorization.
+closed `partial-foundation-recovery` profile and was removed after review.
+
+Protected run `33784785967` subsequently applied an independently reviewed plan
+with the exact eight IAM creates. Terraform wrote current foundation generation
+`1788456706865449` at serial 6 with 33 managed resources. The overall workflow
+failed only when its final convergence plan used the intentionally narrower
+deployer identity; a separate User-ADC plan then reported all 33 resources as
+no-ops and zero changes. Live inventory confirmed the exact eight IAM members,
+three active TTL fields, five secret containers with no versions, enabled
+software Ed25519 key version 1, no workload and no lock. The consumed private
+plan generation was deleted under the bucket's soft-delete policy.
+
+The already-live planner Service Usage Consumer member was also adopted into
+bootstrap state through a one-import/no-change Terraform plan. Project IAM etag
+and canonical policy digest remained unchanged, no `SetIamPolicy` audit entry
+appeared, and a fresh full plan reported no changes. That historical bootstrap
+generation `1788457646215552` at serial 41 had 37 managed resources and is
+retained as the planner-role adoption record.
+
+PR #30 configuration commit
+`ee457535a64355cd8133410d9c8c43f039608928` then produced an exact private
+25,925-byte WIF-retirement plan with SHA-256
+`8f570dfe5450b704112d484f058fc6dfcd39069a92c8bb483c5029027183e888`.
+Its only changes among 35 no-ops were the plan/apply provider `disabled`
+attributes moving from `false` to `true`. Apply reported `0 added, 2 changed, 0
+destroyed`; the pool stayed enabled and retained, and the follow-up plan
+reported no changes. Current bootstrap state generation `1788460174191027` is
+61,864 bytes at serial 42 with 37 managed resources, two data resources and one
+output. Its SHA-256 is
+`288d947d35f5d5a278aaff210ea878a9dab817f594b4c3161ed117bb2e30e26d`.
+Project and service-account IAM normalized hashes were unchanged: the recovery
+service accounts and roles remain, so other administrator impersonation is not
+disproved even though the reviewed GitHub exchange is closed.
+
+The production Function entry point, exact FCM permission, quotas, alerts and
+teardown evidence remain blockers. Workload deployment, secret versions and
+public ingress remain absent.
+Passing the manifest check is evidence, not additional authorization.
 
 Create or attach `miakapp-v4` only after the staging migration rehearsal produces:
 
