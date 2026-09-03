@@ -92,6 +92,7 @@ node "${terraform_root}/guard.mjs" "$terraform_root"
 plan_file="${RUNNER_TEMP:?RUNNER_TEMP is required}/foundation.tfplan"
 plan_log="${RUNNER_TEMP}/foundation-plan.log"
 plan_object="gs://miakapp-v4-staging-tfstate-1072737219170/plans/${GITHUB_SHA}/${GITHUB_RUN_ID}/${GITHUB_RUN_ATTEMPT}/foundation.tfplan"
+diagnostic_object="gs://miakapp-v4-staging-tfstate-1072737219170/plans/${GITHUB_SHA}/${GITHUB_RUN_ID}/${GITHUB_RUN_ATTEMPT}/foundation-plan.failure.log"
 cleanup() {
   rm -f "$plan_file" "$plan_log"
 }
@@ -110,7 +111,21 @@ if ! terraform -chdir="$terraform_root" plan \
   -lock-timeout=5m \
   -no-color \
   -out="$plan_file" >"$plan_log" 2>&1; then
-  echo "Terraform plan failed; detailed output remains private to the discarded runner file." >&2
+  if [[ -f "$plan_log" && ! -L "$plan_log" ]] && \
+      [[ "$(wc -c <"$plan_log")" -le 1048576 ]]; then
+    diagnostic_sha256="$(shasum -a 256 "$plan_log" | awk '{print $1}')"
+    if gcloud storage cp \
+      "$plan_log" \
+      "$diagnostic_object" \
+      --if-generation-match=0 \
+      --quiet; then
+      printf 'Terraform plan failed; private diagnostic: %s\nSHA-256: %s\n' \
+        "$diagnostic_object" \
+        "$diagnostic_sha256" >&2
+      exit 1
+    fi
+  fi
+  echo "Terraform plan failed; its private diagnostic could not be retained." >&2
   exit 1
 fi
 

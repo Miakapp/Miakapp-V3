@@ -29,6 +29,12 @@ creates, the exact partial prior-state inventory, seven accepted refresh-only
 provider normalizations, fully known targets, critical references and passing
 Terraform checks. The plan job cannot request the deployer identity.
 
+If Terraform itself fails before a saved plan exists, the wrapper retains its
+bounded log under the same private, create-only, short-lived `plans/` prefix and
+prints only the object path and SHA-256 publicly. This permits diagnosis without
+placing provider details or planned values in Actions logs. The temporary runner
+copy is still discarded.
+
 The apply job depends on both earlier jobs and on explicit approval in the
 `miakapp-v4-staging-apply` environment. `apply.sh` accepts only the exact private
 object path and SHA-256 emitted by the same workflow attempt, repeats the closed
