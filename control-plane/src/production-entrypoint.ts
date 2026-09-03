@@ -15,7 +15,7 @@ export const STAGING_CONTROL_PLANE_OPTIONS = Object.freeze({
   serviceAccount: 'miakapp-control-plane@miakapp-v4-staging.iam.gserviceaccount.com',
   cors: false,
   invoker: 'private' as const,
-  omit: true,
+  omit: false,
 });
 
 onInit(async () => {

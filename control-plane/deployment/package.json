@@ -1,0 +1,21 @@
+{
+  "name": "@miakapp/control-plane-production",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "lib/production-entrypoint.js",
+  "engines": {
+    "node": "22"
+  },
+  "dependencies": {
+    "@google-cloud/kms": "5.7.0",
+    "@google-cloud/secret-manager": "6.3.0",
+    "@google-cloud/storage": "7.22.0",
+    "acorn": "8.18.0",
+    "express": "5.2.1",
+    "firebase-admin": "14.3.0",
+    "firebase-functions": "7.3.2",
+    "google-auth-library": "9.15.1",
+    "google-gax": "5.0.8"
+  }
+}

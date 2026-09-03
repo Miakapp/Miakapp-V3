@@ -1,5 +1,6 @@
 node_modules/
 package-lock.json
+!control-plane/deployment/package-lock.json
 /dist
 .firebase
 component-runtime/test-results/
