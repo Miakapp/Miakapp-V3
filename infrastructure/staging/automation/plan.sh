@@ -58,13 +58,18 @@ if [[ -n "${CLOUDSDK_CORE_DISABLE_PROMPTS:-}" && "$CLOUDSDK_CORE_DISABLE_PROMPTS
   echo "Interactive gcloud behavior is forbidden in staging automation." >&2
   exit 1
 fi
+if [[ "${CLOUDSDK_METRICS_ENVIRONMENT:-}" != "github-actions-setup-gcloud" || \
+      "${CLOUDSDK_METRICS_ENVIRONMENT_VERSION:-}" != "3.0.1" ]]; then
+  echo "The pinned setup-gcloud identity does not match the reviewed action." >&2
+  exit 1
+fi
 
 while IFS='=' read -r -d '' environment_name environment_value; do
   if [[ -z "$environment_value" ]]; then
     continue
   fi
   case "$environment_name" in
-    GOOGLE_APPLICATION_CREDENTIALS|GOOGLE_GHA_CREDS_PATH|GOOGLE_CLOUD_PROJECT|GCLOUD_PROJECT|GCP_PROJECT|CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE|CLOUDSDK_PROJECT|CLOUDSDK_CORE_PROJECT|CLOUDSDK_CORE_DISABLE_PROMPTS|TF_IN_AUTOMATION)
+    GOOGLE_APPLICATION_CREDENTIALS|GOOGLE_GHA_CREDS_PATH|GOOGLE_CLOUD_PROJECT|GCLOUD_PROJECT|GCP_PROJECT|CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE|CLOUDSDK_PROJECT|CLOUDSDK_CORE_PROJECT|CLOUDSDK_CORE_DISABLE_PROMPTS|CLOUDSDK_METRICS_ENVIRONMENT|CLOUDSDK_METRICS_ENVIRONMENT_VERSION|TF_IN_AUTOMATION)
       ;;
     TF_*|GOOGLE_*|CLOUDSDK_*)
       echo "Unreviewed Terraform or Google overrides are forbidden in staging automation." >&2
