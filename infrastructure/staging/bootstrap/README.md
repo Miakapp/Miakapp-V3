@@ -1,7 +1,7 @@
 # Staging Terraform bootstrap proposal
 
-Status: approved billing link active; authorized plan failed before creating
-resources; import-based recovery configuration ready but not planned or applied
+Status: approved billing link active; import-based recovery plan reviewed;
+guarded wrapper committed but inactive
 
 This root owns the one-time resources required before the ordinary staging
 foundation can use remote state and keyless GitHub automation:
@@ -41,8 +41,8 @@ apply.
 
 [`backend.gcs.tf.example`](backend.gcs.tf.example) is the exact reviewed backend
 block for a later migration. The first saved plan is superseded after its
-zero-resource failure. Before reuse, the committed
-[`apply-and-migrate.sh`](apply-and-migrate.sh) wrapper must be rebound to a newly
+zero-resource failure. The committed
+[`apply-and-migrate.sh`](apply-and-migrate.sh) wrapper is now bound to the newly
 reviewed import plan and must:
 
 1. revalidate the exact saved-plan digest, external GitHub policy, and current
@@ -65,24 +65,29 @@ The zero-resource local state and logs were preserved privately, and independent
 inventory confirmed that every target remained absent. Local state is sensitive
 and must never be committed or attached to a public issue.
 
-## Superseded guarded apply and migration
+## Guarded import apply and migration (inactive)
 
-The existing execution command is intentionally single-use and bound to configuration
-commit `c192f97959833f53a19d4e6dc50b26292c88b3b5`, plan digest
-`0918d21c4677ce0958be9ccc43057d8d76a33857fdfbea066120ba953e30b5c1`,
+The execution command is intentionally single-use and bound to configuration
+commit `6340bffbddcc4797067ef48170fc5c3524345bf2`, plan digest
+`6fb0b0c15fa04338a40ab59de790c3a4a85f96b418377c4a70570a8dabd5d457`,
 project `miakapp-v4-staging`, and remote object
 `gs://miakapp-v4-staging-tfstate-1072737219170/terraform/bootstrap/default.tfstate`.
-Its authorization was consumed by the failed attempt. The digest is superseded
-and the command must not be run again. A later commit may rebind the wrapper only
-after a replacement plan is created and reviewed.
+The replacement plan has not been authorized or applied. Do not set the runtime
+authorization merely because this command exists.
 
 Only one operator may execute an authoritative private bundle at a time. The
 wrapper takes an atomic sibling lock before invoking Terraform or reading cloud
 inventory and releases it on normal exit. A surviving lock after an abrupt
 process or host failure must be investigated, not deleted reflexively or worked
-around with a copied bundle. The superseded command and authorization string are
-deliberately not presented as runnable instructions. A replacement command may
-be documented only after its new source commit and plan digest are reviewed.
+around with a copied bundle. After the owner separately authorizes this exact
+apply-and-migrate operation, an operator may run from a clean descendant of the
+reviewed configuration commit:
+
+```sh
+MIAKAPP_STAGING_BOOTSTRAP_EXECUTION_AUTHORIZATION='apply-and-migrate:miakapp-v4-staging:6fb0b0c15fa04338a40ab59de790c3a4a85f96b418377c4a70570a8dabd5d457' \
+  ./infrastructure/staging/bootstrap/apply-and-migrate.sh \
+  '/absolute/private/miakapp-staging-bootstrap-plan-...'
+```
 
 Before mutation, the wrapper revalidates the plan, its exact Terraform source,
 the active project and billing fingerprint, and the absence of the target
@@ -109,8 +114,8 @@ a bounded error.
 Terraform also runs from that private directory, so a higher-priority
 `errored.tfstate` produced after a persistence failure cannot land in the
 repository and is used for recovery instead of any older normal state.
-Do not rerun the original empty-state plan after a partial apply; preserve the
-directory and create a recovery plan from the migrated state.
+Do not rerun a saved plan after a partial apply; preserve the directory and
+create a recovery plan from the migrated state.
 
 ## Guarded diagnostic plan
 
@@ -147,7 +152,7 @@ newer generations before versions older than 30 days are pruned. Unique saved
 plans are deleted live after two days and their archived version after one more
 day; deleted data may still remain recoverable during soft delete.
 
-## Superseded plan and import recovery
+## Reviewed import recovery plan
 
 This path produced the now-superseded plan from clean commit
 `c192f97959833f53a19d4e6dc50b26292c88b3b5` on 2026-09-03. Its SHA-256 is
@@ -160,10 +165,15 @@ before creating any resource. Do not retry that digest.
 idempotent Terraform import. The saved-plan reducer accepts exactly 35 creations
 plus this one import with a client-side `deletion_policy` update, requires the
 billing account to remain byte-for-byte unchanged, and retains neither its raw
-identifier nor any planned values. The following command may create a new private
-replacement plan, but does not authorize its application.
+identifier nor any planned values. The replacement plan was created from clean
+commit `6340bffbddcc4797067ef48170fc5c3524345bf2` on 2026-09-03. Its SHA-256 is
+`6fb0b0c15fa04338a40ab59de790c3a4a85f96b418377c4a70570a8dabd5d457`;
+the verified and manually reviewed result is exactly 35 creations, one import
+with a client-side update, and no deletion. It created no state and performed no
+apply or migration. The following command can reproduce a private plan, but does
+not authorize its application.
 
-To produce a replacement, first create a persistent operator-owned directory
+To reproduce or refresh the plan, first create a persistent operator-owned directory
 outside the Git repository and remove every group/other permission from it. Then
 run:
 
@@ -180,8 +190,7 @@ MIAKAPP_STAGING_BOOTSTRAP_CONFIRMATION='miakapp-v4-staging' \
 The wrapper rejects a dirty checkout, Git/Terraform/Google overrides, credential
 files, a foreign billing-account fingerprint, local state in the source tree,
 and any plan other than the exact reviewed 35 creates plus one billing-link
-import. It
-uses a fresh bundle-local Terraform data directory so stale backend metadata
+import. It uses a fresh bundle-local Terraform data directory so stale backend metadata
 cannot be reused, removes that directory after planning, and leaves a unique
 mode-0700 bundle containing only:
 

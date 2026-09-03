@@ -11,8 +11,8 @@ import { fileURLToPath } from 'node:url';
 
 import { validateSavedPlanMetadata } from './saved-plan.mjs';
 
-export const APPROVED_CONFIGURATION_COMMIT = 'c192f97959833f53a19d4e6dc50b26292c88b3b5';
-export const APPROVED_PLAN_SHA256 = '0918d21c4677ce0958be9ccc43057d8d76a33857fdfbea066120ba953e30b5c1';
+export const APPROVED_CONFIGURATION_COMMIT = '6340bffbddcc4797067ef48170fc5c3524345bf2';
+export const APPROVED_PLAN_SHA256 = '6fb0b0c15fa04338a40ab59de790c3a4a85f96b418377c4a70570a8dabd5d457';
 export const APPROVED_BILLING_ACCOUNT_SHA256 = '4557923f1be719b78ee844b14bfa4654be3eb3fa785a2cb5a2624c3f85d12270';
 export const PROJECT_ID = 'miakapp-v4-staging';
 export const PROJECT_NUMBER = '1072737219170';
