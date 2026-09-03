@@ -13,7 +13,7 @@ import {
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const PLAN_SCHEMA = 'miakapp.staging-bootstrap-plan/1';
+const PLAN_SCHEMA = 'miakapp.staging-bootstrap-plan/2';
 const PLAN_FILE = 'bootstrap.tfplan';
 const METADATA_FILE = 'metadata.json';
 const STATE_FILE = 'bootstrap.tfstate';
@@ -25,6 +25,9 @@ const ADDRESS_PATTERN = /^[A-Za-z0-9_./[\]"-]{1,256}$/;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 const COMMIT_PATTERN = /^[0-9a-f]{40}$/;
 const TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+const BILLING_ACCOUNT_PATTERN = /^[0-9A-F]{6}-[0-9A-F]{6}-[0-9A-F]{6}$/;
+const IMPORTED_BILLING_ADDRESS = 'google_billing_project_info.staging';
+const IMPORTED_BILLING_ID = 'projects/miakapp-v4-staging';
 
 const EXPECTED_RESOURCE_TYPE_COUNTS = Object.freeze({
   google_billing_budget: 1,
@@ -99,16 +102,73 @@ function canonicalResourceChanges(plan) {
     if (seen.has(change.address)) reject(`Terraform resource address ${change.address} is duplicated`);
     seen.add(change.address);
     exact(change.mode, 'managed', `Terraform resource change ${change.address}.mode`);
-    if (!isPlainObject(change.change) || JSON.stringify(change.change.actions) !== '["create"]') {
-      reject(`Terraform resource change ${change.address} must be create-only`);
-    }
+    if (!isPlainObject(change.change)) reject(`Terraform resource change ${change.address}.change must be an object`);
     const resourceType = change.type;
     if (typeof resourceType !== 'string'
         || !Object.hasOwn(EXPECTED_RESOURCE_TYPE_COUNTS, resourceType)) {
       reject(`Terraform resource change ${change.address} has an unexpected type`);
     }
     typeCounts.set(resourceType, (typeCounts.get(resourceType) ?? 0) + 1);
-    return Object.freeze({ address: change.address, actions: Object.freeze(['create']) });
+    if (change.address === IMPORTED_BILLING_ADDRESS) {
+      if (resourceType !== 'google_billing_project_info'
+          || JSON.stringify(change.change.actions) !== '["update"]') {
+        reject('Terraform billing-link change must be the reviewed import update');
+      }
+      const importing = exactKeys(
+        change.change.importing,
+        ['id'],
+        'Terraform billing-link import',
+      );
+      exact(importing.id, IMPORTED_BILLING_ID, 'Terraform billing-link import.id');
+      const before = exactKeys(
+        change.change.before,
+        ['billing_account', 'deletion_policy', 'id', 'project', 'timeouts'],
+        'Terraform billing-link import.before',
+      );
+      const after = exactKeys(
+        change.change.after,
+        ['billing_account', 'deletion_policy', 'id', 'project', 'timeouts'],
+        'Terraform billing-link import.after',
+      );
+      if (typeof before.billing_account !== 'string'
+          || !BILLING_ACCOUNT_PATTERN.test(before.billing_account)
+          || after.billing_account !== before.billing_account) {
+        reject('Terraform billing-link import must preserve the canonical billing account');
+      }
+      exact(before.deletion_policy, 'DELETE', 'Terraform billing-link import.before.deletion_policy');
+      exact(after.deletion_policy, 'PREVENT', 'Terraform billing-link import.after.deletion_policy');
+      for (const field of ['id', 'project', 'timeouts']) {
+        if (after[field] !== before[field]) reject(`Terraform billing-link import must preserve ${field}`);
+      }
+      exact(before.id, IMPORTED_BILLING_ID, 'Terraform billing-link import.before.id');
+      exact(before.project, 'miakapp-v4-staging', 'Terraform billing-link import.before.project');
+      exact(before.timeouts, null, 'Terraform billing-link import.before.timeouts');
+      exactKeys(change.change.before_sensitive, [], 'Terraform billing-link import.before_sensitive');
+      const afterSensitive = exactKeys(
+        change.change.after_sensitive,
+        ['billing_account'],
+        'Terraform billing-link import.after_sensitive',
+      );
+      exact(afterSensitive.billing_account, true, 'Terraform billing-link import.after_sensitive.billing_account');
+      exactKeys(change.change.after_unknown, [], 'Terraform billing-link import.after_unknown');
+      return Object.freeze({
+        address: change.address,
+        actions: Object.freeze(['import', 'update']),
+        import_id: IMPORTED_BILLING_ID,
+      });
+    }
+    if (resourceType === 'google_billing_project_info') {
+      reject('Terraform billing-link import has an unexpected address');
+    }
+    if (JSON.stringify(change.change.actions) !== '["create"]'
+        || change.change.importing !== undefined) {
+      reject(`Terraform resource change ${change.address} must be create-only`);
+    }
+    return Object.freeze({
+      address: change.address,
+      actions: Object.freeze(['create']),
+      import_id: null,
+    });
   });
 
   for (const [type, expected] of Object.entries(EXPECTED_RESOURCE_TYPE_COUNTS)) {
@@ -148,8 +208,9 @@ export function buildSavedPlanMetadata(plan, context) {
       state_file: STATE_FILE,
       state_created: false,
       change_summary: {
-        create: changes.length,
-        update: 0,
+        create: 35,
+        import: 1,
+        update: 1,
         delete: 0,
       },
       resource_changes: changes,
@@ -200,11 +261,12 @@ export function validateSavedPlanMetadata(value) {
   }
   const summary = exactKeys(
     plan.change_summary,
-    ['create', 'update', 'delete'],
+    ['create', 'import', 'update', 'delete'],
     'Saved-plan metadata.plan.change_summary',
   );
-  exact(summary.create, 36, 'Saved-plan metadata.plan.change_summary.create');
-  exact(summary.update, 0, 'Saved-plan metadata.plan.change_summary.update');
+  exact(summary.create, 35, 'Saved-plan metadata.plan.change_summary.create');
+  exact(summary.import, 1, 'Saved-plan metadata.plan.change_summary.import');
+  exact(summary.update, 1, 'Saved-plan metadata.plan.change_summary.update');
   exact(summary.delete, 0, 'Saved-plan metadata.plan.change_summary.delete');
   if (!Array.isArray(plan.resource_changes) || plan.resource_changes.length !== 36) {
     reject('Saved-plan metadata.plan.resource_changes must contain exactly 36 entries');
@@ -213,7 +275,7 @@ export function validateSavedPlanMetadata(value) {
   const typeCounts = new Map();
   let previousAddress = '';
   for (const [index, change] of plan.resource_changes.entries()) {
-    exactKeys(change, ['address', 'actions'], `Saved-plan metadata.plan.resource_changes[${index}]`);
+    exactKeys(change, ['address', 'actions', 'import_id'], `Saved-plan metadata.plan.resource_changes[${index}]`);
     if (typeof change.address !== 'string' || !ADDRESS_PATTERN.test(change.address)) {
       reject(`Saved-plan metadata.plan.resource_changes[${index}].address is invalid`);
     }
@@ -222,12 +284,17 @@ export function validateSavedPlanMetadata(value) {
     }
     previousAddress = change.address;
     addresses.add(change.address);
-    if (JSON.stringify(change.actions) !== '["create"]') {
-      reject(`Saved-plan metadata.plan.resource_changes[${index}] must be create-only`);
-    }
     const type = change.address.split('.')[0];
     if (!Object.hasOwn(EXPECTED_RESOURCE_TYPE_COUNTS, type)) {
       reject(`Saved-plan metadata.plan.resource_changes[${index}] has an unexpected type`);
+    }
+    if (change.address === IMPORTED_BILLING_ADDRESS) {
+      if (JSON.stringify(change.actions) !== '["import","update"]'
+          || change.import_id !== IMPORTED_BILLING_ID) {
+        reject('Saved-plan metadata billing-link entry must be the reviewed import update');
+      }
+    } else if (JSON.stringify(change.actions) !== '["create"]' || change.import_id !== null) {
+      reject(`Saved-plan metadata.plan.resource_changes[${index}] must be create-only`);
     }
     typeCounts.set(type, (typeCounts.get(type) ?? 0) + 1);
   }
@@ -354,8 +421,11 @@ function printSummary(metadata) {
   console.log(`Terraform version: ${metadata.terraform_version}`);
   console.log(`Created at: ${metadata.created_at}`);
   console.log(`SHA-256: ${metadata.plan.sha256}`);
-  console.log('Changes: 36 create, 0 update, 0 delete');
-  for (const change of metadata.plan.resource_changes) console.log(`create: ${change.address}`);
+  console.log('Changes: 35 create, 1 import with client-side update, 0 delete');
+  for (const change of metadata.plan.resource_changes) {
+    const action = change.import_id === null ? 'create' : 'import+client-state-update';
+    console.log(`${action}: ${change.address}`);
+  }
   console.log('Apply authorized: no');
   console.log('State migration authorized: no');
 }

@@ -18,7 +18,17 @@ mock_provider "google" {
   }
 }
 
-mock_provider "google-beta" {}
+mock_provider "google-beta" {
+  override_resource {
+    target = google_billing_project_info.staging
+    values = {
+      id              = "projects/miakapp-v4-staging"
+      project         = "miakapp-v4-staging"
+      billing_account = "AAAAAA-BBBBBB-CCCCCC"
+      deletion_policy = "DELETE"
+    }
+  }
+}
 
 variables {
   billing_account_id = "AAAAAA-BBBBBB-CCCCCC"

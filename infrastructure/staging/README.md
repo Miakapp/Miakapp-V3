@@ -1,7 +1,7 @@
 # Miakapp 4 staging activation blueprint
 
-Status: approved billing link active and exact private bootstrap plan reviewed;
-the Firebase project remains empty and undeployed
+Status: approved billing link active; the authorized bootstrap plan failed
+before creating resources; import-based recovery configuration is ready
 
 This directory contains a closed, apply-capable description of the future
 `miakapp-v4-staging` foundation. It does not authorize or perform cloud
@@ -18,8 +18,8 @@ dated inventory in [`manifest.json`](manifest.json) records:
 - no registered Firebase app, App Engine application, Firestore database,
   Storage bucket, Function, Cloud Run service, KMS key ring, or secret;
 - no staging runtime, planner, or deployer identity; and
-- one exact saved bootstrap plan exists only in a private local bundle outside
-  the repository; no Terraform state exists.
+- the failed plan and its zero-resource recovery state remain only in private
+  operator directories outside the repository; no remote Terraform state exists.
 
 On 2026-09-03, after the separately authorized billing link, the guarded
 bootstrap command ran against configuration commit
@@ -31,15 +31,25 @@ saved no plan and performed no apply. Because no Terraform state exists, the
 provider still represents the already-active billing association as an addition;
 the command did not create or change that link.
 
-Later on 2026-09-03, the guarded saved-plan path produced and fully inspected the
-authoritative create-only plan from commit
+Later on 2026-09-03, the guarded saved-plan path produced and fully inspected a
+create-only plan from commit
 `c192f97959833f53a19d4e6dc50b26292c88b3b5`. Its SHA-256 is
 `0918d21c4677ce0958be9ccc43057d8d76a33857fdfbea066120ba953e30b5c1`, and
 its exact result is the same 36 additions, no changes, and no destroys. The
 private bundle path, planned values, and raw billing-account identifier are not
 committed. Planning and inspection created no state, performed no apply, and
 left the target budget, buckets, service accounts, and Workload Identity pool
-absent.
+absent. The owner then authorized that exact digest. Its first Terraform action
+attempted to rewrite the already-correct billing association and hit the Cloud
+Billing association-change quota. Terraform stopped with zero managed resources;
+independent inventory confirmed that every proposed cloud target remained absent.
+That plan is superseded and must not be retried.
+
+The recovery configuration now imports the existing billing association into
+Terraform state and permits only its client-side deletion policy to change from
+`DELETE` to `PREVENT`. It therefore avoids a second billing-association API write.
+A new private plan must still be created, inspected, recorded, and explicitly
+authorized before any recovery apply.
 
 Firebase-enabled APIs and its managed Admin SDK service account exist, but they
 are not evidence of a deployed or metered workload. Paris (`europe-west9`) and
@@ -54,7 +64,7 @@ resources, install a cloud workflow, open ingress, apply, or destroy.
 
 | Path | Purpose | Current execution boundary |
 |---|---|---|
-| [`bootstrap/`](bootstrap/) | Billing, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Exact private 36/0/0 plan reviewed; guarded apply/migration wrapper committed but inactive |
+| [`bootstrap/`](bootstrap/) | Imported billing link, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Import recovery configuration ready; prior plan superseded; no recovery apply authorized |
 | [`terraform/`](terraform/) | APIs, Firestore, KMS, empty Secret Manager containers, and resource-scoped runtime IAM | Mock-tested offline; live plan blocked until bootstrap state exists |
 | [`automation/`](automation/) | GitHub policy record, dormant plan/apply workflow, private-plan scripts, and operator inspection | Outside `.github/workflows`; cannot run |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
@@ -103,14 +113,15 @@ is the exact migration target, not an active Terraform file.
 
 The bootstrap root now contains guarded commands that can save an exact plan to
 a mode-0700 directory outside the repository, inspect it locally, and—only after
-a separate exact authorization—apply and migrate it. The execution wrapper is
-bound to the recorded source commit and digest, performs read-only target
-inventory checks, defers the budget lookup only when Service Usage proves its
-API is disabled, and requires exactly one target budget after a complete apply.
-It keeps all transient state outside the repository, activates the backend
-template only in a private working copy, and deletes local state only after the
-remote generation and full state contents reconcile. It is committed
-but has not been authorized or executed.
+a separate exact authorization—apply and migrate it. The execution wrapper
+performs read-only target inventory checks, defers the budget lookup only when
+Service Usage proves its API is disabled, and requires exactly one target budget
+after a complete apply. It keeps all transient state outside the repository,
+activates the backend template only in a private working copy, and deletes local
+state only after the remote generation and full state contents reconcile. The
+wrapper remains bound to the superseded digest and therefore cannot execute the
+recovery configuration; it must be rebound only after a replacement plan is
+created and reviewed.
 
 The ordinary foundation root already points at `terraform/foundation` and reads
 the bootstrap output from `terraform/bootstrap`. A closed precondition checks

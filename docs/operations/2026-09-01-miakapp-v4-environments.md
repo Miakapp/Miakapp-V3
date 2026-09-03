@@ -2,8 +2,9 @@
 
 Date: 2026-09-01
 
-Status: accepted direction; approved staging billing link active and exact
-private bootstrap plan reviewed on 2026-09-03; project remains undeployed
+Status: accepted direction; approved staging billing link active; authorized
+bootstrap plan failed with zero created resources on 2026-09-03; project remains
+undeployed and import recovery is being prepared
 
 ## Decision
 
@@ -196,12 +197,14 @@ and no destroys; it performed no apply and created no state. The untracked but
 already-active billing association consequently still appears as an addition in
 that state-free diagnostic. The subsequent private saved plan from commit
 `c192f97959833f53a19d4e6dc50b26292c88b3b5` was digest-verified and fully
-reviewed with the same 36/0/0 result. It remains unapplied and created no state or
-cloud resource. A recovery-first wrapper now encodes the exact digest,
-preflight, apply, migration, read-back, and reconciliation sequence, but remains
-inactive with all authorization bits false. Before another cloud action, the
-owner must explicitly authorize that exact plan; the operator must then run the
-guarded sequence, initialize and verify the empty foundation state with
+reviewed with the same 36/0/0 result. After exact owner authorization, its first
+action attempted to rewrite the already-correct billing association and Cloud
+Billing rejected it on the association-change quota. Terraform recorded zero
+managed resources, and independent inventory confirmed that no target was
+created. The digest is superseded. An import-based recovery configuration now
+models the active link without another association write; its replacement plan
+must be privately created, inspected, and separately authorized. The operator
+must then run the guarded sequence, initialize and verify the empty foundation state with
 protected operator credentials, then authorize and install the workflow. A
 separate reviewed foundation plan is required before apply approval. The
 production Function entry point,

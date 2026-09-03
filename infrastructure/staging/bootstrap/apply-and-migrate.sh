@@ -86,6 +86,7 @@ reviewed_configuration=(
   infrastructure/staging/bootstrap/billing.tf
   infrastructure/staging/bootstrap/iam.tf
   infrastructure/staging/bootstrap/identity.tf
+  infrastructure/staging/bootstrap/imports.tf
   infrastructure/staging/bootstrap/locals.tf
   infrastructure/staging/bootstrap/outputs.tf
   infrastructure/staging/bootstrap/providers.tf
@@ -198,6 +199,7 @@ for source_name in \
   billing.tf \
   iam.tf \
   identity.tf \
+  imports.tf \
   locals.tf \
   outputs.tf \
   providers.tf \

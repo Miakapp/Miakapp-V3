@@ -681,11 +681,16 @@ function validateTerraform(value) {
     'partial_state_migration_attempted',
     'local_recovery_preserved_on_failure',
     'local_state_removed_only_after_reconciliation',
+    'authorized_plan_attempted',
+    'attempted_on',
+    'result',
+    'cloud_resources_created',
+    'remote_state_migrated',
     'executed',
   ]);
   exact(
     bootstrapExecution.state,
-    'guarded_wrapper_committed_inactive',
+    'authorized_plan_failed_before_resource_creation',
     'terraform.bootstrap_execution.state',
   );
   exact(
@@ -743,6 +748,19 @@ function validateTerraform(value) {
     true,
     'terraform.bootstrap_execution.local_state_removed_only_after_reconciliation',
   );
+  exact(
+    bootstrapExecution.authorized_plan_attempted,
+    true,
+    'terraform.bootstrap_execution.authorized_plan_attempted',
+  );
+  exact(bootstrapExecution.attempted_on, '2026-09-03', 'terraform.bootstrap_execution.attempted_on');
+  exact(
+    bootstrapExecution.result,
+    'billing_association_quota_before_resource_creation',
+    'terraform.bootstrap_execution.result',
+  );
+  exact(bootstrapExecution.cloud_resources_created, 0, 'terraform.bootstrap_execution.cloud_resources_created');
+  exact(bootstrapExecution.remote_state_migrated, false, 'terraform.bootstrap_execution.remote_state_migrated');
   exact(bootstrapExecution.executed, false, 'terraform.bootstrap_execution.executed');
 
   exact(terraform.apply_authorized, false, 'terraform.apply_authorized');
@@ -1073,10 +1091,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 15, 'manifest.revision');
+  exact(manifest.revision, 16, 'manifest.revision');
   exact(
     manifest.status,
-    'bootstrap_saved_plan_reviewed_billing_linked_undeployed',
+    'bootstrap_import_recovery_configuration_ready_billing_linked_undeployed',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
