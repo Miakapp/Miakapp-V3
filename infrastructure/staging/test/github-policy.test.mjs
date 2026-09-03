@@ -17,6 +17,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { validateAutomationRoot } from '../automation/guard.mjs';
+import { validateRecoveryRelevantAttributes } from '../automation/validate-foundation-plan.mjs';
 import {
   readGitHubPolicy,
   validateGitHubPolicy,
@@ -217,8 +218,8 @@ function recoveryResourceChanges() {
     database_edition: 'STANDARD',
     delete_protection_state: 'DELETE_PROTECTION_ENABLED',
     deletion_policy: 'ABANDON',
-    earliest_version_time: '2026-09-03T16:08:26Z',
-    etag: 'reviewed_etag_value',
+    earliest_version_time: '2026-09-03T16:08:26.982324Z',
+    etag: 'reviewed/etag+value=',
     firestore_data_access_mode: '',
     id: `projects/${recoveryProject}/databases/(default)`,
     key_prefix: '',
@@ -434,7 +435,7 @@ function recoveryDrifts(resourceChanges) {
   const firestore = byAddress.get(firestoreAddress);
   const drifts = [drift(
     firestoreAddress,
-    { ...structuredClone(firestore.change.after), etag: 'previous_etag_value' },
+    { ...structuredClone(firestore.change.after), etag: 'previous/etag+value=' },
     { cmek_config: [] },
   )];
   const keyAddress = 'google_kms_crypto_key.access_token_signing';
@@ -526,6 +527,67 @@ function recoveryPlanUntilPriorState() {
     checks: [],
   };
 }
+
+const recoveryRelevantAttributes = [
+  {
+    resource: 'data.google_service_account.control_plane',
+    attribute: ['member'],
+  },
+  {
+    resource: 'data.google_storage_bucket.components',
+    attribute: ['name'],
+  },
+  {
+    resource: 'data.google_service_account.control_plane',
+    attribute: ['email'],
+  },
+  {
+    resource: 'google_kms_crypto_key.access_token_signing',
+    attribute: ['id'],
+  },
+  {
+    resource: 'google_firestore_database.default',
+    attribute: ['name'],
+  },
+  {
+    resource: 'google_secret_manager_secret.runtime',
+    attribute: [],
+  },
+];
+
+test('treats recovery relevant attributes as an exact order-independent set', () => {
+  assert.doesNotThrow(() => validateRecoveryRelevantAttributes({
+    relevant_attributes: structuredClone(recoveryRelevantAttributes).reverse(),
+  }));
+
+  const duplicate = structuredClone(recoveryRelevantAttributes);
+  duplicate[0] = structuredClone(duplicate[1]);
+  assert.throws(
+    () => validateRecoveryRelevantAttributes({ relevant_attributes: duplicate }),
+    /relevant attributes does not match the reviewed value/,
+  );
+
+  assert.throws(
+    () => validateRecoveryRelevantAttributes({
+      relevant_attributes: recoveryRelevantAttributes.slice(1),
+    }),
+    /must contain exactly the reviewed entries/,
+  );
+
+  const extra = structuredClone(recoveryRelevantAttributes);
+  extra.push({ resource: 'google_project_iam_member.unreviewed', attribute: ['member'] });
+  assert.throws(
+    () => validateRecoveryRelevantAttributes({ relevant_attributes: extra }),
+    /must contain exactly the reviewed entries/,
+  );
+
+  const altered = structuredClone(recoveryRelevantAttributes);
+  altered[0].attribute = ['email'];
+  assert.throws(
+    () => validateRecoveryRelevantAttributes({ relevant_attributes: altered }),
+    /relevant attributes does not match the reviewed value/,
+  );
+});
 
 test('authorizes only the hash-bound manual partial-recovery workflow after verified GitHub posture', () => {
   assert.equal(policy.status, 'manual_keyless_partial_foundation_recovery_authorized');
@@ -1076,6 +1138,49 @@ test('rejects destructive, public, unreviewed, and state-inconsistent recovery p
   const destructiveDrift = runValidator(destructiveDriftPlan);
   assert.equal(destructiveDrift.status, 1);
   assert.match(destructiveDrift.stderr, /drift .*change\.actions does not match/);
+
+  const advancingFirestoreMetadataPlan = recoveryPlanUntilPriorState();
+  advancingFirestoreMetadataPlan.resource_drift[0].change.before.earliest_version_time = (
+    '2026-09-03T16:07:26Z'
+  );
+  const advancingFirestoreMetadata = runValidator(advancingFirestoreMetadataPlan);
+  assert.equal(advancingFirestoreMetadata.status, 1);
+  assert.match(
+    advancingFirestoreMetadata.stderr,
+    /prior state must contain exactly 28 resources/,
+  );
+
+  const microsecondAdvancePlan = recoveryPlanUntilPriorState();
+  microsecondAdvancePlan.resource_drift[0].change.before.earliest_version_time = (
+    '2026-09-03T16:08:26.982323Z'
+  );
+  const microsecondAdvance = runValidator(microsecondAdvancePlan);
+  assert.equal(microsecondAdvance.status, 1);
+  assert.match(microsecondAdvance.stderr, /prior state must contain exactly 28 resources/);
+
+  const retreatingFirestoreMetadataPlan = recoveryPlanUntilPriorState();
+  retreatingFirestoreMetadataPlan.resource_drift[0].change.before.earliest_version_time = (
+    '2026-09-03T16:09:26Z'
+  );
+  const retreatingFirestoreMetadata = runValidator(retreatingFirestoreMetadataPlan);
+  assert.equal(retreatingFirestoreMetadata.status, 1);
+  assert.match(retreatingFirestoreMetadata.stderr, /earliest_version_time must not move backwards/);
+
+  const microsecondRetreatPlan = recoveryPlanUntilPriorState();
+  microsecondRetreatPlan.resource_drift[0].change.before.earliest_version_time = (
+    '2026-09-03T16:08:26.982325Z'
+  );
+  const microsecondRetreat = runValidator(microsecondRetreatPlan);
+  assert.equal(microsecondRetreat.status, 1);
+  assert.match(microsecondRetreat.stderr, /earliest_version_time must not move backwards/);
+
+  const invalidCalendarDatePlan = recoveryPlanUntilPriorState();
+  invalidCalendarDatePlan.resource_drift[0].change.before.earliest_version_time = (
+    '2026-02-30T16:08:26.982323Z'
+  );
+  const invalidCalendarDate = runValidator(invalidCalendarDatePlan);
+  assert.equal(invalidCalendarDate.status, 1);
+  assert.match(invalidCalendarDate.stderr, /earliest_version_time is not a valid timestamp/);
 
   const extraDriftPlan = recoveryPlanUntilPriorState();
   extraDriftPlan.resource_drift[0].address = 'google_kms_crypto_key_iam_member.access_token_signer';
