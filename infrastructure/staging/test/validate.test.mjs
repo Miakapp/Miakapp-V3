@@ -151,7 +151,7 @@ test('accepts the completed bootstrap with reconciled remote state', () => {
   assert.equal(initialization.helper, 'terraform/foundation-state.mjs');
   assert.equal(
     initialization.approved_foundation_configuration_commit,
-    'efa8778f2bdc3cb6ab488281253d56eadcbe89dc',
+    'efa877835dde2f5eedc3d950b2e4c514e606751d',
   );
   assert.equal(
     initialization.approved_initialization_configuration_commit,
@@ -164,10 +164,12 @@ test('accepts the completed bootstrap with reconciled remote state', () => {
   assert.equal(initialization.expected_foundation_state.serial, 1);
   assert.equal(initialization.expected_foundation_state.managed_resources, 0);
   assert.equal(initialization.refresh_only_saved_plan_required, true);
+  assert.equal(initialization.saved_plan_fingerprint_required, true);
   assert.equal(initialization.verified_plan_apply_only, true);
   assert.equal(initialization.temporary_lock_object_lifecycle_required, true);
   assert.equal(initialization.manual_state_push_allowed, false);
   assert.equal(initialization.overwrite_existing_state_allowed, false);
+  assert.equal(initialization.final_generation_recheck_required, true);
   assert.equal(initialization.initialization_authorized, false);
   assert.equal(initialization.initialization_executed, false);
   assert.equal(validated.terraform.apply_authorized, false);
@@ -361,6 +363,12 @@ test('rejects every cloud-action authorization bit and bootstrap completion drif
   rejects((candidate) => {
     candidate.terraform.foundation_state_initialization.manual_state_push_allowed = true;
   }, /terraform\.foundation_state_initialization\.manual_state_push_allowed/);
+  rejects((candidate) => {
+    candidate.terraform.foundation_state_initialization.saved_plan_fingerprint_required = false;
+  }, /terraform\.foundation_state_initialization\.saved_plan_fingerprint_required/);
+  rejects((candidate) => {
+    candidate.terraform.foundation_state_initialization.final_generation_recheck_required = false;
+  }, /terraform\.foundation_state_initialization\.final_generation_recheck_required/);
   rejects((candidate) => {
     candidate.terraform.foundation_state_initialization.expected_bootstrap_state.generation = '1';
   }, /terraform\.foundation_state_initialization\.expected_bootstrap_state\.generation/);

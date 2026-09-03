@@ -26,6 +26,7 @@ import {
   PROJECT_NUMBER,
   STATE_BUCKET,
   createPrivateExecutionDirectory,
+  fingerprintSavedFoundationPlan,
   foundationStateAuthorization,
   inspectStateBucketInventory,
   reconcileEmptyFoundationStateFiles,
@@ -80,6 +81,7 @@ function stateObject(name, generation, size) {
 }
 
 function stateBucketInventory({
+  generation = foundationGeneration,
   present = false,
   unexpected = false,
   stateSize = 181,
@@ -94,7 +96,7 @@ function stateBucketInventory({
   if (present) {
     inventory.push(
       { type: 'prefix', url: `${root}terraform/foundation/` },
-      stateObject(FOUNDATION_STATE_OBJECT, foundationGeneration, stateSize),
+      stateObject(FOUNDATION_STATE_OBJECT, generation, stateSize),
     );
   }
   if (unexpected) {
@@ -116,7 +118,11 @@ function runSyntheticInitialization({
   divergentObject = false,
   invalidAuthorization = false,
   nonEmptyPlan = false,
+  planTamperedBeforeApply = false,
   preexistingState = false,
+  stateAppearsBeforeApply = false,
+  stateChangesAfterReadback = false,
+  stateChangesDuringReconciliation = false,
   unexpectedInventory = false,
 } = {}) {
   const temporary = mkdtempSync(join(tmpdir(), 'miakapp-foundation-state-test-'));
@@ -128,6 +134,9 @@ function runSyntheticInitialization({
   const divergentStatePath = join(temporary, 'divergent-state.json');
   const absentInventoryPath = join(temporary, 'absent-inventory.json');
   const presentInventoryPath = join(temporary, 'present-inventory.json');
+  const changedInventoryPath = join(temporary, 'changed-inventory.json');
+  const inventoryCountPath = join(temporary, 'inventory-count');
+  const savedPlanPathMarker = join(temporary, 'saved-plan-path');
   const stateBytes = JSON.stringify(emptyState());
   const stateSize = Buffer.byteLength(stateBytes);
   const plan = emptyPlan();
@@ -145,6 +154,11 @@ function runSyntheticInitialization({
   writeFileSync(
     presentInventoryPath,
     JSON.stringify(stateBucketInventory({ present: true, stateSize })),
+    { mode: 0o600 },
+  );
+  writeFileSync(
+    changedInventoryPath,
+    JSON.stringify(stateBucketInventory({ generation: '223', present: true, stateSize })),
     { mode: 0o600 },
   );
   if (preexistingState) writeFileSync(remoteMarker, '', { mode: 0o600 });
@@ -184,7 +198,10 @@ printf 'terraform:%s:%s\n' "$command_name" "$*" >>"$MIAKAPP_FAKE_CALL_LOG"
 case "$command_name" in
   version) printf '%s\n' '{"terraform_version":"1.11.3"}' ;;
   fmt|init|validate) ;;
-  plan) printf '%s' 'synthetic-empty-plan' >"$plan_output" ;;
+  plan)
+    printf '%s' 'synthetic-empty-plan' >"$plan_output"
+    printf '%s' "$plan_output" >"$MIAKAPP_FAKE_SAVED_PLAN_PATH"
+    ;;
   show) command cat "$MIAKAPP_FAKE_PLAN_JSON" ;;
   apply)
     [[ "$MIAKAPP_FAKE_APPLY_FAILS" == true ]] && exit 92
@@ -202,7 +219,26 @@ case " $* " in
     printf '%s\n' '{"projectId":"miakapp-v4-staging","projectNumber":"1072737219170","name":"Miakapp V4 Staging","lifecycleState":"ACTIVE"}'
     ;;
   *" storage ls "*)
+    inventory_count=0
+    if [[ -f "$MIAKAPP_FAKE_INVENTORY_COUNT" ]]; then
+      inventory_count="$(command cat "$MIAKAPP_FAKE_INVENTORY_COUNT")"
+    fi
+    inventory_count=$((inventory_count + 1))
+    printf '%s' "$inventory_count" >"$MIAKAPP_FAKE_INVENTORY_COUNT"
+    if [[ "$MIAKAPP_FAKE_TAMPER_PLAN" == true \
+      && "$inventory_count" -eq 2 \
+      && -f "$MIAKAPP_FAKE_SAVED_PLAN_PATH" ]]; then
+      saved_plan="$(command cat "$MIAKAPP_FAKE_SAVED_PLAN_PATH")"
+      printf '%s' '-tampered' >>"$saved_plan"
+    fi
     if [[ -f "$MIAKAPP_FAKE_REMOTE_MARKER" ]]; then
+      if [[ "$MIAKAPP_FAKE_STATE_CHANGE_AT" -gt 0 \
+        && "$inventory_count" -ge "$MIAKAPP_FAKE_STATE_CHANGE_AT" ]]; then
+        command cat "$MIAKAPP_FAKE_CHANGED_INVENTORY"
+      else
+        command cat "$MIAKAPP_FAKE_PRESENT_INVENTORY"
+      fi
+    elif [[ "$MIAKAPP_FAKE_STATE_APPEARS_PREAPPLY" == true && "$inventory_count" -ge 2 ]]; then
       command cat "$MIAKAPP_FAKE_PRESENT_INVENTORY"
     else
       command cat "$MIAKAPP_FAKE_ABSENT_INVENTORY"
@@ -234,15 +270,27 @@ esac
         MIAKAPP_FAKE_ABSENT_INVENTORY: absentInventoryPath,
         MIAKAPP_FAKE_APPLY_FAILS: String(applyFails),
         MIAKAPP_FAKE_CALL_LOG: callLog,
+        MIAKAPP_FAKE_CHANGED_INVENTORY: changedInventoryPath,
         MIAKAPP_FAKE_DIRTY_REPOSITORY: String(dirtyRepository),
         MIAKAPP_FAKE_DIVERGENT_OBJECT: String(divergentObject),
         MIAKAPP_FAKE_DIVERGENT_STATE_JSON: divergentStatePath,
         MIAKAPP_FAKE_EXECUTION_COMMIT: executionCommit,
+        MIAKAPP_FAKE_INVENTORY_COUNT: inventoryCountPath,
         MIAKAPP_FAKE_PLAN_JSON: planPath,
         MIAKAPP_FAKE_PRESENT_INVENTORY: presentInventoryPath,
         MIAKAPP_FAKE_REMOTE_MARKER: remoteMarker,
         MIAKAPP_FAKE_REPOSITORY_ROOT: repositoryRoot,
+        MIAKAPP_FAKE_SAVED_PLAN_PATH: savedPlanPathMarker,
         MIAKAPP_FAKE_STATE_JSON: statePath,
+        MIAKAPP_FAKE_STATE_CHANGE_AT: String(
+          stateChangesDuringReconciliation
+            ? 2
+            : stateChangesAfterReadback
+              ? (preexistingState ? 3 : 4)
+              : 0,
+        ),
+        MIAKAPP_FAKE_STATE_APPEARS_PREAPPLY: String(stateAppearsBeforeApply),
+        MIAKAPP_FAKE_TAMPER_PLAN: String(planTamperedBeforeApply),
         MIAKAPP_REAL_NODE: process.execPath,
         MIAKAPP_STAGING_FOUNDATION_STATE_AUTHORIZATION: invalidAuthorization
           ? PROJECT_ID
@@ -352,6 +400,12 @@ test('accepts and reconciles only the exact canonical empty foundation state', (
   try {
     const pulled = join(temporary, 'pulled.tfstate');
     const object = join(temporary, 'object.tfstate');
+    const plan = join(temporary, 'empty.tfplan');
+    writeFileSync(plan, 'synthetic-binary-plan', { mode: 0o600 });
+    assert.deepEqual(fingerprintSavedFoundationPlan(plan), {
+      sha256: 'fc97d9f8596e939a11f43996541ee92fbd7ae0d2fd68c8b009d9b9c05b7c0505',
+      size: 21,
+    });
     writeFileSync(pulled, `${JSON.stringify(emptyState())}\n`, { mode: 0o600 });
     writeFileSync(object, JSON.stringify(emptyState()), { mode: 0o600 });
     assert.equal(reconcileEmptyFoundationStateFiles(pulled, object).managedResources, 0);
@@ -457,13 +511,51 @@ test('reconciles a preexisting exact empty state without plan or mutation', () =
 });
 
 test('fails closed before apply for an unexpected object or non-empty plan', () => {
-  for (const options of [{ unexpectedInventory: true }, { nonEmptyPlan: true }]) {
+  for (const options of [
+    { unexpectedInventory: true },
+    { nonEmptyPlan: true },
+    { planTamperedBeforeApply: true },
+  ]) {
     const execution = runSyntheticInitialization(options);
     try {
       assert.equal(execution.result.status, 1);
       assert.equal(execution.remoteCreated, false);
       assert.doesNotMatch(execution.calls, /terraform:apply:/);
       assert.equal(execution.executionDirectories.length, 1);
+    } finally {
+      rmSync(execution.temporary, { recursive: true });
+    }
+  }
+});
+
+test('fails closed if the current generation changes after object reconciliation', () => {
+  const execution = runSyntheticInitialization({ stateChangesAfterReadback: true });
+  try {
+    assert.equal(execution.result.status, 1);
+    assert.equal(execution.remoteCreated, true);
+    assert.match(execution.calls, /terraform:apply:/);
+    assert.match(execution.result.stderr, /changed during final reconciliation/);
+    assert.equal(execution.executionDirectories.length, 1);
+  } finally {
+    rmSync(execution.temporary, { recursive: true });
+  }
+});
+
+test('fails closed when state appears before apply or changes during reconciliation', () => {
+  for (const options of [
+    { stateAppearsBeforeApply: true },
+    { preexistingState: true, stateChangesDuringReconciliation: true },
+  ]) {
+    const execution = runSyntheticInitialization(options);
+    try {
+      assert.equal(execution.result.status, 1);
+      assert.doesNotMatch(execution.calls, /terraform:apply:/);
+      assert.equal(execution.executionDirectories.length, 1);
+      if (options.stateAppearsBeforeApply) {
+        assert.match(execution.result.stderr, /appeared after planning/);
+      } else {
+        assert.match(execution.result.stderr, /changed during read-only reconciliation/);
+      }
     } finally {
       rmSync(execution.temporary, { recursive: true });
     }
@@ -518,12 +610,17 @@ test('rejects authorization, repository, and environment drift before cloud muta
 });
 
 test('keeps the initializer limited to a verified refresh-only empty-state write', () => {
+  assert.match(
+    initializeStateScript,
+    /approved_foundation_configuration_commit="efa877835dde2f5eedc3d950b2e4c514e606751d"/,
+  );
   assert.match(initializeStateScript, /approved_initialization_configuration_commit=/);
   assert.match(initializeStateScript, /verify-authorization/);
   assert.match(initializeStateScript, /requires a clean Git checkout/);
   assert.match(initializeStateScript, /verify-bootstrap-state/);
   assert.match(initializeStateScript, /plan[\s\S]*-refresh-only/);
   assert.match(initializeStateScript, /show -json[\s\S]*verify-empty-plan/);
+  assert.match(initializeStateScript, /fingerprint-plan/);
   assert.match(initializeStateScript, /reconcile-empty-states/);
   assert.match(initializeStateScript, /terraform[\s\S]* apply /);
   assert.doesNotMatch(

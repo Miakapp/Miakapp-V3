@@ -1118,11 +1118,13 @@ function validateTerraform(value) {
       'expected_bootstrap_state',
       'expected_foundation_state',
       'refresh_only_saved_plan_required',
+      'saved_plan_fingerprint_required',
       'verified_plan_apply_only',
       'temporary_lock_object_lifecycle_required',
       'manual_state_push_allowed',
       'overwrite_existing_state_allowed',
       'read_only_reconciliation_of_existing_exact_state_allowed',
+      'final_generation_recheck_required',
       'initialization_authorized',
       'initialization_executed',
     ],
@@ -1145,7 +1147,7 @@ function validateTerraform(value) {
   );
   exact(
     foundationStateInitialization.approved_foundation_configuration_commit,
-    'efa8778f2bdc3cb6ab488281253d56eadcbe89dc',
+    'efa877835dde2f5eedc3d950b2e4c514e606751d',
     `${foundationStatePath}.approved_foundation_configuration_commit`,
   );
   exact(
@@ -1161,9 +1163,11 @@ function validateTerraform(value) {
     'user_adc_required',
     'cloud_preflight_required',
     'refresh_only_saved_plan_required',
+    'saved_plan_fingerprint_required',
     'verified_plan_apply_only',
     'temporary_lock_object_lifecycle_required',
     'read_only_reconciliation_of_existing_exact_state_allowed',
+    'final_generation_recheck_required',
   ]) {
     exact(foundationStateInitialization[field], true, `${foundationStatePath}.${field}`);
   }

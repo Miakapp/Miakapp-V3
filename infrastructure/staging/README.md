@@ -125,16 +125,19 @@ proceed.
 supported path for creating the initial foundation state. It operates in a
 private directory outside the repository and copies only the reviewed backend,
 provider lock, and CLI configuration. It first requires the exact reconciled
-bootstrap generation and proves that the foundation object is absent. It then
-creates a saved `-refresh-only` plan, rejects any plan containing a resource,
-output, variable, module, provider configuration, or action, and applies only
-that verified empty plan through Terraform's locking GCS backend.
+bootstrap generation and proves that the foundation object is either absent or
+already the exact canonical empty state. Only the absent path creates a saved
+`-refresh-only` plan; it rejects any plan containing a resource, output,
+variable, module, provider configuration, or action, and applies only that
+verified empty plan through Terraform's locking GCS backend. The saved binary
+plan is fingerprinted before inspection and again immediately before apply.
 
 The initializer never uses `terraform state push` or a direct cloud-object
 write. It reads both Terraform's view and the exact current GCS generation back,
 requires an exact canonical empty state at serial 1, and rejects every other
-bucket object. A valid preexisting empty state is reconciled without planning or
-mutation, so recovery after an uncertain client result cannot overwrite it.
+bucket object. It then rechecks that the reconciled generation is still current.
+A valid preexisting empty state is reconciled without planning or mutation, so
+recovery after an uncertain client result cannot overwrite it.
 Failure preserves private diagnostics; success removes them. The implementation
 is bound to reviewed implementation commit
 `052f6c92d76f93ec222ffd03e4d34ba7a927495b` and remains disabled until a
