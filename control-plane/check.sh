@@ -10,12 +10,15 @@ if ! command -v bun >/dev/null 2>&1 || [[ "$(bun --version)" != "1.2.23" ]]; the
 fi
 
 if ! command -v node >/dev/null 2>&1; then
-  echo "Node.js 22 is required." >&2
+  echo "Node.js 22.12 or newer within major 22 is required." >&2
   exit 1
 fi
 NODE_VERSION="$(node --version)"
-if [[ "$NODE_VERSION" != v22.* ]]; then
-  echo "Node.js 22 is required; found ${NODE_VERSION:-an unknown version}." >&2
+if ! node -e '
+  const [major, minor] = process.versions.node.split(".").map(Number);
+  process.exit(major === 22 && minor >= 12 ? 0 : 1);
+'; then
+  echo "Node.js 22.12 or newer within major 22 is required; found ${NODE_VERSION:-an unknown version}." >&2
   exit 1
 fi
 
@@ -117,11 +120,11 @@ run_emulator_test() {
 # next independent scenario.
 for pattern in "${ADMISSION_TEST_PATTERNS[@]}"; do
   printf -v test_command \
-    'bun test ./test/emulator/admission-vertical-slice.test.ts --test-name-pattern %q' \
+    'node ./node_modules/vitest/vitest.mjs run --no-file-parallelism ./test/emulator/admission-vertical-slice.test.ts --testNamePattern %q' \
     "$pattern"
   run_emulator_test "$test_command"
 done
 
 for test_file in "${EMULATOR_TEST_FILES[@]}"; do
-  run_emulator_test "bun test ./${test_file}"
+  run_emulator_test "node ./node_modules/vitest/vitest.mjs run --no-file-parallelism ./${test_file}"
 done

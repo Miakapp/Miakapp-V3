@@ -1,5 +1,7 @@
 import type { Firestore } from 'firebase-admin/firestore';
 
+import { clearAdmissionSubjectReservations } from './admission-fixture.js';
+
 export const PROJECT_ID = 'demo-miakapp-v4';
 
 function requiredEnvironment(name: string): string {
@@ -30,6 +32,7 @@ export async function clearFirestore(firestore: Firestore): Promise<void> {
   if ((await firestore.listCollections()).length !== 0) {
     throw new Error('Firestore reset left top-level documents behind');
   }
+  clearAdmissionSubjectReservations();
 }
 
 export async function signUp(email: string): Promise<EmulatorUser> {

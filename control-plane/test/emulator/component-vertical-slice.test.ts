@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 
@@ -15,7 +15,12 @@ import { doc, getDoc } from 'firebase/firestore';
 import { getBytes, ref, uploadBytes } from 'firebase/storage';
 
 import { loadEmulatorConfig } from '../../src/config.js';
+import { parseHomeKey } from '../../src/crypto.js';
 import { type ComponentRequirements } from '../../src/types.js';
+import {
+  RANDOM_SUBJECT_ATTEMPTS,
+  reserveAdmissionSubjects,
+} from './admission-fixture.js';
 import {
   ALLOWED_ORIGIN,
   FIRESTORE_HOST,
@@ -135,12 +140,19 @@ async function createHome(): Promise<void> {
 }
 
 async function createKey(scopes: readonly string[] = ['components:publish']): Promise<string> {
-  const response = await apiRequest('POST', `/v1/homes/${HOME_ID}/home-keys`, {
-    token: owner.idToken,
-    body: { label: 'Component publisher', scopes },
-  });
-  expect(response.status).toBe(201);
-  return (await jsonResponse<KeyResponse>(response)).home_key;
+  for (let attempt = 0; attempt < RANDOM_SUBJECT_ATTEMPTS; attempt += 1) {
+    const response = await apiRequest('POST', `/v1/homes/${HOME_ID}/home-keys`, {
+      token: owner.idToken,
+      body: { label: 'Component publisher', scopes },
+    });
+    expect(response.status).toBe(201);
+    const homeKey = (await jsonResponse<KeyResponse>(response)).home_key;
+    if (reserveAdmissionSubjects([{
+      budget: 'access.exchange.key',
+      subject: parseHomeKey(homeKey).keyId,
+    }])) return homeKey;
+  }
+  throw new Error('Could not create a collision-free component Home Key fixture');
 }
 
 async function exchange(homeKey: string, purpose: 'components' | 'push' = 'components'): Promise<AccessResponse> {
@@ -160,20 +172,26 @@ async function issueUpload(
   declaredSize = bytes.byteLength,
   declaredAbi = 'miakapp.component/1',
 ): Promise<{ readonly response: Response; readonly upload?: UploadResponse }> {
-  const response = await apiRequest('POST', `/v1/homes/${HOME_ID}/component-uploads`, {
-    ...authorization,
-    body: {
-      release,
-      abi: declaredAbi,
-      sha256: declaredDigest,
-      size: declaredSize,
-      requires: REQUIREMENTS,
-    },
-  });
-  return Object.freeze({
-    response,
-    ...(response.ok ? { upload: await jsonResponse<UploadResponse>(response.clone()) } : {}),
-  });
+  for (let attempt = 0; attempt < RANDOM_SUBJECT_ATTEMPTS; attempt += 1) {
+    const response = await apiRequest('POST', `/v1/homes/${HOME_ID}/component-uploads`, {
+      ...authorization,
+      body: {
+        release,
+        abi: declaredAbi,
+        sha256: declaredDigest,
+        size: declaredSize,
+        requires: REQUIREMENTS,
+      },
+    });
+    if (!response.ok) return Object.freeze({ response });
+    const upload = await jsonResponse<UploadResponse>(response.clone());
+    if (reserveAdmissionSubjects([{
+      budget: 'component.upload.delivery.upload',
+      subject: upload.upload_id,
+    }])) return Object.freeze({ response, upload });
+    await response.body?.cancel();
+  }
+  throw new Error('Could not issue a collision-free component upload fixture');
 }
 
 async function deliver(upload: UploadResponse, bytes: Uint8Array, headers?: Readonly<Record<string, string>>): Promise<Response> {
@@ -231,7 +249,7 @@ async function artifactRequest(publicUrl: string, options: Parameters<typeof api
   expect(url.origin).toBe(base.origin);
   expect(url.search).toBe('');
   expect(url.hash).toBe('');
-  expect(url.pathname.startsWith(`${base.pathname}/`)).toBeTrue();
+  expect(url.pathname.startsWith(`${base.pathname}/`)).toBe(true);
   return apiRequest('GET', url.pathname, options);
 }
 
@@ -499,11 +517,11 @@ describe('component publication vertical slice', () => {
     const interruptedDigest = digest(interruptedBytes);
     const interruptedUrl = `${config.componentArtifactBaseUrl}/${interruptedDigest}.js`;
     const interruptedFile = bucket.file(`components/${interruptedDigest}.js`);
-    expect((await interruptedFile.exists())[0]).toBeTrue();
+    expect((await interruptedFile.exists())[0]).toBe(true);
     expect((await firestore.collection('componentArtifacts')
-      .doc(`${interruptedDigest}.js`).get()).exists).toBeFalse();
+      .doc(`${interruptedDigest}.js`).get()).exists).toBe(false);
     expect((await firestore.collection('controlHomes').doc(HOME_ID)
-      .collection('componentReleases').doc(interruptedDigest).get()).exists).toBeFalse();
+      .collection('componentReleases').doc(interruptedDigest).get()).exists).toBe(false);
     const publicBeforeCommit = await artifactRequest(interruptedUrl);
     expect(publicBeforeCommit.status).toBe(422);
     expect(await errorCode(publicBeforeCommit)).toBe('invalid_artifact');

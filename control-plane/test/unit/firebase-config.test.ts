@@ -15,6 +15,12 @@ interface FirebaseConfig {
   readonly functions: readonly [{ readonly ignore: readonly string[] }];
 }
 
+interface PackageManifest {
+  readonly engines: { readonly node: string };
+  readonly scripts: { readonly 'test:emulator': string };
+  readonly devDependencies: { readonly vitest: string };
+}
+
 function fixture<T>(name: string): T {
   return JSON.parse(readFileSync(new URL(`../../${name}`, import.meta.url), 'utf8')) as T;
 }
@@ -65,6 +71,24 @@ describe('Firebase deployment configuration', () => {
     );
     expect(checkScript).toContain('firebase setup:emulators:firestore --non-interactive');
     expect(checkScript).toContain('Pinned Firestore Emulator integrity verification failed.');
+  });
+
+  test('runs Firestore integration tests on Node instead of Bun HTTP/2', () => {
+    const manifest = fixture<PackageManifest>('package.json');
+    const checkScript = readFileSync(new URL('../../check.sh', import.meta.url), 'utf8');
+    expect(manifest.scripts['test:emulator']).toBe(
+      'node ./node_modules/vitest/vitest.mjs run --no-file-parallelism test/emulator',
+    );
+    expect(manifest.engines.node).toBe('>=22.12.0 <23');
+    expect(manifest.devDependencies.vitest).toBe('4.1.11');
+    expect(checkScript).toContain('major === 22 && minor >= 12');
+    expect(checkScript).toContain('node ./node_modules/vitest/vitest.mjs run --no-file-parallelism');
+    expect(checkScript).not.toContain('bun test ./test/emulator');
+    for (const name of readdirSync(new URL('../emulator/', import.meta.url))) {
+      if (!name.endsWith('.test.ts')) continue;
+      expect(readFileSync(new URL(`../emulator/${name}`, import.meta.url), 'utf8'))
+        .toContain("from 'vitest'");
+    }
   });
 
   test('gives every emulator scenario its own process boundary', () => {
