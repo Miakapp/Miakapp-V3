@@ -1,6 +1,6 @@
-# Miakapp 4 staging foundation
+# Miakapp 4 staging foundation and activation material
 
-Status: foundation complete; recovery workflow and WIF exchange retired
+Status: foundation and initial runtime material complete; application workload undeployed
 
 This directory contains the closed description and observed state of the
 `miakapp-v4-staging` foundation. The bounded recovery has completed; its active
@@ -11,13 +11,24 @@ or production changes.
 ## Current truth
 
 Project `miakapp-v4-staging` (`1072737219170`) remains application-undeployed:
-there is no Firebase app, App Engine application, Function, Cloud Run service,
-secret version, or public ingress. The bootstrap is complete. Protected
-foundation applies on 2026-09-03 created all thirteen declared APIs, the
-deletion-protected Paris Firestore database and three active TTL fields, one
-software Ed25519 signing key, and five empty Secret Manager containers. The
-eight KMS, Secret Manager and component-bucket runtime IAM members are present
-with the exact declared principals and roles.
+there is no App Engine application, Function, Cloud Run service, public ingress,
+or minimum instance. The bootstrap is complete. Protected foundation applies
+on 2026-09-03 created all thirteen declared APIs, the deletion-protected Paris
+Firestore database and three active TTL fields, one software Ed25519 signing
+key, and five Secret Manager containers. The eight KMS, Secret Manager and
+component-bucket runtime IAM members are present with the exact declared
+principals and roles.
+
+The guarded initial activation completed from merge commit
+`101e4231d452423bafa2ae1efd051e51faeff3c8`. It registered exactly one active
+Firebase Web app and added exactly one enabled 32-byte version to each of the
+five existing secret containers. Independent inventory found no workload or
+public-ingress delta, and replaying the exact plan performed only read-back
+reconciliation. The private derivation seed was deleted after success. The
+committed non-secret result has SHA-256
+`290c7cedb500d9f6844b49a45737ed920b3fe2e6ada6ed95b754a795768ccbdf`;
+its production runtime document has SHA-256
+`b794181400bf5ace6aaa9ffc4be00e4c4f6a59519284baa7f73bca3c042c4ff8`.
 
 The earlier authorized bootstrap apply completed:
 
@@ -93,33 +104,34 @@ Protected run `33784785967` passed that validator, applied the exact eight IAM
 members, and wrote complete state generation `1788456706865449` at serial 6.
 The workflow's final step failed because it attempted its follow-up provider
 reads with the deliberately narrower deployer identity. An independent User-ADC
-plan then reported all 33 managed resources as no-ops and zero changes. Cloud
-inventory confirmed the eight exact IAM members, five secret containers with no
-versions, three active TTL fields, enabled software Ed25519 key version 1, no
-workload, and no live lock. The consumed plan generation is deleted and remains
-only within the private bucket's soft-delete window. The active recovery workflow
-has been removed and its plan/apply entrypoints now fail immediately. GitHub
-workflow `349440747` was observed in state `disabled_manually` before source
-removal.
+plan then reported all 33 managed resources as no-ops and zero changes. Before
+activation, cloud inventory confirmed the eight exact IAM members, five secret
+containers with no versions, three active TTL fields, enabled software Ed25519
+key version 1, no workload, and no live lock. The consumed plan generation is
+deleted and remains only within the private bucket's soft-delete window. The
+active recovery workflow has been removed and its plan/apply entrypoints now
+fail immediately. GitHub workflow `349440747` was observed in state
+`disabled_manually` before source removal.
 
 ## Repository layout
 
 | Path | Purpose | Current execution boundary |
 |---|---|---|
 | [`bootstrap/`](bootstrap/) | Billing link, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Complete; both recovery providers disabled, 37-resource serial-42 state reconciled, zero plan verified |
-| [`terraform/`](terraform/) | APIs, Firestore, KMS, empty Secret Manager containers, and resource-scoped runtime IAM | Complete; 33-resource state independently converged |
-| [`activation/`](activation/) | One Firebase Web app, five initial secret versions, and the closed non-secret runtime document | Guarded two-phase executor ready; not yet applied |
+| [`terraform/`](terraform/) | APIs, Firestore, KMS, Secret Manager containers, and resource-scoped runtime IAM | Complete; 33-resource state independently converged; versions are managed outside Terraform |
+| [`activation/`](activation/) | One Firebase Web app, five initial secret versions, and the closed non-secret runtime document | Applied once and idempotently revalidated; result evidence committed without secret payloads |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
 | [`TEARDOWN.md`](TEARDOWN.md) | Manual recovery and teardown rehearsal | Documentation only |
 
 ## Safety and cost posture
 
-The foundation fixes every regional resource to Paris, keeps the
-Function at `minInstances=0` and `maxInstances=1`, and includes no load balancer,
-Cloud Armor policy, VPC connector, Cloud NAT, Analytics property, or deployed
-compute. The component bucket is private, has Public Access Prevention and no
-CORS origin. No secret value or service-account key is represented.
+The foundation fixes every regional resource to Paris, keeps the future
+Function contract at `minInstances=0` and `maxInstances=1`, and includes no load
+balancer, Cloud Armor policy, VPC connector, Cloud NAT, Analytics property, or
+deployed compute. The component bucket is private, has Public Access Prevention
+and no CORS origin. No secret payload, private derivation seed or
+service-account key is represented in Git, logs or Terraform state.
 
 The remote-state bucket uses uniform access, Public Access Prevention, Object
 Versioning, and a seven-day soft-delete window. Foundation state retains
@@ -153,10 +165,10 @@ Repository validation itself costs nothing. Planning adds only bounded API
 reads, temporary locks, and short-lived private saved-plan objects. The state
 bucket currently stores the 61,864-byte bootstrap state, the 53,619-byte complete
 foundation state, and recovery generations. The live Firestore database is the
-project's free-tier database; five secret containers have zero versions. The
-software KMS key version is the principal idle fixed cost. Storage operations
-and retained versions remain usage-metered, and budget alerts at EUR 2, EUR 5,
-and EUR 10 are alarms rather than hard caps.
+project's free-tier database; the five secret containers now each have one
+enabled version. Secret Manager versions, the software KMS key version, Storage
+operations and retained object versions remain usage-metered. Budget alerts at
+EUR 2, EUR 5, and EUR 10 are alarms rather than hard caps.
 
 ## Remote-state bootstrap boundary
 
@@ -332,23 +344,22 @@ No persistent credential or repository secret is used.
 
 ## Next staging gate
 
-The bootstrap and foundation are complete, both current states are reconciled,
-the recovery workflow is retired, and staging still contains no deployed
-workload. Local code now provides the strict non-secret runtime loader, a pure
-four-phase configuration-reference transition validator, single-flight
-initialization and an undiscovered private Function entrypoint carrying
-`omit: true`. It does not yet create, enable, disable or destroy live Secret
-Manager versions, nor enforce those transitions during deployment. A guarded
-two-hour plan and resumable activation executor now constrain the first live
-delta to one Firebase Web app and one 32-byte version in each existing secret
-container; the executor keeps payloads off arguments, environment variables,
-Git, logs and Terraform state, and still deploys no workload. The next sequence
-is to review and run that materialization, record its non-secret evidence,
-authorize live Function activation behind a reviewed private admission path,
-and then run bounded synthetic staging validation before considering public
-ingress.
+The bootstrap, foundation and initial activation material are complete. Both
+Terraform states are reconciled, the recovery workflow is retired, and staging
+still contains no deployed workload. The committed runtime document passes the
+same strict production parser used by the inactive Function composition. Its
+five exact Secret Manager `v1` references and Firebase App Check app ID now
+match independent live inventory; no secret payload is committed.
 
-Live production-Function activation, exact FCM runtime permission, secret-version
-provisioning and rotation evidence, ingress design, monitoring, real-service
-fault matrix, migration rehearsal, and every `STAGE-*` observation remain open
-blockers.
+The next gate is a reviewed private Function deployment boundary. It must
+package the inactive production entrypoint, bind the exact committed runtime
+document, grant only the missing FCM runtime permission, keep
+`minInstances=0`/`maxInstances=1`, expose no unauthenticated invoker, and define
+an explicit synthetic test principal before any live request. Only after that
+deployment is independently inventoried may bounded synthetic staging
+validation begin; public ingress remains a separate later decision.
+
+Function deployment, exact FCM least privilege, App Check live-provider and
+replay policy, relay token-refresh integration, trusted-source/edge admission,
+monitoring and billing-alert validation, secret and signing-key rotation,
+migration rehearsal, and every `STAGE-*` observation remain open blockers.

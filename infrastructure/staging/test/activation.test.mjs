@@ -40,6 +40,7 @@ import {
   createActivationCloudClient,
 } from '../activation/cloud.mjs';
 import { materializeCloudInputs } from '../activation/apply.mjs';
+import { validateActivationEvidence } from '../activation/evidence.mjs';
 import { validateActivationRoot } from '../activation/guard.mjs';
 
 const repositoryRoot = fileURLToPath(new URL('../../../', import.meta.url));
@@ -186,6 +187,37 @@ test('builds a closed two-hour plan for only one app and five secret versions', 
   assert.doesNotThrow(() => validateActivationPlan(value, {
     now: Date.parse('2026-09-03T21:00:00.000Z'),
   }));
+});
+
+test('pins the exact public activation result and runtime document bytes', () => {
+  const resultPath = fileURLToPath(new URL('../activation/result.json', import.meta.url));
+  const runtimePath = fileURLToPath(new URL('../activation/runtime-config.json', import.meta.url));
+  const validated = validateActivationEvidence(resultPath, runtimePath);
+  assert.equal(validated.result.firebase_app.appId, '1:1072737219170:web:5053ca93bf25d7373cd73b');
+  assert.equal(validated.result.secret_versions.length, SECRET_BINDINGS.length);
+  assert.deepEqual(validated.result.workload_delta, {
+    app_engine_applications: 0,
+    cloud_functions: 0,
+    cloud_run_services: 0,
+    public_ingress: 0,
+    minimum_instances: 0,
+  });
+
+  const temporary = mkdtempSync(join(tmpdir(), 'miakapp-activation-evidence-test-'));
+  try {
+    const changedResult = join(temporary, 'result.json');
+    writeFileSync(
+      changedResult,
+      readFileSync(resultPath, 'utf8').replace('"payload_bytes": 32', '"payload_bytes": 31'),
+      { mode: 0o600 },
+    );
+    assert.throws(
+      () => validateActivationEvidence(changedResult, runtimePath),
+      /digest does not match the live result/,
+    );
+  } finally {
+    rmSync(temporary, { recursive: true, force: true });
+  }
 });
 
 test('binds authorization to exact serialized plan bytes and commit', () => {

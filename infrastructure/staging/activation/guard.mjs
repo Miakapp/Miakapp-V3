@@ -7,9 +7,12 @@ const ALLOWED_FILES = Object.freeze([
   'apply.sh',
   'cloud.mjs',
   'contract.mjs',
+  'evidence.mjs',
   'guard.mjs',
   'plan.mjs',
   'plan.sh',
+  'result.json',
+  'runtime-config.json',
 ]);
 
 function exactNames(actual, expected) {

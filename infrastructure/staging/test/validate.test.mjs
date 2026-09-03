@@ -28,21 +28,21 @@ function rejects(mutator, pattern) {
   );
 }
 
-test('accepts the completed foundation with retired recovery automation', () => {
+test('accepts materialized activation inputs with no deployed workload', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 32);
+  assert.equal(validated.revision, 33);
   assert.equal(
     validated.status,
-    'foundation_complete_recovery_retired',
+    'activation_material_complete_undeployed',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
   assert.equal(
     validated.project.lifecycle,
-    'firebase_enabled_billing_linked_bootstrap_and_foundation_created_undeployed',
+    'firebase_enabled_billing_linked_foundation_and_activation_material_created_undeployed',
   );
   assert.equal(validated.bootstrap.billing_enabled, true);
-  assert.equal(validated.bootstrap.firebase_apps, 0);
+  assert.equal(validated.bootstrap.firebase_apps, 1);
   assert.equal(validated.bootstrap.hosting_site, 'miakapp-v4-staging');
   assert.deepEqual(validated.bootstrap.storage_buckets, [
     'miakapp-v4-staging-components',
@@ -63,9 +63,25 @@ test('accepts the completed foundation with retired recovery automation', () => 
   ]);
   assert.equal(validated.security.kms.state, 'created_initial_version_enabled');
   assert.equal(
-    validated.security.secrets.every((secret) => secret.state === 'container_created_no_versions'),
+    validated.security.secrets.every((secret) => (
+      secret.state === 'initial_version_1_enabled'
+      && secret.version_policy_state === 'initialized_rotation_not_implemented'
+      && JSON.stringify(secret.enabled_versions) === '[1]'
+    )),
     true,
   );
+  assert.deepEqual(validated.services.map(({ state }) => state), [
+    'api_enabled_no_staging_identity_test',
+    'firebase_app_created_provider_not_configured',
+    'foundation_created_no_staging_test',
+    'not_deployed',
+    'private_bucket_created_no_staging_test',
+    'signing_key_version_enabled_no_staging_signature',
+    'five_initial_versions_enabled_no_staging_access_test',
+    'api_enabled_runtime_permission_unresolved',
+    'api_enabled_no_deployed_runtime',
+    'api_enabled_no_deployed_runtime',
+  ]);
   assert.equal(
     validated.security.iam.foundation_resource_bindings_state,
     'complete_eight_recovery_bindings_present',
@@ -516,6 +532,31 @@ test('accepts the completed foundation with retired recovery automation', () => 
   assert.equal(validated.evidence.active_apply_workflow_present, false);
   assert.equal(validated.evidence.recovery_workflow_retired, true);
   assert.equal(validated.evidence.staging_wif_providers_disabled, true);
+  assert.deepEqual(validated.evidence.activation_material, {
+    state: 'materialized_and_independently_revalidated',
+    observed_at: '2026-09-03T22:06:49.000Z',
+    executor_repository_commit: '101e4231d452423bafa2ae1efd051e51faeff3c8',
+    plan_sha256: 'f3c29e250cca705a76d3337ec2e1fe7aac40ee9d244e9b9b09cbe083778ad87e',
+    result_path: 'activation/result.json',
+    result_sha256: '290c7cedb500d9f6844b49a45737ed920b3fe2e6ada6ed95b754a795768ccbdf',
+    runtime_config_path: 'activation/runtime-config.json',
+    runtime_config_sha256: 'b794181400bf5ace6aaa9ffc4be00e4c4f6a59519284baa7f73bca3c042c4ff8',
+    firebase_app_id: '1:1072737219170:web:5053ca93bf25d7373cd73b',
+    enabled_secret_versions: 5,
+    secret_payload_bytes_each: 32,
+    runtime_parser: 'production',
+    secret_lifecycle_transition: 'initialize',
+    seed_deleted: true,
+    private_plan_committed: false,
+    secret_payloads_committed: false,
+    workloads: {
+      app_engine_applications: 0,
+      cloud_functions: 0,
+      cloud_run_services: 0,
+      public_ingress: 0,
+      minimum_instances: 0,
+    },
+  });
   assert.deepEqual(validated.evidence.retired_recovery_workflow, {
     id: '349440747',
     state: 'deleted',
@@ -542,6 +583,12 @@ test('accepts the completed foundation with retired recovery automation', () => 
   assert.equal(
     validated.evidence.production_composition_boundary,
     '../../control-plane/test/unit/production-runtime.test.ts',
+  );
+  assert.equal(
+    validated.teardown.inventory_after_teardown.includes(
+      'firebase-app-registrations-and-app-check-providers',
+    ),
+    true,
   );
   assert.equal(validateFirebaseRc(firebaseRc()).projects.default, 'miakapp-3');
 });
@@ -574,7 +621,7 @@ test('rejects drift from the observed billing-linked undeployed bootstrap invent
     candidate.bootstrap.billing_enabled = false;
   }, /bootstrap\.billing_enabled/);
   rejects((candidate) => {
-    candidate.bootstrap.firebase_apps = 1;
+    candidate.bootstrap.firebase_apps = 0;
   }, /bootstrap\.firebase_apps/);
   rejects((candidate) => {
     candidate.bootstrap.storage_buckets.push('unexpected-bucket');
@@ -1232,13 +1279,31 @@ test('rejects incomplete or mutated bootstrap plan evidence', () => {
   }, /terraform\.superseded_saved_plan_observation must contain exactly/);
 });
 
-test('requires every production blocker and staging evidence row', () => {
+test('requires every remaining blocker and staging evidence row', () => {
   rejects((candidate) => {
     candidate.readiness.required_blockers.pop();
   }, /readiness\.required_blockers/);
   rejects((candidate) => {
     candidate.evidence.staging_rows.shift();
   }, /evidence\.staging_rows/);
+});
+
+test('rejects drift from the public activation evidence and initialized versions', () => {
+  rejects((candidate) => {
+    candidate.evidence.activation_material.result_sha256 = '0'.repeat(64);
+  }, /evidence\.activation_material\.result_sha256/);
+  rejects((candidate) => {
+    candidate.evidence.activation_material.seed_deleted = false;
+  }, /evidence\.activation_material\.seed_deleted/);
+  rejects((candidate) => {
+    candidate.evidence.activation_material.workloads.cloud_functions = 1;
+  }, /evidence\.activation_material\.workloads\.cloud_functions/);
+  rejects((candidate) => {
+    candidate.security.secrets[0].enabled_versions.push(2);
+  }, /security\.secrets\[0\]\.enabled_versions/);
+  rejects((candidate) => {
+    candidate.services[6].state = 'planned';
+  }, /services\[6\]\.state/);
 });
 
 test('keeps historical CI keyless, recovery retired, and credentials ephemeral', () => {
@@ -1281,4 +1346,7 @@ test('keeps historical CI keyless, recovery retired, and credentials ephemeral',
   rejects((candidate) => {
     candidate.teardown.manual_project_id_confirmation = false;
   }, /teardown\.manual_project_id_confirmation/);
+  rejects((candidate) => {
+    candidate.teardown.inventory_after_teardown.splice(2, 1);
+  }, /teardown\.inventory_after_teardown/);
 });

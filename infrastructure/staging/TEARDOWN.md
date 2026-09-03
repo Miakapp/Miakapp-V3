@@ -1,8 +1,8 @@
 # Miakapp 4 staging teardown rehearsal
 
-Status: non-executable rehearsal; bootstrap and complete foundation resources
-exist, protected recovery evidence remains private, and one-shot recovery
-automation and its WIF exchange are retired
+Status: non-executable rehearsal; bootstrap, complete foundation and initial
+activation material exist, protected recovery evidence remains private, and
+one-shot recovery automation and its WIF exchange are retired
 
 This runbook applies to the existing `miakapp-v4-staging` project. It must never
 be run against `miakapp-3`, `miakapp-v4`, or a `demo-*` project. A future
@@ -16,11 +16,20 @@ apply created the reviewed budget, two private buckets, three service accounts,
 Workload Identity pool and providers, and their IAM bindings. A later protected
 foundation apply created the declared APIs, Firestore database and TTL fields,
 KMS key ring and signing-key version, and five empty Secret Manager containers.
-It created no App Engine application, Firebase app, Function, Cloud Run service,
-secret version or public ingress. Deleting the whole project would permanently
-retire its globally unique ID; adding Firebase cannot
-otherwise be fully undone. Retaining this empty undeployed project, with the
-billing link removable during an authorized teardown, is therefore the default.
+At that historical boundary it had no App Engine application, Firebase app,
+Function, Cloud Run service, secret version or public ingress.
+
+The guarded initial activation later registered exactly one active Firebase Web
+app and added one enabled 32-byte version to each of the five secret containers.
+Its committed non-secret result and runtime document have respective SHA-256
+digests `290c7cedb500d9f6844b49a45737ed920b3fe2e6ada6ed95b754a795768ccbdf`
+and `b794181400bf5ace6aaa9ffc4be00e4c4f6a59519284baa7f73bca3c042c4ff8`.
+Independent inventory still found no App Engine application, Function, Cloud
+Run service, public ingress or minimum instance. The private derivation seed was
+deleted after success. Deleting the whole project would permanently retire its
+globally unique ID; adding Firebase cannot otherwise be fully undone. Retaining
+this undeployed project, with the billing link removable during an authorized
+teardown, is therefore the default.
 
 The repository contains separate bootstrap and foundation roots, a private
 versioned GCS backend, keyless plan/apply identities and a retained historical
@@ -87,9 +96,9 @@ cannot be deleted; and billing can report late usage.
 - Export only the synthetic evidence required for the staging report. Do not
   retain credentials, FIDs, App Check debug tokens or secret values.
 - Capture a before-inventory of enabled APIs, IAM bindings, service accounts,
-  Functions and Cloud Run revisions, Eventarc triggers, Firestore databases,
-  buckets and objects, Artifact Registry images, secrets, KMS versions, budgets
-  and billing exports.
+  Firebase app registrations and App Check providers, Functions and Cloud Run
+  revisions, Eventarc triggers, Firestore databases, buckets and objects,
+  Artifact Registry images, secrets, KMS versions, budgets and billing exports.
 - Capture the bootstrap and foundation state generations, lock status, Object
   Versioning/soft-delete policy and bucket IAM once the backend exists. Never
   treat an absent local state file as an empty cloud environment.
@@ -104,26 +113,28 @@ cannot be deleted; and billing can report late usage.
    temporary human, CI and test-client access.
 2. Remove the Function and inspect Cloud Run, Eventarc and Artifact Registry for
    resources that outlive the deployment abstraction.
-3. Inventory the component bucket by live generations and soft-deleted objects.
+3. Remove App Check providers and test registrations, then delete Firebase app
+   registrations only after all associated clients and evidence are retired.
+4. Inventory the component bucket by live generations and soft-deleted objects.
    Delete only after required synthetic reconciliation evidence is captured.
-4. Disable Firestore deletion protection only in the reviewed teardown change,
+5. Disable Firestore deletion protection only in the reviewed teardown change,
    then remove the staging database, TTL policies and indexes.
-5. Disable or destroy Secret Manager versions after their consumers are gone.
+6. Disable or destroy Secret Manager versions after their consumers are gone.
    Remove secret-level IAM independently.
-6. Disable KMS key versions, stop any rotation schedule and schedule version
+7. Disable KMS key versions, stop any rotation schedule and schedule version
    destruction according to the reviewed recovery window. Record the
    non-deletable key ring as a permanent residual resource.
-7. Remove runtime IAM, including the planner Service Usage Consumer member, the
+8. Remove runtime IAM, including the planner Service Usage Consumer member, the
    conditional state/plan bucket grants and WIF impersonation grants. Delete the
    runtime, planner and deployer service accounts and WIF pool only after
    confirming no resource still depends on them.
-8. Capture the final bootstrap/foundation state generations and independently
+9. Capture the final bootstrap/foundation state generations and independently
    reconcile the cloud inventory. Securely retain the minimum teardown evidence;
    never publish a state or saved plan.
-9. In a separate reviewed manual step, remove every plan and state generation,
+10. In a separate reviewed manual step, remove every plan and state generation,
    account for the seven-day soft-delete window, and delete the state bucket.
    This self-removal cannot be proven only from the state it destroys.
-10. Remove budget notifications and unlink billing only after the independent
+11. Remove budget notifications and unlink billing only after the independent
     inventory and residual Storage window are accepted. Project deletion is a
     separate explicit owner decision because the ID becomes unavailable and
     recovery is time-limited.
@@ -134,6 +145,7 @@ The teardown is complete only when a second inventory, performed independently
 of deployment state, records all of the following:
 
 - no active Function, Cloud Run revision, Eventarc trigger or Artifact image;
+- no Firebase app registration, App Check provider or test registration;
 - no Firestore database or TTL policy intended for this environment;
 - no live component, plan or state object; every soft-deleted object and its
   remaining recovery/cost window is either expired or explicitly recorded;
