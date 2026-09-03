@@ -416,12 +416,16 @@ current consumer.
    while a closed policy record now proves that the branch, environment and
    Actions settings were configured and re-observed without activating cloud
    resources or installing the workflow. A fresh non-saved diagnostic and the
-   subsequent digest-verified private saved bootstrap plan both report 36
-   additions, no changes and no destroys. A single-use, recovery-first wrapper
-   now binds preflight, apply, state migration, remote read-back and exact
-   reconciliation to that digest; it is committed but inactive. The exact plan
-   remains unapplied. Next obtain explicit mutation authorization for that
-   digest, execute the guarded bootstrap sequence, initialize and verify an empty
+   first digest-verified private saved bootstrap plan both reported 36 additions,
+   no changes and no destroys. Its authorized execution stopped on the redundant
+   billing-association update before any resource was created. A replacement
+   plan now imports that existing association and contains exactly 35 creations,
+   one client-side import update and no deletion. A single-use, recovery-first
+   wrapper binds preflight, apply, state migration, remote read-back and exact
+   reconciliation to the replacement digest and exact executing repository
+   commit; it is committed but inactive. Next
+   obtain explicit mutation authorization for that exact digest, execute the
+   guarded bootstrap sequence, initialize and verify an empty
    foundation state with protected operator credentials, authorize workflow
    installation, then review the foundation plan. The production entry point
    and exact runtime IAM expansion remain required before closing

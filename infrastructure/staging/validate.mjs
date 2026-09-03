@@ -675,6 +675,7 @@ function validateTerraform(value) {
     'approved_configuration_commit',
     'approved_plan_sha256',
     'exact_authorization_required',
+    'repository_commit_bound',
     'cloud_preflight_required',
     'budget_preflight_deferred_only_when_api_disabled',
     'budget_postcondition_required',
@@ -714,6 +715,11 @@ function validateTerraform(value) {
     bootstrapExecution.exact_authorization_required,
     true,
     'terraform.bootstrap_execution.exact_authorization_required',
+  );
+  exact(
+    bootstrapExecution.repository_commit_bound,
+    true,
+    'terraform.bootstrap_execution.repository_commit_bound',
   );
   exact(
     bootstrapExecution.cloud_preflight_required,
@@ -1132,7 +1138,7 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 17, 'manifest.revision');
+  exact(manifest.revision, 18, 'manifest.revision');
   exact(
     manifest.status,
     'bootstrap_import_plan_reviewed_billing_linked_undeployed',

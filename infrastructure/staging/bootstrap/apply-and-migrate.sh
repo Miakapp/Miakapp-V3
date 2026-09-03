@@ -17,8 +17,7 @@ project_id="miakapp-v4-staging"
 state_bucket="miakapp-v4-staging-tfstate-1072737219170"
 state_object="terraform/bootstrap/default.tfstate"
 
-node "$execution_helper" verify-authorization \
-  "${MIAKAPP_STAGING_BOOTSTRAP_EXECUTION_AUTHORIZATION:-}"
+execution_authorization="${MIAKAPP_STAGING_BOOTSTRAP_EXECUTION_AUTHORIZATION:-}"
 unset MIAKAPP_STAGING_BOOTSTRAP_EXECUTION_AUTHORIZATION
 
 for credential_variable in \
@@ -69,13 +68,22 @@ if [[ -z "$observed_repository_root" || "$(cd "$observed_repository_root" && pwd
   echo "Bootstrap execution must run from the reviewed repository." >&2
   exit 1
 fi
+current_commit="$(git -C "$repository_root" rev-parse HEAD)"
+if [[ ! "$current_commit" =~ ^[0-9a-f]{40}$ ]]; then
+  echo "Bootstrap execution requires a canonical repository commit." >&2
+  exit 1
+fi
+node "$execution_helper" verify-authorization \
+  "$execution_authorization" \
+  "$current_commit"
+unset execution_authorization
 if [[ -n "$(git -C "$repository_root" status --porcelain=v1 --untracked-files=all)" ]]; then
   echo "Bootstrap execution requires a clean Git checkout." >&2
   exit 1
 fi
-current_commit="$(git -C "$repository_root" rev-parse HEAD)"
-if [[ ! "$current_commit" =~ ^[0-9a-f]{40}$ ]] \
-  || ! git -C "$repository_root" merge-base --is-ancestor "$approved_configuration_commit" "$current_commit"; then
+if ! git -C "$repository_root" merge-base --is-ancestor \
+  "$approved_configuration_commit" \
+  "$current_commit"; then
   echo "The reviewed bootstrap configuration commit is not an ancestor of this checkout." >&2
   exit 1
 fi

@@ -20,11 +20,11 @@ export const PROJECT_DISPLAY_NAME = 'Miakapp V4 Staging';
 export const STATE_BUCKET = 'miakapp-v4-staging-tfstate-1072737219170';
 export const STATE_PREFIX = 'terraform/bootstrap';
 export const STATE_OBJECT = `${STATE_PREFIX}/default.tfstate`;
-export const EXECUTION_AUTHORIZATION = `apply-and-migrate:${PROJECT_ID}:${APPROVED_PLAN_SHA256}`;
 export const BUDGET_DISPLAY_NAME = 'Miakapp V4 staging monthly';
 
 const MAX_OBSERVATION_BYTES = 1024 * 1024;
 const MAX_STATE_BYTES = 64 * 1024 * 1024;
+const COMMIT_PATTERN = /^[0-9a-f]{40}$/;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const BILLING_ACCOUNT_PATTERN = /^[0-9A-F]{6}-[0-9A-F]{6}-[0-9A-F]{6}$/;
 
@@ -114,9 +114,16 @@ async function readBoundedStandardInput() {
   return Buffer.concat(chunks).toString('utf8');
 }
 
-export function validateExecutionAuthorization(value) {
-  if (value !== EXECUTION_AUTHORIZATION) {
-    reject('Bootstrap execution requires the exact reviewed apply-and-migrate authorization');
+export function executionAuthorization(repositoryCommit) {
+  if (typeof repositoryCommit !== 'string' || !COMMIT_PATTERN.test(repositoryCommit)) {
+    reject('Bootstrap execution requires a canonical repository commit');
+  }
+  return `apply-and-migrate:${PROJECT_ID}:${APPROVED_PLAN_SHA256}:${repositoryCommit}`;
+}
+
+export function validateExecutionAuthorization(value, repositoryCommit) {
+  if (value !== executionAuthorization(repositoryCommit)) {
+    reject('Bootstrap execution requires the exact reviewed plan and repository-commit authorization');
   }
   return value;
 }
@@ -331,8 +338,8 @@ async function main() {
     process.stdout.write(createPrivateExecutionDirectory(args[0], args[1]));
     return;
   }
-  if (command === 'verify-authorization' && args.length === 1) {
-    validateExecutionAuthorization(args[0]);
+  if (command === 'verify-authorization' && args.length === 2) {
+    validateExecutionAuthorization(args[0], args[1]);
     return;
   }
   if (command === 'verify-project' && args.length === 0) {

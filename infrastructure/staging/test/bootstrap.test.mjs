@@ -26,12 +26,12 @@ import {
   APPROVED_CONFIGURATION_COMMIT,
   APPROVED_PLAN_SHA256,
   BUDGET_DISPLAY_NAME,
-  EXECUTION_AUTHORIZATION,
   FOUNDATION_ACTIVATION,
   FOUNDATION_ACTIVATION_TYPE,
   STATE_BUCKET,
   STATE_OBJECT,
   createPrivateExecutionDirectory,
+  executionAuthorization,
   reconcileBootstrapStates,
   validateExecutionAuthorization,
   verifyAbsentTargetInventory,
@@ -440,7 +440,7 @@ printf 'sleep:%s\n' "$*" >>"$MIAKAPP_FAKE_CALL_LOG"
         MIAKAPP_FAKE_MIGRATION_FAILS: String(migrationFails),
         MIAKAPP_FAKE_PREEXISTING_STATE: String(preexistingState),
         MIAKAPP_FAKE_DIVERGENT_REMOTE: String(divergentRemote),
-        MIAKAPP_STAGING_BOOTSTRAP_EXECUTION_AUTHORIZATION: EXECUTION_AUTHORIZATION,
+        MIAKAPP_STAGING_BOOTSTRAP_EXECUTION_AUTHORIZATION: executionAuthorization('b'.repeat(40)),
       },
     },
   );
@@ -819,16 +819,30 @@ esac
 });
 
 test('binds bootstrap execution to the exact reviewed plan and closed cloud observations', () => {
-  assert.equal(validateExecutionAuthorization(EXECUTION_AUTHORIZATION), EXECUTION_AUTHORIZATION);
+  const repositoryCommit = 'b'.repeat(40);
+  const authorization = executionAuthorization(repositoryCommit);
+  assert.equal(validateExecutionAuthorization(authorization, repositoryCommit), authorization);
   assert.throws(
-    () => validateExecutionAuthorization(`apply-and-migrate:miakapp-v4-staging:${'0'.repeat(64)}`),
-    /exact reviewed apply-and-migrate authorization/,
+    () => validateExecutionAuthorization(
+      `apply-and-migrate:miakapp-v4-staging:${'0'.repeat(64)}:${repositoryCommit}`,
+      repositoryCommit,
+    ),
+    /exact reviewed plan and repository-commit authorization/,
   );
   assert.throws(
     () => validateExecutionAuthorization(
-      'apply-and-migrate:miakapp-v4-staging:0918d21c4677ce0958be9ccc43057d8d76a33857fdfbea066120ba953e30b5c1',
+      `apply-and-migrate:miakapp-v4-staging:0918d21c4677ce0958be9ccc43057d8d76a33857fdfbea066120ba953e30b5c1:${repositoryCommit}`,
+      repositoryCommit,
     ),
-    /exact reviewed apply-and-migrate authorization/,
+    /exact reviewed plan and repository-commit authorization/,
+  );
+  assert.throws(
+    () => validateExecutionAuthorization(authorization, 'c'.repeat(40)),
+    /exact reviewed plan and repository-commit authorization/,
+  );
+  assert.throws(
+    () => executionAuthorization('not-a-commit'),
+    /canonical repository commit/,
   );
 
   assert.doesNotThrow(() => verifyProjectObservation({
@@ -1273,7 +1287,7 @@ test('preserves local recovery material when migration fails or remote read-back
   }
 });
 
-test('rejects a generic bootstrap execution approval before invoking external tools', () => {
+test('rejects a generic bootstrap execution approval before cloud access', () => {
   const result = spawnSync(
     fileURLToPath(new URL('apply-and-migrate.sh', bootstrapRoot)),
     ['/private/synthetic-plan'],
@@ -1288,7 +1302,7 @@ test('rejects a generic bootstrap execution approval before invoking external to
     },
   );
   assert.equal(result.status, 1);
-  assert.match(result.stderr, /exact reviewed apply-and-migrate authorization/);
+  assert.match(result.stderr, /exact reviewed plan and repository-commit authorization/);
 });
 
 test('rejects relative, symlinked, and publicly accessible private-plan parents', () => {

@@ -123,8 +123,9 @@ Service Usage proves its API is disabled, and requires exactly one target budget
 after a complete apply. It keeps all transient state outside the repository,
 activates the backend template only in a private working copy, and deletes local
 state only after the remote generation and full state contents reconcile. The
-wrapper is bound to the new reviewed source commit and plan digest, but the
-replacement plan has not been authorized or executed.
+wrapper is bound to the new reviewed source commit and plan digest, and its
+authorization must also name the exact clean repository commit that executes it.
+The replacement plan has not been authorized or executed.
 
 The ordinary foundation root already points at `terraform/foundation` and reads
 the bootstrap output from `terraform/bootstrap`. A closed precondition checks

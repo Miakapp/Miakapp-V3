@@ -22,15 +22,17 @@ The repository now contains separate apply-capable bootstrap and foundation
 roots, a private versioned GCS backend design, keyless plan/apply identities and
 a dormant GitHub workflow blueprint. None exists in the cloud. The circular
 bootstrap uses protected temporary local state first, then the reviewed GCS
-migration template. One exact saved plan has been prepared and inspected in a
-private local bundle outside the repository; it contains no state and has not
-been applied. A digest-bound recovery-first apply/migration command is committed
-but inactive and every authorization bit remains false. Local `.terraform/`
-provider caches are disposable and are not cloud inventory.
+migration template. The first saved plan failed with zero resources after exact
+authorization; its private recovery evidence was retained. A replacement import
+plan has been prepared and inspected in a private local bundle outside the
+repository; it contains no state and has not been authorized or applied. A
+digest-bound recovery-first apply/migration command is committed but inactive
+and every authorization bit remains false. Local `.terraform/` provider caches
+are disposable and are not cloud inventory.
 
 If that wrapper ever reports failure, its printed private execution directory is
-part of the recovery inventory. Do not delete it or rerun the original
-empty-state plan. Determine whether a remote bootstrap generation exists,
+part of the recovery inventory. Do not delete it or rerun the same saved plan.
+Determine whether a remote bootstrap generation exists,
 reconcile it with the preserved local state, and produce a new reviewed recovery
 plan before another mutation.
 

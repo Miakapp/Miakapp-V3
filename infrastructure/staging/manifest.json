@@ -1,6 +1,6 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 17,
+  "revision": 18,
   "status": "bootstrap_import_plan_reviewed_billing_linked_undeployed",
   "environment": "staging",
   "project": {
@@ -366,6 +366,7 @@
       "approved_configuration_commit": "6340bffbddcc4797067ef48170fc5c3524345bf2",
       "approved_plan_sha256": "6fb0b0c15fa04338a40ab59de790c3a4a85f96b418377c4a70570a8dabd5d457",
       "exact_authorization_required": true,
+      "repository_commit_bound": true,
       "cloud_preflight_required": true,
       "budget_preflight_deferred_only_when_api_disabled": true,
       "budget_postcondition_required": true,

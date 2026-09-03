@@ -30,7 +30,7 @@ function rejects(mutator, pattern) {
 
 test('accepts the reviewed import recovery plan without deployment authorization', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 17);
+  assert.equal(validated.revision, 18);
   assert.equal(
     validated.status,
     'bootstrap_import_plan_reviewed_billing_linked_undeployed',
@@ -88,6 +88,7 @@ test('accepts the reviewed import recovery plan without deployment authorization
     approved_configuration_commit: '6340bffbddcc4797067ef48170fc5c3524345bf2',
     approved_plan_sha256: '6fb0b0c15fa04338a40ab59de790c3a4a85f96b418377c4a70570a8dabd5d457',
     exact_authorization_required: true,
+    repository_commit_bound: true,
     cloud_preflight_required: true,
     budget_preflight_deferred_only_when_api_disabled: true,
     budget_postcondition_required: true,
@@ -248,6 +249,9 @@ test('rejects every cloud-action authorization bit', () => {
   rejects((candidate) => {
     candidate.terraform.bootstrap_execution.approved_plan_sha256 = '0'.repeat(64);
   }, /terraform\.bootstrap_execution\.approved_plan_sha256/);
+  rejects((candidate) => {
+    candidate.terraform.bootstrap_execution.repository_commit_bound = false;
+  }, /terraform\.bootstrap_execution\.repository_commit_bound/);
   rejects((candidate) => {
     candidate.terraform.bootstrap_execution.local_recovery_preserved_on_failure = false;
   }, /terraform\.bootstrap_execution\.local_recovery_preserved_on_failure/);
