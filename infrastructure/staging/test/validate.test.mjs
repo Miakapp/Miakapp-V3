@@ -28,12 +28,12 @@ function rejects(mutator, pattern) {
   );
 }
 
-test('accepts the preserved partial bootstrap state without a pending apply authorization', () => {
+test('accepts the reviewed recovery plan without an apply authorization', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 19);
+  assert.equal(validated.revision, 20);
   assert.equal(
     validated.status,
-    'bootstrap_partial_state_preserved_recovery_plan_pending',
+    'bootstrap_recovery_plan_reviewed_awaiting_authorization',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
@@ -82,9 +82,15 @@ test('accepts the preserved partial bootstrap state without a pending apply auth
   assert.equal(validated.terraform.saved_plan.state, 'private_gcs_blueprint_not_active');
   assert.equal(validated.terraform.saved_plan.public_artifacts_allowed, false);
   const execution = validated.terraform.bootstrap_execution;
-  assert.equal(execution.state, 'recovery_configuration_committed_plan_pending');
-  assert.equal(execution.approved_configuration_commit, null);
-  assert.equal(execution.approved_plan_sha256, null);
+  assert.equal(execution.state, 'recovery_plan_reviewed_awaiting_exact_authorization');
+  assert.equal(
+    execution.approved_configuration_commit,
+    'e9f410c58c8cbbf8f5f7a17170c9e8ed55a10501',
+  );
+  assert.equal(
+    execution.approved_plan_sha256,
+    '12927b270f2bfa78c8f8c8c7e7071ce9cfec18d5e848165c04b585260bd5f7da',
+  );
   assert.equal(execution.budget_preflight_requires_quota_project, true);
   assert.equal(execution.authorized_plan_attempted, true);
   assert.equal(execution.bootstrap_completed, false);
@@ -141,7 +147,24 @@ test('accepts the preserved partial bootstrap state without a pending apply auth
     validated.terraform.local_plan_observation.post_plan_checks[0],
     'billing-linked-to-approved-account',
   );
-  assert.equal(validated.terraform.local_saved_plan_observation, null);
+  assert.equal(
+    validated.terraform.local_saved_plan_observation.configuration_commit,
+    'e9f410c58c8cbbf8f5f7a17170c9e8ed55a10501',
+  );
+  assert.equal(
+    validated.terraform.local_saved_plan_observation.plan_sha256,
+    '12927b270f2bfa78c8f8c8c7e7071ce9cfec18d5e848165c04b585260bd5f7da',
+  );
+  assert.deepEqual(validated.terraform.local_saved_plan_observation.result, {
+    create: 27,
+    no_op: 9,
+    import: 0,
+    update: 0,
+    delete: 0,
+  });
+  assert.equal(validated.terraform.local_saved_plan_observation.full_plan_reviewed, true);
+  assert.equal(validated.terraform.local_saved_plan_observation.recovery_state_unchanged, true);
+  assert.equal(validated.terraform.local_saved_plan_observation.apply_authorized, false);
   assert.equal(
     validated.terraform.superseded_saved_plan_observation.plan_sha256,
     '6fb0b0c15fa04338a40ab59de790c3a4a85f96b418377c4a70570a8dabd5d457',
@@ -488,6 +511,30 @@ test('rejects incomplete or mutated bootstrap plan evidence', () => {
   rejects((candidate) => {
     candidate.terraform.local_plan_observation.post_plan_checks.pop();
   }, /terraform\.local_plan_observation\.post_plan_checks/);
+  rejects((candidate) => {
+    candidate.terraform.local_saved_plan_observation.plan_sha256 = '0'.repeat(64);
+  }, /terraform\.local_saved_plan_observation\.plan_sha256/);
+  rejects((candidate) => {
+    candidate.terraform.local_saved_plan_observation.recovery_state.serial = 12;
+  }, /terraform\.local_saved_plan_observation\.recovery_state\.serial/);
+  rejects((candidate) => {
+    candidate.terraform.local_saved_plan_observation.result.no_op = 8;
+  }, /terraform\.local_saved_plan_observation\.result\.no_op/);
+  rejects((candidate) => {
+    candidate.terraform.local_saved_plan_observation.full_plan_reviewed = false;
+  }, /terraform\.local_saved_plan_observation\.full_plan_reviewed/);
+  rejects((candidate) => {
+    candidate.terraform.local_saved_plan_observation.billing_link_no_op = false;
+  }, /terraform\.local_saved_plan_observation\.billing_link_no_op/);
+  rejects((candidate) => {
+    candidate.terraform.local_saved_plan_observation.apply_authorized = true;
+  }, /terraform\.local_saved_plan_observation\.apply_authorized/);
+  rejects((candidate) => {
+    candidate.terraform.local_saved_plan_observation.post_inspection_checks.pop();
+  }, /terraform\.local_saved_plan_observation\.post_inspection_checks/);
+  rejects((candidate) => {
+    candidate.terraform.local_saved_plan_observation.secret = 'must-not-be-accepted';
+  }, /terraform\.local_saved_plan_observation must contain exactly/);
   rejects((candidate) => {
     candidate.terraform.superseded_saved_plan_observation.plan_sha256 = '0'.repeat(64);
   }, /terraform\.local_saved_plan_observation\.plan_sha256/);
