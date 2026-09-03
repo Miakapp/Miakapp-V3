@@ -54,8 +54,8 @@ generation `1788452068422403` at serial 4 containing 25 managed resources.
 Recovery run `33784785967` then created the exact remaining eight IAM members;
 current foundation generation `1788456706865449` is serial 6 with 33 managed
 resources and independently plans to zero changes. GitHub workflow `349440747`
-is `disabled_manually`, its active source is absent, and both recovery WIF
-providers are disabled while the pool remains enabled and retained. Object
+was observed as `deleted` after its active source was removed, and both recovery
+WIF providers are disabled while the pool remains enabled and retained. Object
 Versioning retains recovery generations. Local `.terraform/`
 provider caches are disposable and are not cloud inventory.
 

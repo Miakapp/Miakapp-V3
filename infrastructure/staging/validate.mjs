@@ -2743,7 +2743,7 @@ function validateEvidence(value) {
   exact(retiredRecoveryWorkflow.id, '349440747', 'evidence.retired_recovery_workflow.id');
   exact(
     retiredRecoveryWorkflow.state,
-    'disabled_manually',
+    'deleted',
     'evidence.retired_recovery_workflow.state',
   );
   exact(
