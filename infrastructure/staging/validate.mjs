@@ -95,7 +95,7 @@ const REQUIRED_BLOCKERS = [
   'migration-rehearsal',
   'production-function-entrypoint',
   'secret-version-lifecycle',
-  'private-foundation-plan-not-reviewed',
+  'staging-foundation-not-applied',
 ];
 
 const STAGING_ROWS = [
@@ -556,10 +556,10 @@ function validateTerraform(value) {
     'local_saved_plan_observation',
     'superseded_saved_plan_observation',
   ]);
-  exact(terraform.state, 'foundation_saved_plan_strictly_reviewed', 'terraform.state');
+  exact(terraform.state, 'foundation_apply_workflow_authorized', 'terraform.state');
   exact(
     terraform.supported_workflow,
-    'credential_free_validation_and_manual_keyless_planning',
+    'credential_free_validation_and_manual_keyless_plan_apply',
     'terraform.supported_workflow',
   );
   exact(terraform.configuration_apply_capable, true, 'terraform.configuration_apply_capable');
@@ -570,7 +570,7 @@ function validateTerraform(value) {
   );
   exact(
     terraform.workflow_blueprint_state,
-    'installed_exact_plan_only_copy',
+    'installed_exact_plan_apply_copy',
     'terraform.workflow_blueprint_state',
   );
   exact(terraform.bootstrap_root, 'bootstrap', 'terraform.bootstrap_root');
@@ -642,7 +642,7 @@ function validateTerraform(value) {
   ]);
   exact(
     identity.state,
-    'planner_identity_exercised_deployer_unused',
+    'planner_exercised_deployer_authorized_unused',
     'terraform.identity.state',
   );
   exact(identity.workload_identity_pool, 'miakapp-github', 'terraform.identity.workload_identity_pool');
@@ -1465,16 +1465,16 @@ function validateTerraform(value) {
   );
   const foundationSavedPlanExpectations = {
     observed_on: '2026-09-03',
-    configuration_commit: 'acfcee42e202cdb4f08ada75ad81b1ad8a88951e',
-    workflow_run_id: '33772429693',
+    configuration_commit: '66869a3564788ba725049cc91326b17eb239ddaf',
+    workflow_run_id: '33774848684',
     workflow_run_attempt: 1,
     workflow_result: 'success',
     terraform_version: '1.11.3',
     backend: 'gcs',
-    plan_object: 'gs://miakapp-v4-staging-tfstate-1072737219170/plans/acfcee42e202cdb4f08ada75ad81b1ad8a88951e/33772429693/1/foundation.tfplan',
-    plan_generation: '1788449123427734',
-    plan_size_bytes: 11005,
-    plan_sha256: 'd90f4d2243a7754372c059f1fcd5297a23c317cbcdc9b9ff734c66575f347d3f',
+    plan_object: 'gs://miakapp-v4-staging-tfstate-1072737219170/plans/66869a3564788ba725049cc91326b17eb239ddaf/33774848684/1/foundation.tfplan',
+    plan_generation: '1788450586606804',
+    plan_size_bytes: 11000,
+    plan_sha256: '5def42ea3f598a5f2c59d9456814646c1b526526c6b96acf20a0db7626bc36da',
     data_reads: 2,
     contains_workload: false,
     contains_public_ingress: false,
@@ -1519,7 +1519,7 @@ function validateTerraform(value) {
     );
   }
 
-  exact(terraform.apply_authorized, false, 'terraform.apply_authorized');
+  exact(terraform.apply_authorized, true, 'terraform.apply_authorized');
   exact(terraform.destroy_authorized, false, 'terraform.destroy_authorized');
   exact(terraform.function_deployment_included, false, 'terraform.function_deployment_included');
   exact(terraform.offline_check_uses_mock_providers, true, 'terraform.offline_check_uses_mock_providers');
@@ -1906,7 +1906,7 @@ function validateReadiness(value) {
     true,
     'readiness.plan_only_cloud_actions_authorized',
   );
-  exact(readiness.foundation_apply_authorized, false, 'readiness.foundation_apply_authorized');
+  exact(readiness.foundation_apply_authorized, true, 'readiness.foundation_apply_authorized');
   exactArray(readiness.required_blockers, REQUIRED_BLOCKERS, 'readiness.required_blockers');
 }
 
@@ -1957,7 +1957,7 @@ function validateEvidence(value) {
     'evidence.persistent_ci_credentials_allowed',
   );
   exact(evidence.active_plan_workflow_present, true, 'evidence.active_plan_workflow_present');
-  exact(evidence.active_apply_workflow_present, false, 'evidence.active_apply_workflow_present');
+  exact(evidence.active_apply_workflow_present, true, 'evidence.active_apply_workflow_present');
   exactArray(evidence.staging_rows, STAGING_ROWS, 'evidence.staging_rows');
   exact(evidence.fault_matrix, '../../control-plane/FAULT-MATRIX.md', 'evidence.fault_matrix');
   exact(
@@ -2010,10 +2010,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 27, 'manifest.revision');
+  exact(manifest.revision, 28, 'manifest.revision');
   exact(
     manifest.status,
-    'manual_keyless_plan_workflow_authorized',
+    'foundation_apply_workflow_authorized',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -2068,7 +2068,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; manual keyless planning is authorized and foundation apply remains disabled.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; manual keyless foundation plan and apply are authorized.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';

@@ -115,20 +115,21 @@ Post-plan checks found the exact same state generation and digest and no current
 lock object.
 
 The manual keyless workflow in [`../automation/`](../automation/) is the
-authorized planning path after bootstrap. Its exact active copy creates a
-private, create-only saved plan and emits only bounded action/address metadata.
-Run `33772429693` successfully created and then fully inspected such a plan from
-protected commit `acfcee42e202cdb4f08ada75ad81b1ad8a88951e`. The exact binary
-passed the closed `initial-foundation` validator with 33 creates, two reads, and
-no update or delete. It contains no apply job; the separate apply script and
-deployer identity remain dormant.
+authorized path after bootstrap. Its plan job creates a private, create-only
+saved plan and emits only bounded action/address metadata. Run `33774848684`
+successfully created and fully inspected such a plan from protected commit
+`66869a3564788ba725049cc91326b17eb239ddaf`. The exact binary passed the closed
+`initial-foundation` validator with 33 creates, two reads, and no update or
+delete. This revision admits that same validator and binary boundary into a
+separate environment-protected apply job, followed by a required zero-change
+convergence plan.
 
-## Explicit non-authorization
+## Explicit boundaries
 
 Terraform source is inherently apply-capable. Repository guards and supported
 wrappers do not prevent a privileged operator from bypassing them, so direct
-Terraform mutation remains unauthorized. The plan workflow may use short-lived
-keyless planner credentials, but it cannot write foundation state or request the
-deployer identity. A short-lived private saved foundation plan exists as
-inspection evidence; no active apply workflow exists, and the apply and destroy
-authorization bits remain false.
+Terraform mutation remains unauthorized. The plan job may use only short-lived
+planner credentials and cannot write foundation state. The apply job may use
+only the separately admitted deployer identity after environment approval, and
+only for the exact closed initial-foundation plan. Workload deployment, public
+ingress, direct apply, and destroy remain unauthorized.

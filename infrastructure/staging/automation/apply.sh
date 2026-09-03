@@ -97,8 +97,9 @@ node "${terraform_root}/guard.mjs" "$terraform_root"
 
 plan_file="${RUNNER_TEMP:?RUNNER_TEMP is required}/foundation.tfplan"
 apply_log="${RUNNER_TEMP}/foundation-apply.log"
+verification_log="${RUNNER_TEMP}/foundation-verification.log"
 cleanup() {
-  rm -f "$plan_file" "$apply_log"
+  rm -f "$plan_file" "$apply_log" "$verification_log"
 }
 trap cleanup EXIT
 
@@ -129,4 +130,29 @@ if ! terraform -chdir="$terraform_root" apply \
   echo "Terraform apply failed; detailed output remains private to the discarded runner file." >&2
   exit 1
 fi
-echo "The exact reviewed staging foundation plan was applied successfully."
+
+set +e
+terraform -chdir="$terraform_root" plan \
+  -detailed-exitcode \
+  -input=false \
+  -lock-timeout=5m \
+  -no-color >"$verification_log" 2>&1
+verification_status="$?"
+set -e
+case "$verification_status" in
+  0)
+    echo "The exact reviewed staging foundation plan was applied and converged successfully."
+    ;;
+  1)
+    echo "Post-apply foundation verification failed; detailed output remains private to the discarded runner file." >&2
+    exit 1
+    ;;
+  2)
+    echo "The applied staging foundation did not converge to an empty follow-up plan." >&2
+    exit 1
+    ;;
+  *)
+    echo "Terraform returned an invalid post-apply verification status." >&2
+    exit 1
+    ;;
+esac

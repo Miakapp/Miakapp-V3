@@ -28,12 +28,12 @@ function rejects(mutator, pattern) {
   );
 }
 
-test('accepts reconciled state and the reviewed live foundation plan', () => {
+test('accepts the reviewed keyless foundation apply workflow', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 27);
+  assert.equal(validated.revision, 28);
   assert.equal(
     validated.status,
-    'manual_keyless_plan_workflow_authorized',
+    'foundation_apply_workflow_authorized',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
@@ -56,24 +56,24 @@ test('accepts reconciled state and the reviewed live foundation plan', () => {
     validated.cost.billing_account.terraform_management_state,
     'managed_in_reconciled_remote_bootstrap_state',
   );
-  assert.equal(validated.terraform.state, 'foundation_saved_plan_strictly_reviewed');
+  assert.equal(validated.terraform.state, 'foundation_apply_workflow_authorized');
   assert.equal(
     validated.terraform.supported_workflow,
-    'credential_free_validation_and_manual_keyless_planning',
+    'credential_free_validation_and_manual_keyless_plan_apply',
   );
   assert.equal(validated.terraform.configuration_apply_capable, true);
   assert.equal(
     validated.terraform.active_cloud_workflow,
     '.github/workflows/staging-terraform.yml',
   );
-  assert.equal(validated.terraform.workflow_blueprint_state, 'installed_exact_plan_only_copy');
+  assert.equal(validated.terraform.workflow_blueprint_state, 'installed_exact_plan_apply_copy');
   assert.equal(validated.terraform.backend.type, 'gcs');
   assert.equal(validated.terraform.backend.state, 'bootstrap_and_empty_foundation_state_present');
   assert.equal(
     validated.terraform.backend.bootstrap_migration_state,
     'complete_remote_state_reconciled',
   );
-  assert.equal(validated.terraform.identity.state, 'planner_identity_exercised_deployer_unused');
+  assert.equal(validated.terraform.identity.state, 'planner_exercised_deployer_authorized_unused');
   assert.equal(
     validated.terraform.identity.runtime_service_account,
     'miakapp-control-plane@miakapp-v4-staging.iam.gserviceaccount.com',
@@ -234,11 +234,11 @@ test('accepts reconciled state and the reviewed live foundation plan', () => {
   assert.equal(foundationPlan.contains_secret_versions, false);
   assert.equal(foundationPlan.contains_billing_resource, false);
   const savedFoundationPlan = validated.terraform.foundation_saved_plan_observation;
-  assert.equal(savedFoundationPlan.workflow_run_id, '33772429693');
-  assert.equal(savedFoundationPlan.configuration_commit, 'acfcee42e202cdb4f08ada75ad81b1ad8a88951e');
+  assert.equal(savedFoundationPlan.workflow_run_id, '33774848684');
+  assert.equal(savedFoundationPlan.configuration_commit, '66869a3564788ba725049cc91326b17eb239ddaf');
   assert.equal(
     savedFoundationPlan.plan_sha256,
-    'd90f4d2243a7754372c059f1fcd5297a23c317cbcdc9b9ff734c66575f347d3f',
+    '5def42ea3f598a5f2c59d9456814646c1b526526c6b96acf20a0db7626bc36da',
   );
   assert.deepEqual(savedFoundationPlan.result, { create: 33, update: 0, delete: 0 });
   assert.equal(savedFoundationPlan.saved_plan_created, true);
@@ -255,7 +255,7 @@ test('accepts reconciled state and the reviewed live foundation plan', () => {
   assert.equal(foundationPlan.temporary_lock_released, true);
   assert.equal(foundationPlan.full_plan_reviewed, true);
   assert.equal(foundationPlan.raw_planned_values_committed, false);
-  assert.equal(validated.terraform.apply_authorized, false);
+  assert.equal(validated.terraform.apply_authorized, true);
   assert.equal(validated.terraform.local_plan_executed, true);
   assert.deepEqual(validated.terraform.local_plan_observation.result, {
     add: 36,
@@ -319,14 +319,15 @@ test('accepts reconciled state and the reviewed live foundation plan', () => {
   assert.equal(validated.terraform.superseded_saved_plan_observation.state_migration_executed, false);
   assert.equal(validated.evidence.github_policy_observation_verified, true);
   assert.equal(validated.readiness.plan_only_cloud_actions_authorized, true);
-  assert.equal(validated.readiness.foundation_apply_authorized, false);
+  assert.equal(validated.readiness.foundation_apply_authorized, true);
   assert.equal(validated.evidence.credential_free_validation, true);
   assert.equal(validated.evidence.manual_live_plan_requires_user_adc, true);
   assert.equal(validated.evidence.ci_plan_uses_keyless_oidc, true);
   assert.equal(validated.evidence.persistent_ci_credentials_allowed, false);
   assert.equal(validated.evidence.active_plan_workflow_present, true);
-  assert.equal(validated.evidence.active_apply_workflow_present, false);
-  assert.equal(validated.readiness.required_blockers.includes('private-foundation-plan-not-reviewed'), true);
+  assert.equal(validated.evidence.active_apply_workflow_present, true);
+  assert.equal(validated.readiness.required_blockers.includes('staging-foundation-not-applied'), true);
+  assert.equal(validated.readiness.required_blockers.includes('private-foundation-plan-not-reviewed'), false);
   assert.equal(validated.readiness.required_blockers.includes('github-terraform-workflow-not-installed'), false);
   assert.equal(validated.readiness.required_blockers.includes('foundation-state-not-initialized'), false);
   assert.equal(validated.readiness.required_blockers.includes('live-foundation-plan-not-reviewed'), false);
@@ -405,7 +406,7 @@ test('rejects apply authorization and bootstrap completion drift', () => {
     candidate.readiness.plan_only_cloud_actions_authorized = false;
   }, /readiness\.plan_only_cloud_actions_authorized/);
   rejects((candidate) => {
-    candidate.readiness.foundation_apply_authorized = true;
+    candidate.readiness.foundation_apply_authorized = false;
   }, /readiness\.foundation_apply_authorized/);
   rejects((candidate) => {
     candidate.terraform.bootstrap_execution.bootstrap_completed = false;
@@ -717,7 +718,7 @@ test('rejects Terraform activation, identity, state, provider, and deployment dr
     candidate.terraform.saved_plan.create_only = false;
   }, /terraform\.saved_plan\.create_only/);
   rejects((candidate) => {
-    candidate.terraform.apply_authorized = true;
+    candidate.terraform.apply_authorized = false;
   }, /terraform\.apply_authorized/);
   rejects((candidate) => {
     candidate.terraform.destroy_authorized = true;
@@ -826,7 +827,7 @@ test('requires every production blocker and staging evidence row', () => {
   }, /evidence\.staging_rows/);
 });
 
-test('keeps CI plan-only, keyless, and free of persistent credentials', () => {
+test('keeps CI plan-and-apply keyless and free of persistent credentials', () => {
   rejects((candidate) => {
     candidate.evidence.credential_free_validation = false;
   }, /evidence\.credential_free_validation/);
@@ -843,7 +844,7 @@ test('keeps CI plan-only, keyless, and free of persistent credentials', () => {
     candidate.evidence.active_plan_workflow_present = false;
   }, /evidence\.active_plan_workflow_present/);
   rejects((candidate) => {
-    candidate.evidence.active_apply_workflow_present = true;
+    candidate.evidence.active_apply_workflow_present = false;
   }, /evidence\.active_apply_workflow_present/);
   rejects((candidate) => {
     candidate.teardown.automated = true;

@@ -162,7 +162,7 @@ test('keeps Storage, Firestore, KMS, secrets, and runtime IAM fail-closed', () =
   assert.match(iamSource, /data\.google_service_account\.control_plane\.member/);
 });
 
-test('keeps the local live workflow plan-only and uses the real locking backend', () => {
+test('keeps the local operator plan wrapper non-mutating and uses the real locking backend', () => {
   assert.doesNotMatch(planScript, /terraform\s+(apply|destroy|import)|firebase\s+deploy|\s-out(?:=|\s)/);
   assert.match(planScript, /terraform init -reconfigure -input=false -lockfile=readonly/);
   assert.match(planScript, /terraform plan -input=false -lock-timeout=5m -no-color -detailed-exitcode/);

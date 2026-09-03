@@ -81,8 +81,8 @@ function exactGitHubEnvironment(kind) {
   return environment;
 }
 
-test('authorizes only the hash-bound manual plan workflow after verified GitHub posture', () => {
-  assert.equal(policy.status, 'manual_keyless_plan_workflow_authorized');
+test('authorizes only the hash-bound manual plan-and-apply workflow after verified GitHub posture', () => {
+  assert.equal(policy.status, 'manual_keyless_plan_apply_workflow_authorized');
   assert.equal(policy.observation_context, 'default_branch_before_this_change');
   assert.deepEqual(policy.observed.main_branch, policy.required.main_branch);
   assert.deepEqual(policy.observed.environment_names, [
@@ -99,26 +99,23 @@ test('authorizes only the hash-bound manual plan workflow after verified GitHub 
     policy_observation_verified: true,
     workflow_install_authorized: true,
     cloud_plan_authorized: true,
-    foundation_apply_authorized: false,
+    foundation_apply_authorized: true,
     active_workflow_path: '.github/workflows/staging-terraform.yml',
     blueprint_path: 'infrastructure/staging/automation/staging-terraform.yml',
-    workflow_sha256: '13fd21ad1fa1fdbfec88cefc4af048643eb7a2078d8f33eb0e840c54a3238336',
+    workflow_sha256: 'b506f7561dd5fb6ddb9e9c1d525f11cfe31cfce68e2cbabd544f068d0bfc8d32',
   });
   assert.equal(
     statSync(new URL('../../../.github/workflows/staging-terraform.yml', import.meta.url)).isFile(),
     true,
   );
   assert.equal(activeWorkflow, workflow);
-  assert.match(checkScript, /--require-plan-activation/);
+  assert.match(checkScript, /--require-apply-activation/);
   assert.equal(
     verifyInstalledWorkflow(fileURLToPath(repositoryRoot), policy),
     policy.activation.workflow_sha256,
   );
   assert.doesNotThrow(() => validateGitHubPolicy(policy, { requirePlanActivation: true }));
-  assert.throws(
-    () => validateGitHubPolicy(policy, { requireApplyActivation: true }),
-    /activation\.foundation_apply_authorized/,
-  );
+  assert.doesNotThrow(() => validateGitHubPolicy(policy, { requireApplyActivation: true }));
 });
 
 test('rejects policy weakening, broader activation, and unknown fields', () => {
@@ -141,19 +138,19 @@ test('rejects policy weakening, broader activation, and unknown fields', () => {
   rejects((candidate) => { candidate.required.oidc.repository_id_claim = 'Miakapp/Miakapp-V3'; }, /repository_id_claim/);
   rejects((candidate) => { candidate.activation.workflow_install_authorized = false; }, /workflow_install_authorized/);
   rejects((candidate) => { candidate.activation.cloud_plan_authorized = false; }, /cloud_plan_authorized/);
-  rejects((candidate) => { candidate.activation.foundation_apply_authorized = true; }, /foundation_apply_authorized/);
+  rejects((candidate) => { candidate.activation.foundation_apply_authorized = false; }, /foundation_apply_authorized/);
   rejects((candidate) => { candidate.activation.workflow_sha256 = '0'.repeat(64); }, /workflow_sha256/);
   rejects((candidate) => { candidate.unreviewed = true; }, /must contain exactly/);
 });
 
-test('the policy CLI accepts planning and rejects apply without a stack trace', () => {
+test('the policy CLI accepts both explicitly activated modes without a stack trace', () => {
   const planResult = spawnSync(process.execPath, [
     fileURLToPath(new URL('validate-policy.mjs', automationRoot)),
     '--require-plan-activation',
     policyPath,
   ], { encoding: 'utf8' });
   assert.equal(planResult.status, 0, planResult.stderr);
-  assert.match(planResult.stdout, /manual keyless planning is authorized/);
+  assert.match(planResult.stdout, /manual keyless planning and foundation apply are authorized/);
   assert.equal(planResult.stderr, '');
 
   const applyResult = spawnSync(process.execPath, [
@@ -161,30 +158,31 @@ test('the policy CLI accepts planning and rejects apply without a stack trace', 
     '--require-apply-activation',
     policyPath,
   ], { encoding: 'utf8' });
-  assert.equal(applyResult.status, 1);
-  assert.match(
-    applyResult.stderr,
-    /^GitHub policy rejected: activation\.foundation_apply_authorized must equal true\n$/,
-  );
-  assert.equal(applyResult.stdout, '');
+  assert.equal(applyResult.status, 0, applyResult.stderr);
+  assert.match(applyResult.stdout, /manual keyless planning and foundation apply are authorized/);
+  assert.equal(applyResult.stderr, '');
 });
 
-test('keeps the installed workflow manual, plan-only, and least-permission', () => {
+test('keeps the installed plan-and-apply workflow manual, reviewed, and least-permission', () => {
   assert.doesNotThrow(() => validateAutomationRoot(automationRoot));
   assert.equal(activeWorkflow, workflow);
-  assert.match(workflow, /^name: Staging Terraform plan/m);
+  assert.match(workflow, /^name: Staging Terraform plan and apply/m);
   assert.match(workflow, /^on:\n  workflow_dispatch:/m);
   assert.doesNotMatch(workflow, /pull_request:|\npush:/);
   assert.match(workflow, /^permissions: \{\}$/m);
-  assert.match(workflow, /node infrastructure\/staging\/automation\/validate-policy\.mjs \\\n            --require-plan-activation/);
+  assert.match(workflow, /node infrastructure\/staging\/automation\/validate-policy\.mjs \\\n            --require-apply-activation/);
+  assert.match(workflow, /test "\$CONFIRMATION" = 'apply-miakapp-v4-staging'/);
   assert.match(workflow, /environment: miakapp-v4-staging-plan/);
-  assert.doesNotMatch(workflow, /miakapp-v4-staging-apply|plan-and-apply|automation\/apply\.sh/);
-  assert.equal((workflow.match(/id-token: write/g) ?? []).length, 1);
-  assert.equal((workflow.match(/contents: read/g) ?? []).length, 2);
-  assert.equal((workflow.match(/version: '541\.0\.0'/g) ?? []).length, 1);
-  assert.equal((workflow.match(/terraform_version: 1\.11\.3/g) ?? []).length, 1);
-  assert.equal((workflow.match(/persist-credentials: false/g) ?? []).length, 2);
-  assert.equal((workflow.match(/cleanup_credentials: true/g) ?? []).length, 1);
+  assert.match(workflow, /environment: miakapp-v4-staging-apply/);
+  assert.match(workflow, /MIAKAPP_PLAN_OBJECT: \$\{\{ needs\.plan\.outputs\['plan-object'\] \}\}/);
+  assert.match(workflow, /MIAKAPP_PLAN_SHA256: \$\{\{ needs\.plan\.outputs\['plan-sha256'\] \}\}/);
+  assert.match(workflow, /run: infrastructure\/staging\/automation\/apply\.sh/);
+  assert.equal((workflow.match(/id-token: write/g) ?? []).length, 2);
+  assert.equal((workflow.match(/contents: read/g) ?? []).length, 3);
+  assert.equal((workflow.match(/version: '541\.0\.0'/g) ?? []).length, 2);
+  assert.equal((workflow.match(/terraform_version: 1\.11\.3/g) ?? []).length, 2);
+  assert.equal((workflow.match(/persist-credentials: false/g) ?? []).length, 3);
+  assert.equal((workflow.match(/cleanup_credentials: true/g) ?? []).length, 2);
   assert.doesNotMatch(workflow, /\bsecrets:|\$\{\{\s*secrets\./);
   assert.doesNotMatch(workflow, /pull-requests:\s*write|contents:\s*write|actions:\s*write/);
 });
@@ -205,7 +203,7 @@ test('pins every active or blueprint action and limits action origins to policy'
   }
 });
 
-test('stores a create-only private plan and keeps apply dormant behind separate authorization', () => {
+test('passes the exact create-only private plan to the separately admitted apply job', () => {
   assert.match(planScript, /plans\/\$\{GITHUB_SHA\}\/\$\{GITHUB_RUN_ID\}\/\$\{GITHUB_RUN_ATTEMPT\}\/foundation\.tfplan/);
   assert.match(planScript, /--if-generation-match=0/);
   assert.match(planScript, /plan-sha256/);
@@ -227,7 +225,12 @@ test('stores a create-only private plan and keeps apply dormant behind separate 
       < applyScript.indexOf('terraform -chdir="$terraform_root" apply'),
   );
   assert.doesNotMatch(planScript, /terraform -chdir="\$terraform_root" apply/);
-  assert.doesNotMatch(workflow, /apply\.sh|plan-and-apply/);
+  assert.match(workflow, /apply\.sh/);
+  assert.match(applyScript, /-detailed-exitcode/);
+  assert.ok(
+    applyScript.indexOf('terraform -chdir="$terraform_root" apply')
+      < applyScript.indexOf('-detailed-exitcode'),
+  );
   for (const script of [planScript, applyScript]) {
     assert.match(script, /CLOUDSDK_METRICS_ENVIRONMENT:-.*github-actions-setup-gcloud/);
     assert.match(script, /CLOUDSDK_METRICS_ENVIRONMENT_VERSION:-.*3\.0\.1/);
@@ -367,7 +370,7 @@ test('rejects a foreign plan object before the apply job can use credentials', (
   assert.match(result.stderr, /exact plan produced by this workflow attempt/);
 });
 
-test('rejects a canonical apply request before credential or cloud access', () => {
+test('accepts a canonical apply policy then rejects missing keyless credentials before cloud access', () => {
   const github = exactGitHubEnvironment('apply');
   const planObject = [
     'gs://miakapp-v4-staging-tfstate-1072737219170/plans',
@@ -382,8 +385,8 @@ test('rejects a canonical apply request before credential or cloud access', () =
     MIAKAPP_PLAN_SHA256: 'b'.repeat(64),
   });
   assert.equal(result.status, 1);
-  assert.match(result.stderr, /activation\.foundation_apply_authorized must equal true/);
-  assert.doesNotMatch(result.stderr, /credential file is missing/);
+  assert.match(result.stderr, /keyless Google credential file is missing/);
+  assert.doesNotMatch(result.stderr, /activation\.foundation_apply_authorized/);
 });
 
 test('summarizes only bounded Terraform action metadata', () => {

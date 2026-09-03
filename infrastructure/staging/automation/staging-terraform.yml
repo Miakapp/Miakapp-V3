@@ -1,10 +1,10 @@
-name: Staging Terraform plan
+name: Staging Terraform plan and apply
 
 on:
   workflow_dispatch:
     inputs:
       confirmation:
-        description: Type miakapp-v4-staging
+        description: Type apply-miakapp-v4-staging
         required: true
         type: string
 
@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   policy:
-    name: Verify plan-only activation policy
+    name: Verify plan-and-apply activation policy
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -29,13 +29,13 @@ jobs:
         with:
           node-version: 22.22.0
           package-manager-cache: false
-      - name: Require the exact target and independently authorized planning
+      - name: Require the exact target and independently authorized apply
         env:
           CONFIRMATION: ${{ inputs.confirmation }}
         run: |
-          test "$CONFIRMATION" = 'miakapp-v4-staging'
+          test "$CONFIRMATION" = 'apply-miakapp-v4-staging'
           node infrastructure/staging/automation/validate-policy.mjs \
-            --require-plan-activation \
+            --require-apply-activation \
             infrastructure/staging/automation/github-policy.json
 
   plan:
@@ -74,3 +74,40 @@ jobs:
         env:
           MIAKAPP_GITHUB_ENVIRONMENT: miakapp-v4-staging-plan
         run: infrastructure/staging/automation/plan.sh
+
+  apply:
+    name: Apply exact private foundation plan
+    needs:
+      - policy
+      - plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: miakapp-v4-staging-apply
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          project_id: miakapp-v4-staging
+          workload_identity_provider: projects/1072737219170/locations/global/workloadIdentityPools/miakapp-github/providers/staging-apply
+          service_account: miakapp-tf-apply@miakapp-v4-staging.iam.gserviceaccount.com
+          create_credentials_file: true
+          cleanup_credentials: true
+          export_environment_variables: true
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
+        with:
+          version: '541.0.0'
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: 1.11.3
+          terraform_wrapper: false
+      - name: Apply the exact admitted plan and verify convergence
+        env:
+          MIAKAPP_GITHUB_ENVIRONMENT: miakapp-v4-staging-apply
+          MIAKAPP_PLAN_OBJECT: ${{ needs.plan.outputs['plan-object'] }}
+          MIAKAPP_PLAN_SHA256: ${{ needs.plan.outputs['plan-sha256'] }}
+        run: infrastructure/staging/automation/apply.sh
