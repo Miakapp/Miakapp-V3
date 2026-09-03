@@ -61,7 +61,7 @@ function runScript(name, environment, args = []) {
 }
 
 function exactGitHubEnvironment(kind) {
-  return {
+  const environment = {
     GITHUB_ACTIONS: 'true',
     GITHUB_REPOSITORY: 'Miakapp/Miakapp-V3',
     GITHUB_REPOSITORY_ID: '354682190',
@@ -73,6 +73,11 @@ function exactGitHubEnvironment(kind) {
     GITHUB_RUN_ATTEMPT: '1',
     MIAKAPP_GITHUB_ENVIRONMENT: `miakapp-v4-staging-${kind}`,
   };
+  if (kind === 'plan') {
+    environment.CLOUDSDK_METRICS_ENVIRONMENT = 'github-actions-setup-gcloud';
+    environment.CLOUDSDK_METRICS_ENVIRONMENT_VERSION = '3.0.1';
+  }
+  return environment;
 }
 
 test('authorizes only the hash-bound manual plan workflow after verified GitHub posture', () => {
@@ -260,10 +265,16 @@ test('rejects wrong GitHub context and non-canonical run identifiers before cred
 
 test('rejects credential symlinks and ambient provider or gcloud overrides', () => {
   const temporary = mkdtempSync(join(tmpdir(), 'miakapp-staging-automation-'));
+  const commands = join(temporary, 'commands');
   const output = join(temporary, 'github-output');
   const credential = fileURLToPath(new URL(`../../../gha-creds-test-${process.pid}.json`, import.meta.url));
+  mkdirSync(commands, { mode: 0o700 });
   writeFileSync(output, '', { mode: 0o600 });
   writeFileSync(credential, '{}\n', { flag: 'wx', mode: 0o600 });
+  for (const command of ['gcloud', 'terraform']) {
+    writeFileSync(join(commands, command), '#!/usr/bin/env bash\nexit 0\n', { mode: 0o700 });
+  }
+  writeFileSync(join(commands, 'node'), '#!/usr/bin/env bash\nexit 71\n', { mode: 0o700 });
   const base = {
     ...exactGitHubEnvironment('plan'),
     GITHUB_OUTPUT: output,
@@ -272,6 +283,21 @@ test('rejects credential symlinks and ambient provider or gcloud overrides', () 
     GOOGLE_GHA_CREDS_PATH: credential,
   };
   try {
+    const exactSetupGcloud = runScript('plan.sh', {
+      ...base,
+      PATH: `${commands}:${process.env.PATH}`,
+    });
+    assert.equal(exactSetupGcloud.status, 71);
+    assert.doesNotMatch(exactSetupGcloud.stderr, /Unreviewed Terraform or Google overrides/);
+
+    for (const [name, value] of [
+      ['CLOUDSDK_METRICS_ENVIRONMENT', 'unreviewed-action'],
+      ['CLOUDSDK_METRICS_ENVIRONMENT_VERSION', '999.0.0'],
+    ]) {
+      const result = runScript('plan.sh', { ...base, [name]: value });
+      assert.equal(result.status, 1, name);
+      assert.match(result.stderr, /setup-gcloud identity does not match/);
+    }
     for (const [name, value] of [
       ['TF_DATA_DIR', '/tmp/unreviewed'],
       ['TF_VAR_unreviewed', 'value'],
