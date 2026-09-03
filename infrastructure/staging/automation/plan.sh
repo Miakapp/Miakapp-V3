@@ -115,6 +115,8 @@ if ! terraform -chdir="$terraform_root" plan \
 fi
 
 terraform -chdir="$terraform_root" show -json "$plan_file" \
+  | node "${automation_root}/validate-foundation-plan.mjs"
+terraform -chdir="$terraform_root" show -json "$plan_file" \
   | node "${automation_root}/summarize-plan.mjs"
 
 plan_sha256="$(shasum -a 256 "$plan_file" | awk '{print $1}')"

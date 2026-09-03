@@ -56,7 +56,7 @@ test('accepts reconciled state and the reviewed live foundation plan', () => {
     validated.cost.billing_account.terraform_management_state,
     'managed_in_reconciled_remote_bootstrap_state',
   );
-  assert.equal(validated.terraform.state, 'foundation_live_plan_reviewed');
+  assert.equal(validated.terraform.state, 'foundation_saved_plan_strictly_reviewed');
   assert.equal(
     validated.terraform.supported_workflow,
     'credential_free_validation_and_manual_keyless_planning',
@@ -73,7 +73,7 @@ test('accepts reconciled state and the reviewed live foundation plan', () => {
     validated.terraform.backend.bootstrap_migration_state,
     'complete_remote_state_reconciled',
   );
-  assert.equal(validated.terraform.identity.state, 'created_not_used_by_active_workflow');
+  assert.equal(validated.terraform.identity.state, 'planner_identity_exercised_deployer_unused');
   assert.equal(
     validated.terraform.identity.runtime_service_account,
     'miakapp-control-plane@miakapp-v4-staging.iam.gserviceaccount.com',
@@ -233,6 +233,20 @@ test('accepts reconciled state and the reviewed live foundation plan', () => {
   assert.equal(foundationPlan.contains_public_ingress, false);
   assert.equal(foundationPlan.contains_secret_versions, false);
   assert.equal(foundationPlan.contains_billing_resource, false);
+  const savedFoundationPlan = validated.terraform.foundation_saved_plan_observation;
+  assert.equal(savedFoundationPlan.workflow_run_id, '33772429693');
+  assert.equal(savedFoundationPlan.configuration_commit, 'acfcee42e202cdb4f08ada75ad81b1ad8a88951e');
+  assert.equal(
+    savedFoundationPlan.plan_sha256,
+    'd90f4d2243a7754372c059f1fcd5297a23c317cbcdc9b9ff734c66575f347d3f',
+  );
+  assert.deepEqual(savedFoundationPlan.result, { create: 33, update: 0, delete: 0 });
+  assert.equal(savedFoundationPlan.saved_plan_created, true);
+  assert.equal(savedFoundationPlan.saved_plan_private, true);
+  assert.equal(savedFoundationPlan.strict_validation_profile, 'initial-foundation');
+  assert.equal(savedFoundationPlan.strict_validation_passed, true);
+  assert.equal(savedFoundationPlan.apply_executed, false);
+  assert.equal(savedFoundationPlan.state_unchanged, true);
   assert.equal(foundationPlan.saved_plan_created, false);
   assert.equal(foundationPlan.apply_executed, false);
   assert.equal(foundationPlan.state_generation_before, '1788443136082489');
@@ -506,6 +520,18 @@ test('rejects apply authorization and bootstrap completion drift', () => {
   rejects((candidate) => {
     candidate.terraform.foundation_live_plan_observation.temporary_lock_released = false;
   }, /terraform\.foundation_live_plan_observation\.temporary_lock_released/);
+  rejects((candidate) => {
+    candidate.terraform.foundation_saved_plan_observation.plan_sha256 = '0'.repeat(64);
+  }, /terraform\.foundation_saved_plan_observation\.plan_sha256/);
+  rejects((candidate) => {
+    candidate.terraform.foundation_saved_plan_observation.result.delete = 1;
+  }, /terraform\.foundation_saved_plan_observation\.result\.delete/);
+  rejects((candidate) => {
+    candidate.terraform.foundation_saved_plan_observation.saved_plan_private = false;
+  }, /terraform\.foundation_saved_plan_observation\.saved_plan_private/);
+  rejects((candidate) => {
+    candidate.terraform.foundation_saved_plan_observation.strict_validation_passed = false;
+  }, /terraform\.foundation_saved_plan_observation\.strict_validation_passed/);
 });
 
 test('requires explicit targeting and forbids a staging Firebase alias', () => {

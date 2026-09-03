@@ -1,10 +1,10 @@
 # Miakapp 4 staging activation blueprint
 
-Status: manual keyless plan workflow authorized; protected merge pending
+Status: private keyless foundation plan strictly reviewed; apply unauthorized
 
 This directory contains a closed, apply-capable description of the future
 `miakapp-v4-staging` foundation. This revision authorizes only bounded manual
-planning after a protected merge to `main`; it does not authorize foundation
+planning from protected `main`; it does not authorize foundation
 apply, deployment, public ingress, or teardown.
 
 ## Current truth
@@ -12,8 +12,8 @@ apply, deployment, public ingress, or teardown.
 Project `miakapp-v4-staging` (`1072737219170`) remains application-undeployed:
 there is no Firebase app, App Engine application, Firestore database, Function,
 Cloud Run service, KMS key ring, secret, or public ingress. The plan-only
-workflow is not dispatchable from the default branch until this revision is
-merged. The authorized bootstrap apply on 2026-09-03 did, however, complete
+workflow is installed on the default branch and completed its first successful
+keyless run. The authorized bootstrap apply on 2026-09-03 did, however, complete
 the infrastructure bootstrap itself:
 
 - the approved billing link and exactly one EUR 10 alert budget;
@@ -46,9 +46,10 @@ contains no apply path and refuses to overwrite the existing state object. A
 guarded live foundation plan has now been reviewed, but no foundation resource
 or workload has been applied.
 
-Workflow installation and manual keyless planning are now authorized. A plan
-run may acquire its bounded Terraform lock and create one private, create-only
-saved-plan object. Foundation apply, workload deployment, public ingress and
+Workflow installation and manual keyless planning are authorized. A plan run
+acquired its bounded Terraform lock and created one private, create-only
+saved-plan object. The planner identity was exercised successfully; the deployer
+remains unused. Foundation apply, workload deployment, public ingress and
 destroy remain explicitly unauthorized. Passing the local gate is evidence,
 never additional authorization.
 
@@ -57,8 +58,8 @@ never additional authorization.
 | Path | Purpose | Current execution boundary |
 |---|---|---|
 | [`bootstrap/`](bootstrap/) | Billing link, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Complete; remote state reconciled with protected local recovery evidence |
-| [`terraform/`](terraform/) | APIs, Firestore, KMS, empty Secret Manager containers, and resource-scoped runtime IAM | Empty state reconciled; live plan reviewed; no apply |
-| [`automation/`](automation/) | GitHub policy record, hash-bound plan-only workflow, dormant apply script, and operator inspection | Exact active copy proposed under `.github/workflows`; dispatchable only after protected merge |
+| [`terraform/`](terraform/) | APIs, Firestore, KMS, empty Secret Manager containers, and resource-scoped runtime IAM | Empty state reconciled; private saved plan strictly reviewed; no apply |
+| [`automation/`](automation/) | GitHub policy record, hash-bound plan-only workflow, strict plan validator, dormant apply script, and operator inspection | Exact active plan-only copy installed under `.github/workflows` |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
 | [`TEARDOWN.md`](TEARDOWN.md) | Manual recovery and teardown rehearsal | Documentation only |
 
@@ -88,12 +89,14 @@ state prefix. Escalation-capable project IAM, service-account creation and bucke
 creation remain human-bootstrap operations. The deployer has only service-scoped
 foundation roles plus administration of the separate component bucket; it has no
 project-wide Storage or IAM role capable of bypassing the state boundary. The
-planner becomes usable only by the exact manual workflow after its protected
-merge to `main`. The deployer is not referenced by any active workflow.
+planner is usable only by the exact manual workflow on protected `main` and has
+now completed one successful run. The deployer is not referenced by any active
+workflow.
 
-This repository change itself costs nothing. Dispatching the plan-only workflow
-will add API reads, a temporary lock, and a small private saved-plan object, but
-no foundation resource. The state bucket currently stores
+This repository change itself costs nothing. The successful plan-only workflow
+added only API reads, a temporary lock that was released, and an 11,005-byte
+private saved-plan object; it created no foundation resource. The state bucket
+currently stores
 one 60,909-byte bootstrap state and one current 181-byte empty foundation state,
 plus tiny recoverable state and lock generations. It will later hold bounded
 foundation state and short-lived plan objects. Storage
@@ -179,6 +182,15 @@ The wrapper created no saved plan and ran no apply. A post-plan read proved that
 foundation state generation `1788443136082489` and its SHA-256 remained
 unchanged, and no `.tflock` object remained current.
 
+The installed GitHub workflow then completed run `33772429693` from protected
+configuration commit `acfcee42e202cdb4f08ada75ad81b1ad8a88951e`. Its private
+11,005-byte plan has generation `1788449123427734` and SHA-256
+`d90f4d2243a7754372c059f1fcd5297a23c317cbcdc9b9ff734c66575f347d3f`.
+The complete binary was downloaded, digest-checked, rendered with the pinned
+providers, and accepted by the `initial-foundation` closed policy: the same 33
+creates and two reads, with no update or delete. The empty foundation state kept
+the same generation and digest, and no live lock remained.
+
 ## Plan-only GitHub automation
 
 [`automation/github-policy.json`](automation/github-policy.json) captures both
@@ -189,8 +201,8 @@ Actions were restricted to the reviewed SHA-pinned integrations with read-only
 default permissions. The unrelated `miakapi` environment was left unchanged.
 Repository OIDC customization remains at its default because the Google
 provider, not GitHub's repository subject template, will enforce the immutable
-numeric and workflow claims. This revision installs a hash-bound plan-only copy;
-GitHub will expose it for dispatch only after protected merge to `main`.
+numeric and workflow claims. The hash-bound plan-only copy is installed and has
+successfully exercised those claims.
 
 The plan-only workflow and its byte-identical blueprint require:
 
@@ -220,25 +232,30 @@ The gate validates bounded closed manifests, all three reviewed inventories,
 the exact plan-only active workflow and blueprint, pinned actions and providers,
 exact locks for macOS
 ARM64 and Linux AMD64, both Terraform roots with mock providers, script syntax,
-private-plan handling, the complete simulated migration-only recovery state
+private-plan handling, the exact initial-foundation addresses, actions, planned
+values, prior bootstrap output, critical expression references and checks, the
+complete simulated migration-only recovery state
 machine, the simulated guarded foundation-state initializer, and hostile
 environment inputs. It initializes Terraform with `-backend=false` and never
 reads credentials or contacts staging.
 
 The active validation workflow has only `contents: read`; it has no OIDC or
-secret permission. After protected merge, the manually dispatched plan workflow
-may request only the planner OIDC identity. It has no apply job, and the dormant
+secret permission. The manually dispatched plan workflow may request only the
+planner OIDC identity. It has no apply job, and the dormant
 apply script fails its separate policy check while foundation apply remains
 unauthorized.
 
 ## Next staging gate
 
-The GitHub branch, environment and Actions prerequisite are configured, and the
-foundation state boundary is reconciled. The next sequence is:
+The GitHub branch, environment and Actions prerequisite are configured, the
+foundation state boundary is reconciled, and the first private plan passed full
+inspection. The next sequence is:
 
-1. merge this exact plan-only workflow through protected `main`;
-2. dispatch it with the exact staging confirmation; and
-3. inspect its private saved plan before any foundation apply transition.
+1. merge the strict plan admission policy through protected `main`;
+2. dispatch a fresh private plan so the installed workflow itself exercises the
+   new policy; and
+3. separately review and activate the apply job only for that same
+   `initial-foundation` policy.
 
 The production Function entry point, exact FCM runtime permission, secret
 version lifecycle, ingress design, monitoring, real-service fault matrix,
