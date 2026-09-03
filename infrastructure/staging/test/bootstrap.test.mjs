@@ -23,6 +23,7 @@ import { fileURLToPath } from 'node:url';
 
 import { validateBootstrapRoot } from '../bootstrap/guard.mjs';
 import {
+  APPROVED_CONFIGURATION_COMMIT,
   APPROVED_PLAN_SHA256,
   BUDGET_DISPLAY_NAME,
   EXECUTION_AUTHORIZATION,
@@ -247,7 +248,7 @@ function runSyntheticBootstrapExecution({
   const metadata = metadataForPlan(
     planBytes,
     plan,
-    'c192f97959833f53a19d4e6dc50b26292c88b3b5',
+    APPROVED_CONFIGURATION_COMMIT,
   );
   const completeState = syntheticTerraformState(metadata);
   const partialState = syntheticTerraformState(metadata, { complete: false });
@@ -821,6 +822,12 @@ test('binds bootstrap execution to the exact reviewed plan and closed cloud obse
   assert.equal(validateExecutionAuthorization(EXECUTION_AUTHORIZATION), EXECUTION_AUTHORIZATION);
   assert.throws(
     () => validateExecutionAuthorization(`apply-and-migrate:miakapp-v4-staging:${'0'.repeat(64)}`),
+    /exact reviewed apply-and-migrate authorization/,
+  );
+  assert.throws(
+    () => validateExecutionAuthorization(
+      'apply-and-migrate:miakapp-v4-staging:0918d21c4677ce0958be9ccc43057d8d76a33857fdfbea066120ba953e30b5c1',
+    ),
     /exact reviewed apply-and-migrate authorization/,
   );
 

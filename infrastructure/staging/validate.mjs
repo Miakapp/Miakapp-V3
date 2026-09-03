@@ -119,7 +119,7 @@ const LOCAL_PLAN_POST_CHECKS = [
 const LOCAL_SAVED_PLAN_POST_CHECKS = [
   'billing-linked-to-approved-account',
   'repository-plan-and-state-artifacts-absent',
-  'target-budget-absent',
+  'budget-api-disabled-and-preflight-deferred',
   'target-buckets-absent',
   'target-service-accounts-absent',
   'workload-identity-pool-absent',
@@ -682,15 +682,12 @@ function validateTerraform(value) {
     'local_recovery_preserved_on_failure',
     'local_state_removed_only_after_reconciliation',
     'authorized_plan_attempted',
-    'attempted_on',
-    'result',
-    'cloud_resources_created',
-    'remote_state_migrated',
+    'prior_attempt',
     'executed',
   ]);
   exact(
     bootstrapExecution.state,
-    'authorized_plan_failed_before_resource_creation',
+    'guarded_import_wrapper_committed_inactive',
     'terraform.bootstrap_execution.state',
   );
   exact(
@@ -705,12 +702,12 @@ function validateTerraform(value) {
   );
   exact(
     bootstrapExecution.approved_configuration_commit,
-    'c192f97959833f53a19d4e6dc50b26292c88b3b5',
+    '6340bffbddcc4797067ef48170fc5c3524345bf2',
     'terraform.bootstrap_execution.approved_configuration_commit',
   );
   exact(
     bootstrapExecution.approved_plan_sha256,
-    '0918d21c4677ce0958be9ccc43057d8d76a33857fdfbea066120ba953e30b5c1',
+    '6fb0b0c15fa04338a40ab59de790c3a4a85f96b418377c4a70570a8dabd5d457',
     'terraform.bootstrap_execution.approved_plan_sha256',
   );
   exact(
@@ -750,17 +747,47 @@ function validateTerraform(value) {
   );
   exact(
     bootstrapExecution.authorized_plan_attempted,
-    true,
+    false,
     'terraform.bootstrap_execution.authorized_plan_attempted',
   );
-  exact(bootstrapExecution.attempted_on, '2026-09-03', 'terraform.bootstrap_execution.attempted_on');
-  exact(
-    bootstrapExecution.result,
-    'billing_association_quota_before_resource_creation',
-    'terraform.bootstrap_execution.result',
+  const priorAttempt = record(
+    bootstrapExecution.prior_attempt,
+    'terraform.bootstrap_execution.prior_attempt',
+    [
+      'configuration_commit',
+      'plan_sha256',
+      'attempted_on',
+      'result',
+      'cloud_resources_created',
+      'remote_state_migrated',
+    ],
   );
-  exact(bootstrapExecution.cloud_resources_created, 0, 'terraform.bootstrap_execution.cloud_resources_created');
-  exact(bootstrapExecution.remote_state_migrated, false, 'terraform.bootstrap_execution.remote_state_migrated');
+  exact(
+    priorAttempt.configuration_commit,
+    'c192f97959833f53a19d4e6dc50b26292c88b3b5',
+    'terraform.bootstrap_execution.prior_attempt.configuration_commit',
+  );
+  exact(
+    priorAttempt.plan_sha256,
+    '0918d21c4677ce0958be9ccc43057d8d76a33857fdfbea066120ba953e30b5c1',
+    'terraform.bootstrap_execution.prior_attempt.plan_sha256',
+  );
+  exact(priorAttempt.attempted_on, '2026-09-03', 'terraform.bootstrap_execution.prior_attempt.attempted_on');
+  exact(
+    priorAttempt.result,
+    'billing_association_quota_before_resource_creation',
+    'terraform.bootstrap_execution.prior_attempt.result',
+  );
+  exact(
+    priorAttempt.cloud_resources_created,
+    0,
+    'terraform.bootstrap_execution.prior_attempt.cloud_resources_created',
+  );
+  exact(
+    priorAttempt.remote_state_migrated,
+    false,
+    'terraform.bootstrap_execution.prior_attempt.remote_state_migrated',
+  );
   exact(bootstrapExecution.executed, false, 'terraform.bootstrap_execution.executed');
 
   exact(terraform.apply_authorized, false, 'terraform.apply_authorized');
@@ -853,6 +880,8 @@ function validateTerraform(value) {
       'binary_digest_verified',
       'binary_plan_matches_metadata',
       'full_plan_reviewed',
+      'billing_import_preserves_account',
+      'billing_update_cloud_api_expected',
       'local_state_artifacts_created',
       'apply_authorized',
       'apply_executed',
@@ -864,12 +893,12 @@ function validateTerraform(value) {
   exact(savedObservation.observed_on, '2026-09-03', 'terraform.local_saved_plan_observation.observed_on');
   exact(
     savedObservation.created_at,
-    '2026-09-02T23:32:22Z',
+    '2026-09-03T01:00:18Z',
     'terraform.local_saved_plan_observation.created_at',
   );
   exact(
     savedObservation.configuration_commit,
-    'c192f97959833f53a19d4e6dc50b26292c88b3b5',
+    '6340bffbddcc4797067ef48170fc5c3524345bf2',
     'terraform.local_saved_plan_observation.configuration_commit',
   );
   exact(
@@ -879,18 +908,20 @@ function validateTerraform(value) {
   );
   exact(
     savedObservation.plan_sha256,
-    '0918d21c4677ce0958be9ccc43057d8d76a33857fdfbea066120ba953e30b5c1',
+    '6fb0b0c15fa04338a40ab59de790c3a4a85f96b418377c4a70570a8dabd5d457',
     'terraform.local_saved_plan_observation.plan_sha256',
   );
 
   const savedResult = record(savedObservation.result, 'terraform.local_saved_plan_observation.result', [
-    'add',
-    'change',
-    'destroy',
+    'create',
+    'import',
+    'update',
+    'delete',
   ]);
-  exact(savedResult.add, 36, 'terraform.local_saved_plan_observation.result.add');
-  exact(savedResult.change, 0, 'terraform.local_saved_plan_observation.result.change');
-  exact(savedResult.destroy, 0, 'terraform.local_saved_plan_observation.result.destroy');
+  exact(savedResult.create, 35, 'terraform.local_saved_plan_observation.result.create');
+  exact(savedResult.import, 1, 'terraform.local_saved_plan_observation.result.import');
+  exact(savedResult.update, 1, 'terraform.local_saved_plan_observation.result.update');
+  exact(savedResult.delete, 0, 'terraform.local_saved_plan_observation.result.delete');
 
   const savedResourceCounts = record(
     savedObservation.resource_counts,
@@ -968,6 +999,16 @@ function validateTerraform(value) {
     savedObservation.full_plan_reviewed,
     true,
     'terraform.local_saved_plan_observation.full_plan_reviewed',
+  );
+  exact(
+    savedObservation.billing_import_preserves_account,
+    true,
+    'terraform.local_saved_plan_observation.billing_import_preserves_account',
+  );
+  exact(
+    savedObservation.billing_update_cloud_api_expected,
+    false,
+    'terraform.local_saved_plan_observation.billing_update_cloud_api_expected',
   );
   exact(
     savedObservation.local_state_artifacts_created,
@@ -1091,10 +1132,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 16, 'manifest.revision');
+  exact(manifest.revision, 17, 'manifest.revision');
   exact(
     manifest.status,
-    'bootstrap_import_recovery_configuration_ready_billing_linked_undeployed',
+    'bootstrap_import_plan_reviewed_billing_linked_undeployed',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');

@@ -3,8 +3,8 @@
 Date: 2026-09-01
 
 Status: accepted direction; approved staging billing link active; authorized
-bootstrap plan failed with zero created resources on 2026-09-03; project remains
-undeployed and import recovery is being prepared
+bootstrap plan failed with zero created resources on 2026-09-03; replacement
+import plan reviewed but not authorized; project remains undeployed
 
 ## Decision
 
@@ -202,9 +202,13 @@ action attempted to rewrite the already-correct billing association and Cloud
 Billing rejected it on the association-change quota. Terraform recorded zero
 managed resources, and independent inventory confirmed that no target was
 created. The digest is superseded. An import-based recovery configuration now
-models the active link without another association write; its replacement plan
-must be privately created, inspected, and separately authorized. The operator
-must then run the guarded sequence, initialize and verify the empty foundation state with
+models the active link without another association write. Its replacement plan,
+created from commit `6340bffbddcc4797067ef48170fc5c3524345bf2`, was fully
+inspected with 35 creations, one import with a client-side update, and no
+deletion; its SHA-256 is
+`6fb0b0c15fa04338a40ab59de790c3a4a85f96b418377c4a70570a8dabd5d457`.
+It still requires separate exact authorization. The operator must then run the
+guarded sequence, initialize and verify the empty foundation state with
 protected operator credentials, then authorize and install the workflow. A
 separate reviewed foundation plan is required before apply approval. The
 production Function entry point,

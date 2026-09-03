@@ -1,7 +1,7 @@
 # Miakapp 4 staging activation blueprint
 
-Status: approved billing link active; the authorized bootstrap plan failed
-before creating resources; import-based recovery configuration is ready
+Status: approved billing link active; import-based recovery plan reviewed;
+guarded wrapper committed but inactive
 
 This directory contains a closed, apply-capable description of the future
 `miakapp-v4-staging` foundation. It does not authorize or perform cloud
@@ -18,8 +18,9 @@ dated inventory in [`manifest.json`](manifest.json) records:
 - no registered Firebase app, App Engine application, Firestore database,
   Storage bucket, Function, Cloud Run service, KMS key ring, or secret;
 - no staging runtime, planner, or deployer identity; and
-- the failed plan and its zero-resource recovery state remain only in private
-  operator directories outside the repository; no remote Terraform state exists.
+- the failed plan, its zero-resource recovery state, and the reviewed replacement
+  plan remain only in private operator directories outside the repository; no
+  remote Terraform state exists.
 
 On 2026-09-03, after the separately authorized billing link, the guarded
 bootstrap command ran against configuration commit
@@ -48,8 +49,11 @@ That plan is superseded and must not be retried.
 The recovery configuration now imports the existing billing association into
 Terraform state and permits only its client-side deletion policy to change from
 `DELETE` to `PREVENT`. It therefore avoids a second billing-association API write.
-A new private plan must still be created, inspected, recorded, and explicitly
-authorized before any recovery apply.
+The replacement plan was created and fully inspected from commit
+`6340bffbddcc4797067ef48170fc5c3524345bf2`; its SHA-256 is
+`6fb0b0c15fa04338a40ab59de790c3a4a85f96b418377c4a70570a8dabd5d457`,
+with exactly 35 creations, one import with a client-side update, and no deletion.
+It has not been authorized or applied.
 
 Firebase-enabled APIs and its managed Admin SDK service account exist, but they
 are not evidence of a deployed or metered workload. Paris (`europe-west9`) and
@@ -64,7 +68,7 @@ resources, install a cloud workflow, open ingress, apply, or destroy.
 
 | Path | Purpose | Current execution boundary |
 |---|---|---|
-| [`bootstrap/`](bootstrap/) | Imported billing link, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Import recovery configuration ready; prior plan superseded; no recovery apply authorized |
+| [`bootstrap/`](bootstrap/) | Imported billing link, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Exact import recovery plan reviewed; guarded wrapper inactive; no recovery apply authorized |
 | [`terraform/`](terraform/) | APIs, Firestore, KMS, empty Secret Manager containers, and resource-scoped runtime IAM | Mock-tested offline; live plan blocked until bootstrap state exists |
 | [`automation/`](automation/) | GitHub policy record, dormant plan/apply workflow, private-plan scripts, and operator inspection | Outside `.github/workflows`; cannot run |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
@@ -119,9 +123,8 @@ Service Usage proves its API is disabled, and requires exactly one target budget
 after a complete apply. It keeps all transient state outside the repository,
 activates the backend template only in a private working copy, and deletes local
 state only after the remote generation and full state contents reconcile. The
-wrapper remains bound to the superseded digest and therefore cannot execute the
-recovery configuration; it must be rebound only after a replacement plan is
-created and reviewed.
+wrapper is bound to the new reviewed source commit and plan digest, but the
+replacement plan has not been authorized or executed.
 
 The ordinary foundation root already points at `terraform/foundation` and reads
 the bootstrap output from `terraform/bootstrap`. A closed precondition checks
