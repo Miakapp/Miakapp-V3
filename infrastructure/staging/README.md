@@ -1,6 +1,6 @@
 # Miakapp 4 staging activation blueprint
 
-Status: bootstrap resources created; complete state preserved locally; remote migration pending
+Status: bootstrap complete; remote state migrated and reconciled; foundation initialization pending
 
 This directory contains a closed, apply-capable description of the future
 `miakapp-v4-staging` foundation. It does not authorize or perform cloud
@@ -30,18 +30,18 @@ the path and raw contents remain private outside the repository.
 
 The cloud apply succeeded, but the original wrapper stopped before backend
 migration because its local validator expected a `sensitive` field that
-Terraform 1.11.3 does not persist for this non-sensitive output. A subsequent
-read-only check also established that `gcloud storage ls --json` represents an
-empty bucket by its root URL rather than always returning `[]`. The state bucket
-contains no state object, so the authoritative complete state remains the
-protected local file.
+Terraform 1.11.3 does not persist for this non-sensitive output. The guarded
+recovery subsequently migrated the state to GCS. Terraform canonically raised
+the serial to 40 and permuted the two `check_results` entries; a fresh read of
+generation `1788439334043522` proved that every other parsed value is exactly
+equal. The original serial-39 state remains protected as independent recovery
+evidence outside the repository.
 
 The consumed [`bootstrap/apply-and-migrate.sh`](bootstrap/apply-and-migrate.sh)
 entry point is permanently retired. The replacement
 [`bootstrap/migrate-recovered-state.sh`](bootstrap/migrate-recovered-state.sh)
-can only migrate the exact complete state after a new commit-bound authorization;
-it contains no apply path. No foundation resource or workload may be planned
-until that migration is reconciled.
+contains no apply path and refuses to overwrite the existing state object. No
+foundation resource or workload has been planned yet.
 
 All current authorization bits for additional cloud actions remain false.
 Passing the local gate is evidence, never authorization to migrate state, install
@@ -51,8 +51,8 @@ a workflow, deploy a workload, open ingress, apply, or destroy.
 
 | Path | Purpose | Current execution boundary |
 |---|---|---|
-| [`bootstrap/`](bootstrap/) | Billing link, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Cloud resources exist; complete local state awaits exact migration authorization |
-| [`terraform/`](terraform/) | APIs, Firestore, KMS, empty Secret Manager containers, and resource-scoped runtime IAM | Mock-tested offline; live plan blocked until bootstrap state is migrated |
+| [`bootstrap/`](bootstrap/) | Billing link, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Complete; remote state reconciled with protected local recovery evidence |
+| [`terraform/`](terraform/) | APIs, Firestore, KMS, empty Secret Manager containers, and resource-scoped runtime IAM | Mock-tested offline; live plan blocked until empty foundation state is initialized and verified |
 | [`automation/`](automation/) | GitHub policy record, dormant plan/apply workflow, private-plan scripts, and operator inspection | Outside `.github/workflows`; cannot run |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
 | [`TEARDOWN.md`](TEARDOWN.md) | Manual recovery and teardown rehearsal | Documentation only |
@@ -84,8 +84,10 @@ foundation roles plus administration of the separate component bucket; it has no
 project-wide Storage or IAM role capable of bypassing the state boundary. They
 are not used by any active workflow.
 
-This repository change itself costs nothing. The currently empty state bucket
-will store only small state and short-lived plan objects, but Storage
+This repository change itself costs nothing. The state bucket currently stores
+one 60,909-byte bootstrap state plus Terraform's recoverable 181-byte initial
+empty generation, and will later hold bounded foundation state and short-lived
+plan objects. Storage
 operations and retained versions are usage-metered. Budget alerts at EUR 2, EUR
 5, and EUR 10 are alarms rather than hard caps. The software KMS key version is
 the principal planned idle fixed cost; actual staging measurements must replace
@@ -94,19 +96,22 @@ estimates before production.
 ## Remote-state bootstrap boundary
 
 The GCS bucket could not back the transaction that created it, so the authorized
-apply used a protected local state. The bucket now exists, but the repository
-still keeps [`bootstrap/backend.gcs.tf.example`](bootstrap/backend.gcs.tf.example)
-as a template rather than activating it in the source tree.
+apply used protected local state. The repository still keeps
+[`bootstrap/backend.gcs.tf.example`](bootstrap/backend.gcs.tf.example) as a
+template rather than activating it in the source tree.
 
-The migration-only wrapper revalidates the private saved-plan bundle and exact
+The migration-only wrapper revalidated the private saved-plan bundle and exact
 complete-state digest, serial, lineage, 36-address inventory, and activation
-output. It then checks the project and billing fingerprint, the budget, APIs,
-buckets, service accounts, Workload Identity pool and providers, and proves the
-state bucket has no object. Only in a private working copy does it activate the
-backend template and run `terraform init -migrate-state -force-copy`. It reads
-the remote object back and requires exact parsed-state equality. Both success
-and failure leave the authoritative source state unchanged; failures also retain
-the private execution directory for diagnosis.
+output. It then checked the project and billing fingerprint, the budget, APIs,
+buckets, service accounts, Workload Identity pool and providers, and proved the
+state bucket had no object. Only in a private working copy did it activate the
+backend template and run `terraform init -migrate-state -force-copy`. It read
+the remote object back and accepts only Terraform's observed canonical migration
+transform: one serial increment and an exact permutation of `check_results`,
+with strict equality everywhere else. Both success and failure leave the
+authoritative source state unchanged; failures also retain the private execution
+directory for diagnosis. The migration has completed and the existing object
+makes this path fail closed on replay.
 
 The ordinary foundation root already points at `terraform/foundation` and reads
 the bootstrap output from `terraform/bootstrap`. A closed precondition checks
@@ -166,12 +171,9 @@ because workflow installation and foundation deployment remain unauthorized.
 The GitHub branch, environment and Actions prerequisite are configured. Before
 any additional cloud action, the recovery sequence must:
 
-1. receive explicit authorization for the reviewed migration commit and exact complete-state
-   digest;
-2. migrate and reconcile bootstrap state without applying infrastructure;
-3. initialize and verify the empty foundation state before admitting CI;
-4. install the cloud workflow only after the state boundary is proven; and
-5. review a live foundation plan before granting apply approval.
+1. initialize and verify the empty foundation state before admitting CI;
+2. install the cloud workflow only after the state boundary is proven; and
+3. review a live foundation plan before granting apply approval.
 
 The production Function entry point, exact FCM runtime permission, secret
 version lifecycle, ingress design, monitoring, real-service fault matrix,

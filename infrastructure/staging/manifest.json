@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 21,
-  "status": "bootstrap_apply_complete_state_migration_recovery_pending",
+  "revision": 22,
+  "status": "bootstrap_complete_remote_state_reconciled",
   "environment": "staging",
   "project": {
     "project_id": "miakapp-v4-staging",
@@ -290,7 +290,7 @@
       "identifier_sha256": "4557923f1be719b78ee844b14bfa4654be3eb3fa785a2cb5a2624c3f85d12270",
       "raw_identifier_committed": false,
       "link_state": "linked_to_approved_account",
-      "terraform_management_state": "managed_in_private_complete_local_state_pending_remote_migration"
+      "terraform_management_state": "managed_in_reconciled_remote_bootstrap_state"
     },
     "currency": "EUR",
     "alert_thresholds": [
@@ -313,8 +313,8 @@
     }
   },
   "terraform": {
-    "state": "bootstrap_applied_state_migration_pending",
-    "supported_workflow": "credential_free_validation_and_guarded_state_migration",
+    "state": "bootstrap_complete_foundation_initialization_pending",
+    "supported_workflow": "credential_free_validation_and_guarded_foundation_initialization",
     "configuration_apply_capable": true,
     "active_cloud_workflow": "none",
     "workflow_blueprint_state": "dormant_not_installed",
@@ -334,12 +334,12 @@
     ],
     "backend": {
       "type": "gcs",
-      "state": "bucket_created_state_object_absent",
+      "state": "bootstrap_state_present_foundation_state_absent",
       "bucket": "miakapp-v4-staging-tfstate-1072737219170",
       "bootstrap_prefix": "terraform/bootstrap",
       "foundation_prefix": "terraform/foundation",
       "bootstrap_migration_template": "bootstrap/backend.gcs.tf.example",
-      "bootstrap_migration_state": "complete_local_state_pending_migration",
+      "bootstrap_migration_state": "complete_remote_state_reconciled",
       "locking_enabled": true,
       "object_versioning_enabled": true,
       "public_access_prevention": "enforced"
@@ -372,7 +372,7 @@
       "github_repository_owner_id": "83046838"
     },
     "saved_plan": {
-      "state": "applied_private_bundle_retained_for_state_migration",
+      "state": "applied_private_bundle_retained_as_recovery_evidence",
       "public_artifacts_allowed": false,
       "create_only": true,
       "sha256_verified_before_apply": true,
@@ -381,13 +381,14 @@
       "soft_delete_days": 7
     },
     "bootstrap_execution": {
-      "state": "apply_complete_state_migration_awaiting_exact_authorization",
+      "state": "bootstrap_complete_state_migrated_and_reconciled",
       "script": "bootstrap/migrate-recovered-state.sh",
       "retired_apply_script": "bootstrap/apply-and-migrate.sh",
       "helper": "bootstrap/bootstrap-execution.mjs",
       "approved_configuration_commit": "e9f410c58c8cbbf8f5f7a17170c9e8ed55a10501",
       "approved_plan_sha256": "12927b270f2bfa78c8f8c8c7e7071ce9cfec18d5e848165c04b585260bd5f7da",
       "migration_configuration_commit": "b2daada96d4f5f669bb80fd3cdfc0e0f9fb48286",
+      "reconciliation_configuration_commit": "23d80ec55fcac9cd4cef968ce674fe413306319e",
       "exact_authorization_required": true,
       "repository_commit_bound": true,
       "cloud_preflight_required": true,
@@ -443,6 +444,31 @@
         "path_committed": false,
         "raw_contents_committed": false
       },
+      "remote_state": {
+        "state": "migrated_and_reconciled",
+        "bucket": "miakapp-v4-staging-tfstate-1072737219170",
+        "object": "terraform/bootstrap/default.tfstate",
+        "generation": "1788439334043522",
+        "sha256": "8753dcceaa848ba8734d9892dbec6f2445fbf6b3fbead7da375cc37f0702d3bf",
+        "size_bytes": 60909,
+        "terraform_version": "1.11.3",
+        "serial": 40,
+        "managed_resources": 36,
+        "lineage_sha256": "35e52294057979e6191eaa05141a9476261d4b0ea75c9113128f780abda7a9ba",
+        "canonical_serial_increment": 1,
+        "check_results_exact_permutation": true,
+        "remainder_exactly_equal": true,
+        "initialization_generation": {
+          "state": "noncurrent_recoverable_empty_state",
+          "generation": "1788439333248171",
+          "sha256": "cdf598e8ed07454850616c5059e7dcf3f0669c5aecd83c6cf224a32fe2a1398e",
+          "size_bytes": 181,
+          "serial": 1,
+          "managed_resources": 0,
+          "raw_contents_committed": false
+        },
+        "raw_contents_committed": false
+      },
       "source_state_preserved_on_failure": true,
       "source_state_preserved_after_reconciliation": true,
       "authorized_plan_attempted": true,
@@ -481,7 +507,25 @@
           "remote_state_migrated": false
         }
       ],
-      "bootstrap_completed": false
+      "migration_attempts": [
+        {
+          "execution_commit": "d1d6b75e85dc365666479bd90c165ac674b8ba39",
+          "complete_state_sha256": "c083e7a05f2ccf273abda98c0739584336d2cbaffd8ea836b65b0790f94833a2",
+          "attempted_on": "2026-09-03",
+          "result": "empty_bucket_root_marker_schema_mismatch_before_backend_initialization",
+          "remote_state_migrated": false,
+          "remote_generation": null
+        },
+        {
+          "execution_commit": "107bb23e8b546aca283105f4a9584343985576f6",
+          "complete_state_sha256": "c083e7a05f2ccf273abda98c0739584336d2cbaffd8ea836b65b0790f94833a2",
+          "attempted_on": "2026-09-03",
+          "result": "remote_state_written_then_canonically_reconciled",
+          "remote_state_migrated": true,
+          "remote_generation": "1788439334043522"
+        }
+      ],
+      "bootstrap_completed": true
     },
     "apply_authorized": false,
     "destroy_authorized": false,
@@ -560,7 +604,7 @@
       "apply_authorized": true,
       "apply_executed": true,
       "state_migration_authorized": true,
-      "state_migration_executed": false,
+      "state_migration_executed": true,
       "post_inspection_checks": [
         "billing-linked-to-approved-account",
         "repository-plan-and-state-artifacts-absent",
@@ -571,7 +615,8 @@
         "target-service-accounts-present-once",
         "workload-identity-pool-and-providers-present-once",
         "complete-local-state-verified",
-        "remote-state-object-absent"
+        "remote-state-object-present-once",
+        "remote-state-canonically-reconciled"
       ]
     },
     "superseded_saved_plan_observation": {
@@ -635,7 +680,7 @@
       "migration-rehearsal",
       "production-function-entrypoint",
       "secret-version-lifecycle",
-      "remote-bootstrap-state-not-migrated",
+      "foundation-state-not-initialized",
       "github-terraform-workflow-not-installed",
       "live-foundation-plan-not-reviewed"
     ]

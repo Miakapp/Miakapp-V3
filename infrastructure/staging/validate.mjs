@@ -95,7 +95,7 @@ const REQUIRED_BLOCKERS = [
   'migration-rehearsal',
   'production-function-entrypoint',
   'secret-version-lifecycle',
-  'remote-bootstrap-state-not-migrated',
+  'foundation-state-not-initialized',
   'github-terraform-workflow-not-installed',
   'live-foundation-plan-not-reviewed',
 ];
@@ -143,7 +143,8 @@ const CURRENT_SAVED_PLAN_POST_CHECKS = [
   'target-service-accounts-present-once',
   'workload-identity-pool-and-providers-present-once',
   'complete-local-state-verified',
-  'remote-state-object-absent',
+  'remote-state-object-present-once',
+  'remote-state-canonically-reconciled',
 ];
 
 const TEARDOWN_INVENTORY = [
@@ -507,7 +508,7 @@ function validateCost(value) {
   );
   exact(
     billingAccount.terraform_management_state,
-    'managed_in_private_complete_local_state_pending_remote_migration',
+    'managed_in_reconciled_remote_bootstrap_state',
     'cost.billing_account.terraform_management_state',
   );
   exact(cost.currency, 'EUR', 'cost.currency');
@@ -554,10 +555,10 @@ function validateTerraform(value) {
     'local_saved_plan_observation',
     'superseded_saved_plan_observation',
   ]);
-  exact(terraform.state, 'bootstrap_applied_state_migration_pending', 'terraform.state');
+  exact(terraform.state, 'bootstrap_complete_foundation_initialization_pending', 'terraform.state');
   exact(
     terraform.supported_workflow,
-    'credential_free_validation_and_guarded_state_migration',
+    'credential_free_validation_and_guarded_foundation_initialization',
     'terraform.supported_workflow',
   );
   exact(terraform.configuration_apply_capable, true, 'terraform.configuration_apply_capable');
@@ -590,7 +591,7 @@ function validateTerraform(value) {
     'public_access_prevention',
   ]);
   exact(backend.type, 'gcs', 'terraform.backend.type');
-  exact(backend.state, 'bucket_created_state_object_absent', 'terraform.backend.state');
+  exact(backend.state, 'bootstrap_state_present_foundation_state_absent', 'terraform.backend.state');
   exact(backend.bucket, 'miakapp-v4-staging-tfstate-1072737219170', 'terraform.backend.bucket');
   exact(backend.bootstrap_prefix, 'terraform/bootstrap', 'terraform.backend.bootstrap_prefix');
   exact(backend.foundation_prefix, 'terraform/foundation', 'terraform.backend.foundation_prefix');
@@ -601,7 +602,7 @@ function validateTerraform(value) {
   );
   exact(
     backend.bootstrap_migration_state,
-    'complete_local_state_pending_migration',
+    'complete_remote_state_reconciled',
     'terraform.backend.bootstrap_migration_state',
   );
   exact(backend.locking_enabled, true, 'terraform.backend.locking_enabled');
@@ -718,7 +719,7 @@ function validateTerraform(value) {
   ]);
   exact(
     savedPlan.state,
-    'applied_private_bundle_retained_for_state_migration',
+    'applied_private_bundle_retained_as_recovery_evidence',
     'terraform.saved_plan.state',
   );
   exact(savedPlan.public_artifacts_allowed, false, 'terraform.saved_plan.public_artifacts_allowed');
@@ -736,6 +737,7 @@ function validateTerraform(value) {
     'approved_configuration_commit',
     'approved_plan_sha256',
     'migration_configuration_commit',
+    'reconciliation_configuration_commit',
     'exact_authorization_required',
     'repository_commit_bound',
     'cloud_preflight_required',
@@ -744,15 +746,17 @@ function validateTerraform(value) {
     'migration_only',
     'apply_entry_point_retired',
     'recovery_state',
+    'remote_state',
     'source_state_preserved_on_failure',
     'source_state_preserved_after_reconciliation',
     'authorized_plan_attempted',
     'attempts',
+    'migration_attempts',
     'bootstrap_completed',
   ]);
   exact(
     bootstrapExecution.state,
-    'apply_complete_state_migration_awaiting_exact_authorization',
+    'bootstrap_complete_state_migrated_and_reconciled',
     'terraform.bootstrap_execution.state',
   );
   exact(
@@ -784,6 +788,11 @@ function validateTerraform(value) {
     bootstrapExecution.migration_configuration_commit,
     'b2daada96d4f5f669bb80fd3cdfc0e0f9fb48286',
     'terraform.bootstrap_execution.migration_configuration_commit',
+  );
+  exact(
+    bootstrapExecution.reconciliation_configuration_commit,
+    '23d80ec55fcac9cd4cef968ce674fe413306319e',
+    'terraform.bootstrap_execution.reconciliation_configuration_commit',
   );
   exact(
     bootstrapExecution.exact_authorization_required,
@@ -872,6 +881,125 @@ function validateTerraform(value) {
     false,
     'terraform.bootstrap_execution.recovery_state.raw_contents_committed',
   );
+  const remoteState = record(
+    bootstrapExecution.remote_state,
+    'terraform.bootstrap_execution.remote_state',
+    [
+      'state',
+      'bucket',
+      'object',
+      'generation',
+      'sha256',
+      'size_bytes',
+      'terraform_version',
+      'serial',
+      'managed_resources',
+      'lineage_sha256',
+      'canonical_serial_increment',
+      'check_results_exact_permutation',
+      'remainder_exactly_equal',
+      'initialization_generation',
+      'raw_contents_committed',
+    ],
+  );
+  exact(remoteState.state, 'migrated_and_reconciled', 'terraform.bootstrap_execution.remote_state.state');
+  exact(
+    remoteState.bucket,
+    'miakapp-v4-staging-tfstate-1072737219170',
+    'terraform.bootstrap_execution.remote_state.bucket',
+  );
+  exact(
+    remoteState.object,
+    'terraform/bootstrap/default.tfstate',
+    'terraform.bootstrap_execution.remote_state.object',
+  );
+  exact(
+    remoteState.generation,
+    '1788439334043522',
+    'terraform.bootstrap_execution.remote_state.generation',
+  );
+  exact(
+    remoteState.sha256,
+    '8753dcceaa848ba8734d9892dbec6f2445fbf6b3fbead7da375cc37f0702d3bf',
+    'terraform.bootstrap_execution.remote_state.sha256',
+  );
+  exact(remoteState.size_bytes, 60909, 'terraform.bootstrap_execution.remote_state.size_bytes');
+  exact(remoteState.terraform_version, '1.11.3', 'terraform.bootstrap_execution.remote_state.terraform_version');
+  exact(remoteState.serial, 40, 'terraform.bootstrap_execution.remote_state.serial');
+  exact(remoteState.managed_resources, 36, 'terraform.bootstrap_execution.remote_state.managed_resources');
+  exact(
+    remoteState.lineage_sha256,
+    '35e52294057979e6191eaa05141a9476261d4b0ea75c9113128f780abda7a9ba',
+    'terraform.bootstrap_execution.remote_state.lineage_sha256',
+  );
+  exact(
+    remoteState.canonical_serial_increment,
+    1,
+    'terraform.bootstrap_execution.remote_state.canonical_serial_increment',
+  );
+  exact(
+    remoteState.check_results_exact_permutation,
+    true,
+    'terraform.bootstrap_execution.remote_state.check_results_exact_permutation',
+  );
+  exact(
+    remoteState.remainder_exactly_equal,
+    true,
+    'terraform.bootstrap_execution.remote_state.remainder_exactly_equal',
+  );
+  const initializationGeneration = record(
+    remoteState.initialization_generation,
+    'terraform.bootstrap_execution.remote_state.initialization_generation',
+    [
+      'state',
+      'generation',
+      'sha256',
+      'size_bytes',
+      'serial',
+      'managed_resources',
+      'raw_contents_committed',
+    ],
+  );
+  exact(
+    initializationGeneration.state,
+    'noncurrent_recoverable_empty_state',
+    'terraform.bootstrap_execution.remote_state.initialization_generation.state',
+  );
+  exact(
+    initializationGeneration.generation,
+    '1788439333248171',
+    'terraform.bootstrap_execution.remote_state.initialization_generation.generation',
+  );
+  exact(
+    initializationGeneration.sha256,
+    'cdf598e8ed07454850616c5059e7dcf3f0669c5aecd83c6cf224a32fe2a1398e',
+    'terraform.bootstrap_execution.remote_state.initialization_generation.sha256',
+  );
+  exact(
+    initializationGeneration.size_bytes,
+    181,
+    'terraform.bootstrap_execution.remote_state.initialization_generation.size_bytes',
+  );
+  exact(
+    initializationGeneration.serial,
+    1,
+    'terraform.bootstrap_execution.remote_state.initialization_generation.serial',
+  );
+  exact(
+    initializationGeneration.managed_resources,
+    0,
+    'terraform.bootstrap_execution.remote_state.initialization_generation.managed_resources',
+  );
+  exact(
+    initializationGeneration.raw_contents_committed,
+    false,
+    'terraform.bootstrap_execution.remote_state.initialization_generation.raw_contents_committed',
+  );
+  exact(
+    remoteState.raw_contents_committed,
+    false,
+    'terraform.bootstrap_execution.remote_state.raw_contents_committed',
+  );
   exact(
     bootstrapExecution.source_state_preserved_on_failure,
     true,
@@ -932,9 +1060,41 @@ function validateTerraform(value) {
       exact(attempt[field], expected, `${path}.${field}`);
     }
   });
+  const expectedMigrationAttempts = [
+    {
+      execution_commit: 'd1d6b75e85dc365666479bd90c165ac674b8ba39',
+      complete_state_sha256: 'c083e7a05f2ccf273abda98c0739584336d2cbaffd8ea836b65b0790f94833a2',
+      attempted_on: '2026-09-03',
+      result: 'empty_bucket_root_marker_schema_mismatch_before_backend_initialization',
+      remote_state_migrated: false,
+      remote_generation: null,
+    },
+    {
+      execution_commit: '107bb23e8b546aca283105f4a9584343985576f6',
+      complete_state_sha256: 'c083e7a05f2ccf273abda98c0739584336d2cbaffd8ea836b65b0790f94833a2',
+      attempted_on: '2026-09-03',
+      result: 'remote_state_written_then_canonically_reconciled',
+      remote_state_migrated: true,
+      remote_generation: '1788439334043522',
+    },
+  ];
+  if (!Array.isArray(bootstrapExecution.migration_attempts)
+      || bootstrapExecution.migration_attempts.length !== expectedMigrationAttempts.length) {
+    reject(
+      'terraform.bootstrap_execution.migration_attempts',
+      `must contain exactly ${expectedMigrationAttempts.length} entries`,
+    );
+  }
+  bootstrapExecution.migration_attempts.forEach((value, index) => {
+    const path = `terraform.bootstrap_execution.migration_attempts[${index}]`;
+    const attempt = record(value, path, Object.keys(expectedMigrationAttempts[index]));
+    for (const [field, expected] of Object.entries(expectedMigrationAttempts[index])) {
+      exact(attempt[field], expected, `${path}.${field}`);
+    }
+  });
   exact(
     bootstrapExecution.bootstrap_completed,
-    false,
+    true,
     'terraform.bootstrap_execution.bootstrap_completed',
   );
 
@@ -1131,7 +1291,7 @@ function validateTerraform(value) {
     apply_authorized: true,
     apply_executed: true,
     state_migration_authorized: true,
-    state_migration_executed: false,
+    state_migration_executed: true,
   };
   for (const [field, expected] of Object.entries(currentBooleanExpectations)) {
     exact(currentSavedPlan[field], expected, `${currentSavedPlanPath}.${field}`);
@@ -1412,10 +1572,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 21, 'manifest.revision');
+  exact(manifest.revision, 22, 'manifest.revision');
   exact(
     manifest.status,
-    'bootstrap_apply_complete_state_migration_recovery_pending',
+    'bootstrap_complete_remote_state_reconciled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');

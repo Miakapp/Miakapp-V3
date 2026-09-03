@@ -1,6 +1,6 @@
 # Staging Terraform bootstrap proposal
 
-Status: bootstrap apply complete; exact migration-only authorization pending
+Status: bootstrap complete; remote state migrated and canonically reconciled
 
 This root owns the one-time resources required before the ordinary staging
 foundation can use remote state and keyless GitHub automation:
@@ -29,7 +29,7 @@ bucket administration only on the component bucket. It has no project IAM,
 service-account administration or project-wide Storage role with which to
 escape that boundary.
 
-## Circular state migration recovery
+## Completed circular state migration
 
 The GCS bucket could not back the transaction that created it. The authorized
 plan therefore applied against protected local state. Terraform completed all
@@ -40,9 +40,19 @@ The path, raw state, plan contents, billing identifier, and logs remain private.
 
 The apply wrapper then stopped before migration because the local reducer
 expected a `sensitive` member in the persisted non-sensitive output. Terraform
-1.11.3 stores that output with exactly `type` and `value`. Read-only inventory
-confirmed all bootstrap targets exist exactly once and the state bucket returns
-only its root URL marker, with no state object.
+1.11.3 stores that output with exactly `type` and `value`. The first migration
+attempt stopped before backend initialization when this `gcloud` version added
+`type: unknown` to the empty-bucket root marker. The second guarded attempt
+created bootstrap state generation `1788439334043522` and no infrastructure.
+
+Terraform's GCS serialization raised the state serial once, from 39 to 40, and
+permuted the two `check_results` entries. Reconciliation commit
+`23d80ec55fcac9cd4cef968ce674fe413306319e` accepts exactly that transformation
+and rejects every other difference. A fresh private download independently
+verified the 36-resource remote state. Its raw contents remain private; only
+its generation and SHA-256 evidence are recorded in the closed manifest. Object
+Versioning also retains Terraform's noncurrent 181-byte initialization state;
+it contains no resources or outputs and is recorded separately by fingerprint.
 
 [`apply-and-migrate.sh`](apply-and-migrate.sh) is permanently retired and cannot
 invoke Terraform or Google Cloud. It must not be restored or used to rerun the
@@ -50,7 +60,7 @@ consumed plan. [`backend.gcs.tf.example`](backend.gcs.tf.example) remains the
 reviewed migration target and is activated only inside a disposable private
 working copy.
 
-## Guarded migration-only recovery (awaiting authorization)
+## Guarded migration-only recovery (completed)
 
 [`migrate-recovered-state.sh`](migrate-recovered-state.sh) is bound to the exact
 complete-state digest, the reviewed private plan bundle, project
@@ -59,8 +69,10 @@ complete-state digest, the reviewed private plan bundle, project
 and the clean repository commit that executes it. It has no infrastructure
 apply, import, destroy, state-push, or cloud-object copy path.
 Its reviewed migration implementation is commit
-`b2daada96d4f5f669bb80fd3cdfc0e0f9fb48286`; execution still requires an exact
-authorization tied to the clean commit that runs the wrapper.
+`b2daada96d4f5f669bb80fd3cdfc0e0f9fb48286`. Execution required an exact
+authorization tied to commit `107bb23e8b546aca283105f4a9584343985576f6`.
+The existing remote state object now makes the migration path fail closed on
+replay; do not delete it merely to rerun this command.
 
 Only one operator may use the private bundle and complete state at a time. The
 wrapper takes atomic sibling locks, rejects credential files and ambient Git,
@@ -74,7 +86,7 @@ Terraform, endpoint, or proxy overrides, and then verifies:
 4. an empty state bucket, accepting only `[]` or the exact bucket-root marker
    emitted by `gcloud storage ls --json`.
 
-After a separate exact authorization, the command shape is:
+The authorized command had this shape and is retained only as audit evidence:
 
 ```sh
 MIAKAPP_STAGING_BOOTSTRAP_MIGRATION_AUTHORIZATION='migrate-bootstrap-state:miakapp-v4-staging:<64-hex-complete-state>:<40-hex-execution-commit>' \
@@ -83,12 +95,13 @@ MIAKAPP_STAGING_BOOTSTRAP_MIGRATION_AUTHORIZATION='migrate-bootstrap-state:miaka
   '/absolute/private/complete-bootstrap.tfstate'
 ```
 
-Only after every preflight passes does Terraform run
+Only after every preflight passed did Terraform run
 `init -migrate-state -force-copy`. The wrapper reads the remote object back,
-verifies its generation, and requires exact parsed-state equality. The
-authoritative source state remains byte-for-byte unchanged after both success
-and failure. A failure preserves the private execution directory and reports
-only its path plus a bounded error; a success removes only the disposable copy.
+verifies its generation, and allows only the observed canonical serial increment
+and exact `check_results` permutation while requiring strict equality everywhere
+else. The authoritative source state remains byte-for-byte unchanged. Failed
+verification attempts preserved their private execution directories for
+diagnosis.
 
 ## Guarded diagnostic plan
 
@@ -149,8 +162,9 @@ nine preserved addresses as `no-op`, the remaining 27 as `create`, and no
 import, update or deletion. Both providers set `billing_project` to staging and
 enable user-project quota attribution. The consumed final plan matched that
 closed inventory and completed the bootstrap resources. Do not create or execute
-another bootstrap plan while its complete state awaits migration. The commands
-below remain as historical diagnostic tooling and cannot authorize mutation.
+another bootstrap plan; its complete state has been migrated and reconciled.
+The commands below remain as historical diagnostic tooling and cannot authorize
+mutation.
 
 To reproduce or refresh the plan, first create a persistent operator-owned directory
 outside the Git repository and remove every group/other permission from it. Then
