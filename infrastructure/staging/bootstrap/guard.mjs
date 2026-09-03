@@ -4,8 +4,10 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const ALLOWED_FILES = Object.freeze([
   '.terraform.lock.hcl',
   'README.md',
+  'apply-and-migrate.sh',
   'backend.gcs.tf.example',
   'billing.tf',
+  'bootstrap-execution.mjs',
   'guard.mjs',
   'iam.tf',
   'identity.tf',

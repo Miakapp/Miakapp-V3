@@ -1,6 +1,6 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 13,
+  "revision": 14,
   "status": "bootstrap_saved_plan_reviewed_billing_linked_undeployed",
   "environment": "staging",
   "project": {
@@ -293,7 +293,7 @@
   },
   "terraform": {
     "state": "bootstrap_foundation_and_automation_blueprint",
-    "supported_workflow": "credential_free_validation_and_local_plan_only",
+    "supported_workflow": "credential_free_validation_and_guarded_bootstrap_execution",
     "configuration_apply_capable": true,
     "active_cloud_workflow": "none",
     "workflow_blueprint_state": "dormant_not_installed",
@@ -358,6 +358,19 @@
       "live_retention_days": 2,
       "archived_retention_days": 1,
       "soft_delete_days": 7
+    },
+    "bootstrap_execution": {
+      "state": "guarded_wrapper_committed_inactive",
+      "script": "bootstrap/apply-and-migrate.sh",
+      "helper": "bootstrap/bootstrap-execution.mjs",
+      "approved_configuration_commit": "c192f97959833f53a19d4e6dc50b26292c88b3b5",
+      "approved_plan_sha256": "0918d21c4677ce0958be9ccc43057d8d76a33857fdfbea066120ba953e30b5c1",
+      "exact_authorization_required": true,
+      "cloud_preflight_required": true,
+      "partial_state_migration_attempted": true,
+      "local_recovery_preserved_on_failure": true,
+      "local_state_removed_only_after_reconciliation": true,
+      "executed": false
     },
     "apply_authorized": false,
     "destroy_authorized": false,

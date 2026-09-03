@@ -24,8 +24,15 @@ a dormant GitHub workflow blueprint. None exists in the cloud. The circular
 bootstrap uses protected temporary local state first, then the reviewed GCS
 migration template. One exact saved plan has been prepared and inspected in a
 private local bundle outside the repository; it contains no state and has not
-been applied. No apply or migration command is committed. Local `.terraform/`
+been applied. A digest-bound recovery-first apply/migration command is committed
+but inactive and every authorization bit remains false. Local `.terraform/`
 provider caches are disposable and are not cloud inventory.
+
+If that wrapper ever reports failure, its printed private execution directory is
+part of the recovery inventory. Do not delete it or rerun the original
+empty-state plan. Determine whether a remote bootstrap generation exists,
+reconcile it with the preserved local state, and produce a new reviewed recovery
+plan before another mutation.
 
 Infrastructure state or a successful destroy command is not sufficient evidence
 that spend has stopped. Managed Functions can leave Cloud Run revisions,

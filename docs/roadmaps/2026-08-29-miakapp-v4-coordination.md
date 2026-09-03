@@ -417,13 +417,15 @@ current consumer.
    Actions settings were configured and re-observed without activating cloud
    resources or installing the workflow. A fresh non-saved diagnostic and the
    subsequent digest-verified private saved bootstrap plan both report 36
-   additions, no changes and no destroys. The exact plan is reviewed but remains
-   unapplied. Next obtain explicit mutation authorization for that digest,
-   migrate and reconcile bootstrap state, initialize and verify an empty
-   foundation state with protected operator credentials,
-   authorize workflow installation, then review the foundation plan. The production entry point and exact
-   runtime IAM expansion remain required before closing relay-integration and
-   staging-only RFC 0004 Section 18 gates.
+   additions, no changes and no destroys. A single-use, recovery-first wrapper
+   now binds preflight, apply, state migration, remote read-back and exact
+   reconciliation to that digest; it is committed but inactive. The exact plan
+   remains unapplied. Next obtain explicit mutation authorization for that
+   digest, execute the guarded bootstrap sequence, initialize and verify an empty
+   foundation state with protected operator credentials, authorize workflow
+   installation, then review the foundation plan. The production entry point
+   and exact runtime IAM expansion remain required before closing
+   relay-integration and staging-only RFC 0004 Section 18 gates.
 
 ## 9. Evidence that would change this plan
 

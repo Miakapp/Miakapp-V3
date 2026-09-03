@@ -40,8 +40,8 @@ bundle; a successful plan is rejected if Terraform creates that state before an
 apply.
 
 [`backend.gcs.tf.example`](backend.gcs.tf.example) is the exact reviewed backend
-block for a later migration. Saved-plan creation and review are complete. A
-future authorized bootstrap must:
+block for a later migration. Saved-plan creation and review are complete. The
+committed but inactive [`apply-and-migrate.sh`](apply-and-migrate.sh) wrapper must:
 
 1. revalidate the exact saved-plan digest, external GitHub policy, and current
    cloud inventory;
@@ -55,10 +55,56 @@ future authorized bootstrap must:
    resource; and
 6. remove the protected local state copy only after both checks agree.
 
-Saved-plan preparation and inspection were completed on 2026-09-03. No apply or
-migration wrapper is committed in this phase. Local state is sensitive and must
-never be committed, attached to a public issue, or discarded before migration is
-proven.
+Saved-plan preparation and inspection were completed on 2026-09-03. The guarded
+execution wrapper was then added without executing it and without changing any
+cloud-authorization bit. Local state is sensitive and must never be committed,
+attached to a public issue, or discarded before migration is proven.
+
+## Guarded apply and migration (inactive)
+
+The execution command is intentionally single-use and bound to configuration
+commit `c192f97959833f53a19d4e6dc50b26292c88b3b5`, plan digest
+`0918d21c4677ce0958be9ccc43057d8d76a33857fdfbea066120ba953e30b5c1`,
+project `miakapp-v4-staging`, and remote object
+`gs://miakapp-v4-staging-tfstate-1072737219170/terraform/bootstrap/default.tfstate`.
+The manifest still records execution and authorization as false. Do not set the
+runtime authorization merely because this command exists.
+
+Only one operator may execute the authoritative private bundle at a time. The
+wrapper takes an atomic sibling lock before invoking Terraform or reading cloud
+inventory and releases it on normal exit. A surviving lock after an abrupt
+process or host failure must be investigated, not deleted reflexively or worked
+around with a copied bundle.
+
+After the owner separately authorizes that exact apply-and-migrate operation, an
+operator may run from a clean descendant of the reviewed configuration commit:
+
+```sh
+MIAKAPP_STAGING_BOOTSTRAP_EXECUTION_AUTHORIZATION='apply-and-migrate:miakapp-v4-staging:0918d21c4677ce0958be9ccc43057d8d76a33857fdfbea066120ba953e30b5c1' \
+  ./infrastructure/staging/bootstrap/apply-and-migrate.sh \
+  '/absolute/private/miakapp-staging-bootstrap-plan-...'
+```
+
+Before mutation, the wrapper revalidates the plan, its exact Terraform source,
+the active project and billing fingerprint, and the absence of the target
+budget, buckets, service accounts, and Workload Identity pool. It rejects
+credential files, endpoint, proxy, Git, and Terraform overrides. The plan is
+applied once with state and logs confined beside the private bundle. The backend
+template is activated only in a separate private working copy; Terraform then
+migrates with locking and reads the state back. The helper requires structurally
+identical parsed state contents, the expected lineage/header, the exact 36
+managed addresses, and the sole typed non-secret activation output before the
+local copy is removed.
+
+If apply is partial, the wrapper still attempts to migrate and reconcile the
+partial subset so already-created resources are not orphaned. Any apply,
+migration, read-back, inventory, or reconciliation failure leaves the private
+execution directory intact and prints only its location plus a bounded error.
+Terraform also runs from that private directory, so a higher-priority
+`errored.tfstate` produced after a persistence failure cannot land in the
+repository and is used for recovery instead of any older normal state.
+Do not rerun the original empty-state plan after a partial apply; preserve the
+directory and create a recovery plan from the migrated state.
 
 ## Guarded diagnostic plan
 

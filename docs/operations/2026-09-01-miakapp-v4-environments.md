@@ -197,13 +197,14 @@ already-active billing association consequently still appears as an addition in
 that state-free diagnostic. The subsequent private saved plan from commit
 `c192f97959833f53a19d4e6dc50b26292c88b3b5` was digest-verified and fully
 reviewed with the same 36/0/0 result. It remains unapplied and created no state or
-cloud resource. Before another cloud action, the owner must explicitly authorize
-that exact plan; the operator must then revalidate its digest and inventory,
-apply from protected temporary state, migrate and reconcile that state, and
-initialize and verify the
-empty foundation state with protected operator credentials, then authorize and
-install the workflow. A separate reviewed foundation plan is required before
-apply approval. The production Function entry point,
+cloud resource. A recovery-first wrapper now encodes the exact digest,
+preflight, apply, migration, read-back, and reconciliation sequence, but remains
+inactive with all authorization bits false. Before another cloud action, the
+owner must explicitly authorize that exact plan; the operator must then run the
+guarded sequence, initialize and verify the empty foundation state with
+protected operator credentials, then authorize and install the workflow. A
+separate reviewed foundation plan is required before apply approval. The
+production Function entry point,
 exact FCM permission, quotas, alerts and teardown evidence remain blockers.
 Deployment, public ingress and active CI authentication remain disabled. Passing
 the manifest check is evidence, not authorization.

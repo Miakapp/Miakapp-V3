@@ -30,7 +30,7 @@ function rejects(mutator, pattern) {
 
 test('accepts the reviewed private bootstrap plan without deployment authorization', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 13);
+  assert.equal(validated.revision, 14);
   assert.equal(
     validated.status,
     'bootstrap_saved_plan_reviewed_billing_linked_undeployed',
@@ -51,7 +51,10 @@ test('accepts the reviewed private bootstrap plan without deployment authorizati
     'active_outside_terraform_state',
   );
   assert.equal(validated.terraform.state, 'bootstrap_foundation_and_automation_blueprint');
-  assert.equal(validated.terraform.supported_workflow, 'credential_free_validation_and_local_plan_only');
+  assert.equal(
+    validated.terraform.supported_workflow,
+    'credential_free_validation_and_guarded_bootstrap_execution',
+  );
   assert.equal(validated.terraform.configuration_apply_capable, true);
   assert.equal(validated.terraform.active_cloud_workflow, 'none');
   assert.equal(validated.terraform.workflow_blueprint_state, 'dormant_not_installed');
@@ -78,6 +81,19 @@ test('accepts the reviewed private bootstrap plan without deployment authorizati
   assert.deepEqual(validated.terraform.identity.deployer_write_prefixes, ['terraform/foundation/']);
   assert.equal(validated.terraform.saved_plan.state, 'private_gcs_blueprint_not_active');
   assert.equal(validated.terraform.saved_plan.public_artifacts_allowed, false);
+  assert.deepEqual(validated.terraform.bootstrap_execution, {
+    state: 'guarded_wrapper_committed_inactive',
+    script: 'bootstrap/apply-and-migrate.sh',
+    helper: 'bootstrap/bootstrap-execution.mjs',
+    approved_configuration_commit: 'c192f97959833f53a19d4e6dc50b26292c88b3b5',
+    approved_plan_sha256: '0918d21c4677ce0958be9ccc43057d8d76a33857fdfbea066120ba953e30b5c1',
+    exact_authorization_required: true,
+    cloud_preflight_required: true,
+    partial_state_migration_attempted: true,
+    local_recovery_preserved_on_failure: true,
+    local_state_removed_only_after_reconciliation: true,
+    executed: false,
+  });
   assert.equal(validated.terraform.apply_authorized, false);
   assert.equal(validated.terraform.local_plan_executed, true);
   assert.deepEqual(validated.terraform.local_plan_observation.result, {
@@ -209,6 +225,18 @@ test('rejects every cloud-action authorization bit', () => {
   rejects((candidate) => {
     candidate.readiness.cloud_actions_enabled = true;
   }, /readiness\.cloud_actions_enabled/);
+  rejects((candidate) => {
+    candidate.terraform.bootstrap_execution.executed = true;
+  }, /terraform\.bootstrap_execution\.executed/);
+  rejects((candidate) => {
+    candidate.terraform.bootstrap_execution.state = 'authorized';
+  }, /terraform\.bootstrap_execution\.state/);
+  rejects((candidate) => {
+    candidate.terraform.bootstrap_execution.approved_plan_sha256 = '0'.repeat(64);
+  }, /terraform\.bootstrap_execution\.approved_plan_sha256/);
+  rejects((candidate) => {
+    candidate.terraform.bootstrap_execution.local_recovery_preserved_on_failure = false;
+  }, /terraform\.bootstrap_execution\.local_recovery_preserved_on_failure/);
 });
 
 test('requires explicit targeting and forbids a staging Firebase alias', () => {
