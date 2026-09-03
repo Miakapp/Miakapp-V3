@@ -96,7 +96,6 @@ const REQUIRED_BLOCKERS = [
   'production-function-entrypoint',
   'secret-version-lifecycle',
   'github-terraform-workflow-not-installed',
-  'live-foundation-plan-not-reviewed',
 ];
 
 const STAGING_ROWS = [
@@ -545,6 +544,7 @@ function validateTerraform(value) {
     'saved_plan',
     'bootstrap_execution',
     'foundation_state_initialization',
+    'foundation_live_plan_observation',
     'apply_authorized',
     'destroy_authorized',
     'function_deployment_included',
@@ -555,10 +555,10 @@ function validateTerraform(value) {
     'local_saved_plan_observation',
     'superseded_saved_plan_observation',
   ]);
-  exact(terraform.state, 'bootstrap_and_empty_foundation_state_reconciled', 'terraform.state');
+  exact(terraform.state, 'foundation_live_plan_reviewed', 'terraform.state');
   exact(
     terraform.supported_workflow,
-    'credential_free_validation_and_guarded_live_planning',
+    'credential_free_validation_and_guarded_workflow_installation',
     'terraform.supported_workflow',
   );
   exact(terraform.configuration_apply_capable, true, 'terraform.configuration_apply_capable');
@@ -1317,6 +1317,100 @@ function validateTerraform(value) {
     }
   });
 
+  const foundationLivePlanPath = 'terraform.foundation_live_plan_observation';
+  const foundationLivePlan = record(
+    terraform.foundation_live_plan_observation,
+    foundationLivePlanPath,
+    [
+      'observed_on',
+      'configuration_commit',
+      'terraform_version',
+      'backend',
+      'result',
+      'data_reads',
+      'resource_counts',
+      'contains_workload',
+      'contains_public_ingress',
+      'contains_secret_versions',
+      'contains_billing_resource',
+      'saved_plan_created',
+      'apply_executed',
+      'state_generation_before',
+      'state_generation_after',
+      'state_sha256_before',
+      'state_sha256_after',
+      'state_unchanged',
+      'temporary_lock_released',
+      'full_plan_reviewed',
+      'raw_planned_values_committed',
+    ],
+  );
+  const foundationLivePlanExpectations = {
+    observed_on: '2026-09-03',
+    configuration_commit: '363d017ebdc85af1285e38c5742365fd0a2a4395',
+    terraform_version: '1.11.3',
+    backend: 'gcs',
+    data_reads: 2,
+    contains_workload: false,
+    contains_public_ingress: false,
+    contains_secret_versions: false,
+    contains_billing_resource: false,
+    saved_plan_created: false,
+    apply_executed: false,
+    state_generation_before: '1788443136082489',
+    state_generation_after: '1788443136082489',
+    state_sha256_before: '8a69b37495a7d11b1091a03e7659297adcb62ce853475ab032071888530e30cd',
+    state_sha256_after: '8a69b37495a7d11b1091a03e7659297adcb62ce853475ab032071888530e30cd',
+    state_unchanged: true,
+    temporary_lock_released: true,
+    full_plan_reviewed: true,
+    raw_planned_values_committed: false,
+  };
+  for (const [field, expected] of Object.entries(foundationLivePlanExpectations)) {
+    exact(foundationLivePlan[field], expected, `${foundationLivePlanPath}.${field}`);
+  }
+  const foundationLivePlanResult = record(
+    foundationLivePlan.result,
+    `${foundationLivePlanPath}.result`,
+    ['create', 'update', 'delete'],
+  );
+  for (const [field, expected] of Object.entries({ create: 33, update: 0, delete: 0 })) {
+    exact(foundationLivePlanResult[field], expected, `${foundationLivePlanPath}.result.${field}`);
+  }
+  const foundationLivePlanResourceCounts = record(
+    foundationLivePlan.resource_counts,
+    `${foundationLivePlanPath}.resource_counts`,
+    [
+      'bootstrap_guard',
+      'service_apis',
+      'firestore_database',
+      'firestore_ttl_fields',
+      'kms_key_ring_and_key',
+      'kms_iam_bindings',
+      'secret_containers',
+      'secret_iam_bindings',
+      'component_bucket_iam_bindings',
+    ],
+  );
+  const foundationLivePlanResourceExpectations = {
+    bootstrap_guard: 1,
+    service_apis: 13,
+    firestore_database: 1,
+    firestore_ttl_fields: 3,
+    kms_key_ring_and_key: 2,
+    kms_iam_bindings: 1,
+    secret_containers: 5,
+    secret_iam_bindings: 5,
+    component_bucket_iam_bindings: 2,
+  };
+  for (const [field, expected] of Object.entries(foundationLivePlanResourceExpectations)) {
+    exact(
+      foundationLivePlanResourceCounts[field],
+      expected,
+      `${foundationLivePlanPath}.resource_counts.${field}`,
+    );
+  }
+
   exact(terraform.apply_authorized, false, 'terraform.apply_authorized');
   exact(terraform.destroy_authorized, false, 'terraform.destroy_authorized');
   exact(terraform.function_deployment_included, false, 'terraform.function_deployment_included');
@@ -1791,10 +1885,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 25, 'manifest.revision');
+  exact(manifest.revision, 26, 'manifest.revision');
   exact(
     manifest.status,
-    'bootstrap_and_foundation_state_reconciled',
+    'foundation_live_plan_reviewed_workflow_installation_pending',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');

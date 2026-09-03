@@ -7,7 +7,8 @@ The YAML and scripts in this directory describe the supported future keyless
 plan/apply path. They are deliberately outside GitHub's active workflow
 directory. `github-policy.json` now records the independently observed branch,
 environment and Actions configuration. The initialized foundation state is now
-fully reconciled; workflow installation is the remaining activation boundary.
+fully reconciled and a non-saving live foundation plan has been reviewed;
+workflow installation is the remaining activation boundary.
 
 The blueprint uses two separately admitted GitHub environments and two separate
 Google service accounts. Both OIDC providers require the immutable numeric

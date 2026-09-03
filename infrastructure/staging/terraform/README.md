@@ -1,6 +1,6 @@
 # Staging Terraform foundation proposal
 
-Status: apply-capable configuration; empty backend state initialized and reconciled; live plan pending
+Status: apply-capable configuration; live foundation plan reviewed; no apply
 
 This root describes the ordinary protected foundation for the existing,
 billing-linked but undeployed `miakapp-v4-staging` project. Billing management,
@@ -106,20 +106,25 @@ MIAKAPP_STAGING_PLAN_CONFIRMATION='miakapp-v4-staging' ./plan.sh
 
 The wrapper rejects credential files, explicit tokens, impersonation, custom
 endpoints, and all Terraform or Google environment overrides. It uses the real
-GCS backend with locking. It has not been run; the reconciled state boundary now
-allows that read-only planning step to proceed.
+GCS backend with locking. It was run from clean configuration commit
+`363d017ebdc85af1285e38c5742365fd0a2a4395` and reported exactly `33 to add, 0
+to change, 0 to destroy`. The full output was reviewed: it contains only the
+declared foundation graph, two apply-time data reads, no workload, no public
+ingress, and no secret version. No saved plan was created and no apply ran.
+Post-plan checks found the exact same state generation and digest and no current
+lock object.
 
 The dormant keyless workflow in [`../automation/`](../automation/) is the
 intended activation path after bootstrap. It creates a private, create-only
 saved plan, emits only bounded action/address metadata, and allows the protected
 apply job to consume only the exact same-run object and SHA-256 digest. The
-workflow is not installed or authorized.
+workflow is not installed or enabled in the public policy record.
 
 ## Explicit non-authorization
 
 Terraform source is inherently apply-capable. Repository guards and supported
 wrappers do not prevent a privileged operator from bypassing them, so direct
 Terraform mutation remains unauthorized. No active CI workflow has cloud
-credentials, the WIF resources are not used by an active workflow, no live
-foundation plan has been reviewed, and every current manifest authorization bit
+credentials, the WIF resources are not used by an active workflow, no private
+saved foundation plan exists, and every current manifest authorization bit
 remains false.
