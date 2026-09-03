@@ -155,7 +155,7 @@ test('accepts the completed bootstrap with reconciled remote state', () => {
   );
   assert.equal(
     initialization.approved_initialization_configuration_commit,
-    '052f6c92d76f93ec222ffd03e4d34ba7a927495b',
+    'f820b9004052863d0f9dee5ef203844dec0d4374',
   );
   assert.equal(initialization.authorization_bootstrap_generation, '1788439334043522');
   assert.equal(initialization.expected_bootstrap_state.serial, 40);
