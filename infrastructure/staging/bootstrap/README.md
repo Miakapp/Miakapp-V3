@@ -150,7 +150,9 @@ no destroys. Its authorized apply stopped at the redundant billing-link write
 before creating any resource. Do not retry that digest.
 
 [`imports.tf`](imports.tf) declares the preexisting billing link as an idempotent
-Terraform import. The replacement plan was created from clean
+Terraform import. It also adopts the already-live, non-mutating Service Usage
+Consumer binding for the planner so the new binding can enter bootstrap state
+without another IAM policy write. The replacement plan was created from clean
 commit `6340bffbddcc4797067ef48170fc5c3524345bf2` on 2026-09-03. Its SHA-256 is
 `6fb0b0c15fa04338a40ab59de790c3a4a85f96b418377c4a70570a8dabd5d457`;
 the verified and manually reviewed result is exactly 35 creations, one import
@@ -163,7 +165,9 @@ nine preserved addresses as `no-op`, the remaining 27 as `create`, and no
 import, update or deletion. Both providers set `billing_project` to staging and
 enable user-project quota attribution. The consumed final plan matched that
 closed inventory and completed the bootstrap resources. Do not create or execute
-another bootstrap plan; its complete state has been migrated and reconciled.
+another bootstrap resource-creation plan; its complete state has been migrated
+and reconciled. The only subsequent bootstrap operation is the exact declarative
+import above, which adopts one already-live binding and must otherwise be empty.
 The commands below remain as historical diagnostic tooling and cannot authorize
 mutation.
 
