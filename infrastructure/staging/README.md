@@ -1,21 +1,25 @@
 # Miakapp 4 staging activation blueprint
 
-Status: protected keyless foundation apply authorized; not yet executed
+Status: protected keyless partial-foundation recovery authorized
 
-This directory contains a closed description of the future
+This directory contains the closed description and observed state of the
 `miakapp-v4-staging` foundation. This revision authorizes one bounded manual
-plan-and-apply path from protected `main`, using the exact reviewed
-`initial-foundation` policy. It does not authorize workload deployment, public
-ingress, destroy, or production changes.
+recovery from protected `main`: exactly eight missing resource-scoped IAM
+members on top of the reviewed partial state. It does not authorize workload
+deployment, public ingress, destroy, or production changes.
 
 ## Current truth
 
 Project `miakapp-v4-staging` (`1072737219170`) remains application-undeployed:
-there is no Firebase app, App Engine application, Firestore database, Function,
-Cloud Run service, KMS key ring, secret, or public ingress. The strict planning
-workflow is installed on the default branch and completed two successful
-keyless runs. The authorized bootstrap apply on 2026-09-03 did, however, complete
-the infrastructure bootstrap itself:
+there is no Firebase app, App Engine application, Function, Cloud Run service,
+secret version, or public ingress. The bootstrap is complete. A protected
+foundation apply on 2026-09-03 also created all thirteen declared APIs, the
+deletion-protected Paris Firestore database and three active TTL fields, one
+software Ed25519 signing key, and five empty Secret Manager containers. The
+eight KMS, Secret Manager and component-bucket runtime IAM members remain
+absent.
+
+The earlier authorized bootstrap apply completed:
 
 - the approved billing link and exactly one EUR 10 alert budget;
 - all eight bootstrap APIs;
@@ -45,23 +49,25 @@ entry point is permanently retired. The replacement
 [`bootstrap/migrate-recovered-state.sh`](bootstrap/migrate-recovered-state.sh)
 contains no apply path and refuses to overwrite the existing state object. A
 guarded live foundation plan has now been reviewed, but no foundation resource
-or workload has been applied.
+or workload had been applied at that point.
 
-Manual keyless planning and the exact protected foundation apply are authorized.
-The latest plan run acquired its bounded Terraform lock, passed the closed plan
-validator, and created a private, create-only saved-plan object. The planner
-identity was exercised successfully; the deployer remains unused until the
-protected apply job receives its environment approval. Workload deployment,
-public ingress and destroy remain explicitly unauthorized. Passing the local
-gate is evidence, never additional authorization.
+Run `33776569977` later applied that plan through the separate deployer identity
+after normal environment approval. Terraform recorded 25 managed foundation
+resources before the command failed; the private detailed log was intentionally
+discarded, so no exact failure cause is claimed. State generation
+`1788452068422403` is healthy at serial 4, all TTL operations completed
+successfully, and no lock remains. A fresh private plan reports exactly eight
+creates and 25 no-ops. The closed `partial-foundation-recovery` profile and its
+one-shot protected workflow are now authorized. Workload deployment, public
+ingress and destroy remain explicitly unauthorized.
 
 ## Repository layout
 
 | Path | Purpose | Current execution boundary |
 |---|---|---|
 | [`bootstrap/`](bootstrap/) | Billing link, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Complete; remote state reconciled with protected local recovery evidence |
-| [`terraform/`](terraform/) | APIs, Firestore, KMS, empty Secret Manager containers, and resource-scoped runtime IAM | Empty state reconciled; private saved plan strictly reviewed; protected apply authorized |
-| [`automation/`](automation/) | GitHub policy record, hash-bound plan-and-apply workflow, strict plan validator, and operator inspection | Exact active copy installed under `.github/workflows` after protected merge |
+| [`terraform/`](terraform/) | APIs, Firestore, KMS, empty Secret Manager containers, and resource-scoped runtime IAM | 25 managed resources present; exact eight-IAM recovery authorized |
+| [`automation/`](automation/) | GitHub policy record, hash-bound recovery workflow, strict plan validator, and operator inspection | Exact active copy installed under `.github/workflows` after protected merge |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
 | [`TEARDOWN.md`](TEARDOWN.md) | Manual recovery and teardown rehearsal | Documentation only |
 
@@ -95,17 +101,14 @@ planner is usable only by the exact manual workflow on protected `main` and has
 now completed two successful runs. The deployer is admitted only by the apply
 environment and the exact same workflow after its plan job succeeds.
 
-This repository change itself costs nothing. The two successful planning runs
-added only API reads, released temporary locks, and two private saved-plan
-objects of roughly 11 KB each; they created no foundation resource. The state
-bucket currently stores one 60,909-byte bootstrap state, one current 181-byte
-empty foundation state, and the short-lived plans, plus tiny recoverable state
-and lock generations. The authorized apply will replace the empty foundation
-state with bounded foundation state. Storage
-operations and retained versions are usage-metered. Budget alerts at EUR 2, EUR
-5, and EUR 10 are alarms rather than hard caps. The software KMS key version is
-the principal planned idle fixed cost; actual staging measurements must replace
-estimates before production.
+Repository validation itself costs nothing. Planning adds only bounded API
+reads, temporary locks, and short-lived private saved-plan objects. The state
+bucket currently stores the 60,909-byte bootstrap state, the 42,621-byte partial
+foundation state, and recovery generations. The live Firestore database is the
+project's free-tier database; five secret containers have zero versions. The
+software KMS key version is the principal idle fixed cost. Storage operations
+and retained versions remain usage-metered, and budget alerts at EUR 2, EUR 5,
+and EUR 10 are alarms rather than hard caps.
 
 ## Remote-state bootstrap boundary
 
@@ -193,7 +196,18 @@ providers, and accepted by the `initial-foundation` closed policy: the same 33
 creates and two reads, with no update or delete. The empty foundation state kept
 the same generation and digest, and no live lock remained.
 
-## Protected plan-and-apply GitHub automation
+Protected run `33776569977` then validated and attempted the same 33-create plan.
+The apply stopped after Terraform had persisted 25 managed resources. Its exact
+private plan and resulting state fingerprints are recorded in the manifest;
+the discarded apply log prevents attributing a precise cause. Independent cloud
+and state reads found the three expected IAM groups absent and no unexpected
+workload or public resource. A subsequent private 18,893-byte saved plan,
+SHA-256 `b22920a8fd933ecc05298c9fd8f2565ed01cd5b33b96bf08b223360f3390b54a`,
+contains exactly eight creates, 25 no-ops and seven refresh-only provider
+normalizations. It passed the closed `partial-foundation-recovery` validator and
+was removed after review.
+
+## Protected partial-recovery GitHub automation
 
 [`automation/github-policy.json`](automation/github-policy.json) captures both
 the observed GitHub settings and the settings required before activation. On
@@ -203,7 +217,7 @@ Actions were restricted to the reviewed SHA-pinned integrations with read-only
 default permissions. The unrelated `miakapi` environment was left unchanged.
 Repository OIDC customization remains at its default because the Google
 provider, not GitHub's repository subject template, enforces the immutable
-numeric and workflow claims. The hash-bound plan-and-apply copy becomes active
+numeric and workflow claims. The hash-bound recovery copy becomes active
 only through protected merge, and its planning half has already exercised those
 claims.
 
@@ -217,7 +231,7 @@ The workflow and its byte-identical blueprint require:
   workflow reference, and the exact environment; and
 - a hash-bound active file and blueprint before OIDC can be requested;
 - the exact private object and SHA-256 emitted by the same workflow attempt;
-- the closed `initial-foundation` validator immediately before apply; and
+- the closed `partial-foundation-recovery` validator immediately before apply;
 - a private, non-saving post-apply plan that must report zero changes.
 
 There is one known human administrator. The desired apply environment therefore
@@ -234,11 +248,11 @@ npm run test:staging-manifest
 ```
 
 The gate validates bounded closed manifests, all three reviewed inventories,
-the exact plan-and-apply workflow and blueprint, pinned actions and providers,
+the exact partial-recovery workflow and blueprint, pinned actions and providers,
 exact locks for macOS
 ARM64 and Linux AMD64, both Terraform roots with mock providers, script syntax,
-private-plan handling, the exact initial-foundation addresses, actions, planned
-values, prior bootstrap output, critical expression references and checks, the
+private-plan handling, the exact recovery addresses, actions, planned values,
+partial prior state, critical expression references and checks, the
 complete simulated migration-only recovery state
 machine, the simulated guarded foundation-state initializer, and hostile
 environment inputs. It initializes Terraform with `-backend=false` and never
@@ -253,11 +267,11 @@ checkpoint. Neither job uses a persistent credential or repository secret.
 ## Next staging gate
 
 The GitHub branch, environment and Actions prerequisites are configured, the
-foundation state boundary is reconciled, and the latest private plan passed full
-inspection. The next sequence is:
+partial foundation state is reconciled, and the eight-create recovery plan
+passed full inspection. The next sequence is:
 
-1. merge this exact apply activation through protected `main`;
-2. dispatch with the exact `apply-miakapp-v4-staging` confirmation;
+1. merge this exact recovery activation through protected `main`;
+2. dispatch with the exact `recover-miakapp-v4-staging` confirmation;
 3. approve the normal `miakapp-v4-staging-apply` environment checkpoint; and
 4. verify exact resource inventory, remote state, empty convergence plan, and
    observed idle cost before any workload stage.

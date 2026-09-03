@@ -1,8 +1,8 @@
 # Miakapp 4 staging teardown rehearsal
 
-Status: non-executable rehearsal; bootstrap resources and both reconciled remote
-states exist, protected local recovery evidence remains private, and the exact
-initial-foundation apply is authorized but has not yet run
+Status: non-executable rehearsal; bootstrap and partial foundation resources
+exist, protected recovery evidence remains private, and exact eight-IAM
+foundation recovery is authorized
 
 This runbook applies to the existing `miakapp-v4-staging` project. It must never
 be run against `miakapp-3`, `miakapp-v4`, or a `demo-*` project. A future
@@ -13,10 +13,12 @@ At the 2026-09-02 bootstrap boundary, Firebase reserved the default Hosting site
 namespace, created its project service identity and enabled its bootstrap APIs.
 The owner linked the reviewed billing account on 2026-09-03. The later bootstrap
 apply created the reviewed budget, two private buckets, three service accounts,
-Workload Identity pool and providers, and their IAM bindings. It created no App
-Engine application, Firebase app, database, Function, Cloud Run service, KMS key
-ring or secret. Deleting the whole project would permanently retire its globally
-unique ID; adding Firebase cannot
+Workload Identity pool and providers, and their IAM bindings. A later protected
+foundation apply created the declared APIs, Firestore database and TTL fields,
+KMS key ring and signing-key version, and five empty Secret Manager containers.
+It created no App Engine application, Firebase app, Function, Cloud Run service,
+secret version or public ingress. Deleting the whole project would permanently
+retire its globally unique ID; adding Firebase cannot
 otherwise be fully undone. Retaining this empty undeployed project, with the
 billing link removable during an authorized teardown, is therefore the default.
 
@@ -34,10 +36,12 @@ the serial increased once, the two `check_results` entries were permuted, and
 every other value remained exactly equal. Terraform's foundation backend
 created and guarded execution commit
 `ab6f26bd5dd076a79847f989615e7fddf93f2a07` reconciled canonical empty state
-generation `1788443136082489` at serial 1 without mutation. Object Versioning also
-retains the noncurrent 181-byte empty state that Terraform created during
-bootstrap backend initialization. Local `.terraform/` provider caches are
-disposable and are not cloud inventory.
+generation `1788443136082489` at serial 1 without mutation. Protected run
+`33776569977` later replaced it with partial generation `1788452068422403` at
+serial 4 containing 25 managed resources. The missing inventory is limited to
+one KMS, five Secret Manager and two component-bucket IAM members. Object
+Versioning retains recovery generations. Local `.terraform/` provider caches
+are disposable and are not cloud inventory.
 
 If the migration-only wrapper reports failure, its printed private execution
 directory is part of the recovery inventory. Do not delete it or rerun the

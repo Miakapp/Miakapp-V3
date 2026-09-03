@@ -132,10 +132,10 @@ export function validateGitHubPolicy(value, options = {}) {
     'activation',
   ]);
   exact(policy.schema, 'miakapp.staging-github-policy/1', 'policy.schema');
-  exact(policy.revision, 4, 'policy.revision');
+  exact(policy.revision, 5, 'policy.revision');
   exact(
     policy.status,
-    'manual_keyless_plan_apply_workflow_authorized',
+    'manual_keyless_partial_foundation_recovery_authorized',
     'policy.status',
   );
   exact(policy.observed_on, '2026-09-03', 'policy.observed_on');
@@ -239,7 +239,7 @@ export function validateGitHubPolicy(value, options = {}) {
   );
   exact(
     activation.workflow_sha256,
-    'b506f7561dd5fb6ddb9e9c1d525f11cfe31cfce68e2cbabd544f068d0bfc8d32',
+    '701891a221ee949c5b1f0d67e537911fc7fa1476f46c5e670593eb341f2cae2e',
     'activation.workflow_sha256',
   );
 
@@ -317,7 +317,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       if (mode !== undefined) {
         verifyInstalledWorkflow(resolve(dirname(path), '../../..'), policy);
       }
-      console.log(`Validated ${policy.schema}; manual keyless planning and foundation apply are authorized.`);
+      console.log(`Validated ${policy.schema}; manual keyless partial-foundation recovery is authorized.`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';
       console.error(`GitHub policy rejected: ${message}`);
