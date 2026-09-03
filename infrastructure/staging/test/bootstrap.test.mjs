@@ -237,6 +237,22 @@ function syntheticTerraformState(metadata, { additionalAddresses = [], complete 
           },
         }
       : {},
+    check_results: complete
+      ? [
+          {
+            object_kind: 'check',
+            config_addr: 'check.bootstrap_identity',
+            status: 'pass',
+            objects: [{ object_addr: 'check.bootstrap_identity', status: 'pass' }],
+          },
+          {
+            object_kind: 'output',
+            config_addr: 'output.foundation_activation',
+            status: 'pass',
+            objects: [{ object_addr: 'output.foundation_activation', status: 'pass' }],
+          },
+        ]
+      : null,
     resources,
   };
 }
@@ -317,11 +333,15 @@ if [[ "$1" == *'/bootstrap-execution.mjs' && "$2" == 'verify-completed-state' ]]
   exit 0
 fi
 if [[ "$1" == *'/bootstrap-execution.mjs' && "$2" == 'reconcile-state' ]]; then
+  if [[ "$6" != 'migrated-complete' ]]; then
+    printf '%s\n' 'Bootstrap execution rejected: canonical migration mode is required' >&2
+    exit 1
+  fi
   if [[ "$MIAKAPP_FAKE_DIVERGENT_REMOTE" == true ]]; then
     printf '%s\n' 'Bootstrap execution rejected: Remote bootstrap state does not exactly match local state' >&2
     exit 1
   fi
-  printf '%s\n' 'Bootstrap state reconciled: complete; managed resources: 36; serial: 39'
+  printf '%s\n' 'Bootstrap state reconciled: migrated-complete; managed resources: 36; serial: 40'
   exit 0
 fi
 if [[ "$1" == *'/bootstrap-execution.mjs' && "$2" == 'verify-billing-link' ]]; then
@@ -1078,6 +1098,65 @@ test('reconciles exact complete or expected partial bootstrap state and rejects 
     serial: COMPLETED_STATE_SERIAL,
   });
 
+  const migrated = structuredClone(complete);
+  migrated.serial += 1;
+  migrated.check_results.reverse();
+  assert.deepEqual(reconcileBootstrapStates(
+    complete,
+    migrated,
+    metadata,
+    'migrated-complete',
+    lineageSha256,
+    SYNTHETIC_BILLING_ACCOUNT_SHA256,
+  ), {
+    mode: 'migrated-complete',
+    managedResources: 36,
+    sourceSerial: COMPLETED_STATE_SERIAL,
+    serial: COMPLETED_STATE_SERIAL + 1,
+  });
+
+  const migratedWithWrongSerial = structuredClone(migrated);
+  migratedWithWrongSerial.serial += 1;
+  assert.throws(
+    () => reconcileBootstrapStates(
+      complete,
+      migratedWithWrongSerial,
+      metadata,
+      'migrated-complete',
+      lineageSha256,
+      SYNTHETIC_BILLING_ACCOUNT_SHA256,
+    ),
+    /exact canonical serial increment/,
+  );
+
+  const migratedWithChangedCheck = structuredClone(migrated);
+  migratedWithChangedCheck.check_results[0].status = 'fail';
+  assert.throws(
+    () => reconcileBootstrapStates(
+      complete,
+      migratedWithChangedCheck,
+      metadata,
+      'migrated-complete',
+      lineageSha256,
+      SYNTHETIC_BILLING_ACCOUNT_SHA256,
+    ),
+    /check results are not an exact permutation/,
+  );
+
+  const migratedWithChangedResource = structuredClone(migrated);
+  migratedWithChangedResource.resources[0].instances[0].attributes.id = 'different';
+  assert.throws(
+    () => reconcileBootstrapStates(
+      complete,
+      migratedWithChangedResource,
+      metadata,
+      'migrated-complete',
+      lineageSha256,
+      SYNTHETIC_BILLING_ACCOUNT_SHA256,
+    ),
+    /differs beyond canonical serialization/,
+  );
+
   assert.deepEqual(validateCompletedBootstrapState(
     complete,
     metadata,
@@ -1473,6 +1552,7 @@ test('retires the consumed apply path and keeps migration recovery dormant', () 
   assert.match(migrateRecoveredStateScript, /--billing-project=\$\{project_id\}/);
   assert.match(migrateRecoveredStateScript, /init[\s\S]*-migrate-state[\s\S]*-force-copy/);
   assert.match(migrateRecoveredStateScript, /reconcile-state/);
+  assert.match(migrateRecoveredStateScript, /migrated-complete/);
   assert.match(migrateRecoveredStateScript, /verify-completed-state/);
   assert.match(migrateRecoveredStateScript, /execution_complete=true/);
   assert.match(migrateRecoveredStateScript, /source state remains unchanged/);

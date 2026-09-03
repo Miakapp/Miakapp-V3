@@ -304,7 +304,7 @@ node "$execution_helper" reconcile-state \
   "$completed_state" \
   "$remote_state" \
   "$metadata_file" \
-  complete
+  migrated-complete
 node "$execution_helper" verify-completed-state \
   "$completed_state" \
   "$metadata_file" \
