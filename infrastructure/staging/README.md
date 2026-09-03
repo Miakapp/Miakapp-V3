@@ -1,51 +1,64 @@
 # Miakapp 4 staging activation blueprint
 
-Status: approved billing link active and guarded bootstrap plan re-observed; the
-Firebase project remains empty and undeployed
+Status: manual keyless plan workflow authorized; protected merge pending
 
 This directory contains a closed, apply-capable description of the future
-`miakapp-v4-staging` foundation. It does not authorize or perform cloud
-mutation. No active repository workflow authenticates to Google Cloud.
+`miakapp-v4-staging` foundation. This revision authorizes only bounded manual
+planning after a protected merge to `main`; it does not authorize foundation
+apply, deployment, public ingress, or teardown.
 
 ## Current truth
 
-The one-shot Firebase bootstrap on 2026-09-02 reserved project
-`miakapp-v4-staging` (`1072737219170`) and its default Hosting site name. The
-dated inventory in [`manifest.json`](manifest.json) records:
+Project `miakapp-v4-staging` (`1072737219170`) remains application-undeployed:
+there is no Firebase app, App Engine application, Firestore database, Function,
+Cloud Run service, KMS key ring, secret, or public ingress. The plan-only
+workflow is not dispatchable from the default branch until this revision is
+merged. The authorized bootstrap apply on 2026-09-03 did, however, complete
+the infrastructure bootstrap itself:
 
-- the approved EUR billing link is active; the link operation created no budget
-  or billing export;
-- no registered Firebase app, App Engine application, Firestore database,
-  Storage bucket, Function, Cloud Run service, KMS key ring, or secret;
-- no staging runtime, planner, or deployer identity; and
-- no live Terraform state or saved plan.
+- the approved billing link and exactly one EUR 10 alert budget;
+- all eight bootstrap APIs;
+- the private component and versioned Terraform-state buckets in Paris;
+- the runtime, planner, and deployer service accounts;
+- the Workload Identity pool and its two GitHub providers; and
+- the reviewed project, bucket, and service-account IAM bindings.
 
-On 2026-09-03, after the separately authorized billing link, the guarded
-bootstrap command ran against configuration commit
-`9b3905bb62718b57456b0658386b424ed635e82f` and proposed 36 additions, no
-changes, and no destroys. The closed observation in the manifest records the
-resource-category totals, the approved link, and the unchanged API, IAM, bucket,
-service-account, Workload Identity, and local-state boundaries. The command
-saved no plan and performed no apply. Because no Terraform state exists, the
-provider still represents the already-active billing association as an addition;
-the command did not create or change that link.
+Terraform reported `27 added, 0 changed, 0 destroyed` on top of the nine
+resources recovered from the preceding partial run. Its complete Terraform
+1.11.3 state contains exactly 36 managed addresses at serial 39. The committed
+fingerprint is
+`c083e7a05f2ccf273abda98c0739584336d2cbaffd8ea836b65b0790f94833a2`;
+the path and raw contents remain private outside the repository.
 
-Firebase-enabled APIs and its managed Admin SDK service account exist, but they
-are not evidence of a deployed or metered workload. Paris (`europe-west9`) and
-the SHA-256 fingerprint of the linked EUR billing account are reviewed inputs;
-the raw billing account identifier is not committed.
+The cloud apply succeeded, but the original wrapper stopped before backend
+migration because its local validator expected a `sensitive` field that
+Terraform 1.11.3 does not persist for this non-sensitive output. The guarded
+recovery subsequently migrated the state to GCS. Terraform canonically raised
+the serial to 40 and permuted the two `check_results` entries; a fresh read of
+generation `1788439334043522` proved that every other parsed value is exactly
+equal. The original serial-39 state remains protected as independent recovery
+evidence outside the repository.
 
-All authorization bits for additional cloud actions in the manifest remain
-false. Passing the local gate is review evidence, never authorization to create
-resources, install a cloud workflow, open ingress, apply, or destroy.
+The consumed [`bootstrap/apply-and-migrate.sh`](bootstrap/apply-and-migrate.sh)
+entry point is permanently retired. The replacement
+[`bootstrap/migrate-recovered-state.sh`](bootstrap/migrate-recovered-state.sh)
+contains no apply path and refuses to overwrite the existing state object. A
+guarded live foundation plan has now been reviewed, but no foundation resource
+or workload has been applied.
+
+Workflow installation and manual keyless planning are now authorized. A plan
+run may acquire its bounded Terraform lock and create one private, create-only
+saved-plan object. Foundation apply, workload deployment, public ingress and
+destroy remain explicitly unauthorized. Passing the local gate is evidence,
+never additional authorization.
 
 ## Repository layout
 
 | Path | Purpose | Current execution boundary |
 |---|---|---|
-| [`bootstrap/`](bootstrap/) | Billing, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Guarded 36/0/0 diagnostic observed; exact private-plan tooling ready but not run; never applied |
-| [`terraform/`](terraform/) | APIs, Firestore, KMS, empty Secret Manager containers, and resource-scoped runtime IAM | Mock-tested offline; live plan blocked until bootstrap state exists |
-| [`automation/`](automation/) | GitHub policy record, dormant plan/apply workflow, private-plan scripts, and operator inspection | Outside `.github/workflows`; cannot run |
+| [`bootstrap/`](bootstrap/) | Billing link, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Complete; remote state reconciled with protected local recovery evidence |
+| [`terraform/`](terraform/) | APIs, Firestore, KMS, empty Secret Manager containers, and resource-scoped runtime IAM | Empty state reconciled; live plan reviewed; no apply |
+| [`automation/`](automation/) | GitHub policy record, hash-bound plan-only workflow, dormant apply script, and operator inspection | Exact active copy proposed under `.github/workflows`; dispatchable only after protected merge |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
 | [`TEARDOWN.md`](TEARDOWN.md) | Manual recovery and teardown rehearsal | Documentation only |
 
@@ -57,27 +70,33 @@ Cloud Armor policy, VPC connector, Cloud NAT, Analytics property, or deployed
 compute. The component bucket is private, has Public Access Prevention and no
 CORS origin. No secret value or service-account key is represented.
 
-If separately authorized and applied, the remote-state bucket would use uniform
-access, Public Access Prevention, Object Versioning, and a seven-day soft-delete
-window. Foundation state retains recovery history. Live saved plans expire after
+The remote-state bucket uses uniform access, Public Access Prevention, Object
+Versioning, and a seven-day soft-delete window. Foundation state will retain
+recovery history. Live saved plans expire after
 two days, their archived generation after one further day, and deleted bytes may
 remain recoverable during the bucket soft-delete window. Plans and state may
 contain private data and must never be committed or uploaded to public Actions
 artifacts.
 
-The planner and deployer configurations are keyless and separate. Both may read
-the private bucket. The planner may manage only `.tflock` objects and create
-saved plans; it cannot create or replace state. The empty foundation state must
-be initialized and verified with protected operator credentials before CI is
-admitted. Only the deployer may write foundation state; neither may mutate the bootstrap
+The planner and deployer identities now exist and are keyless and separate.
+Both may read the private bucket. The planner may manage only `.tflock` objects and create
+saved plans; it cannot create or replace state. The empty foundation state was
+initialized and reconciled with protected operator credentials, satisfying the
+state prerequisite for CI. Only the deployer may write foundation state;
+neither may mutate the bootstrap
 state prefix. Escalation-capable project IAM, service-account creation and bucket
 creation remain human-bootstrap operations. The deployer has only service-scoped
 foundation roles plus administration of the separate component bucket; it has no
-project-wide Storage or IAM role capable of bypassing the state boundary. None
-of these identities exists today.
+project-wide Storage or IAM role capable of bypassing the state boundary. The
+planner becomes usable only by the exact manual workflow after its protected
+merge to `main`. The deployer is not referenced by any active workflow.
 
-This repository change itself costs nothing. If activated, the empty state
-bucket should store only small state and short-lived plan objects, but Storage
+This repository change itself costs nothing. Dispatching the plan-only workflow
+will add API reads, a temporary lock, and a small private saved-plan object, but
+no foundation resource. The state bucket currently stores
+one 60,909-byte bootstrap state and one current 181-byte empty foundation state,
+plus tiny recoverable state and lock generations. It will later hold bounded
+foundation state and short-lived plan objects. Storage
 operations and retained versions are usage-metered. Budget alerts at EUR 2, EUR
 5, and EUR 10 are alarms rather than hard caps. The software KMS key version is
 the principal planned idle fixed cost; actual staging measurements must replace
@@ -85,20 +104,23 @@ estimates before production.
 
 ## Remote-state bootstrap boundary
 
-The GCS bucket cannot be the backend of the transaction that creates it. The
-bootstrap root therefore has no active backend block and its guarded plan uses
-the implicit local backend. [`bootstrap/backend.gcs.tf.example`](bootstrap/backend.gcs.tf.example)
-is the exact migration target, not an active Terraform file.
+The GCS bucket could not back the transaction that created it, so the authorized
+apply used protected local state. The repository still keeps
+[`bootstrap/backend.gcs.tf.example`](bootstrap/backend.gcs.tf.example) as a
+template rather than activating it in the source tree.
 
-The bootstrap root now contains guarded commands that can save an exact plan to
-a mode-0700 directory outside the repository and inspect it locally after
-verifying its source commit, digest and create-only resource inventory. They have
-not been run because the plan must be produced from the final clean commit. A
-future separately authorized step must apply that reviewed plan from its
-protected local-state path, activate the backend template, migrate that exact
-state to `terraform/bootstrap`, and independently reconcile the remote
-generation before deleting any local copy. There is deliberately still no apply
-or migration wrapper in this revision.
+The migration-only wrapper revalidated the private saved-plan bundle and exact
+complete-state digest, serial, lineage, 36-address inventory, and activation
+output. It then checked the project and billing fingerprint, the budget, APIs,
+buckets, service accounts, Workload Identity pool and providers, and proved the
+state bucket had no object. Only in a private working copy did it activate the
+backend template and run `terraform init -migrate-state -force-copy`. It read
+the remote object back and accepts only Terraform's observed canonical migration
+transform: one serial increment and an exact permutation of `check_results`,
+with strict equality everywhere else. Both success and failure leave the
+authoritative source state unchanged; failures also retain the private execution
+directory for diagnosis. The migration has completed and the existing object
+makes this path fail closed on replay.
 
 The ordinary foundation root already points at `terraform/foundation` and reads
 the bootstrap output from `terraform/bootstrap`. A closed precondition checks
@@ -106,28 +128,80 @@ the exact project, region, both buckets, identity providers, all service
 accounts, and numeric GitHub repository IDs before any foundation resource can
 proceed.
 
-## Dormant GitHub automation
+## Guarded foundation-state initialization
+
+[`terraform/initialize-state.sh`](terraform/initialize-state.sh) is the only
+supported path for creating the initial foundation state. It operates in a
+private directory outside the repository and copies only the reviewed backend,
+provider lock, and CLI configuration. It first requires the exact reconciled
+bootstrap generation and proves that the foundation object is either absent or
+already the exact canonical empty state. Terraform 1.11.3 initializes an absent
+GCS backend by creating its canonical serial-1 empty state during
+`terraform init`; this is the only state-writing operation in the path.
+
+The initializer never uses `terraform state push` or a direct cloud-object
+write. It reads both Terraform's view and the exact current GCS generation back,
+requires an exact canonical empty state at serial 1, and rejects every other
+bucket object. Only after that reconciliation does the absent path create and
+fingerprint a saved `-refresh-only` plan. It accepts only the two implicit locked
+providers with no resource, output, variable, module, expression, provider
+block, or action; the plan is never applied. It then rechecks that the reconciled
+generation is still current. A valid preexisting empty state is reconciled
+without planning or mutation, so recovery after an uncertain client result
+cannot overwrite it.
+Failure preserves private diagnostics; success removes them. The implementation
+is bound to reviewed implementation commit
+`626dc16637ba843f6d1543156aba99e7b551e705`. The first execution created
+generation `1788443136082489`, then stopped before apply when its conservative
+plan-shape check rejected Terraform's implicit provider metadata. After that
+metadata was modeled exactly, clean execution commit
+`ab6f26bd5dd076a79847f989615e7fddf93f2a07` reconciled the same canonical
+empty generation without mutation. No initialization plan was ever applied.
+
+Backend initialization and planning acquire and release Terraform's temporary
+`.tflock` object.
+The only durable new live object is the roughly 181-byte empty state; Object
+Versioning and soft delete may temporarily retain tiny noncurrent state or lock
+generations as recovery evidence.
+
+## Guarded live foundation plan
+
+The non-saving local wrapper was run from clean configuration commit
+`363d017ebdc85af1285e38c5742365fd0a2a4395` with User ADC. Terraform 1.11.3
+reported exactly `33 to add, 0 to change, 0 to destroy` plus two apply-time data
+reads. The reviewed graph contains thirteen APIs, the bootstrap guard, one
+regional Firestore database and three TTL fields, one software KMS key ring and
+signing key, one key IAM member, five empty secret containers and their five IAM
+members, and two component-bucket IAM members. It contains no workload, secret
+version, public ingress, or billing resource.
+
+The wrapper created no saved plan and ran no apply. A post-plan read proved that
+foundation state generation `1788443136082489` and its SHA-256 remained
+unchanged, and no `.tflock` object remained current.
+
+## Plan-only GitHub automation
 
 [`automation/github-policy.json`](automation/github-policy.json) captures both
 the observed GitHub settings and the settings required before activation. On
-2026-09-02, `main` was protected with the credential-free staging gate bound to
+2026-09-03, `main` was protected with the credential-free staging gate bound to
 GitHub Actions, the plan/apply environments were restricted to `main`, and
 Actions were restricted to the reviewed SHA-pinned integrations with read-only
 default permissions. The unrelated `miakapi` environment was left unchanged.
-Repository OIDC customization remains at its default because the future Google
+Repository OIDC customization remains at its default because the Google
 provider, not GitHub's repository subject template, will enforce the immutable
-numeric and workflow claims. The cloud workflow is still not installed.
+numeric and workflow claims. This revision installs a hash-bound plan-only copy;
+GitHub will expose it for dispatch only after protected merge to `main`.
 
-The dormant blueprint requires:
+The plan-only workflow and its byte-identical blueprint require:
 
 - protected `main` with the credential-free staging gate required;
 - SHA-pinned selected actions and read-only default workflow permissions;
-- separate `miakapp-v4-staging-plan` and `miakapp-v4-staging-apply`
-  environments;
+- the `miakapp-v4-staging-plan` environment, while the separately configured
+  apply environment remains unused;
 - OIDC conditions over immutable repository/owner IDs, `main`, the exact
   workflow reference, and the exact environment; and
-- explicit approval in the apply environment before the same-run,
-  digest-verified private plan is applied.
+- a hash-bound active file and blueprint before OIDC can be requested; and
+- a separate policy transition before any apply workflow may be installed.
 
 There is one known human administrator. The desired apply environment therefore
 records that administrator as reviewer while allowing self-approval. This is an
@@ -143,29 +217,28 @@ npm run test:staging-manifest
 ```
 
 The gate validates bounded closed manifests, all three reviewed inventories,
-the absent active workflow, pinned actions and providers, exact locks for macOS
+the exact plan-only active workflow and blueprint, pinned actions and providers,
+exact locks for macOS
 ARM64 and Linux AMD64, both Terraform roots with mock providers, script syntax,
-private-plan handling, and hostile environment inputs. It initializes Terraform
-with `-backend=false` and never reads credentials or contacts staging.
+private-plan handling, the complete simulated migration-only recovery state
+machine, the simulated guarded foundation-state initializer, and hostile
+environment inputs. It initializes Terraform with `-backend=false` and never
+reads credentials or contacts staging.
 
 The active validation workflow has only `contents: read`; it has no OIDC or
-secret permission. The dormant workflow deliberately fails its first policy job
-because workflow installation and cloud bootstrap remain unauthorized.
+secret permission. After protected merge, the manually dispatched plan workflow
+may request only the planner OIDC identity. It has no apply job, and the dormant
+apply script fails its separate policy check while foundation apply remains
+unauthorized.
 
-## Next authorization gate
+## Next staging gate
 
-The GitHub branch, environment and Actions prerequisite are configured. The
-approved billing link and a fresh non-saved bootstrap diagnostic plan were
-completed and re-observed on 2026-09-03 without installing a cloud workflow or
-creating any other resource. Before any additional cloud action, a separate
-reviewed pass must:
+The GitHub branch, environment and Actions prerequisite are configured, and the
+foundation state boundary is reconciled. The next sequence is:
 
-1. revalidate the external policy and cloud inventory, then create and review an
-   exact saved bootstrap plan and receive new operator authorization to apply it;
-2. migrate and reconcile bootstrap state before any foundation plan;
-3. install the cloud workflow only after its WIF providers and service accounts
-   exist; and
-4. review a live foundation plan before granting apply approval.
+1. merge this exact plan-only workflow through protected `main`;
+2. dispatch it with the exact staging confirmation; and
+3. inspect its private saved plan before any foundation apply transition.
 
 The production Function entry point, exact FCM runtime permission, secret
 version lifecycle, ingress design, monitoring, real-service fault matrix,

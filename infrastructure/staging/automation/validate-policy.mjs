@@ -1,8 +1,10 @@
-import { readFileSync, statSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { lstatSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { resolve } from 'node:path';
+import { dirname, resolve, sep } from 'node:path';
 
 const MAX_POLICY_BYTES = 64 * 1024;
+const MAX_WORKFLOW_BYTES = 128 * 1024;
 
 export class GitHubPolicyError extends Error {
   constructor(message) {
@@ -123,15 +125,25 @@ export function validateGitHubPolicy(value, options = {}) {
     'revision',
     'status',
     'observed_on',
+    'observation_context',
     'repository',
     'observed',
     'required',
     'activation',
   ]);
   exact(policy.schema, 'miakapp.staging-github-policy/1', 'policy.schema');
-  exact(policy.revision, 2, 'policy.revision');
-  exact(policy.status, 'github_security_configured_cloud_inactive', 'policy.status');
-  exact(policy.observed_on, '2026-09-02', 'policy.observed_on');
+  exact(policy.revision, 3, 'policy.revision');
+  exact(
+    policy.status,
+    'manual_keyless_plan_workflow_authorized',
+    'policy.status',
+  );
+  exact(policy.observed_on, '2026-09-03', 'policy.observed_on');
+  exact(
+    policy.observation_context,
+    'default_branch_before_this_change',
+    'policy.observation_context',
+  );
 
   const repository = record(policy.repository, 'repository', [
     'name_with_owner',
@@ -209,30 +221,72 @@ export function validateGitHubPolicy(value, options = {}) {
   const activation = record(policy.activation, 'activation', [
     'policy_observation_verified',
     'workflow_install_authorized',
-    'cloud_bootstrap_authorized',
+    'cloud_plan_authorized',
+    'foundation_apply_authorized',
     'active_workflow_path',
     'blueprint_path',
+    'workflow_sha256',
   ]);
   exact(activation.policy_observation_verified, true, 'activation.policy_observation_verified');
-  exact(activation.workflow_install_authorized, false, 'activation.workflow_install_authorized');
-  exact(activation.cloud_bootstrap_authorized, false, 'activation.cloud_bootstrap_authorized');
+  exact(activation.workflow_install_authorized, true, 'activation.workflow_install_authorized');
+  exact(activation.cloud_plan_authorized, true, 'activation.cloud_plan_authorized');
+  exact(activation.foundation_apply_authorized, false, 'activation.foundation_apply_authorized');
   exact(activation.active_workflow_path, '.github/workflows/staging-terraform.yml', 'activation.active_workflow_path');
   exact(
     activation.blueprint_path,
     'infrastructure/staging/automation/staging-terraform.yml',
     'activation.blueprint_path',
   );
+  exact(
+    activation.workflow_sha256,
+    '13fd21ad1fa1fdbfec88cefc4af048643eb7a2078d8f33eb0e840c54a3238336',
+    'activation.workflow_sha256',
+  );
 
-  if (options.requireActivation === true) {
-    reject('activation', 'still forbids workflow installation and cloud bootstrap');
+  if (options.requirePlanActivation === true || options.requireApplyActivation === true) {
+    exact(activation.workflow_install_authorized, true, 'activation.workflow_install_authorized');
+    exact(activation.cloud_plan_authorized, true, 'activation.cloud_plan_authorized');
+  }
+  if (options.requireApplyActivation === true) {
+    exact(activation.foundation_apply_authorized, true, 'activation.foundation_apply_authorized');
   }
   return policy;
 }
 
+export function verifyInstalledWorkflow(repositoryRoot, policy) {
+  const root = resolve(repositoryRoot);
+  const workflowPaths = [
+    ['active workflow', policy.activation.active_workflow_path],
+    ['workflow blueprint', policy.activation.blueprint_path],
+  ];
+  const sources = workflowPaths.map(([label, relativePath]) => {
+    const absolute = resolve(root, relativePath);
+    if (absolute === root || !absolute.startsWith(`${root}${sep}`)) {
+      reject(label, 'must remain inside the repository');
+    }
+    const metadata = lstatSync(absolute, { throwIfNoEntry: false });
+    if (metadata === undefined || !metadata.isFile() || metadata.isSymbolicLink()) {
+      reject(label, 'must be a regular non-symlink file');
+    }
+    if (metadata.size > MAX_WORKFLOW_BYTES) {
+      reject(label, `must be at most ${MAX_WORKFLOW_BYTES} bytes`);
+    }
+    return readFileSync(absolute);
+  });
+  if (!sources[0].equals(sources[1])) {
+    reject('active workflow', 'must exactly match the reviewed blueprint');
+  }
+  const digest = createHash('sha256').update(sources[0]).digest('hex');
+  exact(digest, policy.activation.workflow_sha256, 'active workflow SHA-256');
+  return digest;
+}
+
 export function readGitHubPolicy(path) {
   const absolute = resolve(path);
-  const metadata = statSync(absolute, { throwIfNoEntry: false });
-  if (metadata === undefined || !metadata.isFile()) reject('policy file', 'must be a regular file');
+  const metadata = lstatSync(absolute, { throwIfNoEntry: false });
+  if (metadata === undefined || !metadata.isFile() || metadata.isSymbolicLink()) {
+    reject('policy file', 'must be a regular non-symlink file');
+  }
   if (metadata.size > MAX_POLICY_BYTES) reject('policy file', `must be at most ${MAX_POLICY_BYTES} bytes`);
   let parsed;
   try {
@@ -245,16 +299,25 @@ export function readGitHubPolicy(path) {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
-  const requireActivation = args[0] === '--require-activation';
-  const path = requireActivation ? args[1] : args[0];
-  if (path === undefined || args.length !== (requireActivation ? 2 : 1)) {
-    console.error('Usage: node validate-policy.mjs [--require-activation] <github-policy.json>');
+  const mode = args[0]?.startsWith('--') ? args[0] : undefined;
+  const path = mode === undefined ? args[0] : args[1];
+  const supportedMode = mode === undefined
+    || mode === '--require-plan-activation'
+    || mode === '--require-apply-activation';
+  if (path === undefined || !supportedMode || args.length !== (mode === undefined ? 1 : 2)) {
+    console.error('Usage: node validate-policy.mjs [--require-plan-activation|--require-apply-activation] <github-policy.json>');
     process.exitCode = 2;
   } else {
     try {
       const policy = readGitHubPolicy(path);
-      validateGitHubPolicy(policy, { requireActivation });
-      console.log(`Validated ${policy.schema}; cloud automation remains inactive.`);
+      validateGitHubPolicy(policy, {
+        requirePlanActivation: mode === '--require-plan-activation',
+        requireApplyActivation: mode === '--require-apply-activation',
+      });
+      if (mode !== undefined) {
+        verifyInstalledWorkflow(resolve(dirname(path), '../../..'), policy);
+      }
+      console.log(`Validated ${policy.schema}; manual keyless planning is authorized and foundation apply remains disabled.`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';
       console.error(`GitHub policy rejected: ${message}`);

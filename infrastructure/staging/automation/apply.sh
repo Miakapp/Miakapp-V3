@@ -35,6 +35,10 @@ if [[ "${MIAKAPP_PLAN_OBJECT:-}" != "$expected_object" || \
   exit 1
 fi
 
+node "${automation_root}/validate-policy.mjs" \
+  --require-apply-activation \
+  "${automation_root}/github-policy.json"
+
 for required_name in GOOGLE_APPLICATION_CREDENTIALS CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE GOOGLE_GHA_CREDS_PATH; do
   if [[ -z "${!required_name:-}" || ! -f "${!required_name}" || -L "${!required_name}" ]]; then
     echo "The keyless Google credential file is missing." >&2
