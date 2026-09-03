@@ -217,9 +217,10 @@ The original wrapper then rejected Terraform's real output representation before
 backend migration. A migration-only wrapper later created and reconciled remote
 bootstrap state generation `1788439334043522` at serial 40 without applying
 infrastructure. The protected serial-39 source remains independent recovery
-evidence. A guarded, currently commit-unbound initializer now describes the next
-mutation: create and verify only an empty serial-1 foundation state with
-protected credentials. Only after its separate exact authorization may the
+evidence. A guarded initializer bound to reviewed commit
+`052f6c92d76f93ec222ffd03e4d34ba7a927495b` now describes the next mutation:
+create and verify only an empty serial-1 foundation state with protected
+credentials. Only after its separate exact authorization may the
 operator authorize and install the workflow and review a foundation plan. The
 production Function entry point,
 exact FCM permission, quotas, alerts and teardown evidence remain blockers.

@@ -1130,7 +1130,7 @@ function validateTerraform(value) {
   const foundationStatePath = 'terraform.foundation_state_initialization';
   exact(
     foundationStateInitialization.state,
-    'guarded_initializer_implemented_pending_commit_binding',
+    'guarded_initializer_reviewed_awaiting_exact_authorization',
     `${foundationStatePath}.state`,
   );
   exact(
@@ -1150,7 +1150,7 @@ function validateTerraform(value) {
   );
   exact(
     foundationStateInitialization.approved_initialization_configuration_commit,
-    '0000000000000000000000000000000000000000',
+    '052f6c92d76f93ec222ffd03e4d34ba7a927495b',
     `${foundationStatePath}.approved_initialization_configuration_commit`,
   );
   for (const field of [
@@ -1698,7 +1698,7 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 23, 'manifest.revision');
+  exact(manifest.revision, 24, 'manifest.revision');
   exact(
     manifest.status,
     'bootstrap_complete_remote_state_reconciled',
