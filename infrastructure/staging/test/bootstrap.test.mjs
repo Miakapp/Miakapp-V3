@@ -57,6 +57,7 @@ const source = terraformFiles
   .join('\n');
 const billingSource = readFileSync(new URL('billing.tf', bootstrapRoot), 'utf8');
 const identitySource = readFileSync(new URL('identity.tf', bootstrapRoot), 'utf8');
+const importsSource = readFileSync(new URL('imports.tf', bootstrapRoot), 'utf8');
 const iamSource = readFileSync(new URL('iam.tf', bootstrapRoot), 'utf8');
 const localsSource = readFileSync(new URL('locals.tf', bootstrapRoot), 'utf8');
 const stateSource = readFileSync(new URL('state.tf', bootstrapRoot), 'utf8');
@@ -120,6 +121,35 @@ function syntheticTerraformPlan(secret = 'must-not-appear') {
   const resourceChanges = [];
   for (const [type, count] of Object.entries(expectedSavedPlanTypes)) {
     for (let index = 0; index < count; index += 1) {
+      if (type === 'google_billing_project_info') {
+        resourceChanges.push({
+          address: 'google_billing_project_info.staging',
+          mode: 'managed',
+          type,
+          change: {
+            actions: ['update'],
+            before: {
+              billing_account: 'AAAAAA-BBBBBB-CCCCCC',
+              deletion_policy: 'DELETE',
+              id: 'projects/miakapp-v4-staging',
+              project: 'miakapp-v4-staging',
+              timeouts: null,
+            },
+            after: {
+              billing_account: 'AAAAAA-BBBBBB-CCCCCC',
+              deletion_policy: 'PREVENT',
+              id: 'projects/miakapp-v4-staging',
+              project: 'miakapp-v4-staging',
+              timeouts: null,
+            },
+            before_sensitive: {},
+            after_sensitive: { billing_account: true },
+            after_unknown: {},
+            importing: { id: 'projects/miakapp-v4-staging' },
+          },
+        });
+        continue;
+      }
       const instanceKey = type === 'google_project_iam_member' ? `roles/viewer-${index}` : `${index}`;
       resourceChanges.push({
         address: `${type}.fixture["${instanceKey}"]`,
@@ -456,6 +486,8 @@ test('pins the billing target, bootstrap APIs, budget, and non-secret output', (
   assert.match(source, /region\s+= "europe-west9"/);
   assert.match(billingSource, /sha256\(var\.billing_account_id\) == local\.approved_billing_account_sha256/);
   assert.doesNotMatch(source, /\b[0-9A-F]{6}-[0-9A-F]{6}-[0-9A-F]{6}\b/);
+  assert.match(importsSource, /to = google_billing_project_info\.staging/);
+  assert.match(importsSource, /id = "projects\/miakapp-v4-staging"/);
   assert.deepEqual(localSet('bootstrap_service_apis'), [
     'billingbudgets.googleapis.com',
     'cloudbilling.googleapis.com',
@@ -607,11 +639,16 @@ test('rejects bootstrap overrides before Terraform or Google access', () => {
   }
 });
 
-test('reduces the exact create-only plan to closed metadata without retaining values', () => {
+test('reduces the exact import-and-create plan to closed metadata without retaining values', () => {
   const secret = 'AAAAAA-BBBBBB-CCCCCC';
   const metadata = metadataForPlan(Buffer.from('synthetic-plan'), syntheticTerraformPlan(secret));
-  assert.equal(metadata.schema, 'miakapp.staging-bootstrap-plan/1');
-  assert.deepEqual(metadata.plan.change_summary, { create: 36, update: 0, delete: 0 });
+  assert.equal(metadata.schema, 'miakapp.staging-bootstrap-plan/2');
+  assert.deepEqual(metadata.plan.change_summary, {
+    create: 35,
+    import: 1,
+    update: 1,
+    delete: 0,
+  });
   assert.equal(metadata.authorization.apply_authorized, false);
   assert.equal(metadata.authorization.state_migration_authorized, false);
   assert.doesNotMatch(JSON.stringify(metadata), new RegExp(secret));
@@ -627,6 +664,25 @@ test('reduces the exact create-only plan to closed metadata without retaining va
   assert.throws(
     () => metadataForPlan(Buffer.from('synthetic-plan'), destructive),
     /must be create-only/,
+  );
+
+  const billingMutation = syntheticTerraformPlan();
+  const billingChange = billingMutation.resource_changes.find(
+    ({ address }) => address === 'google_billing_project_info.staging',
+  );
+  billingChange.change.after.billing_account = 'DDDDDD-EEEEEE-FFFFFF';
+  assert.throws(
+    () => metadataForPlan(Buffer.from('synthetic-plan'), billingMutation),
+    /must preserve the canonical billing account/,
+  );
+
+  const missingImport = syntheticTerraformPlan();
+  delete missingImport.resource_changes.find(
+    ({ address }) => address === 'google_billing_project_info.staging',
+  ).change.importing;
+  assert.throws(
+    () => metadataForPlan(Buffer.from('synthetic-plan'), missingImport),
+    /Terraform billing-link import must be an object/,
   );
 
   const differentPlan = syntheticTerraformPlan();

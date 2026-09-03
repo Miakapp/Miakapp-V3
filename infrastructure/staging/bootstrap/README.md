@@ -1,12 +1,12 @@
 # Staging Terraform bootstrap proposal
 
-Status: approved billing link active; exact private plan reviewed (36 add,
-0 change, 0 destroy); never applied
+Status: approved billing link active; authorized plan failed before creating
+resources; import-based recovery configuration ready but not planned or applied
 
 This root owns the one-time resources required before the ordinary staging
 foundation can use remote state and keyless GitHub automation:
 
-- the exact approved billing association and one project-filtered EUR 10 budget
+- import of the exact approved billing association and one project-filtered EUR 10 budget
   with current-spend alerts at EUR 2, EUR 5, and EUR 10;
 - the exact bootstrap APIs;
 - one private, versioned Paris GCS bucket for state and short-lived saved plans;
@@ -40,8 +40,10 @@ bundle; a successful plan is rejected if Terraform creates that state before an
 apply.
 
 [`backend.gcs.tf.example`](backend.gcs.tf.example) is the exact reviewed backend
-block for a later migration. Saved-plan creation and review are complete. The
-committed but inactive [`apply-and-migrate.sh`](apply-and-migrate.sh) wrapper must:
+block for a later migration. The first saved plan is superseded after its
+zero-resource failure. Before reuse, the committed
+[`apply-and-migrate.sh`](apply-and-migrate.sh) wrapper must be rebound to a newly
+reviewed import plan and must:
 
 1. revalidate the exact saved-plan digest, external GitHub policy, and current
    cloud inventory;
@@ -55,35 +57,32 @@ committed but inactive [`apply-and-migrate.sh`](apply-and-migrate.sh) wrapper mu
    resource; and
 6. remove the protected local state copy only after both checks agree.
 
-Saved-plan preparation and inspection were completed on 2026-09-03. The guarded
-execution wrapper was then added without executing it and without changing any
-cloud-authorization bit. Local state is sensitive and must never be committed,
-attached to a public issue, or discarded before migration is proven.
+The original saved-plan preparation and inspection completed on 2026-09-03.
+After exact owner authorization, Terraform attempted its first resource: a
+redundant update of the already-active billing link. Cloud Billing rejected that
+write on its association-change quota before any managed resource was created.
+The zero-resource local state and logs were preserved privately, and independent
+inventory confirmed that every target remained absent. Local state is sensitive
+and must never be committed or attached to a public issue.
 
-## Guarded apply and migration (inactive)
+## Superseded guarded apply and migration
 
-The execution command is intentionally single-use and bound to configuration
+The existing execution command is intentionally single-use and bound to configuration
 commit `c192f97959833f53a19d4e6dc50b26292c88b3b5`, plan digest
 `0918d21c4677ce0958be9ccc43057d8d76a33857fdfbea066120ba953e30b5c1`,
 project `miakapp-v4-staging`, and remote object
 `gs://miakapp-v4-staging-tfstate-1072737219170/terraform/bootstrap/default.tfstate`.
-The manifest still records execution and authorization as false. Do not set the
-runtime authorization merely because this command exists.
+Its authorization was consumed by the failed attempt. The digest is superseded
+and the command must not be run again. A later commit may rebind the wrapper only
+after a replacement plan is created and reviewed.
 
-Only one operator may execute the authoritative private bundle at a time. The
+Only one operator may execute an authoritative private bundle at a time. The
 wrapper takes an atomic sibling lock before invoking Terraform or reading cloud
 inventory and releases it on normal exit. A surviving lock after an abrupt
 process or host failure must be investigated, not deleted reflexively or worked
-around with a copied bundle.
-
-After the owner separately authorizes that exact apply-and-migrate operation, an
-operator may run from a clean descendant of the reviewed configuration commit:
-
-```sh
-MIAKAPP_STAGING_BOOTSTRAP_EXECUTION_AUTHORIZATION='apply-and-migrate:miakapp-v4-staging:0918d21c4677ce0958be9ccc43057d8d76a33857fdfbea066120ba953e30b5c1' \
-  ./infrastructure/staging/bootstrap/apply-and-migrate.sh \
-  '/absolute/private/miakapp-staging-bootstrap-plan-...'
-```
+around with a copied bundle. The superseded command and authorization string are
+deliberately not presented as runnable instructions. A replacement command may
+be documented only after its new source commit and plan digest are reviewed.
 
 Before mutation, the wrapper revalidates the plan, its exact Terraform source,
 the active project and billing fingerprint, and the absence of the target
@@ -148,15 +147,21 @@ newer generations before versions older than 30 days are pruned. Unique saved
 plans are deleted live after two days and their archived version after one more
 day; deleted data may still remain recoverable during soft delete.
 
-## Exact saved-plan preparation
+## Superseded plan and import recovery
 
-This path produced the authoritative plan from clean commit
+This path produced the now-superseded plan from clean commit
 `c192f97959833f53a19d4e6dc50b26292c88b3b5` on 2026-09-03. Its SHA-256 is
 `0918d21c4677ce0958be9ccc43057d8d76a33857fdfbea066120ba953e30b5c1`; the
-verified and manually reviewed result is exactly 36 additions, no changes, and
-no destroys. It created no state and performed no apply or migration. Only that
-digest is authoritative; any other local bundle is superseded and must not be
-applied.
+verified and manually reviewed result was exactly 36 additions, no changes, and
+no destroys. Its authorized apply stopped at the redundant billing-link write
+before creating any resource. Do not retry that digest.
+
+[`imports.tf`](imports.tf) now declares the preexisting billing link as an
+idempotent Terraform import. The saved-plan reducer accepts exactly 35 creations
+plus this one import with a client-side `deletion_policy` update, requires the
+billing account to remain byte-for-byte unchanged, and retains neither its raw
+identifier nor any planned values. The following command may create a new private
+replacement plan, but does not authorize its application.
 
 To produce a replacement, first create a persistent operator-owned directory
 outside the Git repository and remove every group/other permission from it. Then
@@ -174,7 +179,8 @@ MIAKAPP_STAGING_BOOTSTRAP_CONFIRMATION='miakapp-v4-staging' \
 
 The wrapper rejects a dirty checkout, Git/Terraform/Google overrides, credential
 files, a foreign billing-account fingerprint, local state in the source tree,
-and any plan other than the exact reviewed 36 create-only resource instances. It
+and any plan other than the exact reviewed 35 creates plus one billing-link
+import. It
 uses a fresh bundle-local Terraform data directory so stale backend metadata
 cannot be reused, removes that directory after planning, and leaves a unique
 mode-0700 bundle containing only:

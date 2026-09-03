@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 15,
-  "status": "bootstrap_saved_plan_reviewed_billing_linked_undeployed",
+  "revision": 16,
+  "status": "bootstrap_import_recovery_configuration_ready_billing_linked_undeployed",
   "environment": "staging",
   "project": {
     "project_id": "miakapp-v4-staging",
@@ -360,7 +360,7 @@
       "soft_delete_days": 7
     },
     "bootstrap_execution": {
-      "state": "guarded_wrapper_committed_inactive",
+      "state": "authorized_plan_failed_before_resource_creation",
       "script": "bootstrap/apply-and-migrate.sh",
       "helper": "bootstrap/bootstrap-execution.mjs",
       "approved_configuration_commit": "c192f97959833f53a19d4e6dc50b26292c88b3b5",
@@ -372,6 +372,11 @@
       "partial_state_migration_attempted": true,
       "local_recovery_preserved_on_failure": true,
       "local_state_removed_only_after_reconciliation": true,
+      "authorized_plan_attempted": true,
+      "attempted_on": "2026-09-03",
+      "result": "billing_association_quota_before_resource_creation",
+      "cloud_resources_created": 0,
+      "remote_state_migrated": false,
       "executed": false
     },
     "apply_authorized": false,

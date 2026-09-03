@@ -28,12 +28,12 @@ function rejects(mutator, pattern) {
   );
 }
 
-test('accepts the reviewed private bootstrap plan without deployment authorization', () => {
+test('accepts the import recovery configuration without deployment authorization', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 15);
+  assert.equal(validated.revision, 16);
   assert.equal(
     validated.status,
-    'bootstrap_saved_plan_reviewed_billing_linked_undeployed',
+    'bootstrap_import_recovery_configuration_ready_billing_linked_undeployed',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
@@ -82,7 +82,7 @@ test('accepts the reviewed private bootstrap plan without deployment authorizati
   assert.equal(validated.terraform.saved_plan.state, 'private_gcs_blueprint_not_active');
   assert.equal(validated.terraform.saved_plan.public_artifacts_allowed, false);
   assert.deepEqual(validated.terraform.bootstrap_execution, {
-    state: 'guarded_wrapper_committed_inactive',
+    state: 'authorized_plan_failed_before_resource_creation',
     script: 'bootstrap/apply-and-migrate.sh',
     helper: 'bootstrap/bootstrap-execution.mjs',
     approved_configuration_commit: 'c192f97959833f53a19d4e6dc50b26292c88b3b5',
@@ -94,6 +94,11 @@ test('accepts the reviewed private bootstrap plan without deployment authorizati
     partial_state_migration_attempted: true,
     local_recovery_preserved_on_failure: true,
     local_state_removed_only_after_reconciliation: true,
+    authorized_plan_attempted: true,
+    attempted_on: '2026-09-03',
+    result: 'billing_association_quota_before_resource_creation',
+    cloud_resources_created: 0,
+    remote_state_migrated: false,
     executed: false,
   });
   assert.equal(validated.terraform.apply_authorized, false);
@@ -245,6 +250,12 @@ test('rejects every cloud-action authorization bit', () => {
   rejects((candidate) => {
     candidate.terraform.bootstrap_execution.budget_postcondition_required = false;
   }, /terraform\.bootstrap_execution\.budget_postcondition_required/);
+  rejects((candidate) => {
+    candidate.terraform.bootstrap_execution.cloud_resources_created = 1;
+  }, /terraform\.bootstrap_execution\.cloud_resources_created/);
+  rejects((candidate) => {
+    candidate.terraform.bootstrap_execution.remote_state_migrated = true;
+  }, /terraform\.bootstrap_execution\.remote_state_migrated/);
 });
 
 test('requires explicit targeting and forbids a staging Firebase alias', () => {

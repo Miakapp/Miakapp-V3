@@ -11,6 +11,7 @@ const ALLOWED_FILES = Object.freeze([
   'guard.mjs',
   'iam.tf',
   'identity.tf',
+  'imports.tf',
   'inspect-plan.sh',
   'locals.tf',
   'outputs.tf',

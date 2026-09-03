@@ -161,7 +161,7 @@ if ! terraform -chdir="$bootstrap_root" show -json "$plan_file" 2>>"$private_log
     "$plan_sha256" \
     "$configuration_commit" \
     "$created_at" >/dev/null; then
-  echo "The saved bootstrap plan does not match the reviewed create-only inventory; the private bundle was discarded." >&2
+  echo "The saved bootstrap plan does not match the reviewed import-and-create inventory; the private bundle was discarded." >&2
   exit 1
 fi
 
