@@ -114,17 +114,18 @@ ingress, and no secret version. No saved plan was created and no apply ran.
 Post-plan checks found the exact same state generation and digest and no current
 lock object.
 
-The dormant keyless workflow in [`../automation/`](../automation/) is the
-intended activation path after bootstrap. It creates a private, create-only
-saved plan, emits only bounded action/address metadata, and allows the protected
-apply job to consume only the exact same-run object and SHA-256 digest. The
-workflow is not installed or enabled in the public policy record.
+The manual keyless workflow in [`../automation/`](../automation/) is the
+authorized planning path after bootstrap. Its exact active copy creates a
+private, create-only saved plan and emits only bounded action/address metadata.
+It becomes dispatchable after protected merge to `main`. It contains no apply
+job; the separate apply script and deployer identity remain dormant.
 
 ## Explicit non-authorization
 
 Terraform source is inherently apply-capable. Repository guards and supported
 wrappers do not prevent a privileged operator from bypassing them, so direct
-Terraform mutation remains unauthorized. No active CI workflow has cloud
-credentials, the WIF resources are not used by an active workflow, no private
-saved foundation plan exists, and every current manifest authorization bit
-remains false.
+Terraform mutation remains unauthorized. The plan workflow may use short-lived
+keyless planner credentials after protected merge, but it cannot write
+foundation state or request the deployer identity. No private saved foundation
+plan exists yet, no active apply workflow exists, and the apply and destroy
+authorization bits remain false.

@@ -30,10 +30,10 @@ function rejects(mutator, pattern) {
 
 test('accepts reconciled state and the reviewed live foundation plan', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 26);
+  assert.equal(validated.revision, 27);
   assert.equal(
     validated.status,
-    'foundation_live_plan_reviewed_workflow_installation_pending',
+    'manual_keyless_plan_workflow_authorized',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
@@ -59,11 +59,14 @@ test('accepts reconciled state and the reviewed live foundation plan', () => {
   assert.equal(validated.terraform.state, 'foundation_live_plan_reviewed');
   assert.equal(
     validated.terraform.supported_workflow,
-    'credential_free_validation_and_guarded_workflow_installation',
+    'credential_free_validation_and_manual_keyless_planning',
   );
   assert.equal(validated.terraform.configuration_apply_capable, true);
-  assert.equal(validated.terraform.active_cloud_workflow, 'none');
-  assert.equal(validated.terraform.workflow_blueprint_state, 'dormant_not_installed');
+  assert.equal(
+    validated.terraform.active_cloud_workflow,
+    '.github/workflows/staging-terraform.yml',
+  );
+  assert.equal(validated.terraform.workflow_blueprint_state, 'installed_exact_plan_only_copy');
   assert.equal(validated.terraform.backend.type, 'gcs');
   assert.equal(validated.terraform.backend.state, 'bootstrap_and_empty_foundation_state_present');
   assert.equal(
@@ -301,8 +304,16 @@ test('accepts reconciled state and the reviewed live foundation plan', () => {
   assert.equal(validated.terraform.superseded_saved_plan_observation.local_state_artifacts_created, true);
   assert.equal(validated.terraform.superseded_saved_plan_observation.state_migration_executed, false);
   assert.equal(validated.evidence.github_policy_observation_verified, true);
-  assert.equal(validated.evidence.active_cloud_workflow_present, false);
-  assert.equal(validated.readiness.required_blockers.includes('github-terraform-workflow-not-installed'), true);
+  assert.equal(validated.readiness.plan_only_cloud_actions_authorized, true);
+  assert.equal(validated.readiness.foundation_apply_authorized, false);
+  assert.equal(validated.evidence.credential_free_validation, true);
+  assert.equal(validated.evidence.manual_live_plan_requires_user_adc, true);
+  assert.equal(validated.evidence.ci_plan_uses_keyless_oidc, true);
+  assert.equal(validated.evidence.persistent_ci_credentials_allowed, false);
+  assert.equal(validated.evidence.active_plan_workflow_present, true);
+  assert.equal(validated.evidence.active_apply_workflow_present, false);
+  assert.equal(validated.readiness.required_blockers.includes('private-foundation-plan-not-reviewed'), true);
+  assert.equal(validated.readiness.required_blockers.includes('github-terraform-workflow-not-installed'), false);
   assert.equal(validated.readiness.required_blockers.includes('foundation-state-not-initialized'), false);
   assert.equal(validated.readiness.required_blockers.includes('live-foundation-plan-not-reviewed'), false);
   assert.equal(validated.readiness.required_blockers.includes('remote-bootstrap-state-not-migrated'), false);
@@ -365,7 +376,7 @@ test('rejects drift from the observed billing-linked undeployed bootstrap invent
   }, /bootstrap must contain exactly/);
 });
 
-test('rejects every cloud-action authorization bit and bootstrap completion drift', () => {
+test('rejects apply authorization and bootstrap completion drift', () => {
   for (const field of [
     'creation_authorized',
     'billing_link_authorized',
@@ -377,8 +388,11 @@ test('rejects every cloud-action authorization bit and bootstrap completion drif
     }, new RegExp(`project\\.${field}`));
   }
   rejects((candidate) => {
-    candidate.readiness.cloud_actions_enabled = true;
-  }, /readiness\.cloud_actions_enabled/);
+    candidate.readiness.plan_only_cloud_actions_authorized = false;
+  }, /readiness\.plan_only_cloud_actions_authorized/);
+  rejects((candidate) => {
+    candidate.readiness.foundation_apply_authorized = true;
+  }, /readiness\.foundation_apply_authorized/);
   rejects((candidate) => {
     candidate.terraform.bootstrap_execution.bootstrap_completed = false;
   }, /terraform\.bootstrap_execution\.bootstrap_completed/);
@@ -623,10 +637,10 @@ test('rejects Terraform activation, identity, state, provider, and deployment dr
     candidate.terraform.configuration_apply_capable = false;
   }, /terraform\.configuration_apply_capable/);
   rejects((candidate) => {
-    candidate.terraform.active_cloud_workflow = 'staging-terraform.yml';
+    candidate.terraform.active_cloud_workflow = 'none';
   }, /terraform\.active_cloud_workflow/);
   rejects((candidate) => {
-    candidate.terraform.workflow_blueprint_state = 'installed';
+    candidate.terraform.workflow_blueprint_state = 'dormant_not_installed';
   }, /terraform\.workflow_blueprint_state/);
   rejects((candidate) => {
     candidate.terraform.backend.state = 'created';
@@ -786,19 +800,25 @@ test('requires every production blocker and staging evidence row', () => {
   }, /evidence\.staging_rows/);
 });
 
-test('forbids CI credentials and automated teardown', () => {
+test('keeps CI plan-only, keyless, and free of persistent credentials', () => {
   rejects((candidate) => {
-    candidate.evidence.cloud_credentials_required = true;
-  }, /evidence\.cloud_credentials_required/);
+    candidate.evidence.credential_free_validation = false;
+  }, /evidence\.credential_free_validation/);
   rejects((candidate) => {
-    candidate.evidence.ci_may_authenticate = true;
-  }, /evidence\.ci_may_authenticate/);
+    candidate.evidence.manual_live_plan_requires_user_adc = false;
+  }, /evidence\.manual_live_plan_requires_user_adc/);
   rejects((candidate) => {
-    candidate.evidence.active_cloud_workflow_present = true;
-  }, /evidence\.active_cloud_workflow_present/);
+    candidate.evidence.ci_plan_uses_keyless_oidc = false;
+  }, /evidence\.ci_plan_uses_keyless_oidc/);
   rejects((candidate) => {
-    candidate.evidence.live_plan_cloud_credentials_required = false;
-  }, /evidence\.live_plan_cloud_credentials_required/);
+    candidate.evidence.persistent_ci_credentials_allowed = true;
+  }, /evidence\.persistent_ci_credentials_allowed/);
+  rejects((candidate) => {
+    candidate.evidence.active_plan_workflow_present = false;
+  }, /evidence\.active_plan_workflow_present/);
+  rejects((candidate) => {
+    candidate.evidence.active_apply_workflow_present = true;
+  }, /evidence\.active_apply_workflow_present/);
   rejects((candidate) => {
     candidate.teardown.automated = true;
   }, /teardown\.automated/);

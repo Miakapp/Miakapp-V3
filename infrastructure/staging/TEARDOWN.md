@@ -1,7 +1,8 @@
 # Miakapp 4 staging teardown rehearsal
 
 Status: non-executable rehearsal; bootstrap resources and both reconciled remote
-states exist, protected local recovery evidence remains private, and the cloud workflow is dormant
+states exist, protected local recovery evidence remains private, and only a
+manual plan workflow is authorized
 
 This runbook applies to the existing `miakapp-v4-staging` project. It must never
 be run against `miakapp-3`, `miakapp-v4`, or a `demo-*` project. A future
@@ -20,8 +21,9 @@ otherwise be fully undone. Retaining this empty undeployed project, with the
 billing link removable during an authorized teardown, is therefore the default.
 
 The repository contains separate bootstrap and foundation roots, a private
-versioned GCS backend, keyless plan/apply identities and a dormant GitHub
-workflow blueprint. Terraform completed the final 27-create/nine-no-op plan, but
+versioned GCS backend, keyless plan/apply identities and a hash-bound plan-only
+GitHub workflow awaiting protected merge. Terraform completed the final
+27-create/nine-no-op plan, but
 the wrapper rejected the complete state before migration because its output
 shape assumption differed from Terraform 1.11.3. The exact 36-resource state at
 serial 39 is preserved outside the repository with fingerprint
@@ -72,7 +74,8 @@ cannot be deleted; and billing can report late usage.
 ## Ordered teardown
 
 1. Disable test traffic, scheduled work, triggers and public invocation. Disable
-   the active deployment workflow, both GitHub environments and both WIF
+   every active plan or deployment workflow, both GitHub environments and both
+   WIF
    providers before revoking temporary human, CI and test-client access.
 2. Remove the Function and inspect Cloud Run, Eventarc and Artifact Registry for
    resources that outlive the deployment abstraction.

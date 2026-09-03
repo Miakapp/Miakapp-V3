@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 26,
-  "status": "foundation_live_plan_reviewed_workflow_installation_pending",
+  "revision": 27,
+  "status": "manual_keyless_plan_workflow_authorized",
   "environment": "staging",
   "project": {
     "project_id": "miakapp-v4-staging",
@@ -314,10 +314,10 @@
   },
   "terraform": {
     "state": "foundation_live_plan_reviewed",
-    "supported_workflow": "credential_free_validation_and_guarded_workflow_installation",
+    "supported_workflow": "credential_free_validation_and_manual_keyless_planning",
     "configuration_apply_capable": true,
-    "active_cloud_workflow": "none",
-    "workflow_blueprint_state": "dormant_not_installed",
+    "active_cloud_workflow": ".github/workflows/staging-terraform.yml",
+    "workflow_blueprint_state": "installed_exact_plan_only_copy",
     "bootstrap_root": "bootstrap",
     "foundation_root": "terraform",
     "automation_root": "automation",
@@ -784,7 +784,8 @@
     }
   },
   "readiness": {
-    "cloud_actions_enabled": false,
+    "plan_only_cloud_actions_authorized": true,
+    "foundation_apply_authorized": false,
     "required_blockers": [
       "production-config-loader",
       "kms-signer-and-jwks-rotation",
@@ -798,7 +799,7 @@
       "migration-rehearsal",
       "production-function-entrypoint",
       "secret-version-lifecycle",
-      "github-terraform-workflow-not-installed"
+      "private-foundation-plan-not-reviewed"
     ]
   },
   "evidence": {
@@ -810,10 +811,12 @@
     "automation_blueprint": "automation/staging-terraform.yml",
     "github_policy": "automation/github-policy.json",
     "github_policy_observation_verified": true,
-    "cloud_credentials_required": false,
-    "live_plan_cloud_credentials_required": true,
-    "ci_may_authenticate": false,
-    "active_cloud_workflow_present": false,
+    "credential_free_validation": true,
+    "manual_live_plan_requires_user_adc": true,
+    "ci_plan_uses_keyless_oidc": true,
+    "persistent_ci_credentials_allowed": false,
+    "active_plan_workflow_present": true,
+    "active_apply_workflow_present": false,
     "staging_rows": [
       "STAGE-01",
       "STAGE-02",
