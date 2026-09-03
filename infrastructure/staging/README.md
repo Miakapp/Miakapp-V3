@@ -1,12 +1,12 @@
-# Miakapp 4 staging foundation and activation material
+# Miakapp 4 staging private workload boundary
 
-Status: foundation and initial runtime material complete; application workload undeployed
+Status: private workload contract ready and authorized; application workload undeployed
 
-This directory contains the closed description and observed state of the
-`miakapp-v4-staging` foundation. The bounded recovery has completed; its active
-workflow, apply authorization and reviewed GitHub OIDC exchange are retired.
-This revision does not authorize workload deployment, public ingress, destroy,
-or production changes.
+This directory contains the closed description and observed state of
+`miakapp-v4-staging`. The bounded foundation recovery has completed; its active
+workflow and reviewed GitHub OIDC exchange are retired. The separate private
+workload plan/apply contract is now authorized. This revision does not authorize
+public ingress, live requests, destroy, or production changes.
 
 ## Current truth
 
@@ -120,14 +120,16 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`bootstrap/`](bootstrap/) | Billing link, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Complete; both recovery providers disabled, 37-resource serial-42 state reconciled, zero plan verified |
 | [`terraform/`](terraform/) | APIs, Firestore, KMS, Secret Manager containers, and resource-scoped runtime IAM | Complete; 33-resource state independently converged; versions are managed outside Terraform |
 | [`activation/`](activation/) | One Firebase Web app, five initial secret versions, and the closed non-secret runtime document | Applied once and idempotently revalidated; result evidence committed without secret payloads |
+| [`workload/`](workload/) | Deterministic production package, private Gen 2 Function, dedicated build/probe identities, and one-permission FCM role | Guarded 14-create saved-plan/apply boundary; authorized but not yet applied |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
 | [`TEARDOWN.md`](TEARDOWN.md) | Manual recovery and teardown rehearsal | Documentation only |
 
 ## Safety and cost posture
 
-The foundation fixes every regional resource to Paris, keeps the future
-Function contract at `minInstances=0` and `maxInstances=1`, and includes no load
+The foundation fixes every regional resource to Paris. The workload contract
+keeps the Function at `minInstances=0` and `maxInstances=1` with internal-only
+ingress and includes no load
 balancer, Cloud Armor policy, VPC connector, Cloud NAT, Analytics property, or
 deployed compute. The component bucket is private, has Public Access Prevention
 and no CORS origin. No secret payload, private derivation seed or
@@ -329,7 +331,7 @@ npm run test:staging-manifest
 The gate validates bounded closed manifests, all reviewed inventories,
 the retired recovery policy and historical blueprint, pinned actions and providers,
 exact locks for macOS
-ARM64 and Linux AMD64, both Terraform roots with mock providers, script syntax,
+ARM64 and Linux AMD64, all three Terraform roots with mock providers, script syntax,
 private-plan handling, the exact recovery addresses, actions, planned values,
 partial prior state, critical expression references and checks, the
 complete simulated migration-only recovery state
@@ -344,20 +346,19 @@ No persistent credential or repository secret is used.
 
 ## Next staging gate
 
-The bootstrap, foundation and initial activation material are complete. Both
-Terraform states are reconciled, the recovery workflow is retired, and staging
-still contains no deployed workload. The committed runtime document passes the
-same strict production parser used by the inactive Function composition. Its
-five exact Secret Manager `v1` references and Firebase App Check app ID now
-match independent live inventory; no secret payload is committed.
+The bootstrap, foundation, initial activation material and private deployment
+contract are complete. The deterministic package contains only the production
+module graph, and the separate `terraform/workload` state may create exactly 14
+reviewed resources with zero update or delete. It binds the committed runtime
+document, grants only `cloudmessaging.messages.create`, keeps
+`minInstances=0`/`maxInstances=1`, permits only a keyless probe identity, and
+uses internal-only ingress.
 
-The next gate is a reviewed private Function deployment boundary. It must
-package the inactive production entrypoint, bind the exact committed runtime
-document, grant only the missing FCM runtime permission, keep
-`minInstances=0`/`maxInstances=1`, expose no unauthenticated invoker, and define
-an explicit synthetic test principal before any live request. Only after that
-deployment is independently inventoried may bounded synthetic staging
-validation begin; public ingress remains a separate later decision.
+The next gate is applying that exact private saved plan and independently
+inventorying the Function, Cloud Run service, identities, IAM, source bucket and
+artifact repository. No Function request is part of the apply. Only after that
+inventory succeeds may bounded synthetic staging validation begin; choosing any
+reachable invocation path remains a separate later decision.
 
 Function deployment, exact FCM least privilege, App Check live-provider and
 replay policy, relay token-refresh integration, trusted-source/edge admission,

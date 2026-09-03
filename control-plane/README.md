@@ -3,10 +3,9 @@
 This package is the first deployed-shape implementation slice of
 [RFC 0004](../docs/rfcs/0004-platform-control-plane.md). Its active Firebase
 codebase runs only against the Local Emulator Suite and the exact
-`demo-miakapp-v4` project. A separate production activation contract compiles
-locally. Its endpoint is not exported from the package main and carries
-`omit: true`, so no production Function is discovered or deployed through the
-active codebase.
+`demo-miakapp-v4` project. A separate deterministic production package now
+selects the staging adapter as its entrypoint. That endpoint remains absent from
+the emulator package main, so the Local Emulator Suite cannot discover it.
 
 The slice implements:
 
@@ -158,7 +157,7 @@ key and an explicit recording transport; they can prove token-profile rejection,
 closed schemas, verified UID/app/FID binding, challenge expiry and one-time
 completion, authorization, and the exact synthetic transport request and record.
 Separate unit tests now prove the exact FID-targeted FCM HTTP v1 request built by
-the inactive production transport and its one-attempt, redacted failure boundary.
+the production transport and its one-attempt, redacted failure boundary.
 The transport deliberately does not use the Firebase Admin Messaging retry loop:
 an uncertain provider result is never duplicated automatically. These tests do
 not prove real App Check attestation, FCM acceptance, or device delivery. Real
@@ -180,7 +179,7 @@ Functions Framework may reject compressed or oversized requests before
 application code runs, so the 2 MiB application check is not evidence of a
 production streaming ingress limit.
 
-An inactive production-security boundary lives in
+An isolated production-security boundary lives in
 [`src/production-config.ts`](src/production-config.ts),
 [`src/cloud-security.ts`](src/cloud-security.ts), and
 [`src/google-cloud-clients.ts`](src/google-cloud-clients.ts). It accepts only the
@@ -199,7 +198,7 @@ construction fails before creating either SDK client when
 `GOOGLE_SDK_NODE_LOGGING` is nonempty, because that debug mode can serialize
 Secret Manager payloads and complete KMS signing material.
 
-The complete inactive production composition now lives in
+The complete isolated production composition now lives in
 [`src/production-runtime-config.ts`](src/production-runtime-config.ts) and
 [`src/production-runtime.ts`](src/production-runtime.ts). Its closed runtime
 document binds the exact staging or production project, issuer, origins, App
@@ -259,25 +258,26 @@ another cloud attempt.
 staging-bound Gen 2 adapter. It registers `onInit()`, pins Paris, zero minimum
 and one maximum instance, concurrency 16, a 30-second timeout, the dedicated
 runtime service account and a private invoker. It deliberately selects no
-ingress mode, mounts no Function secret, and sets `omit: true`.
+ingress mode, mounts no Function secret, and is enabled only for the separate
+production package.
 
 None of the production modules is imported or re-exported by
 [`src/index.ts`](src/index.ts), which remains the demo-emulator entry point and
 the sole Function discovered through the package main selected by
-`firebase.json`. The inactive source may still be compiled and packaged, but its
-endpoint is absent from `lib/index.js` and also carries `omit: true`. Importing
-the inactive adapter constructs no client, reads no configuration or secret,
+`firebase.json`. The deployment manifest under [`deployment/`](deployment/)
+selects `lib/production-entrypoint.js` instead, and the reproducible packager
+copies only its statically reachable module graph. Importing the adapter
+constructs no client, reads no configuration or secret,
 and makes no ADC, network or cloud-resource call. Unit tests use injected
 clients. The
 concrete Google adapter is exercised with injected transports to prove that the
 generated clients receive fresh extensible call options while preserving the
 bounded timeout and `retry: null`; no real client method runs in that test. The
 private fixture JWK remains confined to the emulator-specific configuration
-subtype. This is local activation-contract evidence only: there is still no
-exported or deployed production Function, live `onInit()` execution, runtime
-configuration value, provisioned secret version, live JWKS rotation, deployment
-authorization or `STAGE-01` acceptance result. This change creates no project,
-resource or billable operation.
+subtype. The staging workload contract separately pins internal-only ingress,
+scale zero-to-one, the committed runtime document, dedicated runtime/build/probe
+identities and a one-permission FCM role. It authorizes no live request and does
+not count as a `STAGE-01` acceptance result.
 
 Passing this slice does **not** close RFC 0004's complete emulator or production
 gate. Push registration and sending have only synthetic local service evidence;
@@ -293,7 +293,7 @@ subsequent staging work. Admin SDK access
 bypasses Firestore and Storage Rules, so the Rules tests exercise separate client
 contexts explicitly. Public discovery, JWKS and artifact reads are bounded only
 by local Function instance/concurrency settings in this slice; production edge
-admission must cover them before deployment.
+admission must cover them before any publicly reachable deployment.
 
 The reviewable [`../infrastructure/staging/`](../infrastructure/staging/) intent
 now freezes the future project's target, locations, initial resource and IAM

@@ -62,8 +62,8 @@ function reachableRuntimeSources(entry: string): ReadonlySet<string> {
   return reachable;
 }
 
-describe('inactive staging production entrypoint', () => {
-  test('pins a private omitted Gen 2 Function without choosing an ingress path', () => {
+describe('isolated staging production entrypoint', () => {
+  test('pins a private deployable Gen 2 Function without choosing an ingress path', () => {
     expect(STAGING_CONTROL_PLANE_OPTIONS).toEqual({
       region: 'europe-west9',
       minInstances: 0,
@@ -73,7 +73,7 @@ describe('inactive staging production entrypoint', () => {
       serviceAccount: 'miakapp-control-plane@miakapp-v4-staging.iam.gserviceaccount.com',
       cors: false,
       invoker: 'private',
-      omit: true,
+      omit: false,
     });
     expect('ingressSettings' in STAGING_CONTROL_PLANE_OPTIONS).toBe(false);
     expect('secrets' in STAGING_CONTROL_PLANE_OPTIONS).toBe(false);
@@ -82,7 +82,7 @@ describe('inactive staging production entrypoint', () => {
     const trigger = (controlPlane as unknown as { readonly __trigger: FunctionTrigger }).__trigger;
     expect(endpoint).toMatchObject({
       platform: 'gcfv2',
-      omit: true,
+      omit: false,
       region: ['europe-west9'],
       minInstances: 0,
       maxInstances: 1,

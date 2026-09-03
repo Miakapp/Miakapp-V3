@@ -63,6 +63,7 @@ bun install --frozen-lockfile --no-progress
 bun run typecheck
 bun run test:unit
 bun run build
+node deployment/check.mjs
 
 mkdir -p "$EMULATOR_CACHE_DIR"
 bunx firebase setup:emulators:firestore --non-interactive

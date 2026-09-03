@@ -1,16 +1,16 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 33,
-  "status": "activation_material_complete_undeployed",
+  "revision": 34,
+  "status": "private_workload_contract_ready_undeployed",
   "environment": "staging",
   "project": {
     "project_id": "miakapp-v4-staging",
     "project_number": "1072737219170",
     "display_name": "Miakapp V4 Staging",
-    "lifecycle": "firebase_enabled_billing_linked_foundation_and_activation_material_created_undeployed",
+    "lifecycle": "firebase_enabled_billing_linked_private_workload_authorized_undeployed",
     "creation_authorized": false,
     "billing_link_authorized": false,
-    "deployment_authorized": false,
+    "deployment_authorized": true,
     "public_ingress_authorized": false,
     "explicit_project_required": true,
     "firebase_alias_allowed": false,
@@ -145,7 +145,7 @@
     },
     {
       "id": "cloud-functions-gen2",
-      "state": "not_deployed"
+      "state": "private_deployment_contract_ready_not_deployed"
     },
     {
       "id": "cloud-storage",
@@ -161,7 +161,7 @@
     },
     {
       "id": "firebase-cloud-messaging",
-      "state": "api_enabled_runtime_permission_unresolved"
+      "state": "api_enabled_least_privilege_role_declared_not_applied"
     },
     {
       "id": "cloud-logging",
@@ -182,7 +182,7 @@
     "timeout_seconds": 30,
     "dedicated_service_account": "miakapp-control-plane@miakapp-v4-staging.iam.gserviceaccount.com",
     "allow_unauthenticated": false,
-    "ingress": "not_configured"
+    "ingress": "ALLOW_INTERNAL_ONLY"
   },
   "data": {
     "firestore": {
@@ -282,7 +282,7 @@
       }
     ],
     "iam": {
-      "runtime_identity_state": "created_not_deployed",
+      "runtime_identity_state": "created_private_deployment_declared",
       "foundation_resource_bindings_state": "complete_eight_recovery_bindings_present",
       "broad_project_roles_forbidden": true,
       "human_runtime_bindings_forbidden": true,
@@ -354,14 +354,15 @@
     }
   },
   "terraform": {
-    "state": "foundation_complete_recovery_retired",
-    "supported_workflow": "credential_free_validation_and_manual_read_only_plan",
+    "state": "foundation_complete_private_workload_contract_ready",
+    "supported_workflow": "guarded_private_saved_plan_and_exact_apply",
     "configuration_apply_capable": true,
-    "active_cloud_workflow": null,
+    "active_cloud_workflow": "workload/plan.sh",
     "workflow_blueprint_state": "retired_recovery_blueprint_retained_as_evidence",
     "bootstrap_root": "bootstrap",
     "foundation_root": "terraform",
     "automation_root": "automation",
+    "workload_root": "workload",
     "terraform_version": "1.11.3",
     "providers": [
       {
@@ -379,6 +380,7 @@
       "bucket": "miakapp-v4-staging-tfstate-1072737219170",
       "bootstrap_prefix": "terraform/bootstrap",
       "foundation_prefix": "terraform/foundation",
+      "workload_prefix": "terraform/workload",
       "bootstrap_migration_template": "bootstrap/backend.gcs.tf.example",
       "bootstrap_migration_state": "complete_remote_state_reconciled",
       "locking_enabled": true,
@@ -1073,9 +1075,9 @@
       "raw_planned_values_committed": false,
       "recovery_required": false
     },
-    "apply_authorized": false,
+    "apply_authorized": true,
     "destroy_authorized": false,
-    "function_deployment_included": false,
+    "function_deployment_included": true,
     "offline_check_uses_mock_providers": true,
     "local_plan_requires_operator_confirmation": true,
     "local_plan_executed": true,
