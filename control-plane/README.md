@@ -228,6 +228,14 @@ requires the expected deployment environment. The document may contain only
 public configuration, a public JWK and pinned numeric resource names; raw secret
 bytes and private JWK fields are rejected.
 
+[`src/staging-runtime-document.ts`](src/staging-runtime-document.ts) is the
+staging-only initial document builder used by the guarded activation boundary.
+It accepts only the real staging Firebase app ID, the canonical public half of
+the Paris KMS key, and one numeric version per declared secret. Its output must
+pass the production parser and classify all five keyrings as one `initialize`
+transition. The corresponding CLI exchanges this non-secret JSON only through
+stdin/stdout; it neither reads credentials nor calls a cloud service.
+
 [`src/production-secret-lifecycle.ts`](src/production-secret-lifecycle.ts)
 defines a pure offline validator for four-phase configuration-reference
 transitions. An initialization snapshot contains one current pinned reference

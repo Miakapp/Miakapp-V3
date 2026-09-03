@@ -28,11 +28,17 @@ node infrastructure/staging/automation/validate-policy.mjs \
   infrastructure/staging/automation/github-policy.json
 node infrastructure/staging/automation/guard.mjs \
   "${repository_root}/infrastructure/staging/automation"
+node infrastructure/staging/activation/guard.mjs \
+  "${repository_root}/infrastructure/staging/activation"
 node infrastructure/staging/bootstrap/guard.mjs \
   "${repository_root}/infrastructure/staging/bootstrap"
 node --check infrastructure/staging/bootstrap/bootstrap-execution.mjs
 node --check infrastructure/staging/bootstrap/saved-plan.mjs
 node --check infrastructure/staging/automation/validate-foundation-plan.mjs
+node --check infrastructure/staging/activation/apply.mjs
+node --check infrastructure/staging/activation/cloud.mjs
+node --check infrastructure/staging/activation/contract.mjs
+node --check infrastructure/staging/activation/plan.mjs
 node --check infrastructure/staging/terraform/foundation-state.mjs
 node infrastructure/staging/terraform/guard.mjs \
   "${repository_root}/infrastructure/staging/terraform"
@@ -40,6 +46,8 @@ bash -n \
   infrastructure/staging/automation/apply.sh \
   infrastructure/staging/automation/inspect-plan.sh \
   infrastructure/staging/automation/plan.sh \
+  infrastructure/staging/activation/apply.sh \
+  infrastructure/staging/activation/plan.sh \
   infrastructure/staging/bootstrap/apply-and-migrate.sh \
   infrastructure/staging/bootstrap/inspect-plan.sh \
   infrastructure/staging/bootstrap/plan.sh \
@@ -47,6 +55,7 @@ bash -n \
   infrastructure/staging/terraform/initialize-state.sh \
   infrastructure/staging/terraform/plan.sh
 node --test \
+  infrastructure/staging/test/activation.test.mjs \
   infrastructure/staging/test/bootstrap.test.mjs \
   infrastructure/staging/test/foundation-state.test.mjs \
   infrastructure/staging/test/github-policy.test.mjs \
