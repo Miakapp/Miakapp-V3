@@ -410,8 +410,9 @@ describe('component publication vertical slice', () => {
     );
     expect(expiring.response.status).toBe(201);
     if (expiring.upload === undefined) throw new Error('Expiring upload was not issued');
-    const pastCreated = Timestamp.fromMillis(Date.now() - 1_200_000);
-    const pastExpiry = Timestamp.fromMillis(Date.now() - 300_000);
+    const pastNow = Date.now();
+    const pastCreated = Timestamp.fromMillis(pastNow - 1_200_000);
+    const pastExpiry = Timestamp.fromMillis(pastNow - 300_000);
     await Promise.all([
       firestore.collection('controlHomes').doc(HOME_ID).collection('componentUploads')
         .doc(expiring.upload.upload_id).update({ created_at: pastCreated, expires_at: pastExpiry }),
