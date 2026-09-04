@@ -9,7 +9,9 @@ The initial graph contains exactly:
 
 - one deterministic source ZIP in a dedicated private Paris bucket;
 - one private Paris Docker repository and a build-only service account with
-  repository writer, source-object viewer and log-writer access;
+  repository writer, source-object viewer and log-writer access. A conditional
+  project grant additionally permits reads only from Google's regional
+  `gcf-v2-sources-*` object prefix used during the Function build;
 - one Gen 2 `nodejs22` Function using the existing runtime identity, the exact
   committed non-secret runtime document, 256 MB, one CPU, concurrency 16,
   `minInstances=0`, `maxInstances=1`, a 30-second timeout and internal-only
@@ -41,7 +43,7 @@ MIAKAPP_STAGING_WORKLOAD_PLAN_CONFIRMATION=miakapp-v4-staging \
 ```
 
 The plan command builds the source twice-tested deterministic archive, uses the
-real locking backend, permits only the closed 14-create/zero-update/zero-delete
+real locking backend, permits only the closed 15-create/zero-update/zero-delete
 graph, and prints the exact short-lived authorization token. Terraform may
 create its canonical empty workload state while initializing the previously
 absent backend prefix; no workload is applied by this command.
@@ -61,3 +63,14 @@ request and writes a private, non-secret `result.json` for later review.
 No destroy entry point exists. Resources with meaningful identity or storage
 carry `prevent_destroy`; generated source bytes remain reproducible from the
 reviewed commit.
+
+## Bounded first-build recovery
+
+The first saved-plan apply reached Cloud Build but stopped before a Cloud Run
+service or revision existed because the custom build identity could not read
+Google's regional `gcf-v2-sources-*` copy. Successfully created prerequisites
+remain tracked in the workload state. The plan validator therefore also has one
+closed recovery profile: it accepts only the failed Gen 2 Function baseline,
+the new conditional source-reader and private invoker creates, an in-place
+Function update, and zero deletes. Any replacement, wider IAM scope, different
+Function state or additional change is rejected.

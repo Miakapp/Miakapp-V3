@@ -120,7 +120,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`bootstrap/`](bootstrap/) | Billing link, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Complete; both recovery providers disabled, 37-resource serial-42 state reconciled, zero plan verified |
 | [`terraform/`](terraform/) | APIs, Firestore, KMS, Secret Manager containers, and resource-scoped runtime IAM | Complete; 33-resource state independently converged; versions are managed outside Terraform |
 | [`activation/`](activation/) | One Firebase Web app, five initial secret versions, and the closed non-secret runtime document | Applied once and idempotently revalidated; result evidence committed without secret payloads |
-| [`workload/`](workload/) | Deterministic production package, private Gen 2 Function, dedicated build/probe identities, and one-permission FCM role | Guarded 14-create saved-plan/apply boundary; authorized but not yet applied |
+| [`workload/`](workload/) | Deterministic production package, private Gen 2 Function, dedicated build/probe identities, and one-permission FCM role | Guarded 15-create saved-plan/apply boundary; authorized but not yet applied |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
 | [`TEARDOWN.md`](TEARDOWN.md) | Manual recovery and teardown rehearsal | Documentation only |
@@ -348,7 +348,7 @@ No persistent credential or repository secret is used.
 
 The bootstrap, foundation, initial activation material and private deployment
 contract are complete. The deterministic package contains only the production
-module graph, and the separate `terraform/workload` state may create exactly 14
+module graph, and the separate `terraform/workload` state may create exactly 15
 reviewed resources with zero update or delete. It binds the committed runtime
 document, grants only `cloudmessaging.messages.create`, keeps
 `minInstances=0`/`maxInstances=1`, permits only a keyless probe identity, and

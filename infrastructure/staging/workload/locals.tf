@@ -11,6 +11,7 @@ locals {
   build_account_id     = "miakapp-control-build"
   probe_account_id     = "miakapp-staging-probe"
   source_bucket_name   = "miakapp-v4-staging-function-source-1072737219170"
+  gcf_source_bucket    = "gcf-v2-sources-1072737219170-europe-west9"
   artifact_repository  = "miakapp-control-plane"
   function_name        = "control-plane"
   function_entry_point = "controlPlane"
