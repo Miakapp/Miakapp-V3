@@ -4,6 +4,7 @@ import test from 'node:test';
 
 import {
   StagingManifestError,
+  validateCommittedEvidence,
   validateFirebaseRc,
   validateStagingManifest,
 } from '../validate.mjs';
@@ -28,18 +29,18 @@ function rejects(mutator, pattern) {
   );
 }
 
-test('accepts the active internal-only workload with no live request', () => {
+test('accepts the active internal-only workload and successful private discovery probe', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 35);
+  assert.equal(validated.revision, 36);
   assert.equal(
     validated.status,
-    'private_workload_deployed_uninvoked',
+    'private_control_plane_discovery_validated',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
   assert.equal(
     validated.project.lifecycle,
-    'firebase_enabled_billing_linked_private_workload_deployed_uninvoked',
+    'firebase_enabled_billing_linked_private_control_plane_discovery_validated',
   );
   assert.equal(validated.bootstrap.billing_enabled, true);
   assert.equal(validated.bootstrap.firebase_apps, 1);
@@ -73,14 +74,15 @@ test('accepts the active internal-only workload with no live request', () => {
   assert.deepEqual(validated.services.map(({ state }) => state), [
     'api_enabled_no_staging_identity_test',
     'firebase_app_created_provider_not_configured',
-    'foundation_created_no_staging_test',
-    'private_deployment_active_source_verified_uninvoked',
-    'private_bucket_created_no_staging_test',
-    'signing_key_version_enabled_no_staging_signature',
-    'five_initial_versions_enabled_no_staging_access_test',
+    'foundation_created_no_application_mutation',
+    'private_deployment_active_source_verified_discovery_validated',
+    'private_bucket_created_no_application_mutation',
+    'signing_key_version_enabled_public_key_validated',
+    'five_initial_versions_enabled_runtime_access_validated',
     'api_enabled_one_permission_runtime_role_applied_uninvoked',
-    'api_enabled_runtime_deployed_no_live_validation',
-    'api_enabled_runtime_deployed_no_live_validation',
+    'api_enabled_runtime_deployed_no_application_log_validation',
+    'api_enabled_runtime_deployed_no_metric_validation',
+    'api_enabled_unscheduled_private_probe_succeeded',
   ]);
   assert.equal(
     validated.security.iam.foundation_resource_bindings_state,
@@ -95,28 +97,30 @@ test('accepts the active internal-only workload with no live request', () => {
     'managed_in_reconciled_remote_bootstrap_state',
   );
   assert.equal(validated.runtime.deployment_state, 'ACTIVE');
-  assert.equal(validated.runtime.revision, 'control-plane-00001-kod');
+  assert.equal(validated.runtime.revision, 'control-plane-00003-hum');
   assert.equal(validated.runtime.ingress, 'ALLOW_INTERNAL_ONLY');
   assert.equal(validated.runtime.user_managed_keys, 0);
-  assert.equal(validated.runtime.live_request_performed, false);
+  assert.equal(validated.runtime.live_request_performed, true);
   assert.equal(
     validated.security.iam.runtime_identity_state,
     'private_runtime_deployed_zero_user_managed_keys',
   );
   assert.deepEqual(validated.security.iam.unresolved_permissions, []);
-  assert.equal(validated.terraform.state, 'foundation_and_private_workload_complete');
+  assert.equal(validated.terraform.state, 'foundation_private_workload_and_probe_complete');
   assert.equal(
     validated.terraform.supported_workflow,
-    'guarded_private_saved_plan_applied_and_converged',
+    'guarded_private_saved_plans_applied_and_converged',
   );
   assert.equal(validated.terraform.configuration_apply_capable, true);
-  assert.equal(validated.terraform.active_cloud_workflow, 'none_private_workload_converged');
+  assert.equal(validated.terraform.active_cloud_workflow, 'unscheduled_private_probe_retained');
   assert.equal(
     validated.terraform.workflow_blueprint_state,
     'retired_recovery_blueprint_retained_as_evidence',
   );
   assert.equal(validated.terraform.backend.type, 'gcs');
-  assert.equal(validated.terraform.backend.state, 'bootstrap_foundation_and_workload_state_present');
+  assert.equal(validated.terraform.probe_root, 'probe');
+  assert.equal(validated.terraform.backend.state, 'bootstrap_foundation_workload_and_probe_state_present');
+  assert.equal(validated.terraform.backend.probe_prefix, 'terraform/probe');
   assert.equal(
     validated.terraform.backend.bootstrap_migration_state,
     'complete_remote_state_reconciled',
@@ -572,11 +576,11 @@ test('accepts the active internal-only workload with no live request', () => {
   });
   assert.equal(
     validated.evidence.workload_deployment.state,
-    'active_internal_only_source_verified_uninvoked',
+    'active_internal_only_source_verified',
   );
   assert.equal(
     validated.evidence.workload_deployment.result_sha256,
-    '2143c037de6cb2d8caf9acc9676fa5a54d9bf974793136596aac94de30c93590',
+    'dfe8900cd90fe53cbb85ac656ddce42c26fef64c9bbed462688c0e0755363e15',
   );
   assert.deepEqual(validated.evidence.workload_deployment.recovery_plan_result, {
     create: 2,
@@ -584,7 +588,12 @@ test('accepts the active internal-only workload with no live request', () => {
     delete: 0,
     function_replaced: false,
   });
-  assert.equal(validated.evidence.workload_deployment.terraform_state.serial, 8);
+  assert.equal(validated.evidence.workload_deployment.source_updates.length, 2);
+  assert.equal(
+    validated.evidence.workload_deployment.source_updates[1].function_revision,
+    'control-plane-00003-hum',
+  );
+  assert.equal(validated.evidence.workload_deployment.terraform_state.serial, 12);
   assert.equal(validated.evidence.workload_deployment.terraform_state.managed_resources, 15);
   assert.equal(validated.evidence.workload_deployment.terraform_state.tainted_resources, 0);
   assert.equal(validated.evidence.workload_deployment.terraform_state.raw_contents_committed, false);
@@ -594,8 +603,32 @@ test('accepts the active internal-only workload with no live request', () => {
     build: 0,
     probe: 0,
   });
-  assert.equal(validated.evidence.workload_deployment.private_bundle_deleted, true);
+  assert.equal(validated.evidence.workload_deployment.private_bundle_committed, false);
   assert.equal(validated.evidence.workload_deployment.live_request_performed, false);
+  assert.equal(validated.evidence.private_probe.state, 'secure_runtime_discovery_succeeded');
+  assert.equal(validated.evidence.private_probe.workflow_revision, '000001-7fb');
+  assert.equal(
+    validated.evidence.private_probe.result_sha256,
+    'ea3245756727eaf071f2edc6ef55ba1b730c5e3f61e38746fb7cbf36e8f4ef05',
+  );
+  assert.deepEqual(validated.evidence.private_probe.executions, {
+    total: 3,
+    failed: 2,
+    succeeded: 1,
+    workflow_retries: 0,
+    scheduled_triggers: 0,
+  });
+  assert.equal(validated.evidence.private_probe.terraform_state.serial, 3);
+  assert.equal(validated.evidence.private_probe.response_status, 200);
+  assert.equal(validated.evidence.private_probe.five_secret_values_loaded, true);
+  assert.equal(validated.evidence.private_probe.signing_public_key_validated, true);
+  assert.equal(validated.evidence.private_probe.firebase_auth_validated, false);
+  assert.equal(validated.evidence.private_probe.app_check_validated, false);
+  assert.equal(validated.evidence.private_probe.application_mutation_expected, false);
+  assert.equal(validated.evidence.private_probe.execution_identifiers_committed, false);
+  assert.equal(validated.evidence.private_probe.trace_identifiers_committed, false);
+  assert.equal(validated.evidence.private_probe.raw_diagnostics_committed, false);
+  assert.equal(validated.evidence.private_probe.live_request_performed, true);
   assert.deepEqual(validated.evidence.retired_recovery_workflow, {
     id: '349440747',
     state: 'deleted',
@@ -617,7 +650,7 @@ test('accepts the active internal-only workload with no live request', () => {
   );
   assert.equal(
     validated.readiness.required_blockers.includes('private-function-synthetic-invocation'),
-    true,
+    false,
   );
   assert.equal(
     validated.readiness.required_blockers.includes('private-production-function-deployment'),
@@ -641,7 +674,43 @@ test('accepts the active internal-only workload with no live request', () => {
     ),
     true,
   );
+  assert.equal(
+    validated.teardown.inventory_after_teardown.includes(
+      'workflows-probe-executions-schedules-and-api',
+    ),
+    true,
+  );
   assert.equal(validateFirebaseRc(firebaseRc()).projects.default, 'miakapp-3');
+});
+
+test('cross-checks manifest claims against both committed evidence artifacts', () => {
+  const evidence = validateCommittedEvidence(manifest());
+  assert.equal(evidence.workload.function.revision, 'control-plane-00003-hum');
+  assert.equal(evidence.probe.response.status, 200);
+
+  const workloadDigestDrift = manifest();
+  workloadDigestDrift.evidence.workload_deployment.result_sha256 = '0'.repeat(64);
+  assert.throws(
+    () => validateCommittedEvidence(workloadDigestDrift),
+    (error) => error instanceof StagingManifestError
+      && /evidence\.workload_deployment\.result_sha256/.test(error.message),
+  );
+
+  const probeCountDrift = manifest();
+  probeCountDrift.evidence.private_probe.executions.total = 4;
+  assert.throws(
+    () => validateCommittedEvidence(probeCountDrift),
+    (error) => error instanceof StagingManifestError
+      && /evidence\.private_probe\.executions\.total/.test(error.message),
+  );
+
+  const probePathDrift = manifest();
+  probePathDrift.evidence.private_probe.result_path = '../../private-result.json';
+  assert.throws(
+    () => validateCommittedEvidence(probePathDrift),
+    (error) => error instanceof StagingManifestError
+      && /evidence\.private_probe\.result_path/.test(error.message),
+  );
 });
 
 test('rejects unknown fields including embedded secret material', () => {
@@ -1095,7 +1164,7 @@ test('enforces scale-to-zero, one maximum instance, and private ingress', () => 
     candidate.runtime.user_managed_keys = 1;
   }, /runtime\.user_managed_keys/);
   rejects((candidate) => {
-    candidate.runtime.live_request_performed = true;
+    candidate.runtime.live_request_performed = false;
   }, /runtime\.live_request_performed/);
 });
 
@@ -1385,6 +1454,9 @@ test('rejects drift from the public workload deployment evidence', () => {
     candidate.evidence.workload_deployment.recovery_plan_result.function_replaced = true;
   }, /evidence\.workload_deployment\.recovery_plan_result\.function_replaced/);
   rejects((candidate) => {
+    candidate.evidence.workload_deployment.source_updates[1].plan_sha256 = '0'.repeat(64);
+  }, /evidence\.workload_deployment\.source_updates\[1\]\.plan_sha256/);
+  rejects((candidate) => {
     candidate.evidence.workload_deployment.terraform_state.tainted_resources = 1;
   }, /evidence\.workload_deployment\.terraform_state\.tainted_resources/);
   rejects((candidate) => {
@@ -1394,11 +1466,41 @@ test('rejects drift from the public workload deployment evidence', () => {
     candidate.evidence.workload_deployment.operator_email_committed = true;
   }, /evidence\.workload_deployment\.operator_email_committed/);
   rejects((candidate) => {
+    candidate.evidence.workload_deployment.private_bundle_committed = true;
+  }, /evidence\.workload_deployment\.private_bundle_committed/);
+  rejects((candidate) => {
     candidate.evidence.workload_deployment.live_request_performed = true;
   }, /evidence\.workload_deployment\.live_request_performed/);
   rejects((candidate) => {
     candidate.evidence.workload_deployment.private_detail = 'must-not-be-accepted';
   }, /evidence\.workload_deployment must contain exactly/);
+});
+
+test('rejects drift or private telemetry claims in the public probe evidence', () => {
+  rejects((candidate) => {
+    candidate.evidence.private_probe.result_sha256 = '0'.repeat(64);
+  }, /evidence\.private_probe\.result_sha256/);
+  rejects((candidate) => {
+    candidate.evidence.private_probe.deployment_plan_result.create = 4;
+  }, /evidence\.private_probe\.deployment_plan_result\.create/);
+  rejects((candidate) => {
+    candidate.evidence.private_probe.terraform_state.tainted_resources = 1;
+  }, /evidence\.private_probe\.terraform_state\.tainted_resources/);
+  rejects((candidate) => {
+    candidate.evidence.private_probe.executions.succeeded = 2;
+  }, /evidence\.private_probe\.executions\.succeeded/);
+  rejects((candidate) => {
+    candidate.evidence.private_probe.execution_identifiers_committed = true;
+  }, /evidence\.private_probe\.execution_identifiers_committed/);
+  rejects((candidate) => {
+    candidate.evidence.private_probe.trace_identifiers_committed = true;
+  }, /evidence\.private_probe\.trace_identifiers_committed/);
+  rejects((candidate) => {
+    candidate.evidence.private_probe.raw_diagnostics_committed = true;
+  }, /evidence\.private_probe\.raw_diagnostics_committed/);
+  rejects((candidate) => {
+    candidate.evidence.private_probe.private_detail = 'must-not-be-accepted';
+  }, /evidence\.private_probe must contain exactly/);
 });
 
 test('keeps historical CI keyless, recovery retired, and credentials ephemeral', () => {

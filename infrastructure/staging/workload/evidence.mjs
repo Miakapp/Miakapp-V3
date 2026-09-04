@@ -3,7 +3,7 @@ import { lstatSync, readFileSync } from 'node:fs';
 import { isDeepStrictEqual } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
-const RESULT_SHA256 = '2143c037de6cb2d8caf9acc9676fa5a54d9bf974793136596aac94de30c93590';
+const RESULT_SHA256 = 'dfe8900cd90fe53cbb85ac656ddce42c26fef64c9bbed462688c0e0755363e15';
 const MAXIMUM_RESULT_BYTES = 8 * 1024;
 
 function reject(message) {
@@ -14,23 +14,23 @@ function expectedResult() {
   const projectId = 'miakapp-v4-staging';
   const projectNumber = '1072737219170';
   const region = 'europe-west9';
-  const sourceSha256 = 'd2a9ffae2bd85106f782f9c75a10b6fb398682ead65dada2a1cf8ab5c65b7eb4';
+  const sourceSha256 = '86f4818dfcb4021e5578638d6fb1e9b7da31ea245528cbdc8573dabecdfca358';
   const buildSourceBucket = `gcf-v2-sources-${projectNumber}-${region}`;
   return {
     schema: 'miakapp.staging-workload-result/1',
     project_id: projectId,
     project_number: projectNumber,
     region,
-    observed_at: '2026-09-04T00:41:16.532Z',
-    repository_commit: '3f5a94dfcdfc0984487a558d966bbeaa769b18eb',
+    observed_at: '2026-09-04T02:23:35.075Z',
+    repository_commit: '60322c69c92b8ccf5f3d1bc87ba264a00e5dca05',
     source_archive_sha256: sourceSha256,
-    source_generation: '1788480671624708',
+    source_generation: '1788488367380714',
     function: {
       name: `projects/${projectId}/locations/${region}/functions/control-plane`,
       state: 'ACTIVE',
       generation: 2,
       service: `projects/${projectId}/locations/${region}/services/control-plane`,
-      revision: 'control-plane-00001-kod',
+      revision: 'control-plane-00003-hum',
       uri: 'https://control-plane-aczhngqraq-od.a.run.app',
       ingress: 'ALLOW_INTERNAL_ONLY',
       unauthenticated_invokers: 0,
@@ -104,7 +104,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       const result = validateWorkloadEvidence(process.argv[2]);
       console.log([
         `Validated ${result.schema} for ${result.project_id}.`,
-        'The internal-only Gen 2 Function is active, source-verified and uninvoked.',
+        'The current internal-only Gen 2 Function deployment is active and source-verified; its deployment inventory made no request.',
       ].join(' '));
     } catch (error) {
       console.error(error instanceof Error ? error.message : 'Staging workload evidence is invalid');
