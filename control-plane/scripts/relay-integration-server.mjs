@@ -26,6 +26,13 @@ function requiredEnvironment(name) {
   return value;
 }
 
+function optionalEnvironment(name) {
+  const value = process.env[name];
+  if (value === undefined) return undefined;
+  if (value.length === 0) throw new Error(`${name} must not be empty`);
+  return value;
+}
+
 function privateSecret(file) {
   const value = readFileSync(file, 'ascii').trim();
   if (!/^[0-9a-f]{64}$/.test(value)) throw new Error('Integration control secret is invalid');
@@ -74,9 +81,14 @@ const certificateFile = requiredEnvironment('MIAKAPP_INTEGRATION_CERT_FILE');
 const privateKeyFile = requiredEnvironment('MIAKAPP_INTEGRATION_KEY_FILE');
 const metadataFile = requiredEnvironment('MIAKAPP_CONTROL_METADATA_FILE');
 const evidenceFile = requiredEnvironment('MIAKAPP_CONTROL_EVIDENCE_FILE');
-const relayMetadataFile = requiredEnvironment('MIAKAPP_RELAY_METADATA_FILE');
-const browserBundle = readFileSync(requiredEnvironment('MIAKAPP_BROWSER_BUNDLE'));
-if (browserBundle.byteLength === 0 || browserBundle.byteLength > 2 * 1024 * 1024) {
+const relayMetadataFile = optionalEnvironment('MIAKAPP_RELAY_METADATA_FILE');
+const browserBundleFile = optionalEnvironment('MIAKAPP_BROWSER_BUNDLE');
+if ((relayMetadataFile === undefined) !== (browserBundleFile === undefined)) {
+  throw new Error('Browser integration environment is incomplete');
+}
+const browserBundle = browserBundleFile === undefined ? undefined : readFileSync(browserBundleFile);
+if (browserBundle !== undefined
+  && (browserBundle.byteLength === 0 || browserBundle.byteLength > 2 * 1024 * 1024)) {
   throw new Error('Relay integration browser bundle is invalid');
 }
 const controlSecret = privateSecret(requiredEnvironment('MIAKAPP_CONTROL_SECRET_FILE'));
@@ -249,28 +261,30 @@ const controlPlane = createControlPlaneApp({
 
 application = express();
 application.disable('x-powered-by');
-application.get('/__integration/browser', (request, response) => {
-  if (request.originalUrl !== '/__integration/browser') return controlError(response, 400);
-  const relay = browserRelayUrl(relayMetadataFile);
-  response.set({
-    'Cache-Control': 'no-store',
-    'Content-Security-Policy': `default-src 'none'; script-src 'self'; connect-src 'self' ${relay.origin}; base-uri 'none'; frame-ancestors 'none'`,
-    'Content-Type': 'text/html; charset=utf-8',
-    'X-Content-Type-Options': 'nosniff',
+if (browserBundle !== undefined && relayMetadataFile !== undefined) {
+  application.get('/__integration/browser', (request, response) => {
+    if (request.originalUrl !== '/__integration/browser') return controlError(response, 400);
+    const relay = browserRelayUrl(relayMetadataFile);
+    response.set({
+      'Cache-Control': 'no-store',
+      'Content-Security-Policy': `default-src 'none'; script-src 'self'; connect-src 'self' ${relay.origin}; base-uri 'none'; frame-ancestors 'none'`,
+      'Content-Type': 'text/html; charset=utf-8',
+      'X-Content-Type-Options': 'nosniff',
+    });
+    response.status(200).send(
+      '<!doctype html><meta charset="utf-8"><script src="/__integration/browser.js"></script>',
+    );
   });
-  response.status(200).send(
-    '<!doctype html><meta charset="utf-8"><script src="/__integration/browser.js"></script>',
-  );
-});
-application.get('/__integration/browser.js', (request, response) => {
-  if (request.originalUrl !== '/__integration/browser.js') return controlError(response, 400);
-  response.set({
-    'Cache-Control': 'no-store',
-    'Content-Type': 'text/javascript; charset=utf-8',
-    'X-Content-Type-Options': 'nosniff',
+  application.get('/__integration/browser.js', (request, response) => {
+    if (request.originalUrl !== '/__integration/browser.js') return controlError(response, 400);
+    response.set({
+      'Cache-Control': 'no-store',
+      'Content-Type': 'text/javascript; charset=utf-8',
+      'X-Content-Type-Options': 'nosniff',
+    });
+    response.status(200).send(browserBundle);
   });
-  response.status(200).send(browserBundle);
-});
+}
 application.post(
   '/__integration/control',
   express.json({ inflate: false, limit: '1kb', strict: true, type: 'application/json' }),
@@ -370,9 +384,7 @@ writeEvidence();
 writeFileSync(metadataFile, `${JSON.stringify({
   schema: 'miakapp.relay-integration-control/1',
   controlUrl,
-  browserUrl: `${controlUrl}/__integration/browser`,
   exchangeEndpoint: config.exchangeEndpoint,
-  userExchangeEndpoint: config.userRelayExchangeEndpoint,
   jwksUrl: config.jwksUri,
 })}\n`, { encoding: 'utf8', mode: 0o600 });
 
