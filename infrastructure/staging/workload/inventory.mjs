@@ -52,6 +52,21 @@ function jsonCommand(args, repositoryRoot, spawn = spawnSync) {
   }
 }
 
+function binaryCommand(args, repositoryRoot, spawn = spawnSync) {
+  const result = spawn('gcloud', args, {
+    cwd: repositoryRoot,
+    env: childEnvironment(),
+    maxBuffer: MAXIMUM_OUTPUT_BYTES,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  const stdout = Buffer.from(result.stdout ?? '');
+  if (result.status !== 0 || result.signal !== null || result.error !== undefined
+    || stdout.byteLength === 0 || stdout.byteLength > MAXIMUM_OUTPUT_BYTES) {
+    reject('Independent staging workload binary inventory command failed');
+  }
+  return stdout;
+}
+
 function bindings(value) {
   if (!plainObject(value) || (value.bindings !== undefined && !Array.isArray(value.bindings))) {
     reject('IAM policy inventory is invalid');
@@ -125,13 +140,13 @@ export function observeDeployedWorkload({
   }
   const command = (args) => jsonCommand(args, repositoryRoot, spawn);
   const functionValue = command([
-    'functions', 'describe', FUNCTION_NAME, '--v2', `--region=${REGION}`, `--project=${PROJECT_ID}`,
+    'functions', 'describe', FUNCTION_NAME, '--gen2', `--region=${REGION}`, `--project=${PROJECT_ID}`,
   ]);
   const runPolicy = command([
     'run', 'services', 'get-iam-policy', FUNCTION_NAME, `--region=${REGION}`, `--project=${PROJECT_ID}`,
   ]);
   const functionPolicy = command([
-    'functions', 'get-iam-policy', FUNCTION_NAME, '--v2', `--region=${REGION}`, `--project=${PROJECT_ID}`,
+    'functions', 'get-iam-policy', FUNCTION_NAME, '--gen2', `--region=${REGION}`, `--project=${PROJECT_ID}`,
   ]);
   const fcmRole = command(['iam', 'roles', 'describe', 'miakapp.controlPlaneFcmSender', `--project=${PROJECT_ID}`]);
   const buildAccount = command(['iam', 'service-accounts', 'describe', BUILD_ACCOUNT, `--project=${PROJECT_ID}`]);
@@ -167,10 +182,20 @@ export function observeDeployedWorkload({
   exact(build.entryPoint, 'controlPlane', 'Function entry point');
   exact(build.dockerRepository, REPOSITORY, 'Function artifact repository');
   exact(build.serviceAccount, `projects/${PROJECT_ID}/serviceAccounts/${BUILD_ACCOUNT}`, 'Function build account');
-  exact(build.source?.storageSource?.bucket, SOURCE_BUCKET, 'Function source bucket');
-  exact(build.source?.storageSource?.object, `sources/${sourceArchiveSha256}.zip`, 'Function source object');
-  if (!/^[1-9][0-9]*$/u.test(String(build.source?.storageSource?.generation ?? ''))) {
+  const copiedSource = build.source?.storageSource;
+  exact(copiedSource?.bucket, GCF_SOURCE_BUCKET, 'Function copied source bucket');
+  exact(copiedSource?.object, `${FUNCTION_NAME}/function-source.zip`, 'Function copied source object');
+  if (!/^[1-9][0-9]*$/u.test(String(copiedSource?.generation ?? ''))) {
     reject('Function source generation is not immutable');
+  }
+  exact(build.sourceProvenance?.resolvedStorageSource, copiedSource, 'Function source provenance');
+  const copiedSourceBytes = binaryCommand([
+    'storage', 'cat',
+    `gs://${GCF_SOURCE_BUCKET}/${copiedSource.object}#${copiedSource.generation}`,
+    `--project=${PROJECT_ID}`,
+  ], repositoryRoot, spawn);
+  if (createHash('sha256').update(copiedSourceBytes).digest('hex') !== sourceArchiveSha256) {
+    reject('Function copied source bytes differ from the deterministic package');
   }
   exact(service.serviceAccountEmail, RUNTIME_ACCOUNT, 'Function runtime account');
   exact(service.availableMemory, '256M', 'Function memory');
@@ -260,7 +285,7 @@ export function observeDeployedWorkload({
     observed_at: observedAt,
     repository_commit: repositoryCommit,
     source_archive_sha256: sourceArchiveSha256,
-    source_generation: String(build.source.storageSource.generation),
+    source_generation: String(copiedSource.generation),
     function: Object.freeze({
       name: functionResourceName,
       state: 'ACTIVE',
@@ -295,6 +320,8 @@ export function observeDeployedWorkload({
     artifacts: Object.freeze({
       source_bucket: SOURCE_BUCKET,
       source_object: `sources/${sourceArchiveSha256}.zip`,
+      copied_source_bucket: GCF_SOURCE_BUCKET,
+      copied_source_object: `${FUNCTION_NAME}/function-source.zip`,
       repository: REPOSITORY,
     }),
     runtime_config_sha256: RUNTIME_CONFIG_SHA256,
