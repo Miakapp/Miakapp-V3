@@ -264,6 +264,7 @@ export interface DeploymentConfig {
   readonly networkKeyVersion: string;
   readonly networkHmacKeyForVersion: (version: string) => Uint8Array | undefined;
   readonly signingPublicJwk: SigningPublicJwk;
+  readonly signingPublicJwks: readonly SigningPublicJwk[];
 }
 
 export interface EmulatorDeploymentConfig extends DeploymentConfig {

@@ -633,7 +633,7 @@ async function routeRequest(
   if (request.path === '/.well-known/jwks.json' && request.method === 'GET') {
     requireEmptyBody(request);
     response.set('Cache-Control', 'public, max-age=60, must-revalidate');
-    sendJson(response, 200, { keys: [dependencies.config.signingPublicJwk] });
+    sendJson(response, 200, { keys: dependencies.config.signingPublicJwks });
     return;
   }
 

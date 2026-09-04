@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { createPrivateKey, sign } from 'node:crypto';
+import { createPrivateKey, sign, type JsonWebKey } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 
 import {
   AccessTokenVerificationError,
@@ -18,6 +19,19 @@ const ENVIRONMENT = {
 } as NodeJS.ProcessEnv;
 const config = loadEmulatorConfig(ENVIRONMENT);
 const baseHeader = Object.freeze({ alg: 'EdDSA', kid: config.signingPublicJwk.kid, typ: 'at+jwt' });
+const signingFixture = JSON.parse(readFileSync(
+  new URL('../../../control-plane-contract/fixtures/v1/access-tokens.json', import.meta.url),
+  'utf8',
+)) as {
+  readonly test_only_private_keys: {
+    readonly warning: string;
+    readonly current: JsonWebKey & { readonly kid: string };
+  };
+};
+if (signingFixture.test_only_private_keys.warning
+  !== 'SYNTHETIC TEST KEYS. NEVER LOAD IN PRODUCTION.') {
+  throw new Error('Access-token unit fixture is not explicitly synthetic');
+}
 const baseClaims = Object.freeze({
   iss: config.issuer,
   sub: 'synthetic-home',
@@ -34,14 +48,18 @@ const componentClaims = Object.freeze({
   scope: 'components:publish',
 });
 
-function signRawToken(headerJson: string, claimsJson: string): string {
+function signRawToken(
+  headerJson: string,
+  claimsJson: string,
+  privateJwk: JsonWebKey = config.signingPrivateJwk,
+): string {
   const header = Buffer.from(headerJson, 'utf8').toString('base64url');
   const claims = Buffer.from(claimsJson, 'utf8').toString('base64url');
   const signingInput = `${header}.${claims}`;
   const signature = sign(
     null,
     Buffer.from(signingInput, 'ascii'),
-    createPrivateKey({ key: config.signingPrivateJwk, format: 'jwk' }),
+    createPrivateKey({ key: privateJwk, format: 'jwk' }),
   );
   return `${signingInput}.${signature.toString('base64url')}`;
 }
@@ -49,8 +67,9 @@ function signRawToken(headerJson: string, claimsJson: string): string {
 function signToken(
   claims: Readonly<Record<string, unknown>> = baseClaims,
   header: Readonly<Record<string, unknown>> = baseHeader,
+  privateJwk: JsonWebKey = config.signingPrivateJwk,
 ): string {
-  return signRawToken(JSON.stringify(header), JSON.stringify(claims));
+  return signRawToken(JSON.stringify(header), JSON.stringify(claims), privateJwk);
 }
 
 function authorization(token = signToken()): string {
@@ -98,6 +117,25 @@ describe('push-profile access-token verification', () => {
       clientId: baseClaims.client_id,
       expiresAt: NOW + 300,
     });
+  });
+
+  test('accepts both retained and active signing keys during publication overlap', () => {
+    const currentPrivateJwk = signingFixture.test_only_private_keys.current;
+    const currentPublicJwk = config.signingPublicJwks.find(
+      (key) => key.kid === currentPrivateJwk.kid,
+    );
+    if (currentPublicJwk === undefined) throw new Error('Current fixture key is not published');
+    const retainedToken = signToken(
+      baseClaims,
+      { ...baseHeader, kid: currentPublicJwk.kid },
+      currentPrivateJwk,
+    );
+    expect(verifyPushAccessToken(authorization(retainedToken), config, CLOCK)).toEqual({
+      homeId: 'synthetic-home',
+      clientId: baseClaims.client_id,
+      expiresAt: NOW + 300,
+    });
+    expect(verifyPushAccessToken(authorization(), config, CLOCK).expiresAt).toBe(NOW + 300);
   });
 
   test('accepts the exact future-iat and remaining-lease boundaries', () => {
@@ -183,9 +221,25 @@ describe('push-profile access-token verification', () => {
     const pollutedKey = { ...config.signingPublicJwk, d: 'private-material' };
     expect(() => verifyPushAccessToken(
       header,
-      { ...config, signingPublicJwk: pollutedKey },
+      { ...config, signingPublicJwks: [pollutedKey] },
       CLOCK,
-    )).toThrow(/public key is invalid/);
+    )).toThrow(/public keys are invalid/);
+
+    for (const signingPublicJwks of [
+      [],
+      [config.signingPublicJwk, config.signingPublicJwk],
+      [{ ...config.signingPublicJwk, x: 'invalid' }],
+      Array.from({ length: 17 }, (_, index) => ({
+        ...config.signingPublicJwk,
+        kid: `synthetic-key-${index}`,
+      })),
+    ]) {
+      expect(() => verifyPushAccessToken(
+        header,
+        { ...config, signingPublicJwks },
+        CLOCK,
+      )).toThrow(/public keys are invalid/);
+    }
   });
 
   test.each([
@@ -205,7 +259,7 @@ describe('push-profile access-token verification', () => {
       projectId,
       issuer,
       pushAudience: `${issuer}/v1/push`,
-      signingPublicJwk: config.signingPublicJwk,
+      signingPublicJwks: config.signingPublicJwks,
     };
     expect(verifyPushAccessToken(
       authorization(signToken(productionClaims)),
