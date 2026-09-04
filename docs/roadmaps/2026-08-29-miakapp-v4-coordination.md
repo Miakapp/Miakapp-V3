@@ -314,8 +314,9 @@ Function, Cloud Run service, App Engine application or ingress. Every
 
 A ninth slice defines the deployment boundary without making a request. A
 deterministic source archive selects only the production module graph. A third,
-workload-only Terraform state permits exactly 14 creates: private source and
-image storage, dedicated keyless build and probe identities, a scale-to-zero
+workload-only Terraform state permits exactly 15 creates: private source and
+image storage, dedicated keyless build and probe identities, a source-read
+grant conditioned to Google's regional Function bucket, a scale-to-zero
 internal-only Gen 2 Function, and a custom runtime role containing only
 `cloudmessaging.messages.create`. Its exact saved-plan apply is commit-, digest-
 and operator-bound, followed by zero-change convergence and independent cloud

@@ -12,7 +12,10 @@ import {
 } from '../workload/contract.mjs';
 import { validateWorkloadRoot } from '../workload/guard.mjs';
 import { observeDeployedWorkload } from '../workload/inventory.mjs';
-import { validateWorkloadPlanAgainstPolicy } from '../workload/validate-plan.mjs';
+import {
+  validateFailedBuildRecoveryPlanAgainstPolicy,
+  validateWorkloadPlanAgainstPolicy,
+} from '../workload/validate-plan.mjs';
 
 const COMMIT = '1'.repeat(40);
 const SOURCE_SHA256 = '2'.repeat(64);
@@ -23,6 +26,7 @@ const RUNTIME_ACCOUNT = `miakapp-control-plane@${PROJECT_ID}.iam.gserviceaccount
 const BUILD_ACCOUNT = `miakapp-control-build@${PROJECT_ID}.iam.gserviceaccount.com`;
 const PROBE_ACCOUNT = `miakapp-staging-probe@${PROJECT_ID}.iam.gserviceaccount.com`;
 const FCM_ROLE = `projects/${PROJECT_ID}/roles/miakapp.controlPlaneFcmSender`;
+const GCF_SOURCE_BUCKET = 'gcf-v2-sources-1072737219170-europe-west9';
 
 const MANAGED_RESOURCES = Object.freeze({
   'google_artifact_registry_repository.function': 'google_artifact_registry_repository',
@@ -30,6 +34,7 @@ const MANAGED_RESOURCES = Object.freeze({
   'google_cloud_run_v2_service_iam_member.probe_invoker': 'google_cloud_run_v2_service_iam_member',
   'google_cloudfunctions2_function.control_plane': 'google_cloudfunctions2_function',
   'google_project_iam_custom_role.fcm_sender': 'google_project_iam_custom_role',
+  'google_project_iam_member.build_gcf_source_reader': 'google_project_iam_member',
   'google_project_iam_member.build_logs': 'google_project_iam_member',
   'google_project_iam_member.runtime_fcm': 'google_project_iam_member',
   'google_service_account.build': 'google_service_account',
@@ -88,6 +93,17 @@ function plannedValue(address) {
       };
     case 'google_project_iam_member.build_logs':
       return { role: 'roles/logging.logWriter' };
+    case 'google_project_iam_member.build_gcf_source_reader':
+      return {
+        ...common,
+        role: 'roles/storage.objectViewer',
+        member: `serviceAccount:${BUILD_ACCOUNT}`,
+        condition: [{
+          title: 'miakapp-control-build-gcf-source',
+          description: 'Read only the regional Cloud Functions source objects copied by Google.',
+          expression: `resource.type == "storage.googleapis.com/Object" && resource.name.startsWith("projects/_/buckets/${GCF_SOURCE_BUCKET}/objects/")`,
+        }],
+      };
     case 'google_storage_bucket_iam_member.build_source_reader':
       return { role: 'roles/storage.objectViewer' };
     case 'google_artifact_registry_repository_iam_member.build_writer':
@@ -195,9 +211,65 @@ function validateSyntheticPlan(plan = syntheticPlan()) {
   });
 }
 
+function syntheticRecoveryPlan() {
+  const plan = syntheticPlan();
+  for (const resource of plan.resource_changes) {
+    resource.change.actions = ['no-op'];
+    resource.change.before = structuredClone(resource.change.after);
+  }
+  const probeOperator = plan.resource_changes.find(
+    ({ address }) => address === 'google_service_account_iam_member.probe_operator',
+  );
+  probeOperator.change.before.member = 'user:Operator@Example.test';
+  probeOperator.change.after.member = 'user:Operator@Example.test';
+  for (const address of [
+    'google_cloud_run_v2_service_iam_member.probe_invoker',
+    'google_project_iam_member.build_gcf_source_reader',
+  ]) {
+    const resource = plan.resource_changes.find((entry) => entry.address === address);
+    resource.change.actions = ['create'];
+    resource.change.before = null;
+  }
+  const functionResource = plan.resource_changes.find(
+    ({ address }) => address === 'google_cloudfunctions2_function.control_plane',
+  );
+  functionResource.change.actions = ['update'];
+  functionResource.change.before = {
+    project: PROJECT_ID,
+    name: 'control-plane',
+    location: 'europe-west9',
+    state: 'FAILED',
+    environment: 'GEN_2',
+    build_config: [{
+      runtime: 'nodejs22',
+      entry_point: 'controlPlane',
+      docker_repository: `projects/${PROJECT_ID}/locations/europe-west9/repositories/miakapp-control-plane`,
+      service_account: `projects/${PROJECT_ID}/serviceAccounts/${BUILD_ACCOUNT}`,
+      source: [{
+        storage_source: [{
+          bucket: 'miakapp-v4-staging-function-source-1072737219170',
+          object: `sources/${SOURCE_SHA256}.zip`,
+          generation: '1',
+        }],
+      }],
+    }],
+    service_config: [],
+  };
+  return plan;
+}
+
+function validateSyntheticRecoveryPlan(plan = syntheticRecoveryPlan()) {
+  return validateFailedBuildRecoveryPlanAgainstPolicy(plan, {
+    repositoryCommit: COMMIT,
+    sourceArchiveSha256: SOURCE_SHA256,
+  }, {
+    operatorUserSha256: OPERATOR_SHA256,
+  });
+}
+
 test('accepts only the reviewed initial workload graph', () => {
   assert.deepEqual(validateSyntheticPlan(), {
-    create: 14,
+    create: 15,
     update: 0,
     delete: 0,
     function: 1,
@@ -208,6 +280,38 @@ test('accepts only the reviewed initial workload graph', () => {
     synthetic_invokers: 1,
     fcm_permissions: 1,
   });
+});
+
+test('accepts only the bounded in-place recovery from the failed first build', () => {
+  assert.deepEqual(validateSyntheticRecoveryPlan(), {
+    create: 2,
+    update: 1,
+    delete: 0,
+    recovery: 'failed-build-in-place',
+    function: 1,
+    minimum_instances: 0,
+    maximum_instances: 1,
+    ingress: 'internal-only',
+    unauthenticated_invokers: 0,
+    synthetic_invokers: 1,
+    fcm_permissions: 1,
+  });
+  for (const mutate of [
+    (plan) => {
+      plannedChange(plan, 'google_cloudfunctions2_function.control_plane').actions = ['delete', 'create'];
+    },
+    (plan) => {
+      plannedChange(plan, 'google_cloudfunctions2_function.control_plane').before.state = 'ACTIVE';
+    },
+    (plan) => {
+      plannedChange(plan, 'google_project_iam_member.build_gcf_source_reader')
+        .after.member = 'allUsers';
+    },
+  ]) {
+    const plan = syntheticRecoveryPlan();
+    mutate(plan);
+    assert.throws(() => validateSyntheticRecoveryPlan(plan));
+  }
 });
 
 test('rejects updates, public principals, foreign resources and wider ingress', () => {
@@ -250,6 +354,10 @@ function plannedResource(plan, address) {
   return plan.resource_changes.find((resource) => resource.address === address).change.after;
 }
 
+function plannedChange(plan, address) {
+  return plan.resource_changes.find((resource) => resource.address === address).change;
+}
+
 test('binds authorization and expiring metadata to exact private bytes', () => {
   const planBytes = Buffer.from('reviewed-plan');
   assert.equal(
@@ -267,7 +375,7 @@ test('binds authorization and expiring metadata to exact private bytes', () => {
     },
     planBytes,
     planJsonBytes: Buffer.from('{}'),
-    summary: { create: 14 },
+    summary: { create: 15 },
   });
   assert.equal(validatePlanMetadata(metadata, Date.parse(createdAt)), metadata);
   assert.throws(() => validatePlanMetadata(metadata, Date.parse(metadata.expires_at) + 1));
@@ -331,7 +439,7 @@ function inventoryResponses(extraLogWriter = []) {
     { email: PROBE_ACCOUNT, name: `projects/${PROJECT_ID}/serviceAccounts/${PROBE_ACCOUNT}`, disabled: false },
     [],
     [],
-    { bindings: [{ role: 'roles/iam.serviceAccountOpenIdTokenCreator', members: [`user:${OPERATOR_EMAIL}`] }] },
+    { bindings: [{ role: 'roles/iam.serviceAccountOpenIdTokenCreator', members: ['user:Operator@Example.test'] }] },
     {
       name: sourceBucket,
       location: 'EUROPE-WEST9',
@@ -352,6 +460,15 @@ function inventoryResponses(extraLogWriter = []) {
         ],
       },
       { role: FCM_ROLE, members: [`serviceAccount:${RUNTIME_ACCOUNT}`] },
+      {
+        role: 'roles/storage.objectViewer',
+        members: [`serviceAccount:${BUILD_ACCOUNT}`],
+        condition: {
+          title: 'miakapp-control-build-gcf-source',
+          description: 'Read only the regional Cloud Functions source objects copied by Google.',
+          expression: `resource.type == "storage.googleapis.com/Object" && resource.name.startsWith("projects/_/buckets/${GCF_SOURCE_BUCKET}/objects/")`,
+        },
+      },
     ] },
   ];
 }

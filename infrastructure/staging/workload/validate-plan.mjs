@@ -21,6 +21,7 @@ const MANAGED_RESOURCES = Object.freeze({
   'google_cloud_run_v2_service_iam_member.probe_invoker': 'google_cloud_run_v2_service_iam_member',
   'google_cloudfunctions2_function.control_plane': 'google_cloudfunctions2_function',
   'google_project_iam_custom_role.fcm_sender': 'google_project_iam_custom_role',
+  'google_project_iam_member.build_gcf_source_reader': 'google_project_iam_member',
   'google_project_iam_member.build_logs': 'google_project_iam_member',
   'google_project_iam_member.runtime_fcm': 'google_project_iam_member',
   'google_service_account.build': 'google_service_account',
@@ -40,6 +41,20 @@ const BUILD_ACCOUNT = `miakapp-control-build@${PROJECT_ID}.iam.gserviceaccount.c
 const RUNTIME_ACCOUNT = `miakapp-control-plane@${PROJECT_ID}.iam.gserviceaccount.com`;
 const PROBE_ACCOUNT = `miakapp-staging-probe@${PROJECT_ID}.iam.gserviceaccount.com`;
 const SOURCE_BUCKET = `${PROJECT_ID}-function-source-${PROJECT_NUMBER}`;
+const GCF_SOURCE_BUCKET = `gcf-v2-sources-${PROJECT_NUMBER}-${REGION}`;
+const GCF_SOURCE_CONDITION = Object.freeze({
+  title: 'miakapp-control-build-gcf-source',
+  description: 'Read only the regional Cloud Functions source objects copied by Google.',
+  expression: `resource.type == "storage.googleapis.com/Object" && resource.name.startsWith("projects/_/buckets/${GCF_SOURCE_BUCKET}/objects/")`,
+});
+const REPOSITORY = `projects/${PROJECT_ID}/locations/${REGION}/repositories/miakapp-control-plane`;
+const BUILD_ACCOUNT_RESOURCE = `projects/${PROJECT_ID}/serviceAccounts/${BUILD_ACCOUNT}`;
+const RECOVERY_ACTIONS = Object.freeze({
+  ...Object.fromEntries(Object.keys(MANAGED_RESOURCES).map((address) => [address, ['no-op']])),
+  'google_cloud_run_v2_service_iam_member.probe_invoker': ['create'],
+  'google_cloudfunctions2_function.control_plane': ['update'],
+  'google_project_iam_member.build_gcf_source_reader': ['create'],
+});
 
 function reject(message) {
   throw new Error(message);
@@ -183,6 +198,16 @@ function validateChangeValues(change, input, operatorUserSha256) {
     case 'google_project_iam_member.build_logs':
       exact(after.role, 'roles/logging.logWriter', `${address}.role`);
       break;
+    case 'google_project_iam_member.build_gcf_source_reader':
+      exact(after.project, PROJECT_ID, `${address}.project`);
+      exact(after.role, 'roles/storage.objectViewer', `${address}.role`);
+      exact(after.condition, [GCF_SOURCE_CONDITION], `${address}.condition`);
+      if (after.member === null) {
+        exact(change.change.after_unknown?.member, true, `${address}.member unknown state`);
+      } else if (after.member !== `serviceAccount:${BUILD_ACCOUNT}`) {
+        reject(`${address}.member does not match the reviewed build account`);
+      }
+      break;
     case 'google_project_iam_member.runtime_fcm':
       break;
     case 'google_storage_bucket_iam_member.build_source_reader':
@@ -195,7 +220,7 @@ function validateChangeValues(change, input, operatorUserSha256) {
       exact(after.role, 'roles/iam.serviceAccountOpenIdTokenCreator', `${address}.role`);
       const member = after.member;
       if (typeof member !== 'string' || !member.startsWith('user:')
-        || createHash('sha256').update(member.slice(5)).digest('hex') !== operatorUserSha256) {
+        || createHash('sha256').update(member.slice(5).toLowerCase()).digest('hex') !== operatorUserSha256) {
         reject(`${address}.member is not the reviewed private operator`);
       }
       break;
@@ -273,7 +298,66 @@ function validateResourceChanges(plan, input, operatorUserSha256) {
   exact([...managedSeen].sort(), Object.keys(MANAGED_RESOURCES).sort(), 'Managed workload changes');
 }
 
-export function validateWorkloadPlanAgainstPolicy(plan, input, policy) {
+function validateFailedFunction(value, input) {
+  if (!plainObject(value)) reject('Failed Function recovery baseline is missing');
+  exact(value.project, PROJECT_ID, 'Failed Function project');
+  exact(value.name, 'control-plane', 'Failed Function name');
+  exact(value.location, REGION, 'Failed Function location');
+  exact(value.environment, 'GEN_2', 'Failed Function generation');
+  exact(value.state, 'FAILED', 'Failed Function state');
+  exact(value.service_config, [], 'Failed Function service config');
+  const build = value.build_config?.[0];
+  const source = build?.source?.[0]?.storage_source?.[0];
+  if (!plainObject(build) || value.build_config.length !== 1 || !plainObject(source)) {
+    reject('Failed Function build baseline is incomplete');
+  }
+  exact(build.runtime, 'nodejs22', 'Failed Function runtime');
+  exact(build.entry_point, 'controlPlane', 'Failed Function entry point');
+  exact(build.docker_repository, REPOSITORY, 'Failed Function repository');
+  exact(build.service_account, BUILD_ACCOUNT_RESOURCE, 'Failed Function build account');
+  exact(source.bucket, SOURCE_BUCKET, 'Failed Function source bucket');
+  exact(source.object, `sources/${input.sourceArchiveSha256}.zip`, 'Failed Function source object');
+  if (!/^[1-9][0-9]*$/u.test(String(source.generation ?? ''))) {
+    reject('Failed Function source generation is invalid');
+  }
+}
+
+function validateRecoveryResourceChanges(plan, input, operatorUserSha256) {
+  if (!Array.isArray(plan.resource_changes)) reject('Terraform resource changes are missing');
+  const managedSeen = new Set();
+  for (const change of plan.resource_changes) {
+    if (!plainObject(change) || typeof change.address !== 'string' || !plainObject(change.change)) {
+      reject('Terraform recovery plan contains an invalid resource change');
+    }
+    if (change.mode === 'data') {
+      if (DATA_RESOURCES[change.address] !== change.type
+        || ![['read'], ['no-op']].some((actions) => isDeepStrictEqual(actions, change.change.actions))) {
+        reject('Terraform recovery plan contains an unreviewed data read');
+      }
+      continue;
+    }
+    if (change.mode !== 'managed' || MANAGED_RESOURCES[change.address] !== change.type
+      || managedSeen.has(change.address)) {
+      reject('Terraform recovery plan contains an unreviewed managed resource');
+    }
+    managedSeen.add(change.address);
+    exact(change.change.actions, RECOVERY_ACTIONS[change.address], `${change.address}.recovery actions`);
+    if (change.change.importing !== undefined || change.change.generated_config !== undefined) {
+      reject('Terraform recovery plan must not import or generate configuration');
+    }
+    if (isDeepStrictEqual(change.change.actions, ['create'])) {
+      exact(change.change.before, null, `${change.address}.recovery before`);
+    } else if (isDeepStrictEqual(change.change.actions, ['no-op'])) {
+      exact(change.change.before, change.change.after, `${change.address}.recovery no-op`);
+    } else {
+      validateFailedFunction(change.change.before, input);
+    }
+    validateChangeValues(change, input, operatorUserSha256);
+  }
+  exact([...managedSeen].sort(), Object.keys(MANAGED_RESOURCES).sort(), 'Managed recovery changes');
+}
+
+function validatePlanEnvelope(plan, input, policy) {
   if (!plainObject(plan) || !plainObject(input)) reject('Terraform workload plan is invalid');
   if (!plainObject(policy)
     || !/^[0-9a-f]{64}$/u.test(policy.operatorUserSha256 ?? '')) {
@@ -290,6 +374,10 @@ export function validateWorkloadPlanAgainstPolicy(plan, input, policy) {
   }
   validateVariables(plan, input, policy.operatorUserSha256);
   resourceConfiguration(plan);
+}
+
+export function validateWorkloadPlanAgainstPolicy(plan, input, policy) {
+  validatePlanEnvelope(plan, input, policy);
   validateResourceChanges(plan, input, policy.operatorUserSha256);
   rejectForbiddenIdentities(plan);
   return Object.freeze({
@@ -306,35 +394,71 @@ export function validateWorkloadPlanAgainstPolicy(plan, input, policy) {
   });
 }
 
+export function validateFailedBuildRecoveryPlanAgainstPolicy(plan, input, policy) {
+  validatePlanEnvelope(plan, input, policy);
+  validateRecoveryResourceChanges(plan, input, policy.operatorUserSha256);
+  rejectForbiddenIdentities(plan);
+  return Object.freeze({
+    create: 2,
+    update: 1,
+    delete: 0,
+    recovery: 'failed-build-in-place',
+    function: 1,
+    minimum_instances: 0,
+    maximum_instances: 1,
+    ingress: 'internal-only',
+    unauthenticated_invokers: 0,
+    synthetic_invokers: 1,
+    fcm_permissions: 1,
+  });
+}
+
 export function validateInitialWorkloadPlan(plan, input) {
   return validateWorkloadPlanAgainstPolicy(plan, input, {
     operatorUserSha256: OPERATOR_USER_SHA256,
   });
 }
 
-export function readAndValidateInitialWorkloadPlan(path, input) {
+export function validateFailedBuildRecoveryPlan(plan, input) {
+  return validateFailedBuildRecoveryPlanAgainstPolicy(plan, input, {
+    operatorUserSha256: OPERATOR_USER_SHA256,
+  });
+}
+
+function readPlan(path) {
   const bytes = readFileSync(path);
   if (bytes.byteLength === 0 || bytes.byteLength > MAXIMUM_PLAN_BYTES) {
     reject('Terraform workload plan JSON has an invalid size');
   }
-  let plan;
   try {
-    plan = JSON.parse(bytes.toString('utf8'));
+    return JSON.parse(bytes.toString('utf8'));
   } catch {
     return reject('Terraform workload plan is not valid JSON');
   }
-  return validateInitialWorkloadPlan(plan, input);
+}
+
+export function readAndValidateInitialWorkloadPlan(path, input) {
+  return validateInitialWorkloadPlan(readPlan(path), input);
+}
+
+export function readAndValidateFailedBuildRecoveryPlan(path, input) {
+  return validateFailedBuildRecoveryPlan(readPlan(path), input);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  if (process.argv.length !== 5) {
-    console.error('Usage: node validate-plan.mjs <plan.json> <repository-commit> <source-sha256>');
+  const recovery = process.argv[2] === '--recover-failed-build';
+  const offset = recovery ? 1 : 0;
+  if (process.argv.length !== 5 + offset) {
+    console.error('Usage: node validate-plan.mjs [--recover-failed-build] <plan.json> <repository-commit> <source-sha256>');
     process.exitCode = 2;
   } else {
     try {
-      const summary = readAndValidateInitialWorkloadPlan(process.argv[2], {
-        repositoryCommit: process.argv[3],
-        sourceArchiveSha256: process.argv[4],
+      const validate = recovery
+        ? readAndValidateFailedBuildRecoveryPlan
+        : readAndValidateInitialWorkloadPlan;
+      const summary = validate(process.argv[2 + offset], {
+        repositoryCommit: process.argv[3 + offset],
+        sourceArchiveSha256: process.argv[4 + offset],
       });
       process.stdout.write(`${JSON.stringify(summary)}\n`);
     } catch (error) {
