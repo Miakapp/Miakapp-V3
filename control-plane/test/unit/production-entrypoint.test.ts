@@ -125,4 +125,22 @@ describe('isolated staging production entrypoint', () => {
       functions: [{ source: '.', codebase: 'control-plane-emulator' }],
     });
   });
+
+  test('emits only the fixed classified startup failure event', () => {
+    const source = readFileSync(
+      new URL('../../src/production-entrypoint.ts', import.meta.url),
+      'utf8',
+    );
+    expect(source).toContain(
+      'console.error(JSON.stringify(productionInitializationFailureEvent(error)))',
+    );
+    for (const forbidden of [
+      'console.error(error)',
+      'error.message',
+      'error.stack',
+      'JSON.stringify(error)',
+    ]) {
+      expect(source).not.toContain(forbidden);
+    }
+  });
 });

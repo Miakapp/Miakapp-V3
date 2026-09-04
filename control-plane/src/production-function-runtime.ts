@@ -6,6 +6,9 @@ import {
 } from './production-config.js';
 import {
   createProductionControlPlane,
+  isProductionInitializationStage,
+  ProductionInitializationError,
+  type ProductionInitializationStage,
   type ProductionControlPlane,
 } from './production-runtime.js';
 import {
@@ -23,6 +26,23 @@ export interface ProductionFunctionRuntimeDependencies {
 export interface ProductionFunctionRuntime {
   readonly initialize: () => Promise<void>;
   readonly handle: (request: express.Request, response: express.Response) => Promise<void>;
+}
+
+export interface ProductionInitializationFailureEvent {
+  readonly event: 'miakapp_control_plane_initialization_failed';
+  readonly stage: ProductionInitializationStage | 'function-runtime';
+}
+
+export function productionInitializationFailureEvent(
+  error: unknown,
+): ProductionInitializationFailureEvent {
+  return Object.freeze({
+    event: 'miakapp_control_plane_initialization_failed',
+    stage: error instanceof ProductionInitializationError
+      && isProductionInitializationStage(error.stage)
+      ? error.stage
+      : 'function-runtime',
+  });
 }
 
 function unavailable(response: express.Response): void {
@@ -56,7 +76,8 @@ export function createProductionFunctionRuntime(
         }
         return composed;
       })
-      .catch(() => {
+      .catch((error: unknown) => {
+        if (error instanceof ProductionInitializationError) throw error;
         throw new ProductionConfigurationError();
       });
     return initialization;

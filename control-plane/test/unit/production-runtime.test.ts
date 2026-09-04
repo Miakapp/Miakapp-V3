@@ -12,6 +12,7 @@ import type { ComponentStorageBucket } from '../../src/component-storage.js';
 import {
   createFirebaseProductionServices,
   createProductionControlPlane,
+  ProductionInitializationError,
   type FirebaseProductionServices,
   type ProductionRuntimeFactories,
 } from '../../src/production-runtime.js';
@@ -218,6 +219,46 @@ describe('isolated production composition root', () => {
       factories,
     })).rejects.toThrow(/configuration is invalid/);
     expect(constructions).toBe(0);
+  });
+
+  test('classifies initialization failures without retaining their sensitive cause', async () => {
+    const secretPath = 'projects/private-project/secrets/private-secret/versions/1';
+    const factories: ProductionRuntimeFactories = {
+      identity(runtime) {
+        return createProductionRuntimeIdentity(runtime);
+      },
+      firebase(_runtime, identity) {
+        return fakeFirebase(identity);
+      },
+      cloudSecurity() {
+        return {
+          secrets: {
+            async accessSecretVersion() {
+              throw new Error(secretPath);
+            },
+          },
+          kms: fakeCloud({ secretReads: 0, publicKeyReads: 0 }).kms,
+        };
+      },
+    };
+
+    const environmentFailure = await createProductionControlPlane(candidate(), {
+      environment: { HTTPS_PROXY: 'http://private-proxy.test:8080' },
+      factories,
+    }).catch((error: unknown) => error);
+    expect(environmentFailure).toBeInstanceOf(ProductionInitializationError);
+    expect((environmentFailure as ProductionInitializationError).stage)
+      .toBe('runtime-environment');
+
+    const securityFailure = await createProductionControlPlane(candidate(), {
+      environment: {},
+      factories,
+    }).catch((error: unknown) => error);
+    expect(securityFailure).toBeInstanceOf(ProductionInitializationError);
+    expect((securityFailure as ProductionInitializationError).stage).toBe('cloud-security');
+    expect(String(securityFailure)).not.toContain(secretPath);
+    expect(JSON.stringify(securityFailure)).not.toContain(secretPath);
+    expect((securityFailure as Error).cause).toBeUndefined();
   });
 
   test('requires an injected environment and factories to cross the same boundary', async () => {
