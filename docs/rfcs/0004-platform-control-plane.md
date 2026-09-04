@@ -132,7 +132,10 @@ millisecond conversion included for RFC 0003 compatibility.
 Browser-callable endpoints allow only the deployment's exact configured HTTPS
 origins, use no wildcard CORS origin, set `Access-Control-Allow-Credentials:
 false`, and reject cookies as authentication. Secret-bearing and authenticated
-responses use `Cache-Control: no-store`; discovery, JWKS and immutable public
+responses use `Cache-Control: no-store`. Their preflight allowlist includes
+`Cache-Control` and `Pragma` because a browser may add both when the SDK requests
+Fetch `cache: "no-store"`; neither header carries identity or expands the origin
+allowlist. Discovery, JWKS and immutable public
 artifacts are the only cacheable surfaces, with the explicit policies in their
 sections. Redirects are never used for authenticated requests.
 

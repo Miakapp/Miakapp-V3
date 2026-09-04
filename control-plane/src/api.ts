@@ -100,7 +100,7 @@ function applyCors(request: Request, response: Response, config: DeploymentConfi
   response.set({
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Credentials': 'false',
-    'Access-Control-Allow-Headers': 'Authorization, Content-Type, Miakapp-Push-Proof, X-Firebase-AppCheck',
+    'Access-Control-Allow-Headers': 'Authorization, Cache-Control, Content-Type, Miakapp-Push-Proof, Pragma, X-Firebase-AppCheck',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
     'Access-Control-Expose-Headers': 'Retry-After',
     'Access-Control-Max-Age': '600',
