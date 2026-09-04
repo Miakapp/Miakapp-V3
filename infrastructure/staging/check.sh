@@ -57,6 +57,14 @@ node --check infrastructure/staging/workload/plan.mjs
 node --check infrastructure/staging/workload/validate-plan.mjs
 node infrastructure/staging/workload/evidence.mjs \
   infrastructure/staging/workload/result.json
+node infrastructure/staging/probe/guard.mjs \
+  "${repository_root}/infrastructure/staging/probe"
+node --check infrastructure/staging/probe/apply.mjs
+node --check infrastructure/staging/probe/contract.mjs
+node --check infrastructure/staging/probe/guard.mjs
+node --check infrastructure/staging/probe/invoke.mjs
+node --check infrastructure/staging/probe/plan.mjs
+node --check infrastructure/staging/probe/validate-plan.mjs
 bash -n \
   infrastructure/staging/automation/apply.sh \
   infrastructure/staging/automation/inspect-plan.sh \
@@ -70,17 +78,21 @@ bash -n \
   infrastructure/staging/terraform/initialize-state.sh \
   infrastructure/staging/terraform/plan.sh \
   infrastructure/staging/workload/apply.sh \
-  infrastructure/staging/workload/plan.sh
+  infrastructure/staging/workload/plan.sh \
+  infrastructure/staging/probe/apply.sh \
+  infrastructure/staging/probe/invoke.sh \
+  infrastructure/staging/probe/plan.sh
 node --test \
   infrastructure/staging/test/activation.test.mjs \
   infrastructure/staging/test/bootstrap.test.mjs \
   infrastructure/staging/test/foundation-state.test.mjs \
   infrastructure/staging/test/github-policy.test.mjs \
+  infrastructure/staging/test/probe.test.mjs \
   infrastructure/staging/test/validate.test.mjs \
   infrastructure/staging/test/terraform.test.mjs \
   infrastructure/staging/test/workload.test.mjs
 
-for terraform_root in bootstrap terraform workload; do
+for terraform_root in bootstrap terraform workload probe; do
   terraform_path="infrastructure/staging/${terraform_root}"
   terraform -chdir="$terraform_path" fmt -check -recursive
   export TF_CLI_CONFIG_FILE="${repository_root}/${terraform_path}/terraform-cli.tfrc"
