@@ -322,8 +322,19 @@ Its sanitized result is digest-pinned under
 [`../../infrastructure/staging/probe/`](../../infrastructure/staging/probe/)
 without execution or trace identifiers.
 
-App Check live-provider/replay policy, relay integration, quotas, alerts,
-rotation and teardown evidence remain blockers. Public ingress remains absent.
+Read-only preflight found the Firebase APIs enabled but the project-level
+Firebase Authentication configuration absent. A dedicated Terraform root now
+prepares the non-deletable initialization as a closed baseline with no end-user
+sign-in provider. It requires a digest-bound explicit authorization and has no
+destroy path. Backend initialization materialized only its canonical empty GCS
+state (zero managed resources); the non-deletable Auth resource is still absent.
+The independent Auth/App Check root consumes that exact remote
+state before it can arm its dormant, bounded, unscheduled Workflow. Runtime-only
+token material and explicit arm/invoke/retire gates remain unchanged. Neither
+root has yet produced live Auth evidence. A successful execution will not
+replace the separate browser-provider attestation gate.
+Relay integration, quotas, alerts, rotation and teardown evidence remain
+blockers. Public ingress remains absent.
 Passing the manifest check is evidence, not additional authorization.
 
 Create or attach `miakapp-v4` only after the staging migration rehearsal produces:

@@ -487,7 +487,13 @@ current consumer.
    bounded recovery completed it in place, followed by output reconciliation and
    a zero-change plan. Two no-retry private discovery failures were followed by
    one exact HTTP 200 response from the corrected source, with no application
-   mutation. Ongoing secret rotation, App Check provider/replay policy,
+   mutation. Firebase Authentication is not initialized in staging; its closed,
+   no-provider baseline is prepared behind a separate exact non-deletable
+   authorization. A dormant Auth/App Check probe consumes that exact state and is prepared to
+   validate a real Firebase ID token, an Admin custom-provider App Check token,
+   the explicit V1 reusable-token policy and synthetic-user cleanup before
+   removing its temporary Workflow and IAM bindings. Until its live evidence is
+   committed, ongoing secret rotation, browser App Check provider policy,
    source/edge admission, monitoring, migration rehearsal and real staging fault
    evidence remain required before closing relay-integration and staging-only
    RFC 0004 Section 18 gates.
