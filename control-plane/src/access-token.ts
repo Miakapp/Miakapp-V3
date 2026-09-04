@@ -1,6 +1,7 @@
 import { createPublicKey, verify, type JsonWebKey } from 'node:crypto';
 
 import { type JsonValue, parseRequestJson } from './json.js';
+import type { SigningPublicJwk } from './types.js';
 
 const ENVIRONMENT_ISSUERS = Object.freeze({
   'demo-miakapp-v4': 'https://control.example.test',
@@ -13,6 +14,7 @@ const MAX_HEADER_BYTES = 2_048;
 const MAX_CLAIMS_BYTES = 12_288;
 const MAX_SIGNATURE_BYTES = 512;
 const MAX_KID_BYTES = 128;
+const MAX_SIGNING_KEYS = 16;
 const ACCESS_TOKEN_TTL_SECONDS = 300;
 const FUTURE_IAT_TOLERANCE_SECONDS = 30;
 const BASE64URL = /^[A-Za-z0-9_-]+$/;
@@ -26,14 +28,7 @@ export interface AccessTokenVerificationClock {
 interface AccessTokenVerifierBaseConfig {
   readonly projectId: string;
   readonly issuer: string;
-  readonly signingPublicJwk: Readonly<{
-    readonly kty: 'OKP';
-    readonly crv: 'Ed25519';
-    readonly x: string;
-    readonly use: 'sig';
-    readonly alg: 'EdDSA';
-    readonly kid: string;
-  }>;
+  readonly signingPublicJwks: readonly SigningPublicJwk[];
 }
 
 export interface PushAccessTokenVerifierConfig extends AccessTokenVerifierBaseConfig {
@@ -148,7 +143,7 @@ function validateConfig(
   config: AccessTokenVerifierBaseConfig,
   audience: string,
   scope: 'push:send' | 'components:publish',
-): ValidatedEd25519Key {
+): readonly ValidatedEd25519Key[] {
   const expectedIssuer = ENVIRONMENT_ISSUERS[
     config.projectId as keyof typeof ENVIRONMENT_ISSUERS
   ];
@@ -160,31 +155,43 @@ function validateConfig(
     throw new Error('Access-token verification configuration is invalid');
   }
 
-  const key = config.signingPublicJwk;
-  if (!hasExactKeys(key, ['kty', 'crv', 'x', 'use', 'alg', 'kid'])
-    || key.kty !== 'OKP'
-    || key.crv !== 'Ed25519'
-    || key.use !== 'sig'
-    || key.alg !== 'EdDSA'
-    || typeof key.x !== 'string'
-    || decodeCanonicalBase64url(key.x, 32)?.byteLength !== 32
-    || typeof key.kid !== 'string'
-    || Buffer.byteLength(key.kid, 'ascii') > MAX_KID_BYTES
-    || !GRAPHIC_ASCII.test(key.kid)) {
-    throw new Error('Access-token verification public key is invalid');
+  const keys = config.signingPublicJwks;
+  if (!Array.isArray(keys) || keys.length === 0 || keys.length > MAX_SIGNING_KEYS) {
+    throw new Error('Access-token verification public keys are invalid');
   }
-
-  return {
-    kid: key.kid,
-    jwk: {
-      kty: 'OKP',
-      crv: 'Ed25519',
-      x: key.x,
-      use: 'sig',
-      alg: 'EdDSA',
+  const kids = new Set<string>();
+  const validated: ValidatedEd25519Key[] = [];
+  for (const key of keys) {
+    if (key === null
+      || typeof key !== 'object'
+      || Array.isArray(key)
+      || !hasExactKeys(key, ['kty', 'crv', 'x', 'use', 'alg', 'kid'])
+      || key.kty !== 'OKP'
+      || key.crv !== 'Ed25519'
+      || key.use !== 'sig'
+      || key.alg !== 'EdDSA'
+      || typeof key.x !== 'string'
+      || decodeCanonicalBase64url(key.x, 32)?.byteLength !== 32
+      || typeof key.kid !== 'string'
+      || Buffer.byteLength(key.kid, 'ascii') > MAX_KID_BYTES
+      || !GRAPHIC_ASCII.test(key.kid)
+      || kids.has(key.kid)) {
+      throw new Error('Access-token verification public keys are invalid');
+    }
+    kids.add(key.kid);
+    validated.push({
       kid: key.kid,
-    },
-  };
+      jwk: {
+        kty: 'OKP',
+        crv: 'Ed25519',
+        x: key.x,
+        use: 'sig',
+        alg: 'EdDSA',
+        kid: key.kid,
+      },
+    });
+  }
+  return Object.freeze(validated);
 }
 
 function verifyAccessToken(
@@ -194,16 +201,17 @@ function verifyAccessToken(
   scope: 'push:send' | 'components:publish',
   clock: AccessTokenVerificationClock,
 ): VerifiedAccessPrincipal {
-  const key = validateConfig(config, audience, scope);
+  const keys = validateConfig(config, audience, scope);
   const now = validatedClockSeconds(clock);
   const parsed = parseToken(bearerToken(authorizationHeader));
 
   if (!hasExactKeys(parsed.header, ['alg', 'kid', 'typ'])
     || parsed.header.alg !== 'EdDSA'
-    || parsed.header.typ !== 'at+jwt'
-    || parsed.header.kid !== key.kid) {
+    || parsed.header.typ !== 'at+jwt') {
     fail();
   }
+  const key = keys.find((candidate) => candidate.kid === parsed.header.kid);
+  if (key === undefined) fail();
   verifyTokenSignature(parsed, key);
 
   const claims = parsed.claims;

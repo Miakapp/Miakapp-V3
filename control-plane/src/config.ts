@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { createHmac, type JsonWebKey } from 'node:crypto';
 
 import { CONTROL_PLANE_ADMISSION_PROFILE } from './admission-profile.js';
-import type { EmulatorDeploymentConfig } from './types.js';
+import type { EmulatorDeploymentConfig, SigningPublicJwk } from './types.js';
 
 const EMULATOR_PROJECT = 'demo-miakapp-v4';
 const FIXTURE_URL = new URL('../../control-plane-contract/fixtures/v1/access-tokens.json', import.meta.url);
@@ -21,6 +21,9 @@ interface SyntheticFixture {
     readonly components_audience: string;
   };
   readonly home_key: { readonly pepper_base64url: string };
+  readonly key_sets: {
+    readonly rotated: { readonly keys: readonly SigningPublicJwk[] };
+  };
   readonly test_only_private_keys: {
     readonly warning: string;
     readonly future: JsonWebKey & {
@@ -70,6 +73,9 @@ export function loadEmulatorConfig(
   assertEmulatorRuntime(environment);
   const fixture = readSyntheticFixture();
   const signing = fixture.test_only_private_keys.future;
+  const signingPublicJwks = Object.freeze(
+    fixture.key_sets.rotated.keys.map((key) => Object.freeze({ ...key })),
+  );
   const appCheckSigning = fixture.test_only_private_keys.firebase;
   const pepper = Buffer.from(fixture.home_key.pepper_base64url, 'base64url');
   const verifierKeyVersion = 'test-only-emulator-v1';
@@ -83,6 +89,8 @@ export function loadEmulatorConfig(
     || signing.d.length === 0
     || signing.x.length === 0
     || signing.kid.length === 0
+    || signingPublicJwks.length !== 2
+    || !signingPublicJwks.some((key) => key.kid === signing.kid && key.x === signing.x)
     || appCheckSigning.n.length === 0
     || appCheckSigning.e.length === 0
     || appCheckSigning.kid.length === 0) {
@@ -141,5 +149,6 @@ export function loadEmulatorConfig(
       alg: 'EdDSA',
       kid: signing.kid,
     }),
+    signingPublicJwks,
   });
 }
