@@ -25,9 +25,13 @@ main:
           - missing_app_check_code: ""
           - first_status: 0
           - replay_status: 0
+          - probe_stage: initialize
     - run_probe:
         try:
           steps:
+            - enter_web_config_stage:
+                assign:
+                  - probe_stage: web_config
             - read_web_config:
                 call: http.get
                 args:
@@ -40,6 +44,9 @@ main:
                 switch:
                   - condition: ${web_config.code != 200 or web_config.body.projectId != project_id or web_config.body.appId != firebase_app_id or len(web_config.body.apiKey) < 20}
                     raise: Auth probe Firebase Web configuration mismatch
+            - enter_initial_user_stage:
+                assign:
+                  - probe_stage: initial_user
             - verify_initial_user_absence:
                 call: http.post
                 args:
@@ -63,6 +70,9 @@ main:
                   - issued_at: ${math.floor(sys.now())}
                   - auth_expires_at: ${issued_at + 3600}
                   - app_check_expires_at: ${issued_at + 300}
+            - enter_auth_custom_token_stage:
+                assign:
+                  - probe_stage: auth_custom_token
             - build_auth_claims:
                 assign:
                   - auth_claims:
@@ -82,6 +92,9 @@ main:
                   body:
                     payload: ${json.encode_to_string(auth_claims)}
                 result: auth_signature
+            - enter_auth_exchange_stage:
+                assign:
+                  - probe_stage: auth_exchange
             - exchange_auth_custom_token:
                 call: http.post
                 args:
@@ -106,6 +119,9 @@ main:
                   - auth_signature: null
                   - auth_exchange: null
                   - auth_claims: null
+            - enter_app_check_custom_token_stage:
+                assign:
+                  - probe_stage: app_check_custom_token
             - build_app_check_claims:
                 assign:
                   - app_check_claims:
@@ -126,6 +142,9 @@ main:
                   body:
                     payload: ${json.encode_to_string(app_check_claims)}
                 result: app_check_signature
+            - enter_app_check_exchange_stage:
+                assign:
+                  - probe_stage: app_check_exchange
             - exchange_app_check_custom_token:
                 call: http.post
                 args:
@@ -147,6 +166,9 @@ main:
                   - app_check_signature: null
                   - app_check_exchange: null
                   - app_check_claims: null
+            - enter_cloud_run_identity_stage:
+                assign:
+                  - probe_stage: cloud_run_identity
             - mint_cloud_run_token:
                 call: http.post
                 args:
@@ -166,6 +188,9 @@ main:
                 assign:
                   - cloud_run_id_token: ${cloud_run_identity.body.token}
                   - cloud_run_identity: null
+            - enter_missing_app_check_stage:
+                assign:
+                  - probe_stage: missing_app_check
             - reject_missing_app_check:
                 try:
                   call: http.get
@@ -191,6 +216,9 @@ main:
                 switch:
                   - condition: ${missing_app_check_status != 401 or missing_app_check_code != "invalid_app_check_token"}
                     raise: Auth probe missing-App-Check request was unexpectedly accepted
+            - enter_first_authenticated_read_stage:
+                assign:
+                  - probe_stage: first_authenticated_read
             - first_authenticated_read:
                 call: http.get
                 args:
@@ -206,6 +234,9 @@ main:
                 switch:
                   - condition: ${first_response.code != 200 or first_response.body.schema != "miakapp.push-destination-list/1" or len(first_response.body.destinations) != 0}
                     raise: Auth probe first authenticated read mismatch
+            - enter_replay_authenticated_read_stage:
+                assign:
+                  - probe_stage: replay_authenticated_read
             - replay_authenticated_read:
                 call: http.get
                 args:
@@ -223,6 +254,7 @@ main:
                     raise: Auth probe replay-policy read mismatch
             - record_success:
                 assign:
+                  - probe_stage: success
                   - first_status: ${first_response.code}
                   - replay_status: ${replay_response.code}
                   - first_response: null
@@ -304,7 +336,7 @@ main:
           - condition: ${cleanup_failed or (synthetic_user_created and (not(synthetic_user_deleted) or not(synthetic_user_absence_verified)))}
             raise: Auth probe synthetic identity cleanup failed
           - condition: ${probe_failed}
-            raise: Auth probe failed before producing bounded evidence
+            raise: ${"Auth probe failed at bounded stage " + probe_stage}
           - condition: ${not(synthetic_user_created) or not(synthetic_user_deleted) or not(synthetic_user_absence_verified)}
             raise: Auth probe synthetic identity lifecycle mismatch
           - condition: ${missing_app_check_status != 401 or first_status != 200 or replay_status != 200}

@@ -487,6 +487,25 @@ test('binds orphan retirement recovery to exact live and state inventories', () 
 });
 
 test('pins a no-secret one-shot Auth and App Check Workflow', () => {
+  const stages = [
+    'initialize',
+    'web_config',
+    'initial_user',
+    'auth_custom_token',
+    'auth_exchange',
+    'app_check_custom_token',
+    'app_check_exchange',
+    'cloud_run_identity',
+    'missing_app_check',
+    'first_authenticated_read',
+    'replay_authenticated_read',
+    'success',
+  ];
+  assert.equal((WORKFLOW_SOURCE.match(/- probe_stage:/gu) ?? []).length, stages.length);
+  assert.deepEqual(
+    [...WORKFLOW_SOURCE.matchAll(/- probe_stage: ([a-z_]+)/gu)].map((match) => match[1]),
+    stages,
+  );
   assert.equal((WORKFLOW_SOURCE.match(/url: \$\{function_uri \+ destination_path\}/g) ?? []).length, 3);
   assert.equal((WORKFLOW_SOURCE.match(/X-Serverless-Authorization:/g) ?? []).length, 3);
   assert.equal((WORKFLOW_SOURCE.match(/X-Firebase-AppCheck:/g) ?? []).length, 2);
@@ -495,6 +514,8 @@ test('pins a no-secret one-shot Auth and App Check Workflow', () => {
   assert.match(WORKFLOW_SOURCE, /limitedUse: false/);
   assert.match(WORKFLOW_SOURCE, /accounts:delete/);
   assert.match(WORKFLOW_SOURCE, /synthetic_user_absence_verified: true/);
+  assert.match(WORKFLOW_SOURCE, /raise: \$\{"Auth probe failed at bounded stage " \+ probe_stage\}/u);
+  assert.doesNotMatch(WORKFLOW_SOURCE, /probe_error\.(?:body|code|message|tags)/u);
   assert.doesNotMatch(WORKFLOW_SOURCE, /^\s*retry:/mu);
   assert.doesNotMatch(WORKFLOW_SOURCE, /AIza[0-9A-Za-z_-]{30,}|debugToken|private[_ -]?key/iu);
   assert.doesNotMatch(WORKFLOW_SOURCE, /allUsers|allAuthenticatedUsers|\bmiakapp-3\b/);
@@ -679,6 +700,21 @@ test('validates the one successful execution without retaining its identifier', 
     endTime: '2026-09-05T00:00:01Z',
     result: JSON.stringify(workflowResult()),
   }, WORKFLOW_REVISION), /foreign/u);
+  const executionName = `projects/${PROJECT_NUMBER}/locations/${REGION}/workflows/${WORKFLOW_NAME}/executions/00000000-0000-4000-8000-000000000000`;
+  assert.throws(() => validateSuccessfulAuthProbeExecution({
+    name: executionName,
+    state: 'FAILED',
+    error: {
+      context: 'RuntimeError: "Auth probe failed at bounded stage auth_exchange"\nin step "require_cleanup"',
+    },
+  }, WORKFLOW_REVISION), /bounded stage auth_exchange/u);
+  assert.throws(() => validateSuccessfulAuthProbeExecution({
+    name: executionName,
+    state: 'FAILED',
+    error: {
+      context: 'RuntimeError: "Auth probe failed at bounded stage bearer_token"\nin step "require_cleanup"',
+    },
+  }, WORKFLOW_REVISION), /state does not match/u);
 });
 
 test('drivers require exact plans and preserve the separate retirement gate', () => {
