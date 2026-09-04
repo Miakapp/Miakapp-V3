@@ -49,11 +49,21 @@ const GCF_SOURCE_CONDITION = Object.freeze({
 });
 const REPOSITORY = `projects/${PROJECT_ID}/locations/${REGION}/repositories/miakapp-control-plane`;
 const BUILD_ACCOUNT_RESOURCE = `projects/${PROJECT_ID}/serviceAccounts/${BUILD_ACCOUNT}`;
+export const PINNED_UPDATE_BASELINE = Object.freeze({
+  repositoryCommit: '3f5a94dfcdfc0984487a558d966bbeaa769b18eb',
+  sourceArchiveSha256: 'd2a9ffae2bd85106f782f9c75a10b6fb398682ead65dada2a1cf8ab5c65b7eb4',
+});
 const RECOVERY_ACTIONS = Object.freeze({
   ...Object.fromEntries(Object.keys(MANAGED_RESOURCES).map((address) => [address, ['no-op']])),
   'google_cloud_run_v2_service_iam_member.probe_invoker': ['create'],
   'google_cloudfunctions2_function.control_plane': ['update'],
   'google_project_iam_member.build_gcf_source_reader': ['create'],
+});
+const PINNED_UPDATE_ACTIONS = Object.freeze({
+  ...Object.fromEntries(Object.keys(MANAGED_RESOURCES).map((address) => [address, ['no-op']])),
+  'google_cloudfunctions2_function.control_plane': ['update'],
+  'google_storage_bucket_object.source': ['delete', 'create'],
+  'terraform_data.deployment_guard': ['update'],
 });
 
 function reject(message) {
@@ -184,10 +194,14 @@ function validateChangeValues(change, input, operatorUserSha256) {
       exact(after.format, 'DOCKER', `${address}.format`);
       break;
     case 'google_storage_bucket_object.source':
+      exact(after.bucket, SOURCE_BUCKET, `${address}.bucket`);
       exact(after.name, `sources/${input.sourceArchiveSha256}.zip`, `${address}.name`);
       exact(after.content_type, 'application/zip', `${address}.content_type`);
       exact(after.metadata?.sha256, input.sourceArchiveSha256, `${address}.metadata.sha256`);
       exact(after.metadata?.['repository-commit'], input.repositoryCommit, `${address}.metadata.commit`);
+      if (typeof after.source !== 'string' || !after.source.endsWith('/control-plane.zip')) {
+        reject(`${address}.source is not the private deterministic package`);
+      }
       break;
     case 'google_project_iam_custom_role.fcm_sender':
       exact(after.project, PROJECT_ID, `${address}.project`);
@@ -196,7 +210,9 @@ function validateChangeValues(change, input, operatorUserSha256) {
       exact(after.stage, 'GA', `${address}.stage`);
       break;
     case 'google_project_iam_member.build_logs':
+      exact(after.project, PROJECT_ID, `${address}.project`);
       exact(after.role, 'roles/logging.logWriter', `${address}.role`);
+      exact(after.member, `serviceAccount:${BUILD_ACCOUNT}`, `${address}.member`);
       break;
     case 'google_project_iam_member.build_gcf_source_reader':
       exact(after.project, PROJECT_ID, `${address}.project`);
@@ -209,12 +225,25 @@ function validateChangeValues(change, input, operatorUserSha256) {
       }
       break;
     case 'google_project_iam_member.runtime_fcm':
+      exact(after.project, PROJECT_ID, `${address}.project`);
+      exact(after.role, `projects/${PROJECT_ID}/roles/miakapp.controlPlaneFcmSender`, `${address}.role`);
+      exact(after.member, `serviceAccount:${RUNTIME_ACCOUNT}`, `${address}.member`);
       break;
     case 'google_storage_bucket_iam_member.build_source_reader':
       exact(after.role, 'roles/storage.objectViewer', `${address}.role`);
+      if (![SOURCE_BUCKET, `b/${SOURCE_BUCKET}`].includes(after.bucket)) {
+        reject(`${address}.bucket does not match the reviewed source bucket`);
+      }
+      exact(after.member, `serviceAccount:${BUILD_ACCOUNT}`, `${address}.member`);
       break;
     case 'google_artifact_registry_repository_iam_member.build_writer':
+      exact(after.project, PROJECT_ID, `${address}.project`);
+      exact(after.location, REGION, `${address}.location`);
+      if (!['miakapp-control-plane', REPOSITORY].includes(after.repository)) {
+        reject(`${address}.repository does not match the reviewed artifact repository`);
+      }
       exact(after.role, 'roles/artifactregistry.writer', `${address}.role`);
+      exact(after.member, `serviceAccount:${BUILD_ACCOUNT}`, `${address}.member`);
       break;
     case 'google_service_account_iam_member.probe_operator': {
       exact(after.role, 'roles/iam.serviceAccountOpenIdTokenCreator', `${address}.role`);
@@ -228,8 +257,14 @@ function validateChangeValues(change, input, operatorUserSha256) {
     case 'google_cloud_run_v2_service_iam_member.probe_invoker':
       exact(after.project, PROJECT_ID, `${address}.project`);
       exact(after.location, REGION, `${address}.location`);
-      exact(after.name, 'control-plane', `${address}.name`);
+      if (![
+        'control-plane',
+        `projects/${PROJECT_ID}/locations/${REGION}/services/control-plane`,
+      ].includes(after.name)) {
+        reject(`${address}.name does not match the reviewed service`);
+      }
       exact(after.role, 'roles/run.invoker', `${address}.role`);
+      exact(after.member, `serviceAccount:${PROBE_ACCOUNT}`, `${address}.member`);
       break;
     case 'google_cloudfunctions2_function.control_plane': {
       exact(after.project, PROJECT_ID, `${address}.project`);
@@ -240,6 +275,14 @@ function validateChangeValues(change, input, operatorUserSha256) {
       if (!plainObject(build) || !plainObject(service)) reject('Function build or service config is missing');
       exact(build.runtime, 'nodejs22', 'Function runtime');
       exact(build.entry_point, 'controlPlane', 'Function entry point');
+      exact(build.docker_repository, REPOSITORY, 'Function artifact repository');
+      exact(build.service_account, BUILD_ACCOUNT_RESOURCE, 'Function build account');
+      exact(build.environment_variables, {}, 'Function build environment');
+      exact(build.worker_pool, '', 'Function build worker pool');
+      const storageSource = build.source?.[0]?.storage_source?.[0];
+      if (!plainObject(storageSource)) reject('Function storage source is missing');
+      exact(storageSource.bucket, SOURCE_BUCKET, 'Function source bucket');
+      exact(storageSource.object, `sources/${input.sourceArchiveSha256}.zip`, 'Function source object');
       exact(service.available_memory, '256M', 'Function memory');
       exact(service.available_cpu, '1', 'Function CPU');
       exact(service.timeout_seconds, 30, 'Function timeout');
@@ -249,13 +292,24 @@ function validateChangeValues(change, input, operatorUserSha256) {
       exact(service.ingress_settings, 'ALLOW_INTERNAL_ONLY', 'Function ingress');
       exact(service.all_traffic_on_latest_revision, true, 'Function traffic');
       exact(service.service_account_email, RUNTIME_ACCOUNT, 'Function runtime account');
+      exact(service.vpc_connector, '', 'Function VPC connector');
+      exact(service.vpc_connector_egress_settings, '', 'Function VPC egress');
+      exact(service.direct_vpc_network_interface, [], 'Function direct VPC interface');
+      exact(service.secret_environment_variables, [], 'Function secret environment');
+      exact(service.secret_volumes, [], 'Function secret volumes');
+      exact(service.binary_authorization_policy, '', 'Function binary authorization policy');
       const environment = service.environment_variables;
       if (!plainObject(environment)) reject('Function environment is missing');
-      exact(Object.keys(environment).sort(), [
+      const expectedEnvironmentNames = [
         'MIAKAPP_DEPLOYMENT_COMMIT',
         'MIAKAPP_RUNTIME_CONFIG_JSON',
         'MIAKAPP_SOURCE_ARCHIVE_SHA256',
-      ], 'Function environment names');
+      ];
+      if (environment.LOG_EXECUTION_ID !== undefined) {
+        exact(environment.LOG_EXECUTION_ID, 'true', 'Function execution ID logging');
+        expectedEnvironmentNames.push('LOG_EXECUTION_ID');
+      }
+      exact(Object.keys(environment).sort(), expectedEnvironmentNames.sort(), 'Function environment names');
       exact(environment.MIAKAPP_DEPLOYMENT_COMMIT, input.repositoryCommit, 'Function commit');
       exact(environment.MIAKAPP_SOURCE_ARCHIVE_SHA256, input.sourceArchiveSha256, 'Function source digest');
       if (createHash('sha256').update(environment.MIAKAPP_RUNTIME_CONFIG_JSON).digest('hex')
@@ -267,6 +321,132 @@ function validateChangeValues(change, input, operatorUserSha256) {
     default:
       break;
   }
+}
+
+function validateGuardInput(value, input, path) {
+  if (!plainObject(value)) reject(`${path} is missing`);
+  exact(Object.keys(value).sort(), [
+    'bootstrap', 'foundation', 'runtime_config', 'source_archive', 'source_commit',
+  ], `${path} fields`);
+  exact(value.bootstrap, {
+    apply_provider: `projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/miakapp-github/providers/staging-apply`,
+    bootstrap_prefix: 'terraform/bootstrap',
+    component_bucket: `${PROJECT_ID}-components`,
+    deployer_service_account: `miakapp-tf-apply@${PROJECT_ID}.iam.gserviceaccount.com`,
+    foundation_prefix: 'terraform/foundation',
+    github_repository_id: '354682190',
+    github_repository_owner_id: '83046838',
+    plan_provider: `projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/miakapp-github/providers/staging-plan`,
+    planner_service_account: `miakapp-tf-plan@${PROJECT_ID}.iam.gserviceaccount.com`,
+    project_id: PROJECT_ID,
+    project_number: PROJECT_NUMBER,
+    region: REGION,
+    runtime_service_account: RUNTIME_ACCOUNT,
+    schema: 'miakapp.staging-bootstrap/1',
+    state_bucket: `${PROJECT_ID}-tfstate-${PROJECT_NUMBER}`,
+  }, `${path}.bootstrap`);
+  exact(value.foundation, {
+    component_bucket: `${PROJECT_ID}-components`,
+    firestore_database: '(default)',
+    project_id: PROJECT_ID,
+    project_number: PROJECT_NUMBER,
+    region: REGION,
+    runtime_service_account: RUNTIME_ACCOUNT,
+    secret_ids: [
+      'miakapp-audit-hmac',
+      'miakapp-component-hmac',
+      'miakapp-home-key-pepper',
+      'miakapp-network-hmac',
+      'miakapp-push-hmac',
+    ],
+    signing_key: `projects/${PROJECT_ID}/locations/${REGION}/keyRings/${PROJECT_ID}/cryptoKeys/access-token-signing`,
+  }, `${path}.foundation`);
+  exact(value.runtime_config, RUNTIME_CONFIG_SHA256, `${path}.runtime_config`);
+  exact(value.source_archive, input.sourceArchiveSha256, `${path}.source_archive`);
+  exact(value.source_commit, input.repositoryCommit, `${path}.source_commit`);
+}
+
+function validatePinnedSourceObjectBaseline(value, input) {
+  if (!plainObject(value)) reject('Pinned source object baseline is missing');
+  exact(value.bucket, SOURCE_BUCKET, 'Pinned source object bucket');
+  exact(value.name, `sources/${input.sourceArchiveSha256}.zip`, 'Pinned source object name');
+  exact(value.content_type, 'application/zip', 'Pinned source object content type');
+  exact(value.metadata, {
+    'repository-commit': input.repositoryCommit,
+    sha256: input.sourceArchiveSha256,
+  }, 'Pinned source object metadata');
+  exact(value.deletion_policy, 'DELETE', 'Pinned source object deletion policy');
+  exact(value.storage_class, 'STANDARD', 'Pinned source object storage class');
+  exact(value.event_based_hold, false, 'Pinned source object event hold');
+  exact(value.temporary_hold, false, 'Pinned source object temporary hold');
+  if (!Number.isSafeInteger(value.generation) || value.generation < 1) {
+    reject('Pinned source object generation is invalid');
+  }
+  if (typeof value.source !== 'string' || !value.source.endsWith('/control-plane.zip')) {
+    reject('Pinned source object path is invalid');
+  }
+}
+
+function validatePinnedActiveFunction(value, input, operatorUserSha256) {
+  if (!plainObject(value)) reject('Pinned active Function baseline is missing');
+  exact(value.state, 'ACTIVE', 'Pinned Function state');
+  exact(value.environment, 'GEN_2', 'Pinned Function generation');
+  validateChangeValues({
+    address: 'google_cloudfunctions2_function.control_plane',
+    change: { after: value },
+  }, input, operatorUserSha256);
+  const generation = value.build_config?.[0]?.source?.[0]?.storage_source?.[0]?.generation;
+  if (!Number.isSafeInteger(generation) || generation < 1) {
+    reject('Pinned Function source generation is invalid');
+  }
+}
+
+function validatePinnedSourceUpdateChanges(plan, input, policy) {
+  if (!Array.isArray(plan.resource_changes)) reject('Terraform resource changes are missing');
+  const managedSeen = new Set();
+  for (const change of plan.resource_changes) {
+    if (!plainObject(change) || typeof change.address !== 'string' || !plainObject(change.change)) {
+      reject('Terraform source update plan contains an invalid resource change');
+    }
+    if (change.mode === 'data') {
+      if (DATA_RESOURCES[change.address] !== change.type
+        || ![['read'], ['no-op']].some((actions) => isDeepStrictEqual(actions, change.change.actions))) {
+        reject('Terraform source update plan contains an unreviewed data read');
+      }
+      continue;
+    }
+    if (change.mode !== 'managed' || MANAGED_RESOURCES[change.address] !== change.type
+      || managedSeen.has(change.address)) {
+      reject('Terraform source update plan contains an unreviewed managed resource');
+    }
+    managedSeen.add(change.address);
+    exact(change.change.actions, PINNED_UPDATE_ACTIONS[change.address], `${change.address}.update actions`);
+    if (change.change.importing !== undefined || change.change.generated_config !== undefined) {
+      reject('Terraform source update plan must not import or generate configuration');
+    }
+    if (isDeepStrictEqual(change.change.actions, ['no-op'])) {
+      exact(change.change.before, change.change.after, `${change.address}.update no-op`);
+    } else if (change.address === 'google_storage_bucket_object.source') {
+      exact(change.change.replace_paths, [['source'], ['name'], ['metadata']], `${change.address}.replace paths`);
+      validatePinnedSourceObjectBaseline(change.change.before, policy.previous);
+    } else if (change.address === 'google_cloudfunctions2_function.control_plane') {
+      validatePinnedActiveFunction(change.change.before, policy.previous, policy.operatorUserSha256);
+      exact(change.change.after.state, 'ACTIVE', 'Updated Function state');
+      exact(change.change.after.environment, 'GEN_2', 'Updated Function generation');
+    } else if (change.address === 'terraform_data.deployment_guard') {
+      const before = change.change.before;
+      const after = change.change.after;
+      if (!plainObject(before) || !plainObject(after)) reject('Deployment guard update is incomplete');
+      validateGuardInput(before.input, policy.previous, 'Deployment guard baseline');
+      exact(before.output, before.input, 'Deployment guard baseline output');
+      exact(before.triggers_replace, null, 'Deployment guard baseline replacement trigger');
+      validateGuardInput(after.input, input, 'Deployment guard update');
+      exact(after.id, before.id, 'Deployment guard stable identity');
+      exact(after.triggers_replace, null, 'Deployment guard update replacement trigger');
+    }
+    validateChangeValues(change, input, policy.operatorUserSha256);
+  }
+  exact([...managedSeen].sort(), Object.keys(MANAGED_RESOURCES).sort(), 'Managed source update changes');
 }
 
 function validateResourceChanges(plan, input, operatorUserSha256) {
@@ -413,6 +593,32 @@ export function validateFailedBuildRecoveryPlanAgainstPolicy(plan, input, policy
   });
 }
 
+export function validatePinnedSourceUpdatePlanAgainstPolicy(plan, input, policy) {
+  validatePlanEnvelope(plan, input, policy);
+  if (!plainObject(policy.previous)
+    || !/^[0-9a-f]{40}$/u.test(policy.previous.repositoryCommit ?? '')
+    || !/^[0-9a-f]{64}$/u.test(policy.previous.sourceArchiveSha256 ?? '')
+    || input.repositoryCommit === policy.previous.repositoryCommit
+    || input.sourceArchiveSha256 === policy.previous.sourceArchiveSha256) {
+    reject('Terraform source update baseline is invalid or unchanged');
+  }
+  validatePinnedSourceUpdateChanges(plan, input, policy);
+  rejectForbiddenIdentities(plan);
+  return Object.freeze({
+    create: 1,
+    update: 2,
+    delete: 1,
+    replacement: 'deterministic-source-object',
+    function: 1,
+    minimum_instances: 0,
+    maximum_instances: 1,
+    ingress: 'internal-only',
+    unauthenticated_invokers: 0,
+    synthetic_invokers: 1,
+    fcm_permissions: 1,
+  });
+}
+
 export function validateInitialWorkloadPlan(plan, input) {
   return validateWorkloadPlanAgainstPolicy(plan, input, {
     operatorUserSha256: OPERATOR_USER_SHA256,
@@ -422,6 +628,13 @@ export function validateInitialWorkloadPlan(plan, input) {
 export function validateFailedBuildRecoveryPlan(plan, input) {
   return validateFailedBuildRecoveryPlanAgainstPolicy(plan, input, {
     operatorUserSha256: OPERATOR_USER_SHA256,
+  });
+}
+
+export function validatePinnedSourceUpdatePlan(plan, input) {
+  return validatePinnedSourceUpdatePlanAgainstPolicy(plan, input, {
+    operatorUserSha256: OPERATOR_USER_SHA256,
+    previous: PINNED_UPDATE_BASELINE,
   });
 }
 
@@ -445,17 +658,24 @@ export function readAndValidateFailedBuildRecoveryPlan(path, input) {
   return validateFailedBuildRecoveryPlan(readPlan(path), input);
 }
 
+export function readAndValidatePinnedSourceUpdatePlan(path, input) {
+  return validatePinnedSourceUpdatePlan(readPlan(path), input);
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const recovery = process.argv[2] === '--recover-failed-build';
-  const offset = recovery ? 1 : 0;
+  const update = process.argv[2] === '--update-pinned-source';
+  const offset = recovery || update ? 1 : 0;
   if (process.argv.length !== 5 + offset) {
-    console.error('Usage: node validate-plan.mjs [--recover-failed-build] <plan.json> <repository-commit> <source-sha256>');
+    console.error('Usage: node validate-plan.mjs [--recover-failed-build|--update-pinned-source] <plan.json> <repository-commit> <source-sha256>');
     process.exitCode = 2;
   } else {
     try {
       const validate = recovery
         ? readAndValidateFailedBuildRecoveryPlan
-        : readAndValidateInitialWorkloadPlan;
+        : update
+          ? readAndValidatePinnedSourceUpdatePlan
+          : readAndValidateInitialWorkloadPlan;
       const summary = validate(process.argv[2 + offset], {
         repositoryCommit: process.argv[3 + offset],
         sourceArchiveSha256: process.argv[4 + offset],
