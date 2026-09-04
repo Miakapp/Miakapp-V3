@@ -96,16 +96,45 @@ main:
                 assign:
                   - probe_stage: auth_exchange
             - exchange_auth_custom_token:
-                call: http.post
-                args:
-                  url: https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken
-                  timeout: 30
-                  query:
-                    key: ${web_config.body.apiKey}
-                  body:
-                    token: ${auth_signature.body.signedJwt}
-                    returnSecureToken: true
-                result: auth_exchange
+                try:
+                  call: http.post
+                  args:
+                    url: https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken
+                    timeout: 30
+                    query:
+                      key: ${web_config.body.apiKey}
+                    body:
+                      token: ${auth_signature.body.signedJwt}
+                      returnSecureToken: true
+                  result: auth_exchange
+                except:
+                  as: auth_exchange_error
+                  steps:
+                    - classify_auth_exchange_error:
+                        switch:
+                          - condition: ${map.get(auth_exchange_error, "code") == 400 and map.get(auth_exchange_error, ["body", "error", "message"]) != null and text.match_regex(map.get(auth_exchange_error, ["body", "error", "message"]), "^INVALID_CUSTOM_TOKEN")}
+                            assign:
+                              - probe_stage: auth_exchange_invalid_custom_token
+                          - condition: ${map.get(auth_exchange_error, "code") == 400 and map.get(auth_exchange_error, ["body", "error", "message"]) != null and text.match_regex(map.get(auth_exchange_error, ["body", "error", "message"]), "^CREDENTIAL_MISMATCH")}
+                            assign:
+                              - probe_stage: auth_exchange_credential_mismatch
+                          - condition: ${map.get(auth_exchange_error, "code") == 400}
+                            assign:
+                              - probe_stage: auth_exchange_bad_request
+                          - condition: ${map.get(auth_exchange_error, "code") == 403}
+                            assign:
+                              - probe_stage: auth_exchange_forbidden
+                          - condition: true
+                            assign:
+                              - probe_stage: auth_exchange_http_error
+                    - clear_auth_exchange_error:
+                        assign:
+                          - auth_exchange_error: null
+                    - raise_bounded_auth_exchange_error:
+                        raise: Auth probe Firebase Auth exchange request failed
+            - enter_auth_exchange_validation_stage:
+                assign:
+                  - probe_stage: auth_exchange_validation
             - retain_auth_identity:
                 assign:
                   - firebase_id_token: ${auth_exchange.body.idToken}

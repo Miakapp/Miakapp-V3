@@ -51,7 +51,7 @@ const PLAN = Buffer.from('synthetic-auth-probe-plan');
 const PLAN_JSON = Buffer.from('{"synthetic":true}\n');
 const CREATED_AT = '2026-09-05T00:00:00.000Z';
 const WORKFLOW_REVISION = '000001-abc';
-const PREVIOUS_WORKFLOW_SOURCE_SHA256 = '36c24d5f0b6235d057d1a0b2b6cc8bcf3ca1dccc7ad84b2195cf770dd4c80c98';
+const PREVIOUS_WORKFLOW_SOURCE_SHA256 = 'afafd6bbfa15d1b9fc238e84644075857e3d32520c88ba8c3b2f4094aa3d83ca';
 const probeRoot = new URL('../auth-probe/', import.meta.url);
 const terraformFiles = readdirSync(probeRoot).filter((name) => name.endsWith('.tf')).sort();
 const terraformSource = terraformFiles
@@ -494,6 +494,12 @@ test('pins a no-secret one-shot Auth and App Check Workflow', () => {
     'initial_user',
     'auth_custom_token',
     'auth_exchange',
+    'auth_exchange_invalid_custom_token',
+    'auth_exchange_credential_mismatch',
+    'auth_exchange_bad_request',
+    'auth_exchange_forbidden',
+    'auth_exchange_http_error',
+    'auth_exchange_validation',
     'app_check_custom_token',
     'app_check_exchange',
     'cloud_run_identity',
@@ -517,6 +523,8 @@ test('pins a no-secret one-shot Auth and App Check Workflow', () => {
   assert.match(WORKFLOW_SOURCE, /synthetic_user_absence_verified: true/);
   assert.match(WORKFLOW_SOURCE, /raise: \$\{"Auth probe failed at bounded stage " \+ probe_stage\}/u);
   assert.doesNotMatch(WORKFLOW_SOURCE, /probe_error\.(?:body|code|message|tags)/u);
+  assert.match(WORKFLOW_SOURCE, /- auth_exchange_error: null/u);
+  assert.doesNotMatch(WORKFLOW_SOURCE, /raise:.*auth_exchange_error/u);
   assert.doesNotMatch(WORKFLOW_SOURCE, /^\s*retry:/mu);
   assert.doesNotMatch(WORKFLOW_SOURCE, /AIza[0-9A-Za-z_-]{30,}|debugToken|private[_ -]?key/iu);
   assert.doesNotMatch(WORKFLOW_SOURCE, /allUsers|allAuthenticatedUsers|\bmiakapp-3\b/);
@@ -750,9 +758,9 @@ test('validates the one successful execution without retaining its identifier', 
     name: executionName,
     state: 'FAILED',
     error: {
-      context: 'RuntimeError: "Auth probe failed at bounded stage auth_exchange"\nin step "require_cleanup"',
+      context: 'RuntimeError: "Auth probe failed at bounded stage auth_exchange_invalid_custom_token"\nin step "require_cleanup"',
     },
-  }, WORKFLOW_REVISION), /bounded stage auth_exchange/u);
+  }, WORKFLOW_REVISION), /bounded stage auth_exchange_invalid_custom_token/u);
   assert.throws(() => validateSuccessfulAuthProbeExecution({
     name: executionName,
     state: 'FAILED',
