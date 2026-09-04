@@ -428,6 +428,20 @@ function expectUnknownAudit(admission: RecordingAdmission): void {
 }
 
 describe('control-plane API dependency fault matrix', () => {
+  test('rejects an active signing key that is absent from the published JWKS', () => {
+    const deps = dependencies();
+    expect(() => createControlPlaneApp({
+      ...deps,
+      config: {
+        ...deps.config,
+        signingPublicJwk: {
+          ...deps.config.signingPublicJwk,
+          kid: 'unpublished-signing-key',
+        },
+      },
+    })).toThrow(/signing key publication is invalid/);
+  });
+
   test('bounds an admission-open outage before invoking the route effect', async () => {
     const admission = new RecordingAdmission(dependencyFailure('admission.open'));
     let createCalls = 0;

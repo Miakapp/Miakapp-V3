@@ -780,10 +780,14 @@ implementations still have to pass the corresponding vertical-slice exit gates.
    ambiguous commit, push/Storage effect and reconciliation evidence. The Local
    Emulator Suite provides neither an App Check nor an FCM service emulator. A
    pinned local cross-repository gate now proves one real emulator Home Key
-   exchange through the MiakAPI provider, scheduled `REAUTH`, and relay
-   production verifier without reconnecting. Real App Check enforcement, FCM
-   acceptance/delivery, production Storage/KMS, trusted edge admission, broader
-   relay key-rotation/cache behavior, network faults, complete Section 18 and
+   exchange through the MiakAPI provider, key-changing scheduled `REAUTH`, and
+   relay production verifier without reconnecting. A deterministic second
+   instance of the production cache proves 32-way refresh coalescing,
+   unknown-`kid` abuse bounds, conditional expiry, fail-closed JWKS outage and
+   bounded recovery. The local lifecycle stops after overlap and activation; it
+   does not remove the retiring key. Real App Check enforcement, FCM
+   acceptance/delivery, production Storage/KMS and Firebase certificates,
+   trusted edge admission, browser and network faults, complete Section 18 and
    staging behavior remain implementation exit gates.
 4. **MiakAPI coordinator API — closed 2026-08-30; broader agent experience open**
    — RFC 0003 defines the public coordinator lifecycle, declarations, state,

@@ -340,9 +340,12 @@ bindings were retired. Digest-pinned public summaries contain no execution ID,
 token, header, trace or raw diagnostic. The separate browser-provider
 attestation gate remains open.
 
-The first pinned local relay-authentication path is closed; browser participation,
-the broader relay matrix, quotas, alerts, rotation and teardown evidence remain
-blockers. Public ingress remains absent.
+The pinned local relay-authentication path now includes signing-key overlap,
+key-changing `REAUTH`, concurrent cache refresh, expiry, unknown-`kid` abuse,
+JWKS outage and bounded recovery. Browser participation, the disconnect matrix,
+live KMS and Firebase certificate behavior, staging quotas and alerts, managed
+retiring-key removal and teardown evidence remain blockers. Public ingress
+remains absent.
 
 Passing the manifest check is evidence, not additional authorization.
 
