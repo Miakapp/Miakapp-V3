@@ -46,6 +46,7 @@ properties below:
 | `LOCAL-15` | Pinned Secret Manager or Cloud KMS adapter receives a dependency failure, malformed response, mismatched version, invalid checksum, mutable signing input or wrong signing key; generated-client debug logging is enabled | Generic failure; no secret disclosure or invalid token; exact environment issuer; one call per pinned secret and at most one signing RPC with automatic retries disabled; SDK clients are not constructed under sensitive logging | `test/unit/cloud-security.test.ts`, `test/unit/google-cloud-clients.test.ts`, and `test/unit/production-config.test.ts` — production cloud security boundaries |
 | `LOCAL-16` | Inactive production runtime receives a cross-environment config, emulator/credential/endpoint/quota/proxy override, foreign Firebase app, wrong App Check app, Firebase JWKS outage, failed FCM send or mismatched Storage bucket | Fail before SDK construction where possible; exact project/issuer/origin/bucket/service-account binding; explicit Firestore Google Auth without ambient ADC; definitive identity rejection remains `401` while provider-key outage is correlated `503`; one raw FCM HTTP v1 attempt with no SDK retry; create-only Storage/read-back; no import-time cloud effect | `test/unit/production-runtime-config.test.ts`, `test/unit/production-runtime.test.ts`, `test/unit/api-fault-matrix.test.ts`, `test/unit/auth.test.ts`, `test/unit/app-check.test.ts`, `test/unit/push.test.ts`, `test/unit/component-storage.test.ts`, and `test/unit/access-token.test.ts` — offline production composition boundaries |
 | `LOCAL-17` | A prepublished signing key becomes active during scheduled SDK `REAUTH`; 32 future-key verifications race one cold relay cache; random unknown keys hit the refresh bound; an expired cache receives a JWKS outage and recovery | The same socket, generation and principal survive activation; one physical refresh serves all 32 callers; unknown keys cause at most one refresh per ten seconds; expiry uses conditional revalidation; outage fails closed and the next bounded retry recovers | `test/emulator/vertical-slice.test.ts`, `scripts/relay-integration-server.mjs`, and Miakapp-Server `internal/auth/key_cache_test.go`, `internal/auth/platform_test.go` plus `test/integration/platform-auth.mjs` at merge [`25efc19`](https://github.com/Miakapp/Miakapp-Server/commit/25efc195dbd913a9e9e486db4cc7de1d836e9058) — pinned cross-repository relay activation/cache gate |
+| `LOCAL-18` | The public browser client connects from one exact TLS Origin, receives initial state and a patch, makes a call, and renews a four-second synthetic user lease | Real Chromium observes state `21`, both calls succeed, the second call finishes after the original lease expires, and the client remains ready on exactly one WebSocket | MiakAPI merge [`5c26eaa`](https://github.com/Miakapp/MiakAPI/commit/5c26eaa830015d94f53bf05fbbb0f5ebda6d290f) and Miakapp-Server `test/integration/miakapi.mjs`, `test/fixture-server`, and `scripts/check-miakapi-integration.sh` at merge [`da49e8b`](https://github.com/Miakapp/Miakapp-Server/commit/da49e8bf6b1bd03acaabd225ab5e96a61dd5dd91) — pinned reciprocal Chromium/relay gate |
 
 The unit API cases execute the real Express router, parsers, token profiles and
 response encoder. Only the external dependency at the named boundary is replaced
@@ -98,6 +99,15 @@ key lifecycle covers initial publication, overlap and activation, but not remova
 of the retiring key. It makes no Cloud KMS, Google Firebase certificate or
 public-ingress call, so `STAGE-01`, `STAGE-02` and `STAGE-08` remain open.
 
+`LOCAL-18` executes the public `miakapi/browser` bundle in real Chromium against
+the Go relay's production session machinery. Its temporary loopback TLS page has
+one exact Origin, restrictive CSP and synthetic user credentials; the semantic
+evidence retains no token or frame. The post-lease call and single-WebSocket
+count prove completed same-socket renewal. The verifier is injected and no live
+Firebase certificate, public edge or network-fault corpus participates, so it
+closes none of `STAGE-02` or `STAGE-08` and does not complete RFC 0005's
+production credential gate.
+
 - [Functions Emulator differences](https://firebase.google.com/docs/emulator-suite/connect_functions#how_the_cloud_functions_emulator_differs_from_production)
 - [Firestore Emulator differences](https://firebase.google.com/docs/emulator-suite/connect_firestore#how_the_cloud_firestore_emulator_differs_from_production)
 - [Storage Emulator differences](https://firebase.google.com/docs/emulator-suite/connect_storage#how_the_cloud_storage_for_firebase_emulator_differs_from_production)
@@ -112,12 +122,14 @@ Run:
 
 cd /path/to/Miakapp-Server
 ./scripts/check-platform-integration.sh /path/to/Miakapp-V3 /path/to/MiakAPI
+./scripts/check-miakapi-integration.sh /path/to/MiakAPI
 ```
 
 The local gate is closed only when every `LOCAL-*` row is represented by a causal
-test and both checks are green. `LOCAL-17` runs in Miakapp-Server CI and in the
-reciprocal Miakapp-V3 `relay-integration` job. No `STAGE-*` row may be relabelled
-local or complete merely because a fake returned the expected error. The reviewable
+test and all three checks are green. `LOCAL-17` and `LOCAL-18` run in
+Miakapp-Server CI and in the reciprocal Miakapp-V3 `relay-integration` job. No
+`STAGE-*` row may be relabelled local or complete merely because a fake returned
+the expected error. The reviewable
 [`../infrastructure/staging/manifest.json`](../infrastructure/staging/manifest.json)
 binds all nine staging rows to the existing isolated, billing-linked project in
 Paris. Its separate bootstrap and foundation Terraform roots are applied and

@@ -54,11 +54,14 @@ blocking.
 
 ### 3.1 Relay trust
 
-The relay is **platform-untrusted**: it receives no platform signing key,
-Firebase credential, Home Key, or push credential. It is not blind to home data.
-Because it terminates WSS, stores the plaintext state, and applies routing and
-allowlists, a home must trust the selected relay operator for confidentiality
-and correct enforcement.
+The relay's production target is **platform-untrusted**: it receives no platform
+signing key, persistent Firebase service credential, Home Key, or push
+credential. It is not blind to home data. Because it terminates WSS, stores the
+plaintext state, and applies routing and allowlists, a home must trust the
+selected relay operator for confidentiality and correct enforcement. The
+Firebase-direct trusted-relay alpha also receives a transient user ID token; its
+project-wide bearer authority blocks arbitrary relay selection until the user
+credential is audience-bound as required by RFC 0005.
 
 End-to-end encryption through a blind relay is a separate future design. Until
 then, documentation and product claims must not imply that self-hosting the
@@ -127,7 +130,7 @@ the production relay with a permanent legacy protocol.
 | Repository | Miakapp 4 responsibility |
 |---|---|
 | `Miakapp-V3` | Canonical ecosystem docs, React platform shell, component host, Firebase rules/configuration, and web onboarding |
-| `Miakapp-Server` | Go relay and protocol-conformance implementation; no platform secrets or product business logic |
+| `Miakapp-Server` | Go relay and protocol-conformance implementation; no persistent platform secrets or product business logic |
 | `MiakAPI` | TypeScript/Bun SDK, browser protocol client where shareable, CLI, coordinator template, and protocol fixtures tooling |
 | `node-red-contrib-MiakAPI` | Migration adapter and deprecation/onboarding path; no new product-specific business logic |
 | `Colmon-Cloud` | Deployment and private migration validation for the reference installation; never the source of public platform contracts |
@@ -212,23 +215,34 @@ Exit gate: no silent state divergence or duplicate test side effect across the
 defined disconnect matrix.
 
 Implementation status (2026-09-04): the real TypeScript SDK and Go relay pass
-their independent conformance suites and a pinned cross-repository gate now
-drives one synthetic owner through Firebase Auth and Firestore, creates a Home
-Key through the real control-plane router, exchanges it through MiakAPI, and
-binds both `HELLO` and scheduled `REAUTH` in the relay's production verifier.
-The observed session stayed in generation 1 with one principal and no reconnect
-while `REAUTH` changed to a prepublished future signing key. A separate
-fake-clock instance of the same production cache proves one shared refresh for
-32 concurrent future-key tokens, the ten-second random-`kid` abuse bound,
+their independent conformance suites. One pinned cross-repository gate drives a
+synthetic owner through Firebase Auth and Firestore, creates a Home Key through
+the real control-plane router, exchanges it through MiakAPI, and binds both
+`HELLO` and scheduled `REAUTH` in the relay's production verifier. The observed
+session stayed in generation 1 with one principal and no reconnect while
+`REAUTH` changed to a prepublished future signing key. A separate fake-clock
+instance of the same production cache proves one shared refresh for 32
+concurrent future-key tokens, the ten-second random-`kid` abuse bound,
 conditional expiry revalidation, fail-closed outage handling and bounded
-recovery. This gate is pinned by Miakapp-V3 merge
+recovery. This authentication gate is pinned by Miakapp-V3 merge
 [`259173c`](https://github.com/Miakapp/Miakapp-V3/commit/259173ca730f0763710b7c99afa163ba26e70bb2)
 and Miakapp-Server merge
 [`25efc19`](https://github.com/Miakapp/Miakapp-Server/commit/25efc195dbd913a9e9e486db4cc7de1d836e9058).
 It exercises initial publication, overlap and activation; retiring-key removal
-is not part of this local runtime. An authenticated browser in the same path,
-the disconnect matrix, live KMS and Firebase certificate behavior, public
-ingress and staging acceptance remain open, so this workstream is not complete.
+is not part of this local runtime.
+
+A second reciprocal gate now replaces the Node user double with the public
+`miakapi/browser` client in real Chromium. It pins MiakAPI merge
+[`5c26eaa`](https://github.com/Miakapp/MiakAPI/commit/5c26eaa830015d94f53bf05fbbb0f5ebda6d290f)
+and Miakapp-Server merge
+[`da49e8b`](https://github.com/Miakapp/Miakapp-Server/commit/da49e8bf6b1bd03acaabd225ab5e96a61dd5dd91),
+then proves enrollment, initial snapshot, one patch, call/result and a second
+successful call after the original user lease expires, still on one WebSocket
+with no reconnect. RFC 0005 defines the resulting trusted-host API and records
+that the direct Firebase bearer makes arbitrary relay selection unsafe. The
+audience-bound user credential, complete disconnect matrix, live KMS/Firebase
+certificate behavior, public ingress and staging acceptance remain open, so
+this workstream is not complete.
 
 ### D. Component platform vertical slice
 
@@ -391,9 +405,10 @@ Deliverables:
    and the relay's production verifier on one uninterrupted session. Its
    deterministic cache probe covers concurrent refresh coalescing,
    cache-expiry recovery, unknown-`kid` abuse limits and an unavailable JWKS.
-   Live managed-service rotation and retiring-key removal, browser participation,
-   the disconnect matrix, network faults and staging admission evidence remain
-   open.
+   Live managed-service rotation and retiring-key removal, an audience-bound
+   user relay credential, the complete disconnect matrix, network faults and
+   staging admission evidence remain open. Real Chromium now participates in the
+   separate pinned SDK/relay gate with synthetic credentials.
 
 Exit gate: a compromised relay cannot obtain a Home Key or platform credential,
 and a Home Key cannot exercise capabilities outside its declared scopes.
@@ -534,10 +549,21 @@ current consumer.
    production verifier without reconnecting. An isolated instance of that same
    cache closes the local concurrent-refresh, expiry, unknown-`kid`, outage and
    recovery matrix. This runtime stops after overlap and activation; retiring-key
-   removal remains untested. Live KMS signing-key and secret rotation, browser
-   App Check provider attestation, source/edge admission, monitoring, migration
-   rehearsal and real staging fault evidence remain required before closing
-   relay-integration and staging-only RFC 0004 Section 18 gates.
+   removal remains untested. A separate pinned gate now runs the real public
+   browser client in Chromium and closes its narrow snapshot, patch, call and
+   same-socket post-lease reauthentication path. Live KMS signing-key and secret
+   rotation, audience-bound user relay credentials, browser App Check provider
+   attestation, source/edge admission, monitoring, migration rehearsal and real
+   staging fault evidence remain required before closing relay-integration and
+   staging-only RFC 0004 Section 18 gates.
+9. **Done 2026-09-04** — define the trusted browser client in RFC 0005, ship the
+   isolated `miakapi/browser` entry point, and replace the relay's Node user
+   double with real Chromium evidence for snapshot, patch, call/result and
+   completed same-socket reauthentication after the original lease expires.
+10. **Next** — replace the Firebase-direct relay credential with an
+    audience/home/user/role-bound short lease before enabling arbitrary
+    self-hosted relay selection or wiring the client into the production web
+    shell.
 
 ## 9. Evidence that would change this plan
 
@@ -551,13 +577,15 @@ shows that the reference installation can move safely without it. Component
 sandboxing may be relaxed only if home bundles are reclassified as audited
 first-party Miakapp releases, not merely code produced for a tenant.
 
-Overall confidence in this sequencing, protocol 1.0 wire format, component runtime
-architecture selection, coordinator/migration API boundary and control-plane
-contract is **high** after cross-language conformance, the cross-browser hostile
-subset and the bounded contract corpora. Confidence in complete runtime
-conformance, the real Node-RED adapter, production push delivery, the React
-adapter and production Firebase artifact delivery remains **medium** until their
-vertical slices exercise the accepted contracts end to end. Confidence in the
-now-executed owner/Home-Key/access-token, synthetic push and component-publication
-emulator paths is **high within their documented local boundaries**, but it is
-not production or staging evidence.
+Overall confidence in this sequencing, protocol 1.0 wire format, component
+runtime architecture selection, coordinator/migration API boundary and
+control-plane contract is **high** after cross-language conformance, the
+cross-browser hostile subset and the bounded contract corpora. Confidence in the
+trusted browser client's narrow snapshot/patch/call/reauthentication path is
+**high within its synthetic Chromium boundary**. Confidence in complete runtime
+conformance, audience-bound user authentication, the real Node-RED adapter,
+production push delivery, the React adapter and production Firebase artifact
+delivery remains **medium** until their vertical slices exercise the accepted
+contracts end to end. Confidence in the now-executed owner/Home-Key/access-token,
+synthetic push and component-publication emulator paths is **high within their
+documented local boundaries**, but it is not production or staging evidence.

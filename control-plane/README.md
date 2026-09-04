@@ -71,6 +71,7 @@ building this package and the pinned MiakAPI checkout:
 
 ```sh
 ./scripts/check-platform-integration.sh /absolute/path/to/Miakapp-V3 /absolute/path/to/MiakAPI
+./scripts/check-miakapi-integration.sh /absolute/path/to/MiakAPI
 ```
 
 That gate starts only the Auth and Firestore emulators, wraps this exact Express
@@ -85,6 +86,14 @@ performs `initial` and scheduled `reauth` exchanges through the real route. Both
 caches run the production verifier. Build-tagged constructors and authenticated
 control endpoints exist only in the loopback fixture and are absent from normal
 relay builds.
+
+The second command is the independent browser/relay gate. It serves the public
+`miakapi/browser` fixture from ephemeral loopback TLS and exercises snapshot,
+patch, call/result and completed post-lease reauthentication in real Chromium on
+one WebSocket. It uses only synthetic credentials and emits a closed semantic
+summary. Its pinned requirements, privacy boundary and exact expected output are
+documented in the
+[browser-to-relay integration runbook](../docs/operations/2026-09-04-browser-relay-integration.md).
 
 Firebase Functions accepts only a major Node version in `package.json`, so the
 deployment manifest retains `"node": "22"`. The executable preflight enforces
