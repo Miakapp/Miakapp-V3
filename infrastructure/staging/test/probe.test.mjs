@@ -11,12 +11,17 @@ import {
   WORKFLOW_NAME,
   WORKFLOW_SOURCE,
   WORKFLOW_SOURCE_SHA256,
+  WORKLOAD_COMMIT,
+  WORKLOAD_FUNCTION_REVISION,
+  WORKLOAD_SOURCE_SHA256,
   assertSafeWorkloadEnvironment,
   buildProbePlanMetadata,
   probeApplyAuthorization,
   probeInvokeAuthorization,
+  probeRecoveryAuthorization,
   validateProbeApplyAuthorization,
   validateProbeInvokeAuthorization,
+  validateProbeRecoveryAuthorization,
   validateProbePlanMetadata,
 } from '../probe/contract.mjs';
 import { validateProbeRoot } from '../probe/guard.mjs';
@@ -24,6 +29,7 @@ import {
   observeProbeDeployment,
   validateSuccessfulExecution,
 } from '../probe/invoke.mjs';
+import { validateFailedExecution } from '../probe/recover.mjs';
 import { validateProbePlanAgainstPolicy } from '../probe/validate-plan.mjs';
 
 const COMMIT = '1'.repeat(40);
@@ -38,6 +44,7 @@ const localsSource = readFileSync(new URL('locals.tf', probeRoot), 'utf8');
 const planSource = readFileSync(new URL('plan.mjs', probeRoot), 'utf8');
 const applySource = readFileSync(new URL('apply.mjs', probeRoot), 'utf8');
 const invokeSource = readFileSync(new URL('invoke.mjs', probeRoot), 'utf8');
+const recoverSource = readFileSync(new URL('recover.mjs', probeRoot), 'utf8');
 const lockSource = readFileSync(new URL('.terraform.lock.hcl', probeRoot), 'utf8');
 const checkSource = readFileSync(new URL('../check.sh', import.meta.url), 'utf8');
 const workflowResource = `projects/${PROJECT_ID}/locations/europe-west9/workflows/${WORKFLOW_NAME}`;
@@ -179,6 +186,41 @@ function successfulExecution() {
   };
 }
 
+function failedExecution() {
+  return {
+    name: `projects/1072737219170/locations/europe-west9/workflows/${WORKFLOW_NAME}/executions/00000000-0000-4000-8000-000000000001`,
+    state: 'FAILED',
+    workflowRevisionId: '000001-abc',
+    startTime: '2026-09-04T01:14:35.985075630Z',
+    endTime: '2026-09-04T01:14:38.074599578Z',
+    error: {
+      context: 'HTTP server responded with error code 503\nin step "invoke", routine "main", line: 4',
+      payload: JSON.stringify({
+        body: { error: 'service_unavailable' },
+        code: 503,
+        headers: {
+          'Alt-Svc': 'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000',
+          'Cache-Control': 'no-store',
+          'Content-Length': '31',
+          'Content-Type': 'application/json; charset=utf-8',
+          Date: 'Fri, 04 Sep 2026 01:14:38 GMT',
+          Server: 'Google Frontend',
+          'X-Cloud-Trace-Context': `${'a'.repeat(32)};o=1`,
+        },
+        message: 'HTTP server responded with error code 503',
+        tags: ['HttpError'],
+      }),
+      stackTrace: {
+        elements: [{
+          position: { column: '9', length: '4', line: '4' },
+          routine: 'main',
+          step: 'invoke',
+        }],
+      },
+    },
+  };
+}
+
 test('contains only the fixed zero-idle private invocation graph', () => {
   assert.doesNotThrow(() => validateProbeRoot(probeRoot));
   assert.match(terraformSource, /prefix = "terraform\/probe"/);
@@ -236,6 +278,19 @@ test('separates deployment from the exact one-shot invocation', () => {
   assert.match(invokeSource, /--disable-concurrency-quota-overflow-buffering/);
   assert.match(invokeSource, /validateProbeInvokeAuthorization/);
   assert.doesNotMatch(invokeSource, /--data|retry:|setTimeout|curl|fetch\(/);
+});
+
+test('limits recovery to the pinned failure and one corrected execution', () => {
+  assert.equal((recoverSource.match(/'workflows', 'run'/g) ?? []).length, 1);
+  assert.match(recoverSource, /expectedExecutions: 1/);
+  assert.match(recoverSource, /expectedExecutions: 2/);
+  assert.match(recoverSource, /validateProbeRecoveryAuthorization/);
+  assert.match(recoverSource, /WORKLOAD_FUNCTION_REVISION/);
+  assert.match(recoverSource, /attempts_after_correction: 1/);
+  assert.doesNotMatch(recoverSource, /--data|retry:|setTimeout|curl|fetch\(/);
+  assert.equal(WORKLOAD_COMMIT, '72bae493e496b7dbaae38bcba92dfcc6d604644d');
+  assert.equal(WORKLOAD_SOURCE_SHA256, '6cd045394b24a644d6b1ce9c431bcb73267fb894b7dc0b029d6c0be0488a9433');
+  assert.equal(WORKLOAD_FUNCTION_REVISION, 'control-plane-00002-kux');
 });
 
 test('locks the only provider for both CI platforms and runs the root in the main gate', () => {
@@ -306,6 +361,23 @@ test('binds short-lived apply and invocation authorizations to exact artifacts',
   const invokeAuthorization = probeInvokeAuthorization('000001-abc', COMMIT);
   assert.doesNotThrow(() => validateProbeInvokeAuthorization(invokeAuthorization, '000001-abc', COMMIT));
   assert.throws(() => validateProbeInvokeAuthorization(invokeAuthorization, '000002-def', COMMIT));
+  const recoveryAuthorization = probeRecoveryAuthorization(
+    '000001-abc',
+    'control-plane-00002-kux',
+    COMMIT,
+  );
+  assert.doesNotThrow(() => validateProbeRecoveryAuthorization(
+    recoveryAuthorization,
+    '000001-abc',
+    'control-plane-00002-kux',
+    COMMIT,
+  ));
+  assert.throws(() => validateProbeRecoveryAuthorization(
+    recoveryAuthorization,
+    '000001-abc',
+    'control-plane-00003-bad',
+    COMMIT,
+  ));
 });
 
 test('rejects ambient credentials and unreviewed files', () => {
@@ -338,7 +410,7 @@ test('accepts only the exact active Workflow with the requested execution count'
   assert.equal(result.workflow.revision, '000001-abc');
   assert.equal(result.executions.length, 0);
   assert.equal(calls.length, 3);
-  assert.match(calls[2].join(' '), /--limit=2/);
+  assert.match(calls[2].join(' '), /--limit=3/);
 
   const changed = workflow();
   changed.sourceContents += 'retry: ${http.default_retry}\n';
@@ -377,5 +449,37 @@ test('validates the exact successful discovery result without retaining its exec
     const execution = successfulExecution();
     mutate(execution);
     assert.throws(() => validateSuccessfulExecution(execution, { revision: '000001-abc' }));
+  }
+});
+
+test('accepts only the pinned failed execution without retaining its trace context', () => {
+  const execution = failedExecution();
+  const result = validateFailedExecution(execution, { revision: '000001-abc' });
+  assert.deepEqual(result, {
+    name: execution.name,
+    state: 'FAILED',
+    workflow_revision: '000001-abc',
+    duration_milliseconds: 2089,
+    response: { status: 503, error: 'service_unavailable' },
+  });
+  assert.doesNotMatch(JSON.stringify(result), /X-Cloud-Trace|a{32}/);
+  for (const mutate of [
+    (value) => { value.state = 'SUCCEEDED'; },
+    (value) => { value.startTime = '2026-09-04T01:14:35.985075631Z'; },
+    (value) => { value.error.context = 'different step'; },
+    (value) => {
+      const payload = JSON.parse(value.error.payload);
+      payload.code = 500;
+      value.error.payload = JSON.stringify(payload);
+    },
+    (value) => {
+      const payload = JSON.parse(value.error.payload);
+      payload.headers['X-Cloud-Trace-Context'] = 'not-a-trace';
+      value.error.payload = JSON.stringify(payload);
+    },
+  ]) {
+    const value = failedExecution();
+    mutate(value);
+    assert.throws(() => validateFailedExecution(value, { revision: '000001-abc' }));
   }
 });
