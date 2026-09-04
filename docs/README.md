@@ -54,11 +54,15 @@ application/dependency fault matrix are now local gates under
 [`../control-plane/FAULT-MATRIX.md`](../control-plane/FAULT-MATRIX.md). Live
 network and managed-service rows remain implementation gates. A pinned local
 cross-repository path now proves real Home Key exchange, SDK `HELLO` and
-scheduled `REAUTH`, and relay production verification without reconnecting;
-browser participation, signing-key rotation, cache-expiry/unknown-`kid` behavior
-and staging acceptance remain open. The staging manifest makes their intended
-resource, cost and isolation boundary reviewable without pretending that every
-production adapter or a public edge already exists.
+scheduled key-changing `REAUTH`, and relay production verification without
+reconnecting. Its deterministic cache probe covers 32-way refresh coalescing,
+unknown-`kid` abuse bounds, conditional expiry, fail-closed JWKS outage and
+bounded recovery. It covers signing-key overlap and activation, not managed
+retiring-key removal. Browser participation, the disconnect matrix, live KMS
+and Firebase certificate behavior, public ingress and staging acceptance remain
+open. The staging manifest makes their intended resource, cost and isolation
+boundary reviewable without pretending that every production adapter or a
+public edge already exists.
 
 Repository-specific implementation plans must link back to these documents and
 must not redefine a shared contract locally.
