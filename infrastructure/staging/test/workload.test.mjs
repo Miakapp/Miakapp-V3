@@ -6,21 +6,27 @@ import test from 'node:test';
 import {
   PROJECT_ID,
   buildPlanMetadata,
+  buildWorkloadUpdatePlanMetadata,
   assertSafeWorkloadEnvironment,
   validatePlanMetadata,
+  validateWorkloadUpdatePlanMetadata,
   workloadAuthorization,
+  workloadUpdateAuthorization,
 } from '../workload/contract.mjs';
 import { validateWorkloadRoot } from '../workload/guard.mjs';
 import { validateWorkloadEvidence } from '../workload/evidence.mjs';
 import { observeDeployedWorkload } from '../workload/inventory.mjs';
 import {
   validateFailedBuildRecoveryPlanAgainstPolicy,
+  validatePinnedSourceUpdatePlanAgainstPolicy,
   validateWorkloadPlanAgainstPolicy,
 } from '../workload/validate-plan.mjs';
 
 const COMMIT = '1'.repeat(40);
 const SOURCE_BYTES = Buffer.from('synthetic-function-source');
 const SOURCE_SHA256 = createHash('sha256').update(SOURCE_BYTES).digest('hex');
+const PREVIOUS_COMMIT = '2'.repeat(40);
+const PREVIOUS_SOURCE_SHA256 = '3'.repeat(64);
 const OPERATOR_EMAIL = 'operator@example.test';
 const OPERATOR_SHA256 = createHash('sha256').update(OPERATOR_EMAIL).digest('hex');
 const RUNTIME_CONFIG = readFileSync(new URL('../activation/runtime-config.json', import.meta.url), 'utf8');
@@ -29,6 +35,8 @@ const BUILD_ACCOUNT = `miakapp-control-build@${PROJECT_ID}.iam.gserviceaccount.c
 const PROBE_ACCOUNT = `miakapp-staging-probe@${PROJECT_ID}.iam.gserviceaccount.com`;
 const FCM_ROLE = `projects/${PROJECT_ID}/roles/miakapp.controlPlaneFcmSender`;
 const GCF_SOURCE_BUCKET = 'gcf-v2-sources-1072737219170-europe-west9';
+const SOURCE_BUCKET = 'miakapp-v4-staging-function-source-1072737219170';
+const REPOSITORY = `projects/${PROJECT_ID}/locations/europe-west9/repositories/miakapp-control-plane`;
 
 const MANAGED_RESOURCES = Object.freeze({
   'google_artifact_registry_repository.function': 'google_artifact_registry_repository',
@@ -82,9 +90,11 @@ function plannedValue(address) {
       };
     case 'google_storage_bucket_object.source':
       return {
+        bucket: SOURCE_BUCKET,
         name: `sources/${SOURCE_SHA256}.zip`,
         content_type: 'application/zip',
         metadata: { sha256: SOURCE_SHA256, 'repository-commit': COMMIT },
+        source: '/private/tmp/control-plane.zip',
       };
     case 'google_project_iam_custom_role.fcm_sender':
       return {
@@ -94,7 +104,11 @@ function plannedValue(address) {
         stage: 'GA',
       };
     case 'google_project_iam_member.build_logs':
-      return { role: 'roles/logging.logWriter' };
+      return {
+        ...common,
+        role: 'roles/logging.logWriter',
+        member: `serviceAccount:${BUILD_ACCOUNT}`,
+      };
     case 'google_project_iam_member.build_gcf_source_reader':
       return {
         ...common,
@@ -106,10 +120,26 @@ function plannedValue(address) {
           expression: `resource.type == "storage.googleapis.com/Object" && resource.name.startsWith("projects/_/buckets/${GCF_SOURCE_BUCKET}/objects/")`,
         }],
       };
+    case 'google_project_iam_member.runtime_fcm':
+      return {
+        ...common,
+        role: FCM_ROLE,
+        member: `serviceAccount:${RUNTIME_ACCOUNT}`,
+      };
     case 'google_storage_bucket_iam_member.build_source_reader':
-      return { role: 'roles/storage.objectViewer' };
+      return {
+        bucket: SOURCE_BUCKET,
+        role: 'roles/storage.objectViewer',
+        member: `serviceAccount:${BUILD_ACCOUNT}`,
+      };
     case 'google_artifact_registry_repository_iam_member.build_writer':
-      return { role: 'roles/artifactregistry.writer' };
+      return {
+        ...common,
+        location: 'europe-west9',
+        repository: 'miakapp-control-plane',
+        role: 'roles/artifactregistry.writer',
+        member: `serviceAccount:${BUILD_ACCOUNT}`,
+      };
     case 'google_service_account_iam_member.probe_operator':
       return {
         role: 'roles/iam.serviceAccountOpenIdTokenCreator',
@@ -121,13 +151,27 @@ function plannedValue(address) {
         location: 'europe-west9',
         name: 'control-plane',
         role: 'roles/run.invoker',
+        member: `serviceAccount:${PROBE_ACCOUNT}`,
       };
     case 'google_cloudfunctions2_function.control_plane':
       return {
         ...common,
         name: 'control-plane',
         location: 'europe-west9',
-        build_config: [{ runtime: 'nodejs22', entry_point: 'controlPlane' }],
+        build_config: [{
+          runtime: 'nodejs22',
+          entry_point: 'controlPlane',
+          docker_repository: REPOSITORY,
+          service_account: `projects/${PROJECT_ID}/serviceAccounts/${BUILD_ACCOUNT}`,
+          environment_variables: {},
+          worker_pool: '',
+          source: [{
+            storage_source: [{
+              bucket: SOURCE_BUCKET,
+              object: `sources/${SOURCE_SHA256}.zip`,
+            }],
+          }],
+        }],
         service_config: [{
           available_memory: '256M',
           available_cpu: '1',
@@ -138,6 +182,12 @@ function plannedValue(address) {
           ingress_settings: 'ALLOW_INTERNAL_ONLY',
           all_traffic_on_latest_revision: true,
           service_account_email: RUNTIME_ACCOUNT,
+          vpc_connector: '',
+          vpc_connector_egress_settings: '',
+          direct_vpc_network_interface: [],
+          secret_environment_variables: [],
+          secret_volumes: [],
+          binary_authorization_policy: '',
           environment_variables: {
             MIAKAPP_DEPLOYMENT_COMMIT: COMMIT,
             MIAKAPP_RUNTIME_CONFIG_JSON: RUNTIME_CONFIG,
@@ -269,6 +319,148 @@ function validateSyntheticRecoveryPlan(plan = syntheticRecoveryPlan()) {
   });
 }
 
+function guardInput(repositoryCommit, sourceArchiveSha256) {
+  return {
+    bootstrap: {
+      apply_provider: 'projects/1072737219170/locations/global/workloadIdentityPools/miakapp-github/providers/staging-apply',
+      bootstrap_prefix: 'terraform/bootstrap',
+      component_bucket: 'miakapp-v4-staging-components',
+      deployer_service_account: 'miakapp-tf-apply@miakapp-v4-staging.iam.gserviceaccount.com',
+      foundation_prefix: 'terraform/foundation',
+      github_repository_id: '354682190',
+      github_repository_owner_id: '83046838',
+      plan_provider: 'projects/1072737219170/locations/global/workloadIdentityPools/miakapp-github/providers/staging-plan',
+      planner_service_account: 'miakapp-tf-plan@miakapp-v4-staging.iam.gserviceaccount.com',
+      project_id: PROJECT_ID,
+      project_number: '1072737219170',
+      region: 'europe-west9',
+      runtime_service_account: RUNTIME_ACCOUNT,
+      schema: 'miakapp.staging-bootstrap/1',
+      state_bucket: 'miakapp-v4-staging-tfstate-1072737219170',
+    },
+    foundation: {
+      component_bucket: 'miakapp-v4-staging-components',
+      firestore_database: '(default)',
+      project_id: PROJECT_ID,
+      project_number: '1072737219170',
+      region: 'europe-west9',
+      runtime_service_account: RUNTIME_ACCOUNT,
+      secret_ids: [
+        'miakapp-audit-hmac',
+        'miakapp-component-hmac',
+        'miakapp-home-key-pepper',
+        'miakapp-network-hmac',
+        'miakapp-push-hmac',
+      ],
+      signing_key: `projects/${PROJECT_ID}/locations/europe-west9/keyRings/${PROJECT_ID}/cryptoKeys/access-token-signing`,
+    },
+    runtime_config: createHash('sha256').update(RUNTIME_CONFIG).digest('hex'),
+    source_archive: sourceArchiveSha256,
+    source_commit: repositoryCommit,
+  };
+}
+
+function sourceObjectValue(repositoryCommit, sourceArchiveSha256, generation) {
+  return {
+    bucket: SOURCE_BUCKET,
+    name: `sources/${sourceArchiveSha256}.zip`,
+    content_type: 'application/zip',
+    metadata: {
+      'repository-commit': repositoryCommit,
+      sha256: sourceArchiveSha256,
+    },
+    source: `/private/tmp/${sourceArchiveSha256}/control-plane.zip`,
+    deletion_policy: 'DELETE',
+    storage_class: 'STANDARD',
+    event_based_hold: false,
+    temporary_hold: false,
+    ...(generation === undefined ? {} : { generation }),
+  };
+}
+
+function functionValue(repositoryCommit, sourceArchiveSha256, generation) {
+  const value = structuredClone(plannedValue('google_cloudfunctions2_function.control_plane'));
+  value.build_config[0].source[0].storage_source[0].object = `sources/${sourceArchiveSha256}.zip`;
+  if (generation !== undefined) {
+    value.build_config[0].source[0].storage_source[0].generation = generation;
+  }
+  value.service_config[0].environment_variables = {
+    LOG_EXECUTION_ID: 'true',
+    MIAKAPP_DEPLOYMENT_COMMIT: repositoryCommit,
+    MIAKAPP_RUNTIME_CONFIG_JSON: RUNTIME_CONFIG,
+    MIAKAPP_SOURCE_ARCHIVE_SHA256: sourceArchiveSha256,
+  };
+  return value;
+}
+
+function syntheticPinnedSourceUpdatePlan() {
+  const plan = syntheticPlan();
+  for (const resource of plan.resource_changes) {
+    resource.change.actions = ['no-op'];
+    resource.change.before = structuredClone(resource.change.after);
+  }
+
+  const source = plan.resource_changes.find(
+    ({ address }) => address === 'google_storage_bucket_object.source',
+  );
+  source.change = {
+    actions: ['delete', 'create'],
+    before: sourceObjectValue(PREVIOUS_COMMIT, PREVIOUS_SOURCE_SHA256, 123),
+    after: sourceObjectValue(COMMIT, SOURCE_SHA256),
+    replace_paths: [['source'], ['name'], ['metadata']],
+  };
+
+  const functionResource = plan.resource_changes.find(
+    ({ address }) => address === 'google_cloudfunctions2_function.control_plane',
+  );
+  functionResource.change = {
+    actions: ['update'],
+    before: {
+      ...functionValue(PREVIOUS_COMMIT, PREVIOUS_SOURCE_SHA256, 123),
+      state: 'ACTIVE',
+      environment: 'GEN_2',
+    },
+    after: {
+      ...functionValue(COMMIT, SOURCE_SHA256),
+      state: 'ACTIVE',
+      environment: 'GEN_2',
+    },
+  };
+
+  const deploymentGuard = plan.resource_changes.find(
+    ({ address }) => address === 'terraform_data.deployment_guard',
+  );
+  const previousGuardInput = guardInput(PREVIOUS_COMMIT, PREVIOUS_SOURCE_SHA256);
+  deploymentGuard.change = {
+    actions: ['update'],
+    before: {
+      id: 'stable-guard-id',
+      input: previousGuardInput,
+      output: structuredClone(previousGuardInput),
+      triggers_replace: null,
+    },
+    after: {
+      id: 'stable-guard-id',
+      input: guardInput(COMMIT, SOURCE_SHA256),
+      triggers_replace: null,
+    },
+  };
+  return plan;
+}
+
+function validateSyntheticPinnedSourceUpdatePlan(plan = syntheticPinnedSourceUpdatePlan()) {
+  return validatePinnedSourceUpdatePlanAgainstPolicy(plan, {
+    repositoryCommit: COMMIT,
+    sourceArchiveSha256: SOURCE_SHA256,
+  }, {
+    operatorUserSha256: OPERATOR_SHA256,
+    previous: {
+      repositoryCommit: PREVIOUS_COMMIT,
+      sourceArchiveSha256: PREVIOUS_SOURCE_SHA256,
+    },
+  });
+}
+
 test('accepts only the reviewed initial workload graph', () => {
   assert.deepEqual(validateSyntheticPlan(), {
     create: 15,
@@ -313,6 +505,35 @@ test('accepts only the bounded in-place recovery from the failed first build', (
     const plan = syntheticRecoveryPlan();
     mutate(plan);
     assert.throws(() => validateSyntheticRecoveryPlan(plan));
+  }
+});
+
+test('accepts only the one pinned active source correction', () => {
+  assert.deepEqual(validateSyntheticPinnedSourceUpdatePlan(), {
+    create: 1,
+    update: 2,
+    delete: 1,
+    replacement: 'deterministic-source-object',
+    function: 1,
+    minimum_instances: 0,
+    maximum_instances: 1,
+    ingress: 'internal-only',
+    unauthenticated_invokers: 0,
+    synthetic_invokers: 1,
+    fcm_permissions: 1,
+  });
+  for (const mutate of [
+    (plan) => { plannedChange(plan, 'google_cloudfunctions2_function.control_plane').actions = ['delete', 'create']; },
+    (plan) => { plannedChange(plan, 'google_cloudfunctions2_function.control_plane').before.state = 'FAILED'; },
+    (plan) => { plannedResource(plan, 'google_cloudfunctions2_function.control_plane').service_config[0].ingress_settings = 'ALLOW_ALL'; },
+    (plan) => { plannedChange(plan, 'google_storage_bucket_object.source').replace_paths.push(['bucket']); },
+    (plan) => { plannedChange(plan, 'google_storage_bucket_object.source').before.metadata.sha256 = '4'.repeat(64); },
+    (plan) => { plannedChange(plan, 'google_project_iam_member.runtime_fcm').actions = ['update']; },
+    (plan) => { plannedChange(plan, 'terraform_data.deployment_guard').after.input.foundation.project_id = 'foreign-project'; },
+  ]) {
+    const plan = syntheticPinnedSourceUpdatePlan();
+    mutate(plan);
+    assert.throws(() => validateSyntheticPinnedSourceUpdatePlan(plan));
   }
 });
 
@@ -381,6 +602,28 @@ test('binds authorization and expiring metadata to exact private bytes', () => {
   });
   assert.equal(validatePlanMetadata(metadata, Date.parse(createdAt)), metadata);
   assert.throws(() => validatePlanMetadata(metadata, Date.parse(metadata.expires_at) + 1));
+
+  assert.equal(
+    workloadUpdateAuthorization(planBytes, COMMIT),
+    `update-private-workload:${PROJECT_ID}:${createHash('sha256').update(planBytes).digest('hex')}:${COMMIT}`,
+  );
+  const updateMetadata = buildWorkloadUpdatePlanMetadata({
+    repositoryCommit: COMMIT,
+    createdAt,
+    packageResult: {
+      archive_sha256: SOURCE_SHA256,
+      archive_bytes: 42,
+      files: ['package.json', 'lib/production-entrypoint.js'],
+    },
+    planBytes,
+    planJsonBytes: Buffer.from('{}'),
+    summary: { create: 1, update: 2, delete: 1 },
+  });
+  assert.equal(
+    validateWorkloadUpdatePlanMetadata(updateMetadata, Date.parse(createdAt)),
+    updateMetadata,
+  );
+  assert.throws(() => validatePlanMetadata(updateMetadata, Date.parse(createdAt)));
 });
 
 test('rejects ambient cloud overrides and accepts only the selected confirmation', () => {
@@ -545,6 +788,18 @@ test('rejects copied Function source bytes that differ from the deterministic pa
 
 test('workload root guard accepts only the closed executable inventory', () => {
   assert.doesNotThrow(() => validateWorkloadRoot(new URL('../workload/', import.meta.url)));
+});
+
+test('keeps the pinned source updater on a saved Terraform plan without live requests', () => {
+  const planSource = readFileSync(new URL('../workload/update-plan.mjs', import.meta.url), 'utf8');
+  const applySource = readFileSync(new URL('../workload/update-apply.mjs', import.meta.url), 'utf8');
+  assert.match(planSource, /readAndValidatePinnedSourceUpdatePlan/);
+  assert.match(planSource, /buildWorkloadUpdatePlanMetadata/);
+  assert.match(applySource, /readAndValidatePinnedSourceUpdatePlan/);
+  assert.match(applySource, /validateWorkloadUpdateAuthorization/);
+  assert.match(applySource, /'apply', '-input=false', '-auto-approve', '-no-color', planPath/);
+  assert.match(applySource, /observeDeployedWorkload/);
+  assert.doesNotMatch(`${planSource}\n${applySource}`, /\b(?:curl|destroy)\b|functions deploy|run deploy|executions run/u);
 });
 
 test('pins the exact non-secret live workload result', () => {

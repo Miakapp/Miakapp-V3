@@ -54,6 +54,8 @@ node --check infrastructure/staging/workload/evidence.mjs
 node --check infrastructure/staging/workload/guard.mjs
 node --check infrastructure/staging/workload/inventory.mjs
 node --check infrastructure/staging/workload/plan.mjs
+node --check infrastructure/staging/workload/update-apply.mjs
+node --check infrastructure/staging/workload/update-plan.mjs
 node --check infrastructure/staging/workload/validate-plan.mjs
 node infrastructure/staging/workload/evidence.mjs \
   infrastructure/staging/workload/result.json
@@ -79,6 +81,8 @@ bash -n \
   infrastructure/staging/terraform/plan.sh \
   infrastructure/staging/workload/apply.sh \
   infrastructure/staging/workload/plan.sh \
+  infrastructure/staging/workload/update-apply.sh \
+  infrastructure/staging/workload/update-plan.sh \
   infrastructure/staging/probe/apply.sh \
   infrastructure/staging/probe/invoke.sh \
   infrastructure/staging/probe/plan.sh
