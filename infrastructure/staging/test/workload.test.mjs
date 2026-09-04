@@ -11,6 +11,7 @@ import {
   workloadAuthorization,
 } from '../workload/contract.mjs';
 import { validateWorkloadRoot } from '../workload/guard.mjs';
+import { validateWorkloadEvidence } from '../workload/evidence.mjs';
 import { observeDeployedWorkload } from '../workload/inventory.mjs';
 import {
   validateFailedBuildRecoveryPlanAgainstPolicy,
@@ -450,7 +451,9 @@ function inventoryResponses(extraLogWriter = []) {
     {},
     { name: FCM_ROLE, stage: 'GA', includedPermissions: ['cloudmessaging.messages.create'], deleted: false },
     { email: BUILD_ACCOUNT, name: `projects/${PROJECT_ID}/serviceAccounts/${BUILD_ACCOUNT}`, disabled: false },
+    { email: RUNTIME_ACCOUNT, name: `projects/${PROJECT_ID}/serviceAccounts/${RUNTIME_ACCOUNT}`, disabled: false },
     { email: PROBE_ACCOUNT, name: `projects/${PROJECT_ID}/serviceAccounts/${PROBE_ACCOUNT}`, disabled: false },
+    [],
     [],
     [],
     { bindings: [{ role: 'roles/iam.serviceAccountOpenIdTokenCreator', members: ['user:Operator@Example.test'] }] },
@@ -542,4 +545,21 @@ test('rejects copied Function source bytes that differ from the deterministic pa
 
 test('workload root guard accepts only the closed executable inventory', () => {
   assert.doesNotThrow(() => validateWorkloadRoot(new URL('../workload/', import.meta.url)));
+});
+
+test('pins the exact non-secret live workload result', () => {
+  const result = validateWorkloadEvidence(
+    new URL('../workload/result.json', import.meta.url),
+  );
+  assert.equal(result.function.state, 'ACTIVE');
+  assert.equal(result.function.ingress, 'ALLOW_INTERNAL_ONLY');
+  assert.equal(result.function.unauthenticated_invokers, 0);
+  assert.equal(result.function.minimum_instances, 0);
+  assert.equal(result.function.maximum_instances, 1);
+  assert.deepEqual(result.identities.user_managed_keys, {
+    runtime: 0,
+    build: 0,
+    probe: 0,
+  });
+  assert.equal(result.live_request_performed, false);
 });

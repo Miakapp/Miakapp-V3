@@ -1,11 +1,13 @@
 # Private staging control-plane workload
 
+Status: applied, recovered, converged, source-verified, and uninvoked
+
 This is the third, workload-only Terraform state for `miakapp-v4-staging`. It
 reads but never owns the reconciled bootstrap and foundation states. Its GCS
 backend prefix is `terraform/workload`, so a Function deployment cannot alter
 the 37-resource bootstrap or 33-resource foundation evidence.
 
-The initial graph contains exactly:
+The deployed graph contains exactly:
 
 - one deterministic source ZIP in a dedicated private Paris bucket;
 - one private Paris Docker repository and a build-only service account with
@@ -26,41 +28,44 @@ There is no `allUsers` or `allAuthenticatedUsers` binding, VPC connector, load
 balancer, Cloud Armor policy, minimum instance, secret mount, service-account
 key or live request. Internal-only ingress means the probe identity is defined
 before testing but cannot be called directly from an internet workstation.
-Choosing and pricing a public ingress path remains a later gate.
+The next gate must use a reviewed Google-hosted private invocation path; public
+ingress remains forbidden.
 
-## Guarded plan and apply
+## Consumed guarded plan and apply
 
-Both commands require a clean checkout at the exact `origin/main` commit, the
-pinned toolchain, normal local User ADC and the reviewed Google user. The raw
-user email exists only in a mode-0600 private variable file and Terraform plan;
-the repository records only its SHA-256 fingerprint.
+The completed operation required a clean checkout at the exact `origin/main`
+commit, the pinned toolchain, normal local User ADC and the reviewed Google
+user. The raw user email existed only in a mode-0600 private variable file and
+Terraform plan; the repository records only its SHA-256 fingerprint.
 
-Create the initial plan in an existing private parent outside the repository:
+The initial private plan was created with:
 
 ```sh
 MIAKAPP_STAGING_WORKLOAD_PLAN_CONFIRMATION=miakapp-v4-staging \
   ./infrastructure/staging/workload/plan.sh /private/tmp
 ```
 
-The plan command builds the source twice-tested deterministic archive, uses the
-real locking backend, permits only the closed 15-create/zero-update/zero-delete
-graph, and prints the exact short-lived authorization token. Terraform may
-create its canonical empty workload state while initializing the previously
-absent backend prefix; no workload is applied by this command.
+At the reviewed source commit, the plan command built the source twice-tested
+deterministic archive, used the real locking backend, accepted only the then
+closed 14-create/zero-update/zero-delete graph, and printed an exact short-lived
+authorization token. Terraform created its canonical empty workload state while
+initializing the previously absent backend prefix; the plan command itself did
+not apply a workload.
 
-Apply only that saved binary plan:
+The exact saved binary plan was then applied with:
 
 ```sh
 MIAKAPP_STAGING_WORKLOAD_APPLY_AUTHORIZATION='apply-private-workload:...' \
   ./infrastructure/staging/workload/apply.sh /private/tmp/miakapp-staging-workload-XXXXXX
 ```
 
-Apply output and any provider failure remain private. Success requires a fresh
-zero-change plan and independent Cloud Functions, Cloud Run, IAM, Storage and
-Artifact Registry inventory. It reads the immutable Google-managed source copy
-into memory and requires its SHA-256 to match the deterministic package. The
-inventory explicitly performs no Function request and writes a private,
-non-secret `result.json` for later review.
+The consumed bundle has been permanently deleted and these commands are not a
+current replay instruction. Apply output and provider diagnostics remained
+private. Completion required a fresh zero-change plan and independent Cloud
+Functions, Cloud Run, IAM, Storage and Artifact Registry inventory. That
+inventory read the immutable Google-managed source copy into memory, required
+its SHA-256 to match the deterministic package, explicitly performed no
+Function request, and produced the committed sanitized `result.json`.
 
 No destroy entry point exists. Resources with meaningful identity or storage
 carry `prevent_destroy`; generated source bytes remain reproducible from the
@@ -76,3 +81,22 @@ closed recovery profile: it accepts only the failed Gen 2 Function baseline,
 the new conditional source-reader and private invoker creates, an in-place
 Function update, and zero deletes. Any replacement, wider IAM scope, different
 Function state or additional change is rejected.
+
+Recovery configuration commit
+`488da23cd7eb4c08baa9296724b87b7df34a1122` produced exact private plan SHA-256
+`26437631f2d8ea61883762ae854024de5c1142db9182d46e083517af211a192b`.
+Terraform created only the conditional source reader and private invoker,
+updated the Function in place, and deleted nothing. Output reconciliation plan
+SHA-256 `a31bda9269b138b270d58a6bb992ab7902d1fc73074c0f8f2543bdf0c8f09623`
+then changed no resource, and a fresh full plan reported no changes.
+
+Current workload state generation `1788481082158679` is 49,241 bytes at serial
+8 with fifteen managed resources, three data resources, one output and no
+tainted resource. Independent inventory observed active revision
+`control-plane-00001-kod`, verified all three workload service accounts have
+zero user-managed keys, and matched copied source SHA-256
+`d2a9ffae2bd85106f782f9c75a10b6fb398682ead65dada2a1cf8ab5c65b7eb4`.
+The canonical non-secret [`result.json`](result.json) has SHA-256
+`2143c037de6cb2d8caf9acc9676fa5a54d9bf974793136596aac94de30c93590`.
+No request was made. Raw plans, raw state, the operator email and private
+diagnostics were not committed.

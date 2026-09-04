@@ -50,10 +50,13 @@ node infrastructure/staging/workload/guard.mjs \
   "${repository_root}/infrastructure/staging/workload"
 node --check infrastructure/staging/workload/apply.mjs
 node --check infrastructure/staging/workload/contract.mjs
+node --check infrastructure/staging/workload/evidence.mjs
 node --check infrastructure/staging/workload/guard.mjs
 node --check infrastructure/staging/workload/inventory.mjs
 node --check infrastructure/staging/workload/plan.mjs
 node --check infrastructure/staging/workload/validate-plan.mjs
+node infrastructure/staging/workload/evidence.mjs \
+  infrastructure/staging/workload/result.json
 bash -n \
   infrastructure/staging/automation/apply.sh \
   infrastructure/staging/automation/inspect-plan.sh \

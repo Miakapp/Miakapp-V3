@@ -150,9 +150,13 @@ export function observeDeployedWorkload({
   ]);
   const fcmRole = command(['iam', 'roles', 'describe', 'miakapp.controlPlaneFcmSender', `--project=${PROJECT_ID}`]);
   const buildAccount = command(['iam', 'service-accounts', 'describe', BUILD_ACCOUNT, `--project=${PROJECT_ID}`]);
+  const runtimeAccount = command(['iam', 'service-accounts', 'describe', RUNTIME_ACCOUNT, `--project=${PROJECT_ID}`]);
   const probeAccount = command(['iam', 'service-accounts', 'describe', PROBE_ACCOUNT, `--project=${PROJECT_ID}`]);
   const buildKeys = command([
     'iam', 'service-accounts', 'keys', 'list', `--iam-account=${BUILD_ACCOUNT}`, '--managed-by=user', `--project=${PROJECT_ID}`,
+  ]);
+  const runtimeKeys = command([
+    'iam', 'service-accounts', 'keys', 'list', `--iam-account=${RUNTIME_ACCOUNT}`, '--managed-by=user', `--project=${PROJECT_ID}`,
   ]);
   const probeKeys = command([
     'iam', 'service-accounts', 'keys', 'list', `--iam-account=${PROBE_ACCOUNT}`, '--managed-by=user', `--project=${PROJECT_ID}`,
@@ -233,8 +237,10 @@ export function observeDeployedWorkload({
     reject('FCM custom role is not the exact one-permission runtime role');
   }
   account(buildAccount, BUILD_ACCOUNT, 'Build');
+  account(runtimeAccount, RUNTIME_ACCOUNT, 'Runtime');
   account(probeAccount, PROBE_ACCOUNT, 'Probe');
   userManagedKeys(buildKeys, 'Build');
+  userManagedKeys(runtimeKeys, 'Runtime');
   userManagedKeys(probeKeys, 'Probe');
   exactBinding(probePolicy, 'roles/iam.serviceAccountOpenIdTokenCreator', (() => {
     const binding = bindings(probePolicy).find((candidate) => candidate.role === 'roles/iam.serviceAccountOpenIdTokenCreator');
@@ -306,7 +312,11 @@ export function observeDeployedWorkload({
       runtime: RUNTIME_ACCOUNT,
       build: BUILD_ACCOUNT,
       probe: PROBE_ACCOUNT,
-      user_managed_keys: 0,
+      user_managed_keys: Object.freeze({
+        runtime: 0,
+        build: 0,
+        probe: 0,
+      }),
       operator_user_sha256: OPERATOR_USER_SHA256,
     }),
     iam: Object.freeze({

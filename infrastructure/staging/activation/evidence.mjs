@@ -147,7 +147,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       const validated = validateActivationEvidence(process.argv[2], process.argv[3]);
       console.log([
         `Validated ${validated.result.schema} for ${PROJECT_ID}.`,
-        'One Firebase Web app and five enabled version-1 references are materialized; workloads remain absent.',
+        'One Firebase Web app and five enabled version-1 references were materialized; workloads were absent in the activation-time inventory.',
       ].join(' '));
     } catch (error) {
       console.error(error instanceof Error ? error.message : 'Staging activation evidence is invalid');
