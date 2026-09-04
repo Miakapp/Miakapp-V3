@@ -1,6 +1,7 @@
 # RFC 0005 — Trusted browser relay client 1.0
 
-- Status: accepted; audience-bound implementation evidence pending
+- Status: accepted; local audience-bound implementation evidence complete,
+  staging and host integration pending
 - Product release: Miakapp 4
 - Public SDK: `miakapi/browser` in `miakapi@4`
 - Last updated: 2026-09-04
@@ -56,9 +57,9 @@ become a Firebase or relay-session compromise.
 ### 2.2 Legacy Firebase-direct fixture profile
 
 The first synthetic browser fixture assigned a Firebase-shaped token directly to
-role-1 WebSocket `HELLO` and `REAUTH`. That shape remains valid only as legacy
-loopback evidence while the audience-bound implementation is being integrated.
-It is not the production credential profile.
+role-1 WebSocket `HELLO` and `REAUTH`. That evidence remains reproducible only as
+a historical loopback baseline. The current SDK and relay production paths have
+removed the shape; it is not the production credential profile.
 
 A Firebase ID token is reusable against services that trust the same Firebase
 project. Consequently, the legacy profile:
@@ -66,8 +67,8 @@ project. Consequently, the legacy profile:
 - MAY be used only by explicitly synthetic tests;
 - MUST NOT be used by the production application;
 - MUST NOT be accepted as evidence for arbitrary relay selection; and
-- MUST be removed from the production role-1 relay path when the Section 2.3
-  implementation lands.
+- MUST remain absent from the production role-1 relay path; the current
+  implementation has removed it.
 
 This restriction concerns credential replay in addition to plaintext home-data
 visibility. A warning about home data alone is insufficient.
@@ -496,10 +497,10 @@ The native transport:
 The browser has no API for inbound WebSocket backpressure and materializes a
 complete message before JavaScript sees its size. The limits above prevent
 continued processing but cannot prevent that first allocation. Official relays
-and ingress MUST enforce frame/rate limits before sending, the direct profile
-remains trusted-relay-only, and a Worker or process boundary SHOULD be evaluated
-for a hardened browser profile. This implementation MUST NOT claim hard memory
-isolation from a malicious relay.
+and ingress MUST enforce frame/rate limits before sending, the legacy direct
+profile remains synthetic-only, and a Worker or process boundary SHOULD be
+evaluated for a hardened browser profile. This implementation MUST NOT claim
+hard memory isolation from a malicious relay.
 
 Cumulative dictionaries, in-flight calls, completed-call correlation and rejected
 incoming calls remain bounded by RFC 0001/local maxima. Unknown optional opcodes
@@ -518,9 +519,12 @@ as rollback and never triggers automatic retry. `not_dispatched` is used only
 when local validation/offline gating or an explicit terminal proves no handoff.
 
 Listener and logger failures are isolated and sanitized. Evidence may include
-only allow-listed semantic counters and outcomes. Browser traces, network HARs
-and WebSocket frame inspection are forbidden in credential-bearing acceptance
-runs because they may retain `HELLO`, `REAUTH` or home data.
+only allow-listed semantic counters and outcomes. Browser traces, network HARs,
+and recording or decoding WebSocket frame payloads are forbidden in
+credential-bearing acceptance runs because they may retain `HELLO`, `REAUTH` or
+home data. A synthetic-only local gate may transiently compare outbound bytes
+with the source credentials it just generated, but it must retain only a boolean
+presence result and bounded frame count, never a frame or credential.
 
 Firebase ID and App Check tokens exist only inside the trusted host callbacks and
 the control-plane HTTPS request. The credential provider never returns them and
@@ -528,6 +532,8 @@ the browser client never receives them. The only bearer handed to a WebSocket is
 the audience-bound Miakapp access token returned beside that exact relay URL.
 
 ## 14. Conformance evidence
+
+### 14.1 Historical trusted-relay baseline
 
 The legacy trusted-relay implementation evidence is pinned by:
 
@@ -577,12 +583,58 @@ the synthetic scalar, trace or browser diagnostic. These commits predate the
 Section 2.3 provider and do not satisfy its implementation gate; replacement
 pins must prove the control-plane exchange and audience-bound token end to end.
 
+### 14.2 Audience-bound local implementation
+
+The replacement implementation is pinned by:
+
+- Miakapp V3 contract/control-plane merge
+  [`cc3bcd7`](https://github.com/Miakapp/Miakapp-V3/commit/cc3bcd70fdb4b058f990ca2607693a2043faebaf)
+  and two-relay fixture merge
+  [`f9509c4`](https://github.com/Miakapp/Miakapp-V3/commit/f9509c41ef1c0389623d31419372e6430a2313d9);
+- MiakAPI merge
+  [`a798a74`](https://github.com/Miakapp/MiakAPI/commit/a798a746847ba3d5c16128a08b33353269e770a4);
+  and
+- Miakapp-Server merge
+  [`9a7e33d`](https://github.com/Miakapp/Miakapp-Server/commit/9a7e33de3a684b6cd9e82231db7c9af8bf41a0a1).
+
+MiakAPI's complete gate passes 137 tests plus strict type, build, Node/browser
+isolation, external coordinator-contract and package-artifact checks. Its
+deterministic lifecycle corpus serializes native WebSocket replacement through a
+ten-second close barrier on every routing, pre-open, handshake, protocol and
+write failure path. A stuck close fails closed instead of opening an overlapping
+relay connection.
+
+The full reciprocal platform gate starts the Auth and Firestore emulators, the
+real control-plane router, one real Chromium client and two real Go relays. It
+proves:
+
+1. Firebase ID and signed synthetic App Check source credentials remain on the
+   HTTPS exchange boundary;
+2. only an exact `relay:user` token enters `HELLO` or `REAUTH`;
+3. the coordinator session survives control-plane signing-key rotation, after
+   which the browser proves audience-bound renewal and route handoff with tokens
+   issued by the activated key;
+4. same-relay renewal uses one WebSocket and one `reauth` exchange;
+5. authoritative Home routing change carries the already-issued credential to
+   one replacement relay without another exchange or overlapping sockets;
+6. state advances from `21` before handoff to `24` after handoff and three calls
+   complete across the two relays; and
+7. the relay JWKS cache retains 32-way refresh coalescing, unknown-key abuse
+   bounds, conditional expiry, fail-closed outage and bounded recovery.
+
+The closed semantic result reports two sequential browser WebSockets, one
+handoff, a maximum of one active browser WebSocket, three user exchanges and
+`source_credentials_on_websocket: false`. It contains no bearer, raw UID, email,
+Home Key, request body, frame, trace or private Home data. This closes the local
+Section 2.3 implementation gate; it is not staging or production evidence.
+
 ## 15. Limits of the evidence
 
-The legacy evidence in Section 14 does not prove:
+The combined local evidence in Section 14 does not prove:
 
-- Google Firebase certificate fetching, cache rotation or token revocation;
-- the Section 2.3 control-plane exchange or audience-bound user credential;
+- live Firebase Auth and browser App Check provider behavior, revocation or
+  attestation;
+- live Cloud KMS signing, Secret Manager access or managed signing-key removal;
 - public ingress, proxy limits, admission control or hostile-relay isolation;
 - Firefox, WebKit, mobile lifecycle or bfcache support;
 - every disconnect, GOAWAY, delayed-frame and network-fault interleaving;
@@ -600,9 +652,11 @@ The browser client may enter the production application only after:
 
 1. an end-to-end gate proves the RFC 0004 audience/home/user/role-scoped
    credential, source-token confinement, relay-change handoff and local JWKS
-   verification in Section 2.3;
-2. exact production Origins, WSS endpoints and edge frame/rate/admission limits
-   are deployed and observed in isolated staging;
+   verification in Section 2.3 — complete locally at the Section 14.2 pins;
+2. exact staging counterparts of the intended production Origin, WSS endpoint
+   and edge frame/rate/admission policy are deployed and observed in isolated
+   staging, then production endpoints and configuration are checked against the
+   approved template at rollout;
 3. live Firebase identity behavior is proven without persisting a token or trace;
 4. the required disconnect, resync, reauthentication and page-lifecycle matrix
    passes;
@@ -632,6 +686,7 @@ The browser client may enter the production application only after:
 | native WebSocket plus one-second accounting budget | broad platform support with an explicit, non-exaggerated memory limitation |
 | synthetic semantic Chromium evidence | proves browser mechanics without retaining bearer frames |
 | Firebase tokens confined to HTTPS exchange | a platform-wide bearer cannot be made relay-specific by SDK transformation or documentation |
+| atomic relay URL and audience-bound token | prevents a cached or caller-selected destination from being paired with newly issued authority |
 
 ## 18. References
 

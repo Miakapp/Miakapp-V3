@@ -10,9 +10,13 @@ on:
       - 'control-plane-contract/**'
       - 'docs/rfcs/0004-platform-control-plane.md'
       - 'docs/rfcs/0005-browser-client-sdk.md'
+      - 'docs/operations/2026-09-01-miakapp-v4-environments.md'
       - 'docs/operations/2026-09-04-browser-relay-integration.md'
+      - 'docs/runbooks/user-relay-credentials.md'
       - 'docs/specs/2026-08-29-miakapp-v4-design.md'
       - 'docs/roadmaps/2026-08-29-miakapp-v4-coordination.md'
+      - 'docs/README.md'
+      - 'control-plane/FAULT-MATRIX.md'
       - 'package.json'
   pull_request:
     paths:
@@ -21,9 +25,13 @@ on:
       - 'control-plane-contract/**'
       - 'docs/rfcs/0004-platform-control-plane.md'
       - 'docs/rfcs/0005-browser-client-sdk.md'
+      - 'docs/operations/2026-09-01-miakapp-v4-environments.md'
       - 'docs/operations/2026-09-04-browser-relay-integration.md'
+      - 'docs/runbooks/user-relay-credentials.md'
       - 'docs/specs/2026-08-29-miakapp-v4-design.md'
       - 'docs/roadmaps/2026-08-29-miakapp-v4-coordination.md'
+      - 'docs/README.md'
+      - 'control-plane/FAULT-MATRIX.md'
       - 'package.json'
 
 permissions:
@@ -62,13 +70,13 @@ jobs:
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           repository: Miakapp/Miakapp-Server
-          ref: da49e8bf6b1bd03acaabd225ab5e96a61dd5dd91
+          ref: 9a7e33de3a684b6cd9e82231db7c9af8bf41a0a1
           path: .integration/miakapp-server
       - name: Check out the pinned MiakAPI coordinator SDK
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           repository: Miakapp/MiakAPI
-          ref: 5c26eaa830015d94f53bf05fbbb0f5ebda6d290f
+          ref: a798a746847ba3d5c16128a08b33353269e770a4
           path: .integration/miakapi
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
@@ -98,7 +106,14 @@ jobs:
       - name: Install the pinned Chromium runtime
         working-directory: .integration/miakapi
         run: ./node_modules/.bin/playwright install --with-deps chromium
-      - name: Run the Home Key to relay authentication integration
+      - name: Verify the relay's immutable control-plane contract pin
+        working-directory: .integration/miakapp-server
+        run: |
+          expected_contract_version='v0.0.0-20260904181620-cc3bcd70fdb4'
+          actual_contract_version="$(go list -m -f '{{.Version}}' github.com/miakapp/miakapp-v3/control-plane-contract/go)"
+          test "$actual_contract_version" = "$expected_contract_version"
+          go mod verify
+      - name: Run the audience-bound coordinator and browser relay integration
         working-directory: .integration/miakapp-server
         run: >-
           ./scripts/check-platform-integration.sh

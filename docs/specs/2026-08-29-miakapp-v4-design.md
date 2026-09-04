@@ -83,26 +83,31 @@ flowchart LR
 
     C -->|1 · HTTPS Home Key exchange| F
     C -->|2 · WSS short-lived token| R
-    B -->|3 · WSS Firebase ID token| R
-    B -->|4 · pointer and immutable release| S
-    C -->|5 · HTTPS push request| F
+    B -->|3 · HTTPS ID + App Check exchange| F
+    F -->|4 · relay URL + short lease| B
+    B -->|5 · WSS short-lived token| R
+    B -->|6 · pointer and immutable release| S
+    C -->|7 · HTTPS push request| F
     B <-->|versioned capability bridge| U
 ```
 
 1. The coordinator exchanges its Home Key for its server address and a short-lived token.
 2. It connects to the server with that token.
-3. The user connects with their Firebase ID token.
-4. The browser host reads the component pointer from Firestore, verifies the
+3. The browser host sends its Firebase ID and App Check tokens only to the
+   control-plane HTTPS exchange.
+4. The control plane returns one relay URL and audience-bound five-minute token.
+5. The user connects to that relay with only the Miakapp token.
+6. The browser host reads the component pointer from Firestore, verifies the
    release, and loads it in a sandboxed, non-credential-bearing context.
-5. The coordinator requests a push through the Function.
+7. The coordinator requests a push through the Function.
 
 **The server holds no persistent platform or home secret.** It verifies
 signatures with public keys and makes no authenticated outbound calls. The
-trusted-relay alpha nevertheless receives each transient Firebase user bearer,
-and every profile receives plaintext home data; the selected relay is therefore
-trusted by the home for credential handling, confidentiality and correct routing
-(§ 4). Audience binding removes the cross-relay bearer risk, not plaintext
-visibility.
+current user path gives it only a relay-specific Miakapp lease; Firebase source
+credentials remain on HTTPS. Every profile still exposes plaintext home data, so
+the selected relay is trusted by the home for confidentiality and correct
+routing (§ 4). Audience binding removes the cross-relay bearer risk, not
+plaintext visibility.
 
 ---
 
@@ -124,12 +129,13 @@ Two properties follow from the server being **platform-untrusted**:
   otherwise a malicious server could replay a captured token against the
   official server to impersonate the coordinator.
 
-The original Firebase-direct user profile does not yet satisfy the second
-property: its audience is the Firebase project, so the selected relay receives a
-reusable user bearer. RFC 0005 therefore restricts that profile to official or
-explicitly fully trusted relays and blocks arbitrary relay selection until the
-control plane issues a short-lived credential bound to the exact relay, home,
-UID and user role. This is a production gate, not an end-to-end encryption claim.
+The original Firebase-direct user profile did not satisfy the second property:
+its audience was the Firebase project, so the selected relay received a reusable
+user bearer. It is now a historical synthetic-only fixture profile. RFC 0005's
+current path issues a short-lived credential bound to the exact relay, Home, UID
+and user role, and the production relay rejects Firebase source tokens. That path
+has complete local two-relay evidence; staging acceptance remains a production
+gate. This is credential attenuation, not an end-to-end encryption claim.
 
 This is not end-to-end encryption. A relay that terminates WSS can observe,
 alter, replay, misroute, delay or drop application messages. A home must trust
@@ -143,30 +149,27 @@ that work is deferred (§ 17).
 
 ### 5.1 Users
 
-Firebase ID token, verified **locally** by the server: RS256 signature against
-Google's JWKS, cached per the response's `Cache-Control` (several hours). No
-network call per connection, no Firestore read.
+The browser sends its Firebase ID token and App Check token only to RFC 0004's
+HTTPS user-relay exchange. The Function verifies both source credentials, reads
+the authoritative Home record and returns one atomic `{relay URL, access token,
+expiry}` result. Issuance proves authenticated application context and Home
+existence, not ownership, enrollment or membership.
 
-This direct verification is the trusted-relay alpha profile. The token is a
-project-audience bearer visible to the relay and is therefore unsafe for a broad
-community-relay selector. Production self-hosting requires the audience-bound
-user exchange in RFC 0005 Section 2.3; the relay can still verify the resulting
-short lease locally from public signing keys.
+The resulting Ed25519 Miakapp token has an exact relay audience, Home ID,
+Firebase UID, `miakapp_role=user`, `scope=relay:user` and maximum five-minute
+lease. It may carry the email only when Firebase marked it verified. The relay
+verifies that profile locally against the control-plane JWKS cache and binds
+`HELLO` to the signed Home and user. It makes no authenticated platform call,
+fetches no Firebase certificate and rejects Firebase ID or App Check tokens as
+relay credentials.
 
-Verification pins the algorithm and validates `kid`, project `aud`, exact
-issuer, non-empty subject, `exp`, `iat` and `auth_time`; signature verification
-alone is insufficient. The ordinary local path does not check account
-disablement or server-side token revocation.
-
-The server extracts `uid`, `email` and `email_verified`, and forwards the email
-to the coordinator **only if it is verified**. Without that rule, anyone can
-sign up with someone else's address and claim their invitation.
-
-An established socket does not become unauthenticated merely because the token
-presented at `HELLO` expires. The browser therefore refreshes its Firebase ID
-token and sends `REAUTH` before expiry (45 minutes by default). Failure closes
-the socket. This bounds account-disablement and session-revocation propagation
-to the Firebase token lifetime unless a later online revocation check is added.
+Before expiry, the browser repeats the HTTPS exchange and sends the new Miakapp
+token over `REAUTH` when the relay URL is unchanged. If the authoritative route
+changed, it closes the old transport before opening one replacement with the
+already-issued credential; it never sends an audience-mismatched token to the
+old relay or performs a duplicate exchange. Failure closes the session. Already
+issued relay authority remains bounded by five minutes. Live Firebase account
+disablement, revocation and App Check provider behavior remain staging evidence.
 Home membership changes are independent: the coordinator removes or changes the
 user's declarations and the relay applies the change immediately.
 
@@ -183,9 +186,10 @@ A refresh/access token split:
 4. The server verifies it against the platform's public key (cached JWKS). It
    makes no authenticated outbound call; public key refresh is the only network
    dependency of verification.
-5. Before the five-minute token expires (**four minutes by default**), the
-   coordinator re-exchanges its Home Key and pushes the new token over the
-   existing socket (`REAUTH`). Failure → disconnect.
+5. Thirty seconds before the five-minute token expires by default (or halfway
+   through a lease shorter than 60 seconds), the coordinator re-exchanges its
+   Home Key and pushes the new token over the existing socket (`REAUTH`). Failure
+   → disconnect.
 
 Step 5 is what gives revocation a bounded effect on an already-established
 connection. The maximum residual access is the reauthentication interval, not
@@ -387,9 +391,9 @@ The union on allowlists is what lets one coordinator declare rights over
 variables owned by another.
 
 The union establishes **no privilege boundary** between coordinators authorized
-for the same home, even when they use different Home Keys. RFC 0004 defines the
-four exact coarse scopes `relay:coordinator`, `relay:cli`, `push:send` and
-`components:publish`; every access token is attenuated to one of them.
+for the same home, even when they use different Home Keys. RFC 0004 defines five
+exact coarse scopes: `relay:coordinator`, `relay:cli`, `relay:user`, `push:send`
+and `components:publish`. Every access token is attenuated to one of them.
 Fine-grained scopes restricting individual namespaces or functions are deferred.
 
 Events from one coordinator may be received by other subscribed coordinators,
@@ -406,13 +410,15 @@ React component decides what to do with it.
 
 Connect → token verified → home created in memory if absent → `SYNC` +
 `FN_DECLARE` + `ACL` → the server assigns identifiers and broadcasts `DICT` and
-`PATCH` to the affected users. Then `REAUTH` before token expiry (four minutes
-by default).
+`PATCH` to the affected users. Then `REAUTH` 30 seconds before token expiry by
+default, or halfway through a lease shorter than 60 seconds.
 
 ### User
 
-Connect → ID token verified locally → `uid` and verified email extracted →
-three cases, **none of which closes the socket**:
+Acquire one atomic `{relay URL, access token, expiry}` credential from the
+control-plane HTTPS exchange → connect only to that relay → Miakapp token verified
+locally → signed Home ID, `uid` and optional verified email extracted → three
+cases, **none of which closes the socket**:
 
 | Case | `WELCOME` |
 |---|---|
@@ -428,9 +434,15 @@ it on its own when the situation changes.
 invitation flow (§ 11). `miakapp.join` is a reserved function name and may have
 exactly one coordinator owner.
 
-An enrolled browser sends `REAUTH` with a refreshed Firebase ID token before
-expiry (45 minutes by default). Reauthentication never changes the immutable
-session identifier or lets the browser replace its UID.
+Before the five-minute Miakapp lease expires, the browser repeats the HTTPS
+exchange. If the authoritative relay URL is unchanged, it sends only the new
+Miakapp token in `REAUTH`; reauthentication cannot change the established Home,
+UID or verified email. If the URL changed, it closes the old transport before
+opening one replacement with the already-issued credential. It never sends a
+Firebase ID or App Check token over WebSocket, reuses an audience-mismatched
+token at the old relay, performs a second exchange for the handoff, or overlaps
+relay transports. A stuck close fails the handoff closed after its bounded
+deadline.
 
 **No session resumption in Miakapp 4.** A reconnection costs one snapshot, on the
 order of a few kilobytes. The dictionary and a state version number leave the
@@ -764,7 +776,7 @@ Each is reachable without breaking the protocol.
 
 ---
 
-## 19. Design gates before implementation
+## 19. Implementation gates and status
 
 The architecture direction above is stable. RFCs 0001 through 0005 close the
 shared wire, component, coordinator/migration-adapter, control-plane and trusted
@@ -782,7 +794,7 @@ vertical-slice exit gates.
    security-critical boundary subset in Chromium, Firefox and WebKit. The
    production host and complete conformance matrix remain vertical-slice work.
 3. **Platform control plane — base contract closed 2026-08-31; audience-bound
-   user relay credential open** — RFC 0004 defines owner
+   user relay credential complete locally, staging open** — RFC 0004 defines owner
    bootstrap, the private Home Key registry, exact coarse scopes, signed
    resource-specific access tokens, JWKS rotation, Firebase user-token
    verification, push grants, publisher authorization, quotas and audit. The
@@ -808,9 +820,11 @@ vertical-slice exit gates.
    bounded recovery. The local lifecycle stops after overlap and activation; it
    does not remove the retiring key. Real App Check enforcement, FCM
    acceptance/delivery, production Storage/KMS and Firebase certificates,
-   trusted edge admission, audience-bound user relay authentication, browser and
-   network faults, complete Section 18 and staging behavior remain implementation
-   exit gates.
+   trusted edge admission, browser and network faults, complete Section 18 and
+   staging behavior remain implementation exit gates. The audience-bound local
+   path now adds Auth-emulator and signed synthetic App Check sources, exact
+   `relay:user` signing and verification, and a serialized authoritative handoff
+   across two real relays in Chromium.
 4. **MiakAPI coordinator API — closed 2026-08-30; broader agent experience open**
    — RFC 0003 defines the public coordinator lifecycle, declarations, state,
    events, calls, presence, errors and compatibility boundary. CLI/MCP tools,
@@ -820,20 +834,22 @@ vertical-slice exit gates.
    effects, deterministic comparison and Node-RED lifecycle requirements. The
    real bridge, beta topology, backup/restore, canary metrics, cutover and rollback
    runbook remain open.
-6. **Trusted browser relay client — narrow alpha closed 2026-09-04; production
-   credential and host gates open** — RFC 0005 defines the isolated browser
+6. **Trusted browser relay client — audience-bound local path closed 2026-09-04;
+   staging and host gates open** — RFC 0005 defines the isolated browser
    package, lifecycle, immutable state, named calls, reauthentication, reconnect,
-   limits and cleanup. The real implementation passes deterministic tests and a
-   reciprocal Chromium/Go-relay gate through a successful post-lease call on one
-   WebSocket. Its synthetic Firebase-direct profile requires a fully trusted
-   relay; arbitrary self-hosted relay selection, the React host, component bridge,
-   complete fault matrix and staging evidence remain blocked.
+   limits and cleanup. The real implementation passes deterministic tests and
+   reciprocal Chromium/Go-relay gates through a successful post-lease call on one
+   WebSocket and a source-to-token routing handoff across two relays with no
+   overlapping transport. Its historical Firebase-direct profile is
+   synthetic-only. Arbitrary self-hosted relay selection remains disabled until
+   staging acceptance; the React host, component bridge and complete fault matrix
+   also remain open.
 
-Implementation work remains limited by its corresponding gate. The relay may now
-implement RFCs 0001, 0004 and 0005, MiakAPI may implement RFCs 0001, 0003, 0004
-and 0005, and the web repository may implement the RFC 0004 Firebase Emulator
-slice. This
-repository now contains its first owner-to-access-token increment under
+Implementation work remains limited by its corresponding gate. The relay now
+implements the local RFC 0001, 0004 and 0005 boundary; MiakAPI implements the
+corresponding RFC 0001, 0003, 0004 and 0005 SDK boundary; and the web repository
+implements the RFC 0004 Firebase Emulator slice. This repository now contains
+its first owner-to-access-token increment under
 `control-plane/`; its synthetic local push slice now covers FID proof, grants and
 semantic sends, its component slice covers publication authority and immutable
 delivery, and its admission slice covers bounded local counters and audit. Real

@@ -46,11 +46,11 @@ are starting points, not competitors that must be replaced on day one.
 - An embedded in-app agent is deferred until the external coding-agent workflow
   is proven.
 
-## 3. Corrections required before implementation
+## 3. Corrections incorporated into implementation
 
-The architecture direction is approved, but the original design document is
-not yet an implementation-ready shared contract. The following corrections are
-blocking.
+The original proposal required the corrections below. They are now accepted
+constraints and remain blocking invariants for every implementation and staging
+rollout.
 
 ### 3.1 Relay trust
 
@@ -59,9 +59,10 @@ signing key, persistent Firebase service credential, Home Key, or push
 credential. It is not blind to home data. Because it terminates WSS, stores the
 plaintext state, and applies routing and allowlists, a home must trust the
 selected relay operator for confidentiality and correct enforcement. The
-Firebase-direct trusted-relay alpha also receives a transient user ID token; its
-project-wide bearer authority blocks arbitrary relay selection until the user
-credential is audience-bound as required by RFC 0005.
+historical Firebase-direct trusted-relay alpha also received a transient user ID
+token and therefore blocked arbitrary relay selection. RFC 0005's audience-bound
+path now removes that project-wide bearer from the relay in local implementation;
+broad relay selection still requires the corresponding staging gate.
 
 End-to-end encryption through a blind relay is a separate future design. Until
 then, documentation and product claims must not imply that self-hosting the
@@ -231,18 +232,30 @@ and Miakapp-Server merge
 It exercises initial publication, overlap and activation; retiring-key removal
 is not part of this local runtime.
 
-A second reciprocal gate now replaces the Node user double with the public
-`miakapi/browser` client in real Chromium. It pins MiakAPI merge
+A narrow reciprocal gate first replaced the Node user double with the public
+`miakapi/browser` client in real Chromium. Its historical baseline pins MiakAPI
+merge
 [`5c26eaa`](https://github.com/Miakapp/MiakAPI/commit/5c26eaa830015d94f53bf05fbbb0f5ebda6d290f)
 and Miakapp-Server merge
 [`da49e8b`](https://github.com/Miakapp/Miakapp-Server/commit/da49e8bf6b1bd03acaabd225ab5e96a61dd5dd91),
 then proves enrollment, initial snapshot, one patch, call/result and a second
 successful call after the original user lease expires, still on one WebSocket
-with no reconnect. RFC 0005 defines the resulting trusted-host API and records
-that the direct Firebase bearer makes arbitrary relay selection unsafe. The
-audience-bound user credential, complete disconnect matrix, live KMS/Firebase
-certificate behavior, public ingress and staging acceptance remain open, so
-this workstream is not complete.
+with no reconnect.
+
+The current complete local gate pins the V3 two-relay fixture at
+[`f9509c4`](https://github.com/Miakapp/Miakapp-V3/commit/f9509c41ef1c0389623d31419372e6430a2313d9),
+MiakAPI at
+[`a798a74`](https://github.com/Miakapp/MiakAPI/commit/a798a746847ba3d5c16128a08b33353269e770a4)
+and Miakapp-Server at
+[`9a7e33d`](https://github.com/Miakapp/Miakapp-Server/commit/9a7e33de3a684b6cd9e82231db7c9af8bf41a0a1).
+It drives an Auth-emulator identity and signed synthetic App Check token through
+the real exchange and exact `relay:user` verification, then changes the
+authoritative Home route. The browser recovers state and calls on the second
+real relay with one route-changing credential exchange, no source credential on
+WebSocket and never more than one active socket. This closes the audience-bound
+local credential gate. The complete disconnect matrix, live KMS/Firebase behavior,
+public ingress and staging acceptance remain open, so this workstream is not
+complete.
 
 ### D. Component platform vertical slice
 
@@ -401,14 +414,14 @@ Deliverables:
    broader relay/staging rows open** — emulator-first tests cover Rules and Functions,
    synthetic push, component publication, bounded admission/audit, retry,
    ambiguous outcomes and reconciliation. A pinned cross-repository gate now
-   covers real Home Key exchange, SDK `HELLO`, key-changing scheduled `REAUTH`,
-   and the relay's production verifier on one uninterrupted session. Its
+   covers real Home Key and browser-user exchanges, SDK `HELLO`, key-changing
+   scheduled `REAUTH`, and the relay's production verifier. Its
    deterministic cache probe covers concurrent refresh coalescing,
    cache-expiry recovery, unknown-`kid` abuse limits and an unavailable JWKS.
-   Live managed-service rotation and retiring-key removal, an audience-bound
-   user relay credential, the complete disconnect matrix, network faults and
-   staging admission evidence remain open. Real Chromium now participates in the
-   separate pinned SDK/relay gate with synthetic credentials.
+   Real Chromium additionally proves exact audience/Home/user/role binding and a
+   no-overlap authoritative route handoff across two relays. Live managed-service
+   rotation and retiring-key removal, the complete disconnect matrix, network
+   faults and staging admission evidence remain open.
 
 Exit gate: a compromised relay cannot obtain a Home Key or platform credential,
 and a Home Key cannot exercise capabilities outside its declared scopes.
@@ -551,19 +564,24 @@ current consumer.
    recovery matrix. This runtime stops after overlap and activation; retiring-key
    removal remains untested. A separate pinned gate now runs the real public
    browser client in Chromium and closes its narrow snapshot, patch, call and
-   same-socket post-lease reauthentication path. Live KMS signing-key and secret
-   rotation, audience-bound user relay credentials, browser App Check provider
-   attestation, source/edge admission, monitoring, migration rehearsal and real
-   staging fault evidence remain required before closing relay-integration and
-   staging-only RFC 0004 Section 18 gates.
+   same-socket post-lease reauthentication path. The complete audience-bound
+   local gate now adds an Auth-emulator user, signed synthetic App Check source,
+   exact control-plane exchange, local relay verification and a no-overlap
+   authoritative handoff across two real relays. Live KMS signing-key and secret
+   rotation, browser App Check provider attestation, source/edge admission,
+   monitoring, migration rehearsal and real staging fault evidence remain
+   required before closing relay-integration and staging-only RFC 0004 Section
+   18 gates.
 9. **Done 2026-09-04** — define the trusted browser client in RFC 0005, ship the
    isolated `miakapi/browser` entry point, and replace the relay's Node user
    double with real Chromium evidence for snapshot, patch, call/result and
    completed same-socket reauthentication after the original lease expires.
-10. **Next** — replace the Firebase-direct relay credential with an
-    audience/home/user/role-bound short lease before enabling arbitrary
-    self-hosted relay selection or wiring the client into the production web
-    shell.
+10. **Done 2026-09-04** — replace the Firebase-direct relay credential with an
+    audience/home/user/role-bound short lease, pin the real exchange and verifier,
+    and prove a serialized two-relay routing handoff in Chromium.
+11. **Next** — deploy only the merged compatible revisions to the private staging
+    boundary and execute the bounded live source, signing, relay and rollback
+    acceptance matrix before wiring the client into the production web shell.
 
 ## 9. Evidence that would change this plan
 
@@ -583,9 +601,9 @@ control-plane contract is **high** after cross-language conformance, the
 cross-browser hostile subset and the bounded contract corpora. Confidence in the
 trusted browser client's narrow snapshot/patch/call/reauthentication path is
 **high within its synthetic Chromium boundary**. Confidence in complete runtime
-conformance, audience-bound user authentication, the real Node-RED adapter,
-production push delivery, the React adapter and production Firebase artifact
-delivery remains **medium** until their vertical slices exercise the accepted
-contracts end to end. Confidence in the now-executed owner/Home-Key/access-token,
-synthetic push and component-publication emulator paths is **high within their
-documented local boundaries**, but it is not production or staging evidence.
+conformance, the real Node-RED adapter, production push delivery, the React
+adapter and production Firebase artifact delivery remains **medium** until their
+vertical slices exercise the accepted contracts end to end. Confidence in the
+now-executed owner/Home-Key/access-token, audience-bound browser relay, synthetic
+push and component-publication paths is **high within their documented local
+boundaries**, but it is not production or staging evidence.
