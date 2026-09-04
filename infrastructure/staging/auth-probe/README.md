@@ -27,8 +27,10 @@ The armed graph contains exactly:
 It creates no key, secret, provider debug token, scheduler, public invoker, minimum instance or recurring compute. The Firebase Web API key is fetched at execution time and remains only in Workflow memory. The one execution creates a fixed no-email synthetic Firebase UID, performs three private read-only product requests, deletes that UID, and verifies its absence. The local driver independently verifies absence before and after execution and attempts deletion if execution fails.
 
 On failure, the Workflow discards the original exception and can expose only
-one source-pinned stage label such as `auth_exchange`; HTTP bodies, tokens and
-exception details remain absent from the result and local error message.
+one source-pinned stage label. The Auth exchange maps documented Identity
+Platform errors and HTTP statuses to fixed labels before clearing the caught
+error. HTTP bodies, tokens and exception details remain absent from the result
+and local error message.
 
 The expected incremental cost is negligible: one short Workflow execution, Firebase token exchanges, IAM Credentials calls and a handful of Firestore reads. This is not a load test.
 
