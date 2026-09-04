@@ -51,6 +51,7 @@ const PLAN = Buffer.from('synthetic-auth-probe-plan');
 const PLAN_JSON = Buffer.from('{"synthetic":true}\n');
 const CREATED_AT = '2026-09-05T00:00:00.000Z';
 const WORKFLOW_REVISION = '000001-abc';
+const PREVIOUS_WORKFLOW_SOURCE_SHA256 = '36c24d5f0b6235d057d1a0b2b6cc8bcf3ca1dccc7ad84b2195cf770dd4c80c98';
 const probeRoot = new URL('../auth-probe/', import.meta.url);
 const terraformFiles = readdirSync(probeRoot).filter((name) => name.endsWith('.tf')).sort();
 const terraformSource = terraformFiles
@@ -526,6 +527,50 @@ test('validates exact arm and retirement plans and rejects privilege drift', () 
   assert.equal(armed.create, 5);
   assert.equal(armed.delete, 0);
   assert.equal(armed.public_invokers, 0);
+  const sourceTransition = syntheticPlan('arm');
+  const customRoleChange = sourceTransition.resource_changes
+    .find(({ address }) => address === 'google_project_iam_custom_role.auth_probe');
+  customRoleChange.change.actions = ['no-op'];
+  customRoleChange.change.before = structuredClone(customRoleChange.change.after);
+  const guardChange = sourceTransition.resource_changes
+    .find(({ address }) => address === 'terraform_data.auth_probe_guard');
+  const currentInput = structuredClone(guardChange.change.after.input);
+  const previousInput = {
+    ...structuredClone(currentInput),
+    workflow_source_sha256: PREVIOUS_WORKFLOW_SOURCE_SHA256,
+  };
+  guardChange.change = {
+    actions: ['update'],
+    before: {
+      id: 'bd5471f4-d4d8-609b-5621-a84204953f4d',
+      input: previousInput,
+      output: structuredClone(previousInput),
+      triggers_replace: null,
+    },
+    after: {
+      id: 'bd5471f4-d4d8-609b-5621-a84204953f4d',
+      input: currentInput,
+      triggers_replace: null,
+    },
+    after_unknown: { input: { firebase_auth: {} }, output: true },
+    before_sensitive: {
+      input: { firebase_auth: {} },
+      output: { firebase_auth: {} },
+    },
+    after_sensitive: { input: { firebase_auth: {} }, output: {} },
+  };
+  const transitioned = validateAuthProbePlanAgainstPolicy(sourceTransition, 'arm');
+  assert.equal(transitioned.create, 3);
+  assert.equal(transitioned.update, 1);
+  const foreignTransition = structuredClone(sourceTransition);
+  const foreignGuard = foreignTransition.resource_changes
+    .find(({ address }) => address === 'terraform_data.auth_probe_guard');
+  foreignGuard.change.before.input.workflow_source_sha256 = '0'.repeat(64);
+  foreignGuard.change.before.output.workflow_source_sha256 = '0'.repeat(64);
+  assert.throws(
+    () => validateAuthProbePlanAgainstPolicy(foreignTransition, 'arm'),
+    /workflow_source_sha256/u,
+  );
   const retired = validateAuthProbePlanAgainstPolicy(syntheticPlan('retire'), 'retire');
   assert.equal(retired.create, 0);
   assert.equal(retired.delete, 3);

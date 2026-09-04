@@ -24,6 +24,8 @@ const GOOGLE_PROVIDER = 'registry.terraform.io/hashicorp/google';
 const TERRAFORM_PROVIDER = 'terraform.io/builtin/terraform';
 const MAXIMUM_PLAN_BYTES = 16 * 1024 * 1024;
 const REVISION = /^[0-9a-z][0-9a-z-]{0,62}$/u;
+const TERRAFORM_DATA_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
+const PREVIOUS_WORKFLOW_SOURCE_SHA256 = '36c24d5f0b6235d057d1a0b2b6cc8bcf3ca1dccc7ad84b2195cf770dd4c80c98';
 const DATA_RESOURCES = Object.freeze({
   'data.terraform_remote_state.firebase_auth': 'terraform_remote_state',
   'data.terraform_remote_state.workload': 'terraform_remote_state',
@@ -138,7 +140,7 @@ function validateConfiguration(plan) {
   exact(providers.terraform.full_name, TERRAFORM_PROVIDER, 'Terraform built-in provider');
 }
 
-function validateGuard(value, address) {
+function validateGuard(value, address, workflowSourceSha256 = WORKFLOW_SOURCE_SHA256) {
   const input = value.input;
   if (!plainObject(input)) reject(`${address}.input is missing`);
   exact(input.project_id, PROJECT_ID, `${address}.project_id`);
@@ -170,7 +172,43 @@ function validateGuard(value, address) {
   exact(firebaseAuth.mfa, 'DISABLED', `${address}.firebase_auth.mfa`);
   exact(firebaseAuth.request_logging, false, `${address}.firebase_auth.request_logging`);
   exact(input.firebase_app_id, FIREBASE_APP_ID, `${address}.firebase_app_id`);
-  exact(input.workflow_source_sha256, WORKFLOW_SOURCE_SHA256, `${address}.workflow_source_sha256`);
+  exact(input.workflow_source_sha256, workflowSourceSha256, `${address}.workflow_source_sha256`);
+}
+
+function validateGuardSourceTransition(change, address) {
+  exact(Object.keys(change).sort(), [
+    'actions',
+    'after',
+    'after_sensitive',
+    'after_unknown',
+    'before',
+    'before_sensitive',
+  ], `${address}.change fields`);
+  const { before, after } = change;
+  if (!plainObject(before) || !plainObject(after)
+    || typeof before.id !== 'string' || !TERRAFORM_DATA_ID.test(before.id)) {
+    reject(`${address} source transition identity is invalid`);
+  }
+  exact(Object.keys(before).sort(), ['id', 'input', 'output', 'triggers_replace'], `${address}.before fields`);
+  exact(Object.keys(after).sort(), ['id', 'input', 'triggers_replace'], `${address}.after fields`);
+  exact(after.id, before.id, `${address}.id continuity`);
+  exact(before.output, before.input, `${address}.previous output`);
+  exact(before.triggers_replace, null, `${address}.before.triggers_replace`);
+  exact(after.triggers_replace, null, `${address}.after.triggers_replace`);
+  validateGuard(before, `${address}.before`, PREVIOUS_WORKFLOW_SOURCE_SHA256);
+  validateGuard(after, `${address}.after`);
+  exact(change.after_unknown, {
+    input: { firebase_auth: {} },
+    output: true,
+  }, `${address}.after_unknown`);
+  exact(change.before_sensitive, {
+    input: { firebase_auth: {} },
+    output: { firebase_auth: {} },
+  }, `${address}.before_sensitive`);
+  exact(change.after_sensitive, {
+    input: { firebase_auth: {} },
+    output: {},
+  }, `${address}.after_sensitive`);
 }
 
 function validateCustomRole(value, address) {
@@ -259,8 +297,12 @@ function validateResourceValue(address, value, profile) {
   }
 }
 
-function expectedActions(address, phase) {
+function expectedActions(address, profile) {
+  const { phase } = PLAN_PROFILES[profile];
   if (phase === 'arm') {
+    if (address === 'terraform_data.auth_probe_guard') {
+      return [['create'], ['no-op'], ['update']];
+    }
     return TEMPORARY_RESOURCES.has(address) ? [['create']] : [['create'], ['no-op']];
   }
   return TEMPORARY_RESOURCES.has(address) ? [['delete']] : [['no-op']];
@@ -288,6 +330,7 @@ export function validateAuthProbePlanAgainstPolicy(plan, profile) {
 
   const seen = new Set();
   let create = 0;
+  let update = 0;
   let remove = 0;
   let workflowRevision = phase === 'retire' ? 'absent' : null;
   for (const change of plan.resource_changes) {
@@ -306,7 +349,7 @@ export function validateAuthProbePlanAgainstPolicy(plan, profile) {
       reject('Terraform Auth-probe plan contains an unreviewed managed resource');
     }
     seen.add(change.address);
-    const allowed = expectedActions(change.address, phase);
+    const allowed = expectedActions(change.address, profile);
     if (!allowed.some((actions) => isDeepStrictEqual(actions, change.change.actions))) {
       reject(`${change.address}.actions do not match the reviewed ${phase} phase`);
     }
@@ -326,6 +369,12 @@ export function validateAuthProbePlanAgainstPolicy(plan, profile) {
         workflowRevision = revision;
       }
       remove += 1;
+    } else if (isDeepStrictEqual(actions, ['update'])) {
+      if (profile !== 'arm' || change.address !== 'terraform_data.auth_probe_guard') {
+        reject(`${change.address} cannot be updated by the reviewed ${profile} profile`);
+      }
+      validateGuardSourceTransition(change.change, change.address);
+      update += 1;
     } else {
       validateResourceValue(change.address, change.change.after, profile);
     }
@@ -333,8 +382,8 @@ export function validateAuthProbePlanAgainstPolicy(plan, profile) {
   if (phase === 'arm') {
     exact([...seen].sort(), Object.keys(CHANGE_RESOURCES).sort(), 'Managed Auth-probe changes');
   }
-  if ((phase === 'arm' && (create < 3 || remove !== 0))
-    || (phase === 'retire' && (create !== 0 || remove > 3))
+  if ((phase === 'arm' && (create < 3 || update > 1 || remove !== 0))
+    || (phase === 'retire' && (create !== 0 || update !== 0 || remove > 3))
     || (profile === 'retire-finalize' && remove !== 0)) {
     reject(`Terraform Auth-probe ${phase} delta is outside the reviewed boundary`);
   }
@@ -342,7 +391,7 @@ export function validateAuthProbePlanAgainstPolicy(plan, profile) {
   return Object.freeze({
     phase,
     create,
-    update: 0,
+    update,
     delete: remove,
     permanent_custom_roles: 1,
     temporary_iam_bindings: 2,
