@@ -66,6 +66,22 @@ On Apple Silicon with Homebrew, the check automatically discovers the keg-only
 `openjdk@21` installation. Other systems can provide Java 21 through `PATH` or
 `JAVA_HOME`.
 
+The cross-repository relay gate is launched from a Miakapp-Server checkout after
+building this package and the pinned MiakAPI checkout:
+
+```sh
+./scripts/check-platform-integration.sh /absolute/path/to/Miakapp-V3 /absolute/path/to/MiakAPI
+```
+
+That gate starts only the Auth and Firestore emulators, wraps this exact Express
+application in an ephemeral loopback HTTPS listener, creates one synthetic owner,
+home and Home Key through the real routes, and removes its temporary certificate
+and Home Key file on exit. The SDK then performs `initial` and `reauth` exchanges
+through the real route and one relay socket; the relay uses its production token
+verifier and JWKS cache. A build-tagged constructor changes only the relay test
+client's trust roots so the production verifier can trust the ephemeral loopback
+certificate. It is absent from normal relay builds.
+
 Firebase Functions accepts only a major Node version in `package.json`, so the
 deployment manifest retains `"node": "22"`. The executable preflight enforces
 the narrower Node 22.12+ test-runner requirement before installing packages.
@@ -107,6 +123,14 @@ versioned-pepper lookup, independent verification of all four attenuated token
 profiles, uniform/repeated revocation, post-revocation exchange denial,
 transaction-linearized signing during revoke and relay-change races, malformed
 registry state, CORS, cookie rejection, and deny-by-default client Rules.
+
+The separate cross-repository gate proves the exact coordinator path through the
+real Auth and Firestore emulators, control-plane request router, Home Key token
+provider, SDK `HELLO` and scheduled `REAUTH`, relay JWKS fetch, production token
+verifier and binding checks. It observes one ready generation, exactly two
+successful coordinator verifications and no reconnect. This first integrated
+path does not yet close live signing-key rotation, expired-cache recovery,
+unknown-`kid` concurrency or abuse-limit evidence.
 
 For component publication, the corpus proves owner and attenuated-token
 authorization without verifier fallback, direct-Home-Key and cross-resource
