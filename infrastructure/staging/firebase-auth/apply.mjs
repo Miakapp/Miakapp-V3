@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 
 import {
+  FIREBASE_AUTH_CONFIG_NAME,
   PROJECT_ID,
   PROJECT_NUMBER,
   assertSafeWorkloadEnvironment,
@@ -43,7 +44,7 @@ export function validateFirebaseAuthResult(value) {
     schema: 'miakapp.staging-firebase-auth/1',
     project_id: PROJECT_ID,
     project_number: PROJECT_NUMBER,
-    config_name: `projects/${PROJECT_ID}/config`,
+    config_name: FIREBASE_AUTH_CONFIG_NAME,
     anonymous_sign_in: false,
     email_sign_in: false,
     phone_sign_in: false,

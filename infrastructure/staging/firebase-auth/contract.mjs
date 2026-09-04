@@ -42,6 +42,9 @@ export {
   writePrivateFile,
 };
 
+export const FIREBASE_AUTH_IMPORT_ID = `projects/${PROJECT_ID}/config`;
+export const FIREBASE_AUTH_CONFIG_NAME = `projects/${PROJECT_NUMBER}/config`;
+
 const SHA256 = /^[0-9a-f]{64}$/u;
 const COMMIT = /^[0-9a-f]{40}$/u;
 const TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u;
@@ -153,7 +156,7 @@ export function buildFirebaseAuthStateRecoveryMetadata({
     terraform_version: TERRAFORM_VERSION,
     action,
     resource_address: 'google_identity_platform_config.firebase_auth',
-    import_id: `projects/${PROJECT_ID}/config`,
+    import_id: FIREBASE_AUTH_IMPORT_ID,
     state_lineage_sha256: state.lineage_sha256,
     state_serial: state.serial,
     state_sha256: state.sha256,
@@ -195,7 +198,7 @@ export function validateFirebaseAuthStateRecoveryMetadata(value, now = Date.now(
     || metadata.terraform_version !== TERRAFORM_VERSION
     || !['import', 'untaint', 'reconcile'].includes(metadata.action)
     || metadata.resource_address !== 'google_identity_platform_config.firebase_auth'
-    || metadata.import_id !== `projects/${PROJECT_ID}/config`
+    || metadata.import_id !== FIREBASE_AUTH_IMPORT_ID
     || !SHA256.test(metadata.state_lineage_sha256)
     || !Number.isSafeInteger(metadata.state_serial) || metadata.state_serial < 0
     || !SHA256.test(metadata.state_sha256)
