@@ -250,6 +250,23 @@ describe('production cloud security boundaries', () => {
     expect(await KmsAccessTokenSigner.create(config(), kms)).toBeInstanceOf(KmsAccessTokenSigner);
   });
 
+  test('accepts only the pinned numeric project alias returned by Secret Manager', async () => {
+    const canonical = new RecordingSecretManager((response) => ({
+      ...response,
+      name: (response.name ?? '')
+        .replace('projects/miakapp-v4-staging/', 'projects/1072737219170/'),
+    }));
+    const loaded = await loadProductionSecrets(config(), canonical);
+    expect(loaded.verifierKeyVersion).toBe('v2');
+
+    const foreign = new RecordingSecretManager((response) => ({
+      ...response,
+      name: (response.name ?? '')
+        .replace('projects/miakapp-v4-staging/', 'projects/1072737219171/'),
+    }));
+    await expectDependencyError(() => loadProductionSecrets(config(), foreign));
+  });
+
   test('binds one KMS Ed25519 call to the exact JWS input and independently verifies it', async () => {
     const kms = new RecordingKms();
     const signer = await KmsAccessTokenSigner.create(config(), kms);
