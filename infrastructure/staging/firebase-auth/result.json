@@ -1,0 +1,28 @@
+{
+  "schema": "miakapp.staging-firebase-auth-recovery-result/1",
+  "project_id": "miakapp-v4-staging",
+  "project_number": "1072737219170",
+  "repository_commit": "e44ce2cde147b19b7e82f89b44e8f3a5233d1942",
+  "observed_at": "2026-09-04T10:42:43.616Z",
+  "terraform_state_sha256": "94a1eca99e8a793ca1d316a283c43c0a75aeb041a84135ac5084074260fceb69",
+  "live_config_sha256": "2b274774cdc86caf380f67f611de4d7df66da2bb8ad4d92f111df4d26d37dd50",
+  "firebase_auth": {
+    "anonymous_sign_in": false,
+    "anonymous_user_autodelete": true,
+    "config_name": "projects/1072737219170/config",
+    "duplicate_emails": false,
+    "email_sign_in": false,
+    "mfa": "DISABLED",
+    "multi_tenant": false,
+    "phone_sign_in": false,
+    "project_id": "miakapp-v4-staging",
+    "project_number": "1072737219170",
+    "request_logging": false,
+    "schema": "miakapp.staging-firebase-auth/1",
+    "user_deletion_disabled": false,
+    "user_signup_disabled": false
+  },
+  "external_identity_providers": 0,
+  "public_endpoints_created": 0,
+  "persistent_credentials_created": 0
+}

@@ -1,13 +1,13 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 36,
-  "status": "private_control_plane_discovery_validated",
+  "revision": 37,
+  "status": "private_control_plane_auth_app_check_validated",
   "environment": "staging",
   "project": {
     "project_id": "miakapp-v4-staging",
     "project_number": "1072737219170",
     "display_name": "Miakapp V4 Staging",
-    "lifecycle": "firebase_enabled_billing_linked_private_control_plane_discovery_validated",
+    "lifecycle": "firebase_auth_initialized_private_control_plane_auth_app_check_validated",
     "creation_authorized": false,
     "billing_link_authorized": false,
     "deployment_authorized": true,
@@ -133,11 +133,11 @@
   "services": [
     {
       "id": "firebase-auth",
-      "state": "api_enabled_no_staging_identity_test"
+      "state": "initialized_closed_custom_token_lifecycle_validated"
     },
     {
       "id": "firebase-app-check",
-      "state": "firebase_app_created_provider_not_configured"
+      "state": "admin_custom_provider_validated_browser_attestation_pending"
     },
     {
       "id": "firestore",
@@ -173,7 +173,7 @@
     },
     {
       "id": "cloud-workflows",
-      "state": "api_enabled_unscheduled_private_probe_succeeded"
+      "state": "api_enabled_discovery_retained_auth_probe_succeeded_and_retired"
     }
   ],
   "runtime": {
@@ -1230,7 +1230,7 @@
     "manual_read_only_cloud_plan_authorized": true,
     "foundation_apply_authorized": false,
     "required_blockers": [
-      "app-check-live-provider-and-replay-policy",
+      "app-check-browser-provider-attestation",
       "relay-token-refresh-integration",
       "trusted-source-and-edge-admission",
       "live-managed-service-fault-matrix",
@@ -1410,6 +1410,58 @@
       "raw_diagnostics_committed": false,
       "terraform_convergence": "no_changes",
       "live_request_performed": true
+    },
+    "firebase_auth_baseline": {
+      "state": "initialized_closed_and_reconciled",
+      "observed_at": "2026-09-04T10:42:43.616Z",
+      "repository_commit": "e44ce2cde147b19b7e82f89b44e8f3a5233d1942",
+      "result_path": "firebase-auth/result.json",
+      "result_sha256": "25a3c80ccccb89208499b1d0fc2176ac82a04a7fc47ed57af80dfa0371136c87",
+      "terraform_state_sha256": "94a1eca99e8a793ca1d316a283c43c0a75aeb041a84135ac5084074260fceb69",
+      "live_config_sha256": "2b274774cdc86caf380f67f611de4d7df66da2bb8ad4d92f111df4d26d37dd50",
+      "config_name": "projects/1072737219170/config",
+      "external_identity_providers": 0,
+      "anonymous_sign_in": false,
+      "email_sign_in": false,
+      "phone_sign_in": false,
+      "mfa": "DISABLED",
+      "multi_tenant": false,
+      "request_logging": false,
+      "public_endpoints_created": 0,
+      "persistent_credentials_created": 0
+    },
+    "auth_app_check_probe": {
+      "state": "succeeded_and_retired",
+      "observed_at": "2026-09-04T11:33:48.986Z",
+      "repository_commit": "753601acc160c2214511c3207b9f0c47d3d7e03e",
+      "workflow_source_sha256": "525b97d18a2848c1d852b9d117cb20cf464bbc1d7baa85b2d44d457487cd922c",
+      "workflow_revision": "000001-bb4",
+      "result_path": "auth-probe/result.json",
+      "result_sha256": "87af1de1f94bd4f1d070fef430f6e61ee70f7b988ec81fcfb0fb2805a3edc95f",
+      "retirement_path": "auth-probe/retirement.json",
+      "retirement_sha256": "595c994647f181b7f2b7a98e403c9d039b32cde6e57acd9df904d40b568e5b54",
+      "execution_duration_milliseconds": 7821,
+      "execution_count": 1,
+      "product_requests": 3,
+      "expected_application_writes": 0,
+      "missing_app_check_status": 401,
+      "missing_app_check_code": "invalid_app_check_token",
+      "first_authenticated_status": 200,
+      "replay_authenticated_status": 200,
+      "firebase_auth_validated": true,
+      "app_check_validated": true,
+      "app_check_token_consumption": false,
+      "browser_provider_attestation_validated": false,
+      "synthetic_user_created": true,
+      "synthetic_user_deleted": true,
+      "independent_user_absence_verified": true,
+      "workflow_present": false,
+      "temporary_bindings_present": false,
+      "recurring_compute": false,
+      "private_bundle_committed": false,
+      "execution_identifiers_committed": false,
+      "token_material_committed": false,
+      "raw_diagnostics_committed": false
     },
     "retired_recovery_workflow": {
       "id": "349440747",

@@ -1,22 +1,24 @@
 # Miakapp 4 staging private workload boundary
 
-Status: private control plane active, source-verified, and discovery-validated
+Status: private control plane active, source-verified, and Auth/App Check-validated
 
 This directory contains the closed description and observed state of
 `miakapp-v4-staging`. The bounded foundation recovery has completed; its active
 workflow and reviewed GitHub OIDC exchange are retired. The separate private
-workload and unscheduled private probe were applied and converged. One bounded
-discovery request succeeded after two controlled failures. This revision does
-not authorize public ingress, additional live requests, destroy, or production
-changes.
+workload and both unscheduled private probes were applied and converged. One
+bounded discovery request succeeded after two controlled failures. A later
+single-execution probe validated real Firebase Auth and Admin custom-provider
+App Check enforcement, deleted its synthetic user, and retired all temporary
+capability. This revision does not authorize public ingress, additional live
+requests, destroy, or production changes.
 
 ## Current truth
 
 Project `miakapp-v4-staging` (`1072737219170`) now has one active Gen 2 Function
 backed by one Cloud Run service. It still has no App Engine application, public
-ingress, unauthenticated invoker or minimum instance. Its sole successful
-bounded request came through the unscheduled private Workflow. The bootstrap is
-complete. Protected foundation applies
+ingress, unauthenticated invoker or minimum instance. Its bounded requests came
+only through unscheduled private Workflows. The bootstrap is complete.
+Protected foundation applies
 on 2026-09-03 created all thirteen declared APIs, the deletion-protected Paris
 Firestore database and three active TTL fields, one software Ed25519 signing
 key, and five Secret Manager containers. The eight KMS, Secret Manager and
@@ -80,6 +82,20 @@ Firestore, Storage or FCM mutation and did not validate Firebase Auth or App
 Check. The canonical [`probe/result.json`](probe/result.json) has SHA-256
 `ea3245756727eaf071f2edc6ef55ba1b730c5e3f61e38746fb7cbf36e8f4ef05`
 and contains no execution UUID, trace context, stack or raw diagnostic.
+
+Firebase Authentication is now initialized in its closed, non-deletable
+configuration with every end-user provider disabled. The separately armed Auth
+probe exchanged a signed custom token for a real Firebase ID token, proved the
+fixed no-email synthetic UID, and sent three requests through internal ingress.
+The missing-App-Check control returned `401 invalid_app_check_token`; the two
+requests carrying a real Admin custom-provider App Check token both returned an
+empty list with HTTP 200, proving the explicit reusable-token policy. The UID
+was deleted and independently verified absent. The Workflow and both temporary
+IAM bindings were then removed; the custom role remains dormant and unassigned.
+The digest-pinned [`auth-probe/result.json`](auth-probe/result.json) and
+[`auth-probe/retirement.json`](auth-probe/retirement.json) contain no execution
+identifier, token material or raw diagnostic. Browser-provider attestation is
+not claimed by this evidence.
 
 The earlier authorized bootstrap apply completed:
 
@@ -173,8 +189,8 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`activation/`](activation/) | One Firebase Web app, five initial secret versions, and the closed non-secret runtime document | Applied once and idempotently revalidated; result evidence committed without secret payloads |
 | [`workload/`](workload/) | Deterministic production package, private Gen 2 Function, dedicated build/probe identities, and one-permission FCM role | Applied and converged; current internal-only revision independently source-verified |
 | [`probe/`](probe/) | Isolated Workflows API and one fixed, unscheduled, keyless internal discovery probe | Applied and consumed; exactly two failures followed by one validated HTTP 200 discovery response |
-| [`firebase-auth/`](firebase-auth/) | Closed Firebase Authentication initialization with no end-user sign-in provider | Dedicated backend initialized with zero managed resources; non-deletable resource prepared but not applied |
-| [`auth-probe/`](auth-probe/) | Dormant synthetic Firebase Auth and custom-provider App Check Workflow with temporary least-privilege IAM | Prepared; cannot arm until the exact Firebase Auth baseline exists |
+| [`firebase-auth/`](firebase-auth/) | Closed Firebase Authentication initialization with no end-user sign-in provider | Non-deletable resource initialized, state-adopted, reconciled, and independently validated |
+| [`auth-probe/`](auth-probe/) | Dormant synthetic Firebase Auth and custom-provider App Check Workflow with temporary least-privilege IAM | One bounded execution succeeded; synthetic user and all temporary capability retired; sanitized evidence committed |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
 | [`TEARDOWN.md`](TEARDOWN.md) | Manual recovery and teardown rehearsal | Documentation only |
@@ -403,25 +419,16 @@ No persistent credential or repository secret is used.
 
 ## Next staging gate
 
-Bootstrap, foundation, initial activation, private deployment and the bounded
-discovery probe are complete. Firebase Authentication is not initialized in the
-staging project. Its separately guarded, closed baseline is prepared under
-[`firebase-auth/`](firebase-auth/) and requires an exact authorization because
-Google does not support undoing that service initialization. It enables no
-end-user sign-in provider.
+Bootstrap, foundation, initial activation, private deployment, discovery, and
+the synthetic Firebase Auth/App Check gate are complete. Firebase Authentication
+is initialized under [`firebase-auth/`](firebase-auth/) with its exact closed
+configuration and no end-user provider. The one-shot sequence under
+[`auth-probe/`](auth-probe/) proved the real Firebase ID-token and Admin
+custom-provider App Check path, the V1 reusable-token policy, and complete
+synthetic-user cleanup. Its Workflow and temporary permissions are absent.
 
-The synthetic Firebase Auth and App Check probe is prepared under
-[`auth-probe/`](auth-probe/) and now refuses to arm until that exact remote
-Firebase Auth state exists. Its dormant default creates no Workflow or temporary
-permission. After initialization, the reviewed live sequence will arm it
-briefly, prove Firebase Auth and App Check validation plus the V1 reusable-token
-policy, delete and independently reconcile its no-email synthetic user, and
-retire all temporary capability without introducing a public Function invoker
-or real user data.
-
-Until that sequence is executed and committed as sanitized evidence, the
-synthetic Auth/App Check gate remains open. Browser App Check live-provider
-attestation remains a distinct blocker regardless of this probe. Relay
+Browser App Check live-provider attestation remains a distinct blocker because
+an Admin custom-provider token does not exercise browser attestation. Relay
 token-refresh integration, trusted-source/edge admission, the managed-service
 fault matrix, monitoring and billing-alert validation, secret and signing-key
 rotation, migration rehearsal, and every broader `STAGE-*` observation remain

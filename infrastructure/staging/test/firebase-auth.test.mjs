@@ -22,6 +22,10 @@ import {
   validateFirebaseAuthStateRecoveryAuthorization,
   validateFirebaseAuthStateRecoveryMetadata,
 } from '../firebase-auth/contract.mjs';
+import {
+  validateFirebaseAuthEvidence,
+  validateFirebaseAuthEvidenceValue,
+} from '../firebase-auth/evidence.mjs';
 import { validateFirebaseAuthRoot } from '../firebase-auth/guard.mjs';
 import {
   inspectFirebaseAuthState,
@@ -44,6 +48,7 @@ const planDriver = readFileSync(new URL('plan.mjs', firebaseAuthRoot), 'utf8');
 const applyDriver = readFileSync(new URL('apply.mjs', firebaseAuthRoot), 'utf8');
 const recoveryAdoptDriver = readFileSync(new URL('recovery-adopt.mjs', firebaseAuthRoot), 'utf8');
 const recoveryApplyDriver = readFileSync(new URL('recovery-apply.mjs', firebaseAuthRoot), 'utf8');
+const committedResultPath = new URL('../firebase-auth/result.json', import.meta.url);
 
 function foundation() {
   return {
@@ -543,6 +548,18 @@ test('accepts only the sanitized closed-baseline result', () => {
   assert.throws(
     () => validateFirebaseAuthResult({ ...result(), api_key: 'AIza'.padEnd(39, 'x') }),
     /closed baseline/,
+  );
+});
+
+test('pins the sanitized initialized Firebase Auth evidence', () => {
+  const evidence = validateFirebaseAuthEvidence(committedResultPath);
+  assert.equal(evidence.firebase_auth.config_name, FIREBASE_AUTH_CONFIG_NAME);
+  assert.equal(evidence.external_identity_providers, 0);
+  assert.equal(evidence.public_endpoints_created, 0);
+  assert.equal(evidence.persistent_credentials_created, 0);
+  assert.throws(
+    () => validateFirebaseAuthEvidenceValue({ ...evidence, api_key: 'must-not-be-accepted' }),
+    /fields have drifted/u,
   );
 });
 

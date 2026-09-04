@@ -29,18 +29,18 @@ function rejects(mutator, pattern) {
   );
 }
 
-test('accepts the active internal-only workload and successful private discovery probe', () => {
+test('accepts the private workload and successful retired Auth/App Check probe', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 36);
+  assert.equal(validated.revision, 37);
   assert.equal(
     validated.status,
-    'private_control_plane_discovery_validated',
+    'private_control_plane_auth_app_check_validated',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
   assert.equal(
     validated.project.lifecycle,
-    'firebase_enabled_billing_linked_private_control_plane_discovery_validated',
+    'firebase_auth_initialized_private_control_plane_auth_app_check_validated',
   );
   assert.equal(validated.bootstrap.billing_enabled, true);
   assert.equal(validated.bootstrap.firebase_apps, 1);
@@ -72,8 +72,8 @@ test('accepts the active internal-only workload and successful private discovery
     true,
   );
   assert.deepEqual(validated.services.map(({ state }) => state), [
-    'api_enabled_no_staging_identity_test',
-    'firebase_app_created_provider_not_configured',
+    'initialized_closed_custom_token_lifecycle_validated',
+    'admin_custom_provider_validated_browser_attestation_pending',
     'foundation_created_no_application_mutation',
     'private_deployment_active_source_verified_discovery_validated',
     'private_bucket_created_no_application_mutation',
@@ -82,7 +82,7 @@ test('accepts the active internal-only workload and successful private discovery
     'api_enabled_one_permission_runtime_role_applied_uninvoked',
     'api_enabled_runtime_deployed_no_application_log_validation',
     'api_enabled_runtime_deployed_no_metric_validation',
-    'api_enabled_unscheduled_private_probe_succeeded',
+    'api_enabled_discovery_retained_auth_probe_succeeded_and_retired',
   ]);
   assert.equal(
     validated.security.iam.foundation_resource_bindings_state,
@@ -629,6 +629,33 @@ test('accepts the active internal-only workload and successful private discovery
   assert.equal(validated.evidence.private_probe.trace_identifiers_committed, false);
   assert.equal(validated.evidence.private_probe.raw_diagnostics_committed, false);
   assert.equal(validated.evidence.private_probe.live_request_performed, true);
+  assert.equal(validated.evidence.firebase_auth_baseline.state, 'initialized_closed_and_reconciled');
+  assert.equal(validated.evidence.firebase_auth_baseline.external_identity_providers, 0);
+  assert.equal(validated.evidence.firebase_auth_baseline.anonymous_sign_in, false);
+  assert.equal(validated.evidence.firebase_auth_baseline.email_sign_in, false);
+  assert.equal(validated.evidence.firebase_auth_baseline.phone_sign_in, false);
+  assert.equal(validated.evidence.firebase_auth_baseline.public_endpoints_created, 0);
+  assert.equal(validated.evidence.firebase_auth_baseline.persistent_credentials_created, 0);
+  assert.equal(validated.evidence.auth_app_check_probe.state, 'succeeded_and_retired');
+  assert.equal(validated.evidence.auth_app_check_probe.firebase_auth_validated, true);
+  assert.equal(validated.evidence.auth_app_check_probe.app_check_validated, true);
+  assert.equal(validated.evidence.auth_app_check_probe.missing_app_check_status, 401);
+  assert.equal(validated.evidence.auth_app_check_probe.first_authenticated_status, 200);
+  assert.equal(validated.evidence.auth_app_check_probe.replay_authenticated_status, 200);
+  assert.equal(validated.evidence.auth_app_check_probe.synthetic_user_deleted, true);
+  assert.equal(validated.evidence.auth_app_check_probe.independent_user_absence_verified, true);
+  assert.equal(validated.evidence.auth_app_check_probe.workflow_present, false);
+  assert.equal(validated.evidence.auth_app_check_probe.temporary_bindings_present, false);
+  assert.equal(validated.evidence.auth_app_check_probe.token_material_committed, false);
+  assert.equal(validated.evidence.auth_app_check_probe.raw_diagnostics_committed, false);
+  assert.equal(
+    validated.readiness.required_blockers.includes('app-check-browser-provider-attestation'),
+    true,
+  );
+  assert.equal(
+    validated.readiness.required_blockers.includes('app-check-live-provider-and-replay-policy'),
+    false,
+  );
   assert.deepEqual(validated.evidence.retired_recovery_workflow, {
     id: '349440747',
     state: 'deleted',
@@ -683,10 +710,13 @@ test('accepts the active internal-only workload and successful private discovery
   assert.equal(validateFirebaseRc(firebaseRc()).projects.default, 'miakapp-3');
 });
 
-test('cross-checks manifest claims against both committed evidence artifacts', () => {
+test('cross-checks manifest claims against all committed evidence artifacts', () => {
   const evidence = validateCommittedEvidence(manifest());
   assert.equal(evidence.workload.function.revision, 'control-plane-00003-hum');
   assert.equal(evidence.probe.response.status, 200);
+  assert.equal(evidence.firebaseAuth.external_identity_providers, 0);
+  assert.equal(evidence.authProbe.execution.state, 'SUCCEEDED');
+  assert.equal(evidence.authProbeRetirement.workflow_present, false);
 
   const workloadDigestDrift = manifest();
   workloadDigestDrift.evidence.workload_deployment.result_sha256 = '0'.repeat(64);
@@ -710,6 +740,30 @@ test('cross-checks manifest claims against both committed evidence artifacts', (
     () => validateCommittedEvidence(probePathDrift),
     (error) => error instanceof StagingManifestError
       && /evidence\.private_probe\.result_path/.test(error.message),
+  );
+
+  const authProbeDigestDrift = manifest();
+  authProbeDigestDrift.evidence.auth_app_check_probe.result_sha256 = '0'.repeat(64);
+  assert.throws(
+    () => validateCommittedEvidence(authProbeDigestDrift),
+    (error) => error instanceof StagingManifestError
+      && /evidence\.auth_app_check_probe\.result_sha256/.test(error.message),
+  );
+
+  const authProbeRetirementPathDrift = manifest();
+  authProbeRetirementPathDrift.evidence.auth_app_check_probe.retirement_path = '../../private.json';
+  assert.throws(
+    () => validateCommittedEvidence(authProbeRetirementPathDrift),
+    (error) => error instanceof StagingManifestError
+      && /evidence\.auth_app_check_probe\.retirement_path/.test(error.message),
+  );
+
+  const firebaseAuthDigestDrift = manifest();
+  firebaseAuthDigestDrift.evidence.firebase_auth_baseline.result_sha256 = '0'.repeat(64);
+  assert.throws(
+    () => validateCommittedEvidence(firebaseAuthDigestDrift),
+    (error) => error instanceof StagingManifestError
+      && /evidence\.firebase_auth_baseline\.result_sha256/.test(error.message),
   );
 });
 
@@ -1501,6 +1555,51 @@ test('rejects drift or private telemetry claims in the public probe evidence', (
   rejects((candidate) => {
     candidate.evidence.private_probe.private_detail = 'must-not-be-accepted';
   }, /evidence\.private_probe must contain exactly/);
+});
+
+test('rejects drift or private material claims in Auth/App Check evidence', () => {
+  rejects((candidate) => {
+    candidate.evidence.auth_app_check_probe.result_sha256 = '0'.repeat(64);
+  }, /evidence\.auth_app_check_probe\.result_sha256/);
+  rejects((candidate) => {
+    candidate.evidence.auth_app_check_probe.missing_app_check_status = 200;
+  }, /evidence\.auth_app_check_probe\.missing_app_check_status/);
+  rejects((candidate) => {
+    candidate.evidence.auth_app_check_probe.browser_provider_attestation_validated = true;
+  }, /evidence\.auth_app_check_probe\.browser_provider_attestation_validated/);
+  rejects((candidate) => {
+    candidate.evidence.auth_app_check_probe.workflow_present = true;
+  }, /evidence\.auth_app_check_probe\.workflow_present/);
+  rejects((candidate) => {
+    candidate.evidence.auth_app_check_probe.temporary_bindings_present = true;
+  }, /evidence\.auth_app_check_probe\.temporary_bindings_present/);
+  rejects((candidate) => {
+    candidate.evidence.auth_app_check_probe.execution_identifiers_committed = true;
+  }, /evidence\.auth_app_check_probe\.execution_identifiers_committed/);
+  rejects((candidate) => {
+    candidate.evidence.auth_app_check_probe.token_material_committed = true;
+  }, /evidence\.auth_app_check_probe\.token_material_committed/);
+  rejects((candidate) => {
+    candidate.evidence.auth_app_check_probe.private_detail = 'must-not-be-accepted';
+  }, /evidence\.auth_app_check_probe must contain exactly/);
+});
+
+test('rejects drift from the initialized closed Firebase Auth evidence', () => {
+  rejects((candidate) => {
+    candidate.evidence.firebase_auth_baseline.external_identity_providers = 1;
+  }, /evidence\.firebase_auth_baseline\.external_identity_providers/);
+  rejects((candidate) => {
+    candidate.evidence.firebase_auth_baseline.email_sign_in = true;
+  }, /evidence\.firebase_auth_baseline\.email_sign_in/);
+  rejects((candidate) => {
+    candidate.evidence.firebase_auth_baseline.public_endpoints_created = 1;
+  }, /evidence\.firebase_auth_baseline\.public_endpoints_created/);
+  rejects((candidate) => {
+    candidate.evidence.firebase_auth_baseline.persistent_credentials_created = 1;
+  }, /evidence\.firebase_auth_baseline\.persistent_credentials_created/);
+  rejects((candidate) => {
+    candidate.evidence.firebase_auth_baseline.private_detail = 'must-not-be-accepted';
+  }, /evidence\.firebase_auth_baseline must contain exactly/);
 });
 
 test('keeps historical CI keyless, recovery retired, and credentials ephemeral', () => {
