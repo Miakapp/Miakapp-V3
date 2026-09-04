@@ -20,11 +20,17 @@ implemented across several repositories.
 - [`rfcs/0004-platform-control-plane.md`](rfcs/0004-platform-control-plane.md)
   — accepted owner bootstrap, Home Key, resource-specific token, JWKS, Firebase
   identity, push-consent and component-publication contract.
+- [`rfcs/0005-browser-client-sdk.md`](rfcs/0005-browser-client-sdk.md) — accepted
+  trusted-host browser lifecycle, immutable state, calls, reauthentication and
+  cleanup contract; arbitrary-relay production authentication remains gated.
 - [`roadmaps/2026-08-29-miakapp-v4-coordination.md`](roadmaps/2026-08-29-miakapp-v4-coordination.md)
   — cross-repository sequence, ownership, acceptance gates, and deferred work.
 - [`operations/2026-09-01-miakapp-v4-environments.md`](operations/2026-09-01-miakapp-v4-environments.md)
   — accepted local/staging/production isolation, cost posture, migration boundary,
   and the gate before any Miakapp 4 cloud project is used.
+- [`operations/2026-09-04-browser-relay-integration.md`](operations/2026-09-04-browser-relay-integration.md)
+  — pinned, synthetic real-Chromium reproduction and privacy-safe evidence
+  procedure for the public browser client and Go relay.
 - [`../infrastructure/staging/`](../infrastructure/staging/)
   — closed staging intent, digest-pinned live evidence, credential-free policy
   validator and teardown rehearsal. Cloud mutation remains behind separate
@@ -58,11 +64,14 @@ scheduled key-changing `REAUTH`, and relay production verification without
 reconnecting. Its deterministic cache probe covers 32-way refresh coalescing,
 unknown-`kid` abuse bounds, conditional expiry, fail-closed JWKS outage and
 bounded recovery. It covers signing-key overlap and activation, not managed
-retiring-key removal. Browser participation, the disconnect matrix, live KMS
-and Firebase certificate behavior, public ingress and staging acceptance remain
-open. The staging manifest makes their intended resource, cost and isolation
-boundary reviewable without pretending that every production adapter or a
-public edge already exists.
+retiring-key removal. A second reciprocal gate now runs the public
+`miakapi/browser` client in real Chromium against the Go relay and proves
+snapshot, patch, call/result and completed post-lease reauthentication on one
+WebSocket. It uses synthetic credentials and one exact loopback Origin; the
+disconnect matrix, audience-bound user credential, live KMS/Firebase certificate
+behavior, public ingress and staging acceptance remain open. The staging manifest
+makes their intended resource, cost and isolation boundary reviewable without
+pretending that every production adapter or a public edge already exists.
 
 Repository-specific implementation plans must link back to these documents and
 must not redefine a shared contract locally.

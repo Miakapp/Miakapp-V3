@@ -9,6 +9,8 @@ on:
       - 'control-plane/**'
       - 'control-plane-contract/**'
       - 'docs/rfcs/0004-platform-control-plane.md'
+      - 'docs/rfcs/0005-browser-client-sdk.md'
+      - 'docs/operations/2026-09-04-browser-relay-integration.md'
       - 'docs/specs/2026-08-29-miakapp-v4-design.md'
       - 'docs/roadmaps/2026-08-29-miakapp-v4-coordination.md'
       - 'package.json'
@@ -18,6 +20,8 @@ on:
       - 'control-plane/**'
       - 'control-plane-contract/**'
       - 'docs/rfcs/0004-platform-control-plane.md'
+      - 'docs/rfcs/0005-browser-client-sdk.md'
+      - 'docs/operations/2026-09-04-browser-relay-integration.md'
       - 'docs/specs/2026-08-29-miakapp-v4-design.md'
       - 'docs/roadmaps/2026-08-29-miakapp-v4-coordination.md'
       - 'package.json'
@@ -58,13 +62,13 @@ jobs:
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           repository: Miakapp/Miakapp-Server
-          ref: 25efc195dbd913a9e9e486db4cc7de1d836e9058
+          ref: da49e8bf6b1bd03acaabd225ab5e96a61dd5dd91
           path: .integration/miakapp-server
       - name: Check out the pinned MiakAPI coordinator SDK
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           repository: Miakapp/MiakAPI
-          ref: 967632ccc57df32a1a31cdbd761c7c3515106c4b
+          ref: 5c26eaa830015d94f53bf05fbbb0f5ebda6d290f
           path: .integration/miakapi
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
@@ -91,9 +95,17 @@ jobs:
         run: |
           bun install --frozen-lockfile
           bun run build
+      - name: Install the pinned Chromium runtime
+        working-directory: .integration/miakapi
+        run: ./node_modules/.bin/playwright install --with-deps chromium
       - name: Run the Home Key to relay authentication integration
         working-directory: .integration/miakapp-server
         run: >-
           ./scripts/check-platform-integration.sh
           "$GITHUB_WORKSPACE"
+          "$GITHUB_WORKSPACE/.integration/miakapi"
+      - name: Run the real browser relay integration
+        working-directory: .integration/miakapp-server
+        run: >-
+          ./scripts/check-miakapi-integration.sh
           "$GITHUB_WORKSPACE/.integration/miakapi"
