@@ -15,6 +15,8 @@ const componentsAudience = 'https://control.example.test/v1/components';
 const firebaseProject = 'demo-miakapp-control-plane';
 const homeId = 'synthetic-home';
 const clientId = 'AAAAAAAAAAAAAAAAAAAAAA';
+const userId = 'syn_user_1';
+const verifiedEmail = 'synthetic-1@example.test';
 
 const privateKeys = Object.freeze({
   current: {
@@ -110,6 +112,21 @@ function accessHeader(keyName = 'current', overrides = {}) {
 }
 
 function accessClaims(profile, sequence, overrides = {}) {
+  if (profile === 'user') {
+    return {
+      iss: issuer,
+      sub: userId,
+      aud: relayAudience,
+      exp: now + 300,
+      iat: now,
+      jti: Buffer.alloc(16, sequence).toString('base64url'),
+      scope: 'relay:user',
+      miakapp_home: homeId,
+      miakapp_role: 'user',
+      miakapp_verified_email: verifiedEmail,
+      ...overrides,
+    };
+  }
   const common = {
     iss: issuer,
     sub: homeId,
@@ -139,6 +156,16 @@ function accessClaims(profile, sequence, overrides = {}) {
 }
 
 function expectedAccess(profile) {
+  if (profile === 'user') {
+    return {
+      home_id: homeId,
+      principal_id: userId,
+      scope: 'relay:user',
+      expires_at: now + 300,
+      role: 'user',
+      verified_email: verifiedEmail,
+    };
+  }
   return {
     home_id: homeId,
     principal_id: homeId,
@@ -235,6 +262,7 @@ function invalidFirebase(id, sequence, error, overrides = {}, headerOverrides = 
 }
 
 const validCoordinator = validAccess('valid_coordinator', 'coordinator', 1);
+const validUserAccess = validAccess('valid_user_access', 'user', 25);
 const futureToken = validAccess('valid_future_after_rotation', 'coordinator', 5, 'future', 'rotated');
 const retiringToken = validAccess('valid_retiring_during_overlap', 'coordinator', 6, 'current');
 
@@ -242,6 +270,10 @@ const wrongSignatureParts = validCoordinator.token.split('.');
 const signatureBytes = Buffer.from(wrongSignatureParts[2], 'base64url');
 signatureBytes[0] ^= 0x80;
 const wrongSignature = `${wrongSignatureParts[0]}.${wrongSignatureParts[1]}.${signatureBytes.toString('base64url')}`;
+const wrongUserSignatureParts = validUserAccess.token.split('.');
+const wrongUserSignatureBytes = Buffer.from(wrongUserSignatureParts[2], 'base64url');
+wrongUserSignatureBytes[0] ^= 0x80;
+const wrongUserSignature = `${wrongUserSignatureParts[0]}.${wrongUserSignatureParts[1]}.${wrongUserSignatureBytes.toString('base64url')}`;
 
 const duplicatePayload = `{"iss":"${issuer}","sub":"${homeId}","aud":"${relayAudience}","aud":"${pushAudience}","exp":${now + 300},"iat":${now},"jti":"${Buffer.alloc(16, 15).toString('base64url')}","client_id":"${clientId}","scope":"relay:coordinator","miakapp_role":"coordinator","miakapp_coordinator":"automation"}`;
 const unpairedSurrogatePayload = `{"iss":"${issuer}","sub":"${homeId}","aud":"${relayAudience}","exp":${now + 300},"iat":${now},"jti":"${Buffer.alloc(16, 19).toString('base64url')}","client_id":"${clientId}","scope":"relay:coordinator","miakapp_role":"coordinator","miakapp_coordinator":"\\ud800"}`;
@@ -255,6 +287,37 @@ const vectors = [
   validAccess('valid_cli', 'cli', 2),
   validAccess('valid_push', 'push', 3),
   validAccess('valid_components', 'components', 4),
+  validUserAccess,
+  {
+    ...validAccess('valid_user_access_without_email', 'user', 26),
+    token: compact(
+      accessHeader(),
+      accessClaims('user', 26, { miakapp_verified_email: undefined }),
+      'current',
+    ),
+    expected: { ...expectedAccess('user'), verified_email: null },
+  },
+  invalidAccess('user_wrong_audience', 'user', 27, 'invalid_audience', { aud: 'wss://other-relay.example.test/ws' }),
+  invalidAccess('user_invalid_home', 'user', 28, 'invalid_claims', { miakapp_home: 'Invalid-Home' }),
+  invalidAccess('user_invalid_uid', 'user', 29, 'invalid_claims', { sub: '' }),
+  invalidAccess('user_wrong_role', 'user', 30, 'invalid_profile', { miakapp_role: 'cli' }),
+  invalidAccess('user_missing_role', 'user', 31, 'invalid_claims', { miakapp_role: undefined }),
+  invalidAccess('user_wrong_scope', 'user', 32, 'invalid_profile', { scope: 'relay:cli' }),
+  invalidAccess('user_multiple_scopes', 'user', 33, 'invalid_scope', { scope: 'relay:user push:send' }),
+  invalidAccess('user_forbidden_client_id', 'user', 34, 'invalid_claims', { client_id: clientId }),
+  invalidAccess('user_forbidden_coordinator', 'user', 35, 'invalid_claims', { miakapp_coordinator: 'automation' }),
+  invalidAccess('user_invalid_verified_email', 'user', 36, 'invalid_claims', { miakapp_verified_email: true }),
+  invalidAccess('user_overlong_ttl', 'user', 37, 'invalid_time', { exp: now + 301 }),
+  invalidAccess('user_future_iat', 'user', 38, 'invalid_time', { iat: now + 31, exp: now + 300 }),
+  {
+    id: 'user_bad_signature',
+    kind: 'miakapp',
+    profile: 'user',
+    key_set: 'rotated',
+    token: wrongUserSignature,
+    valid: false,
+    error: 'invalid_signature',
+  },
   retiringToken,
   futureToken,
   {
@@ -377,6 +440,7 @@ const fixture = {
     issuer,
     jwks_uri: `${issuer}/.well-known/jwks.json`,
     exchange_endpoint: `${issuer}/v1/access-tokens:exchange`,
+    user_relay_exchange_endpoint: `${issuer}/v1/user-relay-tokens:exchange`,
     push_audience: pushAudience,
     components_audience: componentsAudience,
     relay_audience: relayAudience,

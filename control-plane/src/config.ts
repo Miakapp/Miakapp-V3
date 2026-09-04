@@ -17,6 +17,7 @@ interface SyntheticFixture {
     readonly issuer: string;
     readonly jwks_uri: string;
     readonly exchange_endpoint: string;
+    readonly user_relay_exchange_endpoint: string;
     readonly push_audience: string;
     readonly components_audience: string;
   };
@@ -103,6 +104,7 @@ export function loadEmulatorConfig(
     issuer: fixture.deployment.issuer,
     jwksUri: fixture.deployment.jwks_uri,
     exchangeEndpoint: fixture.deployment.exchange_endpoint,
+    userRelayExchangeEndpoint: fixture.deployment.user_relay_exchange_endpoint,
     pushAudience: fixture.deployment.push_audience,
     componentsAudience: fixture.deployment.components_audience,
     componentBucket,

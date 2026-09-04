@@ -50,12 +50,13 @@ type KeySet struct {
 }
 
 type Deployment struct {
-	Issuer             string `json:"issuer"`
-	JWKSURI            string `json:"jwks_uri"`
-	ExchangeEndpoint   string `json:"exchange_endpoint"`
-	PushAudience       string `json:"push_audience"`
-	ComponentsAudience string `json:"components_audience"`
-	RelayAudience      string `json:"relay_audience"`
+	Issuer                    string `json:"issuer"`
+	JWKSURI                   string `json:"jwks_uri"`
+	ExchangeEndpoint          string `json:"exchange_endpoint"`
+	UserRelayExchangeEndpoint string `json:"user_relay_exchange_endpoint"`
+	PushAudience              string `json:"push_audience"`
+	ComponentsAudience        string `json:"components_audience"`
+	RelayAudience             string `json:"relay_audience"`
 }
 
 type FirebaseProfile struct {
@@ -129,6 +130,11 @@ var (
 	tokenJSONLimits   = jsonLimits{16, 2_048, 4_096, 256, 256}
 	requiredVectorIDs = []string{
 		"valid_coordinator", "valid_cli", "valid_push", "valid_components",
+		"valid_user_access", "valid_user_access_without_email", "user_wrong_audience",
+		"user_invalid_home", "user_invalid_uid", "user_wrong_role", "user_missing_role",
+		"user_wrong_scope", "user_multiple_scopes", "user_forbidden_client_id",
+		"user_forbidden_coordinator", "user_invalid_verified_email", "user_overlong_ttl",
+		"user_future_iat", "user_bad_signature",
 		"valid_retiring_during_overlap", "valid_future_after_rotation",
 		"unknown_future_before_rotation", "retiring_removed_after_overlap",
 		"wrong_issuer", "wrong_audience", "audience_array", "expired",
@@ -399,7 +405,8 @@ func LoadFixture(path string) (*Fixture, error) {
 	}
 	seenVectors := make(map[string]struct{})
 	for _, vector := range fixture.Vectors {
-		if vector.ID == "" || vector.VerificationTime <= 0 || len(vector.Token) > MaxTokenBytes {
+		validProfile := vector.Profile == "user" || vector.Profile == "coordinator" || vector.Profile == "cli" || vector.Profile == "push" || vector.Profile == "components"
+		if vector.ID == "" || vector.VerificationTime <= 0 || len(vector.Token) > MaxTokenBytes || !validProfile || (vector.Kind != "miakapp" && vector.Kind != "firebase") || (vector.Kind == "firebase" && vector.Profile != "user") || ((vector.Kind == "firebase") != (vector.KeySet == "firebase")) {
 			return nil, errors.New("fixture has invalid token vector")
 		}
 		expectedKeySet, keySetErr := expectedVectorKeySet(&fixture, vector)

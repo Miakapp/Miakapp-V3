@@ -19,10 +19,12 @@ implemented across several repositories.
   Node-RED boundary, fail-closed shadow modes, and comparison contract.
 - [`rfcs/0004-platform-control-plane.md`](rfcs/0004-platform-control-plane.md)
   — accepted owner bootstrap, Home Key, resource-specific token, JWKS, Firebase
-  identity, push-consent and component-publication contract.
+  source identity, audience-bound browser exchange, push-consent and
+  component-publication contract.
 - [`rfcs/0005-browser-client-sdk.md`](rfcs/0005-browser-client-sdk.md) — accepted
   trusted-host browser lifecycle, immutable state, calls, reauthentication and
-  cleanup contract; arbitrary-relay production authentication remains gated.
+  cleanup contract; audience-bound SDK/relay implementation evidence remains
+  gated.
 - [`roadmaps/2026-08-29-miakapp-v4-coordination.md`](roadmaps/2026-08-29-miakapp-v4-coordination.md)
   — cross-repository sequence, ownership, acceptance gates, and deferred work.
 - [`operations/2026-09-01-miakapp-v4-environments.md`](operations/2026-09-01-miakapp-v4-environments.md)
@@ -31,6 +33,9 @@ implemented across several repositories.
 - [`operations/2026-09-04-browser-relay-integration.md`](operations/2026-09-04-browser-relay-integration.md)
   — pinned, synthetic real-Chromium reproduction and privacy-safe evidence
   procedure for the public browser client and Go relay.
+- [`runbooks/user-relay-credentials.md`](runbooks/user-relay-credentials.md)
+  — dependency order, privacy-safe validation, staging cost gate, monitoring and
+  rollback for audience-bound browser relay credentials.
 - [`../infrastructure/staging/`](../infrastructure/staging/)
   — closed staging intent, digest-pinned live evidence, credential-free policy
   validator and teardown rehearsal. Cloud mutation remains behind separate
@@ -68,7 +73,7 @@ retiring-key removal. A second reciprocal gate now runs the public
 `miakapi/browser` client in real Chromium against the Go relay and proves
 snapshot, patch, call/result and completed post-lease reauthentication on one
 WebSocket. It uses synthetic credentials and one exact loopback Origin; the
-disconnect matrix, audience-bound user credential, live KMS/Firebase certificate
+disconnect matrix, end-to-end audience-bound user credential, live KMS/Firebase
 behavior, public ingress and staging acceptance remain open. The staging manifest
 makes their intended resource, cost and isolation boundary reviewable without
 pretending that every production adapter or a public edge already exists.

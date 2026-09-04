@@ -18,6 +18,7 @@ export const HOME_KEY_PATTERN = /^mhk1_([A-Za-z0-9_-]{22})_([A-Za-z0-9_-]{43})$/
 export const HOME_ID_PATTERN = /^[a-z][a-z0-9-]{1,61}[a-z0-9]$/;
 export const COORDINATOR_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 export const ACCESS_SCOPES = Object.freeze([
+  'relay:user',
   'relay:coordinator',
   'relay:cli',
   'push:send',
@@ -25,9 +26,9 @@ export const ACCESS_SCOPES = Object.freeze([
 ] as const);
 
 export type AccessScope = typeof ACCESS_SCOPES[number];
-export type AccessProfile = 'coordinator' | 'cli' | 'push' | 'components';
+export type AccessProfile = 'user' | 'coordinator' | 'cli' | 'push' | 'components';
 export type TokenKind = 'miakapp' | 'firebase';
-export type VectorProfile = AccessProfile | 'user';
+export type VectorProfile = AccessProfile;
 export type TokenErrorCode =
   | 'malformed_token'
   | 'invalid_header'
@@ -52,15 +53,26 @@ export interface PublicJwk {
   e?: string;
 }
 
-export interface AccessIdentity {
+export interface HomeKeyAccessIdentity {
   home_id: string;
   principal_id: string;
   client_id: string;
-  scope: AccessScope;
+  scope: Exclude<AccessScope, 'relay:user'>;
   expires_at: number;
   role: 'coordinator' | 'cli' | null;
   coordinator_name: string | null;
 }
+
+export interface UserAccessIdentity {
+  home_id: string;
+  principal_id: string;
+  scope: 'relay:user';
+  expires_at: number;
+  role: 'user';
+  verified_email: string | null;
+}
+
+export type AccessIdentity = HomeKeyAccessIdentity | UserAccessIdentity;
 
 export interface FirebaseIdentity {
   user_id: string;
@@ -98,6 +110,7 @@ export interface AccessTokenFixture {
     issuer: string;
     jwks_uri: string;
     exchange_endpoint: string;
+    user_relay_exchange_endpoint: string;
     push_audience: string;
     components_audience: string;
     relay_audience: string;
@@ -269,8 +282,31 @@ function parseKeySet(value: JsonValue | undefined, label: string): { keys: Publi
   return Object.freeze({ keys: Object.freeze(keys) as PublicJwk[] });
 }
 
-function parseAccessExpected(value: JsonValue, label: string): AccessIdentity {
+function parseAccessExpected(value: JsonValue, profile: AccessProfile, label: string): AccessIdentity {
   const object = objectValue(value, label);
+  if (profile === 'user') {
+    assertKeys(
+      object,
+      ['home_id', 'principal_id', 'scope', 'expires_at', 'role', 'verified_email'],
+      [],
+      label,
+    );
+    if (object.scope !== 'relay:user' || object.role !== 'user') {
+      throw new ContractViolation('invalid_fixture', `${label} is not a user access identity`);
+    }
+    const email = object.verified_email;
+    if (email !== null && typeof email !== 'string') {
+      throw new ContractViolation('invalid_fixture', `${label}.verified_email is invalid`);
+    }
+    return Object.freeze({
+      home_id: safeString(object.home_id, `${label}.home_id`, 63),
+      principal_id: safeString(object.principal_id, `${label}.principal_id`, 128),
+      scope: 'relay:user',
+      expires_at: integerValue(object.expires_at, `${label}.expires_at`),
+      role: 'user',
+      verified_email: email === null ? null : safeString(email, `${label}.verified_email`, 320),
+    });
+  }
   assertKeys(
     object,
     ['home_id', 'principal_id', 'client_id', 'scope', 'expires_at', 'role', 'coordinator_name'],
@@ -293,7 +329,7 @@ function parseAccessExpected(value: JsonValue, label: string): AccessIdentity {
     home_id: safeString(object.home_id, `${label}.home_id`, 63),
     principal_id: safeString(object.principal_id, `${label}.principal_id`, 128),
     client_id: safeString(object.client_id, `${label}.client_id`, 22),
-    scope: scope as AccessScope,
+    scope: scope as Exclude<AccessScope, 'relay:user'>,
     expires_at: integerValue(object.expires_at, `${label}.expires_at`),
     role,
     coordinator_name: coordinator,
@@ -334,8 +370,11 @@ function parseVector(value: JsonValue, label: string): TokenVector {
   if (!['coordinator', 'cli', 'push', 'components', 'user'].includes(profile)) {
     throw new ContractViolation('invalid_fixture', `${label}.profile is invalid`);
   }
-  if ((kind === 'firebase') !== (profile === 'user')) {
+  if (kind === 'firebase' && profile !== 'user') {
     throw new ContractViolation('invalid_fixture', `${label} mixes token profiles`);
+  }
+  if ((kind === 'firebase') !== (keySet === 'firebase')) {
+    throw new ContractViolation('invalid_fixture', `${label} mixes token and key profiles`);
   }
   if (!['initial', 'prepublished', 'rotated', 'retired', 'firebase'].includes(keySet)) {
     throw new ContractViolation('invalid_fixture', `${label}.key_set is invalid`);
@@ -359,7 +398,7 @@ function parseVector(value: JsonValue, label: string): TokenVector {
       token,
       valid,
       expected: kind === 'miakapp'
-        ? parseAccessExpected(object.expected, `${label}.expected`)
+        ? parseAccessExpected(object.expected, profile as AccessProfile, `${label}.expected`)
         : parseFirebaseExpected(object.expected, `${label}.expected`),
     });
   }
@@ -468,7 +507,15 @@ export function validateAccessTokenFixture(raw: JsonValue): AccessTokenFixture {
   const deploymentValue = objectValue(root.deployment ?? null, 'deployment');
   assertKeys(
     deploymentValue,
-    ['issuer', 'jwks_uri', 'exchange_endpoint', 'push_audience', 'components_audience', 'relay_audience'],
+    [
+      'issuer',
+      'jwks_uri',
+      'exchange_endpoint',
+      'user_relay_exchange_endpoint',
+      'push_audience',
+      'components_audience',
+      'relay_audience',
+    ],
     [],
     'deployment',
   );
@@ -476,6 +523,10 @@ export function validateAccessTokenFixture(raw: JsonValue): AccessTokenFixture {
     issuer: exactHttps(deploymentValue.issuer, 'deployment.issuer'),
     jwks_uri: exactHttps(deploymentValue.jwks_uri, 'deployment.jwks_uri'),
     exchange_endpoint: exactHttps(deploymentValue.exchange_endpoint, 'deployment.exchange_endpoint'),
+    user_relay_exchange_endpoint: exactHttps(
+      deploymentValue.user_relay_exchange_endpoint,
+      'deployment.user_relay_exchange_endpoint',
+    ),
     push_audience: exactHttps(deploymentValue.push_audience, 'deployment.push_audience'),
     components_audience: exactHttps(deploymentValue.components_audience, 'deployment.components_audience'),
     relay_audience: exactHttps(deploymentValue.relay_audience, 'deployment.relay_audience', true),
@@ -649,6 +700,21 @@ export function validateAccessTokenFixture(raw: JsonValue): AccessTokenFixture {
     'valid_cli',
     'valid_push',
     'valid_components',
+    'valid_user_access',
+    'valid_user_access_without_email',
+    'user_wrong_audience',
+    'user_invalid_home',
+    'user_invalid_uid',
+    'user_wrong_role',
+    'user_missing_role',
+    'user_wrong_scope',
+    'user_multiple_scopes',
+    'user_forbidden_client_id',
+    'user_forbidden_coordinator',
+    'user_invalid_verified_email',
+    'user_overlong_ttl',
+    'user_future_iat',
+    'user_bad_signature',
     'valid_retiring_during_overlap',
     'valid_future_after_rotation',
     'unknown_future_before_rotation',

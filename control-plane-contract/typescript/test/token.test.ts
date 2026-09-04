@@ -5,6 +5,7 @@ import {
   loadAccessTokenFixture,
   tokenErrorCode,
   verifyFixtureVector,
+  verifyFirebaseIdToken,
   verifyMiakappAccessToken,
   type PublicJwk,
 } from '../src/index.js';
@@ -42,6 +43,25 @@ describe('shared signed token vectors', () => {
     } catch (error) {
       expect(tokenErrorCode(error)).toBe('invalid_audience');
     }
+  });
+
+  test('keeps Firebase source tokens and Miakapp user access tokens mutually exclusive', async () => {
+    const fixture = await loadAccessTokenFixture();
+    const firebase = fixture.vectors.find((vector) => vector.id === 'valid_firebase_verified_email');
+    const userAccess = fixture.vectors.find((vector) => vector.id === 'valid_user_access');
+    if (firebase === undefined || userAccess === undefined) throw new Error('fixture vectors missing');
+
+    expect(() => verifyMiakappAccessToken(
+      firebase.token,
+      fixture,
+      'user',
+      fixture.key_sets.firebase.keys,
+    )).toThrow(TokenVerificationError);
+    expect(() => verifyFirebaseIdToken(
+      userAccess.token,
+      fixture,
+      fixture.key_sets[userAccess.key_set].keys,
+    )).toThrow(TokenVerificationError);
   });
 
   test('does not trust contradictory JWK usage metadata', async () => {

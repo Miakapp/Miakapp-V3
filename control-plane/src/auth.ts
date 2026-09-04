@@ -5,6 +5,7 @@ import type { FirebasePrincipal } from './types.js';
 
 const MAX_FIREBASE_TOKEN_BYTES = 8_192;
 const RECENT_AUTHENTICATION_SECONDS = 600;
+const CONTROL_CHARACTER = /\p{Cc}/u;
 
 export interface FirebaseTokenVerifier {
   verifyIdToken(token: string): Promise<DecodedIdToken>;
@@ -84,10 +85,12 @@ export function firebasePrincipalFromDecodedToken(
   const issuedAt = token.iat;
   const authenticatedAt = token.auth_time;
   const expiresAt = token.exp;
+  const emailVerified = token.email_verified;
   const now = Math.floor(nowMilliseconds / 1_000);
   if (typeof userId !== 'string'
     || userId.length === 0
     || Buffer.byteLength(userId, 'utf8') > 128
+    || CONTROL_CHARACTER.test(userId)
     || !Number.isSafeInteger(issuedAt)
     || !Number.isSafeInteger(authenticatedAt)
     || !Number.isSafeInteger(expiresAt)
@@ -99,7 +102,21 @@ export function firebasePrincipalFromDecodedToken(
     || expiresAt <= now) {
     throw apiError('invalid_firebase_token');
   }
-  return Object.freeze({ userId, authenticatedAt, expiresAt });
+  if (emailVerified !== undefined && typeof emailVerified !== 'boolean') {
+    throw apiError('invalid_firebase_token');
+  }
+  let verifiedEmail: string | null = null;
+  if (emailVerified === true) {
+    const email = token.email;
+    if (typeof email !== 'string'
+      || email.length === 0
+      || Buffer.byteLength(email, 'utf8') > 320
+      || CONTROL_CHARACTER.test(email)) {
+      throw apiError('invalid_firebase_token');
+    }
+    verifiedEmail = email;
+  }
+  return Object.freeze({ userId, verifiedEmail, authenticatedAt, expiresAt });
 }
 
 export async function authenticateFirebase(

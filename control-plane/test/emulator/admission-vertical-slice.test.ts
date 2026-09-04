@@ -22,6 +22,7 @@ import { createControlPlaneApp, type ApiDependencies } from '../../src/api.js';
 import { loadEmulatorConfig } from '../../src/config.js';
 import { HOME_KEY_PATTERN, type AdmissionBudget, type Clock, type DeploymentConfig } from '../../src/types.js';
 import { ApiError } from '../../src/errors.js';
+import { reserveAdmissionSubjects } from './admission-fixture.js';
 import {
   FIRESTORE_HOST,
   PROJECT_ID,
@@ -413,6 +414,76 @@ describe('bounded control-plane admission and audit vertical slice', () => {
     expect(JSON.stringify(audit?.data())).not.toContain(homeKey);
     expect(JSON.stringify(audit?.data())).not.toContain(keyId);
   }, 30_000);
+
+  test('enforces exact user-relay user and source ceilings before any signing effect', async () => {
+    const clock = clockAt(21_000_000);
+    const controller = new AdmissionController(firestore, baseConfig, clock);
+    let signingEffects = 0;
+
+    const reservedUser = (prefix: string): string => {
+      for (let suffix = 1; suffix <= 1_000; suffix += 1) {
+        const subject = `${prefix}-${suffix}`;
+        if (reserveAdmissionSubjects([{
+          budget: 'user_relay.exchange.user',
+          subject,
+        }])) return subject;
+      }
+      throw new Error(`Could not reserve a collision-free admission subject for ${prefix}`);
+    };
+
+    const attempt = async (index: number, userId: string, source: string): Promise<ApiError | null> => {
+      const ticket = await controller.open({
+        requestId: identifier(index),
+        operation: 'user_relay.exchange',
+        source,
+      });
+      try {
+        await ticket.consume(
+          [{ budget: 'user_relay.exchange.user', subject: userId }],
+          ['user_relay.exchange.source'],
+        );
+        signingEffects += 1;
+        await ticket.finish('ok');
+        return null;
+      } catch (error) {
+        if (!(error instanceof ApiError)) throw error;
+        await ticket.finish('denied', error.code);
+        return error;
+      }
+    };
+
+    const boundedUser = reservedUser('bounded-user');
+    for (let index = 1; index <= 32; index += 1) {
+      await expect(attempt(index, boundedUser, '198.51.100.10')).resolves.toBeNull();
+    }
+    const deniedUser = await attempt(33, boundedUser, '198.51.100.10');
+    expect(deniedUser).toMatchObject({ code: 'rate_limited', retryAfterSeconds: 60 });
+    expect(signingEffects).toBe(32);
+
+    clock.advance(60_000);
+    const sourceUsers = Array.from({ length: 5 }, (_value, index) => (
+      reservedUser(`source-user-${index + 1}`)
+    ));
+    for (let index = 1; index <= 128; index += 1) {
+      const sourceUser = sourceUsers[Math.floor((index - 1) / 32)] as string;
+      await expect(attempt(100 + index, sourceUser, '203.0.113.10'))
+        .resolves.toBeNull();
+    }
+    const deniedSource = await attempt(229, sourceUsers[4] as string, '203.0.113.10');
+    expect(deniedSource).toMatchObject({ code: 'rate_limited', retryAfterSeconds: 60 });
+    expect(signingEffects).toBe(160);
+
+    const buckets = await firestore.collection(ADMISSION_BUCKET_COLLECTION).get();
+    const userBuckets = buckets.docs.filter((snapshot) => (
+      snapshot.get('budget') === 'user_relay.exchange.user'
+    ));
+    expect(userBuckets.some((snapshot) => snapshot.get('used') === 32)).toBe(true);
+    const sourceBucket = buckets.docs.find((snapshot) => (
+      snapshot.get('budget') === 'user_relay.exchange.source'
+      && snapshot.get('used') === 128
+    ));
+    expect(sourceBucket).toBeDefined();
+  }, 120_000);
 
   test('keeps every admission, audit, and ring-state document server-only', async () => {
     const host = parseHost(FIRESTORE_HOST);

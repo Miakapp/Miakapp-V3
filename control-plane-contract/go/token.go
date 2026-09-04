@@ -56,7 +56,11 @@ func VerificationCode(err error) string {
 	return ""
 }
 
-type AccessIdentity struct {
+type AccessIdentity interface {
+	isAccessIdentity()
+}
+
+type HomeKeyAccessIdentity struct {
 	HomeID          string  `json:"home_id"`
 	PrincipalID     string  `json:"principal_id"`
 	ClientID        string  `json:"client_id"`
@@ -64,6 +68,83 @@ type AccessIdentity struct {
 	ExpiresAt       int64   `json:"expires_at"`
 	Role            *string `json:"role"`
 	CoordinatorName *string `json:"coordinator_name"`
+}
+
+func (*HomeKeyAccessIdentity) isAccessIdentity() {}
+
+type UserAccessIdentity struct {
+	HomeID        string  `json:"home_id"`
+	PrincipalID   string  `json:"principal_id"`
+	Scope         string  `json:"scope"`
+	ExpiresAt     int64   `json:"expires_at"`
+	Role          string  `json:"role"`
+	VerifiedEmail *string `json:"verified_email"`
+}
+
+func (*UserAccessIdentity) isAccessIdentity() {}
+
+func verifyUserAccessClaims(claims map[string]any, fixture *Fixture) (*UserAccessIdentity, error) {
+	required := []string{"iss", "sub", "aud", "exp", "iat", "jti", "scope", "miakapp_home", "miakapp_role"}
+	if err := exactObjectKeys(claims, required, []string{"miakapp_verified_email"}, InvalidClaims); err != nil {
+		return nil, err
+	}
+	if claims["iss"] != fixture.Deployment.Issuer {
+		return nil, verificationFailure(InvalidIssuer)
+	}
+	if claims["aud"] != fixture.Deployment.RelayAudience {
+		return nil, verificationFailure(InvalidAudience)
+	}
+	issuedAt, err := integerValueClaim(claims["iat"])
+	if err != nil {
+		return nil, err
+	}
+	expiresAt, err := integerValueClaim(claims["exp"])
+	if err != nil {
+		return nil, err
+	}
+	if expiresAt <= fixture.Now {
+		return nil, verificationFailure(Expired)
+	}
+	if issuedAt > fixture.Now+30 || expiresAt <= issuedAt || expiresAt-issuedAt > 300 || expiresAt > fixture.Now+300 {
+		return nil, verificationFailure(InvalidTime)
+	}
+	tokenID, err := stringValueClaim(claims["jti"], 22)
+	if err != nil {
+		return nil, err
+	}
+	if _, err = decodeBase64URL(tokenID, "jti", 16); err != nil {
+		return nil, verificationFailure(InvalidClaims)
+	}
+	scope, ok := claims["scope"].(string)
+	if !ok || scope != "relay:user" {
+		if ok && strings.Contains(scope, " ") {
+			return nil, verificationFailure(InvalidScope)
+		}
+		return nil, verificationFailure(InvalidProfile)
+	}
+	if claims["miakapp_role"] != "user" {
+		return nil, verificationFailure(InvalidProfile)
+	}
+	homeID, err := stringValueClaim(claims["miakapp_home"], 63)
+	if err != nil || !homeIDPattern.MatchString(homeID) {
+		return nil, verificationFailure(InvalidClaims)
+	}
+	principalID, err := stringValueClaim(claims["sub"], 128)
+	if err != nil {
+		return nil, err
+	}
+	var verifiedEmail *string
+	if claim, exists := claims["miakapp_verified_email"]; exists {
+		email, emailErr := stringValueClaim(claim, 320)
+		if emailErr != nil {
+			return nil, emailErr
+		}
+		verifiedEmail = &email
+	}
+	return &UserAccessIdentity{
+		HomeID: homeID, PrincipalID: principalID, Scope: scope, ExpiresAt: expiresAt,
+		Role: "user", VerifiedEmail: verifiedEmail,
+	}, nil
 }
 
 type FirebaseIdentity struct {
@@ -321,7 +402,7 @@ func validateCommonAccessClaims(claims map[string]any, fixture *Fixture, profile
 	return &commonAccessClaims{homeID: homeID, clientID: clientID, scope: scope, expiresAt: expiresAt}, nil
 }
 
-func VerifyMiakappAccessToken(token string, fixture *Fixture, profile string, keys []PublicJWK) (*AccessIdentity, error) {
+func VerifyMiakappAccessToken(token string, fixture *Fixture, profile string, keys []PublicJWK) (AccessIdentity, error) {
 	parsed, err := parseCompactToken(token)
 	if err != nil {
 		return nil, err
@@ -338,6 +419,9 @@ func VerifyMiakappAccessToken(token string, fixture *Fixture, profile string, ke
 	}
 	if err = verifyEd25519Signature(parsed, key); err != nil {
 		return nil, err
+	}
+	if profile == "user" {
+		return verifyUserAccessClaims(parsed.claims, fixture)
 	}
 	common, err := validateCommonAccessClaims(parsed.claims, fixture, profile)
 	if err != nil {
@@ -379,7 +463,7 @@ func VerifyMiakappAccessToken(token string, fixture *Fixture, profile string, ke
 		}
 		coordinatorName = &name
 	}
-	return &AccessIdentity{
+	return &HomeKeyAccessIdentity{
 		HomeID:          common.homeID,
 		PrincipalID:     common.homeID,
 		ClientID:        common.clientID,
@@ -471,7 +555,7 @@ func VerifyVector(vector TokenVector, fixture *Fixture) (any, error) {
 	if vector.Kind == "firebase" {
 		return VerifyFirebaseIDToken(vector.Token, &verificationFixture, keySet.Keys)
 	}
-	if vector.Kind != "miakapp" || vector.Profile == "user" {
+	if vector.Kind != "miakapp" {
 		return nil, verificationFailure(InvalidProfile)
 	}
 	return VerifyMiakappAccessToken(vector.Token, &verificationFixture, vector.Profile, keySet.Keys)

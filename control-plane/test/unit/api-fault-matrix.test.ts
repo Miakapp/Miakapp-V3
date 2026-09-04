@@ -36,7 +36,9 @@ import {
   type ComponentPublisherPrincipal,
   type ExchangeRequest,
   type FirebasePrincipal,
+  type HomeKeyAccessGrant,
   type PushAccessPrincipal,
+  type UserRelayAccessGrant,
 } from '../../src/types.js';
 
 const NOW_SECONDS = 1_788_220_800;
@@ -133,7 +135,8 @@ const FID = 'synthetic-firebase-installation-id';
 const FAILURE_SENTINEL = 'private-dependency-failure-detail';
 const ARTIFACT = Buffer.from('self.component = Object.freeze({});', 'utf8');
 
-const ACCESS_GRANT: AccessGrant = Object.freeze({
+const ACCESS_GRANT: HomeKeyAccessGrant = Object.freeze({
+  subjectKind: 'home_key',
   issuedAt: NOW_SECONDS,
   tokenId: TOKEN_ID,
   homeId: HOME_ID,
@@ -145,9 +148,22 @@ const ACCESS_GRANT: AccessGrant = Object.freeze({
   coordinatorName: null,
 });
 
+const USER_RELAY_GRANT: UserRelayAccessGrant = Object.freeze({
+  subjectKind: 'firebase_user',
+  issuedAt: NOW_SECONDS,
+  tokenId: identifier(12),
+  homeId: HOME_ID,
+  userId: 'synthetic-owner',
+  verifiedEmail: 'synthetic-owner@example.test',
+  scope: 'relay:user',
+  audience: 'wss://relay.example.test/ws',
+  role: 'user',
+});
+
 function accessAuthorization(scope: 'push:send' | 'components:publish'): string {
-  const grant: AccessGrant = Object.freeze({
+  const grant: HomeKeyAccessGrant = Object.freeze({
     ...ACCESS_GRANT,
+    subjectKind: 'home_key',
     scope,
     audience: scope === 'push:send' ? CONFIG.pushAudience : CONFIG.componentsAudience,
   });
@@ -201,6 +217,8 @@ function decodedOwner(): DecodedIdToken {
     iss: `https://securetoken.google.com/${CONFIG.projectId}`,
     sub: 'synthetic-owner',
     uid: 'synthetic-owner',
+    email: 'synthetic-owner@example.test',
+    email_verified: true,
   };
 }
 
@@ -357,6 +375,13 @@ function pushRequest(): RouterRequest {
     title: 'Synthetic title',
     body: 'Synthetic body',
   }, { Authorization: PUSH_AUTHORIZATION });
+}
+
+function userRelayRequest(body: unknown = { home_id: HOME_ID, reason: 'initial' }): RouterRequest {
+  return jsonRequest('POST', '/v1/user-relay-tokens:exchange', body, {
+    Authorization: OWNER_AUTHORIZATION,
+    'X-Firebase-AppCheck': APP_CHECK_TOKEN,
+  });
 }
 
 function dependencyFailure(boundary: string): Error {
@@ -588,6 +613,105 @@ describe('control-plane API dependency fault matrix', () => {
     expect(exchangeCalls).toBe(1);
     expect(signCalls).toBe(1);
     expect(order).toEqual(['exchange', 'sign']);
+  });
+
+  test('issues one audience-bound user relay token after Auth, App Check, and admission', async () => {
+    const admission = new RecordingAdmission();
+    let exchangeCalls = 0;
+    const response = await request(dependencies({
+      admission,
+      store: {
+        exchangeUserRelay: async (
+          principal: FirebasePrincipal,
+          homeId: string,
+          issuer: AccessTokenIssuer,
+        ) => {
+          exchangeCalls += 1;
+          expect(principal).toMatchObject({
+            userId: 'synthetic-owner',
+            verifiedEmail: 'synthetic-owner@example.test',
+          });
+          expect(homeId).toBe(HOME_ID);
+          return { grant: USER_RELAY_GRANT, signed: await issuer.sign(USER_RELAY_GRANT) };
+        },
+      },
+    }), userRelayRequest());
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    const body = parsed<Record<string, unknown>>(response);
+    expect(Object.keys(body).sort()).toEqual([
+      'access_token', 'expires_at_ms', 'relay_url', 'schema', 'token_type',
+    ]);
+    expect(body).toMatchObject({
+      schema: 'miakapp.user-relay-token/1',
+      token_type: 'Bearer',
+      expires_at_ms: (NOW_SECONDS + 300) * 1_000,
+      relay_url: USER_RELAY_GRANT.audience,
+    });
+    expect(typeof body.access_token).toBe('string');
+    expectNoSecretLeak(response.text);
+    expect(exchangeCalls).toBe(1);
+    expect(admission.openCalls).toEqual([expect.objectContaining({ operation: 'user_relay.exchange' })]);
+    expect(admission.tickets[0]?.consumeCalls).toEqual([[
+      { budget: 'user_relay.exchange.user', subject: 'synthetic-owner' },
+    ]]);
+    expect(admission.tickets[0]?.finishCalls).toEqual([{ outcome: 'ok', outcomeCode: null }]);
+  });
+
+  test('rejects invalid browser source credentials and bodies before lookup or signing', async () => {
+    for (const input of [
+      userRelayRequest({ home_id: HOME_ID, reason: 'unsupported' }),
+      {
+        ...userRelayRequest(),
+        headers: { 'X-Firebase-AppCheck': APP_CHECK_TOKEN },
+      },
+      {
+        ...userRelayRequest(),
+        headers: { Authorization: OWNER_AUTHORIZATION, 'X-Firebase-AppCheck': 'invalid' },
+      },
+    ]) {
+      let exchangeCalls = 0;
+      let signCalls = 0;
+      const response = await request(dependencies({
+        signer: { sign: async () => { signCalls += 1; throw new Error('must not sign'); } },
+        store: { exchangeUserRelay: async () => { exchangeCalls += 1; throw new Error('must not read'); } },
+      }), input);
+      expect([400, 401]).toContain(response.status);
+      expect(exchangeCalls).toBe(0);
+      expect(signCalls).toBe(0);
+      expectNoSecretLeak(response.text);
+    }
+  });
+
+  test('bounds one user-token signing outage after one Home lookup without retry', async () => {
+    const admission = new RecordingAdmission();
+    let exchangeCalls = 0;
+    let signCalls = 0;
+    const response = await request(dependencies({
+      admission,
+      signer: {
+        sign: async () => {
+          signCalls += 1;
+          throw dependencyFailure('user-relay.sign');
+        },
+      },
+      store: {
+        exchangeUserRelay: async (
+          _principal: FirebasePrincipal,
+          _homeId: string,
+          issuer: AccessTokenIssuer,
+        ) => {
+          exchangeCalls += 1;
+          return { grant: USER_RELAY_GRANT, signed: await issuer.sign(USER_RELAY_GRANT) };
+        },
+      },
+    }), userRelayRequest({ home_id: HOME_ID, reason: 'reauth' }));
+
+    expectUnavailable(response, admission);
+    expectUnknownAudit(admission);
+    expect(exchangeCalls).toBe(1);
+    expect(signCalls).toBe(1);
   });
 
   test('does not retry challenge transport after challenge creation', async () => {

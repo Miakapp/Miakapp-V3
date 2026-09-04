@@ -53,11 +53,16 @@ func TestSharedTokenVectors(t *testing.T) {
 				return
 			}
 			var expected AccessIdentity
-			if err = decodeJSON(vector.Expected, &expected); err != nil {
+			if vector.Profile == "user" {
+				expected = &UserAccessIdentity{}
+			} else {
+				expected = &HomeKeyAccessIdentity{}
+			}
+			if err = decodeJSON(vector.Expected, expected); err != nil {
 				t.Fatalf("decode expected access identity: %v", err)
 			}
-			if !reflect.DeepEqual(identity, &expected) {
-				t.Fatalf("identity = %#v, want %#v", identity, &expected)
+			if !reflect.DeepEqual(identity, expected) {
+				t.Fatalf("identity = %#v, want %#v", identity, expected)
 			}
 		})
 	}
@@ -83,6 +88,28 @@ func TestAccessTokenCannotCrossResourceProfiles(t *testing.T) {
 	)
 	if got := VerificationCode(err); got != InvalidAudience {
 		t.Fatalf("cross-resource VerificationCode() = %q, want %q", got, InvalidAudience)
+	}
+}
+
+func TestFirebaseAndUserAccessTokensAreMutuallyExclusive(t *testing.T) {
+	fixture := loadTestFixture(t)
+	var firebase, userAccess TokenVector
+	for _, vector := range fixture.Vectors {
+		switch vector.ID {
+		case "valid_firebase_verified_email":
+			firebase = vector
+		case "valid_user_access":
+			userAccess = vector
+		}
+	}
+	if firebase.ID == "" || userAccess.ID == "" {
+		t.Fatal("user credential fixture vectors are missing")
+	}
+	if _, err := VerifyMiakappAccessToken(firebase.Token, fixture, "user", fixture.KeySets[firebase.KeySet].Keys); VerificationCode(err) != InvalidHeader {
+		t.Fatalf("Firebase token as user access token error = %v, want %s", err, InvalidHeader)
+	}
+	if _, err := VerifyFirebaseIDToken(userAccess.Token, fixture, fixture.KeySets[userAccess.KeySet].Keys); VerificationCode(err) != InvalidHeader {
+		t.Fatalf("user access token as Firebase token error = %v, want %s", err, InvalidHeader)
 	}
 }
 

@@ -208,7 +208,7 @@ function validateCommonAccessClaims(
 ): {
   homeId: string;
   clientId: string;
-  scope: AccessIdentity['scope'];
+  scope: Exclude<AccessIdentity['scope'], 'relay:user'>;
   expiresAt: number;
 } {
   const expectedAudience = profile === 'coordinator' || profile === 'cli'
@@ -251,6 +251,50 @@ function validateCommonAccessClaims(
   return { homeId, clientId, scope: expectedScope, expiresAt };
 }
 
+function verifyUserAccessClaims(
+  claims: { [key: string]: JsonValue },
+  fixture: AccessTokenFixture,
+): AccessIdentity {
+  const common = ['iss', 'sub', 'aud', 'exp', 'iat', 'jti', 'scope', 'miakapp_home', 'miakapp_role'];
+  exactKeys(claims, common, ['miakapp_verified_email'], 'invalid_claims');
+  if (claims.iss !== fixture.deployment.issuer) fail('invalid_issuer');
+  if (claims.aud !== fixture.deployment.relay_audience) fail('invalid_audience');
+  const issuedAt = integerClaim(claims.iat);
+  const expiresAt = integerClaim(claims.exp);
+  if (expiresAt <= fixture.now) fail('expired');
+  if (issuedAt > fixture.now + 30
+    || expiresAt <= issuedAt
+    || expiresAt - issuedAt > 300
+    || expiresAt > fixture.now + 300) {
+    fail('invalid_time');
+  }
+  const tokenId = stringClaim(claims.jti, 22);
+  try {
+    decodeCanonicalBase64url(tokenId, 'jti', 16);
+  } catch {
+    fail('invalid_claims');
+  }
+  if (claims.scope !== 'relay:user') {
+    if (typeof claims.scope === 'string' && claims.scope.includes(' ')) fail('invalid_scope');
+    fail('invalid_profile');
+  }
+  if (claims.miakapp_role !== 'user') fail('invalid_profile');
+  const homeId = stringClaim(claims.miakapp_home, 63);
+  if (!HOME_ID_PATTERN.test(homeId)) fail('invalid_claims');
+  const principalId = stringClaim(claims.sub, 128);
+  const verifiedEmail = claims.miakapp_verified_email === undefined
+    ? null
+    : stringClaim(claims.miakapp_verified_email, 320);
+  return Object.freeze({
+    home_id: homeId,
+    principal_id: principalId,
+    scope: 'relay:user',
+    expires_at: expiresAt,
+    role: 'user',
+    verified_email: verifiedEmail,
+  });
+}
+
 export function verifyMiakappAccessToken(
   token: string,
   fixture: AccessTokenFixture,
@@ -262,6 +306,8 @@ export function verifyMiakappAccessToken(
   if (parsed.header.alg !== 'EdDSA' || parsed.header.typ !== 'at+jwt') fail('invalid_header');
   const key = selectKey(keys, parsed.header.kid);
   verifySignature(parsed, key, 'miakapp');
+
+  if (profile === 'user') return verifyUserAccessClaims(parsed.claims, fixture);
 
   const validated = validateCommonAccessClaims(parsed.claims, fixture, profile);
   const common = ['iss', 'sub', 'aud', 'exp', 'iat', 'jti', 'client_id', 'scope'];
@@ -344,7 +390,6 @@ export function verifyFixtureVector(
   const keys = fixture.key_sets[vector.key_set].keys;
   const verificationFixture = { ...fixture, now: vector.verification_time };
   if (vector.kind === 'firebase') return verifyFirebaseIdToken(vector.token, verificationFixture, keys);
-  if (vector.profile === 'user') fail('invalid_profile');
   return verifyMiakappAccessToken(vector.token, verificationFixture, vector.profile, keys);
 }
 

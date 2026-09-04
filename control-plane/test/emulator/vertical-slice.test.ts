@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
+import { createPrivateKey, sign, type JsonWebKey } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { deleteApp, initializeApp } from 'firebase-admin/app';
 import {
@@ -28,11 +29,11 @@ import {
   type HomeKeyGenerator,
 } from '../../src/store.js';
 import {
-  ACCESS_SCOPES,
+  HOME_KEY_ACCESS_SCOPES,
   HOME_KEY_PATTERN,
   SYSTEM_CLOCK,
   type AccessGrant,
-  type AccessScope,
+  type HomeKeyAccessScope,
   type EmulatorDeploymentConfig,
   type FirebasePrincipal,
 } from '../../src/types.js';
@@ -92,18 +93,33 @@ interface AccessResponse {
   readonly key: { readonly id: string; readonly label: string };
 }
 
+interface UserRelayResponse {
+  readonly schema: 'miakapp.user-relay-token/1';
+  readonly access_token: string;
+  readonly token_type: 'Bearer';
+  readonly expires_at_ms: number;
+  readonly relay_url: string;
+}
+
+interface AppCheckSigningFixture {
+  readonly test_only_private_keys: {
+    readonly firebase: JsonWebKey & { readonly kid: string };
+  };
+}
+
 interface DiscoveryResponse {
   readonly schema: 'miakapp.control-plane-discovery/1';
   readonly issuer: string;
   readonly jwks_uri: string;
   readonly exchange_endpoint: string;
+  readonly user_relay_exchange_endpoint: string;
   readonly push_audience: string;
   readonly components_audience: string;
 }
 
 interface ProfileCase {
-  readonly profile: AccessProfile;
-  readonly scope: AccessScope;
+  readonly profile: Exclude<AccessProfile, 'user'>;
+  readonly scope: HomeKeyAccessScope;
   readonly body: Record<string, string>;
   readonly role: 'coordinator' | 'cli' | null;
   readonly coordinatorName: string | null;
@@ -117,6 +133,10 @@ const emulatorEnvironment = {
 } as NodeJS.ProcessEnv;
 const config = loadEmulatorConfig(emulatorEnvironment);
 const signer = new AccessTokenSigner(config);
+const appCheckSigningFixture = JSON.parse(readFileSync(
+  new URL('../../../control-plane-contract/fixtures/v1/access-tokens.json', import.meta.url),
+  'utf8',
+)) as AppCheckSigningFixture;
 let owner: EmulatorUser;
 let stranger: EmulatorUser;
 let fixture: AccessTokenFixture;
@@ -124,7 +144,29 @@ let rules: RulesTestEnvironment | undefined;
 
 function ownerPrincipal(): FirebasePrincipal {
   const now = Math.floor(Date.now() / 1_000);
-  return Object.freeze({ userId: owner.userId, authenticatedAt: now, expiresAt: now + 3_600 });
+  return Object.freeze({
+    userId: owner.userId,
+    verifiedEmail: null,
+    authenticatedAt: now,
+    expiresAt: now + 3_600,
+  });
+}
+
+function appCheckToken(): string {
+  const key = appCheckSigningFixture.test_only_private_keys.firebase;
+  const header = Buffer.from(JSON.stringify({ alg: 'RS256', kid: key.kid, typ: 'JWT' }), 'utf8')
+    .toString('base64url');
+  const now = Math.floor(Date.now() / 1_000);
+  const claims = Buffer.from(JSON.stringify({
+    iss: config.appCheckIssuer,
+    aud: [config.appCheckAudience],
+    sub: config.appCheckAppId,
+    iat: now,
+    exp: now + 3_600,
+  }), 'utf8').toString('base64url');
+  const input = `${header}.${claims}`;
+  const signature = sign('RSA-SHA256', Buffer.from(input, 'ascii'), createPrivateKey({ key, format: 'jwk' }));
+  return `${input}.${signature.toString('base64url')}`;
 }
 
 async function createHome(homeId = 'synthetic-home', relayUrl?: string): Promise<void> {
@@ -141,7 +183,7 @@ async function createHome(homeId = 'synthetic-home', relayUrl?: string): Promise
 }
 
 async function createHomeKey(
-  scopes: readonly string[] = ACCESS_SCOPES,
+  scopes: readonly string[] = HOME_KEY_ACCESS_SCOPES,
   homeId = 'synthetic-home',
 ): Promise<CreatedKeyResponse> {
   for (let attempt = 0; attempt < RANDOM_SUBJECT_ATTEMPTS; attempt += 1) {
@@ -285,6 +327,7 @@ describe('Firebase Emulator owner-to-access-token vertical slice', () => {
       issuer: fixture.deployment.issuer,
       jwks_uri: fixture.deployment.jwks_uri,
       exchange_endpoint: fixture.deployment.exchange_endpoint,
+      user_relay_exchange_endpoint: fixture.deployment.user_relay_exchange_endpoint,
       push_audience: fixture.deployment.push_audience,
       components_audience: fixture.deployment.components_audience,
     });
@@ -496,6 +539,97 @@ describe('Firebase Emulator owner-to-access-token vertical slice', () => {
         fixture.key_sets.rotated.keys,
       )).not.toThrow();
     }
+  });
+
+  test('issues an audience-bound user lease without asserting ownership or enrollment', async () => {
+    await createHome();
+    const forbiddenHomeKeyScope = await apiRequest('POST', '/v1/homes/synthetic-home/home-keys', {
+      token: owner.idToken,
+      body: { label: 'Forbidden user key', scopes: ['relay:user'] },
+    });
+    expect(forbiddenHomeKeyScope.status).toBe(400);
+
+    const missingAttestation = await apiRequest('POST', '/v1/user-relay-tokens:exchange', {
+      token: stranger.idToken,
+      body: { home_id: 'synthetic-home', reason: 'initial' },
+    });
+    expect(missingAttestation.status).toBe(401);
+    expect((await jsonResponse<ErrorResponse>(missingAttestation)).error.code)
+      .toBe('invalid_app_check_token');
+
+    const sourceAppCheck = appCheckToken();
+    const exchanged = await apiRequest('POST', '/v1/user-relay-tokens:exchange', {
+      token: stranger.idToken,
+      appCheckToken: sourceAppCheck,
+      body: { home_id: 'synthetic-home', reason: 'initial' },
+    });
+    expect(exchanged.status).toBe(200);
+    expect(exchanged.headers.get('cache-control')).toBe('no-store');
+    const access = await jsonResponse<UserRelayResponse>(exchanged);
+    expect(access).toMatchObject({
+      schema: 'miakapp.user-relay-token/1',
+      token_type: 'Bearer',
+      relay_url: fixture.deployment.relay_audience,
+    });
+    expect(JSON.stringify(access)).not.toContain(stranger.idToken);
+    expect(JSON.stringify(access)).not.toContain(sourceAppCheck);
+    const identity = verifyMiakappAccessToken(
+      access.access_token,
+      { ...fixture, now: Math.floor(Date.now() / 1_000) },
+      'user',
+      fixture.key_sets.rotated.keys,
+    );
+    expect(identity).toEqual({
+      home_id: 'synthetic-home',
+      principal_id: stranger.userId,
+      scope: 'relay:user',
+      expires_at: access.expires_at_ms / 1_000,
+      role: 'user',
+      verified_email: null,
+    });
+    const privateHome = firestore.collection('controlHomes').doc('synthetic-home');
+    expect(await privateHome.listCollections()).toHaveLength(0);
+
+    const nextRelay = 'wss://relay-user-two.example.test/ws';
+    const patched = await apiRequest('PATCH', '/v1/homes/synthetic-home', {
+      token: owner.idToken,
+      body: { relay_url: nextRelay },
+    });
+    expect(patched.status).toBe(200);
+    const renewed = await apiRequest('POST', '/v1/user-relay-tokens:exchange', {
+      token: stranger.idToken,
+      appCheckToken: appCheckToken(),
+      body: { home_id: 'synthetic-home', reason: 'reconnect' },
+    });
+    expect(renewed.status).toBe(200);
+    const renewedAccess = await jsonResponse<UserRelayResponse>(renewed);
+    expect(renewedAccess.relay_url).toBe(nextRelay);
+    expect(verifyMiakappAccessToken(
+      renewedAccess.access_token,
+      { ...fixture, now: Math.floor(Date.now() / 1_000), deployment: {
+        ...fixture.deployment,
+        relay_audience: nextRelay,
+      } },
+      'user',
+      fixture.key_sets.rotated.keys,
+    ).home_id).toBe('synthetic-home');
+
+    const absent = await apiRequest('POST', '/v1/user-relay-tokens:exchange', {
+      token: stranger.idToken,
+      appCheckToken: appCheckToken(),
+      body: { home_id: 'absent-home', reason: 'initial' },
+    });
+    expect(absent.status).toBe(404);
+    expect((await jsonResponse<ErrorResponse>(absent)).error.code).toBe('home_not_found');
+
+    await privateHome.update({ relay_url: 'https://corrupt-relay.example.test/ws' });
+    const corrupt = await apiRequest('POST', '/v1/user-relay-tokens:exchange', {
+      token: stranger.idToken,
+      appCheckToken: appCheckToken(),
+      body: { home_id: 'synthetic-home', reason: 'reauth' },
+    });
+    expect(corrupt.status).toBe(503);
+    expect((await jsonResponse<ErrorResponse>(corrupt)).error.code).toBe('temporarily_unavailable');
   });
 
   test('keeps CORS closed, rejects cookies, and applies owner patch semantics', async () => {
