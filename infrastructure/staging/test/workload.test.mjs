@@ -19,6 +19,7 @@ import { observeDeployedWorkload } from '../workload/inventory.mjs';
 import {
   PINNED_UPDATE_BASELINE,
   validateFailedBuildRecoveryPlanAgainstPolicy,
+  validatePinnedSourceUpdatePlan,
   validatePinnedSourceUpdatePlanAgainstPolicy,
   validateWorkloadPlanAgainstPolicy,
 } from '../workload/validate-plan.mjs';
@@ -509,10 +510,10 @@ test('accepts only the bounded in-place recovery from the failed first build', (
   }
 });
 
-test('accepts only the one pinned active source correction', () => {
+test('accepts only the next update from the pinned active source', () => {
   assert.deepEqual(PINNED_UPDATE_BASELINE, {
-    repositoryCommit: '72bae493e496b7dbaae38bcba92dfcc6d604644d',
-    sourceArchiveSha256: '6cd045394b24a644d6b1ce9c431bcb73267fb894b7dc0b029d6c0be0488a9433',
+    repositoryCommit: '60322c69c92b8ccf5f3d1bc87ba264a00e5dca05',
+    sourceArchiveSha256: '86f4818dfcb4021e5578638d6fb1e9b7da31ea245528cbdc8573dabecdfca358',
   });
   assert.deepEqual(validateSyntheticPinnedSourceUpdatePlan(), {
     create: 1,
@@ -539,6 +540,82 @@ test('accepts only the one pinned active source correction', () => {
     const plan = syntheticPinnedSourceUpdatePlan();
     mutate(plan);
     assert.throws(() => validateSyntheticPinnedSourceUpdatePlan(plan));
+  }
+
+  const activePlan = syntheticPinnedSourceUpdatePlan();
+  const activeSource = plannedChange(activePlan, 'google_storage_bucket_object.source');
+  activeSource.before = sourceObjectValue(
+    PINNED_UPDATE_BASELINE.repositoryCommit,
+    PINNED_UPDATE_BASELINE.sourceArchiveSha256,
+    123,
+  );
+  const activeFunction = plannedChange(activePlan, 'google_cloudfunctions2_function.control_plane');
+  activeFunction.before = {
+    ...functionValue(
+      PINNED_UPDATE_BASELINE.repositoryCommit,
+      PINNED_UPDATE_BASELINE.sourceArchiveSha256,
+      123,
+    ),
+    state: 'ACTIVE',
+    environment: 'GEN_2',
+  };
+  const activeGuard = plannedChange(activePlan, 'terraform_data.deployment_guard');
+  activeGuard.before.input = guardInput(
+    PINNED_UPDATE_BASELINE.repositoryCommit,
+    PINNED_UPDATE_BASELINE.sourceArchiveSha256,
+  );
+  activeGuard.before.output = structuredClone(activeGuard.before.input);
+  assert.deepEqual(validatePinnedSourceUpdatePlan(activePlan, {
+    repositoryCommit: COMMIT,
+    sourceArchiveSha256: SOURCE_SHA256,
+  }, OPERATOR_SHA256), {
+    create: 1,
+    update: 2,
+    delete: 1,
+    replacement: 'deterministic-source-object',
+    function: 1,
+    minimum_instances: 0,
+    maximum_instances: 1,
+    ingress: 'internal-only',
+    unauthenticated_invokers: 0,
+    synthetic_invokers: 1,
+    fcm_permissions: 1,
+  });
+
+  const superseded = {
+    repositoryCommit: '72bae493e496b7dbaae38bcba92dfcc6d604644d',
+    sourceArchiveSha256: '6cd045394b24a644d6b1ce9c431bcb73267fb894b7dc0b029d6c0be0488a9433',
+  };
+  for (const makeSuperseded of [
+    (plan) => {
+      plannedChange(plan, 'google_storage_bucket_object.source').before = sourceObjectValue(
+        superseded.repositoryCommit,
+        superseded.sourceArchiveSha256,
+        123,
+      );
+    },
+    (plan) => {
+      plannedChange(plan, 'google_cloudfunctions2_function.control_plane').before = {
+        ...functionValue(superseded.repositoryCommit, superseded.sourceArchiveSha256, 123),
+        state: 'ACTIVE',
+        environment: 'GEN_2',
+      };
+    },
+    (plan) => {
+      const supersededGuard = plannedChange(plan, 'terraform_data.deployment_guard');
+      supersededGuard.before.input = guardInput(
+        superseded.repositoryCommit,
+        superseded.sourceArchiveSha256,
+      );
+      supersededGuard.before.output = structuredClone(supersededGuard.before.input);
+    },
+  ]) {
+    const supersededPlan = structuredClone(activePlan);
+    makeSuperseded(supersededPlan);
+    assert.throws(() => validatePinnedSourceUpdatePlan(supersededPlan, {
+      repositoryCommit: COMMIT,
+      sourceArchiveSha256: SOURCE_SHA256,
+    }, OPERATOR_SHA256));
   }
 });
 
