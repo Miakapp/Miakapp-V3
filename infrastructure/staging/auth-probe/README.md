@@ -34,6 +34,11 @@ and local error message.
 
 The expected incremental cost is negligible: one short Workflow execution, Firebase token exchanges, IAM Credentials calls and a handful of Firestore reads. This is not a load test.
 
+The custom-token exchange response is validated against its documented fields.
+Because that response does not include a Firebase UID, a separate project-scoped
+Admin lookup proves that the fixed no-email synthetic UID was created before the
+probe proceeds.
+
 ## What the probe proves
 
 The Workflow uses two authorization layers on each successful product request:
