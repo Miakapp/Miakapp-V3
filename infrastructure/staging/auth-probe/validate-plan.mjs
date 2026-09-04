@@ -153,7 +153,7 @@ function validateGuard(value, address) {
   exact(firebaseAuth.schema, 'miakapp.staging-firebase-auth/1', `${address}.firebase_auth.schema`);
   exact(firebaseAuth.project_id, PROJECT_ID, `${address}.firebase_auth.project_id`);
   exact(String(firebaseAuth.project_number), PROJECT_NUMBER, `${address}.firebase_auth.project_number`);
-  exact(firebaseAuth.config_name, `projects/${PROJECT_ID}/config`, `${address}.firebase_auth.config_name`);
+  exact(firebaseAuth.config_name, `projects/${PROJECT_NUMBER}/config`, `${address}.firebase_auth.config_name`);
   exact(firebaseAuth.anonymous_sign_in, false, `${address}.firebase_auth.anonymous_sign_in`);
   exact(firebaseAuth.email_sign_in, false, `${address}.firebase_auth.email_sign_in`);
   exact(firebaseAuth.phone_sign_in, false, `${address}.firebase_auth.phone_sign_in`);

@@ -12,7 +12,7 @@ override_data {
         schema                    = "miakapp.staging-firebase-auth/1"
         project_id                = "miakapp-v4-staging"
         project_number            = "1072737219170"
-        config_name               = "projects/miakapp-v4-staging/config"
+        config_name               = "projects/1072737219170/config"
         anonymous_sign_in         = false
         email_sign_in             = false
         phone_sign_in             = false
@@ -89,6 +89,59 @@ run "arms_only_the_bounded_private_probe" {
     )
     error_message = "The Auth and App Check probe contract must remain narrow and retry-free."
   }
+}
+
+run "rejects_the_project_id_firebase_auth_config_name" {
+  command = plan
+
+  override_data {
+    target = data.terraform_remote_state.firebase_auth
+    values = {
+      outputs = {
+        staging_firebase_auth = {
+          schema                    = "miakapp.staging-firebase-auth/1"
+          project_id                = "miakapp-v4-staging"
+          project_number            = "1072737219170"
+          config_name               = "projects/miakapp-v4-staging/config"
+          anonymous_sign_in         = false
+          email_sign_in             = false
+          phone_sign_in             = false
+          duplicate_emails          = false
+          user_signup_disabled      = false
+          user_deletion_disabled    = false
+          anonymous_user_autodelete = true
+          multi_tenant              = false
+          mfa                       = "DISABLED"
+          request_logging           = false
+        }
+      }
+    }
+  }
+
+  override_data {
+    target = data.terraform_remote_state.workload
+    values = {
+      outputs = {
+        staging_workload = {
+          schema                = "miakapp.staging-workload/1"
+          project_id            = "miakapp-v4-staging"
+          project_number        = "1072737219170"
+          region                = "europe-west9"
+          function_name         = "control-plane"
+          function_uri          = "https://control-plane-aczhngqraq-od.a.run.app"
+          probe_service_account = "miakapp-staging-probe@miakapp-v4-staging.iam.gserviceaccount.com"
+          source_sha256         = "86f4818dfcb4021e5578638d6fb1e9b7da31ea245528cbdc8573dabecdfca358"
+          repository_commit     = "60322c69c92b8ccf5f3d1bc87ba264a00e5dca05"
+          ingress               = "ALLOW_INTERNAL_ONLY"
+          unauthenticated       = false
+          minimum_instances     = 0
+          maximum_instances     = 1
+        }
+      }
+    }
+  }
+
+  expect_failures = [terraform_data.auth_probe_guard]
 }
 
 run "keeps_the_default_state_dormant" {

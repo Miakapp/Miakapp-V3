@@ -56,7 +56,7 @@ resource "terraform_data" "auth_probe_guard" {
         data.terraform_remote_state.firebase_auth.outputs.staging_firebase_auth.schema == "miakapp.staging-firebase-auth/1" &&
         data.terraform_remote_state.firebase_auth.outputs.staging_firebase_auth.project_id == local.project_id &&
         data.terraform_remote_state.firebase_auth.outputs.staging_firebase_auth.project_number == local.project_number &&
-        data.terraform_remote_state.firebase_auth.outputs.staging_firebase_auth.config_name == "projects/${local.project_id}/config" &&
+        data.terraform_remote_state.firebase_auth.outputs.staging_firebase_auth.config_name == "projects/${local.project_number}/config" &&
         data.terraform_remote_state.firebase_auth.outputs.staging_firebase_auth.anonymous_sign_in == false &&
         data.terraform_remote_state.firebase_auth.outputs.staging_firebase_auth.email_sign_in == false &&
         data.terraform_remote_state.firebase_auth.outputs.staging_firebase_auth.phone_sign_in == false &&
