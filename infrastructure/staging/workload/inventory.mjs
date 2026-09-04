@@ -16,6 +16,7 @@ const BUILD_ACCOUNT = `miakapp-control-build@${PROJECT_ID}.iam.gserviceaccount.c
 const RUNTIME_ACCOUNT = `miakapp-control-plane@${PROJECT_ID}.iam.gserviceaccount.com`;
 const PROBE_ACCOUNT = `miakapp-staging-probe@${PROJECT_ID}.iam.gserviceaccount.com`;
 const SOURCE_BUCKET = `${PROJECT_ID}-function-source-${PROJECT_NUMBER}`;
+const GCF_SOURCE_BUCKET = `gcf-v2-sources-${PROJECT_NUMBER}-${REGION}`;
 const REPOSITORY = `projects/${PROJECT_ID}/locations/${REGION}/repositories/miakapp-control-plane`;
 const FCM_ROLE = `projects/${PROJECT_ID}/roles/miakapp.controlPlaneFcmSender`;
 const MAXIMUM_OUTPUT_BYTES = 8 * 1024 * 1024;
@@ -73,6 +74,15 @@ function exactBindingMembers(policy, role, members) {
     || matching[0].condition !== undefined
     || !isDeepStrictEqual([...(matching[0].members ?? [])].sort(), [...members].sort())) {
     reject(`IAM binding ${role} does not match the reviewed principals`);
+  }
+}
+
+function exactConditionalBinding(policy, role, member, condition) {
+  const matching = bindings(policy).filter((binding) => binding.role === role);
+  if (matching.length !== 1
+    || !isDeepStrictEqual(matching[0].members, [member])
+    || !isDeepStrictEqual(matching[0].condition, condition)) {
+    reject(`Conditional IAM binding ${role} does not match the reviewed principal and scope`);
   }
 }
 
@@ -205,7 +215,7 @@ export function observeDeployedWorkload({
     const binding = bindings(probePolicy).find((candidate) => candidate.role === 'roles/iam.serviceAccountOpenIdTokenCreator');
     const member = binding?.members?.[0];
     if (typeof member !== 'string' || !member.startsWith('user:')
-      || createHash('sha256').update(member.slice(5)).digest('hex') !== operatorUserSha256) {
+      || createHash('sha256').update(member.slice(5).toLowerCase()).digest('hex') !== operatorUserSha256) {
       reject('Probe token-creator binding does not match the private operator');
     }
     return member;
@@ -229,6 +239,16 @@ export function observeDeployedWorkload({
     `serviceAccount:${BUILD_ACCOUNT}`,
     `serviceAccount:${RUNTIME_ACCOUNT}`,
   ]);
+  exactConditionalBinding(
+    projectPolicy,
+    'roles/storage.objectViewer',
+    `serviceAccount:${BUILD_ACCOUNT}`,
+    {
+      title: 'miakapp-control-build-gcf-source',
+      description: 'Read only the regional Cloud Functions source objects copied by Google.',
+      expression: `resource.type == "storage.googleapis.com/Object" && resource.name.startsWith("projects/_/buckets/${GCF_SOURCE_BUCKET}/objects/")`,
+    },
+  );
   exactBinding(projectPolicy, FCM_ROLE, `serviceAccount:${RUNTIME_ACCOUNT}`);
   noPublicPrincipal(sourcePolicy, repositoryPolicy, projectPolicy);
 
@@ -269,6 +289,8 @@ export function observeDeployedWorkload({
       probe_token_role: 'roles/iam.serviceAccountOpenIdTokenCreator',
       fcm_role: FCM_ROLE,
       fcm_permissions: Object.freeze(['cloudmessaging.messages.create']),
+      build_source_role: 'roles/storage.objectViewer',
+      build_source_bucket: GCF_SOURCE_BUCKET,
     }),
     artifacts: Object.freeze({
       source_bucket: SOURCE_BUCKET,

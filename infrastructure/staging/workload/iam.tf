@@ -4,6 +4,18 @@ resource "google_storage_bucket_iam_member" "build_source_reader" {
   member = google_service_account.build.member
 }
 
+resource "google_project_iam_member" "build_gcf_source_reader" {
+  project = local.project_id
+  role    = "roles/storage.objectViewer"
+  member  = google_service_account.build.member
+
+  condition {
+    title       = "miakapp-control-build-gcf-source"
+    description = "Read only the regional Cloud Functions source objects copied by Google."
+    expression  = "resource.type == \"storage.googleapis.com/Object\" && resource.name.startsWith(\"projects/_/buckets/${local.gcf_source_bucket}/objects/\")"
+  }
+}
+
 resource "google_artifact_registry_repository_iam_member" "build_writer" {
   project    = local.project_id
   location   = google_artifact_registry_repository.function.location

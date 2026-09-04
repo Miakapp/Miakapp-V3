@@ -112,6 +112,14 @@ run "accepts_the_exact_foundation_and_private_workload_shape" {
 
   assert {
     condition = (
+      google_project_iam_member.build_gcf_source_reader.role == "roles/storage.objectViewer" &&
+      google_project_iam_member.build_gcf_source_reader.condition[0].expression == "resource.type == \"storage.googleapis.com/Object\" && resource.name.startsWith(\"projects/_/buckets/gcf-v2-sources-1072737219170-europe-west9/objects/\")"
+    )
+    error_message = "The build identity may read only Google's regional Function source objects."
+  }
+
+  assert {
+    condition = (
       google_service_account.probe.account_id == "miakapp-staging-probe" &&
       google_cloud_run_v2_service_iam_member.probe_invoker.role == "roles/run.invoker"
     )

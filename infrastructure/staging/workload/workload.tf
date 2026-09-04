@@ -121,6 +121,7 @@ resource "google_cloudfunctions2_function" "control_plane" {
 
   depends_on = [
     google_artifact_registry_repository_iam_member.build_writer,
+    google_project_iam_member.build_gcf_source_reader,
     google_project_iam_member.build_logs,
     google_project_iam_member.runtime_fcm,
     google_storage_bucket_iam_member.build_source_reader,
