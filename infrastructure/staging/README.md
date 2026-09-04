@@ -150,6 +150,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`terraform/`](terraform/) | APIs, Firestore, KMS, Secret Manager containers, and resource-scoped runtime IAM | Complete; 33-resource state independently converged; versions are managed outside Terraform |
 | [`activation/`](activation/) | One Firebase Web app, five initial secret versions, and the closed non-secret runtime document | Applied once and idempotently revalidated; result evidence committed without secret payloads |
 | [`workload/`](workload/) | Deterministic production package, private Gen 2 Function, dedicated build/probe identities, and one-permission FCM role | Applied and converged; active internal-only revision independently source-verified without making a request |
+| [`probe/`](probe/) | Isolated Workflows API and one fixed, unscheduled, keyless internal discovery probe | Reviewed but not deployed; one-shot invocation remains a separate gate |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
 | [`TEARDOWN.md`](TEARDOWN.md) | Manual recovery and teardown rehearsal | Documentation only |
@@ -363,7 +364,7 @@ npm run test:staging-manifest
 The gate validates bounded closed manifests, all reviewed inventories,
 the retired recovery policy and historical blueprint, pinned actions and providers,
 exact locks for macOS
-ARM64 and Linux AMD64, all three Terraform roots with mock providers, script syntax,
+ARM64 and Linux AMD64, all four Terraform roots with mock providers, script syntax,
 private-plan handling, the exact recovery addresses, actions, planned values,
 partial prior state, critical expression references and checks, the
 complete simulated migration-only recovery state
@@ -385,13 +386,14 @@ resources, binds the committed runtime document, grants only
 `cloudmessaging.messages.create`, keeps `minInstances=0`/`maxInstances=1`,
 permits only a keyless probe identity, and uses internal-only ingress.
 
-The next gate is a single bounded synthetic invocation from an explicitly
-reviewed Google-hosted path that can satisfy internal ingress. It must use the
-dedicated probe identity, preserve the absence of public ingress and persistent
-credentials, perform no load test, and capture both the expected authentication
-result and its cost-relevant operations. App Check live-provider and replay
-policy must be resolved as part of that reachable private path rather than
-bypassed.
+The reviewed `terraform/probe` root is the next gate. It adds no always-on
+compute: it enables Workflows and creates one unscheduled, input-free Workflow
+whose only step is an OIDC-authenticated `GET` of the public discovery document
+through the Function's internal ingress. The URL and audience are fixed, call
+logging is disabled, and no retry exists. Deployment makes no request; the
+separate invocation wrapper refuses to run after any execution. This first call
+validates private reachability and secure runtime startup, not Firebase Auth or
+App Check, which remain later gates.
 
 That private synthetic invocation, App Check live-provider and replay policy,
 relay token-refresh integration, trusted-source/edge admission, monitoring and
