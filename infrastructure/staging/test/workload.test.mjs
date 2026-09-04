@@ -18,7 +18,8 @@ import {
 } from '../workload/validate-plan.mjs';
 
 const COMMIT = '1'.repeat(40);
-const SOURCE_SHA256 = '2'.repeat(64);
+const SOURCE_BYTES = Buffer.from('synthetic-function-source');
+const SOURCE_SHA256 = createHash('sha256').update(SOURCE_BYTES).digest('hex');
 const OPERATOR_EMAIL = 'operator@example.test';
 const OPERATOR_SHA256 = createHash('sha256').update(OPERATOR_EMAIL).digest('hex');
 const RUNTIME_CONFIG = readFileSync(new URL('../activation/runtime-config.json', import.meta.url), 'utf8');
@@ -409,7 +410,20 @@ function inventoryResponses(extraLogWriter = []) {
         entryPoint: 'controlPlane',
         dockerRepository: repository,
         serviceAccount: `projects/${PROJECT_ID}/serviceAccounts/${BUILD_ACCOUNT}`,
-        source: { storageSource: { bucket: sourceBucket, object: `sources/${SOURCE_SHA256}.zip`, generation: '1' } },
+        source: {
+          storageSource: {
+            bucket: GCF_SOURCE_BUCKET,
+            object: 'control-plane/function-source.zip',
+            generation: '1',
+          },
+        },
+        sourceProvenance: {
+          resolvedStorageSource: {
+            bucket: GCF_SOURCE_BUCKET,
+            object: 'control-plane/function-source.zip',
+            generation: '1',
+          },
+        },
       },
       serviceConfig: {
         serviceAccountEmail: RUNTIME_ACCOUNT,
@@ -470,6 +484,7 @@ function inventoryResponses(extraLogWriter = []) {
         },
       },
     ] },
+    SOURCE_BYTES,
   ];
 }
 
@@ -479,7 +494,9 @@ function inventorySpawn(responses) {
     return {
       status: value === undefined ? 1 : 0,
       signal: null,
-      stdout: value === undefined ? Buffer.alloc(0) : Buffer.from(JSON.stringify(value)),
+      stdout: value === undefined
+        ? Buffer.alloc(0)
+        : (Buffer.isBuffer(value) ? value : Buffer.from(JSON.stringify(value))),
       stderr: Buffer.alloc(0),
     };
   };
@@ -509,6 +526,18 @@ test('rejects an unreviewed project log writer', () => {
     operatorUserSha256: OPERATOR_SHA256,
     spawn: inventorySpawn(responses),
   }));
+});
+
+test('rejects copied Function source bytes that differ from the deterministic package', () => {
+  const responses = inventoryResponses();
+  responses[responses.length - 1] = Buffer.from('foreign-function-source');
+  assert.throws(() => observeDeployedWorkload({
+    repositoryRoot: '/tmp/repository',
+    repositoryCommit: COMMIT,
+    sourceArchiveSha256: SOURCE_SHA256,
+    operatorUserSha256: OPERATOR_SHA256,
+    spawn: inventorySpawn(responses),
+  }), /copied source bytes/);
 });
 
 test('workload root guard accepts only the closed executable inventory', () => {
