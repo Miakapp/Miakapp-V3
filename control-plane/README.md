@@ -76,11 +76,15 @@ building this package and the pinned MiakAPI checkout:
 That gate starts only the Auth and Firestore emulators, wraps this exact Express
 application in an ephemeral loopback HTTPS listener, creates one synthetic owner,
 home and Home Key through the real routes, and removes its temporary certificate
-and Home Key file on exit. The SDK then performs `initial` and `reauth` exchanges
-through the real route and one relay socket; the relay uses its production token
-verifier and JWKS cache. A build-tagged constructor changes only the relay test
-client's trust roots so the production verifier can trust the ephemeral loopback
-certificate. It is absent from normal relay builds.
+and Home Key file on exit. The fixture moves the canonical synthetic signing keys
+through initial publication, prepublication and activation. One fake-clock probe
+cache deterministically exercises concurrent unknown-key refresh, the ten-second
+abuse bound, expiry, conditional `304`, failed revalidation and recovery. A
+separate real-time cache remains attached to the relay socket while the SDK
+performs `initial` and scheduled `reauth` exchanges through the real route. Both
+caches run the production verifier. Build-tagged constructors and authenticated
+control endpoints exist only in the loopback fixture and are absent from normal
+relay builds.
 
 Firebase Functions accepts only a major Node version in `package.json`, so the
 deployment manifest retains `"node": "22"`. The executable preflight enforces
@@ -127,10 +131,15 @@ registry state, CORS, cookie rejection, and deny-by-default client Rules.
 The separate cross-repository gate proves the exact coordinator path through the
 real Auth and Firestore emulators, control-plane request router, Home Key token
 provider, SDK `HELLO` and scheduled `REAUTH`, relay JWKS fetch, production token
-verifier and binding checks. It observes one ready generation, exactly two
-successful coordinator verifications and no reconnect. This first integrated
-path does not yet close live signing-key rotation, expired-cache recovery,
-unknown-`kid` concurrency or abuse-limit evidence.
+verifier and binding checks. It holds the physical JWKS response while 32
+future-key verification calls overlap, proving that they share one fetch, and
+separately proves bounded random-`kid` refresh, cache-expiry `304`, fail-closed
+`503` handling and one-second recovery. The SDK observes one ready generation,
+exactly two successful coordinator verifications, a changed signing key and no
+reconnect or principal change. Atomic mode-0600 evidence contains only the key
+phase and bounded request/status counters; it contains no token, Home Key or
+decoded claim. This synthetic local result does not exercise Cloud KMS key
+version orchestration, Google's live Firebase certificates or public ingress.
 
 For component publication, the corpus proves owner and attenuated-token
 authorization without verifier fallback, direct-Home-Key and cross-resource
@@ -312,7 +321,7 @@ application/dependency failures, transaction replays, ambiguous Storage state,
 CAS races and audit outcomes are consolidated in [`FAULT-MATRIX.md`](FAULT-MATRIX.md).
 Trusted production source attribution, Cloud Armor plus ingress restriction,
 alerting, load/cost calibration, TTL/index deployment, live network faults, live
-JWKS rotation, live Cloud KMS and Secret Manager behavior, IAM, bucket CORS/lifecycle policy, real
+Cloud KMS rotation, live Cloud KMS and Secret Manager behavior, IAM, bucket CORS/lifecycle policy, real
 App Check, real FCM, production Firebase certificates and staging rollback remain
 subsequent staging work. Admin SDK access
 bypasses Firestore and Storage Rules, so the Rules tests exercise separate client
