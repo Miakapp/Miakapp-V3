@@ -149,10 +149,10 @@ function workflow() {
     serviceAccount: `projects/${PROJECT_ID}/serviceAccounts/${PROBE_ACCOUNT}`,
     callLogLevel: 'LOG_NONE',
     executionHistoryLevel: 'EXECUTION_HISTORY_BASIC',
-    deletionProtection: true,
     sourceContents: WORKFLOW_SOURCE,
     labels: {
       environment: 'staging',
+      'goog-terraform-provisioned': 'true',
       'managed-by': 'terraform',
       product: 'miakapp-v4',
       purpose: 'private-probe',
