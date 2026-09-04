@@ -4,8 +4,7 @@ Status: Accepted
 
 Date: 2026-08-31
 
-Last updated: 2026-09-04 — Firebase-direct user relay use is restricted pending
-audience-bound attenuation.
+Last updated: 2026-09-04 — audience-bound browser relay credentials specified.
 
 ## 1. Scope
 
@@ -16,7 +15,8 @@ application, Firebase Functions, MiakAPI and RFC 0001 relays. It specifies:
 - generation, storage, use, listing and revocation of Home Keys;
 - Home Key exchange for short-lived, resource-specific access tokens;
 - the exact Miakapp JWT and JWKS profiles consumed by relays and platform APIs;
-- the distinct Firebase ID-token profile used for human relay sessions;
+- the distinct Firebase ID-token source profile and audience-bound Miakapp
+  access-token profile used for human relay sessions;
 - coarse Home Key scopes and their attenuation at token issuance;
 - user-consented, home-scoped push grants;
 - component upload and pointer-publication authorization;
@@ -42,13 +42,11 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHOULD**, **SHOULD NOT** an
 | Home owner | may create a home and manage its Home Keys and selected relay |
 | Home Key holder | receives only the scopes recorded for that key |
 | Coordinator | trusted application authority inside the home named by its token |
-| Relay | production target: platform-untrusted after user-token attenuation; the direct alpha requires a fully trusted operator and still exposes plaintext home data |
+| Relay | platform-untrusted for credentials after user-token attenuation; still observes plaintext home data |
 | Authenticated user | controls their own push destinations and grants |
 | Home bundle | platform-untrusted; receives no control-plane credential |
 
-The production design has these required properties. The Firebase-direct user
-profile in Section 11 is an explicitly restricted alpha exception to property 2
-until its audience-bound replacement is specified and implemented:
+The production design has these required properties:
 
 1. a relay never receives a Home Key, Firebase service credential, signing key,
    push credential or component-publication credential;
@@ -77,12 +75,13 @@ Every deployment publishes a bounded JSON document at
   "issuer": "https://control.example.test",
   "jwks_uri": "https://control.example.test/.well-known/jwks.json",
   "exchange_endpoint": "https://control.example.test/v1/access-tokens:exchange",
+  "user_relay_exchange_endpoint": "https://control.example.test/v1/user-relay-tokens:exchange",
   "push_audience": "https://control.example.test/v1/push",
   "components_audience": "https://control.example.test/v1/components"
 }
 ```
 
-All five URLs MUST be absolute HTTPS URLs without user information, query or
+All six URLs MUST be absolute HTTPS URLs without user information, query or
 fragment. `issuer` has no trailing slash. The other values are exact identifiers,
 not prefixes. The document has no unknown fields and is at most 4 KiB.
 
@@ -441,7 +440,7 @@ cannot be loaded in production.
 
 ### 8.2 Claims
 
-The common claims are:
+Home Key-derived profiles use this claim shape:
 
 ```json
 {
@@ -458,7 +457,7 @@ The common claims are:
 }
 ```
 
-The claims object is closed. Common fields have these rules:
+The claims object is closed. Home Key-derived fields have these rules:
 
 - `iss` exactly equals the pinned deployment issuer;
 - `sub` is the Home Key's home ID;
@@ -473,6 +472,30 @@ The claims object is closed. Common fields have these rules:
 - `scope` is exactly one known scope, never an array or space-delimited set; and
 - the resource profile below is mutually exclusive with every other profile.
 
+The browser user profile is a distinct Miakapp access-token shape:
+
+```json
+{
+  "iss": "https://control.example.test",
+  "sub": "synthetic-firebase-uid",
+  "aud": "wss://relay.example.test/ws",
+  "exp": 1788211500,
+  "iat": 1788211200,
+  "jti": "BBBBBBBBBBBBBBBBBBBBBB",
+  "scope": "relay:user",
+  "miakapp_home": "synthetic-home",
+  "miakapp_role": "user",
+  "miakapp_verified_email": "user@example.test"
+}
+```
+
+For this profile, `sub` is the Firebase UID authenticated by the control plane,
+`miakapp_home` is the requested Home ID, and `miakapp_verified_email` is optional.
+The email claim is present only when Firebase supplied both `email_verified=true`
+and a bounded email. `client_id` and `miakapp_coordinator` are forbidden. The
+header, issuer, audience, `jti`, closed-object and time rules remain identical to
+the other Miakapp profiles. A Firebase ID token is not a token in this profile.
+
 The 30-second `iat` tolerance handles clock skew but does not extend the lease:
 an issuer using a future `iat` must shorten the remaining TTL so `exp` stays no
 more than 300 seconds after the verifier's current time.
@@ -484,6 +507,7 @@ Relays and the control plane require synchronized clocks.
 |---|---|---|---|
 | coordinator relay | exact selected `relay_url` | `scope=relay:coordinator`, `miakapp_role=coordinator`, valid `miakapp_coordinator` | — |
 | CLI relay | exact selected `relay_url` | `scope=relay:cli`, `miakapp_role=cli` | `miakapp_coordinator` |
+| browser user relay | exact selected `relay_url` | `scope=relay:user`, `miakapp_role=user`, valid `miakapp_home`; optional bounded `miakapp_verified_email` | `client_id`, `miakapp_coordinator` |
 | push | discovery `push_audience` | `scope=push:send` | `miakapp_role`, `miakapp_coordinator` |
 | component publisher | discovery `components_audience` | `scope=components:publish` | `miakapp_role`, `miakapp_coordinator` |
 
@@ -501,9 +525,16 @@ For CLI tokens, role is CLI, home ID and principal ID equal `sub`, and the HELLO
 CLI context is empty. A CLI token cannot authenticate a coordinator socket and a
 coordinator token cannot authenticate a CLI socket.
 
-`REAUTH` must validate the same issuer, audience, role, subject, key client and,
-for a coordinator, name. It may change `jti`, issue/expiry times and signing key.
-It cannot change the established principal.
+For browser user tokens, role is user, home ID equals `miakapp_home`, principal
+ID equals the Firebase UID in `sub`, and the optional verified principal email
+comes only from `miakapp_verified_email`. The RFC 0001 user `HELLO` home must
+equal the signed Home ID. The relay does not infer ownership or enrollment from
+this token; coordinator policy remains authoritative for both.
+
+`REAUTH` must validate the same issuer, audience, role and subject. A Home
+Key-derived renewal must retain key client and, for a coordinator, name. A user
+renewal must retain Home ID and verified email. It may change `jti`, issue/expiry
+times and signing key. It cannot change the established principal.
 
 ## 9. JWKS publication and signing-key rotation
 
@@ -549,7 +580,8 @@ The relay treats successful JWT verification as both authentication and coarse
 role authorization:
 
 - `relay:coordinator` permits only RFC 0001 coordinator frames;
-- `relay:cli` permits only RFC 0001 CLI frames; and
+- `relay:cli` permits only RFC 0001 CLI frames;
+- `relay:user` permits only RFC 0001 user frames; and
 - no other Miakapp access-token scope is accepted at the WebSocket endpoint.
 
 The relay does not use push or publication scopes, does not introspect a Home Key
@@ -557,61 +589,85 @@ and makes no authenticated outbound request. Fine-grained state, event and call
 authorization remains RFC 0001 coordinator-declared policy plus coordinator
 business authorization.
 
-## 11. Firebase user-token profile
+## 11. Browser user relay credential exchange
 
-User WebSocket sessions present Firebase ID tokens, not Miakapp access tokens.
-The two token profiles use mutually exclusive issuers, algorithms, audiences and
-claim validation.
+### 11.1 Source authentication and request
 
-This direct profile is accepted only for the trusted-relay alpha. A Firebase ID
-token names the Firebase project as audience, not the selected relay, so an
-operator that receives it can replay the bearer against other services trusting
-that project. Keeping it out of URLs and logs does not attenuate that authority.
-The production application MUST NOT offer arbitrary community-relay selection
-under this profile. It may connect only to an official relay or one the user
-explicitly trusts as completely as the Miakapp backend.
+The browser obtains a role-1 relay credential through
+`POST /v1/user-relay-tokens:exchange`. The request uses
+`Authorization: Bearer <Firebase-ID-token>` for user identity and
+`X-Firebase-AppCheck: <App-Check-token>` for application attestation. Neither
+source token is sent to a relay. Cookies, query parameters, redirects and unknown
+fields are forbidden. The exact request body is:
 
-Before broad self-hosted relay selection, the trusted control plane MUST exchange
-Firebase identity for a short-lived credential bound to one exact relay audience,
-home, UID and user role, with no owner, push, publication, coordinator or CLI
-scope. The exchange, App Check/admission policy, JWT claims and relay verifier
-profile require a follow-up amendment before implementation. RFC 0005 records
-the browser lifecycle and exact production gate. This audience binding prevents
-cross-relay credential replay; it does not make the selected relay blind to home
-traffic.
+```json
+{ "home_id": "synthetic-home", "reason": "initial" }
+```
 
-The relay pins its Firebase project ID and the Google Secure Token certificate
-endpoint. It verifies the official Firebase profile:
+`reason` is exactly `initial`, `reauth` or `reconnect` and describes browser
+lifecycle intent only. The Firebase token is verified with the same bounded
+profile used by owner endpoints, but recent authentication is not required.
+App Check uses ordinary server verification bound to the deployment's exact app
+ID. Version 1 does not use beta replay-protection consumption because each
+five-minute renewal would otherwise add a provider round trip; App Check is
+attestation, not user authentication or Home authorization.
 
-- header `alg` is exactly `RS256`, `kid` selects a cached Google certificate, and
-  an RSA modulus is 2,048 through 4,096 bits with a signature length matching it;
-- `aud` exactly equals the Firebase project ID;
-- `iss` exactly equals `https://securetoken.google.com/<projectId>`;
-- `sub` is a non-empty Firebase UID of at most 128 bytes;
-- `exp` is strictly in the future;
-- `iat` and `auth_time` are integer times not more than 30 seconds in the future;
-- the complete RS256 signature verifies; and
-- decoded input remains within the JSON and token limits in Section 4.
+### 11.2 Issuance semantics
 
-Google's certificate response is cached according to its `Cache-Control` maximum
-age. Fetching is bounded, single-flight and pinned to the configured Google URL.
-An unknown `kid` may cause one rate-limited refresh. A fetch failure after cache
-expiry is temporary authentication failure.
+After both source credentials and admission succeed, the control plane reads
+exactly one private `controlHomes/{homeId}` record. It derives the token audience
+only from that record's canonical `relay_url`; the browser cannot supply an
+audience or relay URL. The request succeeds for any authenticated application
+user when the Home exists, including an unenrolled user and a user other than the
+platform owner. This deliberately asserts authenticated context, not ownership,
+membership, enrollment or coordinator authorization. The coordinator remains the
+only membership authority and may present an unenrolled Home projection or a
+join flow after the relay authenticates the context.
 
-The verifier returns user ID from `sub`, `auth_time` as `authenticated_at`, and
-`exp` as one immutable identity result. The relay forwards `email` only when
-`email_verified` is the boolean `true` and the email is valid UTF-8, contains no
-control character and is at most 320 bytes. A caller-supplied UID or email is
-ignored.
+The control plane creates no grant record, membership row or credential cache.
+It signs exactly the Section 8 browser user profile with a maximum five-minute
+lease. A verified Firebase email may be copied into the signed optional claim;
+an unverified or absent email is omitted. A missing Home returns `home_not_found`.
+Malformed private state or a signing dependency failure fails closed as
+`temporarily_unavailable`.
 
-The Firebase token does not bind a home. The RFC 0001 user `HELLO` context selects
-the home, where the user begins unenrolled unless a coordinator declaration grants
-access. This permits the `miakapp.join` flow without a platform membership table.
+The successful private response is exactly:
 
-Ordinary local verification does not query account disablement or Firebase token
-revocation. The browser sends a fresh ID token through `REAUTH` before expiry;
-failure closes the socket. The maximum disablement/revocation propagation bound
-is therefore the Firebase ID-token lease, and must not be described as immediate.
+```json
+{
+  "schema": "miakapp.user-relay-token/1",
+  "access_token": "<compact JWS>",
+  "token_type": "Bearer",
+  "expires_at_ms": 1788211500000,
+  "relay_url": "wss://relay.example.test/ws"
+}
+```
+
+The `relay_url` and token form one atomic credential result. The browser MUST
+connect only to that URL with that token. It must never pair the token with a
+cached or caller-selected relay URL.
+
+### 11.3 Admission, privacy and relay verification
+
+Before the Home read or signing call, the implementation charges independent
+fixed-window budgets of 128 requests per source fingerprint per minute and 32
+requests per verified Firebase UID per minute. It intentionally has no per-Home
+budget that an authenticated outsider could exhaust for another Home. Rejection
+performs no signing operation. The ordinary global audit/source budgets still
+apply, and audit stores only keyed fingerprints and the Home ID as specified in
+Section 15.
+
+Firebase and App Check source tokens, response bodies and Miakapp relay tokens
+are forbidden from URLs, logs, errors, traces, HAR files and persistent browser
+storage. Only the Miakapp token may enter RFC 0001 `HELLO` or `REAUTH`.
+
+The relay verifies the user token locally through the same pinned control-plane
+issuer, exact WSS audience and bounded JWKS cache as coordinator/CLI tokens. It
+does not fetch Google Secure Token certificates, call Firebase or introspect the
+control plane on the socket hot path. A captured token is useless at another
+relay or platform API and expires within five minutes. This is credential
+attenuation, not end-to-end encryption: the selected relay still sees the user's
+Home traffic.
 
 ## 12. Push destinations and grants
 
@@ -930,6 +986,7 @@ again; possession of an upload capability alone grants neither operation.
 Every production deployment declares finite limits for at least:
 
 - exchange requests per IP, key and home;
+- browser user exchange requests per source fingerprint and Firebase UID;
 - home creations per Firebase UID and source-network fingerprint;
 - active Home Keys per home;
 - active push challenges and destinations per Firebase UID and App Check app ID;
@@ -974,6 +1031,7 @@ an executable local profile, not a portable production default:
 | security-sensitive operations per source fingerprint | 512 / 60 s |
 | home creation per Firebase UID / source fingerprint | 32 / 1 h; 64 / 1 h |
 | exchange per source / Home Key / home | 256 / 60 s; 32 / 60 s; 128 / 60 s |
+| browser user exchange per source / Firebase UID | 128 / 60 s; 32 / 60 s |
 | push challenge per UID / App Check app / source | 64 / 60 s; 256 / 60 s; 128 / 60 s |
 | push send per Home Key / home / grant / destination | 120 / 60 s; 240 / 60 s; 120 / 60 s; 120 / 60 s |
 | component upload issue per home | 64 attempts / 60 s and 64 MiB / 1 h |
@@ -991,6 +1049,8 @@ eventual TTL execution, is the physical collection bound.
 Every accepted sensitive request first reserves an audit event and the generic
 source budget. Additional actor, key, home, grant, destination, upload and byte
 budgets are reserved atomically when their verified dimensions become known.
+Browser user exchange reserves its UID and source budgets after Firebase Auth
+and App Check verification but before the Home read and signing operation.
 The exchange home budget commits after authoritative Home Key reservation but
 before signing. A component delivery performs a capability-authorized read,
 reserves its upload/home/byte budgets, then repeats authorization while consuming
@@ -1118,15 +1178,16 @@ contract harness MUST prove:
 4. one-scope resource attenuation, successful push/component use of an exchanged
    token, and rejection of a direct Home Key, expired token or cross-resource
    substitution at those APIs;
-5. exact issuer, audience, role and coordinator identity extraction;
+5. exact issuer, audience, role, Home, user and coordinator identity extraction;
 6. algorithm confusion, `none`, unknown `kid`, bad signature, malformed base64url,
    duplicate JSON keys, unpaired Unicode surrogates, unsafe integers, overlong
    TTL, future issue time and expired token rejection;
 7. signing-key overlap, at least 60 seconds of prepublication, first signing-key
    use, and at least 330 seconds of retiring-key retention through explicit
    clocked key-set transitions;
-8. Firebase RS256 claim validation with 2,048- and 3,072-bit keys, authenticated
-   time extraction and verified-email suppression;
+8. Firebase RS256 source-claim validation with 2,048- and 3,072-bit keys,
+   authenticated time extraction and verified-email suppression, plus strict
+   cross-profile rejection against the Miakapp relay-user token;
 9. challenge-proved FID destination registration bound to verified Firebase UID
    and App Check app ID, proof expiry/replay/wrong-principal denial, user-created
    grant, cross-home denial, causal grant expiry without an intervening
@@ -1141,13 +1202,16 @@ contract harness MUST prove:
     16-active-grant and 256-retained-grant boundaries, including causal active-
     grant reconstruction and successful replacements that transactionally
     compact both retained sets;
-    and
-12. privacy scanning plus human review of every public fixture.
+12. authenticated browser user exchange without ownership or enrollment
+    semantics, exact relay/home/UID binding, authoritative relay rotation, App
+    Check enforcement, source-token confinement and no persistent grant; and
+13. privacy scanning plus human review of every public fixture.
 
 The local Firebase vertical slice must use a `demo-*` project and Auth, Firestore,
 Functions and Storage emulators. It MUST additionally test every Section 5, 6,
-7, 12 and 13 HTTP schema, one-time-secret redaction, Firestore transactions and
-rules, push challenge expiry/reuse, uniform revocation, upload capability
+7, 11, 12 and 13 HTTP schema, one-time-secret redaction, Firestore transactions
+and rules, browser exchange admission and no-grant behavior, push challenge
+expiry/reuse, uniform revocation, upload capability
 expiry/reuse, delivery-path
 read-back, concurrent generation CAS, bounded rate/cost admission, retry and
 uncertain-outcome behavior. Relay integration MUST prove exact `HELLO`/`REAUTH`
@@ -1179,7 +1243,8 @@ deployment.
 
 After both contract and production acceptance tests pass, Miakapp may claim:
 
-- relays verify coordinator/CLI access without holding a platform secret;
+- relays verify browser user, coordinator and CLI access without holding a
+  platform secret or Firebase service credential;
 - relay-captured access cannot be replayed at another configured audience or a
   push/publication API;
 - Home Key scope and revocation bound newly issued authority;
@@ -1243,8 +1308,18 @@ quarantine, generation CAS and scoped publisher authority as one operation.
 ### Online Firebase revocation check on every socket
 
 Rejected from the default hot path. Local signature verification plus bounded
-reauthentication removes a per-connection platform dependency. Deployments may
-add a stronger profile but must name its availability and latency costs.
+reauthentication removes a per-connection platform dependency. Firebase Auth and
+App Check are instead verified at each control-plane exchange. Deployments may
+add a stronger relay profile but must name its availability and latency costs.
+
+### User-only JOSE algorithm rename
+
+Rejected. Version 1 retains the existing closed `alg=EdDSA`, Ed25519-key profile
+across every Miakapp access token. RFC 9864's newer fully specified `Ed25519`
+algorithm identifier requires a separately versioned, coordinated migration of
+issuers, all resource verifiers, shared vectors and key metadata. Changing only
+the browser user profile would create avoidable algorithm and rollout ambiguity.
+Token-selected algorithms remain forbidden during either profile.
 
 ## 21. References
 
@@ -1254,6 +1329,7 @@ add a stronger profile but must name its availability and latency costs.
 - [RFC 8037 — CFRG elliptic-curve algorithms for JOSE](https://www.rfc-editor.org/rfc/rfc8037)
 - [RFC 8725 — JSON Web Token Best Current Practices](https://www.rfc-editor.org/rfc/rfc8725)
 - [RFC 9068 — JWT profile for OAuth 2.0 access tokens](https://www.rfc-editor.org/rfc/rfc9068)
+- [RFC 9864 — Fully specified algorithms for JOSE and COSE](https://www.rfc-editor.org/rfc/rfc9864)
 - [Firebase ID-token verification](https://firebase.google.com/docs/auth/admin/verify-id-tokens)
 - [Firebase App Check for custom backends](https://firebase.google.com/docs/app-check/custom-resource-backend)
 - [Firebase Cloud Messaging web receive](https://firebase.google.com/docs/cloud-messaging/web/receive-messages)

@@ -175,6 +175,7 @@ export function createProductionDeploymentConfig(
     issuer,
     jwksUri: `${issuer}/.well-known/jwks.json`,
     exchangeEndpoint: `${issuer}/v1/access-tokens:exchange`,
+    userRelayExchangeEndpoint: `${issuer}/v1/user-relay-tokens:exchange`,
     pushAudience: `${issuer}/v1/push`,
     componentsAudience: `${issuer}/v1/components`,
     componentBucket: runtime.componentBucket,

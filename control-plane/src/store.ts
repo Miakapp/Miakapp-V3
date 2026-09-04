@@ -19,11 +19,12 @@ import {
   type SignedAccessToken,
 } from './crypto.js';
 import {
-  ACCESS_SCOPES,
+  HOME_KEY_ACCESS_SCOPES,
   HOME_ID_PATTERN,
   IDENTIFIER_PATTERN,
   type AccessGrant,
-  type AccessScope,
+  type HomeKeyAccessGrant,
+  type HomeKeyAccessScope,
   type Clock,
   type DeploymentConfig,
   type ExchangeRequest,
@@ -32,11 +33,14 @@ import {
   type HomeKeyMetadata,
   type HomePatch,
   type HomeRepresentation,
+  type UserRelayAccessGrant,
 } from './types.js';
 
 const MAX_OWNED_HOMES = 16;
 const MAX_ACTIVE_HOME_KEYS = 64;
 const MAX_RETAINED_HOME_KEYS = 64;
+const MAX_RELAY_URL_BYTES = 2_048;
+const CONTROL_CHARACTER = /\p{Cc}/u;
 
 class IdentifierCollision extends Error {}
 
@@ -64,6 +68,14 @@ export interface AccessTokenExchange {
   readonly signed: SignedAccessToken;
 }
 
+export interface HomeKeyAccessTokenExchange extends AccessTokenExchange {
+  readonly grant: HomeKeyAccessGrant;
+}
+
+export interface UserRelayTokenExchange extends AccessTokenExchange {
+  readonly grant: UserRelayAccessGrant;
+}
+
 export type HomeKeyGenerator = () => GeneratedHomeKey;
 
 function safeCount(value: unknown): number {
@@ -84,28 +96,63 @@ function optionalTimestampText(value: unknown): string | null {
   return value === null ? null : timestampText(value);
 }
 
-function privateHome(snapshot: DocumentSnapshot, principal: FirebasePrincipal): PrivateHomeData {
+function storedRelayUrl(value: unknown): string {
+  if (typeof value !== 'string') throw apiError('temporarily_unavailable');
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw apiError('temporarily_unavailable');
+  }
+  if (Buffer.byteLength(value, 'utf8') > MAX_RELAY_URL_BYTES
+    || parsed.protocol !== 'wss:'
+    || parsed.username !== ''
+    || parsed.password !== ''
+    || parsed.search !== ''
+    || parsed.hash !== ''
+    || !parsed.pathname.endsWith('/ws')
+    || parsed.href !== value) {
+    throw apiError('temporarily_unavailable');
+  }
+  return value;
+}
+
+function privateHomeRecord(snapshot: DocumentSnapshot): PrivateHomeData {
   if (!snapshot.exists) throw apiError('home_not_found');
   const data = snapshot.data();
-  if (data?.owner_uid !== principal.userId) throw apiError('not_home_owner');
-  if (typeof data.relay_url !== 'string') throw apiError('temporarily_unavailable');
+  if (data?.schema !== 'miakapp.control-home/1'
+    || data.home_id !== snapshot.id
+    || typeof data.owner_uid !== 'string'
+    || data.owner_uid.length === 0
+    || Buffer.byteLength(data.owner_uid, 'utf8') > 128
+    || CONTROL_CHARACTER.test(data.owner_uid)) {
+    throw apiError('temporarily_unavailable');
+  }
   return {
-    ownerUid: data.owner_uid as string,
-    relayUrl: data.relay_url,
+    ownerUid: data.owner_uid,
+    relayUrl: storedRelayUrl(data.relay_url),
     activeKeyCount: safeCount(data.active_key_count),
     retainedKeyCount: safeCount(data.retained_key_count),
   };
 }
 
-function keyScopes(value: unknown): AccessScope[] {
+function privateHome(snapshot: DocumentSnapshot, principal: FirebasePrincipal): PrivateHomeData {
+  const home = privateHomeRecord(snapshot);
+  if (home.ownerUid !== principal.userId) throw apiError('not_home_owner');
+  return home;
+}
+
+function keyScopes(value: unknown): HomeKeyAccessScope[] {
   if (!Array.isArray(value)
     || value.length === 0
-    || value.length > ACCESS_SCOPES.length
+    || value.length > HOME_KEY_ACCESS_SCOPES.length
     || new Set(value).size !== value.length
-    || value.some((entry) => typeof entry !== 'string' || !ACCESS_SCOPES.includes(entry as AccessScope))) {
+    || value.some((entry) => (
+      typeof entry !== 'string' || !HOME_KEY_ACCESS_SCOPES.includes(entry as HomeKeyAccessScope)
+    ))) {
     throw apiError('temporarily_unavailable');
   }
-  return value as AccessScope[];
+  return value as HomeKeyAccessScope[];
 }
 
 function keyMetadataFromData(data: DocumentData | undefined): HomeKeyMetadata {
@@ -117,7 +164,7 @@ function keyMetadataFromData(data: DocumentData | undefined): HomeKeyMetadata {
   return Object.freeze({
     key_id: data.key_id,
     label: data.label,
-    scopes: Object.freeze([...keyScopes(data.scopes)]) as AccessScope[],
+    scopes: Object.freeze([...keyScopes(data.scopes)]) as HomeKeyAccessScope[],
     created_at: timestampText(data.created_at),
     revoked_at: optionalTimestampText(data.revoked_at),
     last_used_at: optionalTimestampText(data.last_used_at),
@@ -177,7 +224,7 @@ function validateKeyIndex(
   timestamp(snapshot.get('created_at'));
 }
 
-function sameScopes(left: unknown, right: readonly AccessScope[]): boolean {
+function sameScopes(left: unknown, right: readonly HomeKeyAccessScope[]): boolean {
   return Array.isArray(left)
     && left.length === right.length
     && left.every((entry, index) => entry === right[index]);
@@ -335,7 +382,7 @@ export class ControlPlaneStore {
     principal: FirebasePrincipal,
     homeId: string,
     label: string,
-    scopes: AccessScope[],
+    scopes: HomeKeyAccessScope[],
   ): Promise<{ readonly metadata: HomeKeyMetadata; readonly homeKey: string }> {
     for (let attempt = 0; attempt < 3; attempt += 1) {
       const generated = this.#homeKeyGenerator();
@@ -363,7 +410,7 @@ export class ControlPlaneStore {
     homeId: string,
     keyId: string,
     label: string,
-    scopes: AccessScope[],
+    scopes: HomeKeyAccessScope[],
     verifier: string,
   ): Promise<HomeKeyMetadata> {
     const homeRef = this.#firestore.collection('controlHomes').doc(homeId);
@@ -493,8 +540,8 @@ export class ControlPlaneStore {
     homeKey: string,
     request: ExchangeRequest,
     issuer: AccessTokenIssuer,
-    beforeSigning: (grant: AccessGrant) => Promise<void> = async () => undefined,
-  ): Promise<AccessTokenExchange> {
+    beforeSigning: (grant: HomeKeyAccessGrant) => Promise<void> = async () => undefined,
+  ): Promise<HomeKeyAccessTokenExchange> {
     const { keyId } = parseHomeKey(homeKey);
     const issuedAt = Math.floor(this.#clock.now() / 1_000);
     const tokenId = randomIdentifier();
@@ -506,6 +553,34 @@ export class ControlPlaneStore {
     return Object.freeze({ grant, signed });
   }
 
+  async exchangeUserRelay(
+    principal: FirebasePrincipal,
+    homeId: string,
+    issuer: AccessTokenIssuer,
+    beforeSigning: (grant: UserRelayAccessGrant) => Promise<void> = async () => undefined,
+  ): Promise<UserRelayTokenExchange> {
+    const issuedAt = Math.floor(this.#clock.now() / 1_000);
+    const snapshot = await this.#firestore.collection('controlHomes').doc(homeId).get();
+    const home = privateHomeRecord(snapshot);
+    const grant: UserRelayAccessGrant = Object.freeze({
+      subjectKind: 'firebase_user',
+      issuedAt,
+      tokenId: randomIdentifier(),
+      homeId,
+      userId: principal.userId,
+      verifiedEmail: principal.verifiedEmail,
+      scope: 'relay:user',
+      audience: home.relayUrl,
+      role: 'user',
+    });
+    await beforeSigning(grant);
+    if (issuedAt + 300 <= Math.floor(this.#clock.now() / 1_000)) {
+      throw apiError('temporarily_unavailable');
+    }
+    const signed = await issuer.sign(grant);
+    return Object.freeze({ grant, signed });
+  }
+
   async #reserveGrant(
     transaction: Transaction,
     homeKey: string,
@@ -513,7 +588,7 @@ export class ControlPlaneStore {
     request: ExchangeRequest,
     issuedAt: number,
     tokenId: string,
-  ): Promise<AccessGrant> {
+  ): Promise<HomeKeyAccessGrant> {
     const indexRef = this.#firestore.collection('homeKeyIndex').doc(keyId);
     const indexSnapshot = await transaction.get(indexRef);
     if (!indexSnapshot.exists) throw apiError('invalid_home_key');
@@ -535,8 +610,8 @@ export class ControlPlaneStore {
     if (!homeKeyVerifierMatches(homeKey, pepper, record.data.verifier)) throw apiError('invalid_home_key');
     const scopes = keyScopes(record.data.scopes);
     const label = record.data.label;
-    const relayUrl = homeSnapshot.get('relay_url');
-    if (typeof label !== 'string' || typeof relayUrl !== 'string') throw apiError('temporarily_unavailable');
+    const relayUrl = privateHomeRecord(homeSnapshot).relayUrl;
+    if (typeof label !== 'string') throw apiError('temporarily_unavailable');
     if (issuedAt + 300 <= Math.floor(this.#clock.now() / 1_000)) {
       throw apiError('temporarily_unavailable');
     }
@@ -571,11 +646,11 @@ export class ControlPlaneStore {
     clientId: string,
     label: string,
     relayUrl: string,
-    scopes: AccessScope[],
-  ): AccessGrant {
-    let scope: AccessScope;
+    scopes: HomeKeyAccessScope[],
+  ): HomeKeyAccessGrant {
+    let scope: HomeKeyAccessScope;
     let audience: string;
-    let role: AccessGrant['role'] = null;
+    let role: HomeKeyAccessGrant['role'] = null;
     let coordinatorName: string | null = null;
     if (request.purpose === 'relay') {
       role = request.role;
@@ -591,6 +666,7 @@ export class ControlPlaneStore {
     }
     if (!scopes.includes(scope)) throw apiError('insufficient_scope');
     return Object.freeze({
+      subjectKind: 'home_key',
       issuedAt,
       tokenId,
       homeId,

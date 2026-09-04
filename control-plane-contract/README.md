@@ -8,7 +8,8 @@ The shared fixtures cover:
 
 - Home Key format and verifier derivation;
 - resource-specific Miakapp access-token profiles;
-- the separate Firebase user-token profile;
+- the separate Firebase source-identity profile and audience-bound Miakapp
+  relay-user access-token profile;
 - issuer, audience, scope, role and coordinator binding;
 - clocked signing-key prepublication, overlap and retirement;
 - owner bootstrap, signed `auth_time` freshness and uniform Home Key revocation;

@@ -22,7 +22,7 @@ import {
 } from '../../src/cloud-security.js';
 import { AccessTokenSigner } from '../../src/crypto.js';
 import { parseProductionSecurityConfig } from '../../src/production-config.js';
-import type { AccessGrant } from '../../src/types.js';
+import type { HomeKeyAccessGrant, UserRelayAccessGrant } from '../../src/types.js';
 
 const generated = generateKeyPairSync('ed25519');
 const secondKey = generateKeyPairSync('ed25519');
@@ -174,7 +174,8 @@ class RecordingKms implements KmsClient {
   }
 }
 
-const GRANT: AccessGrant = Object.freeze({
+const GRANT: HomeKeyAccessGrant = Object.freeze({
+  subjectKind: 'home_key',
   issuedAt: 1_788_220_800,
   tokenId: Buffer.alloc(16, 1).toString('base64url'),
   homeId: 'synthetic-home',
@@ -184,6 +185,18 @@ const GRANT: AccessGrant = Object.freeze({
   audience: 'wss://relay.staging.miakapp.com/ws',
   role: 'coordinator',
   coordinatorName: 'automation',
+});
+
+const USER_GRANT: UserRelayAccessGrant = Object.freeze({
+  subjectKind: 'firebase_user',
+  issuedAt: 1_788_220_800,
+  tokenId: Buffer.alloc(16, 3).toString('base64url'),
+  homeId: 'synthetic-home',
+  userId: 'synthetic-user',
+  verifiedEmail: 'synthetic-user@example.test',
+  scope: 'relay:user',
+  audience: 'wss://relay.staging.miakapp.com/ws',
+  role: 'user',
 });
 
 async function expectDependencyError(action: () => Promise<unknown>): Promise<void> {
@@ -307,6 +320,28 @@ describe('production cloud security boundaries', () => {
       signingPublicJwk: PUBLIC_JWK,
       signingPrivateJwk: PRIVATE_JWK,
     }).sign(GRANT));
+  });
+
+  test('binds the KMS signature to the closed user access-token claims', async () => {
+    const kms = new RecordingKms();
+    const signer = await KmsAccessTokenSigner.create(config(), kms);
+    const signed = await signer.sign(USER_GRANT);
+    expect(kms.signCalls).toHaveLength(1);
+    const claims = JSON.parse(Buffer.from(signed.token.split('.')[1]!, 'base64url').toString('utf8')) as Record<string, unknown>;
+    expect(claims).toEqual({
+      iss: config().issuer,
+      sub: USER_GRANT.userId,
+      aud: USER_GRANT.audience,
+      exp: USER_GRANT.issuedAt + 300,
+      iat: USER_GRANT.issuedAt,
+      jti: USER_GRANT.tokenId,
+      scope: 'relay:user',
+      miakapp_home: USER_GRANT.homeId,
+      miakapp_role: 'user',
+      miakapp_verified_email: USER_GRANT.verifiedEmail,
+    });
+    expect(claims).not.toHaveProperty('client_id');
+    expect(claims).not.toHaveProperty('miakapp_coordinator');
   });
 
   test('never trusts a signing client that mutates its request buffer', async () => {

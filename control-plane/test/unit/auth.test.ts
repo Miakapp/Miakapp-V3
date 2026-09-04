@@ -31,10 +31,31 @@ describe('Firebase owner principal', () => {
     const principal = firebasePrincipalFromDecodedToken(decoded(), now * 1_000);
     expect(principal).toEqual({
       userId: 'synthetic-owner',
+      verifiedEmail: null,
       authenticatedAt: now - 60,
       expiresAt: now + 3_600,
     });
     expect(() => requireRecentAuthentication(principal, now * 1_000)).not.toThrow();
+  });
+
+  test('carries only a bounded Firebase-verified email', () => {
+    expect(firebasePrincipalFromDecodedToken(decoded({
+      email: 'synthetic-owner@example.test',
+      email_verified: true,
+    }), now * 1_000).verifiedEmail).toBe('synthetic-owner@example.test');
+    expect(firebasePrincipalFromDecodedToken(decoded({
+      email: 'ignored@example.test',
+      email_verified: false,
+    }), now * 1_000).verifiedEmail).toBeNull();
+    for (const claims of [
+      { email_verified: true },
+      { email_verified: true, email: '' },
+      { email_verified: true, email: 'a'.repeat(321) },
+      { email_verified: true, email: 'unsafe\n@example.test' },
+      { email_verified: 'true' as unknown as boolean },
+    ]) {
+      expect(() => firebasePrincipalFromDecodedToken(decoded(claims), now * 1_000)).toThrow(ApiError);
+    }
   });
 
   test('rejects stale authentication without trusting a request boolean', () => {

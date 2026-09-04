@@ -102,18 +102,34 @@ export function prepareAccessToken(
     kid: config.signingPublicJwk.kid,
     typ: 'at+jwt',
   };
-  const claims: Record<string, string | number> = {
-    iss: config.issuer,
-    sub: grant.homeId,
-    aud: grant.audience,
-    exp: expiresAt,
-    iat: issuedAt,
-    jti: grant.tokenId,
-    client_id: grant.clientId,
-    scope: grant.scope,
-  };
-  if (grant.role !== null) claims.miakapp_role = grant.role;
-  if (grant.coordinatorName !== null) claims.miakapp_coordinator = grant.coordinatorName;
+  let claims: Record<string, string | number>;
+  if (grant.subjectKind === 'firebase_user') {
+    claims = {
+      iss: config.issuer,
+      sub: grant.userId,
+      aud: grant.audience,
+      exp: expiresAt,
+      iat: issuedAt,
+      jti: grant.tokenId,
+      scope: grant.scope,
+      miakapp_home: grant.homeId,
+      miakapp_role: grant.role,
+    };
+    if (grant.verifiedEmail !== null) claims.miakapp_verified_email = grant.verifiedEmail;
+  } else {
+    claims = {
+      iss: config.issuer,
+      sub: grant.homeId,
+      aud: grant.audience,
+      exp: expiresAt,
+      iat: issuedAt,
+      jti: grant.tokenId,
+      client_id: grant.clientId,
+      scope: grant.scope,
+    };
+    if (grant.role !== null) claims.miakapp_role = grant.role;
+    if (grant.coordinatorName !== null) claims.miakapp_coordinator = grant.coordinatorName;
+  }
   const encodedHeader = Buffer.from(JSON.stringify(header), 'utf8').toString('base64url');
   const encodedClaims = Buffer.from(JSON.stringify(claims), 'utf8').toString('base64url');
   return Object.freeze({
