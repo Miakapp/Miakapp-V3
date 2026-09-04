@@ -57,8 +57,10 @@ MIAKAPP_STAGING_WORKLOAD_APPLY_AUTHORIZATION='apply-private-workload:...' \
 
 Apply output and any provider failure remain private. Success requires a fresh
 zero-change plan and independent Cloud Functions, Cloud Run, IAM, Storage and
-Artifact Registry inventory. The inventory explicitly performs no Function
-request and writes a private, non-secret `result.json` for later review.
+Artifact Registry inventory. It reads the immutable Google-managed source copy
+into memory and requires its SHA-256 to match the deterministic package. The
+inventory explicitly performs no Function request and writes a private,
+non-secret `result.json` for later review.
 
 No destroy entry point exists. Resources with meaningful identity or storage
 carry `prevent_destroy`; generated source bytes remain reproducible from the
