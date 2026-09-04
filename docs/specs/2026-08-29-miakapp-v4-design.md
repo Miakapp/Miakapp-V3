@@ -642,9 +642,10 @@ Absent in v3; non-negotiable in Miakapp 4.
   abortable replay runner, recorder-owned state evidence, lease-bound effect
   capabilities and a fail-closed effect recorder. Compiled ESM smoke tests
   exercise both exported boundaries under Node 22, and the external subject runs
-  behind an authenticated, bounded process supervisor. The real
-  MiakAPI session SDK and Node-RED runtime adapter remain to be implemented and
-  installed as subjects of these harnesses.
+  behind an authenticated, bounded process supervisor. The real MiakAPI session
+  SDK now passes that contract and its Home Key provider passes a pinned local
+  control-plane-to-relay `HELLO`/`REAUTH` gate. The Node-RED runtime adapter
+  remains to be implemented and installed as a subject of these harnesses.
 
 ---
 
@@ -777,10 +778,13 @@ implementations still have to pass the corresponding vertical-slice exit gates.
    rate/byte budgets, bounded redacted audit and pre-effect denial. The local
    application/dependency fault matrix now consolidates transaction replay,
    ambiguous commit, push/Storage effect and reconciliation evidence. The Local
-   Emulator Suite provides neither an App Check nor an FCM service emulator, so
-   real App Check enforcement, FCM acceptance/delivery, production Storage/KMS,
-   trusted edge admission, relay integration, network faults, complete Section 18
-   and staging behavior remain implementation exit gates.
+   Emulator Suite provides neither an App Check nor an FCM service emulator. A
+   pinned local cross-repository gate now proves one real emulator Home Key
+   exchange through the MiakAPI provider, scheduled `REAUTH`, and relay
+   production verifier without reconnecting. Real App Check enforcement, FCM
+   acceptance/delivery, production Storage/KMS, trusted edge admission, broader
+   relay key-rotation/cache behavior, network faults, complete Section 18 and
+   staging behavior remain implementation exit gates.
 4. **MiakAPI coordinator API — closed 2026-08-30; broader agent experience open**
    — RFC 0003 defines the public coordinator lifecycle, declarations, state,
    events, calls, presence, errors and compatibility boundary. CLI/MCP tools,
