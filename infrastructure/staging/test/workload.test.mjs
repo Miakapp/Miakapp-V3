@@ -17,6 +17,7 @@ import { validateWorkloadRoot } from '../workload/guard.mjs';
 import { validateWorkloadEvidence } from '../workload/evidence.mjs';
 import { observeDeployedWorkload } from '../workload/inventory.mjs';
 import {
+  PINNED_UPDATE_BASELINE,
   validateFailedBuildRecoveryPlanAgainstPolicy,
   validatePinnedSourceUpdatePlanAgainstPolicy,
   validateWorkloadPlanAgainstPolicy,
@@ -509,6 +510,10 @@ test('accepts only the bounded in-place recovery from the failed first build', (
 });
 
 test('accepts only the one pinned active source correction', () => {
+  assert.deepEqual(PINNED_UPDATE_BASELINE, {
+    repositoryCommit: '72bae493e496b7dbaae38bcba92dfcc6d604644d',
+    sourceArchiveSha256: '6cd045394b24a644d6b1ce9c431bcb73267fb894b7dc0b029d6c0be0488a9433',
+  });
   assert.deepEqual(validateSyntheticPinnedSourceUpdatePlan(), {
     create: 1,
     update: 2,

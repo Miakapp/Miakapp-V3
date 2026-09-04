@@ -74,6 +74,57 @@ export interface ProductionControlPlane {
   readonly projectId: string;
 }
 
+export const PRODUCTION_INITIALIZATION_STAGES = Object.freeze([
+  'runtime-config',
+  'runtime-environment',
+  'identity',
+  'firebase-clients',
+  'cloud-clients',
+  'cloud-security',
+  'application',
+] as const);
+
+export type ProductionInitializationStage =
+  typeof PRODUCTION_INITIALIZATION_STAGES[number];
+
+export function isProductionInitializationStage(
+  value: unknown,
+): value is ProductionInitializationStage {
+  return typeof value === 'string'
+    && (PRODUCTION_INITIALIZATION_STAGES as readonly string[]).includes(value);
+}
+
+export class ProductionInitializationError extends ProductionConfigurationError {
+  readonly stage: ProductionInitializationStage;
+
+  constructor(stage: ProductionInitializationStage) {
+    super();
+    this.name = 'ProductionInitializationError';
+    this.stage = stage;
+  }
+}
+
+function atStage<Value>(stage: ProductionInitializationStage, operation: () => Value): Value {
+  try {
+    return operation();
+  } catch (error) {
+    if (error instanceof ProductionInitializationError) throw error;
+    throw new ProductionInitializationError(stage);
+  }
+}
+
+async function atAsyncStage<Value>(
+  stage: ProductionInitializationStage,
+  operation: () => Promise<Value>,
+): Promise<Value> {
+  try {
+    return await operation();
+  } catch (error) {
+    if (error instanceof ProductionInitializationError) throw error;
+    throw new ProductionInitializationError(stage);
+  }
+}
+
 const OWNED_FIREBASE_APPS = new Map<string, App>();
 
 function firebaseApp(
@@ -150,59 +201,69 @@ export async function createProductionControlPlane(
     readonly clock?: Clock;
   }> = {},
 ): Promise<ProductionControlPlane> {
-  const runtime = parseProductionRuntimeConfig(input);
+  const runtime = atStage('runtime-config', () => parseProductionRuntimeConfig(input));
   const customEnvironment = options.environment !== undefined;
   const customFactories = options.factories !== undefined;
-  if (customEnvironment !== customFactories) throw new ProductionConfigurationError();
+  if (customEnvironment !== customFactories) {
+    throw new ProductionInitializationError('runtime-environment');
+  }
   const environment = options.environment ?? process.env;
-  assertProductionRuntimeEnvironment(runtime, environment);
+  atStage('runtime-environment', () => assertProductionRuntimeEnvironment(runtime, environment));
   const factories = options.factories ?? DEFAULT_FACTORIES;
   const clock = options.clock ?? SYSTEM_CLOCK;
-  const identity = factories.identity(runtime);
+  const identity = atStage('identity', () => factories.identity(runtime));
   if (identity.serviceAccountEmail !== runtime.serviceAccountEmail) {
-    throw new ProductionConfigurationError();
+    throw new ProductionInitializationError('identity');
   }
-  const firebase = factories.firebase(runtime, identity);
-  if (firebase.identity !== identity) throw new ProductionConfigurationError();
-  const cloud = factories.cloudSecurity(runtime, identity);
-  const security = await initializeProductionSecurity(runtime.security, cloud);
-  const config = createProductionDeploymentConfig(runtime, security.secrets);
-  const componentStorage = new ProductionFirebaseComponentStorage(
-    firebase.componentBucket,
-    {
-      environment: runtime.environment,
-      projectId: config.projectId,
-      functionsEmulator: false,
-      storageEmulatorHost: environment.STORAGE_EMULATOR_HOST || undefined,
-      bucketName: config.componentBucket,
-    },
+  const firebase = atStage('firebase-clients', () => factories.firebase(runtime, identity));
+  if (firebase.identity !== identity) {
+    throw new ProductionInitializationError('firebase-clients');
+  }
+  const cloud = atStage('cloud-clients', () => factories.cloudSecurity(runtime, identity));
+  const security = await atAsyncStage(
+    'cloud-security',
+    () => initializeProductionSecurity(runtime.security, cloud),
   );
-  const admission = new AdmissionController(firebase.firestore, config, clock);
-  const store = new ControlPlaneStore(firebase.firestore, config, clock);
-  const pushStore = new PushStore(firebase.firestore, config, clock);
-  const componentStore = new ComponentStore(firebase.firestore, componentStorage, config, clock);
-  const pushTransport = new FirebaseFidPushTransport(new FirebaseFcmClient(
-    identity.firebaseCredential,
-    {
+  const { application, config } = atStage('application', () => {
+    const config = createProductionDeploymentConfig(runtime, security.secrets);
+    const componentStorage = new ProductionFirebaseComponentStorage(
+      firebase.componentBucket,
+      {
+        environment: runtime.environment,
+        projectId: config.projectId,
+        functionsEmulator: false,
+        storageEmulatorHost: environment.STORAGE_EMULATOR_HOST || undefined,
+        bucketName: config.componentBucket,
+      },
+    );
+    const admission = new AdmissionController(firebase.firestore, config, clock);
+    const store = new ControlPlaneStore(firebase.firestore, config, clock);
+    const pushStore = new PushStore(firebase.firestore, config, clock);
+    const componentStore = new ComponentStore(firebase.firestore, componentStorage, config, clock);
+    const pushTransport = new FirebaseFidPushTransport(new FirebaseFcmClient(
+      identity.firebaseCredential,
+      {
+        environment: runtime.environment,
+        projectId: config.projectId,
+      },
+    ), {
       environment: runtime.environment,
       projectId: config.projectId,
-    },
-  ), {
-    environment: runtime.environment,
-    projectId: config.projectId,
-  });
-  const appCheck = new FirebaseAdminAppCheckVerifier(firebase.appCheck, config.appCheckAppId);
-  const application = createControlPlaneApp({
-    admission,
-    appCheck,
-    auth: firebase.auth,
-    clock,
-    config,
-    signer: security.signer,
-    store,
-    pushStore,
-    pushTransport,
-    componentStore,
+    });
+    const appCheck = new FirebaseAdminAppCheckVerifier(firebase.appCheck, config.appCheckAppId);
+    const application = createControlPlaneApp({
+      admission,
+      appCheck,
+      auth: firebase.auth,
+      clock,
+      config,
+      signer: security.signer,
+      store,
+      pushStore,
+      pushTransport,
+      componentStore,
+    });
+    return { application, config };
   });
   return Object.freeze({
     application,

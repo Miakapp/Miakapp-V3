@@ -164,17 +164,20 @@ describe('production runtime configuration', () => {
     }
   });
 
-  test('requires the attached project identity and rejects emulator, credential, and endpoint overrides', () => {
+  test('accepts the pinned serverless environment and rejects credential or endpoint overrides', () => {
     const runtime = parseProductionRuntimeConfig(candidate());
+    expect(() => assertProductionRuntimeEnvironment(runtime, {})).not.toThrow();
     expect(() => assertProductionRuntimeEnvironment(runtime, {
       GCLOUD_PROJECT: 'miakapp-v4-staging',
     })).not.toThrow();
     expect(() => assertProductionRuntimeEnvironment(runtime, {
       GOOGLE_CLOUD_PROJECT: 'miakapp-v4-staging',
     })).not.toThrow();
+    expect(() => assertProductionRuntimeEnvironment(runtime, {
+      GOOGLE_CLOUD_UNIVERSE_DOMAIN: 'googleapis.com',
+    })).not.toThrow();
 
     for (const environment of [
-      {},
       { GCLOUD_PROJECT: 'miakapp-v4' },
       { GCLOUD_PROJECT: 'miakapp-v4-staging', FUNCTIONS_EMULATOR: 'true' },
       { GCLOUD_PROJECT: 'miakapp-v4-staging', FIRESTORE_EMULATOR_HOST: '127.0.0.1:8080' },
