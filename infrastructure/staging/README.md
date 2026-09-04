@@ -173,6 +173,8 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`activation/`](activation/) | One Firebase Web app, five initial secret versions, and the closed non-secret runtime document | Applied once and idempotently revalidated; result evidence committed without secret payloads |
 | [`workload/`](workload/) | Deterministic production package, private Gen 2 Function, dedicated build/probe identities, and one-permission FCM role | Applied and converged; current internal-only revision independently source-verified |
 | [`probe/`](probe/) | Isolated Workflows API and one fixed, unscheduled, keyless internal discovery probe | Applied and consumed; exactly two failures followed by one validated HTTP 200 discovery response |
+| [`firebase-auth/`](firebase-auth/) | Closed Firebase Authentication initialization with no end-user sign-in provider | Dedicated backend initialized with zero managed resources; non-deletable resource prepared but not applied |
+| [`auth-probe/`](auth-probe/) | Dormant synthetic Firebase Auth and custom-provider App Check Workflow with temporary least-privilege IAM | Prepared; cannot arm until the exact Firebase Auth baseline exists |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
 | [`TEARDOWN.md`](TEARDOWN.md) | Manual recovery and teardown rehearsal | Documentation only |
@@ -386,7 +388,7 @@ npm run test:staging-manifest
 The gate validates bounded closed manifests, all reviewed inventories,
 the retired recovery policy and historical blueprint, pinned actions and providers,
 exact locks for macOS
-ARM64 and Linux AMD64, all four Terraform roots with mock providers, script syntax,
+ARM64 and Linux AMD64, all six Terraform roots with mock providers, script syntax,
 private-plan handling, the exact recovery addresses, actions, planned values,
 partial prior state, critical expression references and checks, the
 complete simulated migration-only recovery state
@@ -402,11 +404,25 @@ No persistent credential or repository secret is used.
 ## Next staging gate
 
 Bootstrap, foundation, initial activation, private deployment and the bounded
-discovery probe are complete. The next product-facing gate is a synthetic
-Firebase Auth and App Check flow that proves token validation and replay policy
-without introducing a public Function invoker or real user data.
+discovery probe are complete. Firebase Authentication is not initialized in the
+staging project. Its separately guarded, closed baseline is prepared under
+[`firebase-auth/`](firebase-auth/) and requires an exact authorization because
+Google does not support undoing that service initialization. It enables no
+end-user sign-in provider.
 
-App Check live-provider and replay policy, relay token-refresh integration,
-trusted-source/edge admission, the managed-service fault matrix, monitoring and
-billing-alert validation, secret and signing-key rotation, migration rehearsal,
-and every broader `STAGE-*` observation remain open blockers.
+The synthetic Firebase Auth and App Check probe is prepared under
+[`auth-probe/`](auth-probe/) and now refuses to arm until that exact remote
+Firebase Auth state exists. Its dormant default creates no Workflow or temporary
+permission. After initialization, the reviewed live sequence will arm it
+briefly, prove Firebase Auth and App Check validation plus the V1 reusable-token
+policy, delete and independently reconcile its no-email synthetic user, and
+retire all temporary capability without introducing a public Function invoker
+or real user data.
+
+Until that sequence is executed and committed as sanitized evidence, the
+synthetic Auth/App Check gate remains open. Browser App Check live-provider
+attestation remains a distinct blocker regardless of this probe. Relay
+token-refresh integration, trusted-source/edge admission, the managed-service
+fault matrix, monitoring and billing-alert validation, secret and signing-key
+rotation, migration rehearsal, and every broader `STAGE-*` observation remain
+open blockers.

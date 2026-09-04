@@ -71,6 +71,33 @@ node --check infrastructure/staging/probe/recover.mjs
 node --check infrastructure/staging/probe/validate-plan.mjs
 node infrastructure/staging/probe/evidence.mjs \
   infrastructure/staging/probe/result.json
+node infrastructure/staging/firebase-auth/guard.mjs \
+  "${repository_root}/infrastructure/staging/firebase-auth"
+node --check infrastructure/staging/firebase-auth/apply.mjs
+node --check infrastructure/staging/firebase-auth/cli.mjs
+node --check infrastructure/staging/firebase-auth/contract.mjs
+node --check infrastructure/staging/firebase-auth/guard.mjs
+node --check infrastructure/staging/firebase-auth/plan.mjs
+node --check infrastructure/staging/firebase-auth/recovery-adopt.mjs
+node --check infrastructure/staging/firebase-auth/recovery-apply.mjs
+node --check infrastructure/staging/firebase-auth/recovery-plan.mjs
+node --check infrastructure/staging/firebase-auth/recovery.mjs
+node --check infrastructure/staging/firebase-auth/validate-plan.mjs
+node infrastructure/staging/auth-probe/guard.mjs \
+  "${repository_root}/infrastructure/staging/auth-probe"
+node --check infrastructure/staging/auth-probe/apply.mjs
+node --check infrastructure/staging/auth-probe/cli.mjs
+node --check infrastructure/staging/auth-probe/contract.mjs
+node --check infrastructure/staging/auth-probe/guard.mjs
+node --check infrastructure/staging/auth-probe/inventory.mjs
+node --check infrastructure/staging/auth-probe/invoke.mjs
+node --check infrastructure/staging/auth-probe/plan.mjs
+node --check infrastructure/staging/auth-probe/retire-apply.mjs
+node --check infrastructure/staging/auth-probe/retire-plan.mjs
+node --check infrastructure/staging/auth-probe/retire-recovery-apply.mjs
+node --check infrastructure/staging/auth-probe/retire-recovery-plan.mjs
+node --check infrastructure/staging/auth-probe/retirement-recovery.mjs
+node --check infrastructure/staging/auth-probe/validate-plan.mjs
 bash -n \
   infrastructure/staging/automation/apply.sh \
   infrastructure/staging/automation/inspect-plan.sh \
@@ -90,10 +117,24 @@ bash -n \
   infrastructure/staging/probe/apply.sh \
   infrastructure/staging/probe/invoke.sh \
   infrastructure/staging/probe/recover.sh \
-  infrastructure/staging/probe/plan.sh
+  infrastructure/staging/probe/plan.sh \
+  infrastructure/staging/firebase-auth/apply.sh \
+  infrastructure/staging/firebase-auth/plan.sh \
+  infrastructure/staging/firebase-auth/recovery-adopt.sh \
+  infrastructure/staging/firebase-auth/recovery-apply.sh \
+  infrastructure/staging/firebase-auth/recovery-plan.sh \
+  infrastructure/staging/auth-probe/apply.sh \
+  infrastructure/staging/auth-probe/invoke.sh \
+  infrastructure/staging/auth-probe/plan.sh \
+  infrastructure/staging/auth-probe/retire-apply.sh \
+  infrastructure/staging/auth-probe/retire-plan.sh \
+  infrastructure/staging/auth-probe/retire-recovery-apply.sh \
+  infrastructure/staging/auth-probe/retire-recovery-plan.sh
 node --test \
   infrastructure/staging/test/activation.test.mjs \
+  infrastructure/staging/test/auth-probe.test.mjs \
   infrastructure/staging/test/bootstrap.test.mjs \
+  infrastructure/staging/test/firebase-auth.test.mjs \
   infrastructure/staging/test/foundation-state.test.mjs \
   infrastructure/staging/test/github-policy.test.mjs \
   infrastructure/staging/test/probe.test.mjs \
@@ -101,7 +142,7 @@ node --test \
   infrastructure/staging/test/terraform.test.mjs \
   infrastructure/staging/test/workload.test.mjs
 
-for terraform_root in bootstrap terraform workload probe; do
+for terraform_root in bootstrap terraform workload probe firebase-auth auth-probe; do
   terraform_path="infrastructure/staging/${terraform_root}"
   terraform -chdir="$terraform_path" fmt -check -recursive
   export TF_CLI_CONFIG_FILE="${repository_root}/${terraform_path}/terraform-cli.tfrc"

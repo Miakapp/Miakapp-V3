@@ -1,0 +1,349 @@
+main:
+  steps:
+    - initialize:
+        assign:
+          - project_id: miakapp-v4-staging
+          - project_number: "1072737219170"
+          - firebase_app_id: "1:1072737219170:web:5053ca93bf25d7373cd73b"
+          - probe_service_account: miakapp-staging-probe@miakapp-v4-staging.iam.gserviceaccount.com
+          - function_uri: https://control-plane-aczhngqraq-od.a.run.app
+          - destination_path: /v1/push-destinations
+          - synthetic_uid: miakapp-v4-staging-auth-probe-v1
+          - firebase_id_token: null
+          - app_check_token: null
+          - cloud_run_id_token: null
+          - web_config: null
+          - probe_failed: false
+          - cleanup_failed: false
+          - synthetic_user_created: false
+          - synthetic_user_deleted: false
+          - synthetic_user_absence_verified: false
+          - delete_response: null
+          - user_lookup: null
+          - initial_user_lookup: null
+          - missing_app_check_status: 0
+          - missing_app_check_code: ""
+          - first_status: 0
+          - replay_status: 0
+    - run_probe:
+        try:
+          steps:
+            - read_web_config:
+                call: http.get
+                args:
+                  url: https://firebase.googleapis.com/v1beta1/projects/-/webApps/1:1072737219170:web:5053ca93bf25d7373cd73b/config
+                  timeout: 30
+                  auth:
+                    type: OAuth2
+                result: web_config
+            - validate_web_config:
+                switch:
+                  - condition: ${web_config.code != 200 or web_config.body.projectId != project_id or web_config.body.appId != firebase_app_id or len(web_config.body.apiKey) < 20}
+                    raise: Auth probe Firebase Web configuration mismatch
+            - verify_initial_user_absence:
+                call: http.post
+                args:
+                  url: https://identitytoolkit.googleapis.com/v1/projects/miakapp-v4-staging/accounts:lookup
+                  timeout: 30
+                  auth:
+                    type: OAuth2
+                  body:
+                    localId:
+                      - ${synthetic_uid}
+                result: initial_user_lookup
+            - require_initial_user_absence:
+                switch:
+                  - condition: ${initial_user_lookup.code != 200 or "users" in initial_user_lookup.body}
+                    raise: Auth probe synthetic identity already exists
+            - clear_initial_user_lookup:
+                assign:
+                  - initial_user_lookup: null
+            - set_token_times:
+                assign:
+                  - issued_at: ${math.floor(sys.now())}
+                  - auth_expires_at: ${issued_at + 3600}
+                  - app_check_expires_at: ${issued_at + 300}
+            - build_auth_claims:
+                assign:
+                  - auth_claims:
+                      aud: https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit
+                      iat: ${issued_at}
+                      exp: ${auth_expires_at}
+                      iss: ${probe_service_account}
+                      sub: ${probe_service_account}
+                      uid: ${synthetic_uid}
+            - sign_auth_custom_token:
+                call: http.post
+                args:
+                  url: https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/miakapp-staging-probe@miakapp-v4-staging.iam.gserviceaccount.com:signJwt
+                  timeout: 30
+                  auth:
+                    type: OAuth2
+                  body:
+                    payload: ${json.encode_to_string(auth_claims)}
+                result: auth_signature
+            - exchange_auth_custom_token:
+                call: http.post
+                args:
+                  url: https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken
+                  timeout: 30
+                  query:
+                    key: ${web_config.body.apiKey}
+                  body:
+                    token: ${auth_signature.body.signedJwt}
+                    returnSecureToken: true
+                result: auth_exchange
+            - retain_auth_identity:
+                assign:
+                  - firebase_id_token: ${auth_exchange.body.idToken}
+                  - synthetic_user_created: true
+            - validate_auth_exchange:
+                switch:
+                  - condition: ${auth_exchange.code != 200 or auth_exchange.body.localId != synthetic_uid or auth_exchange.body.isNewUser != true or auth_exchange.body.expiresIn != "3600"}
+                    raise: Auth probe synthetic Firebase identity mismatch
+            - clear_auth_exchange:
+                assign:
+                  - auth_signature: null
+                  - auth_exchange: null
+                  - auth_claims: null
+            - build_app_check_claims:
+                assign:
+                  - app_check_claims:
+                      iss: ${probe_service_account}
+                      sub: ${probe_service_account}
+                      app_id: ${firebase_app_id}
+                      aud: https://firebaseappcheck.googleapis.com/google.firebase.appcheck.v1.TokenExchangeService
+                      iat: ${issued_at}
+                      exp: ${app_check_expires_at}
+                      ttl: 1800s
+            - sign_app_check_custom_token:
+                call: http.post
+                args:
+                  url: https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/miakapp-staging-probe@miakapp-v4-staging.iam.gserviceaccount.com:signJwt
+                  timeout: 30
+                  auth:
+                    type: OAuth2
+                  body:
+                    payload: ${json.encode_to_string(app_check_claims)}
+                result: app_check_signature
+            - exchange_app_check_custom_token:
+                call: http.post
+                args:
+                  url: https://firebaseappcheck.googleapis.com/v1/projects/1072737219170/apps/1:1072737219170:web:5053ca93bf25d7373cd73b:exchangeCustomToken
+                  timeout: 30
+                  auth:
+                    type: OAuth2
+                  body:
+                    customToken: ${app_check_signature.body.signedJwt}
+                    limitedUse: false
+                result: app_check_exchange
+            - validate_app_check_exchange:
+                switch:
+                  - condition: ${app_check_exchange.code != 200 or len(app_check_exchange.body.token) < 100 or app_check_exchange.body.ttl != "1800s"}
+                    raise: Auth probe App Check exchange mismatch
+            - retain_app_check_token:
+                assign:
+                  - app_check_token: ${app_check_exchange.body.token}
+                  - app_check_signature: null
+                  - app_check_exchange: null
+                  - app_check_claims: null
+            - mint_cloud_run_token:
+                call: http.post
+                args:
+                  url: https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/miakapp-staging-probe@miakapp-v4-staging.iam.gserviceaccount.com:generateIdToken
+                  timeout: 30
+                  auth:
+                    type: OAuth2
+                  body:
+                    audience: ${function_uri}
+                    includeEmail: false
+                result: cloud_run_identity
+            - validate_cloud_run_identity:
+                switch:
+                  - condition: ${cloud_run_identity.code != 200 or len(cloud_run_identity.body.token) < 100}
+                    raise: Auth probe Cloud Run identity mismatch
+            - retain_cloud_run_token:
+                assign:
+                  - cloud_run_id_token: ${cloud_run_identity.body.token}
+                  - cloud_run_identity: null
+            - reject_missing_app_check:
+                try:
+                  call: http.get
+                  args:
+                    url: ${function_uri + destination_path}
+                    timeout: 30
+                    headers:
+                      Accept: application/json
+                      Authorization: ${"Bearer " + firebase_id_token}
+                      X-Serverless-Authorization: ${"Bearer " + cloud_run_id_token}
+                except:
+                  as: missing_error
+                  steps:
+                    - validate_missing_error:
+                        switch:
+                          - condition: ${not("HttpError" in missing_error.tags) or missing_error.code != 401 or missing_error.body.error.code != "invalid_app_check_token"}
+                            raise: Auth probe missing-App-Check control mismatch
+                    - record_missing_error:
+                        assign:
+                          - missing_app_check_status: ${missing_error.code}
+                          - missing_app_check_code: ${missing_error.body.error.code}
+            - require_missing_rejection:
+                switch:
+                  - condition: ${missing_app_check_status != 401 or missing_app_check_code != "invalid_app_check_token"}
+                    raise: Auth probe missing-App-Check request was unexpectedly accepted
+            - first_authenticated_read:
+                call: http.get
+                args:
+                  url: ${function_uri + destination_path}
+                  timeout: 30
+                  headers:
+                    Accept: application/json
+                    Authorization: ${"Bearer " + firebase_id_token}
+                    X-Firebase-AppCheck: ${app_check_token}
+                    X-Serverless-Authorization: ${"Bearer " + cloud_run_id_token}
+                result: first_response
+            - validate_first_read:
+                switch:
+                  - condition: ${first_response.code != 200 or first_response.body.schema != "miakapp.push-destination-list/1" or len(first_response.body.destinations) != 0}
+                    raise: Auth probe first authenticated read mismatch
+            - replay_authenticated_read:
+                call: http.get
+                args:
+                  url: ${function_uri + destination_path}
+                  timeout: 30
+                  headers:
+                    Accept: application/json
+                    Authorization: ${"Bearer " + firebase_id_token}
+                    X-Firebase-AppCheck: ${app_check_token}
+                    X-Serverless-Authorization: ${"Bearer " + cloud_run_id_token}
+                result: replay_response
+            - validate_replay_read:
+                switch:
+                  - condition: ${replay_response.code != 200 or replay_response.body.schema != "miakapp.push-destination-list/1" or len(replay_response.body.destinations) != 0}
+                    raise: Auth probe replay-policy read mismatch
+            - record_success:
+                assign:
+                  - first_status: ${first_response.code}
+                  - replay_status: ${replay_response.code}
+                  - first_response: null
+                  - replay_response: null
+        except:
+          as: probe_error
+          steps:
+            - record_probe_failure:
+                assign:
+                  - probe_failed: true
+    - delete_synthetic_user:
+        switch:
+          - condition: ${firebase_id_token != null}
+            steps:
+              - delete_user:
+                  try:
+                    call: http.post
+                    args:
+                      url: https://identitytoolkit.googleapis.com/v1/accounts:delete
+                      timeout: 30
+                      query:
+                        key: ${web_config.body.apiKey}
+                      body:
+                        idToken: ${firebase_id_token}
+                    result: delete_response
+                  except:
+                    as: cleanup_error
+                    steps:
+                      - record_cleanup_failure:
+                          assign:
+                            - cleanup_failed: true
+              - record_user_deletion:
+                  switch:
+                    - condition: ${not(cleanup_failed) and delete_response.code == 200}
+                      assign:
+                        - synthetic_user_deleted: true
+                    - condition: true
+                      assign:
+                        - cleanup_failed: true
+              - verify_user_absence:
+                  try:
+                    call: http.post
+                    args:
+                      url: https://identitytoolkit.googleapis.com/v1/projects/miakapp-v4-staging/accounts:lookup
+                      timeout: 30
+                      auth:
+                        type: OAuth2
+                      body:
+                        localId:
+                          - ${synthetic_uid}
+                    result: user_lookup
+                  except:
+                    as: lookup_error
+                    steps:
+                      - record_lookup_failure:
+                          assign:
+                            - cleanup_failed: true
+              - record_user_absence:
+                  switch:
+                    - condition: ${not(cleanup_failed) and user_lookup.code == 200 and not("users" in user_lookup.body)}
+                      assign:
+                        - synthetic_user_absence_verified: true
+                    - condition: true
+                      assign:
+                        - cleanup_failed: true
+    - clear_ephemeral_material:
+        assign:
+          - firebase_id_token: null
+          - app_check_token: null
+          - cloud_run_id_token: null
+          - web_config: null
+          - delete_response: null
+          - user_lookup: null
+          - issued_at: null
+          - auth_expires_at: null
+          - app_check_expires_at: null
+    - require_cleanup:
+        switch:
+          - condition: ${cleanup_failed or (synthetic_user_created and (not(synthetic_user_deleted) or not(synthetic_user_absence_verified)))}
+            raise: Auth probe synthetic identity cleanup failed
+          - condition: ${probe_failed}
+            raise: Auth probe failed before producing bounded evidence
+          - condition: ${not(synthetic_user_created) or not(synthetic_user_deleted) or not(synthetic_user_absence_verified)}
+            raise: Auth probe synthetic identity lifecycle mismatch
+          - condition: ${missing_app_check_status != 401 or first_status != 200 or replay_status != 200}
+            raise: Auth probe result invariant failed
+    - return_sanitized_result:
+        return:
+          schema: miakapp.staging-auth-app-check-workflow-result/1
+          project_id: ${project_id}
+          project_number: ${project_number}
+          firebase_app_id: ${firebase_app_id}
+          route:
+            method: GET
+            path: ${destination_path}
+            product_requests: 3
+            successful_reads: 2
+            expected_application_writes: 0
+            retries: 0
+          cloud_run:
+            authentication_header: X-Serverless-Authorization
+          firebase_auth:
+            token_source: execution-scoped-custom-token
+            missing_app_check_reached: true
+            synthetic_user_created: ${synthetic_user_created}
+            synthetic_user_deleted: ${synthetic_user_deleted}
+            synthetic_user_absence_verified: ${synthetic_user_absence_verified}
+          app_check:
+            token_source: admin-custom-provider
+            token_consumption: false
+            first_use_accepted: true
+            replay_accepted: true
+          responses:
+            missing_app_check:
+              status: ${missing_app_check_status}
+              code: ${missing_app_check_code}
+            first_authenticated_read:
+              status: ${first_status}
+              schema: miakapp.push-destination-list/1
+              destination_count: 0
+            replay_authenticated_read:
+              status: ${replay_status}
+              schema: miakapp.push-destination-list/1
+              destination_count: 0
