@@ -453,6 +453,27 @@ function expectUnknownAudit(admission: RecordingAdmission): void {
 }
 
 describe('control-plane API dependency fault matrix', () => {
+  test('accepts the browser no-store credential preflight without widening origins', async () => {
+    const response = await request(dependencies(), {
+      method: 'OPTIONS',
+      path: '/v1/user-relay-tokens:exchange',
+      headers: {
+        Origin: 'https://app.example.test',
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers':
+          'authorization,cache-control,content-type,pragma,x-firebase-appcheck',
+      },
+    });
+
+    expect(response.status).toBe(204);
+    expect(response.headers.get('access-control-allow-origin')).toBe('https://app.example.test');
+    expect(response.headers.get('access-control-allow-credentials')).toBe('false');
+    expect(response.headers.get('access-control-allow-headers')).toBe(
+      'Authorization, Cache-Control, Content-Type, Miakapp-Push-Proof, Pragma, X-Firebase-AppCheck',
+    );
+    expect(response.headers.get('vary')).toContain('Origin');
+  });
+
   test('rejects an active signing key that is absent from the published JWKS', () => {
     const deps = dependencies();
     expect(() => createControlPlaneApp({

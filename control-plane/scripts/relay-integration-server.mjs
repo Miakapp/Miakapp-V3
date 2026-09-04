@@ -5,7 +5,7 @@ import process from 'node:process';
 
 import { deleteApp, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import express from 'express';
 
 import { AdmissionController } from '../lib/admission.js';
@@ -23,6 +23,13 @@ process.umask(0o077);
 function requiredEnvironment(name) {
   const value = process.env[name];
   if (value === undefined || value.length === 0) throw new Error(`${name} is required`);
+  return value;
+}
+
+function optionalEnvironment(name) {
+  const value = process.env[name];
+  if (value === undefined) return undefined;
+  if (value.length === 0) throw new Error(`${name} must not be empty`);
   return value;
 }
 
@@ -48,10 +55,52 @@ function exactObject(value, keys) {
     && keys.every((key) => Object.hasOwn(value, key));
 }
 
+function canonicalBrowserRelayUrl(value) {
+  if (typeof value !== 'string') throw new Error('Relay integration browser URL is invalid');
+  const relay = new URL(value);
+  if (relay.protocol !== 'wss:'
+    || relay.hostname !== '127.0.0.1'
+    || relay.port === ''
+    || relay.pathname !== '/ws'
+    || relay.search !== ''
+    || relay.hash !== ''
+    || relay.username !== ''
+    || relay.password !== ''
+    || relay.href !== value) {
+    throw new Error('Relay integration browser URL is invalid');
+  }
+  return relay;
+}
+
+function browserRelayUrl(file) {
+  const metadata = JSON.parse(readFileSync(file, 'utf8'));
+  if (!exactObject(metadata, ['schema', 'relayUrl'])
+    || metadata.schema !== 'miakapp.relay-integration-relay/1') {
+    throw new Error('Relay integration browser metadata is invalid');
+  }
+  return canonicalBrowserRelayUrl(metadata.relayUrl);
+}
+
 const certificateFile = requiredEnvironment('MIAKAPP_INTEGRATION_CERT_FILE');
 const privateKeyFile = requiredEnvironment('MIAKAPP_INTEGRATION_KEY_FILE');
 const metadataFile = requiredEnvironment('MIAKAPP_CONTROL_METADATA_FILE');
 const evidenceFile = requiredEnvironment('MIAKAPP_CONTROL_EVIDENCE_FILE');
+const relayMetadataFile = optionalEnvironment('MIAKAPP_RELAY_METADATA_FILE');
+const secondaryRelayMetadataFile = optionalEnvironment(
+  'MIAKAPP_SECONDARY_RELAY_METADATA_FILE',
+);
+const browserBundleFile = optionalEnvironment('MIAKAPP_BROWSER_BUNDLE');
+if (browserBundleFile !== undefined && relayMetadataFile === undefined) {
+  throw new Error('Browser integration environment is incomplete');
+}
+if (secondaryRelayMetadataFile !== undefined && browserBundleFile === undefined) {
+  throw new Error('Secondary browser relay environment is incomplete');
+}
+const browserBundle = browserBundleFile === undefined ? undefined : readFileSync(browserBundleFile);
+if (browserBundle !== undefined
+  && (browserBundle.byteLength === 0 || browserBundle.byteLength > 2 * 1024 * 1024)) {
+  throw new Error('Relay integration browser bundle is invalid');
+}
 const controlSecret = privateSecret(requiredEnvironment('MIAKAPP_CONTROL_SECRET_FILE'));
 const projectId = 'demo-miakapp-v4';
 const baseConfig = loadEmulatorConfig({
@@ -164,9 +213,11 @@ if (address === null || typeof address === 'string') throw new Error('Control-pl
 const controlUrl = `https://127.0.0.1:${address.port}`;
 const config = Object.freeze({
   ...baseConfig,
+  allowedOrigins: new Set([...baseConfig.allowedOrigins, controlUrl]),
   issuer: controlUrl,
   jwksUri: `${controlUrl}/.well-known/jwks.json`,
   exchangeEndpoint: `${controlUrl}/v1/access-tokens:exchange`,
+  userRelayExchangeEndpoint: `${controlUrl}/v1/user-relay-tokens:exchange`,
   pushAudience: `${controlUrl}/v1/push`,
   componentsAudience: `${controlUrl}/v1/components`,
   componentUploadBaseUrl: `${controlUrl}/v1/component-uploads`,
@@ -220,15 +271,49 @@ const controlPlane = createControlPlaneApp({
 
 application = express();
 application.disable('x-powered-by');
+if (browserBundle !== undefined && relayMetadataFile !== undefined) {
+  application.get('/__integration/browser', (request, response) => {
+    if (request.originalUrl !== '/__integration/browser') return controlError(response, 400);
+    const relayOrigins = [browserRelayUrl(relayMetadataFile).origin];
+    if (secondaryRelayMetadataFile !== undefined) {
+      relayOrigins.push(browserRelayUrl(secondaryRelayMetadataFile).origin);
+    }
+    response.set({
+      'Cache-Control': 'no-store',
+      'Content-Security-Policy': `default-src 'none'; script-src 'self'; connect-src 'self' ${relayOrigins.join(' ')}; base-uri 'none'; frame-ancestors 'none'`,
+      'Content-Type': 'text/html; charset=utf-8',
+      'X-Content-Type-Options': 'nosniff',
+    });
+    response.status(200).send(
+      '<!doctype html><meta charset="utf-8"><script src="/__integration/browser.js"></script>',
+    );
+  });
+  application.get('/__integration/browser.js', (request, response) => {
+    if (request.originalUrl !== '/__integration/browser.js') return controlError(response, 400);
+    response.set({
+      'Cache-Control': 'no-store',
+      'Content-Type': 'text/javascript; charset=utf-8',
+      'X-Content-Type-Options': 'nosniff',
+    });
+    response.status(200).send(browserBundle);
+  });
+}
 application.post(
   '/__integration/control',
   express.json({ inflate: false, limit: '1kb', strict: true, type: 'application/json' }),
-  (request, response) => {
+  async (request, response) => {
     if (!sameSecret(request.headers.authorization, controlSecret)) {
       controlError(response, 401);
       return;
     }
-    if (!exactObject(request.body, ['action']) || typeof request.body.action !== 'string') {
+    if (request.body === null
+      || Array.isArray(request.body)
+      || typeof request.body !== 'object'
+      || typeof request.body.action !== 'string') {
+      controlError(response, 400);
+      return;
+    }
+    if (request.body.action !== 'route_relay' && !exactObject(request.body, ['action'])) {
       controlError(response, 400);
       return;
     }
@@ -263,6 +348,41 @@ application.post(
         if (!failJwks) return controlError(response);
         failJwks = false;
         break;
+      case 'route_relay': {
+        if (!exactObject(request.body, ['action', 'relay_url'])) {
+          return controlError(response, 400);
+        }
+        let relay;
+        try {
+          relay = canonicalBrowserRelayUrl(request.body.relay_url);
+        } catch {
+          return controlError(response, 400);
+        }
+        const homeId = 'synthetic-relay-home';
+        const publicRef = firestore.collection('homes').doc(homeId);
+        const privateRef = firestore.collection('controlHomes').doc(homeId);
+        try {
+          await firestore.runTransaction(async (transaction) => {
+            const [publicSnapshot, privateSnapshot] = await Promise.all([
+              transaction.get(publicRef),
+              transaction.get(privateRef),
+            ]);
+            if (!publicSnapshot.exists
+              || !privateSnapshot.exists
+              || publicSnapshot.get('home_id') !== homeId
+              || privateSnapshot.get('home_id') !== homeId
+              || publicSnapshot.get('relay_url') !== privateSnapshot.get('relay_url')) {
+              throw new Error('Synthetic relay Home is inconsistent');
+            }
+            const updatedAt = Timestamp.now();
+            transaction.update(publicRef, { relay_url: relay.href, updated_at: updatedAt });
+            transaction.update(privateRef, { relay_url: relay.href, updated_at: updatedAt });
+          });
+        } catch {
+          return controlError(response);
+        }
+        break;
+      }
       default:
         return controlError(response, 400);
     }
