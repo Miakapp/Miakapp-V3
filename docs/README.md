@@ -37,10 +37,10 @@ corpus under [`../component-runtime/`](../component-runtime/); complete
 production conformance remains an exit gate for the component-platform vertical
 slice. RFC 0003 is backed by the API-level corpus, bounded replay runner,
 synthetic-home adapter and effect recorder under [`../coordinator-contract/`](../coordinator-contract/);
-the real MiakAPI and Node-RED implementations must still pass that contract. RFC
-0004 is backed by deterministic signed vectors, independent TypeScript and Go
-verifiers, and a bounded behavioral model under
-[`../control-plane-contract/`](../control-plane-contract/). Its first
+the real MiakAPI implementation now passes that contract while the Node-RED
+runtime adapter remains open. RFC 0004 is backed by deterministic signed
+vectors, independent TypeScript and Go verifiers, and a bounded behavioral model
+under [`../control-plane-contract/`](../control-plane-contract/). Its first
 owner-to-access-token implementation slice runs through Auth, Functions and
 Firestore under [`../control-plane/`](../control-plane/). The same isolated
 package now contains synthetic push and local component-publication vertical
@@ -52,10 +52,13 @@ precondition. Separate client contexts prove the public-pointer and private
 Storage/private-record Rules boundaries. Bounded admission and the deterministic
 application/dependency fault matrix are now local gates under
 [`../control-plane/FAULT-MATRIX.md`](../control-plane/FAULT-MATRIX.md). Live
-network, managed-service, relay-integration and staging acceptance rows remain
-implementation gates. The staging manifest makes their intended resource, cost
-and isolation boundary reviewable without pretending that production adapters
-or a deployable cloud stack already exist.
+network and managed-service rows remain implementation gates. A pinned local
+cross-repository path now proves real Home Key exchange, SDK `HELLO` and
+scheduled `REAUTH`, and relay production verification without reconnecting;
+browser participation, signing-key rotation, cache-expiry/unknown-`kid` behavior
+and staging acceptance remain open. The staging manifest makes their intended
+resource, cost and isolation boundary reviewable without pretending that every
+production adapter or a public edge already exists.
 
 Repository-specific implementation plans must link back to these documents and
 must not redefine a shared contract locally.

@@ -211,6 +211,16 @@ Deliver one narrow path before the complete protocol:
 Exit gate: no silent state divergence or duplicate test side effect across the
 defined disconnect matrix.
 
+Implementation status (2026-09-04): the real TypeScript SDK and Go relay pass
+their independent conformance suites and a pinned cross-repository gate now
+drives one synthetic owner through Firebase Auth and Firestore, creates a Home
+Key through the real control-plane router, exchanges it through MiakAPI, and
+binds both `HELLO` and scheduled `REAUTH` in the relay's production verifier.
+The observed session stayed in generation 1 with two successful verifier calls
+and no reconnect. An authenticated browser in the same path, the disconnect
+matrix, live JWKS rotation/cache expiry, unknown-`kid` concurrency and refresh
+abuse evidence remain open, so this workstream is not complete.
+
 ### D. Component platform vertical slice
 
 Deliverables:
@@ -364,11 +374,15 @@ Deliverables:
 6. **local emulator slice complete; staging open** — per-home quotas, fixed-
    window rate/byte limits, redacted audit records, and bounded
    security-operation write/effect costs;
-7. **local deterministic matrix complete; relay/staging rows open** — emulator-
-   first tests cover rules and Functions, synthetic push, component publication,
-   bounded admission/audit, retry, ambiguous outcomes and reconciliation;
-   production service integration, network faults, relay token refresh and
-   staging admission evidence remain open.
+7. **local deterministic matrix and first relay-auth path complete; broader
+   relay/staging rows open** — emulator-first tests cover rules and Functions,
+   synthetic push, component publication, bounded admission/audit, retry,
+   ambiguous outcomes and reconciliation. A pinned cross-repository gate now
+   covers real Home Key exchange, SDK `HELLO` and scheduled `REAUTH`, and the
+   relay's production verifier on one uninterrupted session. Signing-key
+   rotation, cache-expiry recovery, unknown-`kid` concurrency and abuse limits,
+   production service integration, network faults and staging admission evidence
+   remain open.
 
 Exit gate: a compromised relay cannot obtain a Home Key or platform credential,
 and a Home Key cannot exercise capabilities outside its declared scopes.
@@ -503,8 +517,11 @@ current consumer.
    that state and validated a real Firebase ID token, an Admin custom-provider
    App Check token, the explicit V1 reusable-token policy and synthetic-user
    cleanup. Its temporary Workflow and IAM bindings are removed, and its
-   sanitized evidence is digest-pinned. Ongoing secret rotation, browser App
-   Check provider attestation,
+   sanitized evidence is digest-pinned. A pinned local cross-repository gate now
+   carries a real emulator-created Home Key through the production-shaped HTTP
+   exchange, MiakAPI `HELLO` and scheduled `REAUTH`, and the relay's production
+   verifier without reconnecting. Ongoing signing-key and secret rotation,
+   cache-expiry/unknown-`kid` integration, browser App Check provider attestation,
    source/edge admission, monitoring, migration rehearsal and real staging fault
    evidence remain required before closing relay-integration and staging-only
    RFC 0004 Section 18 gates.
