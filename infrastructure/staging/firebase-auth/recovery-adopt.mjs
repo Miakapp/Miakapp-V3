@@ -6,6 +6,7 @@ import {
 import { join } from 'node:path';
 
 import {
+  FIREBASE_AUTH_IMPORT_ID,
   assertSafeWorkloadEnvironment,
   buildFirebaseAuthReconciliationMetadata,
   canonicalJson,
@@ -28,7 +29,6 @@ import {
 import { validateFirebaseAuthRoot } from './guard.mjs';
 import {
   FIREBASE_AUTH_ADDRESS,
-  FIREBASE_AUTH_IMPORT_ID,
   inspectFirebaseAuthState,
   observeLiveFirebaseAuth,
   validateClosedLiveFirebaseAuth,

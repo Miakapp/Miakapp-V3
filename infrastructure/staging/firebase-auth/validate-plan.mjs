@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import { isDeepStrictEqual } from 'node:util';
 
 import {
+  FIREBASE_AUTH_CONFIG_NAME,
+  FIREBASE_AUTH_IMPORT_ID,
   PROJECT_ID,
   PROJECT_NUMBER,
   REGION,
@@ -148,7 +150,7 @@ function expectedOutputWithoutConfigName() {
 function expectedOutput() {
   return {
     ...expectedOutputWithoutConfigName(),
-    config_name: `projects/${PROJECT_ID}/config`,
+    config_name: FIREBASE_AUTH_CONFIG_NAME,
   };
 }
 
@@ -292,8 +294,8 @@ function validateFirebaseAuth(value, address, profile) {
       reject(`${address}.client.api_key is malformed`);
     }
     exact(client.firebase_subdomain, `${PROJECT_ID}.firebaseapp.com`, `${address}.client.firebase_subdomain`);
-    exact(value.id, `projects/${PROJECT_ID}/config`, `${address}.id`);
-    exact(value.name, `projects/${PROJECT_ID}/config`, `${address}.name`);
+    exact(value.id, FIREBASE_AUTH_IMPORT_ID, `${address}.id`);
+    exact(value.name, FIREBASE_AUTH_CONFIG_NAME, `${address}.name`);
     if (!Array.isArray(value.authorized_domains)
       || value.authorized_domains.some((domain) => ![
         'localhost',

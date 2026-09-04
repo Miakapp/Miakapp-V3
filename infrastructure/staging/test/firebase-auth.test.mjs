@@ -4,6 +4,8 @@ import test from 'node:test';
 
 import { validateFirebaseAuthResult } from '../firebase-auth/apply.mjs';
 import {
+  FIREBASE_AUTH_CONFIG_NAME,
+  FIREBASE_AUTH_IMPORT_ID,
   PROJECT_ID,
   PROJECT_NUMBER,
   TERRAFORM_VERSION,
@@ -285,8 +287,8 @@ function recoveryConfiguration() {
       firebase_subdomain: `${PROJECT_ID}.firebaseapp.com`,
       permissions: value.client[0].permissions,
     }],
-    id: `projects/${PROJECT_ID}/config`,
-    name: `projects/${PROJECT_ID}/config`,
+    id: FIREBASE_AUTH_IMPORT_ID,
+    name: FIREBASE_AUTH_CONFIG_NAME,
     sign_in: [{ ...value.sign_in[0], hash_config: [] }],
     sms_region_config: null,
   };
@@ -328,8 +330,8 @@ function state({ status, includeConfig = true } = {}) {
       ...(status === undefined ? {} : { status }),
       schema_version: 0,
       attributes: {
-        id: `projects/${PROJECT_ID}/config`,
-        name: `projects/${PROJECT_ID}/config`,
+        id: FIREBASE_AUTH_IMPORT_ID,
+        name: FIREBASE_AUTH_CONFIG_NAME,
         project: PROJECT_ID,
         client: [{ api_key: `AIza${'x'.repeat(35)}` }],
       },
@@ -350,7 +352,7 @@ function result() {
     schema: 'miakapp.staging-firebase-auth/1',
     project_id: PROJECT_ID,
     project_number: PROJECT_NUMBER,
-    config_name: `projects/${PROJECT_ID}/config`,
+    config_name: FIREBASE_AUTH_CONFIG_NAME,
     anonymous_sign_in: false,
     email_sign_in: false,
     phone_sign_in: false,
@@ -365,6 +367,8 @@ function result() {
 }
 
 test('contains only the guarded non-deletable Firebase Auth baseline', () => {
+  assert.equal(FIREBASE_AUTH_IMPORT_ID, 'projects/miakapp-v4-staging/config');
+  assert.equal(FIREBASE_AUTH_CONFIG_NAME, 'projects/1072737219170/config');
   assert.doesNotThrow(() => validateFirebaseAuthRoot(firebaseAuthRoot));
   assert.match(terraformSource, /prefix = "terraform\/firebase-auth"/);
   assert.match(terraformSource, /resource "google_identity_platform_config" "firebase_auth"/);
@@ -401,6 +405,18 @@ test('binds recovery state adoption and reconciliation to exact snapshots', () =
   assert.equal(tainted.recovery_action, 'untaint');
   const managed = inspectFirebaseAuthState(state());
   assert.equal(managed.recovery_action, null);
+  const projectIdName = JSON.parse(state().toString('utf8'));
+  projectIdName.resources[0].instances[0].attributes.name = FIREBASE_AUTH_IMPORT_ID;
+  assert.throws(
+    () => inspectFirebaseAuthState(Buffer.from(JSON.stringify(projectIdName))),
+    /foreign configuration/,
+  );
+  const numericImportId = JSON.parse(state().toString('utf8'));
+  numericImportId.resources[0].instances[0].attributes.id = FIREBASE_AUTH_CONFIG_NAME;
+  assert.throws(
+    () => inspectFirebaseAuthState(Buffer.from(JSON.stringify(numericImportId))),
+    /foreign configuration/,
+  );
 
   const recovery = buildFirebaseAuthStateRecoveryMetadata({
     repositoryCommit: COMMIT,
@@ -517,6 +533,10 @@ test('binds canonical metadata to the plan, JSON, commit and expiry', () => {
 
 test('accepts only the sanitized closed-baseline result', () => {
   assert.deepEqual(validateFirebaseAuthResult(result()), result());
+  assert.throws(
+    () => validateFirebaseAuthResult({ ...result(), config_name: FIREBASE_AUTH_IMPORT_ID }),
+    /closed baseline/,
+  );
   const changed = result();
   changed.email_sign_in = true;
   assert.throws(() => validateFirebaseAuthResult(changed), /closed baseline/);
@@ -528,7 +548,7 @@ test('accepts only the sanitized closed-baseline result', () => {
 
 test('recognizes only the exact live staging Auth identity and closed policy', () => {
   const live = {
-    name: `projects/${PROJECT_ID}/config`,
+    name: FIREBASE_AUTH_CONFIG_NAME,
     autodeleteAnonymousUsers: true,
     client: { permissions: {} },
     signIn: {
@@ -540,6 +560,10 @@ test('recognizes only the exact live staging Auth identity and closed policy', (
   };
   assert.equal(validateLiveFirebaseAuthIdentity(live).name, live.name);
   assert.doesNotThrow(() => validateClosedLiveFirebaseAuth(live));
+  assert.throws(
+    () => validateLiveFirebaseAuthIdentity({ ...live, name: FIREBASE_AUTH_IMPORT_ID }),
+    /foreign or malformed resource/,
+  );
   assert.throws(
     () => validateClosedLiveFirebaseAuth({
       ...live,

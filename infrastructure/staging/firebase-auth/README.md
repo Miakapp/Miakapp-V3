@@ -89,8 +89,10 @@ MIAKAPP_STAGING_FIREBASE_AUTH_STATE_RECOVERY_AUTHORIZATION='<exact authorization
 
 The adoption driver can only import or untaint
 `google_identity_platform_config.firebase_auth` with the exact ID
-`projects/miakapp-v4-staging/config`. It then renders a second saved plan whose
-validator categorically rejects creating, replacing, or deleting Firebase Auth.
+`projects/miakapp-v4-staging/config`. Google canonicalizes the computed resource
+name to `projects/1072737219170/config`; state and live validation require that
+exact import-ID/name distinction. The driver then renders a second saved plan
+whose validator categorically rejects creating, replacing, or deleting Firebase Auth.
 Apply that digest-bound reconciliation plan with:
 
 ```bash

@@ -1,6 +1,8 @@
 import { isDeepStrictEqual } from 'node:util';
 
 import {
+  FIREBASE_AUTH_CONFIG_NAME,
+  FIREBASE_AUTH_IMPORT_ID,
   PROJECT_ID,
   TERRAFORM_VERSION,
   canonicalJson,
@@ -9,7 +11,6 @@ import {
 import { repositoryRoot, run } from './cli.mjs';
 
 export const FIREBASE_AUTH_ADDRESS = 'google_identity_platform_config.firebase_auth';
-export const FIREBASE_AUTH_IMPORT_ID = `projects/${PROJECT_ID}/config`;
 const MAXIMUM_STATE_BYTES = 32 * 1024 * 1024;
 const MAXIMUM_RESPONSE_BYTES = 8 * 1024 * 1024;
 const STATE_RESOURCES = Object.freeze({
@@ -104,7 +105,7 @@ export function inspectFirebaseAuthState(bytes) {
       const attributes = instance.attributes;
       if (!plainObject(attributes)
         || attributes.id !== FIREBASE_AUTH_IMPORT_ID
-        || attributes.name !== FIREBASE_AUTH_IMPORT_ID
+        || attributes.name !== FIREBASE_AUTH_CONFIG_NAME
         || attributes.project !== PROJECT_ID) {
         reject('Firebase Auth state points to a foreign configuration');
       }
@@ -165,7 +166,7 @@ async function adminRequest(path, token, description) {
 }
 
 export function validateLiveFirebaseAuthIdentity(value) {
-  if (!plainObject(value) || value.name !== FIREBASE_AUTH_IMPORT_ID) {
+  if (!plainObject(value) || value.name !== FIREBASE_AUTH_CONFIG_NAME) {
     reject('Live Firebase Auth configuration belongs to a foreign or malformed resource');
   }
   return Object.freeze({
