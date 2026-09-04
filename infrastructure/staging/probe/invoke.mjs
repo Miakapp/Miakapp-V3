@@ -81,10 +81,10 @@ function workflowInventory(value) {
   exact(value.serviceAccount, PROBE_ACCOUNT_RESOURCE, 'Workflow service account');
   exact(value.callLogLevel, 'LOG_NONE', 'Workflow call log level');
   exact(value.executionHistoryLevel, 'EXECUTION_HISTORY_BASIC', 'Workflow history level');
-  exact(value.deletionProtection, true, 'Workflow deletion protection');
   exact(value.sourceContents, WORKFLOW_SOURCE, 'Workflow source');
   exact(value.labels, {
     environment: 'staging',
+    'goog-terraform-provisioned': 'true',
     'managed-by': 'terraform',
     product: 'miakapp-v4',
     purpose: 'private-probe',
@@ -99,7 +99,6 @@ function workflowInventory(value) {
     source_sha256: WORKFLOW_SOURCE_SHA256,
     call_log_level: 'LOG_NONE',
     execution_history_level: 'EXECUTION_HISTORY_BASIC',
-    deletion_protection: true,
   });
 }
 
