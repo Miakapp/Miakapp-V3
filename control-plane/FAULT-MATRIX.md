@@ -110,9 +110,13 @@ been removed and both WIF providers are disabled. The guarded activation
 materialized exactly one Firebase Web app and five enabled initial secret
 versions, then reconciled the same plan without another write. Its committed
 evidence contains no secret payload. The separately managed workload is now an
-active scale-to-zero Function with internal-only ingress, exact copied-source
-verification and no live request. Active credential-free CI uses mock providers
-and fails closed if a change claims credentials, public ingress, an unpinned
-Function deployment or fixed-cost edge services. Deployment and inventory alone
-close no `STAGE-*` row: neither the manifest, historical cloud evidence nor a
+active scale-to-zero Function with internal-only ingress and exact copied-source
+verification. An unscheduled, fixed Workflow made two controlled failing
+requests followed by one no-retry HTTP 200 response containing the exact
+discovery document. This validates private reachability and secure
+initialization without validating Firebase Auth, App Check or an application
+mutation. Active credential-free CI uses mock providers and fails closed if a
+change claims credentials, public ingress, an unpinned Function deployment or
+fixed-cost edge services. Deployment, inventory and discovery alone close no
+`STAGE-*` row: neither the manifest, historical cloud evidence nor a
 mock-provider check satisfies any staging row by itself.

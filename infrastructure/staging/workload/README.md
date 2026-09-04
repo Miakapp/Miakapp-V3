@@ -1,6 +1,6 @@
 # Private staging control-plane workload
 
-Status: applied, recovered, converged, source-verified, and privately probed twice
+Status: applied, converged, source-verified, and successfully probed through private ingress
 
 This is the third, workload-only Terraform state for `miakapp-v4-staging`. It
 reads but never owns the reconciled bootstrap and foundation states. Its GCS
@@ -25,11 +25,10 @@ The deployed graph contains exactly:
   `iam.serviceAccounts.getOpenIdToken` on that probe account.
 
 There is no `allUsers` or `allAuthenticatedUsers` binding, VPC connector, load
-balancer, Cloud Armor policy, minimum instance, secret mount, service-account
-key or live request. Internal-only ingress means the probe identity is defined
-before testing but cannot be called directly from an internet workstation.
-The probe uses a separately reviewed Google-hosted Workflow path; public
-ingress remains forbidden.
+balancer, Cloud Armor policy, minimum instance, secret mount or service-account
+key. Workload deployment and inventory make no Function request. The later
+bounded probe used a separately reviewed Google-hosted Workflow path;
+internal-only ingress and the absence of public invokers remain unchanged.
 
 ## Consumed guarded plan and apply
 
@@ -104,8 +103,8 @@ keys. Workload state generation `1788486188603490` is 49,242 bytes at serial
 10 with the same fifteen managed and three data resources and nothing tainted.
 A separately authorized recovery ran exactly once against this revision. It
 made one Workflow execution with no retry and received the same controlled
-`503 service_unavailable`; the recovery wrapper then stopped. Staging therefore
-has exactly two failed private executions and no successful execution.
+`503 service_unavailable`; the recovery wrapper then stopped. At that historical
+boundary, staging had exactly two failed private executions and no success.
 
 ## Runtime initialization diagnostic correction
 
@@ -141,6 +140,26 @@ invokers and zero user-managed keys. Workload state generation
 data resources, nothing tainted, and SHA-256
 `3adbde5e684736080d47b239031a2bb469787641ccf0f87c409d2b3a3b180145`.
 
+The current canonical non-secret [`result.json`](result.json) records that
+deployment inventory with SHA-256
+`dfe8900cd90fe53cbb85ac656ddce42c26fef64c9bbed462688c0e0755363e15`.
+It remains scoped to deployment, so `live_request_performed` is false there.
+
+## Successful private discovery
+
+After the diagnostic deployment, the single-purpose recovery path made exactly
+one third Workflow execution with no retry. Revision `control-plane-00003-hum`
+returned HTTP 200 and the exact staging discovery document in 956 ms. Serving
+that route proves the production initialization path loaded all five declared
+secret values and validated the KMS public key. It did not exercise Firebase
+Auth, App Check, FCM, Firestore or Storage mutation.
+
+The sanitized probe artifact is separately digest-pinned under
+[`../probe/`](../probe/). It retains no execution UUID, trace context, stack,
+raw header set or diagnostic payload. Both invocation wrappers now fail closed
+against the three-execution history, so this evidence cannot be replayed into a
+fourth request.
+
 ## Bounded first-build recovery
 
 The first saved-plan apply reached Cloud Build but stopped before a Cloud Run
@@ -166,7 +185,7 @@ tainted resource. Independent inventory observed active revision
 `control-plane-00001-kod`, verified all three workload service accounts have
 zero user-managed keys, and matched copied source SHA-256
 `d2a9ffae2bd85106f782f9c75a10b6fb398682ead65dada2a1cf8ab5c65b7eb4`.
-The canonical non-secret [`result.json`](result.json) has SHA-256
+The historical non-secret result at that boundary had SHA-256
 `2143c037de6cb2d8caf9acc9676fa5a54d9bf974793136596aac94de30c93590`.
 No request was made. Raw plans, raw state, the operator email and private
 diagnostics were not committed.

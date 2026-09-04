@@ -1,0 +1,85 @@
+{
+  "schema": "miakapp.staging-private-probe-recovery-result/2",
+  "project_id": "miakapp-v4-staging",
+  "project_number": "1072737219170",
+  "region": "europe-west9",
+  "observed_at": "2026-09-04T02:35:49.645Z",
+  "repository_commit": "58b6d8a7427f905b54f26dcb23aae514dac1a1a6",
+  "workflow": {
+    "name": "projects/miakapp-v4-staging/locations/europe-west9/workflows/miakapp-private-probe",
+    "revision": "000001-7fb",
+    "service_account": "miakapp-staging-probe@miakapp-v4-staging.iam.gserviceaccount.com",
+    "source_sha256": "361519966cc628d5b6ec03afd99b1e3ed7f03e05bf941e2cd34bb4aba547dd9f",
+    "call_log_level": "LOG_NONE",
+    "execution_history_level": "EXECUTION_HISTORY_BASIC",
+    "scheduled_triggers": 0
+  },
+  "request": {
+    "method": "GET",
+    "uri": "https://control-plane-aczhngqraq-od.a.run.app/.well-known/miakapp-control-plane",
+    "authentication": "OIDC",
+    "audience": "https://control-plane-aczhngqraq-od.a.run.app",
+    "timeout_seconds": 30,
+    "workflow_retries": 0,
+    "attempts_after_latest_correction": 1,
+    "input": false
+  },
+  "prior_executions": [
+    {
+      "phase": "after-secret-name-compatibility-update",
+      "state": "FAILED",
+      "workflow_revision": "000001-7fb",
+      "duration_milliseconds": 343,
+      "response": {
+        "status": 503,
+        "error": "service_unavailable"
+      }
+    },
+    {
+      "phase": "initial-runtime",
+      "state": "FAILED",
+      "workflow_revision": "000001-7fb",
+      "duration_milliseconds": 2089,
+      "response": {
+        "status": 503,
+        "error": "service_unavailable"
+      }
+    }
+  ],
+  "recovery_execution": {
+    "state": "SUCCEEDED",
+    "workflow_revision": "000001-7fb",
+    "duration_milliseconds": 956,
+    "count_before": 2,
+    "count_after": 3
+  },
+  "response": {
+    "status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "cache_control": "public, max-age=300, must-revalidate",
+    "body": {
+      "schema": "miakapp.control-plane-discovery/1",
+      "issuer": "https://control.staging.miakapp.com",
+      "jwks_uri": "https://control.staging.miakapp.com/.well-known/jwks.json",
+      "exchange_endpoint": "https://control.staging.miakapp.com/v1/access-tokens:exchange",
+      "push_audience": "https://control.staging.miakapp.com/v1/push",
+      "components_audience": "https://control.staging.miakapp.com/v1/components"
+    }
+  },
+  "workload": {
+    "deployment_commit": "60322c69c92b8ccf5f3d1bc87ba264a00e5dca05",
+    "source_sha256": "86f4818dfcb4021e5578638d6fb1e9b7da31ea245528cbdc8573dabecdfca358",
+    "function_revision": "control-plane-00003-hum",
+    "function_uri": "https://control-plane-aczhngqraq-od.a.run.app",
+    "ingress": "ALLOW_INTERNAL_ONLY",
+    "unauthenticated_invokers": 0,
+    "probe_user_managed_keys": 0
+  },
+  "claims": {
+    "private_ingress_reached": true,
+    "secure_runtime_served_discovery": true,
+    "firebase_auth_validated": false,
+    "app_check_validated": false,
+    "application_mutation_expected": false
+  }
+}

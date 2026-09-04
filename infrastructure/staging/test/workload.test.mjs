@@ -812,6 +812,12 @@ test('pins the exact non-secret live workload result', () => {
     new URL('../workload/result.json', import.meta.url),
   );
   assert.equal(result.function.state, 'ACTIVE');
+  assert.equal(result.repository_commit, '60322c69c92b8ccf5f3d1bc87ba264a00e5dca05');
+  assert.equal(
+    result.source_archive_sha256,
+    '86f4818dfcb4021e5578638d6fb1e9b7da31ea245528cbdc8573dabecdfca358',
+  );
+  assert.equal(result.function.revision, 'control-plane-00003-hum');
   assert.equal(result.function.ingress, 'ALLOW_INTERNAL_ONLY');
   assert.equal(result.function.unauthenticated_invokers, 0);
   assert.equal(result.function.minimum_instances, 0);

@@ -1,8 +1,8 @@
 # Miakapp 4 staging teardown rehearsal
 
-Status: non-executable rehearsal; bootstrap, complete foundation, activation
-material and an uninvoked private workload exist, protected recovery evidence
-remains private, and one-shot recovery automation and its WIF exchange are retired
+Status: non-executable rehearsal; bootstrap, complete foundation, activation,
+the private workload and a consumed unscheduled probe exist, protected recovery
+evidence remains private, and one-shot recovery automation is retired
 
 This runbook applies to the existing `miakapp-v4-staging` project. It must never
 be run against `miakapp-3`, `miakapp-v4`, or a `demo-*` project. A future
@@ -32,16 +32,19 @@ The later workload apply preserved a 13-resource partial state after its first
 Function build failed on access to Google's copied source; the Function was
 tainted and the private invoker absent. A bounded recovery added only the
 conditional source reader and private probe invoker, then updated the Function
-in place. Current revision `control-plane-00001-kod` is active with
-internal-only ingress, no unauthenticated invoker, no minimum instance, zero
-user-managed keys across its runtime/build/probe identities and no live request.
-Independent inventory matched the copied source bytes. Deleting the whole
-project would permanently retire its globally unique ID; adding Firebase cannot
-otherwise be fully undone. Retaining this private scale-to-zero project, with
-the billing link removable during an authorized teardown, is therefore the
-default.
+in place. Two bounded source corrections later produced active revision
+`control-plane-00003-hum` with internal-only ingress, no unauthenticated
+invoker, no minimum instance and zero user-managed keys across its
+runtime/build/probe identities. Independent inventory matched the copied source
+bytes. One unscheduled Workflow made exactly three no-retry requests: two
+controlled failures followed by one HTTP 200 discovery response. Its successful
+route performed no application mutation; both invocation entry points now fail
+closed. Deleting the whole project would permanently retire its globally unique
+ID; adding Firebase cannot otherwise be fully undone. Retaining this private
+scale-to-zero project, with the billing link removable during an authorized
+teardown, is therefore the default.
 
-The repository contains separate bootstrap, foundation and workload roots, a
+The repository contains separate bootstrap, foundation, workload and probe roots, a
 private versioned GCS backend, keyless plan/apply identities and a retained historical
 workflow blueprint. Terraform completed the final
 27-create/nine-no-op plan, but
@@ -78,12 +81,15 @@ WIF providers are disabled while the pool remains enabled and retained. Object
 Versioning retains recovery generations. Local `.terraform/`
 provider caches are disposable and are not cloud inventory.
 
-Current workload state generation `1788481082158679` is 49,241 bytes at serial
-8 with fifteen managed resources, three data resources, one output and no
+Current workload state generation `1788488610045265` is 49,242 bytes at serial
+12 with fifteen managed resources, three data resources, one output and no
 tainted resource. Its SHA-256 is
-`32601affcf794a097b0e6f9dbddddd2e800166278f630e624f6c8048fda60385`.
-The completed private plan bundle was permanently deleted; raw plan and state
-bytes were never committed.
+`3adbde5e684736080d47b239031a2bb469787641ccf0f87c409d2b3a3b180145`.
+Probe state generation `1788484287000119` is 13,596 bytes at serial 3 with
+three managed resources, one data resource, one output and nothing tainted. Its
+SHA-256 is
+`af7241b8d72085e0b30b7ca1a093726b2462b83160bd7566f6847d94aeb1cbf5`.
+Raw plan and state bytes were never committed.
 
 The planner/deployer service accounts and IAM roles remain. Closing the reviewed
 GitHub OIDC route does not disprove impersonation by another administrator, so
@@ -114,9 +120,10 @@ cannot be deleted; and billing can report late usage.
   retain credentials, FIDs, App Check debug tokens or secret values.
 - Capture a before-inventory of enabled APIs, IAM bindings, service accounts,
   Firebase app registrations and App Check providers, Functions and Cloud Run
-  revisions, Eventarc triggers, Firestore databases, buckets and objects,
-  Artifact Registry images, secrets, KMS versions, budgets and billing exports.
-- Capture the bootstrap, foundation and workload state generations, lock
+  revisions, Eventarc triggers, Workflows, executions and schedules, Firestore
+  databases, buckets and objects, Artifact Registry images, secrets, KMS
+  versions, budgets and billing exports.
+- Capture the bootstrap, foundation, workload and probe state generations, lock
   status, Object Versioning/soft-delete policy and bucket IAM once the backend
   exists. Never
   treat an absent local state file as an empty cloud environment.
@@ -124,11 +131,14 @@ cannot be deleted; and billing can report late usage.
 
 ## Ordered teardown
 
-1. Verify the retired recovery workflow remains absent and both recovery WIF
-   providers remain disabled. Then disable test traffic, scheduled work,
+1. Verify the retired GitHub recovery workflow remains absent and both recovery
+   WIF providers remain disabled. Then disable test traffic, scheduled work,
    triggers, public invocation, every other active plan or deployment workflow,
    both GitHub environments and any other federation route before revoking
-   temporary human, CI and test-client access.
+   temporary human, CI and test-client access. Confirm no probe execution is in
+   flight, remove deletion protection from the unscheduled private Workflow in
+   the reviewed teardown change, delete it, and then decide explicitly whether
+   the now-inert Workflows API remains enabled.
 2. Remove the Function and inspect Cloud Run, Eventarc and Artifact Registry for
    resources that outlive the deployment abstraction.
 3. Remove App Check providers and test registrations, then delete Firebase app
@@ -146,7 +156,7 @@ cannot be deleted; and billing can report late usage.
    conditional state/plan bucket grants and WIF impersonation grants. Delete the
    runtime, build, probe, planner and deployer service accounts and WIF pool only
    after confirming no resource still depends on them.
-9. Capture the final bootstrap/foundation/workload state generations and
+9. Capture the final bootstrap/foundation/workload/probe state generations and
    independently reconcile the cloud inventory. Securely retain the minimum
    teardown evidence; never publish a state or saved plan.
 10. In a separate reviewed manual step, remove every plan and state generation,
@@ -163,6 +173,8 @@ The teardown is complete only when a second inventory, performed independently
 of deployment state, records all of the following:
 
 - no active Function, Cloud Run revision, Eventarc trigger or Artifact image;
+- no private-probe Workflow, in-flight execution or Scheduler trigger, with the
+  Workflows API disabled or explicitly accepted as an inert residual service;
 - no Firebase app registration, App Check provider or test registration;
 - no Firestore database or TTL policy intended for this environment;
 - no live component, plan or state object; every soft-deleted object and its
