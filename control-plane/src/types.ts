@@ -6,14 +6,20 @@ export const IDENTIFIER_PATTERN = /^[A-Za-z0-9_-]{22}$/;
 export const HOME_KEY_PATTERN = /^mhk1_([A-Za-z0-9_-]{22})_([A-Za-z0-9_-]{43})$/;
 export const SHA256_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 export const COMPONENT_ABI = 'miakapp.component/1' as const;
-export const ACCESS_SCOPES = Object.freeze([
+export const HOME_KEY_ACCESS_SCOPES = Object.freeze([
   'relay:coordinator',
   'relay:cli',
   'push:send',
   'components:publish',
 ] as const);
 
+export const ACCESS_SCOPES = Object.freeze([
+  'relay:user',
+  ...HOME_KEY_ACCESS_SCOPES,
+] as const);
+
 export type AccessScope = typeof ACCESS_SCOPES[number];
+export type HomeKeyAccessScope = typeof HOME_KEY_ACCESS_SCOPES[number];
 
 export const ADMISSION_OPERATIONS = Object.freeze([
   'home.create',
@@ -21,6 +27,7 @@ export const ADMISSION_OPERATIONS = Object.freeze([
   'home_key.create',
   'home_key.revoke',
   'access.exchange',
+  'user_relay.exchange',
   'push.destination.challenge',
   'push.destination.register',
   'push.destination.delete',
@@ -43,6 +50,8 @@ export const ADMISSION_BUDGETS = Object.freeze([
   'access.exchange.source',
   'access.exchange.key',
   'access.exchange.home',
+  'user_relay.exchange.source',
+  'user_relay.exchange.user',
   'push.challenge.actor',
   'push.challenge.app',
   'push.challenge.source',
@@ -78,6 +87,7 @@ export interface AdmissionProfile {
 
 export interface FirebasePrincipal {
   readonly userId: string;
+  readonly verifiedEmail: string | null;
   readonly authenticatedAt: number;
   readonly expiresAt: number;
 }
@@ -112,7 +122,7 @@ export interface HomePatch {
 export interface HomeKeyMetadata {
   readonly key_id: string;
   readonly label: string;
-  readonly scopes: AccessScope[];
+  readonly scopes: HomeKeyAccessScope[];
   readonly created_at: string;
   readonly revoked_at: string | null;
   readonly last_used_at: string | null;
@@ -218,17 +228,32 @@ export type ExchangeRequest =
   | { readonly purpose: 'push' }
   | { readonly purpose: 'components' };
 
-export interface AccessGrant {
+export interface HomeKeyAccessGrant {
+  readonly subjectKind: 'home_key';
   readonly issuedAt: number;
   readonly tokenId: string;
   readonly homeId: string;
   readonly clientId: string;
   readonly label: string;
-  readonly scope: AccessScope;
+  readonly scope: HomeKeyAccessScope;
   readonly audience: string;
   readonly role: 'coordinator' | 'cli' | null;
   readonly coordinatorName: string | null;
 }
+
+export interface UserRelayAccessGrant {
+  readonly subjectKind: 'firebase_user';
+  readonly issuedAt: number;
+  readonly tokenId: string;
+  readonly homeId: string;
+  readonly userId: string;
+  readonly verifiedEmail: string | null;
+  readonly scope: 'relay:user';
+  readonly audience: string;
+  readonly role: 'user';
+}
+
+export type AccessGrant = HomeKeyAccessGrant | UserRelayAccessGrant;
 
 export type SigningPublicJwk = Readonly<{
   kty: 'OKP';
@@ -246,6 +271,7 @@ export interface DeploymentConfig {
   readonly issuer: string;
   readonly jwksUri: string;
   readonly exchangeEndpoint: string;
+  readonly userRelayExchangeEndpoint: string;
   readonly pushAudience: string;
   readonly componentsAudience: string;
   readonly componentBucket: string;

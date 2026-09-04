@@ -100,6 +100,7 @@ readonly -a ADMISSION_TEST_PATTERNS=(
   'keeps early source-limit responses readable to an allowed browser origin'
   'keeps syntactically valid but unverified credentials anonymous in audit'
   'returns a correlated 429 before another Home Key reservation or signing effect'
+  'enforces exact user-relay user and source ceilings before any signing effect'
   'keeps every admission, audit, and ring-state document server-only'
 )
 readonly -a EMULATOR_TEST_FILES=(

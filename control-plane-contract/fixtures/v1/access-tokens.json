@@ -11,6 +11,7 @@
     "issuer": "https://control.example.test",
     "jwks_uri": "https://control.example.test/.well-known/jwks.json",
     "exchange_endpoint": "https://control.example.test/v1/access-tokens:exchange",
+    "user_relay_exchange_endpoint": "https://control.example.test/v1/user-relay-tokens:exchange",
     "push_audience": "https://control.example.test/v1/push",
     "components_audience": "https://control.example.test/v1/components",
     "relay_audience": "wss://relay.example.test/ws"
@@ -279,6 +280,170 @@
         "role": null,
         "coordinator_name": null
       }
+    },
+    {
+      "verification_time": 1788220800,
+      "id": "valid_user_access",
+      "kind": "miakapp",
+      "profile": "user",
+      "key_set": "rotated",
+      "token": "eyJhbGciOiJFZERTQSIsImtpZCI6InRlc3QtY3VycmVudC0yMDI2LTA5IiwidHlwIjoiYXQrand0In0.eyJpc3MiOiJodHRwczovL2NvbnRyb2wuZXhhbXBsZS50ZXN0Iiwic3ViIjoic3luX3VzZXJfMSIsImF1ZCI6IndzczovL3JlbGF5LmV4YW1wbGUudGVzdC93cyIsImV4cCI6MTc4ODIyMTEwMCwiaWF0IjoxNzg4MjIwODAwLCJqdGkiOiJHUmtaR1JrWkdSa1pHUmtaR1JrWkdRIiwic2NvcGUiOiJyZWxheTp1c2VyIiwibWlha2FwcF9ob21lIjoic3ludGhldGljLWhvbWUiLCJtaWFrYXBwX3JvbGUiOiJ1c2VyIiwibWlha2FwcF92ZXJpZmllZF9lbWFpbCI6InN5bnRoZXRpYy0xQGV4YW1wbGUudGVzdCJ9.Gk3fo9X6OZk0VbFajnjs0Rb_HQw9VOTxx0u5pTW-_bvy8N081lzt-9wPnLkthxEVqJzf2EetWD7qWe3mPTMSDw",
+      "valid": true,
+      "expected": {
+        "home_id": "synthetic-home",
+        "principal_id": "syn_user_1",
+        "scope": "relay:user",
+        "expires_at": 1788221100,
+        "role": "user",
+        "verified_email": "synthetic-1@example.test"
+      }
+    },
+    {
+      "verification_time": 1788220800,
+      "id": "valid_user_access_without_email",
+      "kind": "miakapp",
+      "profile": "user",
+      "key_set": "rotated",
+      "token": "eyJhbGciOiJFZERTQSIsImtpZCI6InRlc3QtY3VycmVudC0yMDI2LTA5IiwidHlwIjoiYXQrand0In0.eyJpc3MiOiJodHRwczovL2NvbnRyb2wuZXhhbXBsZS50ZXN0Iiwic3ViIjoic3luX3VzZXJfMSIsImF1ZCI6IndzczovL3JlbGF5LmV4YW1wbGUudGVzdC93cyIsImV4cCI6MTc4ODIyMTEwMCwiaWF0IjoxNzg4MjIwODAwLCJqdGkiOiJHaG9hR2hvYUdob2FHaG9hR2hvYUdnIiwic2NvcGUiOiJyZWxheTp1c2VyIiwibWlha2FwcF9ob21lIjoic3ludGhldGljLWhvbWUiLCJtaWFrYXBwX3JvbGUiOiJ1c2VyIn0.dhy8VTEvZVI0CajAnGpjMxE_DzECVY_6PqGzd0h4a8X3wm4zukBONb2GiNC07cmaJZBBTAeavN9Jqi9sw44AAg",
+      "valid": true,
+      "expected": {
+        "home_id": "synthetic-home",
+        "principal_id": "syn_user_1",
+        "scope": "relay:user",
+        "expires_at": 1788221100,
+        "role": "user",
+        "verified_email": null
+      }
+    },
+    {
+      "verification_time": 1788220800,
+      "id": "user_wrong_audience",
+      "kind": "miakapp",
+      "profile": "user",
+      "key_set": "rotated",
+      "token": "eyJhbGciOiJFZERTQSIsImtpZCI6InRlc3QtY3VycmVudC0yMDI2LTA5IiwidHlwIjoiYXQrand0In0.eyJpc3MiOiJodHRwczovL2NvbnRyb2wuZXhhbXBsZS50ZXN0Iiwic3ViIjoic3luX3VzZXJfMSIsImF1ZCI6IndzczovL290aGVyLXJlbGF5LmV4YW1wbGUudGVzdC93cyIsImV4cCI6MTc4ODIyMTEwMCwiaWF0IjoxNzg4MjIwODAwLCJqdGkiOiJHeHNiR3hzYkd4c2JHeHNiR3hzYkd3Iiwic2NvcGUiOiJyZWxheTp1c2VyIiwibWlha2FwcF9ob21lIjoic3ludGhldGljLWhvbWUiLCJtaWFrYXBwX3JvbGUiOiJ1c2VyIiwibWlha2FwcF92ZXJpZmllZF9lbWFpbCI6InN5bnRoZXRpYy0xQGV4YW1wbGUudGVzdCJ9.6fNYCO2-XI7AOmLolNZwlq-YChfx8ArG4nxwYamB4O6mwcHHt6vENGOCKgMsyVymgjH8boMwzSR1CPE_GCMtAg",
+      "valid": false,
+      "error": "invalid_audience"
+    },
+    {
+      "verification_time": 1788220800,
+      "id": "user_invalid_home",
+      "kind": "miakapp",
+      "profile": "user",
+      "key_set": "rotated",
+      "token": "eyJhbGciOiJFZERTQSIsImtpZCI6InRlc3QtY3VycmVudC0yMDI2LTA5IiwidHlwIjoiYXQrand0In0.eyJpc3MiOiJodHRwczovL2NvbnRyb2wuZXhhbXBsZS50ZXN0Iiwic3ViIjoic3luX3VzZXJfMSIsImF1ZCI6IndzczovL3JlbGF5LmV4YW1wbGUudGVzdC93cyIsImV4cCI6MTc4ODIyMTEwMCwiaWF0IjoxNzg4MjIwODAwLCJqdGkiOiJIQndjSEJ3Y0hCd2NIQndjSEJ3Y0hBIiwic2NvcGUiOiJyZWxheTp1c2VyIiwibWlha2FwcF9ob21lIjoiSW52YWxpZC1Ib21lIiwibWlha2FwcF9yb2xlIjoidXNlciIsIm1pYWthcHBfdmVyaWZpZWRfZW1haWwiOiJzeW50aGV0aWMtMUBleGFtcGxlLnRlc3QifQ._-aIDhLL9VGUget4rCA8TlGKHnncmlEIrRVUKPwxal80UqOQPxdZNRs888sSmx-SIDFSnPsl1j14MzPQr6lHCg",
+      "valid": false,
+      "error": "invalid_claims"
+    },
+    {
+      "verification_time": 1788220800,
+      "id": "user_invalid_uid",
+      "kind": "miakapp",
+      "profile": "user",
+      "key_set": "rotated",
+      "token": "eyJhbGciOiJFZERTQSIsImtpZCI6InRlc3QtY3VycmVudC0yMDI2LTA5IiwidHlwIjoiYXQrand0In0.eyJpc3MiOiJodHRwczovL2NvbnRyb2wuZXhhbXBsZS50ZXN0Iiwic3ViIjoiIiwiYXVkIjoid3NzOi8vcmVsYXkuZXhhbXBsZS50ZXN0L3dzIiwiZXhwIjoxNzg4MjIxMTAwLCJpYXQiOjE3ODgyMjA4MDAsImp0aSI6IkhSMGRIUjBkSFIwZEhSMGRIUjBkSFEiLCJzY29wZSI6InJlbGF5OnVzZXIiLCJtaWFrYXBwX2hvbWUiOiJzeW50aGV0aWMtaG9tZSIsIm1pYWthcHBfcm9sZSI6InVzZXIiLCJtaWFrYXBwX3ZlcmlmaWVkX2VtYWlsIjoic3ludGhldGljLTFAZXhhbXBsZS50ZXN0In0.tjzWQUQYPJbMl1oZQh4JJr6G0XO7tXWWT7DtDQLfFw_P8RIJ1_DXyjR0J4_VJ6eLPGooG1JOnX1X8zxBtPeTCA",
+      "valid": false,
+      "error": "invalid_claims"
+    },
+    {
+      "verification_time": 1788220800,
+      "id": "user_wrong_role",
+      "kind": "miakapp",
+      "profile": "user",
+      "key_set": "rotated",
+      "token": "eyJhbGciOiJFZERTQSIsImtpZCI6InRlc3QtY3VycmVudC0yMDI2LTA5IiwidHlwIjoiYXQrand0In0.eyJpc3MiOiJodHRwczovL2NvbnRyb2wuZXhhbXBsZS50ZXN0Iiwic3ViIjoic3luX3VzZXJfMSIsImF1ZCI6IndzczovL3JlbGF5LmV4YW1wbGUudGVzdC93cyIsImV4cCI6MTc4ODIyMTEwMCwiaWF0IjoxNzg4MjIwODAwLCJqdGkiOiJIaDRlSGg0ZUhoNGVIaDRlSGg0ZUhnIiwic2NvcGUiOiJyZWxheTp1c2VyIiwibWlha2FwcF9ob21lIjoic3ludGhldGljLWhvbWUiLCJtaWFrYXBwX3JvbGUiOiJjbGkiLCJtaWFrYXBwX3ZlcmlmaWVkX2VtYWlsIjoic3ludGhldGljLTFAZXhhbXBsZS50ZXN0In0.ZnYEHY5qO5UFdNd9cvwLTbF6ZaQcCJK4UkJrqcIeTKsKEiO_aaxlIh7ZQISdZVGAexBf5X5m2CXajVJcmILQAA",
+      "valid": false,
+      "error": "invalid_profile"
+    },
+    {
+      "verification_time": 1788220800,
+      "id": "user_missing_role",
+      "kind": "miakapp",
+      "profile": "user",
+      "key_set": "rotated",
+      "token": "eyJhbGciOiJFZERTQSIsImtpZCI6InRlc3QtY3VycmVudC0yMDI2LTA5IiwidHlwIjoiYXQrand0In0.eyJpc3MiOiJodHRwczovL2NvbnRyb2wuZXhhbXBsZS50ZXN0Iiwic3ViIjoic3luX3VzZXJfMSIsImF1ZCI6IndzczovL3JlbGF5LmV4YW1wbGUudGVzdC93cyIsImV4cCI6MTc4ODIyMTEwMCwiaWF0IjoxNzg4MjIwODAwLCJqdGkiOiJIeDhmSHg4Zkh4OGZIeDhmSHg4Zkh3Iiwic2NvcGUiOiJyZWxheTp1c2VyIiwibWlha2FwcF9ob21lIjoic3ludGhldGljLWhvbWUiLCJtaWFrYXBwX3ZlcmlmaWVkX2VtYWlsIjoic3ludGhldGljLTFAZXhhbXBsZS50ZXN0In0.Im1CDlxtCFku5pWSDOEZKlOch_DoZxY_uKfJI8kM-Tdbf90S4kwVi8afk_By53ziTLOQ4hkP35AOykCphhbVAw",
+      "valid": false,
+      "error": "invalid_claims"
+    },
+    {
+      "verification_time": 1788220800,
+      "id": "user_wrong_scope",
+      "kind": "miakapp",
+      "profile": "user",
+      "key_set": "rotated",
+      "token": "eyJhbGciOiJFZERTQSIsImtpZCI6InRlc3QtY3VycmVudC0yMDI2LTA5IiwidHlwIjoiYXQrand0In0.eyJpc3MiOiJodHRwczovL2NvbnRyb2wuZXhhbXBsZS50ZXN0Iiwic3ViIjoic3luX3VzZXJfMSIsImF1ZCI6IndzczovL3JlbGF5LmV4YW1wbGUudGVzdC93cyIsImV4cCI6MTc4ODIyMTEwMCwiaWF0IjoxNzg4MjIwODAwLCJqdGkiOiJJQ0FnSUNBZ0lDQWdJQ0FnSUNBZ0lBIiwic2NvcGUiOiJyZWxheTpjbGkiLCJtaWFrYXBwX2hvbWUiOiJzeW50aGV0aWMtaG9tZSIsIm1pYWthcHBfcm9sZSI6InVzZXIiLCJtaWFrYXBwX3ZlcmlmaWVkX2VtYWlsIjoic3ludGhldGljLTFAZXhhbXBsZS50ZXN0In0.2lqowKl_Y7ZiEh6CzTtvhWRf3dEQWnaMSIWGc0KxsLdU4JSffm4bFtGhEWr0Z-t0y54Q0TAlXrKgI0T9moJ9BQ",
+      "valid": false,
+      "error": "invalid_profile"
+    },
+    {
+      "verification_time": 1788220800,
+      "id": "user_multiple_scopes",
+      "kind": "miakapp",
+      "profile": "user",
+      "key_set": "rotated",
+      "token": "eyJhbGciOiJFZERTQSIsImtpZCI6InRlc3QtY3VycmVudC0yMDI2LTA5IiwidHlwIjoiYXQrand0In0.eyJpc3MiOiJodHRwczovL2NvbnRyb2wuZXhhbXBsZS50ZXN0Iiwic3ViIjoic3luX3VzZXJfMSIsImF1ZCI6IndzczovL3JlbGF5LmV4YW1wbGUudGVzdC93cyIsImV4cCI6MTc4ODIyMTEwMCwiaWF0IjoxNzg4MjIwODAwLCJqdGkiOiJJU0VoSVNFaElTRWhJU0VoSVNFaElRIiwic2NvcGUiOiJyZWxheTp1c2VyIHB1c2g6c2VuZCIsIm1pYWthcHBfaG9tZSI6InN5bnRoZXRpYy1ob21lIiwibWlha2FwcF9yb2xlIjoidXNlciIsIm1pYWthcHBfdmVyaWZpZWRfZW1haWwiOiJzeW50aGV0aWMtMUBleGFtcGxlLnRlc3QifQ.aP2RWmHCx8xXX4DPW-DF_xKH694SuMpW0yQGuupkEVLYrkv7Z-M_LqMDnd5y2chGyYiWXZDR05mW9zu5cGbCCg",
+      "valid": false,
+      "error": "invalid_scope"
+    },
+    {
+      "verification_time": 1788220800,
+      "id": "user_forbidden_client_id",
+      "kind": "miakapp",
+      "profile": "user",
+      "key_set": "rotated",
+      "token": "eyJhbGciOiJFZERTQSIsImtpZCI6InRlc3QtY3VycmVudC0yMDI2LTA5IiwidHlwIjoiYXQrand0In0.eyJpc3MiOiJodHRwczovL2NvbnRyb2wuZXhhbXBsZS50ZXN0Iiwic3ViIjoic3luX3VzZXJfMSIsImF1ZCI6IndzczovL3JlbGF5LmV4YW1wbGUudGVzdC93cyIsImV4cCI6MTc4ODIyMTEwMCwiaWF0IjoxNzg4MjIwODAwLCJqdGkiOiJJaUlpSWlJaUlpSWlJaUlpSWlJaUlnIiwic2NvcGUiOiJyZWxheTp1c2VyIiwibWlha2FwcF9ob21lIjoic3ludGhldGljLWhvbWUiLCJtaWFrYXBwX3JvbGUiOiJ1c2VyIiwibWlha2FwcF92ZXJpZmllZF9lbWFpbCI6InN5bnRoZXRpYy0xQGV4YW1wbGUudGVzdCIsImNsaWVudF9pZCI6IkFBQUFBQUFBQUFBQUFBQUFBQUFBQUEifQ.0pOY32qb_dYauuXjAa3lmpdd7pAAhihfTDdrmp-_a2lsSpDmvy4AhJNcu3_VzIBl4lQu8ZCOKdL2L1hc0ho0DA",
+      "valid": false,
+      "error": "invalid_claims"
+    },
+    {
+      "verification_time": 1788220800,
+      "id": "user_forbidden_coordinator",
+      "kind": "miakapp",
+      "profile": "user",
+      "key_set": "rotated",
+      "token": "eyJhbGciOiJFZERTQSIsImtpZCI6InRlc3QtY3VycmVudC0yMDI2LTA5IiwidHlwIjoiYXQrand0In0.eyJpc3MiOiJodHRwczovL2NvbnRyb2wuZXhhbXBsZS50ZXN0Iiwic3ViIjoic3luX3VzZXJfMSIsImF1ZCI6IndzczovL3JlbGF5LmV4YW1wbGUudGVzdC93cyIsImV4cCI6MTc4ODIyMTEwMCwiaWF0IjoxNzg4MjIwODAwLCJqdGkiOiJJeU1qSXlNakl5TWpJeU1qSXlNakl3Iiwic2NvcGUiOiJyZWxheTp1c2VyIiwibWlha2FwcF9ob21lIjoic3ludGhldGljLWhvbWUiLCJtaWFrYXBwX3JvbGUiOiJ1c2VyIiwibWlha2FwcF92ZXJpZmllZF9lbWFpbCI6InN5bnRoZXRpYy0xQGV4YW1wbGUudGVzdCIsIm1pYWthcHBfY29vcmRpbmF0b3IiOiJhdXRvbWF0aW9uIn0.XqMZOO2w26O4vyv4rsCzGY30JXmgbWMWE3CQqif2QSqK-9JVqwCqVu-96-ynQxPS34Agl9dW3rZ0kWTb-9PWDQ",
+      "valid": false,
+      "error": "invalid_claims"
+    },
+    {
+      "verification_time": 1788220800,
+      "id": "user_invalid_verified_email",
+      "kind": "miakapp",
+      "profile": "user",
+      "key_set": "rotated",
+      "token": "eyJhbGciOiJFZERTQSIsImtpZCI6InRlc3QtY3VycmVudC0yMDI2LTA5IiwidHlwIjoiYXQrand0In0.eyJpc3MiOiJodHRwczovL2NvbnRyb2wuZXhhbXBsZS50ZXN0Iiwic3ViIjoic3luX3VzZXJfMSIsImF1ZCI6IndzczovL3JlbGF5LmV4YW1wbGUudGVzdC93cyIsImV4cCI6MTc4ODIyMTEwMCwiaWF0IjoxNzg4MjIwODAwLCJqdGkiOiJKQ1FrSkNRa0pDUWtKQ1FrSkNRa0pBIiwic2NvcGUiOiJyZWxheTp1c2VyIiwibWlha2FwcF9ob21lIjoic3ludGhldGljLWhvbWUiLCJtaWFrYXBwX3JvbGUiOiJ1c2VyIiwibWlha2FwcF92ZXJpZmllZF9lbWFpbCI6dHJ1ZX0.aP6tP7hU2XYY8LDFC-KJZTCWrxF-rABtqqc_QukpY3KoWLnPbsuRuCKG5I8aefxD3xwMrX__59HcPkyWzaRFCA",
+      "valid": false,
+      "error": "invalid_claims"
+    },
+    {
+      "verification_time": 1788220800,
+      "id": "user_overlong_ttl",
+      "kind": "miakapp",
+      "profile": "user",
+      "key_set": "rotated",
+      "token": "eyJhbGciOiJFZERTQSIsImtpZCI6InRlc3QtY3VycmVudC0yMDI2LTA5IiwidHlwIjoiYXQrand0In0.eyJpc3MiOiJodHRwczovL2NvbnRyb2wuZXhhbXBsZS50ZXN0Iiwic3ViIjoic3luX3VzZXJfMSIsImF1ZCI6IndzczovL3JlbGF5LmV4YW1wbGUudGVzdC93cyIsImV4cCI6MTc4ODIyMTEwMSwiaWF0IjoxNzg4MjIwODAwLCJqdGkiOiJKU1VsSlNVbEpTVWxKU1VsSlNVbEpRIiwic2NvcGUiOiJyZWxheTp1c2VyIiwibWlha2FwcF9ob21lIjoic3ludGhldGljLWhvbWUiLCJtaWFrYXBwX3JvbGUiOiJ1c2VyIiwibWlha2FwcF92ZXJpZmllZF9lbWFpbCI6InN5bnRoZXRpYy0xQGV4YW1wbGUudGVzdCJ9.H-Fh00qOwnSGmLCIbJnc9ekZtuB1zJn1aEr-9vrwZ7lQCPmYE00DBjRGcUI5pcWHjNgmUERw6Mm3VG60DsqnBQ",
+      "valid": false,
+      "error": "invalid_time"
+    },
+    {
+      "verification_time": 1788220800,
+      "id": "user_future_iat",
+      "kind": "miakapp",
+      "profile": "user",
+      "key_set": "rotated",
+      "token": "eyJhbGciOiJFZERTQSIsImtpZCI6InRlc3QtY3VycmVudC0yMDI2LTA5IiwidHlwIjoiYXQrand0In0.eyJpc3MiOiJodHRwczovL2NvbnRyb2wuZXhhbXBsZS50ZXN0Iiwic3ViIjoic3luX3VzZXJfMSIsImF1ZCI6IndzczovL3JlbGF5LmV4YW1wbGUudGVzdC93cyIsImV4cCI6MTc4ODIyMTEwMCwiaWF0IjoxNzg4MjIwODMxLCJqdGkiOiJKaVltSmlZbUppWW1KaVltSmlZbUpnIiwic2NvcGUiOiJyZWxheTp1c2VyIiwibWlha2FwcF9ob21lIjoic3ludGhldGljLWhvbWUiLCJtaWFrYXBwX3JvbGUiOiJ1c2VyIiwibWlha2FwcF92ZXJpZmllZF9lbWFpbCI6InN5bnRoZXRpYy0xQGV4YW1wbGUudGVzdCJ9.Ty1-KsC0CtY8T_VCAoKLNyQl7oQD78qPC-CYo0i0LdA-c1GDtdl53hlXd80H82sKdKFSnu7FI28Zcf03hJcPAA",
+      "valid": false,
+      "error": "invalid_time"
+    },
+    {
+      "verification_time": 1788220800,
+      "id": "user_bad_signature",
+      "kind": "miakapp",
+      "profile": "user",
+      "key_set": "rotated",
+      "token": "eyJhbGciOiJFZERTQSIsImtpZCI6InRlc3QtY3VycmVudC0yMDI2LTA5IiwidHlwIjoiYXQrand0In0.eyJpc3MiOiJodHRwczovL2NvbnRyb2wuZXhhbXBsZS50ZXN0Iiwic3ViIjoic3luX3VzZXJfMSIsImF1ZCI6IndzczovL3JlbGF5LmV4YW1wbGUudGVzdC93cyIsImV4cCI6MTc4ODIyMTEwMCwiaWF0IjoxNzg4MjIwODAwLCJqdGkiOiJHUmtaR1JrWkdSa1pHUmtaR1JrWkdRIiwic2NvcGUiOiJyZWxheTp1c2VyIiwibWlha2FwcF9ob21lIjoic3ludGhldGljLWhvbWUiLCJtaWFrYXBwX3JvbGUiOiJ1c2VyIiwibWlha2FwcF92ZXJpZmllZF9lbWFpbCI6InN5bnRoZXRpYy0xQGV4YW1wbGUudGVzdCJ9.mk3fo9X6OZk0VbFajnjs0Rb_HQw9VOTxx0u5pTW-_bvy8N081lzt-9wPnLkthxEVqJzf2EetWD7qWe3mPTMSDw",
+      "valid": false,
+      "error": "invalid_signature"
     },
     {
       "verification_time": 1788220800,
