@@ -39,6 +39,19 @@ import { observeDeployedWorkload } from '../workload/inventory.mjs';
 const INVOKE_AUTHORIZATION = 'MIAKAPP_STAGING_AUTH_PROBE_INVOKE_AUTHORIZATION';
 const WORKFLOW_RESOURCE = `projects/${PROJECT_ID}/locations/${REGION}/workflows/${WORKFLOW_NAME}`;
 const MAXIMUM_RESULT_BYTES = 64 * 1024;
+const BOUNDED_FAILURE_STAGES = new Set([
+  'initialize',
+  'web_config',
+  'initial_user',
+  'auth_custom_token',
+  'auth_exchange',
+  'app_check_custom_token',
+  'app_check_exchange',
+  'cloud_run_identity',
+  'missing_app_check',
+  'first_authenticated_read',
+  'replay_authenticated_read',
+]);
 process.umask(0o077);
 
 function reject(message) {
@@ -140,7 +153,16 @@ export function validateSuccessfulAuthProbeExecution(value, workflowRevision) {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(executionId)) {
     reject('Auth-probe execution belongs to a foreign Workflow');
   }
-  exact(value.state, 'SUCCEEDED', 'Auth-probe execution state');
+  if (value.state !== 'SUCCEEDED') {
+    const context = plainObject(value.error) && typeof value.error.context === 'string'
+      ? value.error.context
+      : '';
+    const match = /^RuntimeError: "Auth probe failed at bounded stage ([a-z_]+)"(?:\n|$)/u.exec(context);
+    if (match !== null && BOUNDED_FAILURE_STAGES.has(match[1])) {
+      reject(`Auth-probe execution failed at bounded stage ${match[1]}`);
+    }
+    reject('Auth-probe execution state does not match the reviewed value');
+  }
   exact(value.workflowRevisionId, workflowRevision, 'Auth-probe execution revision');
   const started = executionTimestamp(value.startTime, 'Auth-probe execution start');
   const ended = executionTimestamp(value.endTime, 'Auth-probe execution end');
