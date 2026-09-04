@@ -36,7 +36,6 @@ const CREDENTIAL_AND_ENDPOINT_OVERRIDES = Object.freeze([
   'GOOGLE_APPLICATION_CREDENTIALS',
   'google_application_credentials',
   'GOOGLE_CLOUD_QUOTA_PROJECT',
-  'GOOGLE_CLOUD_UNIVERSE_DOMAIN',
   'GOOGLE_SDK_NODE_LOGGING',
   'GRPC_PROXY',
   'HTTP_PROXY',
@@ -151,9 +150,15 @@ export function assertProductionRuntimeEnvironment(
     })) {
     fail();
   }
+  const universeDomain = environment.GOOGLE_CLOUD_UNIVERSE_DOMAIN;
+  if (universeDomain !== undefined
+    && universeDomain.length !== 0
+    && universeDomain !== 'googleapis.com') {
+    fail();
+  }
   const projectIds = [environment.GCLOUD_PROJECT, environment.GOOGLE_CLOUD_PROJECT]
     .filter((value): value is string => value !== undefined && value.length !== 0);
-  if (projectIds.length === 0 || projectIds.some((value) => value !== config.security.projectId)) {
+  if (projectIds.some((value) => value !== config.security.projectId)) {
     fail();
   }
 }

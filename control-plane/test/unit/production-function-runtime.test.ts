@@ -2,8 +2,14 @@ import { describe, expect, test } from 'bun:test';
 import type express from 'express';
 
 import { ProductionConfigurationError } from '../../src/production-config.js';
-import { createProductionFunctionRuntime } from '../../src/production-function-runtime.js';
-import type { ProductionControlPlane } from '../../src/production-runtime.js';
+import {
+  createProductionFunctionRuntime,
+  productionInitializationFailureEvent,
+} from '../../src/production-function-runtime.js';
+import {
+  ProductionInitializationError,
+  type ProductionControlPlane,
+} from '../../src/production-runtime.js';
 import {
   PRODUCTION_RUNTIME_CONFIG_VARIABLE,
   loadProductionRuntimeConfig,
@@ -191,6 +197,36 @@ describe('production Function runtime', () => {
       expect(JSON.stringify(state)).not.toContain('private-project');
       expect(JSON.stringify(state)).not.toContain('private-secret');
     }
+  });
+
+  test('preserves only a classified initialization stage for startup diagnostics', async () => {
+    const sensitiveCause = 'projects/private-project/secrets/private-secret/versions/1';
+    const failure = new ProductionInitializationError('cloud-security');
+    const runtime = createProductionFunctionRuntime('staging', {
+      loadConfig: loadedConfig,
+      async createControlPlane() {
+        throw failure;
+      },
+    });
+
+    const observed = await runtime.initialize().catch((error: unknown) => error);
+    expect(observed).toBe(failure);
+    expect(productionInitializationFailureEvent(observed)).toEqual({
+      event: 'miakapp_control_plane_initialization_failed',
+      stage: 'cloud-security',
+    });
+    expect(productionInitializationFailureEvent(new Error(sensitiveCause))).toEqual({
+      event: 'miakapp_control_plane_initialization_failed',
+      stage: 'function-runtime',
+    });
+    expect(JSON.stringify(productionInitializationFailureEvent(new Error(sensitiveCause))))
+      .not.toContain(sensitiveCause);
+
+    Object.defineProperty(failure, 'stage', { value: sensitiveCause });
+    expect(productionInitializationFailureEvent(failure)).toEqual({
+      event: 'miakapp_control_plane_initialization_failed',
+      stage: 'function-runtime',
+    });
   });
 
   test('rejects a composition result that escapes the loaded environment boundary', async () => {
