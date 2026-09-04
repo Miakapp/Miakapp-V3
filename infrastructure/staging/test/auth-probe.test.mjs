@@ -135,7 +135,7 @@ function resourceValue(address) {
             schema: 'miakapp.staging-firebase-auth/1',
             project_id: PROJECT_ID,
             project_number: PROJECT_NUMBER,
-            config_name: `projects/${PROJECT_ID}/config`,
+            config_name: `projects/${PROJECT_NUMBER}/config`,
             anonymous_sign_in: false,
             email_sign_in: false,
             phone_sign_in: false,
@@ -525,6 +525,14 @@ test('validates exact arm and retirement plans and rejects privilege drift', () 
   assert.throws(
     () => validateAuthProbePlanAgainstPolicy(changedFirebaseAuth, 'arm'),
     /firebase_auth\.email_sign_in/u,
+  );
+  const projectIdConfigName = structuredClone(syntheticPlan('arm'));
+  projectIdConfigName.resource_changes
+    .find(({ address }) => address === 'terraform_data.auth_probe_guard')
+    .change.after.input.firebase_auth.config_name = `projects/${PROJECT_ID}/config`;
+  assert.throws(
+    () => validateAuthProbePlanAgainstPolicy(projectIdConfigName, 'arm'),
+    /firebase_auth\.config_name/u,
   );
   assert.throws(
     () => validateAuthProbePlanAgainstPolicy(syntheticPlan('arm'), 'retire'),
