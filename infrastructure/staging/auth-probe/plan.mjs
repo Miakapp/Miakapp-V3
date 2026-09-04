@@ -120,7 +120,7 @@ async function main() {
       `Plan SHA-256: ${metadata.terraform_plan_sha256}`,
       `Workflow source SHA-256: ${metadata.workflow_source_sha256}`,
       `Authorization: ${authProbeApplyAuthorization(planBytes, repositoryCommit)}`,
-      `Planned delta: ${summary.create} creates, 0 updates, 0 deletes; no execution or public ingress.`,
+      `Planned delta: ${summary.create} creates, ${summary.update} updates, 0 deletes; no execution or public ingress.`,
       '',
     ].join('\n'));
   } finally {
