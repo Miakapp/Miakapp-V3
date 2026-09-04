@@ -17,6 +17,7 @@ import {
 } from './app-check.js';
 import {
   AccessTokenVerificationError,
+  assertSigningKeyPublication,
   verifyComponentAccessToken,
   verifyPushAccessToken,
 } from './access-token.js';
@@ -1037,6 +1038,7 @@ async function routeRequest(
 }
 
 export function createControlPlaneApp(dependencies: ApiDependencies): express.Express {
+  assertSigningKeyPublication(dependencies.config);
   const app = express();
   app.disable('x-powered-by');
   app.use(async (request: RawRequest, response: Response) => {

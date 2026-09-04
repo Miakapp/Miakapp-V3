@@ -319,7 +319,6 @@ writeEvidence();
 writeFileSync(metadataFile, `${JSON.stringify({
   schema: 'miakapp.relay-integration-control/1',
   controlUrl,
-  controlEndpoint: `${controlUrl}/__integration/control`,
   exchangeEndpoint: config.exchangeEndpoint,
   jwksUrl: config.jwksUri,
 })}\n`, { encoding: 'utf8', mode: 0o600 });

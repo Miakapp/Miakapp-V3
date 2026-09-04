@@ -139,23 +139,9 @@ function validatedClockSeconds(clock: AccessTokenVerificationClock): number {
   return Math.floor(milliseconds / 1_000);
 }
 
-function validateConfig(
-  config: AccessTokenVerifierBaseConfig,
-  audience: string,
-  scope: 'push:send' | 'components:publish',
+function validatedSigningKeys(
+  keys: readonly SigningPublicJwk[],
 ): readonly ValidatedEd25519Key[] {
-  const expectedIssuer = ENVIRONMENT_ISSUERS[
-    config.projectId as keyof typeof ENVIRONMENT_ISSUERS
-  ];
-  if (expectedIssuer === undefined
-    || config.issuer !== expectedIssuer
-    || Buffer.byteLength(config.issuer, 'utf8') > 2_048
-    || !GRAPHIC_ASCII.test(config.issuer)
-    || audience !== `${expectedIssuer}${scope === 'push:send' ? '/v1/push' : '/v1/components'}`) {
-    throw new Error('Access-token verification configuration is invalid');
-  }
-
-  const keys = config.signingPublicJwks;
   if (!Array.isArray(keys) || keys.length === 0 || keys.length > MAX_SIGNING_KEYS) {
     throw new Error('Access-token verification public keys are invalid');
   }
@@ -192,6 +178,43 @@ function validateConfig(
     });
   }
   return Object.freeze(validated);
+}
+
+export function assertSigningKeyPublication(config: {
+  readonly signingPublicJwk: SigningPublicJwk;
+  readonly signingPublicJwks: readonly SigningPublicJwk[];
+}): void {
+  validatedSigningKeys(config.signingPublicJwks);
+  const active = config.signingPublicJwk;
+  const keyFields = ['kty', 'crv', 'x', 'use', 'alg', 'kid'] as const;
+  if (active === null
+    || typeof active !== 'object'
+    || Array.isArray(active)
+    || !hasExactKeys(active, keyFields)
+    || config.signingPublicJwks.filter((candidate) => (
+      keyFields.every((field) => candidate[field] === active[field])
+    )).length !== 1) {
+    throw new Error('Access-token signing key publication is invalid');
+  }
+}
+
+function validateConfig(
+  config: AccessTokenVerifierBaseConfig,
+  audience: string,
+  scope: 'push:send' | 'components:publish',
+): readonly ValidatedEd25519Key[] {
+  const expectedIssuer = ENVIRONMENT_ISSUERS[
+    config.projectId as keyof typeof ENVIRONMENT_ISSUERS
+  ];
+  if (expectedIssuer === undefined
+    || config.issuer !== expectedIssuer
+    || Buffer.byteLength(config.issuer, 'utf8') > 2_048
+    || !GRAPHIC_ASCII.test(config.issuer)
+    || audience !== `${expectedIssuer}${scope === 'push:send' ? '/v1/push' : '/v1/components'}`) {
+    throw new Error('Access-token verification configuration is invalid');
+  }
+
+  return validatedSigningKeys(config.signingPublicJwks);
 }
 
 function verifyAccessToken(

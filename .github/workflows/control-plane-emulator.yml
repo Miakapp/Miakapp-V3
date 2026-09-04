@@ -47,3 +47,53 @@ jobs:
           bun-version: 1.2.23
       - name: Run the isolated Firebase Emulator slice
         run: ./check.sh
+
+  relay-integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out the control plane under test
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Check out the pinned relay
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          repository: Miakapp/Miakapp-Server
+          ref: 25efc195dbd913a9e9e486db4cc7de1d836e9058
+          path: .integration/miakapp-server
+      - name: Check out the pinned MiakAPI coordinator SDK
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          repository: Miakapp/MiakAPI
+          ref: 967632ccc57df32a1a31cdbd761c7c3515106c4b
+          path: .integration/miakapi
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.26.6'
+          cache-dependency-path: .integration/miakapp-server/go.sum
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22.22.0
+          package-manager-cache: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: 1.2.23
+      - name: Build the control plane under test
+        working-directory: control-plane
+        run: |
+          bun install --frozen-lockfile
+          bun run build
+      - name: Build the pinned MiakAPI coordinator SDK
+        working-directory: .integration/miakapi
+        run: |
+          bun install --frozen-lockfile
+          bun run build
+      - name: Run the Home Key to relay authentication integration
+        working-directory: .integration/miakapp-server
+        run: >-
+          ./scripts/check-platform-integration.sh
+          "$GITHUB_WORKSPACE"
+          "$GITHUB_WORKSPACE/.integration/miakapi"

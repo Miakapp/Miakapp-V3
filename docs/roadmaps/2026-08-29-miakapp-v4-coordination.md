@@ -216,10 +216,19 @@ their independent conformance suites and a pinned cross-repository gate now
 drives one synthetic owner through Firebase Auth and Firestore, creates a Home
 Key through the real control-plane router, exchanges it through MiakAPI, and
 binds both `HELLO` and scheduled `REAUTH` in the relay's production verifier.
-The observed session stayed in generation 1 with two successful verifier calls
-and no reconnect. An authenticated browser in the same path, the disconnect
-matrix, live JWKS rotation/cache expiry, unknown-`kid` concurrency and refresh
-abuse evidence remain open, so this workstream is not complete.
+The observed session stayed in generation 1 with one principal and no reconnect
+while `REAUTH` changed to a prepublished future signing key. A separate
+fake-clock instance of the same production cache proves one shared refresh for
+32 concurrent future-key tokens, the ten-second random-`kid` abuse bound,
+conditional expiry revalidation, fail-closed outage handling and bounded
+recovery. This gate is pinned by Miakapp-V3 merge
+[`259173c`](https://github.com/Miakapp/Miakapp-V3/commit/259173ca730f0763710b7c99afa163ba26e70bb2)
+and Miakapp-Server merge
+[`25efc19`](https://github.com/Miakapp/Miakapp-Server/commit/25efc195dbd913a9e9e486db4cc7de1d836e9058).
+It exercises initial publication, overlap and activation; retiring-key removal
+is not part of this local runtime. An authenticated browser in the same path,
+the disconnect matrix, live KMS and Firebase certificate behavior, public
+ingress and staging acceptance remain open, so this workstream is not complete.
 
 ### D. Component platform vertical slice
 
@@ -374,15 +383,17 @@ Deliverables:
 6. **local emulator slice complete; staging open** — per-home quotas, fixed-
    window rate/byte limits, redacted audit records, and bounded
    security-operation write/effect costs;
-7. **local deterministic matrix and first relay-auth path complete; broader
-   relay/staging rows open** — emulator-first tests cover rules and Functions,
+7. **local deterministic matrix and relay-auth activation/overlap path complete;
+   broader relay/staging rows open** — emulator-first tests cover Rules and Functions,
    synthetic push, component publication, bounded admission/audit, retry,
    ambiguous outcomes and reconciliation. A pinned cross-repository gate now
-   covers real Home Key exchange, SDK `HELLO` and scheduled `REAUTH`, and the
-   relay's production verifier on one uninterrupted session. Signing-key
-   rotation, cache-expiry recovery, unknown-`kid` concurrency and abuse limits,
-   production service integration, network faults and staging admission evidence
-   remain open.
+   covers real Home Key exchange, SDK `HELLO`, key-changing scheduled `REAUTH`,
+   and the relay's production verifier on one uninterrupted session. Its
+   deterministic cache probe covers concurrent refresh coalescing,
+   cache-expiry recovery, unknown-`kid` abuse limits and an unavailable JWKS.
+   Live managed-service rotation and retiring-key removal, browser participation,
+   the disconnect matrix, network faults and staging admission evidence remain
+   open.
 
 Exit gate: a compromised relay cannot obtain a Home Key or platform credential,
 and a Home Key cannot exercise capabilities outside its declared scopes.
@@ -519,12 +530,14 @@ current consumer.
    cleanup. Its temporary Workflow and IAM bindings are removed, and its
    sanitized evidence is digest-pinned. A pinned local cross-repository gate now
    carries a real emulator-created Home Key through the production-shaped HTTP
-   exchange, MiakAPI `HELLO` and scheduled `REAUTH`, and the relay's production
-   verifier without reconnecting. Ongoing signing-key and secret rotation,
-   cache-expiry/unknown-`kid` integration, browser App Check provider attestation,
-   source/edge admission, monitoring, migration rehearsal and real staging fault
-   evidence remain required before closing relay-integration and staging-only
-   RFC 0004 Section 18 gates.
+   exchange, MiakAPI `HELLO` and key-changing scheduled `REAUTH`, and the relay's
+   production verifier without reconnecting. An isolated instance of that same
+   cache closes the local concurrent-refresh, expiry, unknown-`kid`, outage and
+   recovery matrix. This runtime stops after overlap and activation; retiring-key
+   removal remains untested. Live KMS signing-key and secret rotation, browser
+   App Check provider attestation, source/edge admission, monitoring, migration
+   rehearsal and real staging fault evidence remain required before closing
+   relay-integration and staging-only RFC 0004 Section 18 gates.
 
 ## 9. Evidence that would change this plan
 
