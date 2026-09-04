@@ -23,13 +23,13 @@ const SERVICE_STATES = [
   'api_enabled_no_staging_identity_test',
   'firebase_app_created_provider_not_configured',
   'foundation_created_no_staging_test',
-  'private_deployment_contract_ready_not_deployed',
+  'private_deployment_active_source_verified_uninvoked',
   'private_bucket_created_no_staging_test',
   'signing_key_version_enabled_no_staging_signature',
   'five_initial_versions_enabled_no_staging_access_test',
-  'api_enabled_least_privilege_role_declared_not_applied',
-  'api_enabled_no_deployed_runtime',
-  'api_enabled_no_deployed_runtime',
+  'api_enabled_one_permission_runtime_role_applied_uninvoked',
+  'api_enabled_runtime_deployed_no_live_validation',
+  'api_enabled_runtime_deployed_no_live_validation',
 ];
 
 const ENABLED_SERVICE_APIS = [
@@ -107,8 +107,7 @@ const IAM_BINDINGS = [
 ];
 
 const REQUIRED_BLOCKERS = [
-  'private-production-function-deployment',
-  'fcm-least-privilege-runtime-iam',
+  'private-function-synthetic-invocation',
   'app-check-live-provider-and-replay-policy',
   'relay-token-refresh-integration',
   'trusted-source-and-edge-admission',
@@ -235,7 +234,7 @@ function validateProject(value) {
   }
   exact(
     project.lifecycle,
-    'firebase_enabled_billing_linked_private_workload_authorized_undeployed',
+    'firebase_enabled_billing_linked_private_workload_deployed_uninvoked',
     'project.lifecycle',
   );
   exact(project.creation_authorized, false, 'project.creation_authorized');
@@ -378,8 +377,13 @@ function validateServices(value) {
 function validateRuntime(value) {
   const runtime = record(value, 'runtime', [
     'function_name',
+    'resource_name',
     'generation',
     'region',
+    'deployment_state',
+    'service',
+    'revision',
+    'uri',
     'minimum_instances',
     'maximum_instances',
     'concurrency',
@@ -387,10 +391,27 @@ function validateRuntime(value) {
     'dedicated_service_account',
     'allow_unauthenticated',
     'ingress',
+    'source_archive_sha256',
+    'runtime_config_sha256',
+    'user_managed_keys',
+    'live_request_performed',
   ]);
   exact(runtime.function_name, 'controlPlane', 'runtime.function_name');
+  exact(
+    runtime.resource_name,
+    'projects/miakapp-v4-staging/locations/europe-west9/functions/control-plane',
+    'runtime.resource_name',
+  );
   exact(runtime.generation, 2, 'runtime.generation');
   exact(runtime.region, 'europe-west9', 'runtime.region');
+  exact(runtime.deployment_state, 'ACTIVE', 'runtime.deployment_state');
+  exact(
+    runtime.service,
+    'projects/miakapp-v4-staging/locations/europe-west9/services/control-plane',
+    'runtime.service',
+  );
+  exact(runtime.revision, 'control-plane-00001-kod', 'runtime.revision');
+  exact(runtime.uri, 'https://control-plane-aczhngqraq-od.a.run.app', 'runtime.uri');
   exact(runtime.minimum_instances, 0, 'runtime.minimum_instances');
   exact(runtime.maximum_instances, 1, 'runtime.maximum_instances');
   exact(runtime.concurrency, 16, 'runtime.concurrency');
@@ -402,6 +423,18 @@ function validateRuntime(value) {
   );
   exact(runtime.allow_unauthenticated, false, 'runtime.allow_unauthenticated');
   exact(runtime.ingress, 'ALLOW_INTERNAL_ONLY', 'runtime.ingress');
+  exact(
+    runtime.source_archive_sha256,
+    'd2a9ffae2bd85106f782f9c75a10b6fb398682ead65dada2a1cf8ab5c65b7eb4',
+    'runtime.source_archive_sha256',
+  );
+  exact(
+    runtime.runtime_config_sha256,
+    'b794181400bf5ace6aaa9ffc4be00e4c4f6a59519284baa7f73bca3c042c4ff8',
+    'runtime.runtime_config_sha256',
+  );
+  exact(runtime.user_managed_keys, 0, 'runtime.user_managed_keys');
+  exact(runtime.live_request_performed, false, 'runtime.live_request_performed');
 }
 
 function validateData(value) {
@@ -513,7 +546,7 @@ function validateSecurity(value) {
   ]);
   exact(
     iam.runtime_identity_state,
-    'created_private_deployment_declared',
+    'private_runtime_deployed_zero_user_managed_keys',
     'security.iam.runtime_identity_state',
   );
   exact(
@@ -535,7 +568,7 @@ function validateSecurity(value) {
     exact(binding.resource, resourceName, `security.iam.resource_bindings[${index}].resource`);
     exact(binding.access, access, `security.iam.resource_bindings[${index}].access`);
   });
-  exactArray(iam.unresolved_permissions, ['cloudmessaging.messages.create'], 'security.iam.unresolved_permissions');
+  exactArray(iam.unresolved_permissions, [], 'security.iam.unresolved_permissions');
 }
 
 function validateCost(value) {
@@ -626,18 +659,18 @@ function validateTerraform(value) {
   ]);
   exact(
     terraform.state,
-    'foundation_complete_private_workload_contract_ready',
+    'foundation_and_private_workload_complete',
     'terraform.state',
   );
   exact(
     terraform.supported_workflow,
-    'guarded_private_saved_plan_and_exact_apply',
+    'guarded_private_saved_plan_applied_and_converged',
     'terraform.supported_workflow',
   );
   exact(terraform.configuration_apply_capable, true, 'terraform.configuration_apply_capable');
   exact(
     terraform.active_cloud_workflow,
-    'workload/plan.sh',
+    'none_private_workload_converged',
     'terraform.active_cloud_workflow',
   );
   exact(
@@ -676,7 +709,7 @@ function validateTerraform(value) {
   exact(backend.type, 'gcs', 'terraform.backend.type');
   exact(
     backend.state,
-    'bootstrap_and_complete_foundation_state_present',
+    'bootstrap_foundation_and_workload_state_present',
     'terraform.backend.state',
   );
   exact(backend.bucket, 'miakapp-v4-staging-tfstate-1072737219170', 'terraform.backend.bucket');
@@ -2722,6 +2755,7 @@ function validateEvidence(value) {
     'recovery_workflow_retired',
     'staging_wif_providers_disabled',
     'activation_material',
+    'workload_deployment',
     'retired_recovery_workflow',
     'staging_rows',
     'fault_matrix',
@@ -2815,6 +2849,124 @@ function validateEvidence(value) {
   for (const field of Object.keys(workloads)) {
     exact(workloads[field], 0, `evidence.activation_material.workloads.${field}`);
   }
+  const workload = record(evidence.workload_deployment, 'evidence.workload_deployment', [
+    'state',
+    'observed_at',
+    'inventory_repository_commit',
+    'deployed_repository_commit',
+    'initial_plan_sha256',
+    'initial_plan_result',
+    'recovery_configuration_commit',
+    'recovery_plan_sha256',
+    'recovery_plan_result',
+    'output_reconciliation_plan_sha256',
+    'output_reconciliation_resource_changes',
+    'result_path',
+    'result_sha256',
+    'terraform_state',
+    'source_archive_sha256',
+    'runtime_config_sha256',
+    'function_revision',
+    'ingress',
+    'unauthenticated_invokers',
+    'minimum_instances',
+    'maximum_instances',
+    'user_managed_keys',
+    'copied_source_sha256_verified',
+    'terraform_convergence',
+    'private_bundle_deleted',
+    'raw_plan_committed',
+    'raw_state_committed',
+    'operator_email_committed',
+    'live_request_performed',
+  ]);
+  const expectedWorkload = {
+    state: 'active_internal_only_source_verified_uninvoked',
+    observed_at: '2026-09-04T00:41:16.532Z',
+    inventory_repository_commit: '60bb8f48b885c4fdde2948309d95593657e9d039',
+    deployed_repository_commit: '3f5a94dfcdfc0984487a558d966bbeaa769b18eb',
+    initial_plan_sha256: 'b59167718fdad5edfa440f5d59f6e0eb1dff9277b20e1f829ebbb233296cdf05',
+    initial_plan_result: 'failed_build_missing_conditional_source_read',
+    recovery_configuration_commit: '488da23cd7eb4c08baa9296724b87b7df34a1122',
+    recovery_plan_sha256: '26437631f2d8ea61883762ae854024de5c1142db9182d46e083517af211a192b',
+    output_reconciliation_plan_sha256: 'a31bda9269b138b270d58a6bb992ab7902d1fc73074c0f8f2543bdf0c8f09623',
+    output_reconciliation_resource_changes: 0,
+    result_path: 'workload/result.json',
+    result_sha256: '2143c037de6cb2d8caf9acc9676fa5a54d9bf974793136596aac94de30c93590',
+    source_archive_sha256: 'd2a9ffae2bd85106f782f9c75a10b6fb398682ead65dada2a1cf8ab5c65b7eb4',
+    runtime_config_sha256: 'b794181400bf5ace6aaa9ffc4be00e4c4f6a59519284baa7f73bca3c042c4ff8',
+    function_revision: 'control-plane-00001-kod',
+    ingress: 'ALLOW_INTERNAL_ONLY',
+    unauthenticated_invokers: 0,
+    minimum_instances: 0,
+    maximum_instances: 1,
+    copied_source_sha256_verified: true,
+    terraform_convergence: 'no_changes',
+    private_bundle_deleted: true,
+    raw_plan_committed: false,
+    raw_state_committed: false,
+    operator_email_committed: false,
+    live_request_performed: false,
+  };
+  for (const [field, expected] of Object.entries(expectedWorkload)) {
+    exact(workload[field], expected, `evidence.workload_deployment.${field}`);
+  }
+  const workloadKeys = record(
+    workload.user_managed_keys,
+    'evidence.workload_deployment.user_managed_keys',
+    ['runtime', 'build', 'probe'],
+  );
+  for (const field of ['runtime', 'build', 'probe']) {
+    exact(workloadKeys[field], 0, `evidence.workload_deployment.user_managed_keys.${field}`);
+  }
+  const recoveryPlanResult = record(
+    workload.recovery_plan_result,
+    'evidence.workload_deployment.recovery_plan_result',
+    ['create', 'update', 'delete', 'function_replaced'],
+  );
+  exact(recoveryPlanResult.create, 2, 'evidence.workload_deployment.recovery_plan_result.create');
+  exact(recoveryPlanResult.update, 1, 'evidence.workload_deployment.recovery_plan_result.update');
+  exact(recoveryPlanResult.delete, 0, 'evidence.workload_deployment.recovery_plan_result.delete');
+  exact(
+    recoveryPlanResult.function_replaced,
+    false,
+    'evidence.workload_deployment.recovery_plan_result.function_replaced',
+  );
+  const workloadState = record(
+    workload.terraform_state,
+    'evidence.workload_deployment.terraform_state',
+    [
+      'object',
+      'generation',
+      'sha256',
+      'size_bytes',
+      'terraform_version',
+      'serial',
+      'lineage_sha256',
+      'managed_resources',
+      'data_resources',
+      'outputs',
+      'tainted_resources',
+      'raw_contents_committed',
+    ],
+  );
+  const expectedWorkloadState = {
+    object: 'terraform/workload/default.tfstate',
+    generation: '1788481082158679',
+    sha256: '32601affcf794a097b0e6f9dbddddd2e800166278f630e624f6c8048fda60385',
+    size_bytes: 49241,
+    terraform_version: '1.11.3',
+    serial: 8,
+    lineage_sha256: 'aecd871c255da2bb3d30e7a7cc7b76be229e1eccc1fce2c4e41fed5a4a4b4b3a',
+    managed_resources: 15,
+    data_resources: 3,
+    outputs: 1,
+    tainted_resources: 0,
+    raw_contents_committed: false,
+  };
+  for (const [field, expected] of Object.entries(expectedWorkloadState)) {
+    exact(workloadState[field], expected, `evidence.workload_deployment.terraform_state.${field}`);
+  }
   const retiredRecoveryWorkflow = record(
     evidence.retired_recovery_workflow,
     'evidence.retired_recovery_workflow',
@@ -2883,10 +3035,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 34, 'manifest.revision');
+  exact(manifest.revision, 35, 'manifest.revision');
   exact(
     manifest.status,
-    'private_workload_contract_ready_undeployed',
+    'private_workload_deployed_uninvoked',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -2941,7 +3093,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; the private workload contract is ready and the application workload remains undeployed.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; the private workload is active, internal-only, source-verified and uninvoked.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';

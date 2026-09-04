@@ -1,8 +1,8 @@
 # Miakapp 4 staging teardown rehearsal
 
-Status: non-executable rehearsal; bootstrap, complete foundation and initial
-activation material exist, protected recovery evidence remains private, and
-one-shot recovery automation and its WIF exchange are retired
+Status: non-executable rehearsal; bootstrap, complete foundation, activation
+material and an uninvoked private workload exist, protected recovery evidence
+remains private, and one-shot recovery automation and its WIF exchange are retired
 
 This runbook applies to the existing `miakapp-v4-staging` project. It must never
 be run against `miakapp-3`, `miakapp-v4`, or a `demo-*` project. A future
@@ -24,15 +24,25 @@ app and added one enabled 32-byte version to each of the five secret containers.
 Its committed non-secret result and runtime document have respective SHA-256
 digests `290c7cedb500d9f6844b49a45737ed920b3fe2e6ada6ed95b754a795768ccbdf`
 and `b794181400bf5ace6aaa9ffc4be00e4c4f6a59519284baa7f73bca3c042c4ff8`.
-Independent inventory still found no App Engine application, Function, Cloud
-Run service, public ingress or minimum instance. The private derivation seed was
-deleted after success. Deleting the whole project would permanently retire its
-globally unique ID; adding Firebase cannot otherwise be fully undone. Retaining
-this undeployed project, with the billing link removable during an authorized
-teardown, is therefore the default.
+Independent inventory at that activation boundary found no App Engine
+application, Function, Cloud Run service, public ingress or minimum instance.
+The private derivation seed was deleted after success.
 
-The repository contains separate bootstrap and foundation roots, a private
-versioned GCS backend, keyless plan/apply identities and a retained historical
+The later workload apply preserved a 13-resource partial state after its first
+Function build failed on access to Google's copied source; the Function was
+tainted and the private invoker absent. A bounded recovery added only the
+conditional source reader and private probe invoker, then updated the Function
+in place. Current revision `control-plane-00001-kod` is active with
+internal-only ingress, no unauthenticated invoker, no minimum instance, zero
+user-managed keys across its runtime/build/probe identities and no live request.
+Independent inventory matched the copied source bytes. Deleting the whole
+project would permanently retire its globally unique ID; adding Firebase cannot
+otherwise be fully undone. Retaining this private scale-to-zero project, with
+the billing link removable during an authorized teardown, is therefore the
+default.
+
+The repository contains separate bootstrap, foundation and workload roots, a
+private versioned GCS backend, keyless plan/apply identities and a retained historical
 workflow blueprint. Terraform completed the final
 27-create/nine-no-op plan, but
 the wrapper rejected the complete state before migration because its output
@@ -68,6 +78,13 @@ WIF providers are disabled while the pool remains enabled and retained. Object
 Versioning retains recovery generations. Local `.terraform/`
 provider caches are disposable and are not cloud inventory.
 
+Current workload state generation `1788481082158679` is 49,241 bytes at serial
+8 with fifteen managed resources, three data resources, one output and no
+tainted resource. Its SHA-256 is
+`32601affcf794a097b0e6f9dbddddd2e800166278f630e624f6c8048fda60385`.
+The completed private plan bundle was permanently deleted; raw plan and state
+bytes were never committed.
+
 The planner/deployer service accounts and IAM roles remain. Closing the reviewed
 GitHub OIDC route does not disprove impersonation by another administrator, so
 teardown must still inventory and revoke every such authority explicitly.
@@ -99,8 +116,9 @@ cannot be deleted; and billing can report late usage.
   Firebase app registrations and App Check providers, Functions and Cloud Run
   revisions, Eventarc triggers, Firestore databases, buckets and objects,
   Artifact Registry images, secrets, KMS versions, budgets and billing exports.
-- Capture the bootstrap and foundation state generations, lock status, Object
-  Versioning/soft-delete policy and bucket IAM once the backend exists. Never
+- Capture the bootstrap, foundation and workload state generations, lock
+  status, Object Versioning/soft-delete policy and bucket IAM once the backend
+  exists. Never
   treat an absent local state file as an empty cloud environment.
 - Close public ingress and stop test clients before removing stateful resources.
 
@@ -126,11 +144,11 @@ cannot be deleted; and billing can report late usage.
    non-deletable key ring as a permanent residual resource.
 8. Remove runtime IAM, including the planner Service Usage Consumer member, the
    conditional state/plan bucket grants and WIF impersonation grants. Delete the
-   runtime, planner and deployer service accounts and WIF pool only after
-   confirming no resource still depends on them.
-9. Capture the final bootstrap/foundation state generations and independently
-   reconcile the cloud inventory. Securely retain the minimum teardown evidence;
-   never publish a state or saved plan.
+   runtime, build, probe, planner and deployer service accounts and WIF pool only
+   after confirming no resource still depends on them.
+9. Capture the final bootstrap/foundation/workload state generations and
+   independently reconcile the cloud inventory. Securely retain the minimum
+   teardown evidence; never publish a state or saved plan.
 10. In a separate reviewed manual step, remove every plan and state generation,
    account for the seven-day soft-delete window, and delete the state bucket.
    This self-removal cannot be proven only from the state it destroys.

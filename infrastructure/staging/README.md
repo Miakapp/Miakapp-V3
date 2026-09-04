@@ -1,18 +1,20 @@
 # Miakapp 4 staging private workload boundary
 
-Status: private workload contract ready and authorized; application workload undeployed
+Status: private workload active, internal-only, source-verified, and uninvoked
 
 This directory contains the closed description and observed state of
 `miakapp-v4-staging`. The bounded foundation recovery has completed; its active
 workflow and reviewed GitHub OIDC exchange are retired. The separate private
-workload plan/apply contract is now authorized. This revision does not authorize
-public ingress, live requests, destroy, or production changes.
+workload was applied, recovered from its first build failure, and converged.
+This revision does not authorize public ingress, live requests, destroy, or
+production changes.
 
 ## Current truth
 
-Project `miakapp-v4-staging` (`1072737219170`) remains application-undeployed:
-there is no App Engine application, Function, Cloud Run service, public ingress,
-or minimum instance. The bootstrap is complete. Protected foundation applies
+Project `miakapp-v4-staging` (`1072737219170`) now has one active Gen 2 Function
+backed by one Cloud Run service. It still has no App Engine application, public
+ingress, unauthenticated invoker, minimum instance, or live request. The
+bootstrap is complete. Protected foundation applies
 on 2026-09-03 created all thirteen declared APIs, the deletion-protected Paris
 Firestore database and three active TTL fields, one software Ed25519 signing
 key, and five Secret Manager containers. The eight KMS, Secret Manager and
@@ -29,6 +31,33 @@ committed non-secret result has SHA-256
 `290c7cedb500d9f6844b49a45737ed920b3fe2e6ada6ed95b754a795768ccbdf`;
 its production runtime document has SHA-256
 `b794181400bf5ace6aaa9ffc4be00e4c4f6a59519284baa7f73bca3c042c4ff8`.
+
+The deterministic workload package from commit
+`3f5a94dfcdfc0984487a558d966bbeaa769b18eb` has source SHA-256
+`d2a9ffae2bd85106f782f9c75a10b6fb398682ead65dada2a1cf8ab5c65b7eb4`.
+Its first 14-create plan stopped during the Function build because the custom
+build identity could not read Google's regional source copy. Terraform preserved
+a 13-resource partial state with the Function tainted and no private invoker.
+Recovery configuration commit
+`488da23cd7eb4c08baa9296724b87b7df34a1122` added only a conditional object-read
+grant for that Google-managed bucket. The exact recovery plan created that grant
+and the private probe invoker, updated the Function in place, and deleted
+nothing. A separate output-only reconciliation plan changed no resource, and a
+fresh full plan then reported no changes.
+
+Independent inventory from commit
+`60bb8f48b885c4fdde2948309d95593657e9d039` observed Function revision
+`control-plane-00001-kod` as `ACTIVE`, with internal-only ingress,
+`minInstances=0`, `maxInstances=1`, no unauthenticated invoker and no
+user-managed key on the runtime, build or probe account. It streamed Google's
+immutable copied source
+generation and matched the deterministic archive byte-for-byte. The committed
+non-secret [`workload/result.json`](workload/result.json) has SHA-256
+`2143c037de6cb2d8caf9acc9676fa5a54d9bf974793136596aac94de30c93590`.
+Current workload state generation `1788481082158679` is 49,241 bytes at serial
+8 with fifteen managed resources, three data resources, one output and no
+tainted resource. Raw plan and state bytes remain private; the completed private
+bundle was permanently deleted.
 
 The earlier authorized bootstrap apply completed:
 
@@ -120,7 +149,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`bootstrap/`](bootstrap/) | Billing link, budget, both buckets, runtime/project IAM, Workload Identity Federation, and separate CI service accounts | Complete; both recovery providers disabled, 37-resource serial-42 state reconciled, zero plan verified |
 | [`terraform/`](terraform/) | APIs, Firestore, KMS, Secret Manager containers, and resource-scoped runtime IAM | Complete; 33-resource state independently converged; versions are managed outside Terraform |
 | [`activation/`](activation/) | One Firebase Web app, five initial secret versions, and the closed non-secret runtime document | Applied once and idempotently revalidated; result evidence committed without secret payloads |
-| [`workload/`](workload/) | Deterministic production package, private Gen 2 Function, dedicated build/probe identities, and one-permission FCM role | Guarded 15-create saved-plan/apply boundary; authorized but not yet applied |
+| [`workload/`](workload/) | Deterministic production package, private Gen 2 Function, dedicated build/probe identities, and one-permission FCM role | Applied and converged; active internal-only revision independently source-verified without making a request |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
 | [`TEARDOWN.md`](TEARDOWN.md) | Manual recovery and teardown rehearsal | Documentation only |
@@ -131,7 +160,7 @@ The foundation fixes every regional resource to Paris. The workload contract
 keeps the Function at `minInstances=0` and `maxInstances=1` with internal-only
 ingress and includes no load
 balancer, Cloud Armor policy, VPC connector, Cloud NAT, Analytics property, or
-deployed compute. The component bucket is private, has Public Access Prevention
+always-on compute. The component bucket is private, has Public Access Prevention
 and no CORS origin. No secret payload, private derivation seed or
 service-account key is represented in Git, logs or Terraform state.
 
@@ -165,11 +194,14 @@ staging confirmation.
 
 Repository validation itself costs nothing. Planning adds only bounded API
 reads, temporary locks, and short-lived private saved-plan objects. The state
-bucket currently stores the 61,864-byte bootstrap state, the 53,619-byte complete
-foundation state, and recovery generations. The live Firestore database is the
+bucket currently stores the 61,864-byte bootstrap state, the 53,619-byte
+complete foundation state, the 49,241-byte workload state, and recovery
+generations. The live Firestore database is the
 project's free-tier database; the five secret containers now each have one
 enabled version. Secret Manager versions, the software KMS key version, Storage
-operations and retained object versions remain usage-metered. Budget alerts at
+and Artifact Registry bytes, build operations, and retained object versions
+remain usage-metered. The deployed Function remains scale-to-zero and the
+inventory made no request. Budget alerts at
 EUR 2, EUR 5, and EUR 10 are alarms rather than hard caps.
 
 ## Remote-state bootstrap boundary
@@ -347,20 +379,21 @@ No persistent credential or repository secret is used.
 ## Next staging gate
 
 The bootstrap, foundation, initial activation material and private deployment
-contract are complete. The deterministic package contains only the production
-module graph, and the separate `terraform/workload` state may create exactly 15
-reviewed resources with zero update or delete. It binds the committed runtime
-document, grants only `cloudmessaging.messages.create`, keeps
-`minInstances=0`/`maxInstances=1`, permits only a keyless probe identity, and
-uses internal-only ingress.
+are complete. The deterministic package contains only the production module
+graph. The separate `terraform/workload` state owns exactly fifteen reviewed
+resources, binds the committed runtime document, grants only
+`cloudmessaging.messages.create`, keeps `minInstances=0`/`maxInstances=1`,
+permits only a keyless probe identity, and uses internal-only ingress.
 
-The next gate is applying that exact private saved plan and independently
-inventorying the Function, Cloud Run service, identities, IAM, source bucket and
-artifact repository. No Function request is part of the apply. Only after that
-inventory succeeds may bounded synthetic staging validation begin; choosing any
-reachable invocation path remains a separate later decision.
+The next gate is a single bounded synthetic invocation from an explicitly
+reviewed Google-hosted path that can satisfy internal ingress. It must use the
+dedicated probe identity, preserve the absence of public ingress and persistent
+credentials, perform no load test, and capture both the expected authentication
+result and its cost-relevant operations. App Check live-provider and replay
+policy must be resolved as part of that reachable private path rather than
+bypassed.
 
-Function deployment, exact FCM least privilege, App Check live-provider and
-replay policy, relay token-refresh integration, trusted-source/edge admission,
-monitoring and billing-alert validation, secret and signing-key rotation,
-migration rehearsal, and every `STAGE-*` observation remain open blockers.
+That private synthetic invocation, App Check live-provider and replay policy,
+relay token-refresh integration, trusted-source/edge admission, monitoring and
+billing-alert validation, secret and signing-key rotation, migration rehearsal,
+and every `STAGE-*` observation remain open blockers.

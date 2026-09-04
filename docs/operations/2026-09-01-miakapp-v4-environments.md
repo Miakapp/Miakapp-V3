@@ -4,7 +4,8 @@ Date: 2026-09-01
 
 Status: accepted direction; staging bootstrap and foundation complete, exact
 keyless recovery workflow and WIF exchange retired on 2026-09-03, private
-workload deployment contract ready, and project application-undeployed
+workload active and converged with internal-only ingress, source verified, and
+no live request performed
 
 ## Decision
 
@@ -23,7 +24,7 @@ are:
 | Environment | Project ID | Data | Purpose |
 |---|---|---|---|
 | Local | `demo-miakapp-v4` | synthetic only | Hermetic Emulator Suite and CI |
-| Staging | `miakapp-v4-staging` | synthetic only | Existing billing-linked, undeployed project for real-service acceptance, load calibration and migration rehearsal |
+| Staging | `miakapp-v4-staging` | synthetic only | Existing billing-linked project with an uninvoked, scale-to-zero private Function for real-service acceptance and migration rehearsal |
 | Production | `miakapp-v4` | migrated production data | Canary, then final Miakapp 4 service |
 | Legacy production | `miakapp-3` | existing production data | Unchanged service and rollback oracle during migration |
 
@@ -77,11 +78,12 @@ Local control-plane tests and credential-free validation add no Firebase usage.
 A live plan adds bounded API reads, a temporary lock, and a small private object.
 The staging project now has the approved billing link, alert budget, bootstrap
 resources, thirteen foundation APIs, a deletion-protected Firestore database
-with active TTL fields, one software KMS signing-key version and five empty
-Secret Manager containers. No registered Firebase app, App Engine application,
-Function, Cloud Run service, secret version, public ingress, or deployed
-workload exists. Firebase also reserved a Hosting site namespace, but no
-application was deployed to it.
+with active TTL fields, one software KMS signing-key version, one Firebase Web
+app and five Secret Manager containers with one enabled version each. One Gen 2
+Function and its backing Cloud Run service are active with internal-only
+ingress, no unauthenticated invoker, no minimum instance and no live request.
+No App Engine application or public ingress exists. Firebase also reserved a
+Hosting site namespace, but no application was deployed to it.
 
 For a low-volume staging project, the intended initial posture is:
 
@@ -97,6 +99,11 @@ For a low-volume staging project, the intended initial posture is:
   approximately EUR 2, EUR 5 and EUR 10; and
 - no silently enabled fixed-price edge product. The ingress design and its full
   load-balancer/edge-policy baseline must be priced and accepted explicitly.
+
+The current Function deployment and recovery incurred two bounded build
+attempts, source and Artifact Registry storage, and a 49,241-byte workload
+state. Exact artifact bytes are not yet recorded. The Function remains
+scale-to-zero and uninvoked, so there is no recurring minimum-instance charge.
 
 The private Terraform bucket stores small state objects and short-lived saved
 plans. Object Versioning and
@@ -293,11 +300,20 @@ inventory found no workload or ingress, and the private seed was deleted. The
 committed non-secret result and runtime document are digest-pinned in
 [`../../infrastructure/staging/activation/`](../../infrastructure/staging/activation/).
 
-The private workload contract now packages only the production module graph and
-permits a scale-to-zero, internal-only Function plus a one-permission FCM role.
-Its deployment, independent inventory, quotas, alerts, rotation and teardown
-evidence remain blockers. Workload deployment and public ingress remain absent.
-Passing the manifest check is evidence, not additional authorization.
+The private workload packages only the production module graph and deploys a
+scale-to-zero, internal-only Function plus a one-permission FCM role. Its first
+build stopped because the custom build identity lacked access to Google's copied
+source object. A bounded recovery added an object-prefix-conditioned reader,
+created the private probe invoker, updated the Function in place and deleted
+nothing. An output-only reconciliation and a fresh full plan both changed no
+resource. Independent inventory verified the active revision, exact copied
+source bytes, private IAM, all three workload identities with zero user-managed
+keys, and no request. The sanitized result is digest-pinned under
+[`../../infrastructure/staging/workload/`](../../infrastructure/staging/workload/).
+
+Private synthetic invocation, App Check live-provider/replay policy, quotas,
+alerts, rotation and teardown evidence remain blockers. Public ingress remains
+absent. Passing the manifest check is evidence, not additional authorization.
 
 Create or attach `miakapp-v4` only after the staging migration rehearsal produces:
 
