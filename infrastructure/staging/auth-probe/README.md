@@ -64,6 +64,11 @@ MIAKAPP_STAGING_AUTH_PROBE_PLAN_CONFIRMATION=miakapp-v4-staging \
 
 The planning command prints the private bundle path and the exact apply authorization derived from the binary plan digest and reviewed commit. Use that exact value:
 
+When re-arming after the bounded diagnostic source update, the validator also
+accepts one state-only `terraform_data` guard transition from the pinned prior
+Workflow source hash to the current hash. It still rejects every Google
+resource update.
+
 ```bash
 MIAKAPP_STAGING_AUTH_PROBE_APPLY_AUTHORIZATION='arm-auth-app-check-probe:...' \
   ./infrastructure/staging/auth-probe/apply.sh '/private/bundle'
