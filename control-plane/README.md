@@ -74,18 +74,20 @@ building this package and the pinned MiakAPI checkout:
 ./scripts/check-miakapi-integration.sh /absolute/path/to/MiakAPI
 ```
 
-That gate starts only the Auth and Firestore emulators, wraps this exact Express
-application in an ephemeral loopback HTTPS listener, creates one synthetic owner,
-home and Home Key through the real routes, and removes its temporary certificate
-and Home Key file on exit. The fixture moves the canonical synthetic signing keys
-through initial publication, prepublication and activation. One fake-clock probe
-cache deterministically exercises concurrent unknown-key refresh, the ten-second
-abuse bound, expiry, conditional `304`, failed revalidation and recovery. A
-separate real-time cache remains attached to the relay socket while the SDK
-performs `initial` and scheduled `reauth` exchanges through the real route. Both
-caches run the production verifier. Build-tagged constructors and authenticated
-control endpoints exist only in the loopback fixture and are absent from normal
-relay builds.
+The first command starts only the Auth and Firestore emulators, wraps this exact
+Express application in an ephemeral loopback HTTPS listener, and creates one
+synthetic owner, Home, Home Key, unenrolled browser user and signed synthetic App
+Check source. It runs one coordinator and real Chromium across two real relay
+processes. The fixture moves the canonical synthetic signing keys through initial
+publication, prepublication and activation, then changes the authoritative Home
+route during browser renewal. One fake-clock probe cache deterministically
+exercises concurrent unknown-key refresh, the ten-second abuse bound, expiry,
+conditional `304`, failed revalidation and recovery. Real-time caches remain
+attached while the SDKs perform `initial` and scheduled `reauth` exchanges through
+the real routes. Build-tagged constructors and authenticated control endpoints
+exist only in the loopback fixture and are absent from normal relay builds. Every
+temporary certificate, source credential, control secret and Home Key file is
+removed on exit.
 
 The second command is the independent browser/relay gate. It serves the public
 `miakapi/browser` fixture from ephemeral loopback TLS and exercises snapshot,
@@ -137,18 +139,21 @@ profiles, uniform/repeated revocation, post-revocation exchange denial,
 transaction-linearized signing during revoke and relay-change races, malformed
 registry state, CORS, cookie rejection, and deny-by-default client Rules.
 
-The separate cross-repository gate proves the exact coordinator path through the
-real Auth and Firestore emulators, control-plane request router, Home Key token
-provider, SDK `HELLO` and scheduled `REAUTH`, relay JWKS fetch, production token
-verifier and binding checks. It holds the physical JWKS response while 32
-future-key verification calls overlap, proving that they share one fetch, and
-separately proves bounded random-`kid` refresh, cache-expiry `304`, fail-closed
-`503` handling and one-second recovery. The SDK observes one ready generation,
-exactly two successful coordinator verifications, a changed signing key and no
-reconnect or principal change. Atomic mode-0600 evidence contains only the key
-phase and bounded request/status counters; it contains no token, Home Key or
-decoded claim. This synthetic local result does not exercise Cloud KMS key
-version orchestration, Google's live Firebase certificates or public ingress.
+The separate cross-repository gate proves the exact coordinator and browser paths
+through the real Auth and Firestore emulators, control-plane request router, Home
+Key and browser credential providers, SDK `HELLO` and scheduled `REAUTH`, relay
+JWKS fetch, production token verifier and binding checks. It holds the physical
+JWKS response while 32 future-key verification calls overlap, proving that they
+share one fetch, and separately proves bounded random-`kid` refresh, cache-expiry
+`304`, fail-closed `503` handling and one-second recovery. The coordinator stays
+on one ready generation through key rotation. The browser completes state and
+calls on the first relay, then carries the one already-issued route-changing
+credential to the second relay without another exchange or overlapping sockets.
+Atomic mode-0600 evidence contains only key phase, bounded request/status
+counters and closed browser semantics; it contains no token, source credential,
+Home Key, raw principal or decoded claim. This synthetic local result does not
+exercise Cloud KMS key-version orchestration, Google's live Firebase services or
+public ingress.
 
 For component publication, the corpus proves owner and attenuated-token
 authorization without verifier fallback, direct-Home-Key and cross-resource

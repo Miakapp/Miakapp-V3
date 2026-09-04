@@ -344,10 +344,13 @@ The pinned local relay-authentication path now includes signing-key overlap,
 key-changing `REAUTH`, concurrent cache refresh, expiry, unknown-`kid` abuse,
 JWKS outage and bounded recovery. A separate pinned local gate now exercises the
 public browser client in real Chromium through snapshot, patch, call/result and
-completed post-lease reauthentication on one WebSocket. The audience-bound user
-credential, complete disconnect matrix, live KMS and Firebase certificate
-behavior, staging quotas and alerts, managed retiring-key removal and teardown
-evidence remain blockers. Public ingress remains absent.
+completed post-lease reauthentication on one WebSocket. The complete
+audience-bound local gate additionally carries Auth-emulator and signed synthetic
+App Check sources through the real exchange, verifies the exact user token at the
+relay, and performs a no-overlap authoritative handoff across two relays. The
+complete disconnect matrix, live KMS and Firebase behavior, staging quotas and
+alerts, managed retiring-key removal and teardown evidence remain blockers.
+Public ingress remains absent.
 
 Passing the manifest check is evidence, not additional authorization.
 

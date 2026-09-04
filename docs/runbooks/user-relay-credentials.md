@@ -2,8 +2,8 @@
 
 Date: 2026-09-04
 
-Status: contract and local control-plane implementation; dependent runtime and
-staging evidence pending
+Status: local audience-bound control-plane, SDK and relay evidence complete;
+staging acceptance pending
 
 ## Purpose and safety boundary
 
@@ -40,6 +40,21 @@ immutable version. Do not enable the browser path while a relay still expects a
 Firebase role-1 token, or enable the new relay verifier while the browser can
 still send Firebase source tokens to WebSocket.
 
+The local implementation dependency chain is now immutable:
+
+- Miakapp V3 contract and control plane:
+  [`cc3bcd7`](https://github.com/Miakapp/Miakapp-V3/commit/cc3bcd70fdb4b058f990ca2607693a2043faebaf);
+- Miakapp V3 two-relay fixture prerequisite:
+  [`f9509c4`](https://github.com/Miakapp/Miakapp-V3/commit/f9509c41ef1c0389623d31419372e6430a2313d9);
+- MiakAPI credential acquisition and serialized relay replacement:
+  [`a798a74`](https://github.com/Miakapp/MiakAPI/commit/a798a746847ba3d5c16128a08b33353269e770a4);
+- Miakapp-Server audience-bound verifier and full platform fixture:
+  [`9a7e33d`](https://github.com/Miakapp/Miakapp-Server/commit/9a7e33de3a684b6cd9e82231db7c9af8bf41a0a1).
+
+The reciprocal V3 workflow checks out the last two commits exactly and verifies
+that the relay pins the `cc3bcd7` Go contract pseudo-version. Changing any pin is
+a new evidence event and requires this complete gate again.
+
 ## Local validation
 
 From clean checkouts with the pinned toolchains, run:
@@ -63,12 +78,13 @@ go vet ./...
 go test -race ./...
 ./scripts/check-control-plane-integration.sh /absolute/path/to/Miakapp-V3
 ./scripts/check-platform-integration.sh /absolute/path/to/Miakapp-V3 /absolute/path/to/MiakAPI
+./scripts/check-miakapi-integration.sh /absolute/path/to/MiakAPI
 ```
 
-Finally build the exact MiakAPI browser fixture and run the relay-owned
-cross-repository integration as documented in
+The first relay-owned browser gate above is the complete audience-bound path;
+the second is a deliberately narrower transport regression documented in
 [`../operations/2026-09-04-browser-relay-integration.md`](../operations/2026-09-04-browser-relay-integration.md).
-The replacement evidence must additionally prove:
+The complete evidence must prove:
 
 - Firebase-shaped and App Check source tokens reach only the HTTPS fixture;
 - only a valid `relay:user` Miakapp token enters `HELLO` and `REAUTH`;
@@ -77,6 +93,17 @@ The replacement evidence must additionally prove:
 - a relay routing change opens one replacement socket without sending the new
   token to the old relay or performing a duplicate exchange; and
 - no source or relay token appears in the semantic evidence artifact.
+
+The pinned complete gate creates one Auth-emulator user, a signed synthetic App
+Check token, one Home and two real relay instances. It performs `initial` and
+same-relay `reauth`, changes the authoritative Home route, then performs a
+single-credential handoff to the second relay. Chromium observes state `21`
+before and `24` after the handoff, completes three calls, opens two WebSockets in
+sequence, and never has more than one active WebSocket. Both relays verify one
+coordinator and one user identity, the source-credential presence flag remains
+false, and exactly three user-exchange posts cover `initial`, `reauth` and the
+route-changing `reauth`. The gate also retains the prior signing-key rotation,
+32-way JWKS refresh coalescing, outage and bounded-recovery evidence.
 
 The Firebase Emulator Suite has no App Check emulator. Its signed synthetic App
 Check seam proves request binding and failure behavior, not live attestation.
@@ -96,14 +123,16 @@ the rendered plan and require all of the following:
   and
 - zero deletes or replacements of identity-bearing resources.
 
-The expected infrastructure delta is zero. Runtime usage adds, per successful
-credential exchange, Firebase Auth/App Check verification, one admission/audit
-transaction, one private Home read and one KMS signature. At a five-minute lease
-this is at most twelve successful renewals per continuously active browser hour,
-before reconnects, and remains guarded by 32 exchanges/UID/minute and 128/source/
-minute plus global ceilings. Do not run a stress test. Compare the plan and
-measured staging operations against the authorized monthly cost envelope before
-apply.
+The expected infrastructure delta for the control-plane source update is zero.
+Runtime usage adds, per successful credential exchange, Firebase Auth/App Check
+verification, one admission/audit transaction, one private Home read and one KMS
+signature. With the default five-minute lease and renewal 30 seconds before
+expiry, steady state is 13⅓ renewals per continuously active browser hour;
+budget conservatively for at most 14 renewals in any rolling hour, plus the
+initial exchange when a session starts and any bounded reconnects. Admission
+remains guarded by 32 exchanges/UID/minute and 128/source/minute plus global
+ceilings. Do not run a stress test. Compare the plan and measured staging
+operations against the authorized monthly cost envelope before apply.
 
 Use only the current digest-bound wrappers under
 [`../../infrastructure/staging/workload/`](../../infrastructure/staging/workload/).
@@ -112,12 +141,30 @@ evidence, not replay instructions. Generate the exact authorization from the
 fresh reviewed plan, apply once, then require a zero-change plan and independent
 source/revision inventory.
 
+The current staging inventory contains neither a browser runner nor two relay
+endpoints. Before the browser case below, prepare and review a separate topology,
+cost and rollback plan that provides:
+
+- two canonical TLS relay endpoints running the pinned merged Miakapp-Server;
+- one bounded, unscheduled runner using the pinned browser artifact;
+- private reachability, with no public ingress or unauthenticated invoker unless
+  a separate edge-authentication design is explicitly approved;
+- zero minimum instances or otherwise ephemeral execution, hard scaling and
+  invocation ceilings, and an estimated incremental cost below the authorized
+  monthly envelope; and
+- deterministic teardown plus retained revision and semantic evidence.
+
+Any relay or runner is a non-zero infrastructure delta and MUST NOT be hidden in
+the control-plane Function update plan. Stop before the browser case if the
+required private topology cannot be demonstrated without weakening an ingress or
+identity boundary.
+
 ## Staging acceptance
 
 Keep the control plane private while testing the HTTP exchange through a bounded,
 unscheduled internal probe. Use one synthetic Firebase user, one real staging
 App Check token and one synthetic Home. Delete the user and retire temporary
-probe capability after the run. The closed matrix is:
+probe capability after the run. The zero-delta control-plane phase covers:
 
 1. no App Check token: `401 invalid_app_check_token`, no Home read or signing;
 2. invalid Firebase token: `401 invalid_firebase_token`, no Home read or signing;
@@ -127,7 +174,11 @@ probe capability after the run. The closed matrix is:
    expiry and forbidden-claim absence from the published JWKS;
 6. rotate the synthetic Home's selected relay and prove the next credential
    changes both audience and returned URL while the prior token remains bounded
-   to its old audience; and
+   to its old audience.
+
+Only after the separate relay/runner topology plan passes its cost, identity and
+rollback review, complete the staging browser phase:
+
 7. exercise one initial browser session, same-relay reauthentication and
    relay-change handoff through the merged MiakAPI and Miakapp-Server revisions.
 
