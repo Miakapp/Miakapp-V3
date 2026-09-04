@@ -15,6 +15,8 @@ const REQUIRED_FILES = Object.freeze([
   'plan.mjs',
   'plan.sh',
   'providers.tf',
+  'recover.mjs',
+  'recover.sh',
   'terraform-cli.tfrc',
   'validate-plan.mjs',
   'versions.tf',
@@ -56,7 +58,7 @@ export function validateProbeRoot(rootUrl) {
     || JSON.stringify(tests.map(({ name }) => name).sort()) !== JSON.stringify([...TEST_FILES].sort())) {
     throw new Error('Private-probe tests must contain only the reviewed inventory');
   }
-  for (const executable of ['apply.sh', 'invoke.sh', 'plan.sh']) {
+  for (const executable of ['apply.sh', 'invoke.sh', 'plan.sh', 'recover.sh']) {
     if ((lstatSync(new URL(executable, rootUrl)).mode & 0o111) === 0) {
       throw new Error(`${executable} must be executable`);
     }

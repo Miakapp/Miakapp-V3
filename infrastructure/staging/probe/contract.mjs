@@ -47,8 +47,9 @@ export const PROBE_ACCOUNT = `miakapp-staging-probe@${PROJECT_ID}.iam.gserviceac
 export const FUNCTION_NAME = 'control-plane';
 export const FUNCTION_URI = 'https://control-plane-aczhngqraq-od.a.run.app';
 export const DISCOVERY_PATH = '/.well-known/miakapp-control-plane';
-export const WORKLOAD_SOURCE_SHA256 = 'd2a9ffae2bd85106f782f9c75a10b6fb398682ead65dada2a1cf8ab5c65b7eb4';
-export const WORKLOAD_COMMIT = '3f5a94dfcdfc0984487a558d966bbeaa769b18eb';
+export const WORKLOAD_SOURCE_SHA256 = '6cd045394b24a644d6b1ce9c431bcb73267fb894b7dc0b029d6c0be0488a9433';
+export const WORKLOAD_COMMIT = '72bae493e496b7dbaae38bcba92dfcc6d604644d';
+export const WORKLOAD_FUNCTION_REVISION = 'control-plane-00002-kux';
 
 export const WORKFLOW_SOURCE = [
   'main:',
@@ -170,6 +171,37 @@ export function probeInvokeAuthorization(workflowRevision, repositoryCommit) {
 export function validateProbeInvokeAuthorization(value, workflowRevision, repositoryCommit) {
   if (!safeEqual(value, probeInvokeAuthorization(workflowRevision, repositoryCommit))) {
     reject('Exact staging private-probe invocation authorization is missing or invalid');
+  }
+}
+
+export function probeRecoveryAuthorization(workflowRevision, functionRevision, repositoryCommit) {
+  if (!REVISION.test(workflowRevision)
+    || !REVISION.test(functionRevision)
+    || !COMMIT.test(repositoryCommit)) {
+    reject('Private-probe recovery authorization inputs are invalid');
+  }
+  return [
+    'recover-private-probe',
+    PROJECT_ID,
+    workflowRevision,
+    WORKFLOW_SOURCE_SHA256,
+    functionRevision,
+    WORKLOAD_SOURCE_SHA256,
+    repositoryCommit,
+  ].join(':');
+}
+
+export function validateProbeRecoveryAuthorization(
+  value,
+  workflowRevision,
+  functionRevision,
+  repositoryCommit,
+) {
+  if (!safeEqual(
+    value,
+    probeRecoveryAuthorization(workflowRevision, functionRevision, repositoryCommit),
+  )) {
+    reject('Exact staging private-probe recovery authorization is missing or invalid');
   }
 }
 

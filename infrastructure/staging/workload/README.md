@@ -89,11 +89,18 @@ Function update and an in-place deployment-guard update. It rejects any IAM,
 network, scaling, identity or runtime-document change, any Function
 replacement, and every different source baseline.
 
-The update bundle remains private, expires after two hours, binds its
+The update bundle remained private, expired after two hours, bound its
 timing-safe authorization to the exact binary plan and exact `origin/main`
-commit, and performs no request. Application must converge to a fresh empty
-plan and pass the same independent source-byte, Function, IAM, key and ingress
-inventory before a separately authorized probe recovery may run.
+commit, and performed no request. Merge commit
+`72bae493e496b7dbaae38bcba92dfcc6d604644d` produced exact plan SHA-256
+`650a62e7308aa854fb8ac3ed88bdad987148364ac09860bdef734d9bcd56ecee`.
+It converged to an empty plan and independent inventory verified active revision
+`control-plane-00002-kux`, deterministic source SHA-256
+`6cd045394b24a644d6b1ce9c431bcb73267fb894b7dc0b029d6c0be0488a9433`,
+internal-only ingress, scale 0..1, zero public invokers and zero user-managed
+keys. Workload state generation `1788486188603490` is 49,242 bytes at serial
+10 with the same fifteen managed and three data resources and nothing tainted.
+A separately authorized probe recovery may now run.
 
 ## Bounded first-build recovery
 
@@ -114,7 +121,7 @@ updated the Function in place, and deleted nothing. Output reconciliation plan
 SHA-256 `a31bda9269b138b270d58a6bb992ab7902d1fc73074c0f8f2543bdf0c8f09623`
 then changed no resource, and a fresh full plan reported no changes.
 
-Current workload state generation `1788481082158679` is 49,241 bytes at serial
+The pre-correction workload state generation `1788481082158679` was 49,241 bytes at serial
 8 with fifteen managed resources, three data resources, one output and no
 tainted resource. Independent inventory observed active revision
 `control-plane-00001-kod`, verified all three workload service accounts have
