@@ -7,6 +7,7 @@ const REQUIRED_FILES = Object.freeze([
   'apply.mjs',
   'apply.sh',
   'contract.mjs',
+  'evidence.mjs',
   'guard.mjs',
   'invoke.mjs',
   'invoke.sh',
@@ -17,12 +18,13 @@ const REQUIRED_FILES = Object.freeze([
   'providers.tf',
   'recover.mjs',
   'recover.sh',
+  'result.json',
   'terraform-cli.tfrc',
   'validate-plan.mjs',
   'versions.tf',
   'workload.tf',
 ]);
-const OPTIONAL_FILES = Object.freeze(['result.json']);
+const OPTIONAL_FILES = Object.freeze([]);
 const ALLOWED_DIRECTORIES = Object.freeze(['.terraform', 'tests']);
 const TEST_FILES = Object.freeze(['probe.tftest.hcl']);
 

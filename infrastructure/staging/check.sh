@@ -63,11 +63,14 @@ node infrastructure/staging/probe/guard.mjs \
   "${repository_root}/infrastructure/staging/probe"
 node --check infrastructure/staging/probe/apply.mjs
 node --check infrastructure/staging/probe/contract.mjs
+node --check infrastructure/staging/probe/evidence.mjs
 node --check infrastructure/staging/probe/guard.mjs
 node --check infrastructure/staging/probe/invoke.mjs
 node --check infrastructure/staging/probe/plan.mjs
 node --check infrastructure/staging/probe/recover.mjs
 node --check infrastructure/staging/probe/validate-plan.mjs
+node infrastructure/staging/probe/evidence.mjs \
+  infrastructure/staging/probe/result.json
 bash -n \
   infrastructure/staging/automation/apply.sh \
   infrastructure/staging/automation/inspect-plan.sh \

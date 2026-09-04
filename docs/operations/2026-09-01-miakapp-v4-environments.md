@@ -4,8 +4,8 @@ Date: 2026-09-01
 
 Status: accepted direction; staging bootstrap and foundation complete, exact
 keyless recovery workflow and WIF exchange retired on 2026-09-03, private
-workload active and converged with internal-only ingress, source verified, and
-no live request performed
+workload active and converged with internal-only ingress and source verified,
+and one exact discovery response validated through the unscheduled private probe
 
 ## Decision
 
@@ -24,7 +24,7 @@ are:
 | Environment | Project ID | Data | Purpose |
 |---|---|---|---|
 | Local | `demo-miakapp-v4` | synthetic only | Hermetic Emulator Suite and CI |
-| Staging | `miakapp-v4-staging` | synthetic only | Existing billing-linked project with an uninvoked, scale-to-zero private Function for real-service acceptance and migration rehearsal |
+| Staging | `miakapp-v4-staging` | synthetic only | Existing billing-linked project with a discovery-validated, scale-to-zero private Function for real-service acceptance and migration rehearsal |
 | Production | `miakapp-v4` | migrated production data | Canary, then final Miakapp 4 service |
 | Legacy production | `miakapp-3` | existing production data | Unchanged service and rollback oracle during migration |
 
@@ -81,9 +81,11 @@ resources, thirteen foundation APIs, a deletion-protected Firestore database
 with active TTL fields, one software KMS signing-key version, one Firebase Web
 app and five Secret Manager containers with one enabled version each. One Gen 2
 Function and its backing Cloud Run service are active with internal-only
-ingress, no unauthenticated invoker, no minimum instance and no live request.
-No App Engine application or public ingress exists. Firebase also reserved a
-Hosting site namespace, but no application was deployed to it.
+ingress, no unauthenticated invoker and no minimum instance. The unscheduled
+private Workflow made two controlled failing requests and one successful exact
+discovery request, all without retry or application mutation. No App Engine
+application or public ingress exists. Firebase also reserved a Hosting site
+namespace, but no application was deployed to it.
 
 For a low-volume staging project, the intended initial posture is:
 
@@ -100,10 +102,11 @@ For a low-volume staging project, the intended initial posture is:
 - no silently enabled fixed-price edge product. The ingress design and its full
   load-balancer/edge-policy baseline must be priced and accepted explicitly.
 
-The current Function deployment and recovery incurred two bounded build
-attempts, source and Artifact Registry storage, and a 49,241-byte workload
-state. Exact artifact bytes are not yet recorded. The Function remains
-scale-to-zero and uninvoked, so there is no recurring minimum-instance charge.
+The Function deployment and two bounded source corrections incurred build,
+source and Artifact Registry storage plus a 49,242-byte workload state. The
+unscheduled private Workflow made exactly three bounded requests and has a
+13,596-byte state. The Function remains scale-to-zero with no recurring
+minimum-instance charge; the Workflow has no schedule or idle compute.
 
 The private Terraform bucket stores small state objects and short-lived saved
 plans. Object Versioning and
@@ -308,12 +311,20 @@ created the private probe invoker, updated the Function in place and deleted
 nothing. An output-only reconciliation and a fresh full plan both changed no
 resource. Independent inventory verified the active revision, exact copied
 source bytes, private IAM, all three workload identities with zero user-managed
-keys, and no request. The sanitized result is digest-pinned under
+keys, and no deployment-time request. The sanitized result is digest-pinned under
 [`../../infrastructure/staging/workload/`](../../infrastructure/staging/workload/).
 
-Private synthetic invocation, App Check live-provider/replay policy, quotas,
-alerts, rotation and teardown evidence remain blockers. Public ingress remains
-absent. Passing the manifest check is evidence, not additional authorization.
+The separate unscheduled private probe then recorded two bounded `503` failures
+followed by one no-retry HTTP 200 response from the exact discovery route.
+Serving that route proves the production initialization path loaded all five
+secret values and validated the KMS public key without an application mutation.
+Its sanitized result is digest-pinned under
+[`../../infrastructure/staging/probe/`](../../infrastructure/staging/probe/)
+without execution or trace identifiers.
+
+App Check live-provider/replay policy, relay integration, quotas, alerts,
+rotation and teardown evidence remain blockers. Public ingress remains absent.
+Passing the manifest check is evidence, not additional authorization.
 
 Create or attach `miakapp-v4` only after the staging migration rehearsal produces:
 

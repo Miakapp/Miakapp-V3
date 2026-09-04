@@ -274,8 +274,10 @@ TTL fields, a software Ed25519 key, five Secret Manager containers and exact
 resource IAM. Guarded activation then registered exactly one Firebase Web app
 and one enabled initial version in each secret container. It has no App Engine
 application or public ingress. One scale-to-zero Gen 2 Function and its backing
-Cloud Run service are now active with internal-only ingress and no live request.
-Credential-free checks validate all three Terraform roots with mock providers.
+Cloud Run service are now active with internal-only ingress. An unscheduled
+private Workflow returned the exact discovery document after two controlled
+failures, without opening public ingress or making an application mutation.
+Credential-free checks validate all four Terraform roots with mock providers.
 
 The one-shot protected recovery is complete and its active workflow is removed.
 PR #30 configuration commit
@@ -284,7 +286,8 @@ that changed only both recovery WIF providers from enabled to disabled; the pool
 service accounts and IAM roles remain. Current bootstrap state is serial 42 and
 a follow-up plan reports no changes. This closes the reviewed GitHub OIDC
 exchange route but does not disprove impersonation by another administrator.
-All real staging rows and the private synthetic-invocation gate remain open.
+All real staging rows remain open; the bounded private discovery gate is now
+closed but does not satisfy a managed-service row by itself.
 
 A seventh local-only activation-contract slice binds runtime and KMS references
 to Paris, loads one bounded duplicate-key-safe non-secret configuration value,
@@ -297,8 +300,8 @@ point now exists as reviewable source with no Function secret mounts. It is
 absent from the emulator codebase and enabled only by the separate deterministic
 production package; the workload Terraform root selects internal-only ingress.
 The runtime configuration, initial secret versions and Firebase registration are
-materialized; private synthetic invocation, live App Check provider policy and
-all `STAGE-*` observations remain open.
+materialized. Private discovery is validated; live App Check provider policy
+and all `STAGE-*` observations remain open.
 
 An eighth activation-material slice adds the exact staging runtime-document
 builder and a commit/plan-digest-bound two-phase executor. It permits only one
@@ -323,7 +326,20 @@ source read; an exact two-create/one-in-place-update recovery completed it with
 zero deletes. Output reconciliation and a fresh full plan changed no resource.
 Independent inventory verified the active revision, copied source bytes, private
 IAM and zero user-managed keys across all three workload identities. Public
-ingress remains forbidden; one bounded private synthetic invocation is next.
+ingress remained forbidden; one bounded private synthetic invocation was the
+next gate.
+
+A tenth staging slice deploys and consumes that isolated invocation path. One
+unscheduled, argument-free Workflow uses the keyless probe identity for a fixed
+OIDC-authenticated discovery request through internal ingress, with no schedule
+or retry. Two pinned executions returned controlled `503` responses. After two
+saved-plan source corrections that changed no IAM, ingress, network, scaling or
+runtime document, the single permitted recovery execution returned HTTP 200 and
+the exact discovery document. This proves the production initialization path
+loaded all five secret values and validated the KMS public key; it does not
+validate Firebase Auth, App Check, FCM or an application mutation. The committed
+allow-listed evidence contains no execution UUID, trace context, raw headers,
+stack or diagnostic payload, and both invocation entry points now fail closed.
 
 Deliverables:
 
@@ -455,9 +471,9 @@ current consumer.
    Firebase Web app and enabled version `1` in each of those containers. It has
    no App Engine application or public ingress. A scale-to-zero Gen 2 Function
    and its Cloud Run service are active with internal-only ingress; exact source
-   and IAM inventory made no request. The already-live planner quota member was
-   adopted through
-   an import-only Terraform plan without changing project IAM; its serial-41
+   and IAM deployment inventory made no request. The already-live planner quota
+   member was adopted through an import-only Terraform plan without changing
+   project IAM; its serial-41
    generation remains historical evidence. The one-shot protected recovery
    completed, GitHub workflow `349440747` was disabled manually, its active
    source was removed, and its cloud-plan/apply activation flags and scripts fail
@@ -469,10 +485,12 @@ current consumer.
    document and initial secret lifecycle are now materialized and digest-pinned.
    The first Function build failed on Google's copied-source permission; a
    bounded recovery completed it in place, followed by output reconciliation and
-   a zero-change plan. Private synthetic invocation, ongoing secret rotation,
-   App Check provider/replay policy, source/edge admission, monitoring, migration
-   rehearsal and real staging fault evidence remain required before closing
-   relay-integration and staging-only RFC 0004 Section 18 gates.
+   a zero-change plan. Two no-retry private discovery failures were followed by
+   one exact HTTP 200 response from the corrected source, with no application
+   mutation. Ongoing secret rotation, App Check provider/replay policy,
+   source/edge admission, monitoring, migration rehearsal and real staging fault
+   evidence remain required before closing relay-integration and staging-only
+   RFC 0004 Section 18 gates.
 
 ## 9. Evidence that would change this plan
 

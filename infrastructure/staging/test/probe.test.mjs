@@ -24,6 +24,10 @@ import {
   validateProbeRecoveryAuthorization,
   validateProbePlanMetadata,
 } from '../probe/contract.mjs';
+import {
+  validateProbeEvidence,
+  validateProbeEvidenceValue,
+} from '../probe/evidence.mjs';
 import { validateProbeRoot } from '../probe/guard.mjs';
 import {
   observeProbeDeployment,
@@ -303,6 +307,8 @@ test('locks the only provider for both CI platforms and runs the root in the mai
   assert.match(lockSource, /version\s+= "8\.1\.0"/);
   assert.match(checkSource, /for terraform_root in bootstrap terraform workload probe/);
   assert.match(checkSource, /infrastructure\/staging\/test\/probe\.test\.mjs/);
+  assert.match(checkSource, /infrastructure\/staging\/probe\/evidence\.mjs/);
+  assert.match(checkSource, /infrastructure\/staging\/probe\/result\.json/);
   assert.match(checkSource, /infrastructure\/staging\/probe\/invoke\.sh/);
 });
 
@@ -525,4 +531,54 @@ test('accepts only both pinned failed executions without retaining their trace c
     { revision: '000001-abc' },
     { ...FAILED_EXECUTION_PROFILES[1] },
   ));
+});
+
+test('pins the sanitized successful recovery evidence without private correlators', () => {
+  const result = validateProbeEvidence(new URL('../probe/result.json', import.meta.url));
+  assert.equal(result.recovery_execution.state, 'SUCCEEDED');
+  assert.equal(result.recovery_execution.count_before, 2);
+  assert.equal(result.recovery_execution.count_after, 3);
+  assert.equal(result.response.status, 200);
+  assert.deepEqual(result.response.body, EXPECTED_DISCOVERY);
+  assert.equal(result.workload.function_revision, 'control-plane-00003-hum');
+  assert.equal(result.workload.ingress, 'ALLOW_INTERNAL_ONLY');
+  assert.equal(result.workload.unauthenticated_invokers, 0);
+  assert.equal(result.workload.probe_user_managed_keys, 0);
+  assert.equal(result.claims.secure_runtime_served_discovery, true);
+  assert.equal(result.claims.firebase_auth_validated, false);
+  assert.equal(result.claims.app_check_validated, false);
+  assert.doesNotMatch(JSON.stringify(result), /executions\/[0-9a-f-]{36}|x-cloud-trace-context/iu);
+
+  const changedStatus = structuredClone(result);
+  changedStatus.response.status = 201;
+  assert.throws(() => validateProbeEvidenceValue(changedStatus), /fields have drifted/);
+
+  const executionId = structuredClone(result);
+  executionId.correlator = '00000000-0000-4000-8000-000000000000';
+  assert.throws(() => validateProbeEvidenceValue(executionId), /private execution or trace correlator/);
+
+  const traceField = structuredClone(result);
+  traceField.trace_id = 'a'.repeat(32);
+  assert.throws(() => validateProbeEvidenceValue(traceField), /private telemetry or credential field/);
+
+  for (const field of [
+    'executionId',
+    'insert-id',
+    'requestHeaders',
+    'stackTrace',
+    'xCloudTraceContext',
+    'authorization',
+    'accessToken',
+    'secret',
+    'set-cookie',
+    'remoteIp',
+    'userAgent',
+  ]) {
+    const privateField = structuredClone(result);
+    privateField[field] = 'redacted-but-still-forbidden';
+    assert.throws(
+      () => validateProbeEvidenceValue(privateField),
+      /private telemetry or credential field/,
+    );
+  }
 });
