@@ -25,7 +25,7 @@ const TERRAFORM_PROVIDER = 'terraform.io/builtin/terraform';
 const MAXIMUM_PLAN_BYTES = 16 * 1024 * 1024;
 const REVISION = /^[0-9a-z][0-9a-z-]{0,62}$/u;
 const TERRAFORM_DATA_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
-const PREVIOUS_WORKFLOW_SOURCE_SHA256 = '36c24d5f0b6235d057d1a0b2b6cc8bcf3ca1dccc7ad84b2195cf770dd4c80c98';
+const PREVIOUS_WORKFLOW_SOURCE_SHA256 = 'afafd6bbfa15d1b9fc238e84644075857e3d32520c88ba8c3b2f4094aa3d83ca';
 const DATA_RESOURCES = Object.freeze({
   'data.terraform_remote_state.firebase_auth': 'terraform_remote_state',
   'data.terraform_remote_state.workload': 'terraform_remote_state',
