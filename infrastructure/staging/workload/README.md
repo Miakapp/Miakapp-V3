@@ -1,6 +1,6 @@
 # Private staging control-plane workload
 
-Status: applied, recovered, converged, source-verified, and uninvoked
+Status: applied, recovered, converged, source-verified, and privately probed once
 
 This is the third, workload-only Terraform state for `miakapp-v4-staging`. It
 reads but never owns the reconciled bootstrap and foundation states. Its GCS
@@ -28,7 +28,7 @@ There is no `allUsers` or `allAuthenticatedUsers` binding, VPC connector, load
 balancer, Cloud Armor policy, minimum instance, secret mount, service-account
 key or live request. Internal-only ingress means the probe identity is defined
 before testing but cannot be called directly from an internet workstation.
-The next gate must use a reviewed Google-hosted private invocation path; public
+The probe uses a separately reviewed Google-hosted Workflow path; public
 ingress remains forbidden.
 
 ## Consumed guarded plan and apply
@@ -70,6 +70,30 @@ Function request, and produced the committed sanitized `result.json`.
 No destroy entry point exists. Resources with meaningful identity or storage
 carry `prevent_destroy`; generated source bytes remain reproducible from the
 reviewed commit.
+
+## Pinned source correction
+
+The first Workflow execution reached the private Function with authenticated
+internal ingress and returned a controlled `503 service_unavailable`. Runtime
+initialization had rejected Secret Manager's documented canonical response
+name: requests used the project ID while Google returned the same secret under
+the exact numeric staging project. No secret payload, execution identifier or
+trace identifier is committed.
+
+The application correction accepts only the pinned pair
+`miakapp-v4-staging` / `1072737219170`; adjacent project identifiers still fail
+closed. `update-plan.sh` and `update-apply.sh` provide a single-purpose path to
+deploy that correction. The validator accepts only the exact active baseline:
+twelve no-ops, one deterministic source-object replacement, an in-place
+Function update and an in-place deployment-guard update. It rejects any IAM,
+network, scaling, identity or runtime-document change, any Function
+replacement, and every different source baseline.
+
+The update bundle remains private, expires after two hours, binds its
+timing-safe authorization to the exact binary plan and exact `origin/main`
+commit, and performs no request. Application must converge to a fresh empty
+plan and pass the same independent source-byte, Function, IAM, key and ingress
+inventory before a separately authorized probe recovery may run.
 
 ## Bounded first-build recovery
 
