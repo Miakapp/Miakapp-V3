@@ -2,6 +2,11 @@
 
 This Terraform root owns a bounded, private, single-execution probe for the existing Miakapp V4 staging control plane. It proves that the deployed service accepts a genuine Firebase ID token and a genuine App Check token for the pinned Firebase Web app while preserving the existing internal-only Cloud Run boundary.
 
+The reviewed live execution succeeded on 2026-09-04. Its digest-pinned sanitized
+result and retirement inventory are committed as `result.json` and
+`retirement.json`; the Workflow, temporary IAM bindings and synthetic Firebase
+user are absent. The default graph remains dormant.
+
 The root uses the independent GCS backend prefix `terraform/auth-probe`. Its safe default is `armed = false`.
 
 It consumes both the pinned private workload state and the exact closed Firebase
@@ -130,4 +135,6 @@ remains; otherwise, render the normal saved retirement plan afterward.
 Retirement deletes every present temporary Workflow or binding, independently
 removes any remaining synthetic UID, verifies Terraform convergence and live
 absence, and retains only the unassigned custom role and guard in state. Private
-plans, diagnostics and execution results must never be committed.
+plans, tokens, raw diagnostics and unsanitized execution data must never be
+committed. Only the closed, digest-pinned result and retirement summaries pass
+the public evidence validator.
