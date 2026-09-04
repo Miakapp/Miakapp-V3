@@ -127,7 +127,7 @@ export function observeProbeDeployment({ repositoryRoot: root, expectedExecution
     'workflows', 'executions', 'list', WORKFLOW_NAME,
     `--location=${REGION}`,
     `--project=${PROJECT_ID}`,
-    '--limit=2',
+    '--limit=3',
     '--sort-by=~startTime',
   ]), expectedExecutions);
   return Object.freeze({
@@ -164,7 +164,15 @@ function executionTimestamp(value, description) {
 
 export function validateSuccessfulExecution(value, workflow) {
   if (!plainObject(value)) reject('Workflow execution response is invalid');
-  if (typeof value.name !== 'string' || !value.name.startsWith(`${WORKFLOW_RESOURCE}/executions/`)) {
+  const executionPrefixes = [
+    `${WORKFLOW_RESOURCE}/executions/`,
+    `projects/${PROJECT_NUMBER}/locations/${REGION}/workflows/${WORKFLOW_NAME}/executions/`,
+  ];
+  const executionPrefix = typeof value.name === 'string'
+    ? executionPrefixes.find((prefix) => value.name.startsWith(prefix))
+    : undefined;
+  const executionId = executionPrefix === undefined ? '' : value.name.slice(executionPrefix.length);
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(executionId)) {
     reject('Workflow execution belongs to a foreign workflow');
   }
   exact(value.state, 'SUCCEEDED', 'Workflow execution state');
