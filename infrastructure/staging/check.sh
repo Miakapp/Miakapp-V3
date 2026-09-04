@@ -66,6 +66,7 @@ node --check infrastructure/staging/probe/contract.mjs
 node --check infrastructure/staging/probe/guard.mjs
 node --check infrastructure/staging/probe/invoke.mjs
 node --check infrastructure/staging/probe/plan.mjs
+node --check infrastructure/staging/probe/recover.mjs
 node --check infrastructure/staging/probe/validate-plan.mjs
 bash -n \
   infrastructure/staging/automation/apply.sh \
@@ -85,6 +86,7 @@ bash -n \
   infrastructure/staging/workload/update-plan.sh \
   infrastructure/staging/probe/apply.sh \
   infrastructure/staging/probe/invoke.sh \
+  infrastructure/staging/probe/recover.sh \
   infrastructure/staging/probe/plan.sh
 node --test \
   infrastructure/staging/test/activation.test.mjs \

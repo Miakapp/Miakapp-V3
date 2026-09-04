@@ -1,6 +1,6 @@
 # Private staging invocation path
 
-Status: reviewed contract, not deployed
+Status: deployed; one pinned failed execution; recovery not yet invoked
 
 This isolated Terraform root creates the cheapest bounded path able to reach the
 internal-only staging control plane without changing its ingress. It enables the
@@ -26,9 +26,25 @@ states. There is no destroy entry point. Both managed resources have
 `prevent_destroy`, enabling the API is non-destructive on teardown, and the
 Workflow has deletion protection.
 
-Planning and applying use a short-lived private bundle outside the repository.
-The apply consumes only the exact reviewed binary plan and then requires a
-zero-change convergence plan. Invocation is a separate one-shot operation: its
-wrapper refuses any Workflow that already has an execution and never retries.
-No result is committed until independent validation has removed execution IDs,
-operator identity and provider diagnostics.
+Planning and applying used a short-lived private bundle outside the repository.
+The apply consumed only the exact reviewed binary plan and then required a
+zero-change convergence plan. The original invocation remains a separate
+one-shot operation: its wrapper refuses any Workflow that already has an
+execution and never retries.
+
+That first execution authenticated through internal ingress but received a
+controlled `503 service_unavailable`. Secret Manager had canonicalized the
+staging project ID in each response name to its equivalent numeric project;
+the runtime's stricter comparison rejected that representation before serving
+discovery. The execution identifier, trace context and raw diagnostics remain
+private.
+
+`recover.sh` is a different, single-purpose path. It accepts only that exact
+failed execution (including Workflow revision, timestamps, step, HTTP status
+and non-sensitive error shape), the exact corrected Function revision and an
+authorization bound to the current `origin/main`. It checks the one-execution
+inventory twice, makes exactly one new Workflow execution with no Workflow or
+client retry, then requires exactly the original failure plus one success. It
+cannot accept any other failure or run after a second execution already exists.
+Only a sanitized result without execution IDs or trace context may be
+committed.
