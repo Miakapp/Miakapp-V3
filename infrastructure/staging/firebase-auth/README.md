@@ -18,6 +18,14 @@ identity providers all remain disabled. User creation and deletion through
 Firebase custom-token and authenticated administrative APIs remain available so
 the bounded probe can create and remove its fixed no-email synthetic identity.
 
+The closed configuration was initialized, adopted into its dedicated remote
+state after the provider's non-atomic create, and reconciled to zero change on
+2026-09-04. Independent live inspection found no default-supported, OIDC or
+inbound-SAML provider. The subsequent bounded Auth/App Check probe validated one
+custom-token user lifecycle and removed that synthetic identity. The sanitized
+closed-baseline summary is committed as digest-pinned `result.json`; its
+validator rejects any extra field or changed policy value.
+
 No API key, OAuth token, user token, private key, or service-account key may be
 written to Git or emitted by these drivers. The Google provider does persist its
 computed `client.api_key` as a sensitive attribute in the private,

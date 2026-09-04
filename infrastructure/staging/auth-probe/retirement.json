@@ -1,0 +1,24 @@
+{
+  "schema": "miakapp.staging-auth-probe-retirement/1",
+  "project_id": "miakapp-v4-staging",
+  "project_number": "1072737219170",
+  "region": "europe-west9",
+  "custom_role": {
+    "name": "projects/miakapp-v4-staging/roles/miakapp.stagingAuthProbe",
+    "stage": "GA",
+    "deleted": false,
+    "permissions": [
+      "firebase.clients.get",
+      "firebaseappcheck.tokens.mint",
+      "firebaseauth.users.get",
+      "serviceusage.services.use"
+    ]
+  },
+  "iam": {
+    "project_role_assigned_to_probe": false,
+    "self_signer_assigned_to_probe": false
+  },
+  "workflow_present": false,
+  "temporary_bindings_present": false,
+  "recurring_compute": false
+}
