@@ -2,7 +2,10 @@ import { onInit } from 'firebase-functions/v2/core';
 import { onRequest } from 'firebase-functions/v2/https';
 
 import { PRODUCTION_CONTROL_PLANE_REGION } from './production-config.js';
-import { createProductionFunctionRuntime } from './production-function-runtime.js';
+import {
+  createProductionFunctionRuntime,
+  productionInitializationFailureEvent,
+} from './production-function-runtime.js';
 
 const runtime = createProductionFunctionRuntime('staging');
 
@@ -19,7 +22,9 @@ export const STAGING_CONTROL_PLANE_OPTIONS = Object.freeze({
 });
 
 onInit(async () => {
-  await runtime.initialize().catch(() => undefined);
+  await runtime.initialize().catch((error: unknown) => {
+    console.error(JSON.stringify(productionInitializationFailureEvent(error)));
+  });
 });
 
 export const controlPlane = onRequest(STAGING_CONTROL_PLANE_OPTIONS, runtime.handle);

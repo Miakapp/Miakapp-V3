@@ -1,6 +1,6 @@
 # Private staging control-plane workload
 
-Status: applied, recovered, converged, source-verified, and privately probed once
+Status: applied, recovered, converged, source-verified, and privately probed twice
 
 This is the third, workload-only Terraform state for `miakapp-v4-staging`. It
 reads but never owns the reconciled bootstrap and foundation states. Its GCS
@@ -100,7 +100,35 @@ It converged to an empty plan and independent inventory verified active revision
 internal-only ingress, scale 0..1, zero public invokers and zero user-managed
 keys. Workload state generation `1788486188603490` is 49,242 bytes at serial
 10 with the same fifteen managed and three data resources and nothing tainted.
-A separately authorized probe recovery may now run.
+A separately authorized recovery ran exactly once against this revision. It
+made one Workflow execution with no retry and received the same controlled
+`503 service_unavailable`; the recovery wrapper then stopped. Staging therefore
+has exactly two failed private executions and no successful execution.
+
+## Runtime initialization diagnostic correction
+
+Cloud Run documents `PORT`, `K_SERVICE`, `K_REVISION` and `K_CONFIGURATION` as
+its built-in container variables, but does not guarantee either
+`GCLOUD_PROJECT` or `GOOGLE_CLOUD_PROJECT`. The production runtime boundary had
+required one of those optional project aliases and rejected the standard
+`googleapis.com` universe-domain marker. Both assumptions can fail before any
+Google client is constructed.
+
+The next pinned source update accepts an absent project alias, still rejects
+every present alias that differs from `miakapp-v4-staging`, and accepts only an
+unset or exact `googleapis.com` universe domain. It also classifies startup
+failures into a small fixed stage allow-list. The Function logs only the fixed
+event name and stage; it discards the original exception, message, stack and
+cause. The currently deployed baseline for that update is merge commit
+`72bae493e496b7dbaae38bcba92dfcc6d604644d`, source SHA-256
+`6cd045394b24a644d6b1ce9c431bcb73267fb894b7dc0b029d6c0be0488a9433`
+and revision `control-plane-00002-kux`.
+
+The existing update-plan validator permits only the deterministic source
+object replacement, in-place Function update, deployment-guard update and
+twelve no-ops from that exact baseline. It continues to reject IAM, network,
+scaling, identity, runtime-document and Function replacement changes. Applying
+the update makes no Function request.
 
 ## Bounded first-build recovery
 
