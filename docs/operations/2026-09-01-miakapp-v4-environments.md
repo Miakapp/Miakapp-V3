@@ -339,8 +339,11 @@ and independently verified absent, and the Workflow and both temporary IAM
 bindings were retired. Digest-pinned public summaries contain no execution ID,
 token, header, trace or raw diagnostic. The separate browser-provider
 attestation gate remains open.
-Relay integration, quotas, alerts, rotation and teardown evidence remain
+
+The first pinned local relay-authentication path is closed; browser participation,
+the broader relay matrix, quotas, alerts, rotation and teardown evidence remain
 blockers. Public ingress remains absent.
+
 Passing the manifest check is evidence, not additional authorization.
 
 Create or attach `miakapp-v4` only after the staging migration rehearsal produces:
