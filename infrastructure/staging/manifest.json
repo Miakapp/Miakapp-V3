@@ -1,13 +1,13 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 34,
-  "status": "private_workload_contract_ready_undeployed",
+  "revision": 35,
+  "status": "private_workload_deployed_uninvoked",
   "environment": "staging",
   "project": {
     "project_id": "miakapp-v4-staging",
     "project_number": "1072737219170",
     "display_name": "Miakapp V4 Staging",
-    "lifecycle": "firebase_enabled_billing_linked_private_workload_authorized_undeployed",
+    "lifecycle": "firebase_enabled_billing_linked_private_workload_deployed_uninvoked",
     "creation_authorized": false,
     "billing_link_authorized": false,
     "deployment_authorized": true,
@@ -145,7 +145,7 @@
     },
     {
       "id": "cloud-functions-gen2",
-      "state": "private_deployment_contract_ready_not_deployed"
+      "state": "private_deployment_active_source_verified_uninvoked"
     },
     {
       "id": "cloud-storage",
@@ -161,28 +161,37 @@
     },
     {
       "id": "firebase-cloud-messaging",
-      "state": "api_enabled_least_privilege_role_declared_not_applied"
+      "state": "api_enabled_one_permission_runtime_role_applied_uninvoked"
     },
     {
       "id": "cloud-logging",
-      "state": "api_enabled_no_deployed_runtime"
+      "state": "api_enabled_runtime_deployed_no_live_validation"
     },
     {
       "id": "cloud-monitoring",
-      "state": "api_enabled_no_deployed_runtime"
+      "state": "api_enabled_runtime_deployed_no_live_validation"
     }
   ],
   "runtime": {
     "function_name": "controlPlane",
+    "resource_name": "projects/miakapp-v4-staging/locations/europe-west9/functions/control-plane",
     "generation": 2,
     "region": "europe-west9",
+    "deployment_state": "ACTIVE",
+    "service": "projects/miakapp-v4-staging/locations/europe-west9/services/control-plane",
+    "revision": "control-plane-00001-kod",
+    "uri": "https://control-plane-aczhngqraq-od.a.run.app",
     "minimum_instances": 0,
     "maximum_instances": 1,
     "concurrency": 16,
     "timeout_seconds": 30,
     "dedicated_service_account": "miakapp-control-plane@miakapp-v4-staging.iam.gserviceaccount.com",
     "allow_unauthenticated": false,
-    "ingress": "ALLOW_INTERNAL_ONLY"
+    "ingress": "ALLOW_INTERNAL_ONLY",
+    "source_archive_sha256": "d2a9ffae2bd85106f782f9c75a10b6fb398682ead65dada2a1cf8ab5c65b7eb4",
+    "runtime_config_sha256": "b794181400bf5ace6aaa9ffc4be00e4c4f6a59519284baa7f73bca3c042c4ff8",
+    "user_managed_keys": 0,
+    "live_request_performed": false
   },
   "data": {
     "firestore": {
@@ -282,7 +291,7 @@
       }
     ],
     "iam": {
-      "runtime_identity_state": "created_private_deployment_declared",
+      "runtime_identity_state": "private_runtime_deployed_zero_user_managed_keys",
       "foundation_resource_bindings_state": "complete_eight_recovery_bindings_present",
       "broad_project_roles_forbidden": true,
       "human_runtime_bindings_forbidden": true,
@@ -320,9 +329,7 @@
           "access": "roles/monitoring.metricWriter"
         }
       ],
-      "unresolved_permissions": [
-        "cloudmessaging.messages.create"
-      ]
+      "unresolved_permissions": []
     }
   },
   "cost": {
@@ -354,10 +361,10 @@
     }
   },
   "terraform": {
-    "state": "foundation_complete_private_workload_contract_ready",
-    "supported_workflow": "guarded_private_saved_plan_and_exact_apply",
+    "state": "foundation_and_private_workload_complete",
+    "supported_workflow": "guarded_private_saved_plan_applied_and_converged",
     "configuration_apply_capable": true,
-    "active_cloud_workflow": "workload/plan.sh",
+    "active_cloud_workflow": "none_private_workload_converged",
     "workflow_blueprint_state": "retired_recovery_blueprint_retained_as_evidence",
     "bootstrap_root": "bootstrap",
     "foundation_root": "terraform",
@@ -376,7 +383,7 @@
     ],
     "backend": {
       "type": "gcs",
-      "state": "bootstrap_and_complete_foundation_state_present",
+      "state": "bootstrap_foundation_and_workload_state_present",
       "bucket": "miakapp-v4-staging-tfstate-1072737219170",
       "bootstrap_prefix": "terraform/bootstrap",
       "foundation_prefix": "terraform/foundation",
@@ -1217,8 +1224,7 @@
     "manual_read_only_cloud_plan_authorized": true,
     "foundation_apply_authorized": false,
     "required_blockers": [
-      "private-production-function-deployment",
-      "fcm-least-privilege-runtime-iam",
+      "private-function-synthetic-invocation",
       "app-check-live-provider-and-replay-policy",
       "relay-token-refresh-integration",
       "trusted-source-and-edge-admission",
@@ -1269,6 +1275,59 @@
         "public_ingress": 0,
         "minimum_instances": 0
       }
+    },
+    "workload_deployment": {
+      "state": "active_internal_only_source_verified_uninvoked",
+      "observed_at": "2026-09-04T00:41:16.532Z",
+      "inventory_repository_commit": "60bb8f48b885c4fdde2948309d95593657e9d039",
+      "deployed_repository_commit": "3f5a94dfcdfc0984487a558d966bbeaa769b18eb",
+      "initial_plan_sha256": "b59167718fdad5edfa440f5d59f6e0eb1dff9277b20e1f829ebbb233296cdf05",
+      "initial_plan_result": "failed_build_missing_conditional_source_read",
+      "recovery_configuration_commit": "488da23cd7eb4c08baa9296724b87b7df34a1122",
+      "recovery_plan_sha256": "26437631f2d8ea61883762ae854024de5c1142db9182d46e083517af211a192b",
+      "recovery_plan_result": {
+        "create": 2,
+        "update": 1,
+        "delete": 0,
+        "function_replaced": false
+      },
+      "output_reconciliation_plan_sha256": "a31bda9269b138b270d58a6bb992ab7902d1fc73074c0f8f2543bdf0c8f09623",
+      "output_reconciliation_resource_changes": 0,
+      "result_path": "workload/result.json",
+      "result_sha256": "2143c037de6cb2d8caf9acc9676fa5a54d9bf974793136596aac94de30c93590",
+      "terraform_state": {
+        "object": "terraform/workload/default.tfstate",
+        "generation": "1788481082158679",
+        "sha256": "32601affcf794a097b0e6f9dbddddd2e800166278f630e624f6c8048fda60385",
+        "size_bytes": 49241,
+        "terraform_version": "1.11.3",
+        "serial": 8,
+        "lineage_sha256": "aecd871c255da2bb3d30e7a7cc7b76be229e1eccc1fce2c4e41fed5a4a4b4b3a",
+        "managed_resources": 15,
+        "data_resources": 3,
+        "outputs": 1,
+        "tainted_resources": 0,
+        "raw_contents_committed": false
+      },
+      "source_archive_sha256": "d2a9ffae2bd85106f782f9c75a10b6fb398682ead65dada2a1cf8ab5c65b7eb4",
+      "runtime_config_sha256": "b794181400bf5ace6aaa9ffc4be00e4c4f6a59519284baa7f73bca3c042c4ff8",
+      "function_revision": "control-plane-00001-kod",
+      "ingress": "ALLOW_INTERNAL_ONLY",
+      "unauthenticated_invokers": 0,
+      "minimum_instances": 0,
+      "maximum_instances": 1,
+      "user_managed_keys": {
+        "runtime": 0,
+        "build": 0,
+        "probe": 0
+      },
+      "copied_source_sha256_verified": true,
+      "terraform_convergence": "no_changes",
+      "private_bundle_deleted": true,
+      "raw_plan_committed": false,
+      "raw_state_committed": false,
+      "operator_email_committed": false,
+      "live_request_performed": false
     },
     "retired_recovery_workflow": {
       "id": "349440747",

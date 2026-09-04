@@ -28,18 +28,18 @@ function rejects(mutator, pattern) {
   );
 }
 
-test('accepts the authorized private workload contract with no deployed workload', () => {
+test('accepts the active internal-only workload with no live request', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 34);
+  assert.equal(validated.revision, 35);
   assert.equal(
     validated.status,
-    'private_workload_contract_ready_undeployed',
+    'private_workload_deployed_uninvoked',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
   assert.equal(
     validated.project.lifecycle,
-    'firebase_enabled_billing_linked_private_workload_authorized_undeployed',
+    'firebase_enabled_billing_linked_private_workload_deployed_uninvoked',
   );
   assert.equal(validated.bootstrap.billing_enabled, true);
   assert.equal(validated.bootstrap.firebase_apps, 1);
@@ -74,13 +74,13 @@ test('accepts the authorized private workload contract with no deployed workload
     'api_enabled_no_staging_identity_test',
     'firebase_app_created_provider_not_configured',
     'foundation_created_no_staging_test',
-    'private_deployment_contract_ready_not_deployed',
+    'private_deployment_active_source_verified_uninvoked',
     'private_bucket_created_no_staging_test',
     'signing_key_version_enabled_no_staging_signature',
     'five_initial_versions_enabled_no_staging_access_test',
-    'api_enabled_least_privilege_role_declared_not_applied',
-    'api_enabled_no_deployed_runtime',
-    'api_enabled_no_deployed_runtime',
+    'api_enabled_one_permission_runtime_role_applied_uninvoked',
+    'api_enabled_runtime_deployed_no_live_validation',
+    'api_enabled_runtime_deployed_no_live_validation',
   ]);
   assert.equal(
     validated.security.iam.foundation_resource_bindings_state,
@@ -94,19 +94,29 @@ test('accepts the authorized private workload contract with no deployed workload
     validated.cost.billing_account.terraform_management_state,
     'managed_in_reconciled_remote_bootstrap_state',
   );
-  assert.equal(validated.terraform.state, 'foundation_complete_private_workload_contract_ready');
+  assert.equal(validated.runtime.deployment_state, 'ACTIVE');
+  assert.equal(validated.runtime.revision, 'control-plane-00001-kod');
+  assert.equal(validated.runtime.ingress, 'ALLOW_INTERNAL_ONLY');
+  assert.equal(validated.runtime.user_managed_keys, 0);
+  assert.equal(validated.runtime.live_request_performed, false);
+  assert.equal(
+    validated.security.iam.runtime_identity_state,
+    'private_runtime_deployed_zero_user_managed_keys',
+  );
+  assert.deepEqual(validated.security.iam.unresolved_permissions, []);
+  assert.equal(validated.terraform.state, 'foundation_and_private_workload_complete');
   assert.equal(
     validated.terraform.supported_workflow,
-    'guarded_private_saved_plan_and_exact_apply',
+    'guarded_private_saved_plan_applied_and_converged',
   );
   assert.equal(validated.terraform.configuration_apply_capable, true);
-  assert.equal(validated.terraform.active_cloud_workflow, 'workload/plan.sh');
+  assert.equal(validated.terraform.active_cloud_workflow, 'none_private_workload_converged');
   assert.equal(
     validated.terraform.workflow_blueprint_state,
     'retired_recovery_blueprint_retained_as_evidence',
   );
   assert.equal(validated.terraform.backend.type, 'gcs');
-  assert.equal(validated.terraform.backend.state, 'bootstrap_and_complete_foundation_state_present');
+  assert.equal(validated.terraform.backend.state, 'bootstrap_foundation_and_workload_state_present');
   assert.equal(
     validated.terraform.backend.bootstrap_migration_state,
     'complete_remote_state_reconciled',
@@ -560,6 +570,32 @@ test('accepts the authorized private workload contract with no deployed workload
       minimum_instances: 0,
     },
   });
+  assert.equal(
+    validated.evidence.workload_deployment.state,
+    'active_internal_only_source_verified_uninvoked',
+  );
+  assert.equal(
+    validated.evidence.workload_deployment.result_sha256,
+    '2143c037de6cb2d8caf9acc9676fa5a54d9bf974793136596aac94de30c93590',
+  );
+  assert.deepEqual(validated.evidence.workload_deployment.recovery_plan_result, {
+    create: 2,
+    update: 1,
+    delete: 0,
+    function_replaced: false,
+  });
+  assert.equal(validated.evidence.workload_deployment.terraform_state.serial, 8);
+  assert.equal(validated.evidence.workload_deployment.terraform_state.managed_resources, 15);
+  assert.equal(validated.evidence.workload_deployment.terraform_state.tainted_resources, 0);
+  assert.equal(validated.evidence.workload_deployment.terraform_state.raw_contents_committed, false);
+  assert.equal(validated.evidence.workload_deployment.terraform_convergence, 'no_changes');
+  assert.deepEqual(validated.evidence.workload_deployment.user_managed_keys, {
+    runtime: 0,
+    build: 0,
+    probe: 0,
+  });
+  assert.equal(validated.evidence.workload_deployment.private_bundle_deleted, true);
+  assert.equal(validated.evidence.workload_deployment.live_request_performed, false);
   assert.deepEqual(validated.evidence.retired_recovery_workflow, {
     id: '349440747',
     state: 'deleted',
@@ -577,6 +613,18 @@ test('accepts the authorized private workload contract with no deployed workload
   assert.equal(validated.readiness.required_blockers.includes('remote-bootstrap-state-not-migrated'), false);
   assert.equal(
     validated.readiness.required_blockers.includes('github-branch-environment-and-actions-policy-not-configured'),
+    false,
+  );
+  assert.equal(
+    validated.readiness.required_blockers.includes('private-function-synthetic-invocation'),
+    true,
+  );
+  assert.equal(
+    validated.readiness.required_blockers.includes('private-production-function-deployment'),
+    false,
+  );
+  assert.equal(
+    validated.readiness.required_blockers.includes('fcm-least-privilege-runtime-iam'),
     false,
   );
   assert.equal(
@@ -613,7 +661,7 @@ test('rejects legacy, production, and demo project targets', () => {
   }
 });
 
-test('rejects drift from the observed billing-linked undeployed bootstrap inventory', () => {
+test('rejects drift from the historical billing-linked bootstrap inventory', () => {
   rejects((candidate) => {
     candidate.project.project_number = '000000000000';
   }, /project\.project_number/);
@@ -1020,6 +1068,12 @@ test('locks every regional resource to the reviewed Paris location', () => {
 
 test('enforces scale-to-zero, one maximum instance, and private ingress', () => {
   rejects((candidate) => {
+    candidate.runtime.deployment_state = 'FAILED';
+  }, /runtime\.deployment_state/);
+  rejects((candidate) => {
+    candidate.runtime.revision = 'control-plane-00002-unreviewed';
+  }, /runtime\.revision/);
+  rejects((candidate) => {
     candidate.runtime.minimum_instances = 1;
   }, /runtime\.minimum_instances/);
   rejects((candidate) => {
@@ -1031,6 +1085,18 @@ test('enforces scale-to-zero, one maximum instance, and private ingress', () => 
   rejects((candidate) => {
     candidate.runtime.ingress = 'all';
   }, /runtime\.ingress/);
+  rejects((candidate) => {
+    candidate.runtime.source_archive_sha256 = '0'.repeat(64);
+  }, /runtime\.source_archive_sha256/);
+  rejects((candidate) => {
+    candidate.runtime.runtime_config_sha256 = '0'.repeat(64);
+  }, /runtime\.runtime_config_sha256/);
+  rejects((candidate) => {
+    candidate.runtime.user_managed_keys = 1;
+  }, /runtime\.user_managed_keys/);
+  rejects((candidate) => {
+    candidate.runtime.live_request_performed = true;
+  }, /runtime\.live_request_performed/);
 });
 
 test('rejects public, default-bucket, retained, or cross-origin Storage drift', () => {
@@ -1063,7 +1129,7 @@ test('keeps KMS manual, software-backed, and explicitly non-deletable', () => {
   }, /security\.kms\.key_ring_deletion_supported/);
 });
 
-test('rejects broad IAM substitution and premature resolution of FCM access', () => {
+test('rejects broad IAM substitution and resolved FCM access drift', () => {
   rejects((candidate) => {
     candidate.security.iam.resource_bindings[0].access = 'roles/owner';
   }, /security\.iam\.resource_bindings\[0\]\.access/);
@@ -1077,7 +1143,7 @@ test('rejects broad IAM substitution and premature resolution of FCM access', ()
     candidate.security.secrets[0].version_policy_state = 'implemented';
   }, /security\.secrets\[0\]\.version_policy_state/);
   rejects((candidate) => {
-    candidate.security.iam.unresolved_permissions = [];
+    candidate.security.iam.unresolved_permissions = ['cloudmessaging.messages.create'];
   }, /security\.iam\.unresolved_permissions/);
 });
 
@@ -1309,6 +1375,30 @@ test('rejects drift from the public activation evidence and initialized versions
   rejects((candidate) => {
     candidate.services[6].state = 'planned';
   }, /services\[6\]\.state/);
+});
+
+test('rejects drift from the public workload deployment evidence', () => {
+  rejects((candidate) => {
+    candidate.evidence.workload_deployment.result_sha256 = '0'.repeat(64);
+  }, /evidence\.workload_deployment\.result_sha256/);
+  rejects((candidate) => {
+    candidate.evidence.workload_deployment.recovery_plan_result.function_replaced = true;
+  }, /evidence\.workload_deployment\.recovery_plan_result\.function_replaced/);
+  rejects((candidate) => {
+    candidate.evidence.workload_deployment.terraform_state.tainted_resources = 1;
+  }, /evidence\.workload_deployment\.terraform_state\.tainted_resources/);
+  rejects((candidate) => {
+    candidate.evidence.workload_deployment.user_managed_keys.runtime = 1;
+  }, /evidence\.workload_deployment\.user_managed_keys\.runtime/);
+  rejects((candidate) => {
+    candidate.evidence.workload_deployment.operator_email_committed = true;
+  }, /evidence\.workload_deployment\.operator_email_committed/);
+  rejects((candidate) => {
+    candidate.evidence.workload_deployment.live_request_performed = true;
+  }, /evidence\.workload_deployment\.live_request_performed/);
+  rejects((candidate) => {
+    candidate.evidence.workload_deployment.private_detail = 'must-not-be-accepted';
+  }, /evidence\.workload_deployment must contain exactly/);
 });
 
 test('keeps historical CI keyless, recovery retired, and credentials ephemeral', () => {

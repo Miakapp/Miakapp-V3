@@ -274,10 +274,11 @@ concrete Google adapter is exercised with injected transports to prove that the
 generated clients receive fresh extensible call options while preserving the
 bounded timeout and `retry: null`; no real client method runs in that test. The
 private fixture JWK remains confined to the emulator-specific configuration
-subtype. The staging workload contract separately pins internal-only ingress,
+subtype. The deployed staging workload separately pins internal-only ingress,
 scale zero-to-one, the committed runtime document, dedicated runtime/build/probe
-identities and a one-permission FCM role. It authorizes no live request and does
-not count as a `STAGE-01` acceptance result.
+identities and a one-permission FCM role. Independent inventory verified its
+active revision and exact copied source without making a request, so it does not
+count as a `STAGE-01` acceptance result.
 
 Passing this slice does **not** close RFC 0004's complete emulator or production
 gate. Push registration and sending have only synthetic local service evidence;
@@ -296,6 +297,6 @@ by local Function instance/concurrency settings in this slice; production edge
 admission must cover them before any publicly reachable deployment.
 
 The reviewable [`../infrastructure/staging/`](../infrastructure/staging/) intent
-now freezes the future project's target, locations, initial resource and IAM
-inventory, cost posture, unresolved production adapters and teardown evidence.
-Its CI gate has no credentials and authorizes no project creation or deployment.
+freezes the existing project's target, locations, resource and IAM inventory,
+cost posture, unresolved production adapters and teardown evidence. Its CI gate
+has no credentials and authorizes no cloud mutation or live request.

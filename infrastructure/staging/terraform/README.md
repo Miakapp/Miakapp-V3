@@ -3,7 +3,8 @@
 Status: foundation complete; recovery workflow and WIF exchange retired
 
 This root describes the ordinary protected foundation for the existing,
-billing-linked but undeployed `miakapp-v4-staging` project. Billing management,
+billing-linked `miakapp-v4-staging` project. The deployed private workload is
+owned by the separate [`../workload/`](../workload/) state. Billing management,
 budgets, both Storage buckets,
 the runtime service account and its project IAM, remote-state storage, Workload
 Identity Federation, and CI identities belong to
@@ -172,5 +173,5 @@ retired and absent, both provider resources are disabled, and the reviewed
 GitHub OIDC exchange route is closed. The service accounts and IAM roles remain;
 this evidence does not disprove impersonation by another administrator. The
 manual operator plan remains read-only, requires User ADC and exact staging
-confirmation, and uses the locking backend. Workload deployment, public ingress,
-direct apply, and destroy remain unauthorized.
+confirmation, and uses the locking backend. Workload mutation from this root,
+public ingress, direct apply, and destroy remain unauthorized.
