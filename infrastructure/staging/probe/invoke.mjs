@@ -127,7 +127,7 @@ export function observeProbeDeployment({ repositoryRoot: root, expectedExecution
     'workflows', 'executions', 'list', WORKFLOW_NAME,
     `--location=${REGION}`,
     `--project=${PROJECT_ID}`,
-    '--limit=3',
+    '--limit=4',
     '--sort-by=~startTime',
   ]), expectedExecutions);
   return Object.freeze({

@@ -74,11 +74,13 @@ reviewed commit.
 ## Pinned source correction
 
 The first Workflow execution reached the private Function with authenticated
-internal ingress and returned a controlled `503 service_unavailable`. Runtime
-initialization had rejected Secret Manager's documented canonical response
-name: requests used the project ID while Google returned the same secret under
-the exact numeric staging project. No secret payload, execution identifier or
-trace identifier is committed.
+internal ingress and returned a controlled `503 service_unavailable`. A
+separate read-only boundary reproduction found that Secret Manager's documented
+canonical response name used the exact numeric staging project while requests
+used its project ID, and that the runtime rejected that valid representation.
+The original execution had no classified startup log, so it did not by itself
+identify the failing initialization boundary. No secret payload, execution
+identifier or trace identifier is committed.
 
 The application correction accepts only the pinned pair
 `miakapp-v4-staging` / `1072737219170`; adjacent project identifiers still fail
@@ -114,21 +116,30 @@ required one of those optional project aliases and rejected the standard
 `googleapis.com` universe-domain marker. Both assumptions can fail before any
 Google client is constructed.
 
-The next pinned source update accepts an absent project alias, still rejects
+The diagnostic source update accepts an absent project alias, still rejects
 every present alias that differs from `miakapp-v4-staging`, and accepts only an
 unset or exact `googleapis.com` universe domain. It also classifies startup
 failures into a small fixed stage allow-list. The Function logs only the fixed
 event name and stage; it discards the original exception, message, stack and
-cause. The currently deployed baseline for that update is merge commit
-`72bae493e496b7dbaae38bcba92dfcc6d604644d`, source SHA-256
-`6cd045394b24a644d6b1ce9c431bcb73267fb894b7dc0b029d6c0be0488a9433`
-and revision `control-plane-00002-kux`.
+cause.
 
-The existing update-plan validator permits only the deterministic source
+The update-plan validator permitted only the deterministic source
 object replacement, in-place Function update, deployment-guard update and
 twelve no-ops from that exact baseline. It continues to reject IAM, network,
 scaling, identity, runtime-document and Function replacement changes. Applying
-the update makes no Function request.
+the update made no Function request.
+
+Merge commit `60322c69c92b8ccf5f3d1bc87ba264a00e5dca05` produced exact
+plan SHA-256
+`b66c16e1f7cd540b4708306e17f7e92fe69172ce06b3e2ee1f90fb284636ea07`
+and source SHA-256
+`86f4818dfcb4021e5578638d6fb1e9b7da31ea245528cbdc8573dabecdfca358`.
+The saved plan applied and converged to active revision
+`control-plane-00003-hum` with internal-only ingress, scale 0..1, zero public
+invokers and zero user-managed keys. Workload state generation
+`1788488610045265` is 49,242 bytes at serial 12 with fifteen managed and three
+data resources, nothing tainted, and SHA-256
+`3adbde5e684736080d47b239031a2bb469787641ccf0f87c409d2b3a3b180145`.
 
 ## Bounded first-build recovery
 

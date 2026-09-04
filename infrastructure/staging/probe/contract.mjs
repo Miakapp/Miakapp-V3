@@ -47,9 +47,9 @@ export const PROBE_ACCOUNT = `miakapp-staging-probe@${PROJECT_ID}.iam.gserviceac
 export const FUNCTION_NAME = 'control-plane';
 export const FUNCTION_URI = 'https://control-plane-aczhngqraq-od.a.run.app';
 export const DISCOVERY_PATH = '/.well-known/miakapp-control-plane';
-export const WORKLOAD_SOURCE_SHA256 = '6cd045394b24a644d6b1ce9c431bcb73267fb894b7dc0b029d6c0be0488a9433';
-export const WORKLOAD_COMMIT = '72bae493e496b7dbaae38bcba92dfcc6d604644d';
-export const WORKLOAD_FUNCTION_REVISION = 'control-plane-00002-kux';
+export const WORKLOAD_SOURCE_SHA256 = '86f4818dfcb4021e5578638d6fb1e9b7da31ea245528cbdc8573dabecdfca358';
+export const WORKLOAD_COMMIT = '60322c69c92b8ccf5f3d1bc87ba264a00e5dca05';
+export const WORKLOAD_FUNCTION_REVISION = 'control-plane-00003-hum';
 
 export const WORKFLOW_SOURCE = [
   'main:',

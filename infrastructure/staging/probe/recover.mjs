@@ -33,9 +33,23 @@ const RECOVERY_AUTHORIZATION = 'MIAKAPP_STAGING_PROBE_RECOVERY_AUTHORIZATION';
 const repositoryRoot = fileURLToPath(new URL('../../../', import.meta.url));
 const MAXIMUM_OUTPUT_BYTES = 8 * 1024 * 1024;
 const WORKFLOW_RESOURCE = `projects/${PROJECT_ID}/locations/${REGION}/workflows/${WORKFLOW_NAME}`;
-const FAILED_START = '2026-09-04T01:14:35.985075630Z';
-const FAILED_END = '2026-09-04T01:14:38.074599578Z';
 const FAILED_CONTEXT = 'HTTP server responded with error code 503\nin step "invoke", routine "main", line: 4';
+export const FAILED_EXECUTION_PROFILES = Object.freeze([
+  Object.freeze({
+    phase: 'after-secret-name-compatibility-update',
+    startTime: '2026-09-04T01:55:57.556580127Z',
+    endTime: '2026-09-04T01:55:57.899282611Z',
+    responseDate: 'Fri, 04 Sep 2026 01:55:57 GMT',
+    durationMilliseconds: 343,
+  }),
+  Object.freeze({
+    phase: 'initial-runtime',
+    startTime: '2026-09-04T01:14:35.985075630Z',
+    endTime: '2026-09-04T01:14:38.074599578Z',
+    responseDate: 'Fri, 04 Sep 2026 01:14:38 GMT',
+    durationMilliseconds: 2_089,
+  }),
+]);
 process.umask(0o077);
 
 function reject(message) {
@@ -74,7 +88,7 @@ function command(args) {
   return parseJson(Buffer.from(result.stdout ?? ''), 'Private-probe recovery inventory command');
 }
 
-function executionName(value) {
+function executionId(value) {
   if (typeof value !== 'string') reject('Workflow execution name is invalid');
   const prefixes = [
     `${WORKFLOW_RESOURCE}/executions/`,
@@ -85,6 +99,11 @@ function executionName(value) {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(suffix)) {
     reject('Workflow execution belongs to a foreign or malformed resource');
   }
+  return suffix;
+}
+
+function executionName(value) {
+  executionId(value);
   return value;
 }
 
@@ -95,18 +114,32 @@ function timestamp(value, expected, description) {
   return milliseconds;
 }
 
-function validateFailedIdentity(value, workflow) {
+function reviewedFailureProfile(value) {
+  if (!FAILED_EXECUTION_PROFILES.includes(value)) {
+    reject('Prior Workflow failure profile is not reviewed');
+  }
+  return value;
+}
+
+function validateFailedIdentity(value, workflow, expectedProfile) {
+  const profile = reviewedFailureProfile(expectedProfile);
   if (!plainObject(value)) reject('Prior Workflow execution is invalid');
   const name = executionName(value.name);
   exact(value.state, 'FAILED', 'Prior Workflow execution state');
   exact(value.workflowRevisionId, workflow.revision, 'Prior Workflow execution revision');
-  const start = timestamp(value.startTime, FAILED_START, 'Prior Workflow execution start');
-  const end = timestamp(value.endTime, FAILED_END, 'Prior Workflow execution end');
-  return Object.freeze({ name, duration_milliseconds: end - start });
+  const start = timestamp(value.startTime, profile.startTime, 'Prior Workflow execution start');
+  const end = timestamp(value.endTime, profile.endTime, 'Prior Workflow execution end');
+  exact(end - start, profile.durationMilliseconds, 'Prior Workflow execution duration');
+  return Object.freeze({
+    name,
+    phase: profile.phase,
+    duration_milliseconds: profile.durationMilliseconds,
+  });
 }
 
-export function validateFailedExecution(value, workflow) {
-  const identity = validateFailedIdentity(value, workflow);
+export function validateFailedExecution(value, workflow, expectedProfile) {
+  const profile = reviewedFailureProfile(expectedProfile);
+  const identity = validateFailedIdentity(value, workflow, profile);
   if (!plainObject(value.error)) reject('Prior Workflow error is missing');
   exact(Object.keys(value.error).sort(), ['context', 'payload', 'stackTrace'], 'Prior Workflow error fields');
   exact(value.error.context, FAILED_CONTEXT, 'Prior Workflow error context');
@@ -148,7 +181,7 @@ export function validateFailedExecution(value, workflow) {
   exact(payload.headers['Cache-Control'], 'no-store', 'Prior HTTP cache policy');
   exact(payload.headers['Content-Length'], '31', 'Prior HTTP content length');
   exact(payload.headers['Content-Type'], 'application/json; charset=utf-8', 'Prior HTTP content type');
-  exact(payload.headers.Date, 'Fri, 04 Sep 2026 01:14:38 GMT', 'Prior HTTP date');
+  exact(payload.headers.Date, profile.responseDate, 'Prior HTTP date');
   exact(payload.headers.Server, 'Google Frontend', 'Prior HTTP server');
   if (!/^[0-9a-f]{32};o=[01]$/u.test(payload.headers['X-Cloud-Trace-Context'] ?? '')) {
     reject('Prior private trace context is malformed');
@@ -161,17 +194,24 @@ export function validateFailedExecution(value, workflow) {
   });
 }
 
-function observeFailure() {
-  const deployment = observeProbeDeployment({ repositoryRoot, expectedExecutions: 1 });
-  const listed = validateFailedIdentity(deployment.executions[0], deployment.workflow);
-  const detailed = command([
-    'workflows', 'executions', 'describe', listed.name,
-    `--location=${REGION}`,
-    `--project=${PROJECT_ID}`,
-  ]);
-  const failure = validateFailedExecution(detailed, deployment.workflow);
-  exact(failure.name, listed.name, 'Prior Workflow execution identity');
-  return Object.freeze({ deployment, failure });
+function observeFailures() {
+  const deployment = observeProbeDeployment({ repositoryRoot, expectedExecutions: 2 });
+  const failures = FAILED_EXECUTION_PROFILES.map((profile, index) => {
+    const listed = validateFailedIdentity(
+      deployment.executions[index],
+      deployment.workflow,
+      profile,
+    );
+    const detailed = command([
+      'workflows', 'executions', 'describe', listed.name,
+      `--location=${REGION}`,
+      `--project=${PROJECT_ID}`,
+    ]);
+    const failure = validateFailedExecution(detailed, deployment.workflow, profile);
+    exact(failure.name, listed.name, 'Prior Workflow execution identity');
+    return failure;
+  });
+  return Object.freeze({ deployment, failures: Object.freeze(failures) });
 }
 
 function runWorkflow(bundle) {
@@ -199,7 +239,7 @@ function runWorkflow(bundle) {
       join(bundle, 'recovery-failure.log'),
       diagnostics.length === 0 ? Buffer.from('Recovery failed without diagnostics\n') : diagnostics,
     );
-    reject('The single private-probe recovery execution failed; private diagnostics were preserved');
+    reject('The single private-probe diagnostic execution failed; private diagnostics were preserved');
   }
   return parseJson(Buffer.from(result.stdout), 'Workflow recovery execution');
 }
@@ -223,7 +263,7 @@ async function main() {
   const repositoryCommit = verifyExactMain(repositoryRoot);
   verifiedOperatorEmail(repositoryRoot);
 
-  const initial = observeFailure();
+  const initial = observeFailures();
   const workload = observeCorrectedWorkload();
   validateProbeRecoveryAuthorization(
     process.env[RECOVERY_AUTHORIZATION],
@@ -233,27 +273,38 @@ async function main() {
   );
 
   const bundle = createPrivateProbeBundle(process.argv[2], repositoryRoot);
-  const finalPreflight = observeFailure();
+  const finalPreflight = observeFailures();
   const finalWorkload = observeCorrectedWorkload();
-  exact(finalPreflight.failure.name, initial.failure.name, 'Prior execution stable identity');
+  exact(
+    finalPreflight.failures.map((failure) => failure.name),
+    initial.failures.map((failure) => failure.name),
+    'Prior executions stable identities',
+  );
   exact(finalPreflight.deployment.workflow, initial.deployment.workflow, 'Workflow stable deployment');
   exact(finalWorkload.function.revision, workload.function.revision, 'Function stable revision');
 
   const rawExecution = runWorkflow(bundle);
   const execution = validateSuccessfulExecution(rawExecution, initial.deployment.workflow);
-  const after = observeProbeDeployment({ repositoryRoot, expectedExecutions: 2 });
-  const priorAfter = validateFailedIdentity(after.executions[1], after.workflow);
+  const after = observeProbeDeployment({ repositoryRoot, expectedExecutions: 3 });
+  const priorAfter = FAILED_EXECUTION_PROFILES.map((profile, index) => validateFailedIdentity(
+    after.executions[index + 1],
+    after.workflow,
+    profile,
+  ));
   if (after.workflow.revision !== initial.deployment.workflow.revision
-    || executionName(after.executions[0]?.name) !== execution.name
+    || executionId(after.executions[0]?.name) !== executionId(execution.name)
     || after.executions[0]?.state !== 'SUCCEEDED'
     || after.executions[0]?.workflowRevisionId !== after.workflow.revision
-    || priorAfter.name !== initial.failure.name) {
-    reject('Post-recovery Workflow inventory does not match the exact two executions');
+    || !isDeepStrictEqual(
+      priorAfter.map((failure) => failure.name),
+      initial.failures.map((failure) => failure.name),
+    )) {
+    reject('Post-recovery Workflow inventory does not match the exact three executions');
   }
   observeCorrectedWorkload();
 
   const result = Object.freeze({
-    schema: 'miakapp.staging-private-probe-recovery-result/1',
+    schema: 'miakapp.staging-private-probe-recovery-result/2',
     project_id: PROJECT_ID,
     project_number: PROJECT_NUMBER,
     region: REGION,
@@ -275,22 +326,22 @@ async function main() {
       audience: FUNCTION_URI,
       timeout_seconds: 30,
       workflow_retries: 0,
-      attempts_after_correction: 1,
+      attempts_after_latest_correction: 1,
       input: false,
     }),
-    prior_execution: Object.freeze({
-      state: initial.failure.state,
-      workflow_revision: initial.failure.workflow_revision,
-      duration_milliseconds: initial.failure.duration_milliseconds,
-      response: initial.failure.response,
-      cause: 'secret-manager-numeric-project-canonicalization',
-    }),
+    prior_executions: Object.freeze(initial.failures.map((failure) => Object.freeze({
+      phase: failure.phase,
+      state: failure.state,
+      workflow_revision: failure.workflow_revision,
+      duration_milliseconds: failure.duration_milliseconds,
+      response: failure.response,
+    }))),
     recovery_execution: Object.freeze({
       state: execution.state,
       workflow_revision: execution.workflow_revision,
       duration_milliseconds: execution.duration_milliseconds,
-      count_before: 1,
-      count_after: 2,
+      count_before: 2,
+      count_after: 3,
     }),
     response: execution.response,
     workload: Object.freeze({
@@ -314,9 +365,9 @@ async function main() {
   writePrivateFile(resultPath, Buffer.from(canonicalJson(result), 'utf8'), 0o400);
   verifyExactMain(repositoryRoot, repositoryCommit);
   process.stdout.write([
-    'The single private staging probe recovery succeeded.',
+    'The single private staging diagnostic recovery succeeded.',
     `Private sanitized result: ${resultPath}`,
-    'HTTP 200; internal-only ingress; total executions: 2; Workflow retries: 0; Miakapp writes expected: 0.',
+    'HTTP 200; internal-only ingress; total executions: 3; Workflow retries: 0; Miakapp writes expected: 0.',
     '',
   ].join('\n'));
 }
