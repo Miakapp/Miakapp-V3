@@ -195,7 +195,9 @@ function resourceValue(address) {
   }
 }
 
-function syntheticPlan(phase) {
+function syntheticPlan(profile) {
+  const phase = profile === 'arm' ? 'arm' : 'retire';
+  const finalization = profile === 'retire-finalize';
   const configurationResources = {
     'google_project_iam_custom_role.auth_probe': 'google_project_iam_custom_role',
     'google_project_iam_member.auth_probe': 'google_project_iam_member',
@@ -215,7 +217,7 @@ function syntheticPlan(phase) {
     format_version: '1.2',
     terraform_version: TERRAFORM_VERSION,
     applyable: true,
-    complete: true,
+    complete: profile !== 'retire',
     errored: false,
     variables: { armed: { value: phase === 'arm' ? 'true' : 'false' } },
     configuration: {
@@ -255,13 +257,19 @@ function syntheticPlan(phase) {
         ],
       },
     },
-    resource_changes: Object.entries(changeResources).map(([address, type]) => {
+    resource_changes: Object.entries(changeResources)
+      .filter(([address]) => !finalization || !temporary(address))
+      .map(([address, type]) => {
       const actions = phase === 'arm'
         ? ['create']
         : (temporary(address) ? ['delete'] : ['no-op']);
       const baseValue = resourceValue(address);
       const value = phase === 'retire' && address === 'google_workflows_workflow.auth_probe[0]'
-        ? { ...baseValue, revision_id: WORKFLOW_REVISION }
+        ? {
+          ...baseValue,
+          revision_id: WORKFLOW_REVISION,
+          service_account: `projects/${PROJECT_ID}/serviceAccounts/${PROBE_ACCOUNT}`,
+        }
         : baseValue;
       return {
         address,
@@ -273,7 +281,7 @@ function syntheticPlan(phase) {
           after: phase === 'arm' ? value : (temporary(address) ? null : value),
         },
       };
-    }),
+      }),
   };
 }
 
@@ -501,6 +509,13 @@ test('validates exact arm and retirement plans and rejects privilege drift', () 
   assert.equal(retired.create, 0);
   assert.equal(retired.delete, 3);
   assert.equal(retired.workflow_revision, WORKFLOW_REVISION);
+  const finalized = validateAuthProbePlanAgainstPolicy(
+    syntheticPlan('retire-finalize'),
+    'retire-finalize',
+  );
+  assert.equal(finalized.create, 0);
+  assert.equal(finalized.delete, 0);
+  assert.equal(finalized.workflow_revision, 'absent');
 
   const partialRetirement = syntheticPlan('retire');
   partialRetirement.resource_changes = partialRetirement.resource_changes.filter(({ address }) => (
@@ -534,9 +549,29 @@ test('validates exact arm and retirement plans and rejects privilege drift', () 
     () => validateAuthProbePlanAgainstPolicy(projectIdConfigName, 'arm'),
     /firebase_auth\.config_name/u,
   );
+  const armedAsRetirement = syntheticPlan('arm');
+  armedAsRetirement.complete = false;
   assert.throws(
-    () => validateAuthProbePlanAgainstPolicy(syntheticPlan('arm'), 'retire'),
+    () => validateAuthProbePlanAgainstPolicy(armedAsRetirement, 'retire'),
     /variables|phase/u,
+  );
+  const incompleteArm = syntheticPlan('arm');
+  incompleteArm.complete = false;
+  assert.throws(
+    () => validateAuthProbePlanAgainstPolicy(incompleteArm, 'arm'),
+    /metadata/u,
+  );
+  const completeRetirement = syntheticPlan('retire');
+  completeRetirement.complete = true;
+  assert.throws(
+    () => validateAuthProbePlanAgainstPolicy(completeRetirement, 'retire'),
+    /metadata/u,
+  );
+  const mutatingFinalization = syntheticPlan('retire');
+  mutatingFinalization.complete = true;
+  assert.throws(
+    () => validateAuthProbePlanAgainstPolicy(mutatingFinalization, 'retire-finalize'),
+    /outside the reviewed boundary/u,
   );
 });
 

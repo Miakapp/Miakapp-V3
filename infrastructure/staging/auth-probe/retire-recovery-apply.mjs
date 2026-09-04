@@ -197,7 +197,7 @@ async function main() {
         });
         const finalizeJsonPath = join(bundle, 'retire-recovery-finalize.tfplan.json');
         writePrivateFile(finalizeJsonPath, Buffer.from(shown.stdout), 0o400);
-        const summary = readAndValidateAuthProbePlan(finalizeJsonPath, 'retire');
+        const summary = readAndValidateAuthProbePlan(finalizeJsonPath, 'retire-finalize');
         if (summary.create !== 0 || summary.update !== 0 || summary.delete !== 0) {
           throw new Error('Auth-probe recovery finalization contains a cloud-resource mutation');
         }
