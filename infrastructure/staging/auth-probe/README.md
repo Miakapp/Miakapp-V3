@@ -75,7 +75,11 @@ MIAKAPP_STAGING_AUTH_PROBE_INVOKE_AUTHORIZATION='invoke-auth-app-check-probe:...
 Retirement is a separately rendered and validated targeted plan. It accepts the
 exact subset of temporary resources found in Terraform state, so it also works
 when arm or post-apply inventory stopped before `deployment.json` was written.
-It never creates a missing resource during cleanup:
+Terraform 1.11.3 marks this deliberately targeted plan as incomplete; the
+validator requires that flag only for the normal targeted retirement profile
+and still enumerates every allowed resource and action. The separate untargeted
+recovery finalizer requires a complete, zero-cloud-delta plan. Normal retirement
+never creates a missing resource during cleanup:
 
 ```bash
 MIAKAPP_STAGING_AUTH_PROBE_RETIRE_PLAN_CONFIRMATION=miakapp-v4-staging \
