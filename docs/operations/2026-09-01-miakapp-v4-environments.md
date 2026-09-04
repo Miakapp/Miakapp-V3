@@ -342,10 +342,12 @@ attestation gate remains open.
 
 The pinned local relay-authentication path now includes signing-key overlap,
 key-changing `REAUTH`, concurrent cache refresh, expiry, unknown-`kid` abuse,
-JWKS outage and bounded recovery. Browser participation, the disconnect matrix,
-live KMS and Firebase certificate behavior, staging quotas and alerts, managed
-retiring-key removal and teardown evidence remain blockers. Public ingress
-remains absent.
+JWKS outage and bounded recovery. A separate pinned local gate now exercises the
+public browser client in real Chromium through snapshot, patch, call/result and
+completed post-lease reauthentication on one WebSocket. The audience-bound user
+credential, complete disconnect matrix, live KMS and Firebase certificate
+behavior, staging quotas and alerts, managed retiring-key removal and teardown
+evidence remain blockers. Public ingress remains absent.
 
 Passing the manifest check is evidence, not additional authorization.
 

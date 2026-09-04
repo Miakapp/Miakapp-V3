@@ -1,8 +1,9 @@
 # Miakapp 4 — Design
 
 Date: 2026-08-29
-Status: architecture approved; wire, component-runtime, coordinator-SDK and
-platform-control-plane contracts accepted; operational migration remains open
+Status: architecture approved; wire, component-runtime, coordinator-SDK,
+platform-control-plane and trusted-browser contracts accepted; operational
+migration remains open
 Scope: the Miakapp ecosystem. This document is the shared contract between the
 web app, `miakapp-server` (rewritten in Go), MiakAPI and the Firebase Functions.
 Each repository derives its own implementation plan from it.
@@ -10,9 +11,10 @@ Each repository derives its own implementation plan from it.
 The web app's own rebuild is not covered here and needs its own design pass. The
 exact wire format is RFC 0001, the component capability boundary is RFC 0002 and
 the MiakAPI coordinator surface plus temporary migration-adapter boundary are RFC
-0003. RFC 0004 defines the platform control plane. The operational migration
-procedure remains an explicit gate. A repository may proceed only through the
-gates required by its current vertical slice (§ 19).
+0003. RFC 0004 defines the platform control plane and RFC 0005 defines the trusted
+browser relay client. The operational migration procedure remains an explicit
+gate. A repository may proceed only through the gates required by its current
+vertical slice (§ 19).
 
 ---
 
@@ -63,7 +65,7 @@ to decide differently.
 - The `relations` Firestore collection and its ~120 lines of rules.
 - The Coordinator Secret — replaced by Home Keys.
 - The Firestore read in the user authentication path.
-- Firebase credentials inside the server.
+- Persistent Firebase service credentials inside the server.
 - `.devcontainer/`, `.vscode/`, and every mention of abandoned tooling.
 
 ---
@@ -74,7 +76,7 @@ to decide differently.
 flowchart LR
     C[Coordinator<br/>MiakAPI · Bun/TypeScript]
     F[Firebase Function<br/>Home Keys · push · JWKS]
-    R[miakapp-server<br/>Go · no platform secrets]
+    R[miakapp-server<br/>Go · no persistent platform secrets]
     B[Browser host<br/>trusted React shell]
     S[Firestore + Storage<br/>directory · pointers · bundles]
     U[Sandboxed home UI<br/>home-authored React bundle]
@@ -94,10 +96,13 @@ flowchart LR
    release, and loads it in a sandboxed, non-credential-bearing context.
 5. The coordinator requests a push through the Function.
 
-**The server holds no platform secrets.** It only verifies signatures with
-public keys and makes no authenticated outbound calls. It still receives
-plaintext home data in Miakapp 4; the selected relay is therefore trusted by the home
-for confidentiality and correct routing (§ 4).
+**The server holds no persistent platform or home secret.** It verifies
+signatures with public keys and makes no authenticated outbound calls. The
+trusted-relay alpha nevertheless receives each transient Firebase user bearer,
+and every profile receives plaintext home data; the selected relay is therefore
+trusted by the home for credential handling, confidentiality and correct routing
+(§ 4). Audience binding removes the cross-relay bearer risk, not plaintext
+visibility.
 
 ---
 
@@ -108,7 +113,7 @@ for confidentiality and correct routing (§ 4).
 | Firebase Auth | identity root | provides `uid` and `email_verified` |
 | Firebase Function | platform root | sole holder of platform signing, push and Home Key material |
 | Coordinator | trusted within its own home | application permission authority; deployed agent output is reviewed as ordinary privileged code |
-| miakapp-server | **platform-untrusted, home-data-trusted** | anyone may host one; never receives a platform secret, but sees plaintext home state |
+| miakapp-server | target: **platform-untrusted, home-data-trusted** | anyone may host one after user credentials are audience-bound; it sees plaintext home state |
 | Browser host | trusted platform client | holds Firebase identity and enforces the component capability boundary |
 | Home UI bundle | untrusted by the platform | executes in a sandbox without ambient Firebase credentials or host-origin authority |
 
@@ -118,6 +123,13 @@ Two properties follow from the server being **platform-untrusted**:
 - The short-lived token carries an `aud` claim naming the destination server;
   otherwise a malicious server could replay a captured token against the
   official server to impersonate the coordinator.
+
+The original Firebase-direct user profile does not yet satisfy the second
+property: its audience is the Firebase project, so the selected relay receives a
+reusable user bearer. RFC 0005 therefore restricts that profile to official or
+explicitly fully trusted relays and blocks arbitrary relay selection until the
+control plane issues a short-lived credential bound to the exact relay, home,
+UID and user role. This is a production gate, not an end-to-end encryption claim.
 
 This is not end-to-end encryption. A relay that terminates WSS can observe,
 alter, replay, misroute, delay or drop application messages. A home must trust
@@ -134,6 +146,12 @@ that work is deferred (§ 17).
 Firebase ID token, verified **locally** by the server: RS256 signature against
 Google's JWKS, cached per the response's `Cache-Control` (several hours). No
 network call per connection, no Firestore read.
+
+This direct verification is the trusted-relay alpha profile. The token is a
+project-audience bearer visible to the relay and is therefore unsafe for a broad
+community-relay selector. Production self-hosting requires the audience-bound
+user exchange in RFC 0005 Section 2.3; the relay can still verify the resulting
+short lease locally from public signing keys.
 
 Verification pins the algorithm and validates `kid`, project `aud`, exact
 issuer, non-empty subject, `exp`, `iat` and `auth_time`; signature verification
@@ -734,6 +752,7 @@ Each is reachable without breaking the protocol.
 | Refresh / access token | the only construction giving absence of expiry, revocability and secret-free verification at once |
 | Coordinator calls the Function | the relay is platform-untrusted; the reverse makes it an oracle and keys the rate limit to the wrong IP |
 | `aud` in the short token | anyone may host a server, hence capture and replay a token |
+| audience-bound user relay token before broad self-hosting | the Firebase project bearer received by the direct alpha profile is replayable outside one relay |
 | Declaration replaces the slice | makes orphaned variables structurally impossible, with no cleanup pass |
 | Rejection on collision | the agent sees its bug in development, not a silent overwrite in production |
 | No permanent relay compatibility | v3 compatibility depended on deleted collections; migration safety comes from beta/shadow/canary tooling instead |
@@ -747,10 +766,11 @@ Each is reachable without breaking the protocol.
 
 ## 19. Design gates before implementation
 
-The architecture direction above is stable. RFCs 0001 through 0004 close the
-shared wire, component, coordinator/migration-adapter and control-plane contract
-gates. Their executable corpora prove the contracts themselves; production
-implementations still have to pass the corresponding vertical-slice exit gates.
+The architecture direction above is stable. RFCs 0001 through 0005 close the
+shared wire, component, coordinator/migration-adapter, control-plane and trusted
+browser-client contract gates. Their executable corpora prove the contracts
+themselves; production implementations still have to pass the corresponding
+vertical-slice exit gates.
 
 1. **Protocol RFC — closed 2026-08-30** — RFC 0001 defines exact frames, state
    and call semantics, caller metadata, ACLs, revisions, limits, errors and
@@ -761,7 +781,8 @@ implementations still have to pass the corresponding vertical-slice exit gates.
    limits and conformance claims. Its architectural harness exercises the
    security-critical boundary subset in Chromium, Firefox and WebKit. The
    production host and complete conformance matrix remain vertical-slice work.
-3. **Platform control plane — closed 2026-08-31** — RFC 0004 defines owner
+3. **Platform control plane — base contract closed 2026-08-31; audience-bound
+   user relay credential open** — RFC 0004 defines owner
    bootstrap, the private Home Key registry, exact coarse scopes, signed
    resource-specific access tokens, JWKS rotation, Firebase user-token
    verification, push grants, publisher authorization, quotas and audit. The
@@ -787,8 +808,9 @@ implementations still have to pass the corresponding vertical-slice exit gates.
    bounded recovery. The local lifecycle stops after overlap and activation; it
    does not remove the retiring key. Real App Check enforcement, FCM
    acceptance/delivery, production Storage/KMS and Firebase certificates,
-   trusted edge admission, browser and network faults, complete Section 18 and
-   staging behavior remain implementation exit gates.
+   trusted edge admission, audience-bound user relay authentication, browser and
+   network faults, complete Section 18 and staging behavior remain implementation
+   exit gates.
 4. **MiakAPI coordinator API — closed 2026-08-30; broader agent experience open**
    — RFC 0003 defines the public coordinator lifecycle, declarations, state,
    events, calls, presence, errors and compatibility boundary. CLI/MCP tools,
@@ -798,10 +820,19 @@ implementations still have to pass the corresponding vertical-slice exit gates.
    effects, deterministic comparison and Node-RED lifecycle requirements. The
    real bridge, beta topology, backup/restore, canary metrics, cutover and rollback
    runbook remain open.
+6. **Trusted browser relay client — narrow alpha closed 2026-09-04; production
+   credential and host gates open** — RFC 0005 defines the isolated browser
+   package, lifecycle, immutable state, named calls, reauthentication, reconnect,
+   limits and cleanup. The real implementation passes deterministic tests and a
+   reciprocal Chromium/Go-relay gate through a successful post-lease call on one
+   WebSocket. Its synthetic Firebase-direct profile requires a fully trusted
+   relay; arbitrary self-hosted relay selection, the React host, component bridge,
+   complete fault matrix and staging evidence remain blocked.
 
 Implementation work remains limited by its corresponding gate. The relay may now
-implement RFCs 0001 and 0004, MiakAPI may implement RFCs 0001, 0003 and 0004, and
-the web repository may implement the RFC 0004 Firebase Emulator slice. This
+implement RFCs 0001, 0004 and 0005, MiakAPI may implement RFCs 0001, 0003, 0004
+and 0005, and the web repository may implement the RFC 0004 Firebase Emulator
+slice. This
 repository now contains its first owner-to-access-token increment under
 `control-plane/`; its synthetic local push slice now covers FID proof, grants and
 semantic sends, its component slice covers publication authority and immutable

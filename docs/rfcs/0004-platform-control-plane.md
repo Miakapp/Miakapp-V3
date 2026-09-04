@@ -4,6 +4,9 @@ Status: Accepted
 
 Date: 2026-08-31
 
+Last updated: 2026-09-04 — Firebase-direct user relay use is restricted pending
+audience-bound attenuation.
+
 ## 1. Scope
 
 This RFC defines the privileged Miakapp 4 control plane shared by the web
@@ -39,16 +42,18 @@ The keywords **MUST**, **MUST NOT**, **REQUIRED**, **SHOULD**, **SHOULD NOT** an
 | Home owner | may create a home and manage its Home Keys and selected relay |
 | Home Key holder | receives only the scopes recorded for that key |
 | Coordinator | trusted application authority inside the home named by its token |
-| Relay | platform-untrusted but trusted by a home for plaintext data and routing |
+| Relay | production target: platform-untrusted after user-token attenuation; the direct alpha requires a fully trusted operator and still exposes plaintext home data |
 | Authenticated user | controls their own push destinations and grants |
 | Home bundle | platform-untrusted; receives no control-plane credential |
 
-The design has these required properties:
+The production design has these required properties. The Firebase-direct user
+profile in Section 11 is an explicitly restricted alpha exception to property 2
+until its audience-bound replacement is specified and implemented:
 
 1. a relay never receives a Home Key, Firebase service credential, signing key,
    push credential or component-publication credential;
-2. a token captured by a relay is useless at another relay and at every platform
-   HTTP API;
+2. every short-lived relay credential captured by a relay is useless at another
+   relay and at every platform HTTP API;
 3. deleting a Home Key prevents every new exchange immediately after the
    authoritative transaction commits;
 4. access already issued from that key ends after a bounded lease;
@@ -557,6 +562,23 @@ business authorization.
 User WebSocket sessions present Firebase ID tokens, not Miakapp access tokens.
 The two token profiles use mutually exclusive issuers, algorithms, audiences and
 claim validation.
+
+This direct profile is accepted only for the trusted-relay alpha. A Firebase ID
+token names the Firebase project as audience, not the selected relay, so an
+operator that receives it can replay the bearer against other services trusting
+that project. Keeping it out of URLs and logs does not attenuate that authority.
+The production application MUST NOT offer arbitrary community-relay selection
+under this profile. It may connect only to an official relay or one the user
+explicitly trusts as completely as the Miakapp backend.
+
+Before broad self-hosted relay selection, the trusted control plane MUST exchange
+Firebase identity for a short-lived credential bound to one exact relay audience,
+home, UID and user role, with no owner, push, publication, coordinator or CLI
+scope. The exchange, App Check/admission policy, JWT claims and relay verifier
+profile require a follow-up amendment before implementation. RFC 0005 records
+the browser lifecycle and exact production gate. This audience binding prevents
+cross-relay credential replay; it does not make the selected relay blind to home
+traffic.
 
 The relay pins its Firebase project ID and the Google Secure Token certificate
 endpoint. It verifies the official Firebase profile:
