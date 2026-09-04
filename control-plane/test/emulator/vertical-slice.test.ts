@@ -293,11 +293,11 @@ describe('Firebase Emulator owner-to-access-token vertical slice', () => {
     expect(jwks.status).toBe(200);
     expect(jwks.headers.get('cache-control')).toBe('public, max-age=60, must-revalidate');
     const body = await jsonResponse<{ keys: { kid: string; d?: string }[] }>(jwks);
-    expect(body.keys).toHaveLength(1);
+    expect(body.keys).toEqual(fixture.key_sets.rotated.keys);
     const activated = fixture.rotation.transitions.find((transition) => transition.phase === 'activated');
     if (activated === undefined) throw new Error('Synthetic fixture has no activated signing key');
-    expect(body.keys[0]?.kid).toBe(activated.signing_kid);
-    expect(body.keys[0]?.d).toBeUndefined();
+    expect(body.keys.some((key) => key.kid === activated.signing_kid)).toBe(true);
+    expect(body.keys.every((key) => key.d === undefined)).toBe(true);
   });
 
   test('creates both home records atomically and rejects unauthenticated, ambiguous, and duplicate requests', async () => {

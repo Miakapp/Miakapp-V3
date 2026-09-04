@@ -128,6 +128,9 @@ describe('production runtime configuration', () => {
     });
     expect(deployment.admissionProfile).toBe(CONTROL_PLANE_ADMISSION_PROFILE);
     expect([...deployment.allowedOrigins]).toEqual(['https://app.staging.miakapp.com']);
+    expect(deployment.signingPublicJwks).toEqual([deployment.signingPublicJwk]);
+    expect(deployment.signingPublicJwks[0]).toBe(deployment.signingPublicJwk);
+    expect(Object.isFrozen(deployment.signingPublicJwks)).toBe(true);
     expect(Object.isFrozen(runtime)).toBe(true);
     expect(Object.isFrozen(deployment)).toBe(true);
     expect(identity.authClient.serviceAccountEmail).toBe(runtime.serviceAccountEmail);

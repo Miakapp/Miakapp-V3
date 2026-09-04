@@ -193,5 +193,6 @@ export function createProductionDeploymentConfig(
     networkKeyVersion: secrets.networkKeyVersion,
     networkHmacKeyForVersion: secrets.networkHmacKeyForVersion,
     signingPublicJwk: signing.publicJwk,
+    signingPublicJwks: Object.freeze([signing.publicJwk]),
   });
 }
