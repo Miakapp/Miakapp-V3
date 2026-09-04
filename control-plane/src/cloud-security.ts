@@ -19,6 +19,10 @@ import type { AccessGrant, SigningPublicJwk } from './types.js';
 
 const KMS_ED25519_ALGORITHM = 'EC_SIGN_ED25519';
 const MAXIMUM_PEM_BYTES = 8_192;
+const SECRET_MANAGER_RESPONSE_PROJECTS = Object.freeze({
+  staging: Object.freeze(['miakapp-v4-staging', '1072737219170']),
+  production: Object.freeze(['miakapp-v4']),
+} as const);
 
 export interface CloudCallOptions {
   readonly timeout: number;
@@ -160,10 +164,26 @@ function secretResolver(keys: ReadonlyMap<string, Uint8Array>): (
   };
 }
 
+function sameSecretVersion(
+  actual: unknown,
+  requested: string,
+  allowedProjects: readonly string[],
+): boolean {
+  const pattern = /^projects\/([^/]+)\/secrets\/([^/]+)\/versions\/([1-9][0-9]*)$/;
+  const actualMatch = typeof actual === 'string' ? pattern.exec(actual) : null;
+  const requestedMatch = pattern.exec(requested);
+  return actualMatch !== null
+    && requestedMatch !== null
+    && allowedProjects.includes(actualMatch[1] as string)
+    && actualMatch[2] === requestedMatch[2]
+    && actualMatch[3] === requestedMatch[3];
+}
+
 async function loadKeyring(
   keyring: PinnedSecretKeyringConfig,
   client: SecretManagerClient,
   timeout: number,
+  responseProjects: readonly string[],
 ): Promise<ReadonlyMap<string, Uint8Array>> {
   const entries = await Promise.all(keyring.versions.map(async (reference) => {
     try {
@@ -176,7 +196,7 @@ async function loadKeyring(
       const payload = response.payload;
       if (payload === null || Array.isArray(payload) || typeof payload !== 'object') fail();
       const key = bytes(payload.data);
-      if (response.name !== reference.resourceName
+      if (!sameSecretVersion(response.name, reference.resourceName, responseProjects)
         || key.byteLength !== 32
         || checksumNumber(payload.dataCrc32c) !== crc32c(key)) {
         fail();
@@ -207,6 +227,7 @@ export async function loadProductionSecrets(
         config.secretManager.keyrings[purpose],
         client,
         config.secretManager.rpcTimeoutMilliseconds,
+        SECRET_MANAGER_RESPONSE_PROJECTS[config.environment],
       ),
     ] as const)),
   );
