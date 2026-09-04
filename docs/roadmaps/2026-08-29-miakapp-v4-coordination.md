@@ -300,8 +300,9 @@ point now exists as reviewable source with no Function secret mounts. It is
 absent from the emulator codebase and enabled only by the separate deterministic
 production package; the workload Terraform root selects internal-only ingress.
 The runtime configuration, initial secret versions and Firebase registration are
-materialized. Private discovery is validated; live App Check provider policy
-and all `STAGE-*` observations remain open.
+materialized. Private discovery and the Admin custom-provider App Check policy
+are validated; browser-provider attestation and all `STAGE-*` observations
+remain open.
 
 An eighth activation-material slice adds the exact staging runtime-document
 builder and a commit/plan-digest-bound two-phase executor. It permits only one
@@ -340,6 +341,16 @@ loaded all five secret values and validated the KMS public key; it does not
 validate Firebase Auth, App Check, FCM or an application mutation. The committed
 allow-listed evidence contains no execution UUID, trace context, raw headers,
 stack or diagnostic payload, and both invocation entry points now fail closed.
+
+An eleventh staging slice initializes Firebase Authentication with every
+end-user provider disabled, then consumes it through a separate one-shot probe.
+One no-email synthetic custom-token identity reached the internal-only Function:
+the missing-App-Check control returned `401 invalid_app_check_token`, while two
+requests carrying a real Admin custom-provider App Check token returned HTTP
+200. This proves the backend verifier and explicit reusable-token policy, not
+browser attestation. The identity was deleted and independently verified absent;
+the Workflow and both temporary IAM bindings were retired. Only closed,
+digest-pinned result and retirement summaries are public.
 
 Deliverables:
 
@@ -487,13 +498,13 @@ current consumer.
    bounded recovery completed it in place, followed by output reconciliation and
    a zero-change plan. Two no-retry private discovery failures were followed by
    one exact HTTP 200 response from the corrected source, with no application
-   mutation. Firebase Authentication is not initialized in staging; its closed,
-   no-provider baseline is prepared behind a separate exact non-deletable
-   authorization. A dormant Auth/App Check probe consumes that exact state and is prepared to
-   validate a real Firebase ID token, an Admin custom-provider App Check token,
-   the explicit V1 reusable-token policy and synthetic-user cleanup before
-   removing its temporary Workflow and IAM bindings. Until its live evidence is
-   committed, ongoing secret rotation, browser App Check provider policy,
+   mutation. Firebase Authentication is initialized in staging with its exact
+   closed, no-provider baseline. A separately gated Auth/App Check probe consumed
+   that state and validated a real Firebase ID token, an Admin custom-provider
+   App Check token, the explicit V1 reusable-token policy and synthetic-user
+   cleanup. Its temporary Workflow and IAM bindings are removed, and its
+   sanitized evidence is digest-pinned. Ongoing secret rotation, browser App
+   Check provider attestation,
    source/edge admission, monitoring, migration rehearsal and real staging fault
    evidence remain required before closing relay-integration and staging-only
    RFC 0004 Section 18 gates.

@@ -4,6 +4,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 import { BOOTSTRAP_RESOURCE_ADDRESSES } from './bootstrap/saved-plan.mjs';
+import { validateAuthProbeEvidence } from './auth-probe/evidence.mjs';
+import { validateFirebaseAuthEvidence } from './firebase-auth/evidence.mjs';
 import { validateProbeEvidence } from './probe/evidence.mjs';
 import { validateWorkloadEvidence } from './workload/evidence.mjs';
 
@@ -24,8 +26,8 @@ const SERVICE_IDS = [
 ];
 
 const SERVICE_STATES = [
-  'api_enabled_no_staging_identity_test',
-  'firebase_app_created_provider_not_configured',
+  'initialized_closed_custom_token_lifecycle_validated',
+  'admin_custom_provider_validated_browser_attestation_pending',
   'foundation_created_no_application_mutation',
   'private_deployment_active_source_verified_discovery_validated',
   'private_bucket_created_no_application_mutation',
@@ -34,7 +36,7 @@ const SERVICE_STATES = [
   'api_enabled_one_permission_runtime_role_applied_uninvoked',
   'api_enabled_runtime_deployed_no_application_log_validation',
   'api_enabled_runtime_deployed_no_metric_validation',
-  'api_enabled_unscheduled_private_probe_succeeded',
+  'api_enabled_discovery_retained_auth_probe_succeeded_and_retired',
 ];
 
 const ENABLED_SERVICE_APIS = [
@@ -112,7 +114,7 @@ const IAM_BINDINGS = [
 ];
 
 const REQUIRED_BLOCKERS = [
-  'app-check-live-provider-and-replay-policy',
+  'app-check-browser-provider-attestation',
   'relay-token-refresh-integration',
   'trusted-source-and-edge-admission',
   'live-managed-service-fault-matrix',
@@ -239,7 +241,7 @@ function validateProject(value) {
   }
   exact(
     project.lifecycle,
-    'firebase_enabled_billing_linked_private_control_plane_discovery_validated',
+    'firebase_auth_initialized_private_control_plane_auth_app_check_validated',
     'project.lifecycle',
   );
   exact(project.creation_authorized, false, 'project.creation_authorized');
@@ -2766,6 +2768,8 @@ function validateEvidence(value) {
     'activation_material',
     'workload_deployment',
     'private_probe',
+    'firebase_auth_baseline',
+    'auth_app_check_probe',
     'retired_recovery_workflow',
     'staging_rows',
     'fault_matrix',
@@ -3138,6 +3142,116 @@ function validateEvidence(value) {
   for (const [field, expected] of Object.entries(expectedExecutions)) {
     exact(executions[field], expected, `evidence.private_probe.executions.${field}`);
   }
+  const firebaseAuth = record(evidence.firebase_auth_baseline, 'evidence.firebase_auth_baseline', [
+    'state',
+    'observed_at',
+    'repository_commit',
+    'result_path',
+    'result_sha256',
+    'terraform_state_sha256',
+    'live_config_sha256',
+    'config_name',
+    'external_identity_providers',
+    'anonymous_sign_in',
+    'email_sign_in',
+    'phone_sign_in',
+    'mfa',
+    'multi_tenant',
+    'request_logging',
+    'public_endpoints_created',
+    'persistent_credentials_created',
+  ]);
+  const expectedFirebaseAuth = {
+    state: 'initialized_closed_and_reconciled',
+    observed_at: '2026-09-04T10:42:43.616Z',
+    repository_commit: 'e44ce2cde147b19b7e82f89b44e8f3a5233d1942',
+    result_path: 'firebase-auth/result.json',
+    result_sha256: '25a3c80ccccb89208499b1d0fc2176ac82a04a7fc47ed57af80dfa0371136c87',
+    terraform_state_sha256: '94a1eca99e8a793ca1d316a283c43c0a75aeb041a84135ac5084074260fceb69',
+    live_config_sha256: '2b274774cdc86caf380f67f611de4d7df66da2bb8ad4d92f111df4d26d37dd50',
+    config_name: 'projects/1072737219170/config',
+    external_identity_providers: 0,
+    anonymous_sign_in: false,
+    email_sign_in: false,
+    phone_sign_in: false,
+    mfa: 'DISABLED',
+    multi_tenant: false,
+    request_logging: false,
+    public_endpoints_created: 0,
+    persistent_credentials_created: 0,
+  };
+  for (const [field, expected] of Object.entries(expectedFirebaseAuth)) {
+    exact(firebaseAuth[field], expected, `evidence.firebase_auth_baseline.${field}`);
+  }
+  const authProbe = record(evidence.auth_app_check_probe, 'evidence.auth_app_check_probe', [
+    'state',
+    'observed_at',
+    'repository_commit',
+    'workflow_source_sha256',
+    'workflow_revision',
+    'result_path',
+    'result_sha256',
+    'retirement_path',
+    'retirement_sha256',
+    'execution_duration_milliseconds',
+    'execution_count',
+    'product_requests',
+    'expected_application_writes',
+    'missing_app_check_status',
+    'missing_app_check_code',
+    'first_authenticated_status',
+    'replay_authenticated_status',
+    'firebase_auth_validated',
+    'app_check_validated',
+    'app_check_token_consumption',
+    'browser_provider_attestation_validated',
+    'synthetic_user_created',
+    'synthetic_user_deleted',
+    'independent_user_absence_verified',
+    'workflow_present',
+    'temporary_bindings_present',
+    'recurring_compute',
+    'private_bundle_committed',
+    'execution_identifiers_committed',
+    'token_material_committed',
+    'raw_diagnostics_committed',
+  ]);
+  const expectedAuthProbe = {
+    state: 'succeeded_and_retired',
+    observed_at: '2026-09-04T11:33:48.986Z',
+    repository_commit: '753601acc160c2214511c3207b9f0c47d3d7e03e',
+    workflow_source_sha256: '525b97d18a2848c1d852b9d117cb20cf464bbc1d7baa85b2d44d457487cd922c',
+    workflow_revision: '000001-bb4',
+    result_path: 'auth-probe/result.json',
+    result_sha256: '87af1de1f94bd4f1d070fef430f6e61ee70f7b988ec81fcfb0fb2805a3edc95f',
+    retirement_path: 'auth-probe/retirement.json',
+    retirement_sha256: '595c994647f181b7f2b7a98e403c9d039b32cde6e57acd9df904d40b568e5b54',
+    execution_duration_milliseconds: 7_821,
+    execution_count: 1,
+    product_requests: 3,
+    expected_application_writes: 0,
+    missing_app_check_status: 401,
+    missing_app_check_code: 'invalid_app_check_token',
+    first_authenticated_status: 200,
+    replay_authenticated_status: 200,
+    firebase_auth_validated: true,
+    app_check_validated: true,
+    app_check_token_consumption: false,
+    browser_provider_attestation_validated: false,
+    synthetic_user_created: true,
+    synthetic_user_deleted: true,
+    independent_user_absence_verified: true,
+    workflow_present: false,
+    temporary_bindings_present: false,
+    recurring_compute: false,
+    private_bundle_committed: false,
+    execution_identifiers_committed: false,
+    token_material_committed: false,
+    raw_diagnostics_committed: false,
+  };
+  for (const [field, expected] of Object.entries(expectedAuthProbe)) {
+    exact(authProbe[field], expected, `evidence.auth_app_check_probe.${field}`);
+  }
   const retiredRecoveryWorkflow = record(
     evidence.retired_recovery_workflow,
     'evidence.retired_recovery_workflow',
@@ -3206,10 +3320,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 36, 'manifest.revision');
+  exact(manifest.revision, 37, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_discovery_validated',
+    'private_control_plane_auth_app_check_validated',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -3382,7 +3496,132 @@ export function validateCommittedEvidence(
     probe.recovery_execution.count_after === probe.recovery_execution.count_before + 1,
     'runtime.live_request_performed',
   );
-  return Object.freeze({ workload, probe });
+
+  const firebaseAuthManifest = manifest.evidence.firebase_auth_baseline;
+  const firebaseAuthPath = committedEvidencePath(
+    stagingRoot,
+    firebaseAuthManifest.result_path,
+    'firebase-auth/result.json',
+    'evidence.firebase_auth_baseline.result_path',
+  );
+  const firebaseAuth = validatedEvidenceFile(
+    firebaseAuthPath,
+    validateFirebaseAuthEvidence,
+    'evidence.firebase_auth_baseline.result_path',
+  );
+  exact(
+    fileSha256(firebaseAuthPath),
+    firebaseAuthManifest.result_sha256,
+    'evidence.firebase_auth_baseline.result_sha256',
+  );
+  exactFields(firebaseAuthManifest, {
+    state: 'initialized_closed_and_reconciled',
+    observed_at: firebaseAuth.observed_at,
+    repository_commit: firebaseAuth.repository_commit,
+    terraform_state_sha256: firebaseAuth.terraform_state_sha256,
+    live_config_sha256: firebaseAuth.live_config_sha256,
+    config_name: firebaseAuth.firebase_auth.config_name,
+    external_identity_providers: firebaseAuth.external_identity_providers,
+    anonymous_sign_in: firebaseAuth.firebase_auth.anonymous_sign_in,
+    email_sign_in: firebaseAuth.firebase_auth.email_sign_in,
+    phone_sign_in: firebaseAuth.firebase_auth.phone_sign_in,
+    mfa: firebaseAuth.firebase_auth.mfa,
+    multi_tenant: firebaseAuth.firebase_auth.multi_tenant,
+    request_logging: firebaseAuth.firebase_auth.request_logging,
+    public_endpoints_created: firebaseAuth.public_endpoints_created,
+    persistent_credentials_created: firebaseAuth.persistent_credentials_created,
+  }, 'evidence.firebase_auth_baseline');
+
+  const authProbeManifest = manifest.evidence.auth_app_check_probe;
+  const authProbeResultPath = committedEvidencePath(
+    stagingRoot,
+    authProbeManifest.result_path,
+    'auth-probe/result.json',
+    'evidence.auth_app_check_probe.result_path',
+  );
+  const authProbeRetirementPath = committedEvidencePath(
+    stagingRoot,
+    authProbeManifest.retirement_path,
+    'auth-probe/retirement.json',
+    'evidence.auth_app_check_probe.retirement_path',
+  );
+  let authProbeEvidence;
+  try {
+    authProbeEvidence = validateAuthProbeEvidence(authProbeResultPath, authProbeRetirementPath);
+  } catch {
+    reject('evidence.auth_app_check_probe', 'does not match its committed artifacts');
+  }
+  const { result: authProbe, retirement: authProbeRetirement } = authProbeEvidence;
+  exact(
+    fileSha256(authProbeResultPath),
+    authProbeManifest.result_sha256,
+    'evidence.auth_app_check_probe.result_sha256',
+  );
+  exact(
+    fileSha256(authProbeRetirementPath),
+    authProbeManifest.retirement_sha256,
+    'evidence.auth_app_check_probe.retirement_sha256',
+  );
+  exactFields(authProbeManifest, {
+    state: authProbe.execution.state === 'SUCCEEDED'
+      && authProbeRetirement.workflow_present === false
+      && authProbeRetirement.temporary_bindings_present === false
+      ? 'succeeded_and_retired'
+      : 'incomplete',
+    observed_at: authProbe.observed_at,
+    repository_commit: authProbe.repository_commit,
+    workflow_source_sha256: authProbe.workflow.source_sha256,
+    workflow_revision: authProbe.workflow.revision,
+    execution_duration_milliseconds: authProbe.execution.duration_milliseconds,
+    execution_count: authProbe.execution.count_after - authProbe.execution.count_before,
+    product_requests: authProbe.request.product_requests,
+    expected_application_writes: authProbe.request.expected_application_writes,
+    missing_app_check_status: authProbe.responses.missing_app_check.status,
+    missing_app_check_code: authProbe.responses.missing_app_check.code,
+    first_authenticated_status: authProbe.responses.first_authenticated_read.status,
+    replay_authenticated_status: authProbe.responses.replay_authenticated_read.status,
+    firebase_auth_validated: authProbe.firebase_auth.synthetic_user_created
+      && authProbe.firebase_auth.synthetic_user_deleted
+      && authProbe.firebase_auth.independent_absence_verified,
+    app_check_validated: authProbe.app_check.first_use_accepted
+      && authProbe.app_check.replay_accepted,
+    app_check_token_consumption: authProbe.app_check.token_consumption,
+    browser_provider_attestation_validated:
+      authProbe.app_check.browser_provider_attestation_validated,
+    synthetic_user_created: authProbe.firebase_auth.synthetic_user_created,
+    synthetic_user_deleted: authProbe.firebase_auth.synthetic_user_deleted,
+    independent_user_absence_verified: authProbe.firebase_auth.independent_absence_verified,
+    workflow_present: authProbeRetirement.workflow_present,
+    temporary_bindings_present: authProbeRetirement.temporary_bindings_present,
+    recurring_compute: authProbeRetirement.recurring_compute,
+  }, 'evidence.auth_app_check_probe');
+  exactFields(authProbe.workload, {
+    deployment_commit: workload.repository_commit,
+    source_sha256: workload.source_archive_sha256,
+    function_revision: workload.function.revision,
+    expected_function_revision: workload.function.revision,
+    function_uri: workload.function.uri,
+    ingress: workload.function.ingress,
+    unauthenticated_invokers: workload.function.unauthenticated_invokers,
+    probe_user_managed_keys: workload.identities.user_managed_keys.probe,
+  }, 'evidence.auth_app_check_probe.result.workload');
+  exact(
+    authProbe.app_check.firebase_app_id,
+    manifest.evidence.activation_material.firebase_app_id,
+    'evidence.auth_app_check_probe.result.app_check.firebase_app_id',
+  );
+  exact(
+    firebaseAuth.firebase_auth.project_id,
+    authProbe.project_id,
+    'evidence.auth_app_check_probe.result.project_id',
+  );
+  return Object.freeze({
+    workload,
+    probe,
+    firebaseAuth,
+    authProbe,
+    authProbeRetirement,
+  });
 }
 
 export function validateStagingManifestFile(manifestPath, firebaseRcPath = fileURLToPath(new URL('../../.firebaserc', import.meta.url))) {
@@ -3404,7 +3643,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; the internal-only control plane served its exact discovery document through the unscheduled private probe.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; the internal-only control plane served its exact discovery document and passed the retired Firebase Auth/App Check probe.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';

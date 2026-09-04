@@ -36,6 +36,10 @@ import {
 } from '../auth-probe/contract.mjs';
 import { validateAuthProbeRoot } from '../auth-probe/guard.mjs';
 import {
+  validateAuthProbeEvidence,
+  validateAuthProbeEvidenceValues,
+} from '../auth-probe/evidence.mjs';
+import {
   validateAuthProbeWorkflowResult,
   validateSuccessfulAuthProbeExecution,
 } from '../auth-probe/invoke.mjs';
@@ -70,6 +74,8 @@ const retirementRecoveryDrivers = [
 ].join('\n');
 const cliDriver = readFileSync(new URL('cli.mjs', probeRoot), 'utf8');
 const checkSource = readFileSync(new URL('../check.sh', import.meta.url), 'utf8');
+const committedResultPath = new URL('../auth-probe/result.json', import.meta.url);
+const committedRetirementPath = new URL('../auth-probe/retirement.json', import.meta.url);
 
 function workflowResult() {
   return {
@@ -531,6 +537,40 @@ test('pins a no-secret one-shot Auth and App Check Workflow', () => {
   assert.doesNotMatch(WORKFLOW_SOURCE, /^\s*retry:/mu);
   assert.doesNotMatch(WORKFLOW_SOURCE, /AIza[0-9A-Za-z_-]{30,}|debugToken|private[_ -]?key/iu);
   assert.doesNotMatch(WORKFLOW_SOURCE, /allUsers|allAuthenticatedUsers|\bmiakapp-3\b/);
+});
+
+test('pins sanitized successful Auth/App Check evidence and dormant retirement', () => {
+  const validated = validateAuthProbeEvidence(committedResultPath, committedRetirementPath);
+  assert.equal(validated.result.execution.state, 'SUCCEEDED');
+  assert.deepEqual(validated.result.responses, {
+    first_authenticated_read: {
+      destination_count: 0,
+      schema: 'miakapp.push-destination-list/1',
+      status: 200,
+    },
+    missing_app_check: {
+      code: 'invalid_app_check_token',
+      status: 401,
+    },
+    replay_authenticated_read: {
+      destination_count: 0,
+      schema: 'miakapp.push-destination-list/1',
+      status: 200,
+    },
+  });
+  assert.equal(validated.result.firebase_auth.independent_absence_verified, true);
+  assert.equal(validated.result.app_check.browser_provider_attestation_validated, false);
+  assert.equal(validated.retirement.workflow_present, false);
+  assert.equal(validated.retirement.temporary_bindings_present, false);
+
+  const leaked = structuredClone(validated.result);
+  leaked.execution.execution_id = 'e13810a0-3b6d-4e5f-8a7b-0123456789ab';
+  assert.throws(
+    () => validateAuthProbeEvidenceValues(leaked, validated.retirement),
+    /private telemetry or credential field|private execution, trace or credential value/u,
+  );
+  assert.match(checkSource, /auth-probe\/evidence\.mjs/u);
+  assert.match(checkSource, /auth-probe\/retirement\.json/u);
 });
 
 test('validates exact arm and retirement plans and rejects privilege drift', () => {

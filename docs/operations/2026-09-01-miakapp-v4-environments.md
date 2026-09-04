@@ -5,7 +5,8 @@ Date: 2026-09-01
 Status: accepted direction; staging bootstrap and foundation complete, exact
 keyless recovery workflow and WIF exchange retired on 2026-09-03, private
 workload active and converged with internal-only ingress and source verified,
-and one exact discovery response validated through the unscheduled private probe
+one exact discovery response validated, and one real Firebase Auth plus Admin
+custom-provider App Check probe succeeded and retired on 2026-09-04
 
 ## Decision
 
@@ -24,7 +25,7 @@ are:
 | Environment | Project ID | Data | Purpose |
 |---|---|---|---|
 | Local | `demo-miakapp-v4` | synthetic only | Hermetic Emulator Suite and CI |
-| Staging | `miakapp-v4-staging` | synthetic only | Existing billing-linked project with a discovery-validated, scale-to-zero private Function for real-service acceptance and migration rehearsal |
+| Staging | `miakapp-v4-staging` | synthetic only | Existing billing-linked project with an Auth/App Check-validated, scale-to-zero private Function for real-service acceptance and migration rehearsal |
 | Production | `miakapp-v4` | migrated production data | Canary, then final Miakapp 4 service |
 | Legacy production | `miakapp-3` | existing production data | Unchanged service and rollback oracle during migration |
 
@@ -322,17 +323,22 @@ Its sanitized result is digest-pinned under
 [`../../infrastructure/staging/probe/`](../../infrastructure/staging/probe/)
 without execution or trace identifiers.
 
-Read-only preflight found the Firebase APIs enabled but the project-level
-Firebase Authentication configuration absent. A dedicated Terraform root now
-prepares the non-deletable initialization as a closed baseline with no end-user
-sign-in provider. It requires a digest-bound explicit authorization and has no
-destroy path. Backend initialization materialized only its canonical empty GCS
-state (zero managed resources); the non-deletable Auth resource is still absent.
-The independent Auth/App Check root consumes that exact remote
-state before it can arm its dormant, bounded, unscheduled Workflow. Runtime-only
-token material and explicit arm/invoke/retire gates remain unchanged. Neither
-root has yet produced live Auth evidence. A successful execution will not
-replace the separate browser-provider attestation gate.
+The project-level Firebase Authentication configuration is now initialized as a
+non-deletable closed baseline with no end-user sign-in provider. The provider's
+non-atomic create was recovered by exact state adoption and reconciled to zero
+change; independent live inspection found no default-supported, OIDC or
+inbound-SAML provider.
+
+The independent Auth/App Check root then armed one bounded, unscheduled Workflow
+with temporary least-privilege IAM. Its sole successful execution created one
+fixed no-email synthetic user through a custom token, proved that missing App
+Check returns `401 invalid_app_check_token`, and received HTTP 200 twice with a
+real Admin custom-provider App Check token. This validates the explicit V1
+reusable-token policy without claiming browser attestation. The user was deleted
+and independently verified absent, and the Workflow and both temporary IAM
+bindings were retired. Digest-pinned public summaries contain no execution ID,
+token, header, trace or raw diagnostic. The separate browser-provider
+attestation gate remains open.
 Relay integration, quotas, alerts, rotation and teardown evidence remain
 blockers. Public ingress remains absent.
 Passing the manifest check is evidence, not additional authorization.

@@ -26,8 +26,9 @@ implemented across several repositories.
   — accepted local/staging/production isolation, cost posture, migration boundary,
   and the gate before any Miakapp 4 cloud project is used.
 - [`../infrastructure/staging/`](../infrastructure/staging/)
-  — closed, credential-free staging intent, policy validator and teardown
-  rehearsal. It creates no cloud resource and grants no deployment authority.
+  — closed staging intent, digest-pinned live evidence, credential-free policy
+  validator and teardown rehearsal. Cloud mutation remains behind separate
+  explicit gates; reading the documents grants no deployment authority.
 
 RFC 0001 is backed by independent Go and TypeScript implementations and shared
 binary fixtures under [`../protocol/`](../protocol/). RFC 0002's architecture

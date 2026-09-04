@@ -76,6 +76,7 @@ node infrastructure/staging/firebase-auth/guard.mjs \
 node --check infrastructure/staging/firebase-auth/apply.mjs
 node --check infrastructure/staging/firebase-auth/cli.mjs
 node --check infrastructure/staging/firebase-auth/contract.mjs
+node --check infrastructure/staging/firebase-auth/evidence.mjs
 node --check infrastructure/staging/firebase-auth/guard.mjs
 node --check infrastructure/staging/firebase-auth/plan.mjs
 node --check infrastructure/staging/firebase-auth/recovery-adopt.mjs
@@ -83,11 +84,14 @@ node --check infrastructure/staging/firebase-auth/recovery-apply.mjs
 node --check infrastructure/staging/firebase-auth/recovery-plan.mjs
 node --check infrastructure/staging/firebase-auth/recovery.mjs
 node --check infrastructure/staging/firebase-auth/validate-plan.mjs
+node infrastructure/staging/firebase-auth/evidence.mjs \
+  infrastructure/staging/firebase-auth/result.json
 node infrastructure/staging/auth-probe/guard.mjs \
   "${repository_root}/infrastructure/staging/auth-probe"
 node --check infrastructure/staging/auth-probe/apply.mjs
 node --check infrastructure/staging/auth-probe/cli.mjs
 node --check infrastructure/staging/auth-probe/contract.mjs
+node --check infrastructure/staging/auth-probe/evidence.mjs
 node --check infrastructure/staging/auth-probe/guard.mjs
 node --check infrastructure/staging/auth-probe/inventory.mjs
 node --check infrastructure/staging/auth-probe/invoke.mjs
@@ -98,6 +102,9 @@ node --check infrastructure/staging/auth-probe/retire-recovery-apply.mjs
 node --check infrastructure/staging/auth-probe/retire-recovery-plan.mjs
 node --check infrastructure/staging/auth-probe/retirement-recovery.mjs
 node --check infrastructure/staging/auth-probe/validate-plan.mjs
+node infrastructure/staging/auth-probe/evidence.mjs \
+  infrastructure/staging/auth-probe/result.json \
+  infrastructure/staging/auth-probe/retirement.json
 bash -n \
   infrastructure/staging/automation/apply.sh \
   infrastructure/staging/automation/inspect-plan.sh \
