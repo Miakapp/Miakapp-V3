@@ -47,6 +47,11 @@ const TEMPORARY_RESOURCES = new Set([
   'google_service_account_iam_member.auth_probe_self_signer[0]',
   'google_workflows_workflow.auth_probe[0]',
 ]);
+const PLAN_PROFILES = Object.freeze({
+  arm: Object.freeze({ complete: true, phase: 'arm' }),
+  retire: Object.freeze({ complete: false, phase: 'retire' }),
+  'retire-finalize': Object.freeze({ complete: true, phase: 'retire' }),
+});
 
 function reject(message) {
   throw new Error(message);
@@ -197,7 +202,7 @@ function validateSignerBinding(value, address) {
   exact(value.member, `serviceAccount:${PROBE_ACCOUNT}`, `${address}.member`);
 }
 
-function validateWorkflow(value, address) {
+function validateWorkflow(value, address, profile) {
   exact(value.project, PROJECT_ID, `${address}.project`);
   exact(value.region, REGION, `${address}.region`);
   exact(value.name, WORKFLOW_NAME, `${address}.name`);
@@ -206,7 +211,13 @@ function validateWorkflow(value, address) {
     'One-shot private Firebase Auth and custom-provider App Check probe for Miakapp V4 staging.',
     `${address}.description`,
   );
-  exact(value.service_account, PROBE_ACCOUNT, `${address}.service_account`);
+  exact(
+    value.service_account,
+    profile === 'arm'
+      ? PROBE_ACCOUNT
+      : `projects/${PROJECT_ID}/serviceAccounts/${PROBE_ACCOUNT}`,
+    `${address}.service_account`,
+  );
   exact(value.source_contents, WORKFLOW_SOURCE, `${address}.source_contents`);
   exact(value.call_log_level, 'LOG_NONE', `${address}.call_log_level`);
   exact(value.execution_history_level, 'EXECUTION_HISTORY_BASIC', `${address}.execution_history_level`);
@@ -226,7 +237,7 @@ function validateWorkflow(value, address) {
   return value.revision_id ?? null;
 }
 
-function validateResourceValue(address, value) {
+function validateResourceValue(address, value, profile) {
   if (!plainObject(value)) reject(`${address} reviewed value is missing`);
   switch (address) {
     case 'terraform_data.auth_probe_guard':
@@ -242,7 +253,7 @@ function validateResourceValue(address, value) {
       validateSignerBinding(value, address);
       break;
     case 'google_workflows_workflow.auth_probe[0]':
-      return validateWorkflow(value, address);
+      return validateWorkflow(value, address, profile);
     default:
       reject('Terraform Auth-probe plan contains an unreviewed resource');
   }
@@ -255,13 +266,15 @@ function expectedActions(address, phase) {
   return TEMPORARY_RESOURCES.has(address) ? [['delete']] : [['no-op']];
 }
 
-export function validateAuthProbePlanAgainstPolicy(plan, phase) {
-  if (!['arm', 'retire'].includes(phase)) reject('Auth-probe plan phase is invalid');
+export function validateAuthProbePlanAgainstPolicy(plan, profile) {
+  const settings = PLAN_PROFILES[profile];
+  if (settings === undefined) reject('Auth-probe plan profile is invalid');
+  const { complete, phase } = settings;
   if (!plainObject(plan)
     || plan.format_version !== '1.2'
     || plan.terraform_version !== TERRAFORM_VERSION
     || plan.applyable !== true
-    || plan.complete !== true
+    || plan.complete !== complete
     || plan.errored !== false) {
     reject('Terraform Auth-probe plan metadata is invalid');
   }
@@ -303,25 +316,26 @@ export function validateAuthProbePlanAgainstPolicy(plan, phase) {
     const actions = change.change.actions;
     if (isDeepStrictEqual(actions, ['create'])) {
       exact(change.change.before, null, `${change.address}.before`);
-      validateResourceValue(change.address, change.change.after);
+      validateResourceValue(change.address, change.change.after, profile);
       create += 1;
     } else if (isDeepStrictEqual(actions, ['delete'])) {
       exact(change.change.after, null, `${change.address}.after`);
-      const revision = validateResourceValue(change.address, change.change.before);
+      const revision = validateResourceValue(change.address, change.change.before, profile);
       if (change.address === 'google_workflows_workflow.auth_probe[0]') {
         if (revision === null) reject('Retired Auth-probe Workflow revision is missing');
         workflowRevision = revision;
       }
       remove += 1;
     } else {
-      validateResourceValue(change.address, change.change.after);
+      validateResourceValue(change.address, change.change.after, profile);
     }
   }
   if (phase === 'arm') {
     exact([...seen].sort(), Object.keys(CHANGE_RESOURCES).sort(), 'Managed Auth-probe changes');
   }
   if ((phase === 'arm' && (create < 3 || remove !== 0))
-    || (phase === 'retire' && (create !== 0 || remove > 3))) {
+    || (phase === 'retire' && (create !== 0 || remove > 3))
+    || (profile === 'retire-finalize' && remove !== 0)) {
     reject(`Terraform Auth-probe ${phase} delta is outside the reviewed boundary`);
   }
   rejectForbiddenValues(plan);
@@ -342,7 +356,7 @@ export function validateAuthProbePlanAgainstPolicy(plan, phase) {
   });
 }
 
-export function readAndValidateAuthProbePlan(path, phase) {
+export function readAndValidateAuthProbePlan(path, profile) {
   const bytes = readFileSync(path);
   if (bytes.byteLength === 0 || bytes.byteLength > MAXIMUM_PLAN_BYTES) {
     reject('Terraform Auth-probe plan JSON size is invalid');
@@ -353,5 +367,5 @@ export function readAndValidateAuthProbePlan(path, phase) {
   } catch {
     return reject('Terraform Auth-probe plan is not valid JSON');
   }
-  return validateAuthProbePlanAgainstPolicy(plan, phase);
+  return validateAuthProbePlanAgainstPolicy(plan, profile);
 }
