@@ -145,6 +145,14 @@ deployment inventory with SHA-256
 `dfe8900cd90fe53cbb85ac656ddce42c26fef64c9bbed462688c0e0755363e15`.
 It remains scoped to deployment, so `live_request_performed` is false there.
 
+The saved-plan updater's next before-state is pinned to this exact active
+deployment: commit `60322c69c92b8ccf5f3d1bc87ba264a00e5dca05` and source
+SHA-256 `86f4818dfcb4021e5578638d6fb1e9b7da31ea245528cbdc8573dabecdfca358`.
+That tuple was independently reobserved on 2026-09-04 before repinning. The
+repin itself changes no cloud resource; any subsequent update must still render
+the exact guarded source replacement and in-place Function/guard changes from
+that live baseline.
+
 ## Successful private discovery
 
 After the diagnostic deployment, the single-purpose recovery path made exactly
