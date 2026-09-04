@@ -2,7 +2,8 @@
 
 Date: 2026-09-04
 
-Status: local deterministic evidence for the trusted-relay alpha
+Status: current narrow browser-transport regression; historical trusted-relay
+alpha baseline retained
 
 ## Purpose
 
@@ -18,22 +19,32 @@ WebSocket; the second call therefore proves that `REAUTH_OK` completed before
 the old authority ended, rather than merely proving that a renewal frame was
 sent.
 
-This is not evidence for live Firebase certificates, App Check, public ingress,
-the complete disconnect matrix, a malicious relay, or staging acceptance. Its
-Firebase-shaped tokens are synthetic. It does not make the Firebase-direct user
-profile safe for an arbitrary relay; RFC 0005 keeps that production gate open.
+The current fixture injects literal synthetic Miakapp access credentials on both
+sides of the boundary. It does not run the control-plane exchange and therefore
+is not evidence for source-token confinement, audience derivation, live Firebase
+Auth or App Check, public ingress, the complete disconnect matrix, a malicious
+relay, or staging acceptance. The complete audience-bound local gate is in the
+[`user-relay-credentials` runbook](../runbooks/user-relay-credentials.md).
 
 ## Immutable inputs
 
 The reciprocal CI gate checks out these exact public merge commits:
 
-- MiakAPI: `5c26eaa830015d94f53bf05fbbb0f5ebda6d290f`;
-- Miakapp-Server: `da49e8bf6b1bd03acaabd225ab5e96a61dd5dd91`.
+- MiakAPI: `a798a746847ba3d5c16128a08b33353269e770a4`;
+- Miakapp-Server: `9a7e33de3a684b6cd9e82231db7c9af8bf41a0a1`.
 
 Use detached worktrees at those revisions for release evidence. A developer may
 run the same commands against clean local checkouts while iterating, but must
 record the resulting commit IDs and must not describe that result as the pinned
 gate.
+
+The original Firebase-direct trusted-relay alpha evidence remains reproducible
+at MiakAPI
+[`5c26eaa`](https://github.com/Miakapp/MiakAPI/commit/5c26eaa830015d94f53bf05fbbb0f5ebda6d290f)
+and Miakapp-Server
+[`da49e8b`](https://github.com/Miakapp/Miakapp-Server/commit/da49e8bf6b1bd03acaabd225ab5e96a61dd5dd91).
+Those commits are historical inputs, not the current reciprocal pins, and their
+Firebase-direct credential shape must never return to a production relay path.
 
 ## Requirements
 
@@ -85,10 +96,10 @@ not satisfy this gate.
 ## Safety and cleanup
 
 The fixture creates temporary loopback TLS material and a browser bundle, and
-uses only literal synthetic bearer values. It serves one exact Origin with
-`Cache-Control: no-store`, a restrictive Content Security Policy and no external
-subresources. The relay enforces that exact Origin and the `miakapp` WebSocket
-subprotocol.
+uses only literal synthetic Miakapp bearer values. It serves one exact Origin
+with `Cache-Control: no-store`, a restrictive Content Security Policy and no
+external subresources. The relay enforces that exact Origin and the `miakapp`
+WebSocket subprotocol.
 
 The runner does not enable Playwright tracing, video, screenshots, HAR capture
 or WebSocket frame inspection. Do not add those facilities to a run carrying
