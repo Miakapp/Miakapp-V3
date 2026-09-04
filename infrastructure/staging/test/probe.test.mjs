@@ -29,7 +29,10 @@ import {
   observeProbeDeployment,
   validateSuccessfulExecution,
 } from '../probe/invoke.mjs';
-import { validateFailedExecution } from '../probe/recover.mjs';
+import {
+  FAILED_EXECUTION_PROFILES,
+  validateFailedExecution,
+} from '../probe/recover.mjs';
 import { validateProbePlanAgainstPolicy } from '../probe/validate-plan.mjs';
 
 const COMMIT = '1'.repeat(40);
@@ -186,13 +189,13 @@ function successfulExecution() {
   };
 }
 
-function failedExecution() {
+function failedExecution(profile = FAILED_EXECUTION_PROFILES[1]) {
   return {
     name: `projects/1072737219170/locations/europe-west9/workflows/${WORKFLOW_NAME}/executions/00000000-0000-4000-8000-000000000001`,
     state: 'FAILED',
     workflowRevisionId: '000001-abc',
-    startTime: '2026-09-04T01:14:35.985075630Z',
-    endTime: '2026-09-04T01:14:38.074599578Z',
+    startTime: profile.startTime,
+    endTime: profile.endTime,
     error: {
       context: 'HTTP server responded with error code 503\nin step "invoke", routine "main", line: 4',
       payload: JSON.stringify({
@@ -203,7 +206,7 @@ function failedExecution() {
           'Cache-Control': 'no-store',
           'Content-Length': '31',
           'Content-Type': 'application/json; charset=utf-8',
-          Date: 'Fri, 04 Sep 2026 01:14:38 GMT',
+          Date: profile.responseDate,
           Server: 'Google Frontend',
           'X-Cloud-Trace-Context': `${'a'.repeat(32)};o=1`,
         },
@@ -280,17 +283,18 @@ test('separates deployment from the exact one-shot invocation', () => {
   assert.doesNotMatch(invokeSource, /--data|retry:|setTimeout|curl|fetch\(/);
 });
 
-test('limits recovery to the pinned failure and one corrected execution', () => {
+test('limits recovery to two pinned failures and one corrected execution', () => {
   assert.equal((recoverSource.match(/'workflows', 'run'/g) ?? []).length, 1);
-  assert.match(recoverSource, /expectedExecutions: 1/);
+  assert.equal((recoverSource.match(/= observeFailures\(\);/g) ?? []).length, 2);
   assert.match(recoverSource, /expectedExecutions: 2/);
+  assert.match(recoverSource, /expectedExecutions: 3/);
   assert.match(recoverSource, /validateProbeRecoveryAuthorization/);
   assert.match(recoverSource, /WORKLOAD_FUNCTION_REVISION/);
-  assert.match(recoverSource, /attempts_after_correction: 1/);
+  assert.match(recoverSource, /attempts_after_latest_correction: 1/);
   assert.doesNotMatch(recoverSource, /--data|retry:|setTimeout|curl|fetch\(/);
-  assert.equal(WORKLOAD_COMMIT, '72bae493e496b7dbaae38bcba92dfcc6d604644d');
-  assert.equal(WORKLOAD_SOURCE_SHA256, '6cd045394b24a644d6b1ce9c431bcb73267fb894b7dc0b029d6c0be0488a9433');
-  assert.equal(WORKLOAD_FUNCTION_REVISION, 'control-plane-00002-kux');
+  assert.equal(WORKLOAD_COMMIT, '60322c69c92b8ccf5f3d1bc87ba264a00e5dca05');
+  assert.equal(WORKLOAD_SOURCE_SHA256, '86f4818dfcb4021e5578638d6fb1e9b7da31ea245528cbdc8573dabecdfca358');
+  assert.equal(WORKLOAD_FUNCTION_REVISION, 'control-plane-00003-hum');
 });
 
 test('locks the only provider for both CI platforms and runs the root in the main gate', () => {
@@ -410,7 +414,37 @@ test('accepts only the exact active Workflow with the requested execution count'
   assert.equal(result.workflow.revision, '000001-abc');
   assert.equal(result.executions.length, 0);
   assert.equal(calls.length, 3);
-  assert.match(calls[2].join(' '), /--limit=3/);
+  assert.match(calls[2].join(' '), /--limit=4/);
+
+  const exactThreeResponses = [
+    [{ config: { name: 'workflows.googleapis.com' }, state: 'ENABLED' }],
+    workflow(),
+    [{ state: 'SUCCEEDED' }, { state: 'FAILED' }, { state: 'FAILED' }],
+  ];
+  assert.equal(observeProbeDeployment({
+    repositoryRoot: '/tmp',
+    expectedExecutions: 3,
+    spawn: () => ({
+      status: 0,
+      signal: null,
+      stdout: Buffer.from(JSON.stringify(exactThreeResponses.shift())),
+    }),
+  }).executions.length, 3);
+
+  const extraExecutionResponses = [
+    [{ config: { name: 'workflows.googleapis.com' }, state: 'ENABLED' }],
+    workflow(),
+    [{}, {}, {}, {}],
+  ];
+  assert.throws(() => observeProbeDeployment({
+    repositoryRoot: '/tmp',
+    expectedExecutions: 3,
+    spawn: () => ({
+      status: 0,
+      signal: null,
+      stdout: Buffer.from(JSON.stringify(extraExecutionResponses.shift())),
+    }),
+  }));
 
   const changed = workflow();
   changed.sourceContents += 'retry: ${http.default_retry}\n';
@@ -452,17 +486,20 @@ test('validates the exact successful discovery result without retaining its exec
   }
 });
 
-test('accepts only the pinned failed execution without retaining its trace context', () => {
-  const execution = failedExecution();
-  const result = validateFailedExecution(execution, { revision: '000001-abc' });
-  assert.deepEqual(result, {
-    name: execution.name,
-    state: 'FAILED',
-    workflow_revision: '000001-abc',
-    duration_milliseconds: 2089,
-    response: { status: 503, error: 'service_unavailable' },
-  });
-  assert.doesNotMatch(JSON.stringify(result), /X-Cloud-Trace|a{32}/);
+test('accepts only both pinned failed executions without retaining their trace contexts', () => {
+  for (const profile of FAILED_EXECUTION_PROFILES) {
+    const execution = failedExecution(profile);
+    const result = validateFailedExecution(execution, { revision: '000001-abc' }, profile);
+    assert.deepEqual(result, {
+      name: execution.name,
+      phase: profile.phase,
+      state: 'FAILED',
+      workflow_revision: '000001-abc',
+      duration_milliseconds: profile.durationMilliseconds,
+      response: { status: 503, error: 'service_unavailable' },
+    });
+    assert.doesNotMatch(JSON.stringify(result), /X-Cloud-Trace|a{32}/);
+  }
   for (const mutate of [
     (value) => { value.state = 'SUCCEEDED'; },
     (value) => { value.startTime = '2026-09-04T01:14:35.985075631Z'; },
@@ -478,8 +515,14 @@ test('accepts only the pinned failed execution without retaining its trace conte
       value.error.payload = JSON.stringify(payload);
     },
   ]) {
-    const value = failedExecution();
+    const profile = FAILED_EXECUTION_PROFILES[1];
+    const value = failedExecution(profile);
     mutate(value);
-    assert.throws(() => validateFailedExecution(value, { revision: '000001-abc' }));
+    assert.throws(() => validateFailedExecution(value, { revision: '000001-abc' }, profile));
   }
+  assert.throws(() => validateFailedExecution(
+    failedExecution(),
+    { revision: '000001-abc' },
+    { ...FAILED_EXECUTION_PROFILES[1] },
+  ));
 });

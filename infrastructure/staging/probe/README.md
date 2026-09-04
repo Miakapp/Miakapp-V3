@@ -1,6 +1,6 @@
 # Private staging invocation path
 
-Status: deployed; two pinned failed executions; no successful execution
+Status: two pinned failures; diagnostic Function deployed; third execution not invoked
 
 This isolated Terraform root creates the cheapest bounded path able to reach the
 internal-only staging control plane without changing its ingress. It enables the
@@ -33,10 +33,13 @@ one-shot operation: its wrapper refuses any Workflow that already has an
 execution and never retries.
 
 The first execution authenticated through internal ingress but received a
-controlled `503 service_unavailable`. Secret Manager had canonicalized the
-staging project ID in each response name to its equivalent numeric project;
-the runtime's stricter comparison rejected that representation before serving
-discovery. A corrected Function revision was deployed without making a request.
+controlled `503 service_unavailable`. A separate read-only boundary
+reproduction found that Secret Manager canonicalizes the staging project ID in
+response names to its equivalent numeric project and that the runtime rejected
+that valid representation. The original execution had no classified startup
+log, so it could not independently identify which initialization boundary
+produced the `503`. A compatibility correction was deployed without making a
+request.
 
 The bounded recovery then made exactly one second execution with no Workflow
 or client retry. It reached the corrected private Function but received the
@@ -50,10 +53,25 @@ authorization bound to the then-current `origin/main`. Its one-execution
 preflight now fails closed because the second execution exists, so it cannot
 make another request.
 
-The next deployment changes no ingress, IAM, network, scaling or runtime
-document. It removes assumptions about optional Cloud Run project environment
-variables and emits only a fixed initialization event plus a coarse stage. No
-error message, stack, resource name, execution identifier or trace context is
-logged by that diagnostic. A future invocation path must separately pin both
-existing failures and the newly observed Function revision before allowing one
-more execution.
+The diagnostic Function deployment changed no ingress, IAM, network, scaling
+or runtime document. It removed assumptions about optional Cloud Run project
+environment variables and emits only a fixed initialization event plus a
+coarse stage. No error message, stack, resource name, execution identifier or
+trace context is logged by that diagnostic. Active revision
+`control-plane-00003-hum` is pinned to source SHA-256
+`86f4818dfcb4021e5578638d6fb1e9b7da31ea245528cbdc8573dabecdfca358`.
+The deployment made no Function request.
+
+Cloud Run's deployment health check proved the container healthy but did not
+execute the Firebase `onInit` callback: the SDK runs that callback immediately
+before the first application request. The next diagnostic therefore still
+requires one private Workflow execution.
+
+The revised `recover.sh` pins both existing failures by exact timestamp,
+Workflow revision, step, HTTP shape and non-retained trace format. It pins the
+new Function revision, source and deployment commit, verifies the two-execution
+inventory and workload twice, then permits exactly one Workflow execution with
+no retry. A success must leave exactly the two original failures followed by
+one validated discovery response. A failure stops immediately and leaves only
+private diagnostics; a fourth execution cannot pass the three-execution
+postcondition or either future two-execution preflight.
