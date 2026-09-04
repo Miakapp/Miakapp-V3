@@ -51,7 +51,7 @@ const PLAN = Buffer.from('synthetic-auth-probe-plan');
 const PLAN_JSON = Buffer.from('{"synthetic":true}\n');
 const CREATED_AT = '2026-09-05T00:00:00.000Z';
 const WORKFLOW_REVISION = '000001-abc';
-const PREVIOUS_WORKFLOW_SOURCE_SHA256 = 'afafd6bbfa15d1b9fc238e84644075857e3d32520c88ba8c3b2f4094aa3d83ca';
+const PREVIOUS_WORKFLOW_SOURCE_SHA256 = '67e2f65dc00db84918205911abc0a2b856eac723a676f1ace2a405601f1462e9';
 const probeRoot = new URL('../auth-probe/', import.meta.url);
 const terraformFiles = readdirSync(probeRoot).filter((name) => name.endsWith('.tf')).sort();
 const terraformSource = terraformFiles
@@ -525,6 +525,9 @@ test('pins a no-secret one-shot Auth and App Check Workflow', () => {
   assert.doesNotMatch(WORKFLOW_SOURCE, /probe_error\.(?:body|code|message|tags)/u);
   assert.match(WORKFLOW_SOURCE, /- auth_exchange_error: null/u);
   assert.doesNotMatch(WORKFLOW_SOURCE, /raise:.*auth_exchange_error/u);
+  assert.doesNotMatch(WORKFLOW_SOURCE, /auth_exchange\.body\.localId/u);
+  assert.match(WORKFLOW_SOURCE, /created_user_lookup\.body\.users\[0\]\.localId != synthetic_uid/u);
+  assert.match(WORKFLOW_SOURCE, /- synthetic_user_created: true/u);
   assert.doesNotMatch(WORKFLOW_SOURCE, /^\s*retry:/mu);
   assert.doesNotMatch(WORKFLOW_SOURCE, /AIza[0-9A-Za-z_-]{30,}|debugToken|private[_ -]?key/iu);
   assert.doesNotMatch(WORKFLOW_SOURCE, /allUsers|allAuthenticatedUsers|\bmiakapp-3\b/);

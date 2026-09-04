@@ -21,6 +21,7 @@ main:
           - delete_response: null
           - user_lookup: null
           - initial_user_lookup: null
+          - created_user_lookup: null
           - missing_app_check_status: 0
           - missing_app_check_code: ""
           - first_status: 0
@@ -138,16 +139,34 @@ main:
             - retain_auth_identity:
                 assign:
                   - firebase_id_token: ${auth_exchange.body.idToken}
-                  - synthetic_user_created: true
             - validate_auth_exchange:
                 switch:
-                  - condition: ${auth_exchange.code != 200 or auth_exchange.body.localId != synthetic_uid or auth_exchange.body.isNewUser != true or auth_exchange.body.expiresIn != "3600"}
+                  - condition: ${auth_exchange.code != 200 or len(auth_exchange.body.idToken) < 100 or len(auth_exchange.body.refreshToken) < 100 or auth_exchange.body.isNewUser != true or auth_exchange.body.expiresIn != "3600"}
                     raise: Auth probe synthetic Firebase identity mismatch
+            - verify_created_user:
+                call: http.post
+                args:
+                  url: https://identitytoolkit.googleapis.com/v1/projects/miakapp-v4-staging/accounts:lookup
+                  timeout: 30
+                  auth:
+                    type: OAuth2
+                  body:
+                    localId:
+                      - ${synthetic_uid}
+                result: created_user_lookup
+            - validate_created_user:
+                switch:
+                  - condition: ${created_user_lookup.code != 200 or not("users" in created_user_lookup.body) or len(created_user_lookup.body.users) != 1 or created_user_lookup.body.users[0].localId != synthetic_uid or "email" in created_user_lookup.body.users[0]}
+                    raise: Auth probe synthetic Firebase identity lookup mismatch
+            - record_created_user:
+                assign:
+                  - synthetic_user_created: true
             - clear_auth_exchange:
                 assign:
                   - auth_signature: null
                   - auth_exchange: null
                   - auth_claims: null
+                  - created_user_lookup: null
             - enter_app_check_custom_token_stage:
                 assign:
                   - probe_stage: app_check_custom_token
@@ -357,6 +376,7 @@ main:
           - web_config: null
           - delete_response: null
           - user_lookup: null
+          - created_user_lookup: null
           - issued_at: null
           - auth_expires_at: null
           - app_check_expires_at: null
