@@ -208,24 +208,42 @@ export function validateWorkloadAuthorization(value, planBytes, repositoryCommit
   }
 }
 
-export function buildPlanMetadata({
+export function workloadUpdateAuthorization(planBytes, repositoryCommit) {
+  if (!Buffer.isBuffer(planBytes) || planBytes.byteLength === 0 || !COMMIT.test(repositoryCommit)) {
+    reject('Workload update authorization inputs are invalid');
+  }
+  return `update-private-workload:${PROJECT_ID}:${sha256(planBytes)}:${repositoryCommit}`;
+}
+
+export function validateWorkloadUpdateAuthorization(value, planBytes, repositoryCommit) {
+  const expected = Buffer.from(workloadUpdateAuthorization(planBytes, repositoryCommit), 'utf8');
+  const actual = Buffer.from(typeof value === 'string' ? value : '', 'utf8');
+  if (actual.byteLength !== expected.byteLength || !timingSafeEqual(actual, expected)) {
+    reject('Exact staging workload update authorization is missing or invalid');
+  }
+}
+
+function buildMetadata({
   repositoryCommit,
   createdAt,
   packageResult,
   planBytes,
   planJsonBytes,
   summary,
-}) {
+}, profile) {
   if (!COMMIT.test(repositoryCommit)
     || !SHA256.test(packageResult.archive_sha256)
     || !Buffer.isBuffer(planBytes)
-    || !Buffer.isBuffer(planJsonBytes)) {
+    || !Buffer.isBuffer(planJsonBytes)
+    || !plainObject(profile)
+    || typeof profile.schema !== 'string'
+    || typeof profile.operation !== 'string') {
     reject('Workload plan metadata inputs are invalid');
   }
   const createdMilliseconds = canonicalTimestamp(createdAt, 'created_at');
   return Object.freeze({
-    schema: 'miakapp.staging-workload-plan/1',
-    operation: 'deploy-initial-private-control-plane',
+    schema: profile.schema,
+    operation: profile.operation,
     project_id: PROJECT_ID,
     project_number: PROJECT_NUMBER,
     region: REGION,
@@ -246,7 +264,21 @@ export function buildPlanMetadata({
   });
 }
 
-export function validatePlanMetadata(value, now = Date.now()) {
+export function buildPlanMetadata(input) {
+  return buildMetadata(input, {
+    schema: 'miakapp.staging-workload-plan/1',
+    operation: 'deploy-initial-private-control-plane',
+  });
+}
+
+export function buildWorkloadUpdatePlanMetadata(input) {
+  return buildMetadata(input, {
+    schema: 'miakapp.staging-workload-update-plan/1',
+    operation: 'replace-pinned-control-plane-source',
+  });
+}
+
+function validateMetadata(value, now, profile) {
   const metadata = exactKeys(value, [
     'schema',
     'operation',
@@ -268,8 +300,8 @@ export function validatePlanMetadata(value, now = Date.now()) {
     'private_bundle_committed',
     'live_request_authorized',
   ], 'Workload plan metadata');
-  if (metadata.schema !== 'miakapp.staging-workload-plan/1'
-    || metadata.operation !== 'deploy-initial-private-control-plane'
+  if (metadata.schema !== profile.schema
+    || metadata.operation !== profile.operation
     || metadata.project_id !== PROJECT_ID
     || metadata.project_number !== PROJECT_NUMBER
     || metadata.region !== REGION
@@ -298,7 +330,21 @@ export function validatePlanMetadata(value, now = Date.now()) {
   return metadata;
 }
 
-export function readPlanMetadata(path, now = Date.now()) {
+export function validatePlanMetadata(value, now = Date.now()) {
+  return validateMetadata(value, now, {
+    schema: 'miakapp.staging-workload-plan/1',
+    operation: 'deploy-initial-private-control-plane',
+  });
+}
+
+export function validateWorkloadUpdatePlanMetadata(value, now = Date.now()) {
+  return validateMetadata(value, now, {
+    schema: 'miakapp.staging-workload-update-plan/1',
+    operation: 'replace-pinned-control-plane-source',
+  });
+}
+
+function readMetadata(path, now, validate) {
   const bytes = readPrivateFile(path, 1024 * 1024);
   let value;
   try {
@@ -309,5 +355,13 @@ export function readPlanMetadata(path, now = Date.now()) {
   if (canonicalJson(value) !== bytes.toString('utf8')) {
     reject('Workload plan metadata is not canonical JSON');
   }
-  return Object.freeze({ bytes, value: validatePlanMetadata(value, now) });
+  return Object.freeze({ bytes, value: validate(value, now) });
+}
+
+export function readPlanMetadata(path, now = Date.now()) {
+  return readMetadata(path, now, validatePlanMetadata);
+}
+
+export function readWorkloadUpdatePlanMetadata(path, now = Date.now()) {
+  return readMetadata(path, now, validateWorkloadUpdatePlanMetadata);
 }
