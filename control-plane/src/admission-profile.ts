@@ -13,6 +13,8 @@ export const CONTROL_PLANE_ADMISSION_PROFILE: AdmissionProfile = Object.freeze({
     'access.exchange.source': Object.freeze({ maximum: 256, windowMilliseconds: MINUTE }),
     'access.exchange.key': Object.freeze({ maximum: 32, windowMilliseconds: MINUTE }),
     'access.exchange.home': Object.freeze({ maximum: 128, windowMilliseconds: MINUTE }),
+    'user_relay.exchange.source': Object.freeze({ maximum: 128, windowMilliseconds: MINUTE }),
+    'user_relay.exchange.user': Object.freeze({ maximum: 32, windowMilliseconds: MINUTE }),
     'push.challenge.actor': Object.freeze({ maximum: 64, windowMilliseconds: MINUTE }),
     'push.challenge.app': Object.freeze({ maximum: 256, windowMilliseconds: MINUTE }),
     'push.challenge.source': Object.freeze({ maximum: 128, windowMilliseconds: MINUTE }),

@@ -120,6 +120,7 @@ describe('production runtime configuration', () => {
       issuer: 'https://control.staging.miakapp.com',
       jwksUri: 'https://control.staging.miakapp.com/.well-known/jwks.json',
       exchangeEndpoint: 'https://control.staging.miakapp.com/v1/access-tokens:exchange',
+      userRelayExchangeEndpoint: 'https://control.staging.miakapp.com/v1/user-relay-tokens:exchange',
       pushAudience: 'https://control.staging.miakapp.com/v1/push',
       componentsAudience: 'https://control.staging.miakapp.com/v1/components',
       componentUploadBaseUrl: 'https://control.staging.miakapp.com/v1/component-uploads',

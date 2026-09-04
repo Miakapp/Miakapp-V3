@@ -1,6 +1,6 @@
 # RFC 0005 — Trusted browser relay client 1.0
 
-- Status: accepted for the trusted-relay alpha; production credential gate open
+- Status: accepted; audience-bound implementation evidence pending
 - Product release: Miakapp 4
 - Public SDK: `miakapi/browser` in `miakapi@4`
 - Last updated: 2026-09-04
@@ -13,9 +13,10 @@ authentication-provider boundary, lifecycle, home availability, authoritative
 state view, named calls, reconnect and reauthentication behavior, failures,
 resource limits and cleanup.
 
-The client is framework-neutral. The future React shell owns Firebase Auth,
-relay selection, routing and presentation; the client owns only one fixed
-`{user, home, relay}` session. Home-authored component code remains behind the
+The client is framework-neutral. The future React shell owns Firebase Auth, App
+Check, home selection and presentation; the control plane owns relay routing,
+and the client owns one `{user, home}` session whose selected relay may change
+between credentials. Home-authored component code remains behind the
 RFC 0002 semantic capability bridge and never receives this client, its socket
 or an authentication credential.
 
@@ -39,7 +40,7 @@ The words **MUST**, **MUST NOT**, **REQUIRED**, **SHOULD**, **SHOULD NOT** and
 ### 2.1 Trusted host
 
 The browser client runs only in the trusted Miakapp application host. That host
-may hold the signed-in Firebase user in memory and may call a token provider.
+may hold the signed-in Firebase user in memory and may call a credential provider.
 It MUST NOT give any of the following to an RFC 0002 guest bundle or Worker:
 
 - the Firebase user or ID token;
@@ -52,47 +53,45 @@ The trusted host translates only approved state, events and calls into the
 versioned semantic component ABI. A component compromise therefore does not
 become a Firebase or relay-session compromise.
 
-### 2.2 Firebase-direct alpha profile
+### 2.2 Legacy Firebase-direct fixture profile
 
-RFC 0004 currently assigns a Firebase ID token directly to a role-1 WebSocket
-`HELLO` and `REAUTH`. The client keeps that bearer out of URLs, WebSocket
-subprotocols, browser persistence, logs, errors and public evidence. This does
-not make the selected relay unable to read it: the relay necessarily receives
-the token in the binary application frame.
+The first synthetic browser fixture assigned a Firebase-shaped token directly to
+role-1 WebSocket `HELLO` and `REAUTH`. That shape remains valid only as legacy
+loopback evidence while the audience-bound implementation is being integrated.
+It is not the production credential profile.
 
 A Firebase ID token is reusable against services that trust the same Firebase
-project. Consequently, the Firebase-direct profile has a stronger relay trust
-requirement than the audience-bound coordinator profile:
+project. Consequently, the legacy profile:
 
-- it MAY be used by synthetic tests;
-- it MAY be used with an official relay or a relay the user explicitly trusts
-  as completely as the Miakapp backend;
-- it MUST NOT power an arbitrary community-relay catalogue; and
-- the production application MUST NOT expose unrestricted relay selection while
-  this is the only user credential profile.
+- MAY be used only by explicitly synthetic tests;
+- MUST NOT be used by the production application;
+- MUST NOT be accepted as evidence for arbitrary relay selection; and
+- MUST be removed from the production role-1 relay path when the Section 2.3
+  implementation lands.
 
 This restriction concerns credential replay in addition to plaintext home-data
 visibility. A warning about home data alone is insufficient.
 
-### 2.3 Required production attenuation
+### 2.3 Audience-bound production credential
 
-Before broad self-hosted relay selection is enabled, the trusted control plane
-MUST exchange Firebase identity for a short-lived user relay credential with at
-least these properties:
+The trusted host supplies Firebase ID and App Check tokens only to RFC 0004's
+HTTPS user relay exchange. The control plane returns one atomic credential
+containing a canonical WSS relay URL, a Miakapp access token and its expiry. The
+token has exactly these properties:
 
 1. an exact audience naming one relay endpoint;
 2. one home ID, one Firebase UID and role `user`;
 3. no push, component-publication, owner or coordinator authority;
-4. expiry and renewal bounds no weaker than the direct Firebase lease;
+4. a maximum five-minute lease with bounded renewal;
 5. locally verifiable signatures and bounded public-key refresh at the relay;
 6. no Home Key or other permanent secret in the browser or relay; and
-7. request admission, App Check posture and audit behavior defined by an update
-   to RFC 0004.
+7. the exact request admission, App Check and audit behavior in RFC 0004.
 
-The relay URL and home in the application session MUST match the signed claims.
-This change may revise the alpha provider name and wire authentication profile;
-`miakapi@4` is still prerelease. No SDK-only transformation can safely attenuate
-a Firebase bearer because the browser does not possess a trusted signing key.
+The returned relay URL is authoritative for that credential and MUST match its
+signed audience. The fixed Home ID in the application session MUST match the
+signed `miakapp_home`. No Firebase or App Check token may enter a WebSocket frame.
+No SDK-only transformation can safely attenuate a Firebase bearer because the
+browser does not possess a trusted signing key.
 
 Audience-bound user authentication prevents credential replay against another
 relay. It does not hide state or calls from the selected relay. End-to-end
@@ -139,16 +138,24 @@ export type BrowserClientStatus =
   | 'stopping'
   | 'stopped';
 
-export type FirebaseIdTokenReason = 'initial' | 'reauth' | 'reconnect';
+export type BrowserRelayCredentialReason = 'initial' | 'reauth' | 'reconnect';
 
-export interface FirebaseIdTokenRequest {
+export interface BrowserRelayCredentialRequest {
   readonly homeId: string;
-  readonly reason: FirebaseIdTokenReason;
+  readonly reason: BrowserRelayCredentialReason;
   readonly signal: AbortSignal;
 }
 
-export interface FirebaseIdTokenProvider {
-  getIdToken(request: FirebaseIdTokenRequest): Promise<string>;
+export interface BrowserRelayCredential {
+  readonly relayUrl: string;
+  readonly accessToken: string;
+  readonly expiresAtMs: number;
+}
+
+export interface BrowserRelayCredentialProvider {
+  getCredential(
+    request: BrowserRelayCredentialRequest,
+  ): Promise<BrowserRelayCredential>;
 }
 
 export interface BrowserClientLogRecord {
@@ -164,8 +171,7 @@ export interface BrowserClientLogger {
 
 export interface BrowserClientOptions {
   readonly homeId: string;
-  readonly relayUrl: string;
-  readonly idTokenProvider: FirebaseIdTokenProvider;
+  readonly credentialProvider: BrowserRelayCredentialProvider;
   readonly logger?: BrowserClientLogger;
 }
 
@@ -265,17 +271,43 @@ export interface BrowserClient {
 
 export type BrowserClientFactory =
   (options: BrowserClientOptions) => BrowserClient;
+
+export interface ControlPlaneBrowserRelayCredentialProviderOptions {
+  readonly exchangeEndpoint: string;
+  readonly getFirebaseIdToken:
+    (request: BrowserRelayCredentialRequest) => Promise<string>;
+  readonly getAppCheckToken:
+    (request: BrowserRelayCredentialRequest) => Promise<string>;
+  readonly fetch?: typeof globalThis.fetch;
+}
+
+export function createControlPlaneBrowserRelayCredentialProvider(
+  options: ControlPlaneBrowserRelayCredentialProviderOptions,
+): BrowserRelayCredentialProvider;
 ```
 
 The optional logger accepts only a closed record containing level, stable event,
 optional lifecycle status and optional numeric protocol code. Provider exception
 text, token text, relay payloads, state and stack traces are never logger fields.
 
-All option, call and protocol-value objects are closed and validated before
-handoff. The alpha home ID grammar is 3–63 lowercase ASCII characters, begins
+All option, credential, call and protocol-value objects are closed and validated
+before handoff. The home ID grammar is 3–63 lowercase ASCII characters, begins
 with a letter, ends with a letter or digit, and otherwise contains letters,
-digits or hyphens. The relay URL is at most 2,048 bytes, uses `wss:`, contains no
-userinfo, query or fragment, and ends in `/ws`.
+digits or hyphens. Every credential relay URL is at most 2,048 bytes, uses
+`wss:`, contains no userinfo, query or fragment, and ends in `/ws`. Its access
+token is compact printable ASCII of at most 8,192 bytes and its expiry is a
+future safe-integer time.
+The provider result is one indivisible value; callers cannot supply or override
+the relay URL separately.
+
+The control-plane provider validates one canonical HTTPS exchange endpoint and
+uses only `POST`, `Authorization`, `X-Firebase-AppCheck` and the exact RFC 0004
+JSON body. The two callbacks adapt the host's Firebase SDK without importing it
+into MiakAPI. The provider rejects redirects, non-JSON or oversized responses,
+unknown fields, unsafe credentials and source-token reflection. It coalesces only
+identical in-flight requests, propagates cancellation and returns no source
+token. Provider errors and public logs never contain a URL query, header, body or
+token fragment.
 
 ## 5. Lifecycle
 
@@ -294,23 +326,24 @@ the synchronization barrier in Section 6. Calling it again or after `stop()` is
 an `invalid_lifecycle` failure.
 
 `stop()` is idempotent: every call returns the same terminal promise. Its first
-call aborts token acquisition, terminates the current session, marks published
+call aborts credential acquisition, terminates the current session, marks published
 views stale, settles calls conservatively, removes listeners and bounds cleanup
 by `deadlineMs`. The status never leaves `stopping` except for `stopped`.
 
 Lifecycle, home, state, error and logger callbacks are isolated from protocol
 health. A thrown callback cannot disconnect the relay. A callback may call
 `stop()` reentrantly; after each user callback, the client rechecks cancellation
-before requesting a token, opening transport, synchronizing or reconnecting.
+before requesting a credential, opening transport, synchronizing or reconnecting.
 
 ## 6. Authentication and readiness barrier
 
-For the Firebase-direct alpha profile, the first connection performs:
+The first connection performs:
 
-1. request reason `initial` from `idTokenProvider`;
-2. open the fixed secure relay URL with subprotocol `miakapp`;
-3. send RFC 0001 role `1` `HELLO` with version range exactly 1.0, token and the
-   fixed home ID;
+1. request reason `initial` from `credentialProvider`;
+2. validate the complete credential and open its secure relay URL with
+   subprotocol `miakapp`;
+3. send RFC 0001 role `1` `HELLO` with version range exactly 1.0, its Miakapp
+   access token and the fixed home ID;
 4. require `WELCOME` version exactly 1.0, a future authentication expiry, a
    16-byte epoch and limits no greater than local protocol maxima;
 5. expose the initial enrollment/coordinator availability from `WELCOME`;
@@ -324,9 +357,10 @@ session bounds and buffers them until its managers are installed, then delivers
 them in order. It does not publish partially initialized readiness. An unenrolled
 home still completes a coherent empty projection supplied by the relay.
 
-Token acquisition, socket/WELCOME handshake and post-WELCOME bootstrap each have
-a ten-second maximum. A provider that ignores `AbortSignal` does not extend the
-public wait indefinitely. A failed phase terminates its socket before reconnect.
+Credential acquisition, socket/WELCOME handshake and post-WELCOME bootstrap each
+have a ten-second maximum. A provider that ignores `AbortSignal` does not extend
+the public wait indefinitely. A failed phase terminates its socket before
+reconnect.
 
 ## 7. Home availability
 
@@ -398,10 +432,18 @@ are consumed within a bounded set.
 
 The accepted `WELCOME.expiresAtMs` controls renewal. The client requests reason
 `reauth` thirty seconds before expiry, or halfway through a lease shorter than
-sixty seconds. It sends the fresh token in one correlated `REAUTH` on the active
-socket and accepts only a matching `REAUTH_OK` whose expiry is in the future.
+sixty seconds. If the fresh credential's relay URL equals the active socket URL,
+it sends the token in one correlated `REAUTH` and accepts only a matching
+`REAUTH_OK` whose expiry is in the future.
 
-Token acquisition and response wait are each bounded by the smaller of ten
+If the fresh credential names a different relay URL, the client MUST NOT send it
+on the old socket because its audience cannot authorize that relay. It retains
+that already-issued atomic credential, closes the old session, enters the
+`reconnecting` lifecycle and immediately opens one replacement socket to the new
+URL. It MUST NOT perform a second exchange for that handoff. The old view becomes
+stale and the replacement session passes the complete readiness barrier.
+
+Credential acquisition and response wait are each bounded by the smaller of ten
 seconds and the remaining lease. Failure or expiry terminates the transport and
 enters reconnect. The relay independently requires the renewed identity to keep
 the same role, home, UID and verified principal fields.
@@ -413,15 +455,17 @@ bootstrap. A complete Page Lifecycle/bfcache policy remains a host acceptance
 gate, not an excuse to keep an expired socket.
 
 The host MUST stop and discard the client immediately when Firebase signs out or
-when user, home or relay selection changes. A new identity tuple requires a new
-client instance and new token provider closure.
+when user or home selection changes. A new identity tuple requires a new client
+instance and new credential-provider closure. Relay selection changes do not
+mutate options; they arrive only through a new control-plane credential and use
+the handoff above.
 
 ## 11. Reconnect and draining
 
 Unexpected closure, retryable protocol failure or failed renewal marks state and
-home views stale, settles active calls once, reacquires a token with reason
-`reconnect` and opens one replacement socket. No operation queue survives the
-gap.
+home views stale, settles active calls once, reacquires a credential with reason
+`reconnect` and opens one replacement socket at its authoritative URL. No
+operation queue survives the gap.
 
 Reconnect uses full jitter with ceilings 1 s, 2 s, 4 s and so on, capped at
 30 s. Exactly one timer and one connection attempt exist. Accepting a valid
@@ -478,9 +522,14 @@ only allow-listed semantic counters and outcomes. Browser traces, network HARs
 and WebSocket frame inspection are forbidden in credential-bearing acceptance
 runs because they may retain `HELLO`, `REAUTH` or home data.
 
+Firebase ID and App Check tokens exist only inside the trusted host callbacks and
+the control-plane HTTPS request. The credential provider never returns them and
+the browser client never receives them. The only bearer handed to a WebSocket is
+the audience-bound Miakapp access token returned beside that exact relay URL.
+
 ## 14. Conformance evidence
 
-The accepted implementation is pinned by:
+The legacy trusted-relay implementation evidence is pinned by:
 
 - MiakAPI merge
   [`5c26eaa`](https://github.com/Miakapp/MiakAPI/commit/5c26eaa830015d94f53bf05fbbb0f5ebda6d290f);
@@ -524,14 +573,16 @@ The committed evidence shape is limited to:
 
 Literal fixture tokens are synthetic strings accepted only by the ephemeral
 injected verifier. The gate records no token, frame, Origin header, state beyond
-the synthetic scalar, trace or browser diagnostic.
+the synthetic scalar, trace or browser diagnostic. These commits predate the
+Section 2.3 provider and do not satisfy its implementation gate; replacement
+pins must prove the control-plane exchange and audience-bound token end to end.
 
 ## 15. Limits of the evidence
 
-The evidence in Section 14 does not prove:
+The legacy evidence in Section 14 does not prove:
 
 - Google Firebase certificate fetching, cache rotation or token revocation;
-- an attenuated audience-bound user relay credential;
+- the Section 2.3 control-plane exchange or audience-bound user credential;
 - public ingress, proxy limits, admission control or hostile-relay isolation;
 - Firefox, WebKit, mobile lifecycle or bfcache support;
 - every disconnect, GOAWAY, delayed-frame and network-fault interleaving;
@@ -547,9 +598,9 @@ loopback gate returned the expected value.
 
 The browser client may enter the production application only after:
 
-1. RFC 0004 defines and an end-to-end gate proves the audience/home/user/role
-   scoped credential in Section 2.3, or product policy intentionally limits the
-   direct profile to an explicitly enumerated fully trusted relay set;
+1. an end-to-end gate proves the RFC 0004 audience/home/user/role-scoped
+   credential, source-token confinement, relay-change handoff and local JWKS
+   verification in Section 2.3;
 2. exact production Origins, WSS endpoints and edge frame/rate/admission limits
    are deployed and observed in isolated staging;
 3. live Firebase identity behavior is proven without persisting a token or trace;
@@ -567,8 +618,8 @@ The browser client may enter the production application only after:
 | Decision | Rationale |
 |---|---|
 | separate `miakapi/browser` export | prevents coordinator secrets and Node transport code from entering the web bundle |
-| injected identity provider | the SDK does not own Firebase state or persistence and can adopt the future attenuated exchange |
-| one immutable home/relay tuple | identity changes require deterministic teardown rather than mutable cross-session state |
+| injected credential provider | the SDK does not own Firebase state or persistence and receives one atomic control-plane credential |
+| immutable user/home with credential-owned relay | identity changes require teardown while authoritative routing can move safely between leases |
 | readiness after complete bootstrap | the host never renders a partially authoritative home |
 | immediate subscription snapshot | closes the snapshot-then-subscribe race |
 | stale view retained read-only | allows honest degraded UI without presenting old data as live |
@@ -580,7 +631,7 @@ The browser client may enter the production application only after:
 | full-jitter single reconnect loop | bounded load without parallel identity sessions |
 | native WebSocket plus one-second accounting budget | broad platform support with an explicit, non-exaggerated memory limitation |
 | synthetic semantic Chromium evidence | proves browser mechanics without retaining bearer frames |
-| arbitrary relay selection blocked for Firebase-direct | a platform-wide bearer cannot be made audience-bound by documentation |
+| Firebase tokens confined to HTTPS exchange | a platform-wide bearer cannot be made relay-specific by SDK transformation or documentation |
 
 ## 18. References
 
@@ -590,8 +641,8 @@ The browser client may enter the production application only after:
   semantic capability boundary.
 - [RFC 0003](0003-coordinator-sdk-and-migration.md) defines shared values,
   dispatch outcomes and coordinator-side lifecycle semantics.
-- [RFC 0004](0004-platform-control-plane.md) defines the current Firebase user
-  profile and the control plane that must own future credential attenuation.
+- [RFC 0004](0004-platform-control-plane.md) defines Firebase/App Check source
+  verification and the audience-bound browser relay credential exchange.
 - [Miakapp 4 design](../specs/2026-08-29-miakapp-v4-design.md) defines the
   ecosystem trust and migration boundaries.
 - [RFC 6455](https://www.rfc-editor.org/rfc/rfc6455.html) defines WebSocket.

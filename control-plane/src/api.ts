@@ -40,13 +40,13 @@ import { ControlPlaneStore, type AccessTokenIssuer } from './store.js';
 import { type PushTransport } from './push.js';
 import { PushStore } from './push-store.js';
 import {
-  ACCESS_SCOPES,
+  HOME_KEY_ACCESS_SCOPES,
   COORDINATOR_NAME_PATTERN,
   HOME_ID_PATTERN,
   IDENTIFIER_PATTERN,
   SHA256_PATTERN,
   COMPONENT_ABI,
-  type AccessScope,
+  type HomeKeyAccessScope,
   type AdmissionOperation,
   type AppCheckPrincipal,
   type Clock,
@@ -62,6 +62,7 @@ import {
 const CONTROL_CHARACTER = /\p{Cc}/u;
 const HTML_DELIMITER = /[<>]/u;
 const REASONS = new Set(['initial', 'reauth', 'reconnect']);
+const MAX_RELAY_URL_BYTES = 2_048;
 const MAX_RESPONSE_BODY_BYTES = 64 * 1_024;
 const MAX_PUSH_GRANT_LIST_RESPONSE_BYTES = 96 * 1_024;
 
@@ -118,6 +119,7 @@ function admissionOperation(request: Request): AdmissionOperation | null {
     return 'home_key.revoke';
   }
   if (method === 'POST' && path === '/v1/access-tokens:exchange') return 'access.exchange';
+  if (method === 'POST' && path === '/v1/user-relay-tokens:exchange') return 'user_relay.exchange';
   if (method === 'POST' && path === '/v1/push-destinations:challenge') return 'push.destination.challenge';
   if (method === 'POST' && path === '/v1/push-destinations:complete') return 'push.destination.register';
   if (method === 'DELETE' && /^\/v1\/push-destinations\/[A-Za-z0-9_-]{22}$/.test(path)) {
@@ -355,7 +357,8 @@ function relayUrl(value: JsonValue | undefined): string {
   } catch {
     throw apiError('invalid_request');
   }
-  if (parsed.protocol !== 'wss:'
+  if (Buffer.byteLength(raw, 'utf8') > MAX_RELAY_URL_BYTES
+    || parsed.protocol !== 'wss:'
     || parsed.username !== ''
     || parsed.password !== ''
     || parsed.search !== ''
@@ -389,17 +392,17 @@ function homePatch(body: { [key: string]: JsonValue }): HomePatch {
 
 function keyCreation(body: { [key: string]: JsonValue }): {
   readonly label: string;
-  readonly scopes: AccessScope[];
+  readonly scopes: HomeKeyAccessScope[];
 } {
   assertExactKeys(body, ['label', 'scopes']);
   const scopes = stringArray(body.scopes);
   if (scopes.length === 0
     || new Set(scopes).size !== scopes.length
-    || scopes.some((scope) => !ACCESS_SCOPES.includes(scope as AccessScope))) {
+    || scopes.some((scope) => !HOME_KEY_ACCESS_SCOPES.includes(scope as HomeKeyAccessScope))) {
     throw apiError('invalid_request');
   }
   scopes.sort((left, right) => Buffer.compare(Buffer.from(left), Buffer.from(right)));
-  return Object.freeze({ label: boundedText(body.label, 64), scopes: scopes as AccessScope[] });
+  return Object.freeze({ label: boundedText(body.label, 64), scopes: scopes as HomeKeyAccessScope[] });
 }
 
 function exchangeRequest(body: { [key: string]: JsonValue }): ExchangeRequest {
@@ -434,6 +437,19 @@ function exchangeRequest(body: { [key: string]: JsonValue }): ExchangeRequest {
     return Object.freeze({ purpose });
   }
   throw apiError('invalid_request');
+}
+
+function userRelayExchangeRequest(body: { [key: string]: JsonValue }): {
+  readonly homeId: string;
+  readonly reason: 'initial' | 'reauth' | 'reconnect';
+} {
+  assertExactKeys(body, ['home_id', 'reason']);
+  const reason = stringValue(body.reason);
+  if (!REASONS.has(reason)) throw apiError('invalid_request');
+  return Object.freeze({
+    homeId: homeId(body.home_id),
+    reason: reason as 'initial' | 'reauth' | 'reconnect',
+  });
 }
 
 function assertNoCookie(request: Request): void {
@@ -626,6 +642,7 @@ async function routeRequest(
       issuer: dependencies.config.issuer,
       jwks_uri: dependencies.config.jwksUri,
       exchange_endpoint: dependencies.config.exchangeEndpoint,
+      user_relay_exchange_endpoint: dependencies.config.userRelayExchangeEndpoint,
       push_audience: dependencies.config.pushAudience,
       components_audience: dependencies.config.componentsAudience,
     });
@@ -1030,6 +1047,31 @@ async function routeRequest(
       expires_at_ms: signed.expiresAtMs,
       ...(exchange.purpose === 'relay' ? { relay_url: grant.audience } : {}),
       key: { id: grant.clientId, label: grant.label },
+    });
+    return;
+  }
+
+  if (request.path === '/v1/user-relay-tokens:exchange' && request.method === 'POST') {
+    const ticket = activeAdmission(admission, 'user_relay.exchange');
+    const { owner: principal, appCheck } = await destinationPrincipals(request, dependencies);
+    identifyOwner(ticket, principal);
+    ticket.identifySubject(appCheck.appId);
+    const exchange = userRelayExchangeRequest(jsonBody(request));
+    ticket.identifyHome(exchange.homeId);
+    await ticket.consume([
+      { budget: 'user_relay.exchange.user', subject: principal.userId },
+    ], ['user_relay.exchange.source']);
+    const { grant, signed } = await dependencies.store.exchangeUserRelay(
+      principal,
+      exchange.homeId,
+      dependencies.signer,
+    );
+    sendJson(response, 200, {
+      schema: 'miakapp.user-relay-token/1',
+      access_token: signed.token,
+      token_type: 'Bearer',
+      expires_at_ms: signed.expiresAtMs,
+      relay_url: grant.audience,
     });
     return;
   }

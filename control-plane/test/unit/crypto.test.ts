@@ -39,6 +39,7 @@ describe('control-plane cryptography', () => {
     const config = loadEmulatorConfig(environment);
     const signer = new AccessTokenSigner(config);
     const grant: AccessGrant = {
+      subjectKind: 'home_key',
       issuedAt: fixture.now,
       tokenId: Buffer.alloc(16, 15).toString('base64url'),
       homeId: 'synthetic-home',
@@ -66,6 +67,42 @@ describe('control-plane cryptography', () => {
       role: 'coordinator',
       coordinator_name: 'automation',
     });
+  });
+
+  test('issues a least-privilege user token accepted by the independent contract verifier', async () => {
+    const fixture = await loadAccessTokenFixture();
+    const config = loadEmulatorConfig(environment);
+    const signer = new AccessTokenSigner(config);
+    const grant: AccessGrant = {
+      subjectKind: 'firebase_user',
+      issuedAt: fixture.now,
+      tokenId: Buffer.alloc(16, 16).toString('base64url'),
+      homeId: 'synthetic-home',
+      userId: 'syn_user_1',
+      verifiedEmail: 'synthetic-1@example.test',
+      scope: 'relay:user',
+      audience: fixture.deployment.relay_audience,
+      role: 'user',
+    };
+    const signed = signer.sign(grant);
+    expect(verifyMiakappAccessToken(
+      signed.token,
+      fixture,
+      'user',
+      fixture.key_sets.rotated.keys,
+    )).toEqual({
+      home_id: 'synthetic-home',
+      principal_id: 'syn_user_1',
+      scope: 'relay:user',
+      expires_at: fixture.now + 300,
+      role: 'user',
+      verified_email: 'synthetic-1@example.test',
+    });
+    const claims = JSON.parse(Buffer.from(signed.token.split('.')[1]!, 'base64url').toString('utf8')) as object;
+    expect(Object.keys(claims).sort()).toEqual([
+      'aud', 'exp', 'iat', 'iss', 'jti', 'miakapp_home', 'miakapp_role',
+      'miakapp_verified_email', 'scope', 'sub',
+    ]);
   });
 
   test('refuses to load synthetic signing material outside the exact demo emulator', () => {
