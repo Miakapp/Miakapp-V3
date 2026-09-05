@@ -184,7 +184,11 @@ cannot be deleted; and billing can report late usage.
    resources that outlive the deployment abstraction.
 3. Disable App Check enforcement first, revoke and delete debug tokens, stop all
    provider-backed clients, and delete reCAPTCHA Enterprise keys only after
-   their evidence is retired. Firebase exposes no delete operation for a
+   their evidence is retired. If the private browser-key attempt claim exists,
+   retain it until direct key inventory and Terraform state have been reconciled,
+   then delete its live generation only in the reviewed browser-key retirement.
+   Account for its versioned and soft-deleted generations with the other state
+   objects. Firebase exposes no delete operation for a
    registered reCAPTCHA Enterprise App Check provider configuration; record it
    as a permanent project residual instead of claiming Terraform state removal
    deleted it. After the direct key inventory is empty, disable
