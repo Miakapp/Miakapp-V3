@@ -38,6 +38,10 @@ resource "terraform_data" "auth_probe_guard" {
     verifier_identity      = local.verifier_account
     verifier_image         = local.expected_workload_image
     capability_expiry      = local.capability_expiry
+    role_generation        = 2
+    custom_role_name       = local.custom_role_name
+    firestore_role_name    = local.firestore_role_name
+    signer_role_name       = local.signer_role_name
   }
 
   lifecycle {
@@ -93,11 +97,87 @@ resource "google_project_service" "auth_probe_asset_inventory" {
   depends_on = [terraform_data.auth_probe_guard]
 }
 
-resource "google_project_iam_custom_role" "auth_probe" {
+moved {
+  from = google_project_iam_custom_role.auth_probe
+  to   = google_project_iam_custom_role.auth_probe_generation_1
+}
+
+moved {
+  from = google_project_iam_custom_role.auth_probe_firestore
+  to   = google_project_iam_custom_role.auth_probe_firestore_generation_1
+}
+
+moved {
+  from = google_project_iam_custom_role.auth_probe_signer
+  to   = google_project_iam_custom_role.auth_probe_signer_generation_1
+}
+
+resource "google_project_iam_custom_role" "auth_probe_generation_1" {
   project     = local.project_id
-  role_id     = local.custom_role_id
+  role_id     = local.retired_custom_role_id
   title       = "Miakapp staging Auth probe"
   description = "Dormant least-privilege role for the bounded staging Auth and App Check probe."
+  permissions = [
+    "firebase.clients.get",
+    "firebaseappcheck.tokens.mint",
+    "firebaseauth.users.get",
+    "serviceusage.services.use",
+  ]
+  stage = "DISABLED"
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  depends_on = [
+    google_project_service.auth_probe_asset_inventory,
+    terraform_data.auth_probe_guard,
+  ]
+}
+
+resource "google_project_iam_custom_role" "auth_probe_signer_generation_1" {
+  project     = local.project_id
+  role_id     = local.retired_signer_role_id
+  title       = "Miakapp staging probe signer"
+  description = "Dormant self-scoped signing role for bounded staging probes."
+  permissions = [
+    "iam.serviceAccounts.getOpenIdToken",
+    "iam.serviceAccounts.signJwt",
+  ]
+  stage = "DISABLED"
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  depends_on = [terraform_data.auth_probe_guard]
+}
+
+resource "google_project_iam_custom_role" "auth_probe_firestore_generation_1" {
+  project     = local.project_id
+  role_id     = local.retired_firestore_role_id
+  title       = "Miakapp staging probe Firestore access"
+  description = "Dormant database-scoped CRUD role for bounded staging probe fixtures."
+  permissions = [
+    "datastore.entities.create",
+    "datastore.entities.delete",
+    "datastore.entities.get",
+    "datastore.entities.update",
+  ]
+  stage = "DISABLED"
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  depends_on = [terraform_data.auth_probe_guard]
+}
+
+resource "google_project_iam_custom_role" "auth_probe_generation_2" {
+  project     = local.project_id
+  role_id     = local.custom_role_id
+  title       = "Miakapp staging user-relay Auth probe 2"
+  description = "Generation 2 least-privilege role for the bounded staging user-relay probe."
   permissions = [
     "firebase.clients.get",
     "firebaseappcheck.tokens.mint",
@@ -116,11 +196,11 @@ resource "google_project_iam_custom_role" "auth_probe" {
   ]
 }
 
-resource "google_project_iam_custom_role" "auth_probe_signer" {
+resource "google_project_iam_custom_role" "auth_probe_signer_generation_2" {
   project     = local.project_id
   role_id     = local.signer_role_id
-  title       = "Miakapp staging probe signer"
-  description = "Dormant self-scoped signing role for bounded staging probes."
+  title       = "Miakapp staging user-relay signer probe 2"
+  description = "Generation 2 self-scoped signing role for the bounded staging user-relay probe."
   permissions = [
     "iam.serviceAccounts.getOpenIdToken",
     "iam.serviceAccounts.signJwt",
@@ -134,11 +214,11 @@ resource "google_project_iam_custom_role" "auth_probe_signer" {
   depends_on = [terraform_data.auth_probe_guard]
 }
 
-resource "google_project_iam_custom_role" "auth_probe_firestore" {
+resource "google_project_iam_custom_role" "auth_probe_firestore_generation_2" {
   project     = local.project_id
   role_id     = local.firestore_role_id
-  title       = "Miakapp staging probe Firestore access"
-  description = "Dormant database-scoped CRUD role for bounded staging probe fixtures."
+  title       = "Miakapp staging user-relay Firestore probe 2"
+  description = "Generation 2 database-scoped CRUD role for bounded staging user-relay fixtures."
   permissions = [
     "datastore.entities.create",
     "datastore.entities.delete",
@@ -183,7 +263,7 @@ resource "google_project_iam_member" "auth_probe" {
     expression  = "request.time < timestamp(\"${local.capability_expiry}\")"
   }
 
-  depends_on = [google_project_iam_custom_role.auth_probe]
+  depends_on = [google_project_iam_custom_role.auth_probe_generation_2]
 }
 
 resource "google_service_account_iam_member" "auth_probe_self_signer" {
@@ -200,7 +280,7 @@ resource "google_service_account_iam_member" "auth_probe_self_signer" {
   }
 
   depends_on = [
-    google_project_iam_custom_role.auth_probe_signer,
+    google_project_iam_custom_role.auth_probe_signer_generation_2,
     terraform_data.auth_probe_guard,
   ]
 }
@@ -218,7 +298,7 @@ resource "google_project_iam_member" "auth_probe_firestore" {
     expression  = "resource.name == \"projects/${local.project_id}/databases/(default)\" && request.time < timestamp(\"${local.capability_expiry}\")"
   }
 
-  depends_on = [google_project_iam_custom_role.auth_probe_firestore]
+  depends_on = [google_project_iam_custom_role.auth_probe_firestore_generation_2]
 }
 
 resource "google_cloud_run_v2_service" "auth_probe_verifier" {
