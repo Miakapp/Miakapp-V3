@@ -20,6 +20,7 @@ const REQUIRED_FILES = Object.freeze([
   'preflight-v2-result.json',
   'preflight-v3-result.json',
   'preflight-v4-result.json',
+  'preflight-v5-result.json',
   'recovery-apply.mjs',
   'recovery-apply.sh',
   'recovery-plan.mjs',
@@ -50,6 +51,7 @@ export function validateBrowserAttestationRoot(rootUrl) {
   }
   const index = readFileSync(new URL('index.html', rootUrl), 'utf8');
   const runner = readFileSync(new URL('runner.mjs', rootUrl), 'utf8');
+  const contract = readFileSync(new URL('contract.mjs', rootUrl), 'utf8');
   const driver = ['apply.mjs', 'browser.mjs', 'plan.mjs']
     .map((name) => readFileSync(new URL(name, rootUrl), 'utf8'))
     .join('\n');
@@ -76,6 +78,11 @@ export function validateBrowserAttestationRoot(rootUrl) {
     || !runner.includes("JSON.stringify(['callback', 'challenge'])")
     || !runner.includes('window.location.replace(')
     || !runner.includes('encodeURIComponent(JSON.stringify(result))')
+    || !runner.includes("failureStage = 'provider-token-request'")
+    || !runner.includes("failureCode = 'provider-rejection'")
+    || /error\?*\.message|error\?*\.stack/u.test(runner)
+    || !contract.includes('https://content-firebaseappcheck.googleapis.com')
+    || /connect-src[^\n]*https:\/\/firebaseappcheck\.googleapis\.com/u.test(contract)
     || /process\.stdin|single-tty-json-line|operator-connected-interactive|0\.0\.0\.0|shell:\s*true/u.test(driver)) {
     throw new Error('Browser-attestation driver differs from the reviewed system-browser loopback boundary');
   }

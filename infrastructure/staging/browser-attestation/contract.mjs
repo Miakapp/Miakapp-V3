@@ -27,8 +27,10 @@ export const THIRD_PRIOR_CLAIM_OBJECT =
   'terraform/browser-attestation/operations/live-browser-attestation-v3.json';
 export const FOURTH_PRIOR_CLAIM_OBJECT =
   'terraform/browser-attestation/operations/live-browser-attestation-v4.json';
-export const CLAIM_OBJECT =
+export const FIFTH_PRIOR_CLAIM_OBJECT =
   'terraform/browser-attestation/operations/live-browser-attestation-v5.json';
+export const CLAIM_OBJECT =
+  'terraform/browser-attestation/operations/live-browser-attestation-v6.json';
 export const PRIOR_CLAIM_GENERATION = '1788616557403719';
 export const PRIOR_CLAIM_SIZE_BYTES = 671;
 export const PRIOR_CLAIM_SHA256 =
@@ -79,6 +81,26 @@ export const PREFLIGHT_V4_DEPLOY_MESSAGE =
   'Miakapp V4 bounded browser App Check attestation v4';
 export const PREFLIGHT_V4_DISABLE_MESSAGE =
   'Miakapp V4 browser App Check attestation v4 retired';
+export const FIFTH_PRIOR_CLAIM_GENERATION = '1788629890224429';
+export const FIFTH_PRIOR_CLAIM_SIZE_BYTES = 686;
+export const FIFTH_PRIOR_CLAIM_SHA256 =
+  'e1e7fb2e4a79c9b7845af604e28157f6de344e975ee8fbfa79afc3f9fb7d105b';
+export const PREFLIGHT_V5_REPOSITORY_COMMIT =
+  '930177a0ff0d1305ebed541b2d8fccc3601c29df';
+export const PREFLIGHT_V5_METADATA_SHA256 =
+  'e78c5bb7bb670218898c12479434f83716d0e40af66bf4c320abfaed167a5fb5';
+export const PREFLIGHT_V5_VERSION_NAME_SHA256 =
+  '0b2a00c0f321692ee75d1d5e19957a54c0bd1e4289e37fa77775eb3234bda2cd';
+export const PREFLIGHT_V5_DEPLOY_RELEASE_NAME_SHA256 =
+  '883e02db5637c44e0baa713c8ffa6b602aac319d5c902f3de3d8fc1716fdf8d0';
+export const PREFLIGHT_V5_DISABLE_RELEASE_NAME_SHA256 =
+  '1c603c5386815f4afd1791cfff4c8f3d728ee1626070df1e2d88b3e54c343e4f';
+export const PREFLIGHT_V5_DEPLOY_RELEASE_TIME = '2026-09-05T17:38:19.804Z';
+export const PREFLIGHT_V5_DISABLE_RELEASE_TIME = '2026-09-05T17:38:23.594Z';
+export const PREFLIGHT_V5_DEPLOY_MESSAGE =
+  'Miakapp V4 bounded interactive browser App Check attestation v5';
+export const PREFLIGHT_V5_DISABLE_MESSAGE =
+  'Miakapp V4 interactive browser App Check attestation v5 retired';
 export const OPERATOR_USER_SHA256 =
   'd1c8514ac6eb5c13205cfec40dd6cc2072f33eb4279172df17273aa7c54a181c';
 export const APP_CHECK_SITE_KEY_SHA256 =
@@ -91,7 +113,7 @@ export const INTERACTIVE_OBSERVATION_DEADLINE_MILLISECONDS = 2 * 60 * 1_000;
 export const CONTENT_SECURITY_POLICY = [
   "default-src 'none'",
   "base-uri 'none'",
-  "connect-src 'self' https://firebaseappcheck.googleapis.com https://www.google.com https://www.recaptcha.net",
+  "connect-src 'self' https://content-firebaseappcheck.googleapis.com https://www.google.com https://www.recaptcha.net",
   "form-action 'none'",
   "frame-ancestors 'none'",
   'frame-src https://www.google.com https://recaptcha.google.com https://www.recaptcha.net',
@@ -198,7 +220,7 @@ export function attestationAuthorization(metadataBytes, repositoryCommit) {
     || !COMMIT.test(repositoryCommit)) {
     reject('Browser-attestation authorization inputs are invalid');
   }
-  return `run-interactive-browser-app-check-attestation-v5:${PROJECT_ID}:${sha256(metadataBytes)}:${repositoryCommit}`;
+  return `run-interactive-browser-app-check-attestation-v6:${PROJECT_ID}:${sha256(metadataBytes)}:${repositoryCommit}`;
 }
 
 export function validateAttestationAuthorization(value, metadataBytes, repositoryCommit) {
@@ -228,20 +250,23 @@ function validateBaseline(value) {
     || baseline.app_check_enforcement_records !== 0
     || baseline.debug_tokens !== 0
     || !SHA256.test(baseline.firebase_app_config_sha256)
-    || baseline.hosting_release_count !== 2
+    || baseline.hosting_release_count !== 4
     || baseline.hosting_site !== HOSTING_SITE
     || baseline.hosting_site_type !== 'DEFAULT_SITE'
-    || baseline.hosting_version_count !== 4
+    || baseline.hosting_version_count !== 5
     || baseline.operation_claim_present !== false
     || !isDeepStrictEqual(baseline.retired_preflight_version_name_sha256s, [
       PREFLIGHT_VERSION_NAME_SHA256,
       PREFLIGHT_V2_VERSION_NAME_SHA256,
       PREFLIGHT_V3_VERSION_NAME_SHA256,
       PREFLIGHT_V4_VERSION_NAME_SHA256,
+      PREFLIGHT_V5_VERSION_NAME_SHA256,
     ])
     || !isDeepStrictEqual(baseline.retired_release_name_sha256s, [
       PREFLIGHT_V4_DEPLOY_RELEASE_NAME_SHA256,
       PREFLIGHT_V4_DISABLE_RELEASE_NAME_SHA256,
+      PREFLIGHT_V5_DEPLOY_RELEASE_NAME_SHA256,
+      PREFLIGHT_V5_DISABLE_RELEASE_NAME_SHA256,
     ])
     || !isDeepStrictEqual(baseline.prior_operation_claims, [
       {
@@ -267,6 +292,12 @@ function validateBaseline(value) {
         generation: FOURTH_PRIOR_CLAIM_GENERATION,
         size_bytes: FOURTH_PRIOR_CLAIM_SIZE_BYTES,
         sha256: FOURTH_PRIOR_CLAIM_SHA256,
+      },
+      {
+        object: FIFTH_PRIOR_CLAIM_OBJECT,
+        generation: FIFTH_PRIOR_CLAIM_GENERATION,
+        size_bytes: FIFTH_PRIOR_CLAIM_SIZE_BYTES,
+        sha256: FIFTH_PRIOR_CLAIM_SHA256,
       },
     ])) {
     reject('Browser-attestation baseline differs from the reviewed retired preflight boundary');
@@ -343,8 +374,8 @@ export function buildAttestationMetadata({
   validateBaseline(baseline);
   validateArtifact(artifact);
   return Object.freeze({
-    schema: 'miakapp.staging-browser-attestation-plan/5',
-    operation: 'attest-interactive-browser-app-check-and-disable-hosting-v5',
+    schema: 'miakapp.staging-browser-attestation-plan/6',
+    operation: 'attest-interactive-browser-app-check-and-disable-hosting-v6',
     project_id: PROJECT_ID,
     project_number: PROJECT_NUMBER,
     hosting_site: HOSTING_SITE,
@@ -424,8 +455,8 @@ export function validateAttestationMetadata(value, now = Date.now()) {
   const expires = canonicalTimestamp(metadata.expires_at, 'Browser-attestation expiry time');
   const baseline = validateBaseline(metadata.baseline);
   validateArtifact(metadata.artifact);
-  if (metadata.schema !== 'miakapp.staging-browser-attestation-plan/5'
-    || metadata.operation !== 'attest-interactive-browser-app-check-and-disable-hosting-v5'
+  if (metadata.schema !== 'miakapp.staging-browser-attestation-plan/6'
+    || metadata.operation !== 'attest-interactive-browser-app-check-and-disable-hosting-v6'
     || metadata.project_id !== PROJECT_ID
     || metadata.project_number !== PROJECT_NUMBER
     || metadata.hosting_site !== HOSTING_SITE
@@ -498,18 +529,41 @@ export function validateBrowserResult(value, expectedChallenge) {
   const common = ['attestation_attempts', 'challenge', 'schema', 'state'];
   const keys = value?.state === 'passed'
     ? [...common, 'duration_milliseconds', 'token_format', 'token_ttl_seconds']
-    : [...common, 'failure'];
+    : [...common, 'failure_code', 'failure_stage'];
   const result = exactKeys(value, keys, 'Browser-attestation result');
   const expected = Buffer.from(expectedChallenge, 'utf8');
   const actual = Buffer.from(typeof result.challenge === 'string' ? result.challenge : '', 'utf8');
-  if (result.schema !== 'miakapp.browser-app-check-attestation/2'
+  if (result.schema !== 'miakapp.browser-app-check-attestation/3'
     || actual.byteLength !== expected.byteLength
     || !timingSafeEqual(actual, expected)
     || result.attestation_attempts !== 1) {
     reject('Browser-attestation result differs from the exact system-browser challenge');
   }
   if (result.state === 'failed') {
-    if (result.failure !== 'provider-or-token-shape-rejected') {
+    const allowedFailures = {
+      'firebase-initialization': ['initialization-rejected'],
+      'provider-token-request': [
+        'app-check-exchange-http-400',
+        'app-check-exchange-http-401',
+        'app-check-exchange-http-403',
+        'app-check-exchange-http-404',
+        'app-check-exchange-http-409',
+        'app-check-exchange-http-429',
+        'app-check-exchange-http-5xx',
+        'app-check-exchange-http-other',
+        'app-check-fetch-network-error',
+        'app-check-fetch-parse-error',
+        'app-check-recaptcha-error',
+        'app-check-sdk-error',
+        'app-check-throttled',
+        'provider-rejection',
+      ],
+      'token-format-validation': ['token-format-rejected'],
+      'token-ttl-validation': ['token-ttl-rejected'],
+      'duration-bound-validation': ['duration-bound-rejected'],
+    };
+    if (!Object.hasOwn(allowedFailures, result.failure_stage)
+      || !allowedFailures[result.failure_stage].includes(result.failure_code)) {
       reject('Browser-attestation failure is not the exact closed shape');
     }
     return Object.freeze(result);
