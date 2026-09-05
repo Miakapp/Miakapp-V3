@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import {
   FIREBASE_APP_CONFIG_NAME,
@@ -26,6 +28,7 @@ import {
   validateBrowserAppCheckKeyAttemptClaimReceipt,
 } from '../browser-app-check/attempt-claim.mjs';
 import {
+  KEY_PREREQUISITE_CONSUMED as APPLY_KEY_PREREQUISITE_CONSUMED,
   buildBrowserAppCheckKeyResult,
   validateBrowserAppCheckKeyTerraformOutput,
 } from '../browser-app-check/key-apply.mjs';
@@ -37,6 +40,10 @@ import {
   validateBrowserAppCheckKeyPlanMetadata,
 } from '../browser-app-check/key-contract.mjs';
 import {
+  validateBrowserAppCheckEvidence,
+  validateBrowserAppCheckEvidenceValue,
+} from '../browser-app-check/evidence.mjs';
+import {
   validateBrowserAppCheckKeyInventory,
   validateNormalizedRecaptchaKey,
   validateRecaptchaKeyRecord,
@@ -44,6 +51,9 @@ import {
 import {
   validateBrowserAppCheckKeyState,
 } from '../browser-app-check/state.mjs';
+import {
+  KEY_PREREQUISITE_CONSUMED as PLAN_KEY_PREREQUISITE_CONSUMED,
+} from '../browser-app-check/key-plan.mjs';
 import {
   browserAppCheckKeyOutput,
   validateBrowserAppCheckKeyPlan,
@@ -69,10 +79,7 @@ const keyPlanDriver = readFileSync(
   new URL('../browser-app-check/key-plan.mjs', import.meta.url),
   'utf8',
 );
-const stagingManifest = JSON.parse(readFileSync(
-  new URL('../manifest.json', import.meta.url),
-  'utf8',
-));
+const committedResultPath = new URL('../browser-app-check/result.json', import.meta.url);
 
 function foundation() {
   return {
@@ -707,20 +714,20 @@ test('key plan metadata and authorization bind exact private bytes, baseline and
   assert.equal(value.global_attempt_claim_deletion_authorized, false);
   assert.deepEqual(value.baseline.attempt_claim, browserAppCheckKeyAttemptClaimAbsence());
   assert.equal(value.baseline.terraform_state, API_PREREQUISITE_TERRAFORM_STATE);
-  const {
-    schema: stateSchema,
-    ...stateFields
-  } = API_PREREQUISITE_TERRAFORM_STATE;
-  const {
-    raw_contents_committed: rawContentsCommitted,
-    ...manifestStateFields
-  } = stagingManifest.evidence.browser_app_check_prerequisite.terraform_state;
-  assert.equal(stateSchema, 'miakapp.staging-browser-app-check-state/1');
-  assert.equal(rawContentsCommitted, false);
-  assert.deepEqual(
-    stateFields,
-    manifestStateFields,
-  );
+  assert.deepEqual(API_PREREQUISITE_TERRAFORM_STATE, {
+    schema: 'miakapp.staging-browser-app-check-state/1',
+    object: 'terraform/browser-app-check/default.tfstate',
+    generation: '1788591686695870',
+    size_bytes: 11057,
+    sha256: '4c2ac56a22e2ba11e6a4dd5c195910c1a0f1e749a009660294ea05bcd8c48aa7',
+    terraform_version: '1.11.3',
+    serial: 3,
+    lineage_sha256: 'f6640c6c40b21a544f3ddc3ee8005f8a1d9d2eaa19dd79ba5fca5709394d9601',
+    managed_resources: 2,
+    data_resources: 2,
+    outputs: 1,
+    tainted_resources: 0,
+  });
   const authorization = browserAppCheckKeyAuthorization(PLAN, COMMIT, value.baseline_sha256);
   assert.match(
     authorization,
@@ -855,6 +862,30 @@ test('result omits the site key while binding Terraform state to direct inventor
   assert.equal(validateBrowserAppCheckKeyTerraformOutput(browserAppCheckKeyOutput()).recaptcha_testing, false);
 });
 
+test('committed key evidence is exact, cross-linked, sanitized, and immutable', () => {
+  const result = validateBrowserAppCheckEvidence(committedResultPath);
+  assert.equal(result.repository_commit, 'ec541acce307d32f2816097065f7bff1e3f0f7d0');
+  assert.equal(result.terraform_plan_sha256, 'dd45c80ed38dbe5e681713442ddaa02e1dc78d2a3ce6f9365b7bbc04f96e248b');
+  assert.equal(result.authoritative_recaptcha_keys, 1);
+  assert.equal(result.cloud_asset_recaptcha_keys, 1);
+  assert.equal(result.app_check_registered, false);
+  assert.equal(result.global_attempt_claim.retry_authorized, false);
+  assert.equal(
+    result.terraform_state.recaptcha_key_name_sha256,
+    result.recaptcha_key.name_sha256,
+  );
+  assert.doesNotMatch(
+    JSON.stringify(result),
+    /accessToken|Authorization|siteKey|legacySecretKey|projects\/miakapp-v4-staging\/keys\//u,
+  );
+  const drift = structuredClone(result);
+  drift.recaptcha_key.allow_all_domains = true;
+  assert.throws(
+    () => validateBrowserAppCheckEvidenceValue(drift),
+    /does not match the exact sanitized result/u,
+  );
+});
+
 test('key drivers revalidate immediately, claim globally, preserve fallback state and forbid replay', () => {
   const marker = keyApplyDriver.indexOf('writeMutationAttemptMarker(bundle, freshMetadata)');
   const globalClaim = keyApplyDriver.indexOf('createBrowserAppCheckKeyAttemptClaim(\n      mutationSession');
@@ -874,4 +905,31 @@ test('key drivers revalidate immediately, claim globally, preserve fallback stat
   assert.match(keyPlanDriver, /observeBrowserAppCheckKeyAttemptClaimAbsent/u);
   assert.doesNotMatch(`${keyPlanDriver}\n${keyApplyDriver}`, /retrieveLegacySecretKey|legacySecretKey/u);
   assert.doesNotMatch(`${keyPlanDriver}\n${keyApplyDriver}`, /terraform', \['destroy'/u);
+});
+
+test('consumed key plan and apply entrypoints are permanently retired before cloud access', () => {
+  assert.equal(PLAN_KEY_PREREQUISITE_CONSUMED, true);
+  assert.equal(APPLY_KEY_PREREQUISITE_CONSUMED, true);
+  for (const [entrypoint, message] of [
+    ['key-plan.mjs', 'planner is permanently retired'],
+    ['key-apply.mjs', 'apply path is permanently retired'],
+  ]) {
+    const result = spawnSync(
+      process.execPath,
+      [fileURLToPath(new URL(`../browser-app-check/${entrypoint}`, import.meta.url))],
+      {
+        cwd: fileURLToPath(new URL('../../../', import.meta.url)),
+        env: {
+          PATH: process.env.PATH,
+          GOOGLE_APPLICATION_CREDENTIALS: '/must-not-be-read',
+          GOOGLE_OAUTH_ACCESS_TOKEN: 'must-not-be-read',
+        },
+        encoding: 'utf8',
+      },
+    );
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, '');
+    assert.match(result.stderr, new RegExp(message, 'u'));
+    assert.doesNotMatch(result.stderr, /gcloud|terraform|credential|token/u);
+  }
 });
