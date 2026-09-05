@@ -11,26 +11,34 @@ import { fileURLToPath } from 'node:url';
 import { buildProductionArchive } from '../../../control-plane/deployment/package.mjs';
 import {
   PROJECT_ID,
+  REGION,
   RUNTIME_CONFIG_SHA256,
+  TARGET_RUNTIME_CONFIG_SHA256,
   TERRAFORM_VERSION,
   assertSafeWorkloadEnvironment,
+  buildWorkloadSigningActivationPlanMetadata,
   buildWorkloadUpdatePlanMetadata,
   canonicalJson,
   childEnvironment,
   createPrivateBundle,
   sha256,
+  validateSigningActivationBaseline,
   verifiedOperatorEmail,
   verifyExactMain,
+  workloadSigningActivationAuthorization,
   workloadUpdateAuthorization,
   writePrivateFile,
 } from './contract.mjs';
 import { validateWorkloadRoot } from './guard.mjs';
 import {
   PINNED_UPDATE_BASELINE,
+  readAndValidatePinnedSigningActivationPlan,
   readAndValidatePinnedSourceUpdatePlan,
 } from './validate-plan.mjs';
 
 const PLAN_CONFIRMATION = 'MIAKAPP_STAGING_WORKLOAD_UPDATE_PLAN_CONFIRMATION';
+const SIGNING_ACTIVATION_CONFIRMATION =
+  'MIAKAPP_STAGING_SIGNING_ACTIVATION_PLAN_CONFIRMATION';
 const workloadRoot = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = fileURLToPath(new URL('../../../', import.meta.url));
 const manifestPath = join(repositoryRoot, 'infrastructure/staging/manifest.json');
@@ -81,13 +89,41 @@ function validateToolchain() {
   if (version !== TERRAFORM_VERSION) throw new Error(`Terraform ${TERRAFORM_VERSION} is required`);
 }
 
-async function main() {
-  if (process.argv.length !== 3 || process.argv[2] === undefined) {
-    throw new Error(`Usage: ${PLAN_CONFIRMATION}=${PROJECT_ID} ./update-plan.sh <private-parent>`);
+function signingActivationBaseline() {
+  const result = run('gcloud', [
+    'functions',
+    'describe',
+    'control-plane',
+    '--gen2',
+    `--region=${REGION}`,
+    `--project=${PROJECT_ID}`,
+    '--quiet',
+    '--format=json(name,state,updateTime,serviceConfig.revision,serviceConfig.environmentVariables)',
+  ], { cwd: repositoryRoot, description: 'signing-activation-baseline' });
+  let value;
+  try {
+    value = JSON.parse(Buffer.from(result.stdout).toString('utf8'));
+  } catch {
+    throw new Error('Live signing prepublication baseline is invalid JSON');
   }
-  assertSafeWorkloadEnvironment(process.env, PLAN_CONFIRMATION);
-  if (process.env[PLAN_CONFIRMATION] !== PROJECT_ID) {
-    throw new Error(`Set ${PLAN_CONFIRMATION}=${PROJECT_ID} to acknowledge the exact private update target`);
+  return validateSigningActivationBaseline(value);
+}
+
+async function main() {
+  const signingActivation = process.argv[2] === '--signing-activate';
+  const offset = signingActivation ? 1 : 0;
+  const privateParent = process.argv[2 + offset];
+  const confirmation = signingActivation ? SIGNING_ACTIVATION_CONFIRMATION : PLAN_CONFIRMATION;
+  if (process.argv.length !== 3 + offset || privateParent === undefined) {
+    const executable = signingActivation ? './signing-activate-plan.sh' : './update-plan.sh';
+    throw new Error(`Usage: ${confirmation}=${PROJECT_ID} ${executable} <private-parent>`);
+  }
+  assertSafeWorkloadEnvironment(process.env, confirmation);
+  if (process.env[confirmation] !== PROJECT_ID) {
+    throw new Error(`Set ${confirmation}=${PROJECT_ID} to acknowledge the exact private update target`);
+  }
+  if (!signingActivation && RUNTIME_CONFIG_SHA256 !== TARGET_RUNTIME_CONFIG_SHA256) {
+    throw new Error('The guarded signing activation must converge before another source update');
   }
   validateWorkloadRoot(new URL('./', import.meta.url));
   validateToolchain();
@@ -98,18 +134,27 @@ async function main() {
   const repositoryCommit = verifyExactMain(repositoryRoot);
   const operatorEmail = verifiedOperatorEmail(repositoryRoot);
   const runtimeConfigPath = join(workloadRoot, 'runtime-config.json');
-  if (sha256(readFileSync(runtimeConfigPath)) !== RUNTIME_CONFIG_SHA256) {
+  const runtimeConfigSha256 = signingActivation
+    ? TARGET_RUNTIME_CONFIG_SHA256
+    : RUNTIME_CONFIG_SHA256;
+  if (sha256(readFileSync(runtimeConfigPath)) !== runtimeConfigSha256) {
     throw new Error('Committed staging runtime configuration does not match the reviewed digest');
   }
+  if (signingActivation) signingActivationBaseline();
 
-  const bundle = createPrivateBundle(process.argv[2], repositoryRoot);
+  const bundle = createPrivateBundle(privateParent, repositoryRoot);
   const terraformData = join(bundle, 'terraform-data');
   mkdirSync(terraformData, { mode: 0o700 });
   try {
     const archivePath = join(bundle, 'control-plane.zip');
     const packageResult = buildProductionArchive(archivePath);
     verifyExactMain(repositoryRoot, repositoryCommit);
-    if (packageResult.archive_sha256 === PINNED_UPDATE_BASELINE.sourceArchiveSha256) {
+    if (signingActivation
+      && packageResult.archive_sha256 !== PINNED_UPDATE_BASELINE.sourceArchiveSha256) {
+      throw new Error('Signing activation source differs from the exact deployed package');
+    }
+    if (!signingActivation
+      && packageResult.archive_sha256 === PINNED_UPDATE_BASELINE.sourceArchiveSha256) {
       throw new Error('Pinned workload update requires new deterministic source bytes');
     }
 
@@ -153,7 +198,11 @@ async function main() {
       diagnosticDirectory: bundle,
       description: 'terraform-plan',
     });
-    if (plan.status !== 2) throw new Error('Pinned workload update must contain the exact reviewed source delta');
+    if (plan.status !== 2) {
+      throw new Error(signingActivation
+        ? 'Signing activation must contain the exact reviewed runtime delta'
+        : 'Pinned workload update must contain the exact reviewed source delta');
+    }
     chmodSync(planPath, 0o400);
 
     const show = run('terraform', ['show', '-json', planPath], {
@@ -166,13 +215,21 @@ async function main() {
     writePrivateFile(planJsonPath, planJsonBytes, 0o400);
     const validationInput = {
       repositoryCommit,
-      sourceRepositoryCommit: repositoryCommit,
+      sourceRepositoryCommit: signingActivation
+        ? PINNED_UPDATE_BASELINE.sourceRepositoryCommit
+        : repositoryCommit,
       sourceArchiveSha256: packageResult.archive_sha256,
-      runtimeConfigSha256: RUNTIME_CONFIG_SHA256,
+      runtimeConfigSha256,
     };
-    const summary = readAndValidatePinnedSourceUpdatePlan(planJsonPath, validationInput);
+    const summary = signingActivation
+      ? readAndValidatePinnedSigningActivationPlan(planJsonPath, validationInput)
+      : readAndValidatePinnedSourceUpdatePlan(planJsonPath, validationInput);
+    if (signingActivation) signingActivationBaseline();
     const planBytes = readFileSync(planPath);
-    const metadata = buildWorkloadUpdatePlanMetadata({
+    const buildMetadata = signingActivation
+      ? buildWorkloadSigningActivationPlanMetadata
+      : buildWorkloadUpdatePlanMetadata;
+    const metadata = buildMetadata({
       repositoryCommit,
       sourceRepositoryCommit: validationInput.sourceRepositoryCommit,
       createdAt: new Date().toISOString(),
@@ -188,11 +245,15 @@ async function main() {
     verifyExactMain(repositoryRoot, repositoryCommit);
 
     process.stdout.write([
-      `Private workload update bundle: ${bundle}`,
+      `Private workload ${signingActivation ? 'signing activation' : 'update'} bundle: ${bundle}`,
       `Plan SHA-256: ${metadata.terraform_plan_sha256}`,
       `Source SHA-256: ${metadata.source_archive_sha256}`,
-      `Authorization: ${workloadUpdateAuthorization(planBytes, repositoryCommit)}`,
-      'Planned delta: one reproducible source replacement and two in-place updates; IAM, ingress and scale unchanged; no live request.',
+      `Authorization: ${signingActivation
+        ? workloadSigningActivationAuthorization(planBytes, repositoryCommit)
+        : workloadUpdateAuthorization(planBytes, repositoryCommit)}`,
+      signingActivation
+        ? 'Planned delta: two in-place updates; identical source; versions 1 and 2 published; version 2 current; IAM, ingress and scale unchanged; no live request.'
+        : 'Planned delta: one reproducible source replacement and two in-place updates; IAM, ingress and scale unchanged; no live request.',
       '',
     ].join('\n'));
   } finally {
