@@ -4,6 +4,10 @@ import {
   APP_CHECK_SITE_KEY_SHA256,
   CLAIM_OBJECT,
   FIREBASE_APP_ID,
+  FIFTH_PRIOR_CLAIM_GENERATION,
+  FIFTH_PRIOR_CLAIM_OBJECT,
+  FIFTH_PRIOR_CLAIM_SHA256,
+  FIFTH_PRIOR_CLAIM_SIZE_BYTES,
   FOURTH_PRIOR_CLAIM_GENERATION,
   FOURTH_PRIOR_CLAIM_OBJECT,
   FOURTH_PRIOR_CLAIM_SHA256,
@@ -27,6 +31,15 @@ import {
   PREFLIGHT_V4_METADATA_SHA256,
   PREFLIGHT_V4_REPOSITORY_COMMIT,
   PREFLIGHT_V4_VERSION_NAME_SHA256,
+  PREFLIGHT_V5_DEPLOY_MESSAGE,
+  PREFLIGHT_V5_DEPLOY_RELEASE_NAME_SHA256,
+  PREFLIGHT_V5_DEPLOY_RELEASE_TIME,
+  PREFLIGHT_V5_DISABLE_MESSAGE,
+  PREFLIGHT_V5_DISABLE_RELEASE_NAME_SHA256,
+  PREFLIGHT_V5_DISABLE_RELEASE_TIME,
+  PREFLIGHT_V5_METADATA_SHA256,
+  PREFLIGHT_V5_REPOSITORY_COMMIT,
+  PREFLIGHT_V5_VERSION_NAME_SHA256,
   PREFLIGHT_VERSION_NAME_SHA256,
   PRIOR_CLAIM_GENERATION,
   PRIOR_CLAIM_OBJECT,
@@ -244,9 +257,14 @@ export function validateRetiredPreflightVersions(inventory, options = {}) {
       operation: 'browser-app-check-attestation-v4',
       repository_commit: PREFLIGHT_V4_REPOSITORY_COMMIT,
     },
+    {
+      name_sha256: PREFLIGHT_V5_VERSION_NAME_SHA256,
+      operation: 'browser-app-check-attestation-v5',
+      repository_commit: PREFLIGHT_V5_REPOSITORY_COMMIT,
+    },
   ];
   if (!plainObject(inventory) || !Array.isArray(inventory.versions)
-    || !Array.isArray(expectedVersions) || expectedVersions.length !== 4
+    || !Array.isArray(expectedVersions) || expectedVersions.length !== 5
     || expectedVersions.some((expected) => !plainObject(expected)
       || !SHA256.test(expected.name_sha256 ?? '')
       || typeof expected.operation !== 'string'
@@ -293,10 +311,24 @@ export function validateRetiredAttestationReleases(inventory, retiredVersions, o
       message: PREFLIGHT_V4_DISABLE_MESSAGE,
       release_time: PREFLIGHT_V4_DISABLE_RELEASE_TIME,
     },
+    {
+      name_sha256: PREFLIGHT_V5_DEPLOY_RELEASE_NAME_SHA256,
+      type: 'DEPLOY',
+      version_name_sha256: PREFLIGHT_V5_VERSION_NAME_SHA256,
+      message: PREFLIGHT_V5_DEPLOY_MESSAGE,
+      release_time: PREFLIGHT_V5_DEPLOY_RELEASE_TIME,
+    },
+    {
+      name_sha256: PREFLIGHT_V5_DISABLE_RELEASE_NAME_SHA256,
+      type: 'SITE_DISABLE',
+      version_name_sha256: null,
+      message: PREFLIGHT_V5_DISABLE_MESSAGE,
+      release_time: PREFLIGHT_V5_DISABLE_RELEASE_TIME,
+    },
   ];
   if (!plainObject(inventory) || !Array.isArray(inventory.releases)
-    || !Array.isArray(retiredVersions) || retiredVersions.length !== 4
-    || !Array.isArray(expectedReleases) || expectedReleases.length !== 2) {
+    || !Array.isArray(retiredVersions) || retiredVersions.length !== 5
+    || !Array.isArray(expectedReleases) || expectedReleases.length !== 4) {
     reject('Retired browser-attestation release inventory is invalid');
   }
   const retired = expectedReleases.map((expected) => {
@@ -337,7 +369,8 @@ export function validateRetiredAttestationReleases(inventory, retiredVersions, o
 
 function validateClaimObject(objectName) {
   if (![CLAIM_OBJECT, PRIOR_CLAIM_OBJECT, SECOND_PRIOR_CLAIM_OBJECT,
-    THIRD_PRIOR_CLAIM_OBJECT, FOURTH_PRIOR_CLAIM_OBJECT].includes(objectName)) {
+    THIRD_PRIOR_CLAIM_OBJECT, FOURTH_PRIOR_CLAIM_OBJECT,
+    FIFTH_PRIOR_CLAIM_OBJECT].includes(objectName)) {
     reject('Browser-attestation claim inventory object is outside the reviewed boundary');
   }
   return objectName;
@@ -425,6 +458,7 @@ export function observePriorOperationClaims(session, fetchImplementation) {
     observeClaim(session, SECOND_PRIOR_CLAIM_OBJECT, fetchImplementation),
     observeClaim(session, THIRD_PRIOR_CLAIM_OBJECT, fetchImplementation),
     observeClaim(session, FOURTH_PRIOR_CLAIM_OBJECT, fetchImplementation),
+    observeClaim(session, FIFTH_PRIOR_CLAIM_OBJECT, fetchImplementation),
   ]);
 }
 
@@ -523,8 +557,21 @@ export async function observeAttestationBaseline(session, options = {}) {
         sha256: FOURTH_PRIOR_CLAIM_SHA256,
       },
     },
+    {
+      schema: 'miakapp.staging-browser-attestation-claim/5',
+      operation: 'attest-interactive-browser-app-check-and-disable-hosting-v5',
+      repository_commit: PREFLIGHT_V5_REPOSITORY_COMMIT,
+      metadata_sha256: PREFLIGHT_V5_METADATA_SHA256,
+      receipt: {
+        bucket: STATE_BUCKET,
+        object: FIFTH_PRIOR_CLAIM_OBJECT,
+        generation: FIFTH_PRIOR_CLAIM_GENERATION,
+        size_bytes: FIFTH_PRIOR_CLAIM_SIZE_BYTES,
+        sha256: FIFTH_PRIOR_CLAIM_SHA256,
+      },
+    },
   ];
-  if (!Array.isArray(expectedPriorClaims) || expectedPriorClaims.length !== 4) {
+  if (!Array.isArray(expectedPriorClaims) || expectedPriorClaims.length !== 5) {
     reject('Prior browser-attestation claim expectations are invalid');
   }
   const [appCheck, keys, hosting, webConfigResponse, priorClaims, claimPresent] = await Promise.all([
@@ -595,8 +642,8 @@ export async function observeAttestationBaseline(session, options = {}) {
   });
   const expectedClaimPresent = options.operationClaimPresent ?? false;
   if (typeof expectedClaimPresent !== 'boolean'
-    || baseline.hosting_version_count !== 4
-    || baseline.hosting_release_count !== 2
+    || baseline.hosting_version_count !== 5
+    || baseline.hosting_release_count !== 4
     || baseline.operation_claim_present !== expectedClaimPresent) {
     reject('Browser-attestation requires the exact retired preflight boundary');
   }
