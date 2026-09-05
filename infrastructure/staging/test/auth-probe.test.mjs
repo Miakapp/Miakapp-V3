@@ -55,6 +55,7 @@ import {
   validateCustomRolePolicySearch,
   validateInheritedVerifierInvokerBindings,
   validateVerifierAnnouncedUrls,
+  validateVerifierServiceEndpoints,
   validateVerifierServicePolicy,
 } from '../auth-probe/inventory.mjs';
 import {
@@ -704,10 +705,26 @@ test('contains only the reviewed dormant and temporary user-relay probe graph', 
 
 test('accepts the real two-URL Cloud Run shape and closes the verifier IAM boundary', () => {
   const generatedUri = 'https://miakapp-user-relay-verifier-3jgucqdh7a-od.a.run.app';
+  const announcedUris = [generatedUri, VERIFIER_SERVICE_URI];
   assert.deepEqual(
-    validateVerifierAnnouncedUrls([generatedUri, VERIFIER_SERVICE_URI]),
-    [generatedUri, VERIFIER_SERVICE_URI],
+    validateVerifierAnnouncedUrls(announcedUris),
+    announcedUris,
   );
+  assert.deepEqual(
+    validateVerifierServiceEndpoints(
+      { url: generatedUri, address: { url: generatedUri } },
+      JSON.stringify(announcedUris),
+    ),
+    announcedUris,
+  );
+  assert.throws(() => validateVerifierServiceEndpoints(
+    { url: VERIFIER_SERVICE_URI, address: { url: VERIFIER_SERVICE_URI } },
+    JSON.stringify(announcedUris),
+  ), /service URI/u);
+  assert.throws(() => validateVerifierServiceEndpoints(
+    { url: generatedUri, address: { url: 'https://unreviewed.example.invalid' } },
+    JSON.stringify(announcedUris),
+  ), /service address/u);
   for (const invalid of [
     [VERIFIER_SERVICE_URI],
     [VERIFIER_SERVICE_URI, 'https://verifier.example.com'],
