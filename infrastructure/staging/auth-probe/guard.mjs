@@ -33,6 +33,7 @@ const REQUIRED_FILES = Object.freeze([
   'terraform-cli.tfrc',
   'validate-plan.mjs',
   'variables.tf',
+  'verifier.mjs',
   'versions.tf',
   'workflow.yaml',
 ]);

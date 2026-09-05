@@ -4,9 +4,10 @@ Date: 2026-09-01
 
 Status: accepted direction; staging bootstrap and foundation complete, exact
 keyless recovery workflow and WIF exchange retired on 2026-09-03, private
-workload active and converged with internal-only ingress and source verified,
-one exact discovery response validated, and one real Firebase Auth plus Admin
-custom-provider App Check probe succeeded and retired on 2026-09-04
+audience-bound workload source active and converged with internal-only ingress
+and no request, one exact discovery response validated on its preceding
+revision, and one real Firebase Auth plus Admin custom-provider App Check probe
+succeeded there and retired on 2026-09-04
 
 ## Decision
 
@@ -103,8 +104,8 @@ For a low-volume staging project, the intended initial posture is:
 - no silently enabled fixed-price edge product. The ingress design and its full
   load-balancer/edge-policy baseline must be priced and accepted explicitly.
 
-The Function deployment and two bounded source corrections incurred build,
-source and Artifact Registry storage plus a 49,242-byte workload state. The
+The Function deployment and three bounded source updates incurred build,
+source and Artifact Registry storage plus a 49,283-byte workload state. The
 unscheduled private Workflow made exactly three bounded requests and has a
 13,596-byte state. The Function remains scale-to-zero with no recurring
 minimum-instance charge; the Workflow has no schedule or idle compute.
@@ -310,12 +311,12 @@ build stopped because the custom build identity lacked access to Google's copied
 source object. A bounded recovery added an object-prefix-conditioned reader,
 created the private probe invoker, updated the Function in place and deleted
 nothing. An output-only reconciliation and a fresh full plan both changed no
-resource. Independent inventory verified the active revision, exact copied
-source bytes, private IAM, all three workload identities with zero user-managed
-keys, and no deployment-time request. The sanitized result is digest-pinned under
-[`../../infrastructure/staging/workload/`](../../infrastructure/staging/workload/).
+resource. After two bounded source corrections, independent inventory verified
+revision `control-plane-00003-hum`, its exact copied source bytes, private IAM,
+all three workload identities with zero user-managed keys, and no
+deployment-time request.
 
-The separate unscheduled private probe then recorded two bounded `503` failures
+The separate unscheduled private probe against that revision then recorded two bounded `503` failures
 followed by one no-retry HTTP 200 response from the exact discovery route.
 Serving that route proves the production initialization path loaded all five
 secret values and validated the KMS public key without an application mutation.
@@ -340,6 +341,16 @@ bindings were retired. Digest-pinned public summaries contain no execution ID,
 token, header, trace or raw diagnostic. The separate browser-provider
 attestation gate remains open.
 
+After those historical probes, a third source-only update deployed the
+audience-bound user-relay credential exchange as current revision
+`control-plane-00004-yis`. Its saved plan changed only the deterministic source
+object, Function and deployment guard. It converged to zero changes, and
+independent inventory verified the copied bytes, internal-only ingress, scale
+0..1, zero public invokers and zero user-managed keys without making a request.
+The current sanitized deployment result is digest-pinned under
+[`../../infrastructure/staging/workload/`](../../infrastructure/staging/workload/);
+the bounded user-relay acceptance probe remains pending.
+
 The pinned local relay-authentication path now includes signing-key overlap,
 key-changing `REAUTH`, concurrent cache refresh, expiry, unknown-`kid` abuse,
 JWKS outage and bounded recovery. A separate pinned local gate now exercises the
@@ -351,6 +362,15 @@ relay, and performs a no-overlap authoritative handoff across two relays. The
 complete disconnect matrix, live KMS and Firebase behavior, staging quotas and
 alerts, managed retiring-key removal and teardown evidence remain blockers.
 Public ingress remains absent.
+
+The user-relay probe retirement driver also closes both zero-temporary crash
+windows. If all six temporaries are already absent live and in Terraform state,
+a separate short-lived authorization binds explicit finalization to the exact
+inventory, operator and reviewed commit. Recovery then disables any remaining
+GA roles or, for an already retired graph, skips apply and regenerates sanitized
+retirement evidence after fixture and convergence checks. The normal validator
+admits a zero-delete plan only as a race fallback and only with one to three exact
+role-disable updates; it never accepts an all-no-op delta.
 
 Passing the manifest check is evidence, not additional authorization.
 

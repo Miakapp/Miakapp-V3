@@ -32,21 +32,24 @@ The later workload apply preserved a 13-resource partial state after its first
 Function build failed on access to Google's copied source; the Function was
 tainted and the private invoker absent. A bounded recovery added only the
 conditional source reader and private probe invoker, then updated the Function
-in place. Two bounded source corrections later produced active revision
-`control-plane-00003-hum` with internal-only ingress, no unauthenticated
-invoker, no minimum instance and zero user-managed keys across its
-runtime/build/probe identities. Independent inventory matched the copied source
-bytes. One unscheduled Workflow made exactly three no-retry requests: two
+in place. Two bounded source corrections later produced revision
+`control-plane-00003-hum`. Against that revision, one unscheduled Workflow made
+exactly three no-retry requests: two
 controlled failures followed by one HTTP 200 discovery response. Its successful
 route performed no application mutation; both invocation entry points now fail
-closed. Deleting the whole project would permanently retire its globally unique
+closed. A third source-only update then deployed the audience-bound user-relay
+exchange as active revision `control-plane-00004-yis` without making a request.
+Independent inventory matched the copied source bytes and reconfirmed
+internal-only ingress, no unauthenticated invoker, no minimum instance and zero
+user-managed keys across the runtime/build/probe identities. Deleting the whole
+project would permanently retire its globally unique
 ID; adding Firebase cannot otherwise be fully undone. Retaining this private
 scale-to-zero project, with the billing link removable during an authorized
 teardown, is therefore the default.
 
-The repository contains separate bootstrap, foundation, workload and probe roots, a
-private versioned GCS backend, keyless plan/apply identities and a retained historical
-workflow blueprint. Terraform completed the final
+The repository contains separate bootstrap, foundation, workload, discovery-probe,
+Firebase Auth and Auth-probe roots, a private versioned GCS backend, keyless
+plan/apply identities and a retained historical workflow blueprint. Terraform completed the final
 27-create/nine-no-op plan, but
 the wrapper rejected the complete state before migration because its output
 shape assumption differed from Terraform 1.11.3. The exact 36-resource state at
@@ -81,15 +84,33 @@ WIF providers are disabled while the pool remains enabled and retained. Object
 Versioning retains recovery generations. Local `.terraform/`
 provider caches are disposable and are not cloud inventory.
 
-Current workload state generation `1788488610045265` is 49,242 bytes at serial
-12 with fifteen managed resources, three data resources, one output and no
+Current workload state generation `1788557027934706` is 49,283 bytes at serial
+14 with fifteen managed resources, three data resources, one output and no
 tainted resource. Its SHA-256 is
-`3adbde5e684736080d47b239031a2bb469787641ccf0f87c409d2b3a3b180145`.
+`4f2977ce6e8c736cbdf31d58ba1da81f4291ace4c9d5d0d7d21a727c063cfc6e`.
 Probe state generation `1788484287000119` is 13,596 bytes at serial 3 with
 three managed resources, one data resource, one output and nothing tainted. Its
 SHA-256 is
 `af7241b8d72085e0b30b7ca1a093726b2462b83160bd7566f6847d94aeb1cbf5`.
+Firebase Auth state generation `1788517368759987` is 11,010 bytes. Auth-probe
+state generation `1788521684032698` is 16,821 bytes and currently retains the
+historical dormant role and retired-probe evidence boundary. Raw state remains
+private; these metadata do not establish current convergence by themselves.
 Raw plan and state bytes were never committed.
+
+The `auth-probe` root also contains a reviewed but not-yet-armed user-relay
+acceptance graph. If a run is interrupted, retire its uniquely named Workflow,
+internal verifier service and four conditioned probe bindings before broader
+teardown. Preserve its three disabled custom roles and keyless verifier
+identity until Terraform state and independent inventory agree; neither creates
+idle compute by itself.
+
+The guarded Auth-probe recovery enables a missing Cloud Asset API as a separate
+prerequisite and requires a new authorization afterward. It never automatically
+undeletes a soft-deleted custom role because eventually consistent IAM-policy
+search cannot exclude a recent descendant binding. Investigate that case
+manually, and never replace a tracked missing role with a generic create while
+its role ID may still be reserved.
 
 The planner/deployer service accounts and IAM roles remain. Closing the reviewed
 GitHub OIDC route does not disprove impersonation by another administrator, so
@@ -123,9 +144,9 @@ cannot be deleted; and billing can report late usage.
   revisions, Eventarc triggers, Workflows, executions and schedules, Firestore
   databases, buckets and objects, Artifact Registry images, secrets, KMS
   versions, budgets and billing exports.
-- Capture the bootstrap, foundation, workload and probe state generations, lock
-  status, Object Versioning/soft-delete policy and bucket IAM once the backend
-  exists. Never
+- Capture the bootstrap, foundation, workload, discovery-probe, Firebase Auth and
+  Auth-probe state generations, lock status, Object Versioning/soft-delete policy
+  and bucket IAM once the backend exists. Never
   treat an absent local state file as an empty cloud environment.
 - Close public ingress and stop test clients before removing stateful resources.
 
@@ -154,11 +175,14 @@ cannot be deleted; and billing can report late usage.
    non-deletable key ring as a permanent residual resource.
 8. Remove runtime IAM, including the planner Service Usage Consumer member, the
    conditional state/plan bucket grants and WIF impersonation grants. Delete the
-   runtime, build, probe, planner and deployer service accounts and WIF pool only
-   after confirming no resource still depends on them.
-9. Capture the final bootstrap/foundation/workload/probe state generations and
-   independently reconcile the cloud inventory. Securely retain the minimum
-   teardown evidence; never publish a state or saved plan.
+   runtime, build, probe, Auth-probe verifier, planner and deployer service
+   accounts and WIF pool only after confirming no resource still depends on them.
+   Remove the three retained custom Auth-probe roles only after their bindings are
+   absent; explicitly decide whether the now-inert Cloud Asset API remains enabled.
+9. Capture the final bootstrap/foundation/workload/discovery-probe/Firebase-Auth/
+   Auth-probe state generations and independently reconcile the cloud inventory.
+   Securely retain the minimum teardown evidence; never publish a state or saved
+   plan.
 10. In a separate reviewed manual step, remove every plan and state generation,
    account for the seven-day soft-delete window, and delete the state bucket.
    This self-removal cannot be proven only from the state it destroys.
@@ -175,6 +199,8 @@ of deployment state, records all of the following:
 - no active Function, Cloud Run revision, Eventarc trigger or Artifact image;
 - no private-probe Workflow, in-flight execution or Scheduler trigger, with the
   Workflows API disabled or explicitly accepted as an inert residual service;
+- the Cloud Asset API disabled or explicitly accepted as an inert residual
+  service after its verifier-identity policy inventory is no longer needed;
 - no Firebase app registration, App Check provider or test registration;
 - no Firestore database or TTL policy intended for this environment;
 - no live component, plan or state object; every soft-deleted object and its

@@ -10,11 +10,18 @@ import {
   PROJECT_ID,
   PROJECT_NUMBER,
   REGION,
+  SYNTHETIC_HOME_ID,
+  SYNTHETIC_OWNER_UID,
   SYNTHETIC_UID,
+  VERIFIER_ACCOUNT,
+  VERIFIER_SERVICE_NAME,
+  VERIFIER_SERVICE_URI,
+  VERIFIER_SOURCE_SHA256,
   WORKFLOW_NAME,
   WORKFLOW_SOURCE_SHA256,
   WORKLOAD_COMMIT,
   WORKLOAD_FUNCTION_REVISION,
+  WORKLOAD_IMAGE,
   WORKLOAD_SOURCE_SHA256,
   assertSafeWorkloadEnvironment,
   authProbeInvokeAuthorization,
@@ -38,25 +45,30 @@ import { observeDeployedWorkload } from '../workload/inventory.mjs';
 
 const INVOKE_AUTHORIZATION = 'MIAKAPP_STAGING_AUTH_PROBE_INVOKE_AUTHORIZATION';
 const WORKFLOW_RESOURCE = `projects/${PROJECT_ID}/locations/${REGION}/workflows/${WORKFLOW_NAME}`;
+const FIRESTORE_DOCUMENT_URL = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/controlHomes/${SYNTHETIC_HOME_ID}`;
+const PUBLIC_FIRESTORE_DOCUMENT_URL = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/homes/${SYNTHETIC_HOME_ID}`;
 const MAXIMUM_RESULT_BYTES = 64 * 1024;
 const BOUNDED_FAILURE_STAGES = new Set([
   'initialize',
   'web_config',
+  'initial_home',
   'initial_user',
   'auth_custom_token',
   'auth_exchange',
-  'auth_exchange_invalid_custom_token',
-  'auth_exchange_credential_mismatch',
-  'auth_exchange_bad_request',
-  'auth_exchange_forbidden',
-  'auth_exchange_http_error',
-  'auth_exchange_validation',
   'app_check_custom_token',
   'app_check_exchange',
   'cloud_run_identity',
+  'discovery',
+  'jwks',
+  'invalid_firebase',
   'missing_app_check',
-  'first_authenticated_read',
-  'replay_authenticated_read',
+  'missing_home',
+  'home_create',
+  'first_exchange',
+  'home_rotation',
+  'second_exchange',
+  'token_verification',
+  'success',
 ]);
 process.umask(0o077);
 
@@ -97,57 +109,77 @@ export function validateAuthProbeWorkflowResult(value) {
     'cloud_run',
     'firebase_auth',
     'app_check',
+    'firestore',
+    'metadata',
     'responses',
-  ], 'Auth-probe Workflow result');
-  exact(result.schema, 'miakapp.staging-auth-app-check-workflow-result/1', 'Result schema');
+    'tokens',
+  ], 'User-relay probe Workflow result');
+  exact(result.schema, 'miakapp.staging-user-relay-workflow-result/1', 'Result schema');
   exact(result.project_id, PROJECT_ID, 'Result project');
   exact(String(result.project_number), PROJECT_NUMBER, 'Result project number');
   exact(result.firebase_app_id, FIREBASE_APP_ID, 'Result Firebase app');
   exact(result.route, {
-    method: 'GET',
+    method: 'POST',
     path: DESTINATION_PATH,
-    product_requests: 3,
-    successful_reads: 2,
-    expected_application_writes: 0,
+    product_requests: 5,
+    successful_exchanges: 2,
+    negative_controls: 3,
     retries: 0,
   }, 'Result route');
   exact(result.cloud_run, {
     authentication_header: 'X-Serverless-Authorization',
+    verifier_uri: VERIFIER_SERVICE_URI,
+    verifier_ingress: 'internal-only',
   }, 'Result Cloud Run boundary');
   exact(result.firebase_auth, {
     token_source: 'execution-scoped-custom-token',
-    missing_app_check_reached: true,
     synthetic_user_created: true,
     synthetic_user_deleted: true,
     synthetic_user_absence_verified: true,
+    verified_email_present: false,
   }, 'Result Firebase Auth boundary');
   exact(result.app_check, {
     token_source: 'admin-custom-provider',
     token_consumption: false,
-    first_use_accepted: true,
     replay_accepted: true,
   }, 'Result App Check boundary');
-  exactObject(result.responses, [
-    'missing_app_check',
-    'first_authenticated_read',
-    'replay_authenticated_read',
-  ], 'Result responses');
-  exact(result.responses.missing_app_check, {
-    status: 401,
-    code: 'invalid_app_check_token',
-  }, 'Missing-App-Check response');
-  const expectedRead = {
-    status: 200,
-    schema: 'miakapp.push-destination-list/1',
-    destination_count: 0,
-  };
-  exact(result.responses.first_authenticated_read, expectedRead, 'First authenticated read');
-  exact(result.responses.replay_authenticated_read, expectedRead, 'Replay authenticated read');
+  exact(result.firestore, {
+    collection: 'controlHomes',
+    synthetic_home_created: true,
+    relay_rotated: true,
+    synthetic_home_deleted: true,
+    synthetic_home_absence_verified: true,
+    public_home_written: false,
+    owner_matches_authenticated_user: false,
+  }, 'Result Firestore boundary');
+  exact(result.metadata, { discovery_valid: true, jwks_valid: true }, 'Result metadata boundary');
+  exact(result.responses, {
+    invalid_firebase: { status: 401, code: 'invalid_firebase_token' },
+    missing_app_check: { status: 401, code: 'invalid_app_check_token' },
+    missing_home: { status: 404, code: 'home_not_found' },
+    first_exchange: { status: 200, relay_url: 'wss://relay-a.probe.invalid/ws' },
+    second_exchange: { status: 200, relay_url: 'wss://relay-b.probe.invalid/ws' },
+  }, 'Result responses');
+  exact(result.tokens, {
+    algorithm: 'EdDSA',
+    key_id: 'staging-access-token-v1',
+    type: 'at+jwt',
+    ttl_seconds: 300,
+    signatures_valid: true,
+    audiences_changed: true,
+    distinct_tokens: true,
+    distinct_jti: true,
+    scope: 'relay:user',
+    role: 'user',
+    verified_email_present: false,
+    client_id_present: false,
+    coordinator_present: false,
+  }, 'Result token boundary');
   return Object.freeze(result);
 }
 
 export function validateSuccessfulAuthProbeExecution(value, workflowRevision) {
-  if (!plainObject(value)) reject('Auth-probe execution response is invalid');
+  if (!plainObject(value)) reject('User-relay probe execution response is invalid');
   const prefixes = [
     `${WORKFLOW_RESOURCE}/executions/`,
     `projects/${PROJECT_NUMBER}/locations/${REGION}/workflows/${WORKFLOW_NAME}/executions/`,
@@ -157,34 +189,33 @@ export function validateSuccessfulAuthProbeExecution(value, workflowRevision) {
     : undefined;
   const executionId = prefix === undefined ? '' : value.name.slice(prefix.length);
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(executionId)) {
-    reject('Auth-probe execution belongs to a foreign Workflow');
+    reject('User-relay probe execution belongs to a foreign Workflow');
   }
   if (value.state !== 'SUCCEEDED') {
     const context = plainObject(value.error) && typeof value.error.context === 'string'
       ? value.error.context
       : '';
-    const match = /^RuntimeError: "Auth probe failed at bounded stage ([a-z_]+)"(?:\n|$)/u.exec(context);
+    const match = /^RuntimeError: "User-relay probe failed at bounded stage ([a-z_]+)"(?:\n|$)/u.exec(context);
     if (match !== null && BOUNDED_FAILURE_STAGES.has(match[1])) {
-      reject(`Auth-probe execution failed at bounded stage ${match[1]}`);
+      reject(`User-relay probe execution failed at bounded stage ${match[1]}`);
     }
-    reject('Auth-probe execution state does not match the reviewed value');
+    reject('User-relay probe execution state does not match the reviewed value');
   }
-  exact(value.workflowRevisionId, workflowRevision, 'Auth-probe execution revision');
-  const started = executionTimestamp(value.startTime, 'Auth-probe execution start');
-  const ended = executionTimestamp(value.endTime, 'Auth-probe execution end');
+  exact(value.workflowRevisionId, workflowRevision, 'User-relay probe execution revision');
+  const started = executionTimestamp(value.startTime, 'User-relay probe execution start');
+  const ended = executionTimestamp(value.endTime, 'User-relay probe execution end');
   if (ended < started || ended - started > 300_000) {
-    reject('Auth-probe execution duration is outside the reviewed bound');
+    reject('User-relay probe execution duration is outside the reviewed bound');
   }
-  if (typeof value.result !== 'string'
-    || Buffer.byteLength(value.result, 'utf8') === 0
+  if (typeof value.result !== 'string' || Buffer.byteLength(value.result, 'utf8') === 0
     || Buffer.byteLength(value.result, 'utf8') > MAXIMUM_RESULT_BYTES) {
-    reject('Auth-probe execution result has an invalid size');
+    reject('User-relay probe execution result has an invalid size');
   }
   let result;
   try {
     result = JSON.parse(value.result);
   } catch {
-    return reject('Auth-probe execution result is not JSON');
+    return reject('User-relay probe execution result is not JSON');
   }
   return Object.freeze({
     name: value.name,
@@ -201,10 +232,10 @@ function readDeployment(bundle, observed) {
   try {
     value = JSON.parse(bytes.toString('utf8'));
   } catch {
-    return reject('Private Auth-probe deployment is not valid JSON');
+    return reject('Private user-relay probe deployment is not valid JSON');
   }
   if (canonicalJson(value) !== bytes.toString('utf8') || !isDeepStrictEqual(value, observed)) {
-    reject('Private Auth-probe deployment no longer matches live staging');
+    reject('Private user-relay probe deployment no longer matches live staging');
   }
 }
 
@@ -220,63 +251,153 @@ function operatorAccessToken() {
   return token;
 }
 
-async function firebaseAdminRequest(path, body, accessToken) {
+async function jsonRequest(url, { accessToken, method = 'GET', body } = {}) {
   let response;
   try {
-    response = await fetch(
-      `https://identitytoolkit.googleapis.com/v1/projects/${PROJECT_ID}/${path}`,
-      {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-          'X-Goog-User-Project': PROJECT_ID,
-        },
-        body: JSON.stringify(body),
-        signal: AbortSignal.timeout(30_000),
+    response = await fetch(url, {
+      method,
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+        ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+        'X-Goog-User-Project': PROJECT_ID,
       },
-    );
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      signal: AbortSignal.timeout(30_000),
+    });
   } catch {
-    return reject('Independent Firebase Auth cleanup request failed');
+    return reject('Independent synthetic-fixture request failed');
   }
-  let value;
-  try {
-    value = await response.json();
-  } catch {
-    return reject('Independent Firebase Auth cleanup returned invalid JSON');
+  let value = {};
+  const bytes = await response.text();
+  if (bytes.length > 0) {
+    try {
+      value = JSON.parse(bytes);
+    } catch {
+      return reject('Independent synthetic-fixture request returned invalid JSON');
+    }
   }
-  if (response.status !== 200 || !plainObject(value)) {
-    reject('Independent Firebase Auth cleanup returned an unexpected status');
-  }
-  return value;
+  if (!plainObject(value)) reject('Independent synthetic-fixture request returned a non-object');
+  return Object.freeze({ status: response.status, value });
 }
 
 async function syntheticUserPresent(accessToken) {
-  const value = await firebaseAdminRequest(
-    'accounts:lookup',
-    { localId: [SYNTHETIC_UID] },
-    accessToken,
+  const response = await jsonRequest(
+    `https://identitytoolkit.googleapis.com/v1/projects/${PROJECT_ID}/accounts:lookup`,
+    { method: 'POST', body: { localId: [SYNTHETIC_UID] }, accessToken },
   );
-  if (value.users === undefined) return false;
-  if (!Array.isArray(value.users) || value.users.length !== 1
-    || value.users[0]?.localId !== SYNTHETIC_UID) {
+  if (response.status !== 200) reject('Independent Firebase Auth lookup returned an unexpected status');
+  if (response.value.users === undefined) return false;
+  if (!Array.isArray(response.value.users) || response.value.users.length !== 1
+    || response.value.users[0]?.localId !== SYNTHETIC_UID
+    || response.value.users[0]?.email !== undefined) {
     reject('Synthetic Firebase Auth inventory is ambiguous');
   }
   return true;
 }
 
-export async function requireSyntheticUserAbsent({ cleanup }) {
+function validateSyntheticHome(value) {
+  if (value?.name !== `projects/${PROJECT_ID}/databases/(default)/documents/controlHomes/${SYNTHETIC_HOME_ID}`
+    || value?.fields?.probe_marker?.stringValue !== 'miakapp.staging-user-relay-probe/1'
+    || value?.fields?.home_id?.stringValue !== SYNTHETIC_HOME_ID
+    || value?.fields?.owner_uid?.stringValue !== SYNTHETIC_OWNER_UID
+    || typeof value?.updateTime !== 'string') {
+    reject('Synthetic Firestore Home inventory is ambiguous');
+  }
+  return value.updateTime;
+}
+
+async function syntheticHome(accessToken) {
+  const response = await jsonRequest(FIRESTORE_DOCUMENT_URL, { accessToken });
+  if (response.status === 404) return null;
+  if (response.status !== 200) reject('Independent Firestore Home lookup returned an unexpected status');
+  validateSyntheticHome(response.value);
+  return response.value;
+}
+
+async function syntheticPublicHomePresent(accessToken) {
+  const response = await jsonRequest(PUBLIC_FIRESTORE_DOCUMENT_URL, { accessToken });
+  if (response.status === 404) return false;
+  if (response.status !== 200
+    || response.value.name !== `projects/${PROJECT_ID}/databases/(default)/documents/homes/${SYNTHETIC_HOME_ID}`) {
+    reject('Independent public Firestore Home lookup is ambiguous');
+  }
+  return true;
+}
+
+async function settle(operation) {
+  try {
+    return Object.freeze({ ok: true, value: await operation() });
+  } catch {
+    return Object.freeze({ ok: false, value: null });
+  }
+}
+
+export async function requireSyntheticFixturesAbsent({ cleanup }) {
   const accessToken = operatorAccessToken();
-  const present = await syntheticUserPresent(accessToken);
-  if (present && !cleanup) reject('Synthetic Firebase Auth user already exists before invocation');
-  if (present) {
-    await firebaseAdminRequest('accounts:delete', { localId: SYNTHETIC_UID }, accessToken);
+  const [userInspection, homeInspection, publicHomeInspection] = await Promise.all([
+    settle(() => syntheticUserPresent(accessToken)),
+    settle(() => syntheticHome(accessToken)),
+    settle(() => syntheticPublicHomePresent(accessToken)),
+  ]);
+  const inspectionFailed = !userInspection.ok || !homeInspection.ok || !publicHomeInspection.ok;
+  const userPresent = userInspection.value === true;
+  const home = homeInspection.value;
+  const publicHomePresent = publicHomeInspection.value === true;
+  if (!cleanup && (inspectionFailed || userPresent || home !== null || publicHomePresent)) {
+    reject('A synthetic user-relay fixture already exists before or after invocation');
   }
-  if (await syntheticUserPresent(accessToken)) {
-    reject('Synthetic Firebase Auth user remains after cleanup');
+  if (!cleanup) {
+    return Object.freeze({
+      user_present_before_cleanup: false,
+      home_present_before_cleanup: false,
+      public_home_present_before_cleanup: false,
+      user_present_after_cleanup: false,
+      home_present_after_cleanup: false,
+      public_home_present_after_cleanup: false,
+    });
   }
-  return Object.freeze({ present_before_cleanup: present, present_after_cleanup: false });
+
+  const [homeDeletion, userDeletion] = await Promise.all([
+    settle(async () => {
+      if (!homeInspection.ok || home === null) return false;
+      const updateTime = validateSyntheticHome(home);
+      const deleted = await jsonRequest(
+        `${FIRESTORE_DOCUMENT_URL}?currentDocument.updateTime=${encodeURIComponent(updateTime)}`,
+        { method: 'DELETE', accessToken },
+      );
+      if (deleted.status !== 200) reject('Independent Firestore Home cleanup failed');
+      return true;
+    }),
+    settle(async () => {
+      if (!userInspection.ok || !userPresent) return false;
+      const deleted = await jsonRequest(
+        `https://identitytoolkit.googleapis.com/v1/projects/${PROJECT_ID}/accounts:delete`,
+        { method: 'POST', body: { localId: SYNTHETIC_UID }, accessToken },
+      );
+      if (deleted.status !== 200) reject('Independent Firebase Auth cleanup failed');
+      return true;
+    }),
+  ]);
+  const [homeAfter, userAfter, publicHomeAfter] = await Promise.all([
+    settle(() => syntheticHome(accessToken)),
+    settle(() => syntheticUserPresent(accessToken)),
+    settle(() => syntheticPublicHomePresent(accessToken)),
+  ]);
+  if (inspectionFailed || !homeDeletion.ok || !userDeletion.ok
+    || !homeAfter.ok || !userAfter.ok || !publicHomeAfter.ok
+    || homeAfter.value !== null || userAfter.value !== false || publicHomeAfter.value !== false
+    || publicHomePresent) {
+    reject('A synthetic user-relay fixture remains after cleanup');
+  }
+  return Object.freeze({
+    user_present_before_cleanup: userPresent,
+    home_present_before_cleanup: home !== null,
+    public_home_present_before_cleanup: publicHomePresent,
+    user_present_after_cleanup: false,
+    home_present_after_cleanup: false,
+    public_home_present_after_cleanup: false,
+  });
 }
 
 function runWorkflow(bundle) {
@@ -292,9 +413,9 @@ function runWorkflow(bundle) {
   ], {
     cwd: repositoryRoot,
     diagnosticDirectory: bundle,
-    description: 'auth-probe-invocation',
+    description: 'user-relay-probe-invocation',
   });
-  return parseJson(result.stdout, 'Auth-probe execution');
+  return parseJson(result.stdout, 'User-relay probe execution');
 }
 
 async function main() {
@@ -310,9 +431,7 @@ async function main() {
   const deployment = observeAuthProbeDeployment({ expectedExecutions: 0 });
   readDeployment(bundle, deployment);
   validateAuthProbeInvokeAuthorization(
-    process.env[INVOKE_AUTHORIZATION],
-    deployment.workflow.revision,
-    repositoryCommit,
+    process.env[INVOKE_AUTHORIZATION], deployment.workflow.revision, repositoryCommit,
   );
   const workload = observeDeployedWorkload({
     repositoryRoot,
@@ -320,38 +439,39 @@ async function main() {
     sourceArchiveSha256: WORKLOAD_SOURCE_SHA256,
   });
   if (workload.function.revision !== WORKLOAD_FUNCTION_REVISION) {
-    reject('Deployed workload revision no longer matches the reviewed Auth-probe target');
+    reject('Deployed workload revision no longer matches the reviewed user-relay target');
   }
-  await requireSyntheticUserAbsent({ cleanup: false });
+  await requireSyntheticFixturesAbsent({ cleanup: false });
   const finalPreflight = observeAuthProbeDeployment({ expectedExecutions: 0 });
-  if (finalPreflight.workflow.revision !== deployment.workflow.revision) {
-    reject('Auth-probe Workflow revision changed after invocation authorization');
+  if (finalPreflight.workflow.revision !== deployment.workflow.revision
+    || finalPreflight.verifier.revision !== deployment.verifier.revision) {
+    reject('User-relay probe deployment changed after invocation authorization');
   }
 
   let execution;
   try {
     execution = validateSuccessfulAuthProbeExecution(
-      runWorkflow(bundle),
-      deployment.workflow.revision,
+      runWorkflow(bundle), deployment.workflow.revision,
     );
-    await requireSyntheticUserAbsent({ cleanup: false });
+    await requireSyntheticFixturesAbsent({ cleanup: false });
   } catch (error) {
     try {
-      await requireSyntheticUserAbsent({ cleanup: true });
+      await requireSyntheticFixturesAbsent({ cleanup: true });
     } catch {
-      reject('Auth-probe failed and the synthetic Firebase user requires manual cleanup');
+      reject('User-relay probe failed and synthetic fixtures require manual cleanup');
     }
     throw error;
   }
 
   const after = observeAuthProbeDeployment({ expectedExecutions: 1 });
   if (after.workflow.revision !== deployment.workflow.revision
+    || after.verifier.revision !== deployment.verifier.revision
     || after.workflow.executions[0]?.name !== execution.name
     || after.workflow.executions[0]?.state !== 'SUCCEEDED') {
-    reject('Post-invocation Workflow inventory does not match the single successful execution');
+    reject('Post-invocation inventory does not match the single successful execution');
   }
   const result = Object.freeze({
-    schema: 'miakapp.staging-auth-app-check-probe-result/1',
+    schema: 'miakapp.staging-user-relay-probe-result/1',
     project_id: PROJECT_ID,
     project_number: PROJECT_NUMBER,
     region: REGION,
@@ -366,6 +486,20 @@ async function main() {
       execution_history_level: 'EXECUTION_HISTORY_BASIC',
       scheduled_triggers: 0,
     }),
+    verifier: Object.freeze({
+      service_name: VERIFIER_SERVICE_NAME,
+      service_uri: VERIFIER_SERVICE_URI,
+      revision: deployment.verifier.revision,
+      identity: VERIFIER_ACCOUNT,
+      image: WORKLOAD_IMAGE,
+      source_sha256: VERIFIER_SOURCE_SHA256,
+      ingress: 'internal-only',
+      public_invokers: 0,
+      service_level_invoker_bindings: 1,
+      workflow_only: false,
+      inherited_invocation: deployment.iam.verifier_inherited_invokers,
+      user_managed_keys: 0,
+    }),
     execution: Object.freeze({
       state: 'SUCCEEDED',
       workflow_revision: execution.workflow_revision,
@@ -373,31 +507,24 @@ async function main() {
       count_before: 0,
       count_after: 1,
     }),
-    request: Object.freeze({
-      method: 'GET',
-      path: DESTINATION_PATH,
-      product_requests: 3,
-      successful_reads: 2,
-      expected_application_writes: 0,
-      retries: 0,
-      cloud_run_authentication_header: 'X-Serverless-Authorization',
-    }),
+    request: execution.result.route,
     responses: execution.result.responses,
     firebase_auth: Object.freeze({
-      token_source: 'execution-scoped-custom-token',
-      synthetic_user_created: true,
-      synthetic_user_deleted: true,
+      ...execution.result.firebase_auth,
       workflow_absence_verified: true,
       independent_absence_verified: true,
     }),
     app_check: Object.freeze({
       firebase_app_id: FIREBASE_APP_ID,
-      token_source: 'admin-custom-provider',
-      token_consumption: false,
-      first_use_accepted: true,
-      replay_accepted: true,
+      ...execution.result.app_check,
       browser_provider_attestation_validated: false,
     }),
+    firestore: Object.freeze({
+      ...execution.result.firestore,
+      independent_absence_verified: true,
+    }),
+    metadata: execution.result.metadata,
+    tokens: execution.result.tokens,
     workload: Object.freeze({
       deployment_commit: workload.repository_commit,
       source_sha256: workload.source_archive_sha256,
@@ -413,17 +540,17 @@ async function main() {
   writePrivateFile(resultPath, Buffer.from(canonicalJson(result), 'utf8'), 0o400);
   verifyExactMain(repositoryRoot, repositoryCommit);
   process.stdout.write([
-    'The bounded Firebase Auth and App Check staging probe succeeded.',
+    'The bounded audience-bound user-relay staging probe succeeded.',
     `Private sanitized result: ${resultPath}`,
-    'Responses: missing App Check 401; authenticated reads 200 then 200.',
-    'Synthetic Firebase user deleted and independently verified absent.',
+    'Responses: invalid Firebase 401; missing App Check 401; missing Home 404; exchanges 200 then 200.',
+    'Two Ed25519 tokens were verified; the synthetic user and private Home were independently absent.',
     '',
   ].join('\n'));
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   main().catch((error) => {
-    console.error(error instanceof Error ? error.message : 'Auth-probe invocation failed');
+    console.error(error instanceof Error ? error.message : 'User-relay probe invocation failed');
     process.exitCode = 1;
   });
 }

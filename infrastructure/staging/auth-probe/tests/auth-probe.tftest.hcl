@@ -43,8 +43,8 @@ run "arms_only_the_bounded_private_probe" {
           function_name         = "control-plane"
           function_uri          = "https://control-plane-aczhngqraq-od.a.run.app"
           probe_service_account = "miakapp-staging-probe@miakapp-v4-staging.iam.gserviceaccount.com"
-          source_sha256         = "86f4818dfcb4021e5578638d6fb1e9b7da31ea245528cbdc8573dabecdfca358"
-          repository_commit     = "60322c69c92b8ccf5f3d1bc87ba264a00e5dca05"
+          source_sha256         = "6674c0353ec9c73fcfe0d3a63d17850f057a5f2a547a5855989e28f011249b1e"
+          repository_commit     = "022f10e2dc15f32a8a6679b38ce7f1a04582e450"
           ingress               = "ALLOW_INTERNAL_ONLY"
           unauthenticated       = false
           minimum_instances     = 0
@@ -69,7 +69,7 @@ run "arms_only_the_bounded_private_probe" {
     condition = (
       google_project_iam_member.auth_probe[0].role == "projects/miakapp-v4-staging/roles/miakapp.stagingAuthProbe" &&
       google_project_iam_member.auth_probe[0].member == "serviceAccount:miakapp-staging-probe@miakapp-v4-staging.iam.gserviceaccount.com" &&
-      google_service_account_iam_member.auth_probe_self_signer[0].role == "roles/iam.serviceAccountTokenCreator" &&
+      google_service_account_iam_member.auth_probe_self_signer[0].role == "projects/miakapp-v4-staging/roles/miakapp.stagingProbeSigner" &&
       google_service_account_iam_member.auth_probe_self_signer[0].member == "serviceAccount:miakapp-staging-probe@miakapp-v4-staging.iam.gserviceaccount.com"
     )
     error_message = "Only the exact temporary probe identity bindings may be armed."
@@ -83,11 +83,35 @@ run "arms_only_the_bounded_private_probe" {
         "firebaseauth.users.get",
         "serviceusage.services.use",
       ]) &&
+      google_project_iam_custom_role.auth_probe.stage == "GA" &&
+      google_project_iam_custom_role.auth_probe_firestore.stage == "GA" &&
+      google_project_iam_custom_role.auth_probe_signer.stage == "GA" &&
       strcontains(google_workflows_workflow.auth_probe[0].source_contents, "X-Serverless-Authorization") &&
       strcontains(google_workflows_workflow.auth_probe[0].source_contents, "X-Firebase-AppCheck") &&
       !strcontains(google_workflows_workflow.auth_probe[0].source_contents, "retry:")
     )
     error_message = "The Auth and App Check probe contract must remain narrow and retry-free."
+  }
+
+  assert {
+    condition = (
+      google_cloud_run_v2_service.auth_probe_verifier[0].ingress == "INGRESS_TRAFFIC_INTERNAL_ONLY" &&
+      google_cloud_run_v2_service.auth_probe_verifier[0].invoker_iam_disabled == false &&
+      google_cloud_run_v2_service.auth_probe_verifier[0].template[0].service_account == "miakapp-staging-verifier@miakapp-v4-staging.iam.gserviceaccount.com" &&
+      google_cloud_run_v2_service.auth_probe_verifier[0].template[0].scaling[0].min_instance_count == 0 &&
+      google_cloud_run_v2_service.auth_probe_verifier[0].template[0].scaling[0].max_instance_count == 1 &&
+      google_cloud_run_v2_service.auth_probe_verifier[0].template[0].max_instance_request_concurrency == 1 &&
+      google_cloud_run_v2_service_iam_member.auth_probe_verifier_invoker[0].role == "roles/run.servicesInvoker"
+    )
+    error_message = "The verifier must remain internal, isolated, single-instance and have the exact probe service binding."
+  }
+
+  assert {
+    condition = (
+      google_project_service.auth_probe_asset_inventory.service == "cloudasset.googleapis.com" &&
+      google_project_service.auth_probe_asset_inventory.disable_on_destroy == false
+    )
+    error_message = "The no-role verifier assertion requires durable all-resource IAM policy search."
   }
 }
 
@@ -130,8 +154,8 @@ run "rejects_the_project_id_firebase_auth_config_name" {
           function_name         = "control-plane"
           function_uri          = "https://control-plane-aczhngqraq-od.a.run.app"
           probe_service_account = "miakapp-staging-probe@miakapp-v4-staging.iam.gserviceaccount.com"
-          source_sha256         = "86f4818dfcb4021e5578638d6fb1e9b7da31ea245528cbdc8573dabecdfca358"
-          repository_commit     = "60322c69c92b8ccf5f3d1bc87ba264a00e5dca05"
+          source_sha256         = "6674c0353ec9c73fcfe0d3a63d17850f057a5f2a547a5855989e28f011249b1e"
+          repository_commit     = "022f10e2dc15f32a8a6679b38ce7f1a04582e450"
           ingress               = "ALLOW_INTERNAL_ONLY"
           unauthenticated       = false
           minimum_instances     = 0
@@ -163,8 +187,8 @@ run "keeps_the_default_state_dormant" {
           function_name         = "control-plane"
           function_uri          = "https://control-plane-aczhngqraq-od.a.run.app"
           probe_service_account = "miakapp-staging-probe@miakapp-v4-staging.iam.gserviceaccount.com"
-          source_sha256         = "86f4818dfcb4021e5578638d6fb1e9b7da31ea245528cbdc8573dabecdfca358"
-          repository_commit     = "60322c69c92b8ccf5f3d1bc87ba264a00e5dca05"
+          source_sha256         = "6674c0353ec9c73fcfe0d3a63d17850f057a5f2a547a5855989e28f011249b1e"
+          repository_commit     = "022f10e2dc15f32a8a6679b38ce7f1a04582e450"
           ingress               = "ALLOW_INTERNAL_ONLY"
           unauthenticated       = false
           minimum_instances     = 0
@@ -177,8 +201,14 @@ run "keeps_the_default_state_dormant" {
   assert {
     condition = (
       length(google_project_iam_member.auth_probe) == 0 &&
+      length(google_project_iam_member.auth_probe_firestore) == 0 &&
       length(google_service_account_iam_member.auth_probe_self_signer) == 0 &&
+      length(google_cloud_run_v2_service.auth_probe_verifier) == 0 &&
+      length(google_cloud_run_v2_service_iam_member.auth_probe_verifier_invoker) == 0 &&
       length(google_workflows_workflow.auth_probe) == 0 &&
+      google_project_iam_custom_role.auth_probe.stage == "DISABLED" &&
+      google_project_iam_custom_role.auth_probe_firestore.stage == "DISABLED" &&
+      google_project_iam_custom_role.auth_probe_signer.stage == "DISABLED" &&
       output.staging_auth_probe.armed == false
     )
     error_message = "The default Auth-probe state must have no Workflow or temporary IAM binding."
@@ -200,8 +230,8 @@ run "rejects_a_changed_or_public_workload" {
           function_name         = "control-plane"
           function_uri          = "https://control-plane-aczhngqraq-od.a.run.app"
           probe_service_account = "miakapp-staging-probe@miakapp-v4-staging.iam.gserviceaccount.com"
-          source_sha256         = "86f4818dfcb4021e5578638d6fb1e9b7da31ea245528cbdc8573dabecdfca358"
-          repository_commit     = "60322c69c92b8ccf5f3d1bc87ba264a00e5dca05"
+          source_sha256         = "6674c0353ec9c73fcfe0d3a63d17850f057a5f2a547a5855989e28f011249b1e"
+          repository_commit     = "022f10e2dc15f32a8a6679b38ce7f1a04582e450"
           ingress               = "ALLOW_ALL"
           unauthenticated       = true
           minimum_instances     = 0

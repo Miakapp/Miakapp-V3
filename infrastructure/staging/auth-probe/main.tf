@@ -33,6 +33,11 @@ resource "terraform_data" "auth_probe_guard" {
     firebase_auth          = data.terraform_remote_state.firebase_auth.outputs.staging_firebase_auth
     firebase_app_id        = local.firebase_app_id
     workflow_source_sha256 = sha256(local.workflow_source)
+    verifier_source_sha256 = sha256(local.verifier_source)
+    verifier_service_uri   = local.verifier_service_uri
+    verifier_identity      = local.verifier_account
+    verifier_image         = local.expected_workload_image
+    capability_expiry      = local.capability_expiry
   }
 
   lifecycle {
@@ -74,6 +79,20 @@ resource "terraform_data" "auth_probe_guard" {
   }
 }
 
+resource "google_project_service" "auth_probe_asset_inventory" {
+  project = local.project_id
+  service = "cloudasset.googleapis.com"
+
+  disable_dependent_services = false
+  disable_on_destroy         = false
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  depends_on = [terraform_data.auth_probe_guard]
+}
+
 resource "google_project_iam_custom_role" "auth_probe" {
   project     = local.project_id
   role_id     = local.custom_role_id
@@ -85,13 +104,70 @@ resource "google_project_iam_custom_role" "auth_probe" {
     "firebaseauth.users.get",
     "serviceusage.services.use",
   ]
-  stage = "GA"
+  stage = var.armed ? "GA" : "DISABLED"
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  depends_on = [
+    google_project_service.auth_probe_asset_inventory,
+    terraform_data.auth_probe_guard,
+  ]
+}
+
+resource "google_project_iam_custom_role" "auth_probe_signer" {
+  project     = local.project_id
+  role_id     = local.signer_role_id
+  title       = "Miakapp staging probe signer"
+  description = "Dormant self-scoped signing role for bounded staging probes."
+  permissions = [
+    "iam.serviceAccounts.getOpenIdToken",
+    "iam.serviceAccounts.signJwt",
+  ]
+  stage = var.armed ? "GA" : "DISABLED"
 
   lifecycle {
     prevent_destroy = true
   }
 
   depends_on = [terraform_data.auth_probe_guard]
+}
+
+resource "google_project_iam_custom_role" "auth_probe_firestore" {
+  project     = local.project_id
+  role_id     = local.firestore_role_id
+  title       = "Miakapp staging probe Firestore access"
+  description = "Dormant database-scoped CRUD role for bounded staging probe fixtures."
+  permissions = [
+    "datastore.entities.create",
+    "datastore.entities.delete",
+    "datastore.entities.get",
+    "datastore.entities.update",
+  ]
+  stage = var.armed ? "GA" : "DISABLED"
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  depends_on = [terraform_data.auth_probe_guard]
+}
+
+resource "google_service_account" "auth_probe_verifier" {
+  project      = local.project_id
+  account_id   = local.verifier_account_id
+  display_name = "Miakapp V4 staging probe verifier"
+  description  = "Keyless no-role identity for the temporary internal JWT verifier."
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  depends_on = [
+    google_project_service.auth_probe_asset_inventory,
+    terraform_data.auth_probe_guard,
+  ]
 }
 
 resource "google_project_iam_member" "auth_probe" {
@@ -101,6 +177,12 @@ resource "google_project_iam_member" "auth_probe" {
   role    = local.custom_role_name
   member  = "serviceAccount:${local.probe_service_account}"
 
+  condition {
+    title       = "temporary_user_relay_probe"
+    description = "Expires the user-relay probe Firebase capability independently of cleanup."
+    expression  = "request.time < timestamp(\"${local.capability_expiry}\")"
+  }
+
   depends_on = [google_project_iam_custom_role.auth_probe]
 }
 
@@ -108,13 +190,103 @@ resource "google_service_account_iam_member" "auth_probe_self_signer" {
   count = var.armed ? 1 : 0
 
   service_account_id = "projects/${local.project_id}/serviceAccounts/${local.probe_service_account}"
-  role               = "roles/iam.serviceAccountTokenCreator"
+  role               = local.signer_role_name
   member             = "serviceAccount:${local.probe_service_account}"
 
+  condition {
+    title       = "temporary_user_relay_probe"
+    description = "Expires the user-relay probe self-signing capability independently of cleanup."
+    expression  = "request.time < timestamp(\"${local.capability_expiry}\")"
+  }
+
   depends_on = [
-    google_project_iam_custom_role.auth_probe,
+    google_project_iam_custom_role.auth_probe_signer,
     terraform_data.auth_probe_guard,
   ]
+}
+
+resource "google_project_iam_member" "auth_probe_firestore" {
+  count = var.armed ? 1 : 0
+
+  project = local.project_id
+  role    = local.firestore_role_name
+  member  = "serviceAccount:${local.probe_service_account}"
+
+  condition {
+    title       = "temporary_user_relay_probe_default_database"
+    description = "Limits the temporary probe fixture capability to the default database and arm window."
+    expression  = "resource.name == \"projects/${local.project_id}/databases/(default)\" && request.time < timestamp(\"${local.capability_expiry}\")"
+  }
+
+  depends_on = [google_project_iam_custom_role.auth_probe_firestore]
+}
+
+resource "google_cloud_run_v2_service" "auth_probe_verifier" {
+  count = var.armed ? 1 : 0
+
+  project              = local.project_id
+  location             = local.region
+  name                 = local.verifier_service_name
+  description          = "Temporary internal verifier for the bounded staging user-relay probe."
+  ingress              = "INGRESS_TRAFFIC_INTERNAL_ONLY"
+  default_uri_disabled = false
+  invoker_iam_disabled = false
+  deletion_protection  = false
+  labels               = local.verifier_labels
+
+  template {
+    service_account                  = local.verifier_account
+    timeout                          = "30s"
+    max_instance_request_concurrency = 1
+    execution_environment            = "EXECUTION_ENVIRONMENT_GEN2"
+
+    scaling {
+      min_instance_count = 0
+      max_instance_count = 1
+    }
+
+    containers {
+      name    = "verifier"
+      image   = local.expected_workload_image
+      command = ["node"]
+      args    = ["--input-type=module", "--eval", local.verifier_startup_source]
+
+      ports {
+        name           = "http1"
+        container_port = 8080
+      }
+
+      resources {
+        limits = {
+          cpu    = "1"
+          memory = "512Mi"
+        }
+        cpu_idle          = true
+        startup_cpu_boost = false
+      }
+    }
+  }
+
+  depends_on = [
+    google_service_account.auth_probe_verifier,
+    terraform_data.auth_probe_guard,
+  ]
+}
+
+resource "google_cloud_run_v2_service_iam_member" "auth_probe_verifier_invoker" {
+  count = var.armed ? 1 : 0
+
+  project  = local.project_id
+  location = local.region
+  name     = google_cloud_run_v2_service.auth_probe_verifier[0].name
+  role     = "roles/run.servicesInvoker"
+  member   = "serviceAccount:${local.probe_service_account}"
+
+  condition {
+    title       = "temporary_user_relay_probe"
+    description = "Expires invocation of the temporary verifier independently of cleanup."
+    expression  = "request.time < timestamp(\"${local.capability_expiry}\")"
+  }
 }
 
 resource "google_workflows_workflow" "auth_probe" {
@@ -123,7 +295,7 @@ resource "google_workflows_workflow" "auth_probe" {
   project                 = local.project_id
   region                  = local.region
   name                    = local.workflow_name
-  description             = "One-shot private Firebase Auth and custom-provider App Check probe for Miakapp V4 staging."
+  description             = "One-shot private audience-bound user-relay credential probe for Miakapp V4 staging."
   service_account         = local.probe_service_account
   source_contents         = local.workflow_source
   call_log_level          = "LOG_NONE"
@@ -133,6 +305,8 @@ resource "google_workflows_workflow" "auth_probe" {
 
   depends_on = [
     google_project_iam_member.auth_probe,
+    google_project_iam_member.auth_probe_firestore,
     google_service_account_iam_member.auth_probe_self_signer,
+    google_cloud_run_v2_service_iam_member.auth_probe_verifier_invoker,
   ]
 }

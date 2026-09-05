@@ -102,6 +102,7 @@ node --check infrastructure/staging/auth-probe/retire-recovery-apply.mjs
 node --check infrastructure/staging/auth-probe/retire-recovery-plan.mjs
 node --check infrastructure/staging/auth-probe/retirement-recovery.mjs
 node --check infrastructure/staging/auth-probe/validate-plan.mjs
+node --check infrastructure/staging/auth-probe/verifier.mjs
 node infrastructure/staging/auth-probe/evidence.mjs \
   infrastructure/staging/auth-probe/result.json \
   infrastructure/staging/auth-probe/retirement.json
@@ -147,6 +148,7 @@ node --test \
   infrastructure/staging/test/probe.test.mjs \
   infrastructure/staging/test/validate.test.mjs \
   infrastructure/staging/test/terraform.test.mjs \
+  infrastructure/staging/test/user-relay-verifier.test.mjs \
   infrastructure/staging/test/workload.test.mjs
 
 for terraform_root in bootstrap terraform workload probe firebase-auth auth-probe; do

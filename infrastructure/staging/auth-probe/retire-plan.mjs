@@ -30,6 +30,7 @@ import { observeAuthProbeTemporaryInventory } from './inventory.mjs';
 import {
   buildAuthProbeRetirementRecoveryInventory,
   inspectAuthProbeState,
+  requiresAuthProbeRetirementRecovery,
 } from './retirement-recovery.mjs';
 import { readAndValidateAuthProbePlan } from './validate-plan.mjs';
 
@@ -76,16 +77,20 @@ async function main() {
       state,
       observeAuthProbeTemporaryInventory(),
     );
-    if (recovery.missing_temporaries.length !== 0
-      || recovery.absent_remote_temporaries.length !== 0
-      || recovery.custom_role_state_action !== null) {
-      throw new Error('Auth-probe retirement requires the separately authorized state-missing-resource recovery first');
+    if (requiresAuthProbeRetirementRecovery(recovery)) {
+      throw new Error('Auth-probe retirement requires separately authorized recovery or finalization first');
     }
     const planPath = join(bundle, 'retire.tfplan');
     const planned = run('terraform', [
       'plan',
       '-var=armed=false',
+      '-target=google_cloud_run_v2_service.auth_probe_verifier',
+      '-target=google_cloud_run_v2_service_iam_member.auth_probe_verifier_invoker',
       '-target=google_project_iam_member.auth_probe',
+      '-target=google_project_iam_member.auth_probe_firestore',
+      '-target=google_project_iam_custom_role.auth_probe',
+      '-target=google_project_iam_custom_role.auth_probe_firestore',
+      '-target=google_project_iam_custom_role.auth_probe_signer',
       '-target=google_service_account_iam_member.auth_probe_self_signer',
       '-target=google_workflows_workflow.auth_probe',
       '-input=false',
@@ -100,7 +105,7 @@ async function main() {
       diagnosticDirectory: bundle,
       description: 'terraform-retire-plan',
     });
-    if (planned.status !== 2) throw new Error('Auth-probe retirement plan must contain the reviewed delete-only delta');
+    if (planned.status !== 2) throw new Error('Auth-probe retirement plan must contain the reviewed capability-closing delta');
     chmodSync(planPath, 0o400);
 
     const shown = run('terraform', ['show', '-json', planPath], {
@@ -133,7 +138,7 @@ async function main() {
       `Private Auth-probe bundle: ${bundle}`,
       `Retirement plan SHA-256: ${metadata.terraform_plan_sha256}`,
       `Authorization: ${authProbeRetireAuthorization(planBytes, summary.workflow_revision, repositoryCommit)}`,
-      `Planned cleanup: 0 creates, 0 updates, ${summary.delete} temporary resource delete(s).`,
+      `Planned cleanup: 0 creates, ${summary.update} role disable(s), ${summary.delete} temporary resource delete(s).`,
       '',
     ].join('\n'));
   } finally {
