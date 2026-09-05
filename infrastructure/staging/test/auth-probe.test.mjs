@@ -1747,7 +1747,7 @@ test('pins a no-secret one-shot audience-bound user-relay Workflow', () => {
   assert.doesNotMatch(WORKFLOW_SOURCE, /allUsers|allAuthenticatedUsers|\bmiakapp-3\b/);
 });
 
-test('retains valid historical Auth/App Check evidence until superseded by live relay evidence', () => {
+test('accepts only the sanitized successful user-relay evidence and rejects private telemetry', () => {
   const validated = validateAuthProbeEvidence(committedResultPath, committedRetirementPath);
   assert.equal(validated.result.execution.state, 'SUCCEEDED');
   assert.equal(validated.retirement.workflow_present, false);

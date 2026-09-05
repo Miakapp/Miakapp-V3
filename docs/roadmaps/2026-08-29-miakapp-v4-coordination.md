@@ -253,9 +253,11 @@ the real exchange and exact `relay:user` verification, then changes the
 authoritative Home route. The browser recovers state and calls on the second
 real relay with one route-changing credential exchange, no source credential on
 WebSocket and never more than one active socket. This closes the audience-bound
-local credential gate. The complete disconnect matrix, live KMS/Firebase behavior,
-public ingress and staging acceptance remain open, so this workstream is not
-complete.
+local credential gate. A separate bounded private staging probe now closes live
+Firebase Auth/App Check verification, KMS-backed signing, relay-audience
+rotation and cleanup on the deployed control plane. The complete disconnect
+matrix, browser-provider attestation, live relay topology, public ingress and
+broader staging acceptance remain open, so this workstream is not complete.
 
 ### D. Component platform vertical slice
 
@@ -284,8 +286,9 @@ complete Section 18 emulator or staging gates. A second local slice now covers a
 closed Firebase Installation ID (FID) proof-of-possession flow, bounded
 destination/grant registries and semantic push authorization. Its App Check
 verifier and FCM transport are strictly synthetic because the Local Emulator
-Suite provides neither service; real App Check enforcement, FCM
-acceptance/delivery remain open gates.
+Suite provides neither service. The bounded private staging user-relay probe
+separately validates Admin custom-provider App Check enforcement, but browser
+attestation and FCM acceptance/delivery remain open gates.
 
 A third local slice now implements component upload capabilities, private
 Storage read-back, marker-gated immutable release delivery, reconciliation,
@@ -405,7 +408,20 @@ in place. The plan converged to zero changes; independent inventory verified
 the copied source, internal-only ingress, scale 0..1, zero public invokers and
 zero user-managed keys without making a request. The earlier discovery and Auth/
 App Check probes remain historical evidence for revision
-`control-plane-00003-hum`; the bounded live user-relay acceptance probe is next.
+`control-plane-00003-hum`.
+
+A thirteenth staging slice executes and retires the bounded live user-relay
+probe against exact current revision `control-plane-00004-yis`. Its single
+Workflow execution observes `401 invalid_firebase_token`,
+`401 invalid_app_check_token` and `404 home_not_found`, then receives two
+distinct five-minute Ed25519 credentials while rotating the authoritative
+private Home from relay A to relay B. The internal verifier validates both
+signatures, claims and changed audiences. The no-email synthetic user and
+private Home are deleted and independently absent, the public `homes` path
+stays absent, and retirement removes the Workflow, verifier and four temporary
+bindings. All nine one-shot roles are disabled and unassigned; no recurring
+compute remains. Digest-pinned public evidence contains no token, execution ID
+or raw diagnostic.
 
 Deliverables:
 
@@ -577,9 +593,10 @@ current consumer.
    local gate now adds an Auth-emulator user, signed synthetic App Check source,
    exact control-plane exchange, local relay verification and a no-overlap
    authoritative handoff across two real relays. The merged exchange source is
-   now active on private staging revision `control-plane-00004-yis`; deployment
-   inventory made no request, so its bounded acceptance probe remains open. Live
-   KMS signing-key and secret
+   active on private staging revision `control-plane-00004-yis`; one bounded
+   live probe has now validated the three negative controls, both signed token
+   exchanges, authoritative relay rotation and complete two-fixture cleanup.
+   Its Workflow, verifier and temporary grants are retired. Live KMS signing-key and secret
    rotation, browser App Check provider attestation, source/edge admission,
    monitoring, migration rehearsal and real staging fault evidence remain
    required before closing relay-integration and staging-only RFC 0004 Section
@@ -591,10 +608,12 @@ current consumer.
 10. **Done 2026-09-04** — replace the Firebase-direct relay credential with an
     audience/home/user/role-bound short lease, pin the real exchange and verifier,
     and prove a serialized two-relay routing handoff in Chromium.
-11. **Next** — execute the bounded private user-relay exchange probe against the
-    deployed merged control plane, then design and run the separate live relay,
-    browser, signing and rollback acceptance matrix before wiring the client into
-    the production web shell.
+11. **Done 2026-09-05** — execute the bounded private user-relay exchange probe
+    against the deployed merged control plane, verify both audience-bound
+    credentials and retire every temporary capability and synthetic fixture.
+12. **Next** — design and run the separate live relay, browser, signing and
+    rollback acceptance matrix before wiring the client into the production web
+    shell.
 
 ## 9. Evidence that would change this plan
 
