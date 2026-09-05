@@ -3,7 +3,7 @@ import { lstatSync, readFileSync } from 'node:fs';
 import { isDeepStrictEqual } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
-const RESULT_SHA256 = 'cfdb18b9dd6604cd92977cbd447dd0684f4b731ca84d2f7aa3f772cbd3bc3056';
+const RESULT_SHA256 = 'dc3324d3b812e1dafc6a6678c7427ac715ea1d2a81de527750aa958c7c71a440';
 const MAXIMUM_RESULT_BYTES = 8 * 1024;
 
 function reject(message) {
@@ -14,23 +14,23 @@ function expectedResult() {
   const projectId = 'miakapp-v4-staging';
   const projectNumber = '1072737219170';
   const region = 'europe-west9';
-  const sourceSha256 = '6674c0353ec9c73fcfe0d3a63d17850f057a5f2a547a5855989e28f011249b1e';
+  const sourceSha256 = 'd1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8';
   const buildSourceBucket = `gcf-v2-sources-${projectNumber}-${region}`;
   return {
     schema: 'miakapp.staging-workload-result/1',
     project_id: projectId,
     project_number: projectNumber,
     region,
-    observed_at: '2026-09-04T21:23:53.111Z',
-    repository_commit: '022f10e2dc15f32a8a6679b38ce7f1a04582e450',
+    observed_at: '2026-09-05T04:07:54.932Z',
+    repository_commit: '9f217da102b394734adba7ccef3f8f70d0317306',
     source_archive_sha256: sourceSha256,
-    source_generation: '1788556976821648',
+    source_generation: '1788581208774706',
     function: {
       name: `projects/${projectId}/locations/${region}/functions/control-plane`,
       state: 'ACTIVE',
       generation: 2,
       service: `projects/${projectId}/locations/${region}/services/control-plane`,
-      revision: 'control-plane-00004-yis',
+      revision: 'control-plane-00005-biq',
       uri: 'https://control-plane-aczhngqraq-od.a.run.app',
       ingress: 'ALLOW_INTERNAL_ONLY',
       unauthenticated_invokers: 0,

@@ -512,8 +512,8 @@ test('accepts only the bounded in-place recovery from the failed first build', (
 
 test('accepts only the next update from the pinned active source', () => {
   assert.deepEqual(PINNED_UPDATE_BASELINE, {
-    repositoryCommit: '022f10e2dc15f32a8a6679b38ce7f1a04582e450',
-    sourceArchiveSha256: '6674c0353ec9c73fcfe0d3a63d17850f057a5f2a547a5855989e28f011249b1e',
+    repositoryCommit: '9f217da102b394734adba7ccef3f8f70d0317306',
+    sourceArchiveSha256: 'd1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8',
   });
   assert.deepEqual(validateSyntheticPinnedSourceUpdatePlan(), {
     create: 1,
@@ -889,12 +889,12 @@ test('pins the exact non-secret live workload result', () => {
     new URL('../workload/result.json', import.meta.url),
   );
   assert.equal(result.function.state, 'ACTIVE');
-  assert.equal(result.repository_commit, '022f10e2dc15f32a8a6679b38ce7f1a04582e450');
+  assert.equal(result.repository_commit, '9f217da102b394734adba7ccef3f8f70d0317306');
   assert.equal(
     result.source_archive_sha256,
-    '6674c0353ec9c73fcfe0d3a63d17850f057a5f2a547a5855989e28f011249b1e',
+    'd1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8',
   );
-  assert.equal(result.function.revision, 'control-plane-00004-yis');
+  assert.equal(result.function.revision, 'control-plane-00005-biq');
   assert.equal(result.function.ingress, 'ALLOW_INTERNAL_ONLY');
   assert.equal(result.function.unauthenticated_invokers, 0);
   assert.equal(result.function.minimum_instances, 0);

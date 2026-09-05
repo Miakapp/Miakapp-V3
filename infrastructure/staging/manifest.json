@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 41,
-  "status": "private_control_plane_user_relay_acceptance_succeeded_live_browser_plan_reviewed",
+  "revision": 42,
+  "status": "private_control_plane_signing_overlap_bridge_deployed_user_relay_acceptance_succeeded_live_browser_plan_reviewed",
   "environment": "staging",
   "project": {
     "project_id": "miakapp-v4-staging",
@@ -145,7 +145,7 @@
     },
     {
       "id": "cloud-functions-gen2",
-      "state": "private_deployment_active_user_relay_acceptance_succeeded"
+      "state": "private_signing_overlap_bridge_active_user_relay_acceptance_succeeded"
     },
     {
       "id": "cloud-storage",
@@ -183,7 +183,7 @@
     "region": "europe-west9",
     "deployment_state": "ACTIVE",
     "service": "projects/miakapp-v4-staging/locations/europe-west9/services/control-plane",
-    "revision": "control-plane-00004-yis",
+    "revision": "control-plane-00005-biq",
     "uri": "https://control-plane-aczhngqraq-od.a.run.app",
     "minimum_instances": 0,
     "maximum_instances": 1,
@@ -192,7 +192,7 @@
     "dedicated_service_account": "miakapp-control-plane@miakapp-v4-staging.iam.gserviceaccount.com",
     "allow_unauthenticated": false,
     "ingress": "ALLOW_INTERNAL_ONLY",
-    "source_archive_sha256": "6674c0353ec9c73fcfe0d3a63d17850f057a5f2a547a5855989e28f011249b1e",
+    "source_archive_sha256": "d1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8",
     "runtime_config_sha256": "b794181400bf5ace6aaa9ffc4be00e4c4f6a59519284baa7f73bca3c042c4ff8",
     "user_managed_keys": 0,
     "live_request_performed": true
@@ -1287,9 +1287,9 @@
     },
     "workload_deployment": {
       "state": "active_internal_only_source_verified",
-      "observed_at": "2026-09-04T21:23:53.111Z",
-      "inventory_repository_commit": "022f10e2dc15f32a8a6679b38ce7f1a04582e450",
-      "deployed_repository_commit": "022f10e2dc15f32a8a6679b38ce7f1a04582e450",
+      "observed_at": "2026-09-05T04:07:54.932Z",
+      "inventory_repository_commit": "9f217da102b394734adba7ccef3f8f70d0317306",
+      "deployed_repository_commit": "9f217da102b394734adba7ccef3f8f70d0317306",
       "initial_plan_sha256": "b59167718fdad5edfa440f5d59f6e0eb1dff9277b20e1f829ebbb233296cdf05",
       "initial_plan_result": "failed_build_missing_conditional_source_read",
       "recovery_configuration_commit": "488da23cd7eb4c08baa9296724b87b7df34a1122",
@@ -1332,17 +1332,27 @@
           "terraform_state_generation": "1788557027934706",
           "terraform_state_serial": 14,
           "terraform_state_sha256": "4f2977ce6e8c736cbdf31d58ba1da81f4291ace4c9d5d0d7d21a727c063cfc6e"
+        },
+        {
+          "purpose": "bounded_signing_key_overlap_runtime_bridge",
+          "repository_commit": "9f217da102b394734adba7ccef3f8f70d0317306",
+          "plan_sha256": "ee98468a4ed92196109ac6f646030dca582068c6e2f2b5c1889e347322b1e3a6",
+          "source_archive_sha256": "d1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8",
+          "function_revision": "control-plane-00005-biq",
+          "terraform_state_generation": "1788581270106628",
+          "terraform_state_serial": 16,
+          "terraform_state_sha256": "d765cceffc696905f045a34805f9c6f1a6c45e9ba3f2224754a90a157c89b428"
         }
       ],
       "result_path": "workload/result.json",
-      "result_sha256": "cfdb18b9dd6604cd92977cbd447dd0684f4b731ca84d2f7aa3f772cbd3bc3056",
+      "result_sha256": "dc3324d3b812e1dafc6a6678c7427ac715ea1d2a81de527750aa958c7c71a440",
       "terraform_state": {
         "object": "terraform/workload/default.tfstate",
-        "generation": "1788557027934706",
-        "sha256": "4f2977ce6e8c736cbdf31d58ba1da81f4291ace4c9d5d0d7d21a727c063cfc6e",
-        "size_bytes": 49283,
+        "generation": "1788581270106628",
+        "sha256": "d765cceffc696905f045a34805f9c6f1a6c45e9ba3f2224754a90a157c89b428",
+        "size_bytes": 49242,
         "terraform_version": "1.11.3",
-        "serial": 14,
+        "serial": 16,
         "lineage_sha256": "aecd871c255da2bb3d30e7a7cc7b76be229e1eccc1fce2c4e41fed5a4a4b4b3a",
         "managed_resources": 15,
         "data_resources": 3,
@@ -1350,9 +1360,9 @@
         "tainted_resources": 0,
         "raw_contents_committed": false
       },
-      "source_archive_sha256": "6674c0353ec9c73fcfe0d3a63d17850f057a5f2a547a5855989e28f011249b1e",
+      "source_archive_sha256": "d1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8",
       "runtime_config_sha256": "b794181400bf5ace6aaa9ffc4be00e4c4f6a59519284baa7f73bca3c042c4ff8",
-      "function_revision": "control-plane-00004-yis",
+      "function_revision": "control-plane-00005-biq",
       "ingress": "ALLOW_INTERNAL_ONLY",
       "unauthenticated_invokers": 0,
       "minimum_instances": 0,
@@ -1495,7 +1505,7 @@
     "browser_relay_plan": {
       "state": "reviewed_not_deployed",
       "path": "browser-relay/plan.json",
-      "sha256": "9bdd11359518b15002de6570b306c589a57588d02aa9a443c3f21d56a495c811",
+      "sha256": "900bee3c4ba365bcf76da2e0c2d1510c1dc8921d1f32c99847c94a19f301ede5",
       "cloud_mutation_authorized_by_plan": false,
       "acceptance_executed": false,
       "public_ingress_active": false,

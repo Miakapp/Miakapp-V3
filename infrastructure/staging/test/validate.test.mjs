@@ -31,10 +31,10 @@ function rejects(mutator, pattern) {
 
 test('accepts the successful and retired private user-relay probe', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 41);
+  assert.equal(validated.revision, 42);
   assert.equal(
     validated.status,
-    'private_control_plane_user_relay_acceptance_succeeded_live_browser_plan_reviewed',
+    'private_control_plane_signing_overlap_bridge_deployed_user_relay_acceptance_succeeded_live_browser_plan_reviewed',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
@@ -75,7 +75,7 @@ test('accepts the successful and retired private user-relay probe', () => {
     'initialized_closed_custom_token_lifecycle_validated',
     'admin_custom_provider_validated_browser_attestation_pending',
     'private_fixture_lifecycle_validated_no_persistent_application_data',
-    'private_deployment_active_user_relay_acceptance_succeeded',
+    'private_signing_overlap_bridge_active_user_relay_acceptance_succeeded',
     'private_bucket_created_no_application_mutation',
     'signing_key_version_enabled_public_key_validated',
     'five_initial_versions_enabled_runtime_access_validated',
@@ -97,7 +97,7 @@ test('accepts the successful and retired private user-relay probe', () => {
     'managed_in_reconciled_remote_bootstrap_state',
   );
   assert.equal(validated.runtime.deployment_state, 'ACTIVE');
-  assert.equal(validated.runtime.revision, 'control-plane-00004-yis');
+  assert.equal(validated.runtime.revision, 'control-plane-00005-biq');
   assert.equal(validated.runtime.ingress, 'ALLOW_INTERNAL_ONLY');
   assert.equal(validated.runtime.user_managed_keys, 0);
   assert.equal(validated.runtime.live_request_performed, true);
@@ -587,7 +587,7 @@ test('accepts the successful and retired private user-relay probe', () => {
   );
   assert.equal(
     validated.evidence.workload_deployment.result_sha256,
-    'cfdb18b9dd6604cd92977cbd447dd0684f4b731ca84d2f7aa3f772cbd3bc3056',
+    'dc3324d3b812e1dafc6a6678c7427ac715ea1d2a81de527750aa958c7c71a440',
   );
   assert.deepEqual(validated.evidence.workload_deployment.recovery_plan_result, {
     create: 2,
@@ -595,12 +595,12 @@ test('accepts the successful and retired private user-relay probe', () => {
     delete: 0,
     function_replaced: false,
   });
-  assert.equal(validated.evidence.workload_deployment.source_updates.length, 3);
+  assert.equal(validated.evidence.workload_deployment.source_updates.length, 4);
   assert.equal(
-    validated.evidence.workload_deployment.source_updates[2].function_revision,
-    'control-plane-00004-yis',
+    validated.evidence.workload_deployment.source_updates[3].function_revision,
+    'control-plane-00005-biq',
   );
-  assert.equal(validated.evidence.workload_deployment.terraform_state.serial, 14);
+  assert.equal(validated.evidence.workload_deployment.terraform_state.serial, 16);
   assert.equal(validated.evidence.workload_deployment.terraform_state.managed_resources, 15);
   assert.equal(validated.evidence.workload_deployment.terraform_state.tainted_resources, 0);
   assert.equal(validated.evidence.workload_deployment.terraform_state.raw_contents_committed, false);
@@ -669,7 +669,7 @@ test('accepts the successful and retired private user-relay probe', () => {
   assert.deepEqual(validated.evidence.browser_relay_plan, {
     state: 'reviewed_not_deployed',
     path: 'browser-relay/plan.json',
-    sha256: '9bdd11359518b15002de6570b306c589a57588d02aa9a443c3f21d56a495c811',
+    sha256: '900bee3c4ba365bcf76da2e0c2d1510c1dc8921d1f32c99847c94a19f301ede5',
     cloud_mutation_authorized_by_plan: false,
     acceptance_executed: false,
     public_ingress_active: false,
@@ -745,7 +745,7 @@ test('accepts the successful and retired private user-relay probe', () => {
 
 test('cross-checks manifest claims against all committed evidence artifacts', () => {
   const evidence = validateCommittedEvidence(manifest());
-  assert.equal(evidence.workload.function.revision, 'control-plane-00004-yis');
+  assert.equal(evidence.workload.function.revision, 'control-plane-00005-biq');
   assert.equal(evidence.probe.workload.function_revision, 'control-plane-00003-hum');
   assert.equal(evidence.userRelayProbe.workload.function_revision, 'control-plane-00004-yis');
   assert.equal(evidence.probe.response.status, 200);

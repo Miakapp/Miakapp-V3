@@ -79,12 +79,13 @@ transition, separate reviewed implementation must provide:
 6. allow-listed metric and billing observations; and
 7. a rollback plan that is rendered and checked before the live window opens.
 
-The currently deployed runtime revision and document publish one signing key,
+The currently deployed runtime document publishes one signing key,
 which makes the routine 60-second prepublication and 330-second retiring-key
-retention contract impossible to rehearse honestly. The source-level schema 2
-bridge must first be merged, deployed privately and migrated under a separate
-guard. `SIGNING-01` therefore remains open instead of treating the local
-two-key fixture or unshipped code as cloud evidence.
+retention contract impossible to rehearse honestly. The schema-2 bridge is now
+merged and deployed privately in revision `control-plane-00005-biq`, but the
+runtime document must still be migrated under a separate guard and independently
+verified. `SIGNING-01` therefore remains open instead of treating source
+support or the local two-key fixture as live overlap evidence.
 
 ## Matrix and evidence boundary
 

@@ -1,7 +1,8 @@
 # Miakapp 4 staging private workload boundary
 
 Status: private audience-bound user-relay acceptance succeeded and retired;
-live browser-relay plan reviewed but not deployed
+bounded signing-key overlap bridge deployed privately; live browser-relay plan
+reviewed but not deployed
 
 This directory contains the closed description and observed state of
 `miakapp-v4-staging`. The bounded foundation recovery has completed; its active
@@ -25,7 +26,9 @@ below.
 Project `miakapp-v4-staging` (`1072737219170`) now has one active Gen 2 Function
 backed by one Cloud Run service. It still has no App Engine application, public
 ingress, unauthenticated invoker or minimum instance. The latest bounded
-requests targeted the current revision through one unscheduled private Workflow.
+requests targeted historical revision `control-plane-00004-yis` through one
+unscheduled private Workflow. The current revision was source-verified without
+making a request.
 The bootstrap is complete.
 Protected foundation applies
 on 2026-09-03 created all thirteen declared APIs, the deletion-protected Paris
@@ -73,17 +76,29 @@ tainted resource. Raw plan and state bytes remain private; the completed private
 bundle was permanently deleted.
 
 Three later, saved-plan source updates changed no IAM, ingress, network,
-scaling or runtime document. Current merge commit
+scaling or runtime document. The audience-bound exchange merge commit
 `022f10e2dc15f32a8a6679b38ce7f1a04582e450` produced source SHA-256
 `6674c0353ec9c73fcfe0d3a63d17850f057a5f2a547a5855989e28f011249b1e`
-and active revision `control-plane-00004-yis`. Current workload state generation
-`1788557027934706` is 49,283 bytes at serial 14 with fifteen managed resources,
-three data resources, one output and nothing tainted. The current canonical
-[`workload/result.json`](workload/result.json) has SHA-256
-`cfdb18b9dd6604cd92977cbd447dd0684f4b731ca84d2f7aa3f772cbd3bc3056`.
-The latest source contains the audience-bound user-relay credential exchange;
-its separate bounded acceptance probe completed successfully against this exact
-revision. The discovery evidence below remains pinned to historical revision
+and revision `control-plane-00004-yis`. Its separate bounded acceptance probe
+completed successfully against that exact revision.
+
+A fourth source-only update deployed merge commit
+`9f217da102b394734adba7ccef3f8f70d0317306` with deterministic source SHA-256
+`d1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8`.
+Exact saved plan SHA-256
+`ee98468a4ed92196109ac6f646030dca582068c6e2f2b5c1889e347322b1e3a6`
+changed only the source object, Function and deployment guard, then converged
+to active revision `control-plane-00005-biq`. The deployed source accepts the
+bounded two-key runtime schema while preserving the existing schema-1 runtime
+document and its single published key. Independent inventory made no request
+and reconfirmed internal-only ingress, scale 0..1, zero public invokers and zero
+user-managed keys. Current workload state generation `1788581270106628` is
+49,242 bytes at serial 16 with fifteen managed resources, three data resources,
+one output and nothing tainted; its SHA-256 is
+`d765cceffc696905f045a34805f9c6f1a6c45e9ba3f2224754a90a157c89b428`.
+The current canonical [`workload/result.json`](workload/result.json) has SHA-256
+`dc3324d3b812e1dafc6a6678c7427ac715ea1d2a81de527750aa958c7c71a440`.
+The discovery evidence below remains pinned to historical revision
 `control-plane-00003-hum`.
 
 The private probe deployment created only the Workflows API guard and one

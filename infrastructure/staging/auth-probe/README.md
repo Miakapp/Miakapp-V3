@@ -6,7 +6,7 @@ It uses the independent GCS backend prefix `terraform/auth-probe`; its safe and
 current state is `armed = false`.
 
 The committed `result.json` and `retirement.json` preserve the successful
-generation-3 run against current revision `control-plane-00004-yis`. Generation
+generation-3 run against then-current revision `control-plane-00004-yis`. Generation
 1 was rejected by Workflows for an invalid inline map expression, and generation
 2 exceeded the 50-assignment per-step limit; neither executed. Generation 3
 performed exactly one execution, passed all three negative controls, returned

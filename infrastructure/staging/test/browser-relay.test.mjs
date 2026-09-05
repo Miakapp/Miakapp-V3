@@ -38,6 +38,7 @@ function rejects(mutator, pattern = /drifted|invalid|must|reviewed|credential/u)
 test('accepts the reviewed browser-relay design without claiming live evidence', () => {
   const validated = validateBrowserRelayPlan(planPath);
   assert.equal(validated.schema, 'miakapp.staging-browser-relay-plan/1');
+  assert.equal(validated.revision, 2);
   assert.equal(validated.state, 'reviewed_not_deployed');
   assert.equal(validated.target.project_id, 'miakapp-v4-staging');
   assert.equal(validated.target.cloud_mutation_authorized_by_document, false);
@@ -68,6 +69,10 @@ test('pins a reversible scale-to-zero topology and a bounded public window', () 
   assert.equal(validated.budgets.authorized_monthly_incremental_eur, 5);
   assert.equal(validated.budgets.free_tier_assumed, false);
   assert.equal(validated.budgets.stress_test, false);
+  assert.equal(validated.baseline.control_plane.runtime_schema, 'miakapp.production-runtime/1');
+  assert.equal(validated.baseline.control_plane.security_schema, 'miakapp.production-security/1');
+  assert.equal(validated.baseline.control_plane.published_signing_keys, 1);
+  assert.equal(validated.baseline.control_plane.overlap_schema_supported_by_source, true);
 });
 
 test('pins all pending matrix rows and routine signing-key timing', () => {
@@ -93,6 +98,9 @@ test('rejects target, evidence and public-baseline escalation', () => {
   rejects((candidate) => { candidate.target.acceptance_executed = true; });
   rejects((candidate) => { candidate.baseline.control_plane.ingress = 'ALLOW_ALL'; });
   rejects((candidate) => { candidate.baseline.control_plane.unauthenticated_invokers = 1; });
+  rejects((candidate) => { candidate.baseline.control_plane.runtime_schema = 'miakapp.production-runtime/2'; });
+  rejects((candidate) => { candidate.baseline.control_plane.published_signing_keys = 2; });
+  rejects((candidate) => { candidate.baseline.control_plane.overlap_schema_supported_by_source = false; });
   rejects((candidate) => { candidate.baseline.app_check.browser_attestation_validated = true; });
   rejects((candidate) => { candidate.evidence.state = 'succeeded'; });
   rejects((candidate) => { candidate.evidence.completed_case_ids.push('LIVE-01'); });

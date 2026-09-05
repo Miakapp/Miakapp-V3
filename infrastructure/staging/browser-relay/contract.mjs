@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { lstatSync, readFileSync } from 'node:fs';
 import { isDeepStrictEqual } from 'node:util';
 
-export const BROWSER_RELAY_PLAN_SHA256 = '9bdd11359518b15002de6570b306c589a57588d02aa9a443c3f21d56a495c811';
+export const BROWSER_RELAY_PLAN_SHA256 = '900bee3c4ba365bcf76da2e0c2d1510c1dc8921d1f32c99847c94a19f301ede5';
 export const BROWSER_RELAY_PLAN_PATH = 'browser-relay/plan.json';
 
 const MAXIMUM_PLAN_BYTES = 16 * 1024;
@@ -151,6 +151,10 @@ function validateBaseline(value) {
   exact(baseline, expectedPlan.baseline, 'baseline');
   exact(baseline.control_plane.ingress, 'ALLOW_INTERNAL_ONLY', 'baseline.control_plane.ingress');
   exact(baseline.control_plane.unauthenticated_invokers, 0, 'baseline.control_plane.unauthenticated_invokers');
+  exact(baseline.control_plane.runtime_schema, 'miakapp.production-runtime/1', 'baseline.control_plane.runtime_schema');
+  exact(baseline.control_plane.security_schema, 'miakapp.production-security/1', 'baseline.control_plane.security_schema');
+  exact(baseline.control_plane.published_signing_keys, 1, 'baseline.control_plane.published_signing_keys');
+  exact(baseline.control_plane.overlap_schema_supported_by_source, true, 'baseline.control_plane.overlap_schema_supported_by_source');
   exact(baseline.relay_services, 0, 'baseline.relay_services');
   exact(baseline.browser_runner_present, false, 'baseline.browser_runner_present');
   exact(baseline.app_engine_application_present, false, 'baseline.app_engine_application_present');
@@ -350,7 +354,7 @@ export function validateBrowserRelayPlanValue(value) {
     'rollback',
   ], 'plan');
   exact(plan.schema, 'miakapp.staging-browser-relay-plan/1', 'plan.schema');
-  exact(plan.revision, 1, 'plan.revision');
+  exact(plan.revision, 2, 'plan.revision');
   exact(plan.state, 'reviewed_not_deployed', 'plan.state');
   validateTarget(plan.target);
   validatePins(plan.pins);
