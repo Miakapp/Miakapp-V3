@@ -1196,6 +1196,7 @@ test('guards the browser-relay rotation entry and blocks regular source updates'
   const planSource = readFileSync(new URL('../workload/update-plan.mjs', import.meta.url), 'utf8');
   const applySource = readFileSync(new URL('../workload/update-apply.mjs', import.meta.url), 'utf8');
   const localsSource = readFileSync(new URL('../workload/locals.tf', import.meta.url), 'utf8');
+  const foundationSource = readFileSync(new URL('../workload/foundation.tf', import.meta.url), 'utf8');
   const variablesSource = readFileSync(new URL('../workload/variables.tf', import.meta.url), 'utf8');
   const workloadSource = readFileSync(new URL('../workload/workload.tf', import.meta.url), 'utf8');
   assert.match(planSource, /readAndValidatePinnedBrowserRelayRotationEntryPlan/);
@@ -1224,6 +1225,7 @@ test('guards the browser-relay rotation entry and blocks regular source updates'
     /source_repository_commit[\s\S]*9f217da102b394734adba7ccef3f8f70d0317306/,
   );
   assert.match(workloadSource, /repository-commit = local\.source_repository_commit/);
+  assert.match(foundationSource, /source_commit\s+= local\.source_repository_commit/);
   assert.match(
     workloadSource,
     /ignore_changes = \[\s*detect_md5hash,\s*source,\s*\]/,
