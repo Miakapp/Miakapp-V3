@@ -151,13 +151,13 @@ describe('initial staging runtime document', () => {
     }
   });
 
-  test('accepts the exact live two-key runtime with version 1 current', () => {
+  test('accepts the exact prepublished two-key runtime with version 1 current', () => {
     const current = parseRequestJson(readFileSync(new URL(
       '../../../infrastructure/staging/workload/runtime-config-single-key.json',
       import.meta.url,
     ))) as Record<string, any>;
     const targetBytes = readFileSync(new URL(
-      '../../../infrastructure/staging/workload/runtime-config.json',
+      '../../../infrastructure/staging/workload/runtime-config-version-1-current.json',
       import.meta.url,
     ));
     expect(createHash('sha256').update(targetBytes).digest('hex'))
@@ -180,5 +180,26 @@ describe('initial staging runtime document', () => {
     expect(runtime.security.signing.currentKid).toBe('staging-access-token-v1');
     expect(runtime.security.signing.publicJwks).toHaveLength(2);
     expect(runtime.security.signing.publicJwk.kid).toBe('staging-access-token-v1');
+  });
+
+  test('activates version 2 by changing only current_kid while retaining version 1', () => {
+    const current = parseRequestJson(readFileSync(new URL(
+      '../../../infrastructure/staging/workload/runtime-config-version-1-current.json',
+      import.meta.url,
+    ))) as Record<string, any>;
+    const targetBytes = readFileSync(new URL(
+      '../../../infrastructure/staging/workload/runtime-config.json',
+      import.meta.url,
+    ));
+    expect(createHash('sha256').update(targetBytes).digest('hex'))
+      .toBe('40e2f83fbe8e3d27b7e53c4a666f424519fc6972ef19a7598ab9e093be0c70f7');
+    const target = parseRequestJson(targetBytes) as Record<string, any>;
+    const expected = structuredClone(current) as Record<string, any>;
+    expected.security.signing.current_kid = 'staging-access-token-v2';
+    expect(target).toEqual(expected);
+    const runtime = parseProductionRuntimeConfig(target);
+    expect(runtime.security.signing.currentKid).toBe('staging-access-token-v2');
+    expect(runtime.security.signing.publicJwks).toHaveLength(2);
+    expect(runtime.security.signing.publicJwk.kid).toBe('staging-access-token-v2');
   });
 });
