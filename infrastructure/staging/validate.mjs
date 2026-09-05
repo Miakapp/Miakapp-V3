@@ -37,7 +37,7 @@ const SERVICE_STATES = [
   'initialized_closed_custom_token_lifecycle_validated',
   'admin_custom_provider_and_system_browser_attestation_validated_enforcement_disabled',
   'private_fixture_lifecycle_validated_no_persistent_application_data',
-  'private_schema_2_two_key_version_1_rehearsal_entry_runtime_active_user_relay_acceptance_succeeded',
+  'private_schema_2_two_key_version_1_rehearsal_entry_edge_profile_runtime_active_user_relay_acceptance_succeeded',
   'private_bucket_created_no_application_mutation',
   'two_signing_key_versions_enabled_runtime_two_keys_published_version_1_rehearsal_entry',
   'five_initial_versions_enabled_runtime_access_validated',
@@ -428,7 +428,7 @@ function validateRuntime(value) {
     'projects/miakapp-v4-staging/locations/europe-west9/services/control-plane',
     'runtime.service',
   );
-  exact(runtime.revision, 'control-plane-00009-kur', 'runtime.revision');
+  exact(runtime.revision, 'control-plane-00010-vop', 'runtime.revision');
   exact(runtime.uri, 'https://control-plane-aczhngqraq-od.a.run.app', 'runtime.uri');
   exact(runtime.minimum_instances, 0, 'runtime.minimum_instances');
   exact(runtime.maximum_instances, 1, 'runtime.maximum_instances');
@@ -443,7 +443,7 @@ function validateRuntime(value) {
   exact(runtime.ingress, 'ALLOW_INTERNAL_ONLY', 'runtime.ingress');
   exact(
     runtime.source_archive_sha256,
-    'd1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8',
+    '3e94305e17ee4df07f54f13560dac0a9491de3f89fb3ddbf4ab745c62dce8c7e',
     'runtime.source_archive_sha256',
   );
   exact(
@@ -2957,11 +2957,11 @@ function validateEvidence(value) {
     'live_request_performed',
   ]);
   const expectedWorkload = {
-    state: 'active_internal_only_schema_2_two_key_version_1_rehearsal_entry_source_verified',
-    observed_at: '2026-09-05T19:04:24.200Z',
-    inventory_repository_commit: 'eaa7bb46ed06206fcd0c0dec100a069c54b259cf',
-    deployed_repository_commit: 'eaa7bb46ed06206fcd0c0dec100a069c54b259cf',
-    deployed_source_repository_commit: '9f217da102b394734adba7ccef3f8f70d0317306',
+    state: 'active_internal_only_schema_2_two_key_version_1_rehearsal_entry_edge_profile_source_verified',
+    observed_at: '2026-09-05T19:49:07.829Z',
+    inventory_repository_commit: 'ba4fc9caed566fa39fc66371192fb1821b4232ff',
+    deployed_repository_commit: 'ba4fc9caed566fa39fc66371192fb1821b4232ff',
+    deployed_source_repository_commit: 'ba4fc9caed566fa39fc66371192fb1821b4232ff',
     initial_plan_sha256: 'b59167718fdad5edfa440f5d59f6e0eb1dff9277b20e1f829ebbb233296cdf05',
     initial_plan_result: 'failed_build_missing_conditional_source_read',
     recovery_configuration_commit: '488da23cd7eb4c08baa9296724b87b7df34a1122',
@@ -2969,10 +2969,10 @@ function validateEvidence(value) {
     output_reconciliation_plan_sha256: 'a31bda9269b138b270d58a6bb992ab7902d1fc73074c0f8f2543bdf0c8f09623',
     output_reconciliation_resource_changes: 0,
     result_path: 'workload/result.json',
-    result_sha256: '5259f61aa65ceca3e45e162ea59045ee4947d9cec04e5a301261314f526b067c',
-    source_archive_sha256: 'd1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8',
+    result_sha256: '7aa7f4ec4b5d5bcd2b272f472361975c84dbc974dfdf24f154290d20c95b7266',
+    source_archive_sha256: '3e94305e17ee4df07f54f13560dac0a9491de3f89fb3ddbf4ab745c62dce8c7e',
     runtime_config_sha256: 'c018708786fc23a15f7701093b5148c0e415a2df8045af8e170e4308c2deae37',
-    function_revision: 'control-plane-00009-kur',
+    function_revision: 'control-plane-00010-vop',
     ingress: 'ALLOW_INTERNAL_ONLY',
     unauthenticated_invokers: 0,
     minimum_instances: 0,
@@ -3009,8 +3009,8 @@ function validateEvidence(value) {
     false,
     'evidence.workload_deployment.recovery_plan_result.function_replaced',
   );
-  if (!Array.isArray(workload.source_updates) || workload.source_updates.length !== 4) {
-    reject('evidence.workload_deployment.source_updates', 'must contain exactly 4 entries');
+  if (!Array.isArray(workload.source_updates) || workload.source_updates.length !== 5) {
+    reject('evidence.workload_deployment.source_updates', 'must contain exactly 5 entries');
   }
   const expectedSourceUpdates = [
     {
@@ -3052,6 +3052,16 @@ function validateEvidence(value) {
       terraform_state_generation: '1788581270106628',
       terraform_state_serial: 16,
       terraform_state_sha256: 'd765cceffc696905f045a34805f9c6f1a6c45e9ba3f2224754a90a157c89b428',
+    },
+    {
+      purpose: 'bounded_staging_browser_relay_edge_profile',
+      repository_commit: 'ba4fc9caed566fa39fc66371192fb1821b4232ff',
+      plan_sha256: '346dd483045090c31e6bf7da715bfb2d71a3c4672a85aa16aa92992058a71393',
+      source_archive_sha256: '3e94305e17ee4df07f54f13560dac0a9491de3f89fb3ddbf4ab745c62dce8c7e',
+      function_revision: 'control-plane-00010-vop',
+      terraform_state_generation: '1788637742341649',
+      terraform_state_serial: 26,
+      terraform_state_sha256: 'e948862e0638bca565bba5a46841162fa4757c6e477f63d859c8aa47a6b8aab7',
     },
   ];
   workload.source_updates.forEach((value, index) => {
@@ -3206,11 +3216,11 @@ function validateEvidence(value) {
   );
   const expectedWorkloadState = {
     object: 'terraform/workload/default.tfstate',
-    generation: '1788635059003671',
-    sha256: '07c0c7ef2d3130e440282a8923c15723deca39cf2d150c742bd7da4767d59283',
+    generation: '1788637742341649',
+    sha256: 'e948862e0638bca565bba5a46841162fa4757c6e477f63d859c8aa47a6b8aab7',
     size_bytes: 49898,
     terraform_version: '1.11.3',
-    serial: 24,
+    serial: 26,
     lineage_sha256: 'aecd871c255da2bb3d30e7a7cc7b76be229e1eccc1fce2c4e41fed5a4a4b4b3a',
     managed_resources: 15,
     data_resources: 3,
@@ -3505,11 +3515,11 @@ function validateEvidence(value) {
     ],
   );
   const expectedBrowserRelayPlan = {
-    state: 'rotation_entry_converged_reviewed_not_deployed',
+    state: 'edge_profile_source_converged_reviewed_not_deployed',
     path: BROWSER_RELAY_PLAN_PATH,
     sha256: BROWSER_RELAY_PLAN_SHA256,
-    baseline_observed_at: '2026-09-05T19:04:24.200Z',
-    baseline_control_plane_revision: 'control-plane-00009-kur',
+    baseline_observed_at: '2026-09-05T19:49:07.829Z',
+    baseline_control_plane_revision: 'control-plane-00010-vop',
     baseline_published_signing_keys: 2,
     baseline_current_signing_key_version: 1,
     browser_attestation_validated: true,

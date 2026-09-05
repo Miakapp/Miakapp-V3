@@ -324,7 +324,7 @@ required all thirteen other managed resources to remain no-ops. Source, build,
 IAM, private ingress, identities and scale were unchanged; no Function request
 was made.
 
-Apply converged to current revision `control-plane-00009-kur`, whose
+Apply converged to historical revision `control-plane-00009-kur`, whose
 authoritative update time is `2026-09-05T19:04:13.514360614Z`. Independent
 inventory matched unchanged source SHA-256
 `d1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8`
@@ -334,7 +334,7 @@ enabled and both public keys remain published, with version 1 current. Workload
 state generation `1788635059003671` is 49,898 bytes at serial 24 with fifteen
 managed and three data resources, one output, nothing tainted, and SHA-256
 `07c0c7ef2d3130e440282a8923c15723deca39cf2d150c742bd7da4767d59283`.
-The current canonical non-secret [`result.json`](result.json) has SHA-256
+The canonical non-secret result at that boundary had SHA-256
 `5259f61aa65ceca3e45e162ea59045ee4947d9cec04e5a301261314f526b067c`.
 
 The one-shot entry wrappers and selector are retired. The default Terraform
@@ -342,6 +342,40 @@ graph now directly describes this version-1-current state, and the regular
 source updater is restored against the exact deployed revision. Re-entering the
 historical transition requires new reviewed tooling; it cannot replay these
 consumed plan bytes.
+
+## Bounded staging browser-relay edge-profile source
+
+Merge commit `ba4fc9caed566fa39fc66371192fb1821b4232ff` added one staging-only
+network profile. It accepts only the direct control-plane `run.app` issuer and
+the staging Hosting `web.app` origin as an atomic pair; mixed pairs, arbitrary
+provider domains and production usage fail closed. The active runtime document
+remains canonical, so deploying this capability did not change an issuer,
+origin, IAM binding or ingress setting.
+
+Exact saved plan SHA-256
+`346dd483045090c31e6bf7da715bfb2d71a3c4672a85aa16aa92992058a71393`
+had metadata and JSON SHA-256
+`79960deb8bf50b8d3895685db88bfb50b5450cf92cc5026115f3301f7b013f7f`
+and
+`ac3fd004bd27ef0dc1564a3244d5a3fea598df4feffd0f9f325c66fc029a5271`.
+It deployed deterministic source SHA-256
+`3e94305e17ee4df07f54f13560dac0a9491de3f89fb3ddbf4ab745c62dce8c7e`
+to current private revision `control-plane-00010-vop`, updated at
+`2026-09-05T19:48:55.366699112Z`, with copied source generation
+`1788637681094791`. Independent inventory at
+`2026-09-05T19:49:07.829Z` reconfirmed internal-only ingress, scale 0..1,
+zero public invokers and no live request. Runtime SHA-256
+`c018708786fc23a15f7701093b5148c0e415a2df8045af8e170e4308c2deae37`
+still publishes both enabled keys with version 1 current.
+
+Workload state generation `1788637742341649` is 49,898 bytes at serial 26
+with fifteen managed and three data resources, one output, nothing tainted,
+and SHA-256
+`e948862e0638bca565bba5a46841162fa4757c6e477f63d859c8aa47a6b8aab7`.
+The current canonical non-secret [`result.json`](result.json) has SHA-256
+`7aa7f4ec4b5d5bcd2b272f472361975c84dbc974dfdf24f154290d20c95b7266`.
+The private bundle retains the raw plan and state only until this sanitized
+evidence is merged, after which it is recoverably trashed.
 
 ## Successful private discovery
 

@@ -81,7 +81,7 @@ test('accepts the successful and retired private user-relay probe', () => {
     'initialized_closed_custom_token_lifecycle_validated',
     'admin_custom_provider_and_system_browser_attestation_validated_enforcement_disabled',
     'private_fixture_lifecycle_validated_no_persistent_application_data',
-    'private_schema_2_two_key_version_1_rehearsal_entry_runtime_active_user_relay_acceptance_succeeded',
+    'private_schema_2_two_key_version_1_rehearsal_entry_edge_profile_runtime_active_user_relay_acceptance_succeeded',
     'private_bucket_created_no_application_mutation',
     'two_signing_key_versions_enabled_runtime_two_keys_published_version_1_rehearsal_entry',
     'five_initial_versions_enabled_runtime_access_validated',
@@ -103,7 +103,7 @@ test('accepts the successful and retired private user-relay probe', () => {
     'managed_in_reconciled_remote_bootstrap_state',
   );
   assert.equal(validated.runtime.deployment_state, 'ACTIVE');
-  assert.equal(validated.runtime.revision, 'control-plane-00009-kur');
+  assert.equal(validated.runtime.revision, 'control-plane-00010-vop');
   assert.equal(validated.runtime.runtime_schema, 'miakapp.production-runtime/2');
   assert.equal(validated.runtime.security_schema, 'miakapp.production-security/2');
   assert.equal(validated.runtime.published_signing_keys, 2);
@@ -601,11 +601,11 @@ test('accepts the successful and retired private user-relay probe', () => {
   });
   assert.equal(
     validated.evidence.workload_deployment.state,
-    'active_internal_only_schema_2_two_key_version_1_rehearsal_entry_source_verified',
+    'active_internal_only_schema_2_two_key_version_1_rehearsal_entry_edge_profile_source_verified',
   );
   assert.equal(
     validated.evidence.workload_deployment.result_sha256,
-    '5259f61aa65ceca3e45e162ea59045ee4947d9cec04e5a301261314f526b067c',
+    '7aa7f4ec4b5d5bcd2b272f472361975c84dbc974dfdf24f154290d20c95b7266',
   );
   assert.deepEqual(validated.evidence.workload_deployment.recovery_plan_result, {
     create: 2,
@@ -613,10 +613,14 @@ test('accepts the successful and retired private user-relay probe', () => {
     delete: 0,
     function_replaced: false,
   });
-  assert.equal(validated.evidence.workload_deployment.source_updates.length, 4);
+  assert.equal(validated.evidence.workload_deployment.source_updates.length, 5);
   assert.equal(
     validated.evidence.workload_deployment.source_updates[3].function_revision,
     'control-plane-00005-biq',
+  );
+  assert.equal(
+    validated.evidence.workload_deployment.source_updates[4].function_revision,
+    'control-plane-00010-vop',
   );
   assert.equal(validated.evidence.workload_deployment.runtime_migrations.length, 4);
   assert.deepEqual(
@@ -687,7 +691,7 @@ test('accepts the successful and retired private user-relay probe', () => {
     validated.evidence.workload_deployment.runtime_migrations[3].function_updated_at,
     '2026-09-05T19:04:13.514360614Z',
   );
-  assert.equal(validated.evidence.workload_deployment.terraform_state.serial, 24);
+  assert.equal(validated.evidence.workload_deployment.terraform_state.serial, 26);
   assert.equal(validated.evidence.workload_deployment.terraform_state.managed_resources, 15);
   assert.equal(validated.evidence.workload_deployment.terraform_state.tainted_resources, 0);
   assert.equal(validated.evidence.workload_deployment.terraform_state.raw_contents_committed, false);
@@ -754,11 +758,11 @@ test('accepts the successful and retired private user-relay probe', () => {
   assert.equal(userRelayProbe.token_material_committed, false);
   assert.equal(userRelayProbe.raw_diagnostics_committed, false);
   assert.deepEqual(validated.evidence.browser_relay_plan, {
-    state: 'rotation_entry_converged_reviewed_not_deployed',
+    state: 'edge_profile_source_converged_reviewed_not_deployed',
     path: 'browser-relay/plan.json',
-    sha256: '74db861387be92dbfc85fbaf338c593f5f40ea6a39333d1a7a765b0fb5bc47ba',
-    baseline_observed_at: '2026-09-05T19:04:24.200Z',
-    baseline_control_plane_revision: 'control-plane-00009-kur',
+    sha256: 'b8da1ed6c073fea64bb79dc0c97c1624ccae6743114168cc554b45af45b90e49',
+    baseline_observed_at: '2026-09-05T19:49:07.829Z',
+    baseline_control_plane_revision: 'control-plane-00010-vop',
     baseline_published_signing_keys: 2,
     baseline_current_signing_key_version: 1,
     browser_attestation_validated: true,
@@ -999,7 +1003,7 @@ test('accepts the successful and retired private user-relay probe', () => {
 
 test('cross-checks manifest claims against all committed evidence artifacts', () => {
   const evidence = validateCommittedEvidence(manifest());
-  assert.equal(evidence.workload.function.revision, 'control-plane-00009-kur');
+  assert.equal(evidence.workload.function.revision, 'control-plane-00010-vop');
   assert.equal(evidence.probe.workload.function_revision, 'control-plane-00003-hum');
   assert.equal(evidence.userRelayProbe.workload.function_revision, 'control-plane-00004-yis');
   assert.equal(evidence.probe.response.status, 200);
@@ -1007,7 +1011,7 @@ test('cross-checks manifest claims against all committed evidence artifacts', ()
   assert.equal(evidence.userRelayProbe.execution.state, 'SUCCEEDED');
   assert.equal(evidence.userRelayProbeRetirement.workflow_present, false);
   assert.equal(evidence.userRelayProbeRetirement.verifier_service_present, false);
-  assert.equal(evidence.browserRelayPlan.state, 'rotation_entry_converged_reviewed_not_deployed');
+  assert.equal(evidence.browserRelayPlan.state, 'edge_profile_source_converged_reviewed_not_deployed');
   assert.equal(evidence.browserRelayPlan.evidence.state, 'absent');
 
   const workloadDigestDrift = manifest();

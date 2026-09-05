@@ -48,9 +48,12 @@ versions 1 and 2, kept version 1 current, and converged to historical revision
 `control-plane-00007-deb`. A second exact two-update plan selected version 2,
 retained version 1, and converged to historical revision
 `control-plane-00008-saz`. A third exact two-update plan reselected version 1
-while retaining version 2 and converged to current revision
-`control-plane-00009-kur`. Independent inventory matched the unchanged source
-bytes and reconfirmed internal-only ingress, no unauthenticated invoker, no
+while retaining version 2 and converged to historical revision
+`control-plane-00009-kur`. A later source-only plan deployed the bounded
+staging edge-profile support to current revision `control-plane-00010-vop`
+without selecting that profile. Independent inventory matched source SHA-256
+`3e94305e17ee4df07f54f13560dac0a9491de3f89fb3ddbf4ab745c62dce8c7e`
+and reconfirmed internal-only ingress, no unauthenticated invoker, no
 minimum instance and zero user-managed keys across the runtime/build/probe
 identities. The current schema 2 publishes both enabled keys and selects version
 1 for the browser-relay rehearsal; version 2 remains published for the forward
@@ -98,10 +101,10 @@ WIF providers are disabled while the pool remains enabled and retained. Object
 Versioning retains recovery generations. Local `.terraform/`
 provider caches are disposable and are not cloud inventory.
 
-Current workload state generation `1788635059003671` is 49,898 bytes at serial
-24 with fifteen managed resources, three data resources, one output and no
+Current workload state generation `1788637742341649` is 49,898 bytes at serial
+26 with fifteen managed resources, three data resources, one output and no
 tainted resource. Its SHA-256 is
-`07c0c7ef2d3130e440282a8923c15723deca39cf2d150c742bd7da4767d59283`.
+`e948862e0638bca565bba5a46841162fa4757c6e477f63d859c8aa47a6b8aab7`.
 Probe state generation `1788484287000119` is 13,596 bytes at serial 3 with
 three managed resources, one data resource, one output and nothing tainted. Its
 SHA-256 is

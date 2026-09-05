@@ -4,7 +4,7 @@ This directory freezes the rebased reviewable plan for live browser, relay,
 signing-key and rollback acceptance. It contains no Terraform, deployer,
 invocation wrapper, credential or result. Reading or validating it authorizes no
 cloud mutation. The committed state is
-`rotation_entry_converged_reviewed_not_deployed`, all `LIVE-*` cases are
+`edge_profile_source_converged_reviewed_not_deployed`, all `LIVE-*` cases are
 pending and the canonical staging manifest still records private control-plane
 ingress.
 
@@ -74,8 +74,8 @@ and [reCAPTCHA billing](https://cloud.google.com/recaptcha/docs/billing-informat
 
 ## Preconditions
 
-Revision 6 was rebased from an independent read-only observation on
-2026-09-05T19:04:24.200Z. It verified `control-plane-00009-kur`, private ingress,
+Revision 7 was rebased from an independent read-only observation on
+2026-09-05T19:49:07.829Z. It verified `control-plane-00010-vop`, private ingress,
 zero unauthenticated invokers, two enabled and published signing versions with
 version 1 current for the rehearsal entry, a registered reCAPTCHA Enterprise provider, the prior real
 browser token result, zero enforcement records, zero debug tokens, zero Firebase
@@ -85,8 +85,12 @@ documents across its three expected technical collections; no Home or user
 collection existed.
 
 The immutable cross-repository pins, two-key runtime, readable provider,
-standalone real-browser token observation and guarded rotation entry are
-therefore satisfied today. The entry plan changed only the Function and its
+standalone real-browser token observation, guarded rotation entry and bounded
+edge-profile source support are therefore present today. The new source accepts
+only the exact staging direct `run.app` issuer and exact Hosting `web.app` origin
+as an atomic pair; mixed or foreign provider domains fail closed. The deployed
+runtime remains on the canonical issuer/origin pair, so this source deployment
+did not open an edge or authorize a live request. The entry plan changed only the Function and its
 deployment guard in place, retained both published keys, source, build, IAM,
 private ingress and scale, and made no live request. Its one-shot wrappers are
 retired. The complete authenticated browser case remains part of `LIVE-02`.
@@ -116,6 +120,16 @@ version. `ROTATION-ENTRY-01` is satisfied. Version 2 stays published throughout;
 the matrix activates it on the live socket and retires version 1 only after the
 complete lease bound. Schema support or the local two-key fixture alone is not
 live overlap evidence.
+
+Merge commit `ba4fc9caed566fa39fc66371192fb1821b4232ff` then deployed the
+bounded staging edge-profile source as private revision
+`control-plane-00010-vop`. Deterministic source SHA-256
+`3e94305e17ee4df07f54f13560dac0a9491de3f89fb3ddbf4ab745c62dce8c7e`
+was applied by exact saved plan SHA-256
+`346dd483045090c31e6bf7da715bfb2d71a3c4672a85aa16aa92992058a71393`.
+It preserved the canonical runtime SHA-256, private ingress, IAM and scale and
+made no Function request. `EDGE-01` remains open until the separate ingress,
+runtime-profile, IAM and rollback operations are digest-bound and preflighted.
 
 ## Matrix and evidence boundary
 

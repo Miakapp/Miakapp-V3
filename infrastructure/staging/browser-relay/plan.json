@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-browser-relay-plan/1",
-  "revision": 6,
-  "state": "rotation_entry_converged_reviewed_not_deployed",
+  "revision": 7,
+  "state": "edge_profile_source_converged_reviewed_not_deployed",
   "target": {
     "project_id": "miakapp-v4-staging",
     "project_number": "1072737219170",
@@ -17,9 +17,9 @@
     "acceptance_executed": false
   },
   "pins": {
-    "miakapp_v3_commit": "eaa7bb46ed06206fcd0c0dec100a069c54b259cf",
-    "deployed_control_plane_commit": "eaa7bb46ed06206fcd0c0dec100a069c54b259cf",
-    "deployed_control_plane_source_sha256": "d1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8",
+    "miakapp_v3_commit": "ba4fc9caed566fa39fc66371192fb1821b4232ff",
+    "deployed_control_plane_commit": "ba4fc9caed566fa39fc66371192fb1821b4232ff",
+    "deployed_control_plane_source_sha256": "3e94305e17ee4df07f54f13560dac0a9491de3f89fb3ddbf4ab745c62dce8c7e",
     "miakapi_commit": "a798a746847ba3d5c16128a08b33353269e770a4",
     "miakapp_server_commit": "9a7e33de3a684b6cd9e82231db7c9af8bf41a0a1",
     "protocol_contract_commit": "cc3bcd70fdb4b058f990ca2607693a2043faebaf",
@@ -30,10 +30,10 @@
     "terraform_version": "1.11.3"
   },
   "baseline": {
-    "observed_at": "2026-09-05T19:04:24.200Z",
+    "observed_at": "2026-09-05T19:49:07.829Z",
     "control_plane": {
       "service": "control-plane",
-      "revision": "control-plane-00009-kur",
+      "revision": "control-plane-00010-vop",
       "uri": "https://control-plane-aczhngqraq-od.a.run.app",
       "issuer": "https://control.staging.miakapp.com",
       "allowed_origin": "https://app.staging.miakapp.com",
@@ -43,6 +43,8 @@
       "published_signing_keys": 2,
       "current_signing_key_version": 1,
       "overlap_schema_supported_by_source": true,
+      "network_profile": "canonical",
+      "browser_relay_edge_profile_supported_by_source": true,
       "ingress": "ALLOW_INTERNAL_ONLY",
       "unauthenticated_invokers": 0,
       "minimum_instances": 0,
@@ -242,7 +244,7 @@
     {
       "id": "EDGE-01",
       "state": "open",
-      "requirement": "temporary_public_control_plane_transition_is_separate_guarded_and_reversible"
+      "requirement": "temporary_public_control_plane_transition_and_atomic_edge_profile_switch_are_separate_guarded_and_reversible"
     },
     {
       "id": "RELAY-01",

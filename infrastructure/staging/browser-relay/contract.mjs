@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { lstatSync, readFileSync } from 'node:fs';
 import { isDeepStrictEqual } from 'node:util';
 
-export const BROWSER_RELAY_PLAN_SHA256 = '74db861387be92dbfc85fbaf338c593f5f40ea6a39333d1a7a765b0fb5bc47ba';
+export const BROWSER_RELAY_PLAN_SHA256 = 'b8da1ed6c073fea64bb79dc0c97c1624ccae6743114168cc554b45af45b90e49';
 export const BROWSER_RELAY_PLAN_PATH = 'browser-relay/plan.json';
 
 const MAXIMUM_PLAN_BYTES = 16 * 1024;
@@ -160,6 +160,8 @@ function validateBaseline(value) {
   exact(baseline.control_plane.published_signing_keys, 2, 'baseline.control_plane.published_signing_keys');
   exact(baseline.control_plane.current_signing_key_version, 1, 'baseline.control_plane.current_signing_key_version');
   exact(baseline.control_plane.overlap_schema_supported_by_source, true, 'baseline.control_plane.overlap_schema_supported_by_source');
+  exact(baseline.control_plane.network_profile, 'canonical', 'baseline.control_plane.network_profile');
+  exact(baseline.control_plane.browser_relay_edge_profile_supported_by_source, true, 'baseline.control_plane.browser_relay_edge_profile_supported_by_source');
   exact(baseline.hosting.site_disabled, true, 'baseline.hosting.site_disabled');
   exact(baseline.hosting.all_versions_deleted, true, 'baseline.hosting.all_versions_deleted');
   exact(baseline.hosting.browser_relay_route_status, 404, 'baseline.hosting.browser_relay_route_status');
@@ -385,8 +387,8 @@ export function validateBrowserRelayPlanValue(value) {
     'rollback',
   ], 'plan');
   exact(plan.schema, 'miakapp.staging-browser-relay-plan/1', 'plan.schema');
-  exact(plan.revision, 6, 'plan.revision');
-  exact(plan.state, 'rotation_entry_converged_reviewed_not_deployed', 'plan.state');
+  exact(plan.revision, 7, 'plan.revision');
+  exact(plan.state, 'edge_profile_source_converged_reviewed_not_deployed', 'plan.state');
   validateTarget(plan.target);
   validatePins(plan.pins);
   validateBaseline(plan.baseline);

@@ -851,7 +851,8 @@ vertical-slice exit gates.
    WebSocket and a source-to-token routing handoff across two relays with no
    overlapping transport. Its historical Firebase-direct profile is
    synthetic-only. The closed staging plan is now rebased against the private
-   `control-plane-00009-kur` two-key/version-1-rehearsal-entry runtime, completed real-browser App Check
+   `control-plane-00010-vop` two-key/version-1-rehearsal-entry runtime with the
+   bounded staging edge profile present in source but not selected, completed real-browser App Check
    prerequisite and zero-user/zero-fixture/zero-relay baseline; it still grants
    no deployment or public ingress. Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,

@@ -570,9 +570,9 @@ test('accepts only the bounded in-place recovery from the failed first build', (
 
 test('accepts only the next update from the pinned active source', () => {
   assert.deepEqual(PINNED_UPDATE_BASELINE, {
-    repositoryCommit: 'eaa7bb46ed06206fcd0c0dec100a069c54b259cf',
-    sourceRepositoryCommit: '9f217da102b394734adba7ccef3f8f70d0317306',
-    sourceArchiveSha256: 'd1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8',
+    repositoryCommit: 'ba4fc9caed566fa39fc66371192fb1821b4232ff',
+    sourceRepositoryCommit: 'ba4fc9caed566fa39fc66371192fb1821b4232ff',
+    sourceArchiveSha256: '3e94305e17ee4df07f54f13560dac0a9491de3f89fb3ddbf4ab745c62dce8c7e',
     runtimeConfigSha256: 'c018708786fc23a15f7701093b5148c0e415a2df8045af8e170e4308c2deae37',
   });
   const expected = {
@@ -951,12 +951,12 @@ test('pins the exact non-secret live workload result', () => {
     new URL('../workload/result.json', import.meta.url),
   );
   assert.equal(result.function.state, 'ACTIVE');
-  assert.equal(result.repository_commit, 'eaa7bb46ed06206fcd0c0dec100a069c54b259cf');
+  assert.equal(result.repository_commit, 'ba4fc9caed566fa39fc66371192fb1821b4232ff');
   assert.equal(
     result.source_archive_sha256,
-    'd1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8',
+    '3e94305e17ee4df07f54f13560dac0a9491de3f89fb3ddbf4ab745c62dce8c7e',
   );
-  assert.equal(result.function.revision, 'control-plane-00009-kur');
+  assert.equal(result.function.revision, 'control-plane-00010-vop');
   assert.equal(
     result.runtime_config_sha256,
     'c018708786fc23a15f7701093b5148c0e415a2df8045af8e170e4308c2deae37',

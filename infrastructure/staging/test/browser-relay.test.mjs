@@ -35,11 +35,11 @@ function rejects(mutator, pattern = /drifted|invalid|must|reviewed|credential/u)
   );
 }
 
-test('accepts the rotation-entry browser-relay design without claiming matrix evidence', () => {
+test('accepts the edge-profile-capable browser-relay design without claiming matrix evidence', () => {
   const validated = validateBrowserRelayPlan(planPath);
   assert.equal(validated.schema, 'miakapp.staging-browser-relay-plan/1');
-  assert.equal(validated.revision, 6);
-  assert.equal(validated.state, 'rotation_entry_converged_reviewed_not_deployed');
+  assert.equal(validated.revision, 7);
+  assert.equal(validated.state, 'edge_profile_source_converged_reviewed_not_deployed');
   assert.equal(validated.target.project_id, 'miakapp-v4-staging');
   assert.equal(validated.target.cloud_mutation_authorized_by_document, false);
   assert.equal(validated.target.public_ingress_currently_active, false);
@@ -74,6 +74,8 @@ test('pins a reversible scale-to-zero topology and a bounded public window', () 
   assert.equal(validated.baseline.control_plane.published_signing_keys, 2);
   assert.equal(validated.baseline.control_plane.current_signing_key_version, 1);
   assert.equal(validated.baseline.control_plane.overlap_schema_supported_by_source, true);
+  assert.equal(validated.baseline.control_plane.network_profile, 'canonical');
+  assert.equal(validated.baseline.control_plane.browser_relay_edge_profile_supported_by_source, true);
   assert.equal(validated.baseline.app_check.browser_provider_inventory, 'readable_registered_recaptcha_enterprise');
   assert.equal(validated.baseline.app_check.browser_attestation_validated, true);
   assert.equal(validated.baseline.application_data.firebase_auth_users, 0);
@@ -117,6 +119,8 @@ test('rejects target, evidence and public-baseline escalation', () => {
   rejects((candidate) => { candidate.baseline.control_plane.published_signing_keys = 1; });
   rejects((candidate) => { candidate.baseline.control_plane.current_signing_key_version = 2; });
   rejects((candidate) => { candidate.baseline.control_plane.overlap_schema_supported_by_source = false; });
+  rejects((candidate) => { candidate.baseline.control_plane.network_profile = 'staging-browser-relay-acceptance'; });
+  rejects((candidate) => { candidate.baseline.control_plane.browser_relay_edge_profile_supported_by_source = false; });
   rejects((candidate) => { candidate.baseline.app_check.browser_attestation_validated = false; });
   rejects((candidate) => { candidate.baseline.application_data.firebase_auth_users = 1; });
   rejects((candidate) => { candidate.baseline.application_data.application_fixture_collections = 1; });
