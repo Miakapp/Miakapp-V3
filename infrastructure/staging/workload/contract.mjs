@@ -17,6 +17,7 @@ export const REGION = 'europe-west9';
 export const TERRAFORM_VERSION = '1.11.3';
 export const OPERATOR_USER_SHA256 = 'd1c8514ac6eb5c13205cfec40dd6cc2072f33eb4279172df17273aa7c54a181c';
 export const RUNTIME_CONFIG_SHA256 = '20be750358ffbc2136bab26bca6338b430ea6480ae9874f3fe5e7132c5e0db10';
+export const TARGET_RUNTIME_CONFIG_SHA256 = 'c018708786fc23a15f7701093b5148c0e415a2df8045af8e170e4308c2deae37';
 export const PLAN_TTL_MILLISECONDS = 2 * 60 * 60 * 1_000;
 
 const SHA256 = /^[0-9a-f]{64}$/u;
@@ -223,6 +224,28 @@ export function validateWorkloadUpdateAuthorization(value, planBytes, repository
   }
 }
 
+export function workloadSigningPrepublicationAuthorization(planBytes, repositoryCommit) {
+  if (!Buffer.isBuffer(planBytes) || planBytes.byteLength === 0 || !COMMIT.test(repositoryCommit)) {
+    reject('Workload signing prepublication authorization inputs are invalid');
+  }
+  return `prepublish-staging-signing-key:${PROJECT_ID}:${sha256(planBytes)}:${repositoryCommit}`;
+}
+
+export function validateWorkloadSigningPrepublicationAuthorization(
+  value,
+  planBytes,
+  repositoryCommit,
+) {
+  const expected = Buffer.from(
+    workloadSigningPrepublicationAuthorization(planBytes, repositoryCommit),
+    'utf8',
+  );
+  const actual = Buffer.from(typeof value === 'string' ? value : '', 'utf8');
+  if (actual.byteLength !== expected.byteLength || !timingSafeEqual(actual, expected)) {
+    reject('Exact staging workload signing prepublication authorization is missing or invalid');
+  }
+}
+
 function buildMetadata({
   repositoryCommit,
   sourceRepositoryCommit = repositoryCommit,
@@ -281,6 +304,14 @@ export function buildWorkloadUpdatePlanMetadata(input) {
     schema: 'miakapp.staging-workload-update-plan/1',
     operation: 'replace-pinned-control-plane-source',
     runtimeConfigSha256: RUNTIME_CONFIG_SHA256,
+  });
+}
+
+export function buildWorkloadSigningPrepublicationPlanMetadata(input) {
+  return buildMetadata(input, {
+    schema: 'miakapp.staging-workload-signing-prepublication-plan/1',
+    operation: 'prepublish-second-signing-key',
+    runtimeConfigSha256: TARGET_RUNTIME_CONFIG_SHA256,
   });
 }
 
@@ -354,6 +385,14 @@ export function validateWorkloadUpdatePlanMetadata(value, now = Date.now()) {
   });
 }
 
+export function validateWorkloadSigningPrepublicationPlanMetadata(value, now = Date.now()) {
+  return validateMetadata(value, now, {
+    schema: 'miakapp.staging-workload-signing-prepublication-plan/1',
+    operation: 'prepublish-second-signing-key',
+    runtimeConfigSha256: TARGET_RUNTIME_CONFIG_SHA256,
+  });
+}
+
 function readMetadata(path, now, validate) {
   const bytes = readPrivateFile(path, 1024 * 1024);
   let value;
@@ -374,4 +413,8 @@ export function readPlanMetadata(path, now = Date.now()) {
 
 export function readWorkloadUpdatePlanMetadata(path, now = Date.now()) {
   return readMetadata(path, now, validateWorkloadUpdatePlanMetadata);
+}
+
+export function readWorkloadSigningPrepublicationPlanMetadata(path, now = Date.now()) {
+  return readMetadata(path, now, validateWorkloadSigningPrepublicationPlanMetadata);
 }
