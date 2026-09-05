@@ -118,11 +118,14 @@ node infrastructure/staging/browser-app-check/guard.mjs \
 node --check infrastructure/staging/browser-app-check/apply.mjs
 node --check infrastructure/staging/browser-app-check/cli.mjs
 node --check infrastructure/staging/browser-app-check/contract.mjs
+node --check infrastructure/staging/browser-app-check/evidence.mjs
 node --check infrastructure/staging/browser-app-check/guard.mjs
 node --check infrastructure/staging/browser-app-check/inventory.mjs
 node --check infrastructure/staging/browser-app-check/plan.mjs
 node --check infrastructure/staging/browser-app-check/state.mjs
 node --check infrastructure/staging/browser-app-check/validate-plan.mjs
+node infrastructure/staging/browser-app-check/evidence.mjs \
+  infrastructure/staging/browser-app-check/result.json
 bash -n \
   infrastructure/staging/automation/apply.sh \
   infrastructure/staging/automation/inspect-plan.sh \
