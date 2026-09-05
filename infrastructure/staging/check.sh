@@ -113,6 +113,15 @@ node --check infrastructure/staging/browser-relay/guard.mjs
 node --check infrastructure/staging/browser-relay/validate.mjs
 node infrastructure/staging/browser-relay/validate.mjs \
   infrastructure/staging/browser-relay/plan.json
+node infrastructure/staging/signing-overlap/guard.mjs \
+  "${repository_root}/infrastructure/staging/signing-overlap"
+node --check infrastructure/staging/signing-overlap/claim.mjs
+node --check infrastructure/staging/signing-overlap/cli.mjs
+node --check infrastructure/staging/signing-overlap/contract.mjs
+node --check infrastructure/staging/signing-overlap/guard.mjs
+node --check infrastructure/staging/signing-overlap/inventory.mjs
+node --check infrastructure/staging/signing-overlap/key-apply.mjs
+node --check infrastructure/staging/signing-overlap/key-plan.mjs
 node infrastructure/staging/browser-app-check/guard.mjs \
   "${repository_root}/infrastructure/staging/browser-app-check"
 node --check infrastructure/staging/browser-app-check/apply.mjs
@@ -178,7 +187,9 @@ bash -n \
   infrastructure/staging/browser-app-check/registration-apply.sh \
   infrastructure/staging/browser-app-check/registration-plan.sh \
   infrastructure/staging/browser-app-check/registration-recovery-apply.sh \
-  infrastructure/staging/browser-app-check/registration-recovery-plan.sh
+  infrastructure/staging/browser-app-check/registration-recovery-plan.sh \
+  infrastructure/staging/signing-overlap/key-apply.sh \
+  infrastructure/staging/signing-overlap/key-plan.sh
 node --test \
   infrastructure/staging/test/activation.test.mjs \
   infrastructure/staging/test/auth-probe.test.mjs \
@@ -191,6 +202,7 @@ node --test \
   infrastructure/staging/test/foundation-state.test.mjs \
   infrastructure/staging/test/github-policy.test.mjs \
   infrastructure/staging/test/probe.test.mjs \
+  infrastructure/staging/test/signing-overlap.test.mjs \
   infrastructure/staging/test/validate.test.mjs \
   infrastructure/staging/test/terraform.test.mjs \
   infrastructure/staging/test/user-relay-verifier.test.mjs \

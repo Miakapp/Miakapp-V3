@@ -4,7 +4,8 @@ Status: private audience-bound user-relay acceptance succeeded and retired;
 schema-2 single-key runtime deployed privately; live browser-relay plan reviewed
 but not deployed; browser App Check API-only prerequisite applied and
 converged; one domain-restricted score key applied and independently converged;
-exact non-deletable App Check provider registered with enforcement disabled
+exact non-deletable App Check provider registered with enforcement disabled;
+guarded second signing-key version creation reviewed but not applied
 
 This directory contains the closed description and observed state of
 `miakapp-v4-staging`. The bounded foundation recovery has completed; its active
@@ -19,9 +20,18 @@ additional live requests, destroy, or production changes.
 
 The separate [`browser-relay/`](browser-relay/) package now freezes the first
 closed live topology, cost, signing-key and rollback matrix. It records twelve
-pending cases and seven open implementation preconditions. It contains no
-deployer or result and does not change the private cloud baseline described
-below.
+pending cases and six open implementation preconditions. The App Check provider
+precondition is satisfied while browser attestation remains a pending live case.
+It contains no deployer or result and does not change the private cloud baseline
+described below.
+
+The [`signing-overlap/`](signing-overlap/) package freezes the next prerequisite:
+one non-retryable Cloud KMS version creation behind two atomic GCS claims. It
+keeps version 1, the runtime document, Terraform state, IAM and private ingress
+unchanged. The follow-up rollout must prepublish both public keys for at least
+60 seconds before activating version 2, then retain version 1 for at least the
+complete 330-second lease bound. The additional active software version is
+bounded to USD 0.06/month at the currently documented Cloud KMS price.
 
 The [`browser-app-check/`](browser-app-check/) root applied the reCAPTCHA
 Enterprise API, exactly one domain-restricted score key and the exact
@@ -272,6 +282,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`firebase-auth/`](firebase-auth/) | Closed Firebase Authentication initialization with no end-user sign-in provider | Non-deletable resource initialized, state-adopted, reconciled, and independently validated |
 | [`auth-probe/`](auth-probe/) | Guarded audience-bound user-relay Workflow, internal verifier and sanitized evidence | Generation 3 succeeded once and retired; both fixtures and every temporary capability are absent; all nine one-shot roles are disabled |
 | [`browser-app-check/`](browser-app-check/) | Guarded reCAPTCHA Enterprise API, score key and App Check provider prerequisites | API, one globally serialized domain-restricted score key and exact non-deletable provider applied and converged; all consumed/recovery entrypoints retired; traffic and enforcement pending |
+| [`signing-overlap/`](signing-overlap/) | Monotone second KMS version creation and 60/330-second overlap rollout contract | Reviewed but not applied; two atomic claims prevent blind retries; no runtime, Terraform, IAM, ingress or request mutation |
 | [`browser-relay/`](browser-relay/) | Closed live browser, two-relay, signing-key and rollback acceptance plan | Reviewed but not deployed; every `LIVE-*` case is pending and the package grants no cloud mutation |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
@@ -537,7 +548,8 @@ inside the separately authorized EUR 5 monthly boundary. App Engine, an
 external load balancer, Cloud Armor, VPC and DNS changes are absent.
 
 No live case may start yet. The production runtime must first support an active
-plus retiring public signing key. The browser App Check API, its single
+plus retiring public signing key. The guarded `signing-overlap/` operation is
+the reviewed first step and has not yet created version 2. The browser App Check API, its single
 domain-restricted score key and the exact non-deletable provider registration
 are applied, independently converged and retired as one-shot entrypoints. The
 next browser attestation step is a bounded real browser SDK/token observation

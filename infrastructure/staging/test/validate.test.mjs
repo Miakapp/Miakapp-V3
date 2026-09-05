@@ -31,7 +31,7 @@ function rejects(mutator, pattern) {
 
 test('accepts the successful and retired private user-relay probe', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 47);
+  assert.equal(validated.revision, 48);
   assert.equal(
     validated.status,
     'private_control_plane_schema_2_single_key_runtime_deployed_user_relay_acceptance_succeeded_live_browser_plan_reviewed_app_check_provider_registered',
@@ -695,7 +695,7 @@ test('accepts the successful and retired private user-relay probe', () => {
   assert.deepEqual(validated.evidence.browser_relay_plan, {
     state: 'reviewed_not_deployed',
     path: 'browser-relay/plan.json',
-    sha256: '330491f9f59b3638dfac55731d48b903ecf1f278ace696c2885e7644bb815319',
+    sha256: '7cbf154c3d3d77ad74a806533bbaaed27f7ab333287762334b0a31abc9c2874c',
     cloud_mutation_authorized_by_plan: false,
     acceptance_executed: false,
     public_ingress_active: false,

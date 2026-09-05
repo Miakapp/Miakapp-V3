@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { lstatSync, readFileSync } from 'node:fs';
 import { isDeepStrictEqual } from 'node:util';
 
-export const BROWSER_RELAY_PLAN_SHA256 = '330491f9f59b3638dfac55731d48b903ecf1f278ace696c2885e7644bb815319';
+export const BROWSER_RELAY_PLAN_SHA256 = '7cbf154c3d3d77ad74a806533bbaaed27f7ab333287762334b0a31abc9c2874c';
 export const BROWSER_RELAY_PLAN_PATH = 'browser-relay/plan.json';
 
 const MAXIMUM_PLAN_BYTES = 16 * 1024;
@@ -266,8 +266,8 @@ function validatePreconditions(value) {
     exactKeys(entry, ['id', 'state', 'requirement'], `preconditions[${index}]`);
     exact(entry, expectedPlan.preconditions[index], `preconditions[${index}]`);
   });
-  exact(value.filter(({ state }) => state === 'satisfied').map(({ id }) => id), ['PIN-01'], 'satisfied preconditions');
-  exact(value.filter(({ state }) => state === 'open').length, 7, 'open precondition count');
+  exact(value.filter(({ state }) => state === 'satisfied').map(({ id }) => id), ['PIN-01', 'APP-CHECK-01'], 'satisfied preconditions');
+  exact(value.filter(({ state }) => state === 'open').length, 6, 'open precondition count');
 }
 
 function validateMatrix(value) {
@@ -354,7 +354,7 @@ export function validateBrowserRelayPlanValue(value) {
     'rollback',
   ], 'plan');
   exact(plan.schema, 'miakapp.staging-browser-relay-plan/1', 'plan.schema');
-  exact(plan.revision, 3, 'plan.revision');
+  exact(plan.revision, 4, 'plan.revision');
   exact(plan.state, 'reviewed_not_deployed', 'plan.state');
   validateTarget(plan.target);
   validatePins(plan.pins);

@@ -67,21 +67,25 @@ and [reCAPTCHA billing](https://cloud.google.com/recaptcha/docs/billing-informat
 
 ## Preconditions
 
-Only the immutable cross-repository pins are satisfied today. Before any public
-transition, separate reviewed implementation must provide:
+The immutable cross-repository pins and the readable registered reCAPTCHA
+Enterprise App Check provider are satisfied today. Browser attestation itself
+remains a live acceptance case. Before any public transition, separate reviewed
+implementation must still provide:
 
 1. a production runtime configuration that publishes one active and one
    retiring signing key while selecting exactly one KMS signer;
-2. readable inventory and registration of the Web App Check provider;
-3. a digest-bound and reversible control-plane ingress transition;
-4. two digest-pinned relay services using a keyless no-role identity;
-5. a three-engine runner that emits closed semantic counters only;
-6. allow-listed metric and billing observations; and
-7. a rollback plan that is rendered and checked before the live window opens.
+2. a digest-bound and reversible control-plane ingress transition;
+3. two digest-pinned relay services using a keyless no-role identity;
+4. a three-engine runner that emits closed semantic counters only;
+5. allow-listed metric and billing observations; and
+6. a rollback plan that is rendered and checked before the live window opens.
 
 The currently deployed runtime document publishes one signing key,
 which makes the routine 60-second prepublication and 330-second retiring-key
-retention contract impossible to rehearse honestly. The schema-2 bridge and its
+retention contract impossible to rehearse honestly. The guarded
+`signing-overlap/` package now freezes the one-shot second-version creation and
+subsequent 60/330-second rollout, but no signing-key mutation has yet run. The
+schema-2 bridge and its
 single-key runtime migration are now deployed privately in revision
 `control-plane-00006-wid`; the migration changed no effective key and made no
 live request. `SIGNING-01` remains open until a separate guard creates and
