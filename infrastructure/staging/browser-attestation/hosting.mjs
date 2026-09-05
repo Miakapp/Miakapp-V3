@@ -11,8 +11,8 @@ import { googleJsonRequest } from './inventory.mjs';
 
 const VERSION_NAME = new RegExp(`^sites/${HOSTING_SITE}/versions/[0-9A-Za-z_-]{8,128}$`, 'u');
 const RELEASE_NAME = new RegExp(`^sites/${HOSTING_SITE}/releases/[0-9A-Za-z_-]{8,128}$`, 'u');
-const DEPLOY_MESSAGE = 'Miakapp V4 bounded browser App Check attestation v3';
-const DISABLE_MESSAGE = 'Miakapp V4 browser App Check attestation v3 retired';
+const DEPLOY_MESSAGE = 'Miakapp V4 bounded browser App Check attestation v4';
+const DISABLE_MESSAGE = 'Miakapp V4 browser App Check attestation v4 retired';
 const MAXIMUM_STORED_ARTIFACT_BYTES = 1024 * 1024;
 
 function request(session, url, options = {}) {
@@ -22,7 +22,7 @@ function request(session, url, options = {}) {
 export function hostingLabels(repositoryCommit) {
   return Object.freeze({
     environment: 'staging',
-    operation: 'browser-app-check-attestation-v3',
+    operation: 'browser-app-check-attestation-v4',
     repository: repositoryCommit,
   });
 }
@@ -85,20 +85,33 @@ export async function populateHostingVersion(
       fetchImplementation,
     },
   );
-  const required = response.value?.uploadRequiredHashes;
+  const value = response.value;
+  if (value === null || Array.isArray(value) || typeof value !== 'object'
+    || Object.keys(value).some((key) => !['uploadRequiredHashes', 'uploadUrl'].includes(key))) {
+    throw new Error('Firebase Hosting file-population response is malformed');
+  }
+  const required = value.uploadRequiredHashes ?? [];
   const uploadUrl = response.value?.uploadUrl;
   const known = new Set(artifactEntries.map(({ gzip_sha256: hash }) => hash));
-  if (!Array.isArray(required) || new Set(required).size !== required.length
+  const expectedUploadUrl =
+    `https://upload-firebasehosting.googleapis.com/upload/${versionName}/files`;
+  if (value.uploadRequiredHashes === null
+    || !Array.isArray(required) || new Set(required).size !== required.length
     || required.some((hash) => !known.has(hash))
-    || typeof uploadUrl !== 'string'
-    || uploadUrl !== `https://upload-firebasehosting.googleapis.com/upload/${versionName}/files`) {
+    || (required.length > 0 && uploadUrl !== expectedUploadUrl)
+    || (required.length === 0
+      && ![undefined, '', expectedUploadUrl].includes(uploadUrl))) {
     throw new Error('Firebase Hosting requested an unreviewed artifact upload');
   }
   for (const hash of required) {
     const entry = artifactEntries.find(({ gzip_sha256: candidate }) => candidate === hash);
     await uploadHostingFile(session, `${uploadUrl}/${hash}`, entry.gzip, fetchImplementation);
   }
-  return Object.freeze({ required_uploads: required.length, file_count: artifactEntries.length });
+  return Object.freeze({
+    required_uploads: required.length,
+    upload_url_present: uploadUrl === expectedUploadUrl,
+    file_count: artifactEntries.length,
+  });
 }
 
 async function uploadHostingFile(session, url, bytes, fetchImplementation) {
