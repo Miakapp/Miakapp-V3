@@ -824,8 +824,10 @@ vertical-slice exit gates.
    bounded recovery. The local lifecycle stops after overlap and activation; it
    does not remove the retiring key. A bounded private staging probe now proves
    Admin custom-provider App Check enforcement and KMS-backed user-relay signing
-   on the deployed control plane. Browser App Check attestation, FCM
-   acceptance/delivery, production Storage/KMS and Firebase certificates,
+   on the deployed control plane. A separate one-shot default-system-browser
+   operation now proves real Web App Check provider attestation without
+   retaining its token. FCM acceptance/delivery, production Storage/KMS and
+   Firebase certificates,
    trusted edge admission, browser and network faults, the rest of Section 18
    and broader staging behavior remain implementation exit gates. The
    audience-bound local path now adds Auth-emulator and signed synthetic App

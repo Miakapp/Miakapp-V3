@@ -84,8 +84,11 @@ no-overlap authoritative handoff across two real relays. It uses synthetic
 credentials and exact loopback Origins. One bounded private staging probe now
 also proves live Firebase Auth/App Check enforcement, KMS-backed user-relay signing,
 audience rotation and cleanup on the deployed control plane. The complete
-disconnect matrix, browser-provider attestation, live relay topology, public
-ingress and broader staging acceptance remain open. The staging manifest now
+standalone provider-attestation prerequisite was later closed when the default
+system browser obtained one real reCAPTCHA Enterprise-backed App Check token
+and the temporary Hosting route was retired. The complete disconnect matrix,
+authenticated browser-relay flow, live relay topology, public ingress and
+broader staging acceptance remain open. The staging manifest now
 pins the separate browser-relay plan, making its intended resource, cost,
 exposure and rollback boundary reviewable without pretending that the required
 runtime and staging adapters have been deployed or that a public edge already

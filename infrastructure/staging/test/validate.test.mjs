@@ -31,10 +31,10 @@ function rejects(mutator, pattern) {
 
 test('accepts the successful and retired private user-relay probe', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 54);
+  assert.equal(validated.revision, 55);
   assert.equal(
     validated.status,
-    'private_control_plane_two_key_version_2_current_runtime_deployed_signing_overlap_active_user_relay_acceptance_succeeded_system_browser_v6_plan_reviewed_app_check_provider_registered',
+    'private_control_plane_two_key_version_2_current_runtime_deployed_signing_overlap_active_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_enforcement_disabled',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
@@ -79,7 +79,7 @@ test('accepts the successful and retired private user-relay probe', () => {
   );
   assert.deepEqual(validated.services.map(({ state }) => state), [
     'initialized_closed_custom_token_lifecycle_validated',
-    'admin_custom_provider_validated_system_browser_attestation_pending',
+    'admin_custom_provider_and_system_browser_attestation_validated_enforcement_disabled',
     'private_fixture_lifecycle_validated_no_persistent_application_data',
     'private_schema_2_two_key_version_2_current_runtime_active_user_relay_acceptance_succeeded',
     'private_bucket_created_no_application_mutation',
@@ -890,8 +890,24 @@ test('accepts the successful and retired private user-relay probe', () => {
     raw_state_committed: false,
   });
   assert.equal(
+    validated.evidence.browser_app_check_attestation.state,
+    'real_system_browser_provider_token_obtained_and_retired',
+  );
+  assert.equal(validated.evidence.browser_app_check_attestation.provider_token_obtained, true);
+  assert.equal(validated.evidence.browser_app_check_attestation.jwt_shape_validated, true);
+  assert.equal(validated.evidence.browser_app_check_attestation.hosting_site_disabled, true);
+  assert.equal(validated.evidence.browser_app_check_attestation.runner_http_status_after_cleanup, 404);
+  assert.equal(validated.evidence.browser_app_check_attestation.app_check_token_committed, false);
+  assert.equal(validated.evidence.browser_app_check_attestation.raw_browser_error_committed, false);
+  assert.deepEqual(validated.evidence.browser_app_check_attestation.local_post_validation, {
+    state: 'rejected_after_provider_success',
+    stage: 'token-ttl-validation',
+    code: 'token-ttl-rejected',
+    cause: 'public_get_token_result_contains_token_only',
+  });
+  assert.equal(
     validated.readiness.required_blockers.includes('app-check-browser-provider-attestation'),
-    true,
+    false,
   );
   assert.equal(
     validated.readiness.required_blockers.includes('audience-bound-user-relay-staging-acceptance'),
@@ -1800,6 +1816,12 @@ test('requires every remaining blocker and staging evidence row', () => {
   rejects((candidate) => {
     candidate.evidence.browser_app_check_prerequisite.recovery_entrypoints_retired = false;
   }, /evidence\.browser_app_check_prerequisite\.recovery_entrypoints_retired/);
+  rejects((candidate) => {
+    candidate.evidence.browser_app_check_attestation.provider_token_obtained = false;
+  }, /evidence\.browser_app_check_attestation\.provider_token_obtained/);
+  rejects((candidate) => {
+    candidate.evidence.browser_app_check_attestation.entrypoints_retired = false;
+  }, /evidence\.browser_app_check_attestation\.entrypoints_retired/);
   rejects((candidate) => {
     candidate.evidence.signing_key_overlap_prerequisite.kms_version_creations = 2;
   }, /evidence\.signing_key_overlap_prerequisite\.kms_version_creations/);

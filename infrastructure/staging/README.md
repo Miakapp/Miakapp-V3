@@ -2,7 +2,8 @@
 
 Status: private audience-bound user-relay acceptance succeeded and retired;
 schema-2 two-key runtime deployed privately with version 2 current and version 1 retained; live browser-relay plan reviewed
-but not deployed; browser App Check API-only prerequisite applied and
+but not deployed; real system-browser App Check provider token obtained and its
+temporary Hosting route retired; browser App Check API-only prerequisite applied and
 converged; one domain-restricted score key applied and independently converged;
 exact non-deletable App Check provider registered with enforcement disabled;
 second software signing-key version enabled and both versions published
@@ -21,7 +22,8 @@ additional live requests, destroy, or production changes.
 The separate [`browser-relay/`](browser-relay/) package now freezes the first
 closed live topology, cost, signing-key and rollback matrix. It records twelve
 pending cases and six open implementation preconditions. The App Check provider
-precondition is satisfied while browser attestation remains a pending live case.
+and standalone real-browser attestation prerequisites are satisfied, while the
+complete authenticated `LIVE-02` relay case remains pending.
 It contains no deployer or result and does not change the private cloud baseline
 described below.
 
@@ -40,8 +42,10 @@ The [`browser-app-check/`](browser-app-check/) root applied the reCAPTCHA
 Enterprise API, exactly one domain-restricted score key and the exact
 non-deletable provider registration. Direct and eventual Cloud Asset inventories
 corroborate the key; direct App Check inventory corroborates the provider with a
-one-hour TTL and default 0.5 minimum score. Enforcement, debug tokens and browser
-traffic remain absent. Three atomic GCS claims permanently serialize the key,
+one-hour TTL and default 0.5 minimum score. Enforcement and debug tokens remain
+absent. A separate one-shot system-browser operation obtained one fresh provider
+token and then removed its temporary Hosting route. Three atomic GCS claims
+serialize the key,
 registration operation and provider-attempt boundary across independently
 copied bundles. The provider converged on the first exact saved-plan apply, so
 recovery was not used. API, key, registration and unused recovery entrypoints
@@ -304,7 +308,8 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`probe/`](probe/) | Isolated Workflows API and one fixed, unscheduled, keyless internal discovery probe | Applied and consumed; exactly two failures followed by one validated HTTP 200 discovery response |
 | [`firebase-auth/`](firebase-auth/) | Closed Firebase Authentication initialization with no end-user sign-in provider | Non-deletable resource initialized, state-adopted, reconciled, and independently validated |
 | [`auth-probe/`](auth-probe/) | Guarded audience-bound user-relay Workflow, internal verifier and sanitized evidence | Generation 3 succeeded once and retired; both fixtures and every temporary capability are absent; all nine one-shot roles are disabled |
-| [`browser-app-check/`](browser-app-check/) | Guarded reCAPTCHA Enterprise API, score key and App Check provider prerequisites | API, one globally serialized domain-restricted score key and exact non-deletable provider applied and converged; all consumed/recovery entrypoints retired; traffic and enforcement pending |
+| [`browser-app-check/`](browser-app-check/) | Guarded reCAPTCHA Enterprise API, score key and App Check provider prerequisites | API, one globally serialized domain-restricted score key and exact non-deletable provider applied and converged; all consumed/recovery entrypoints retired; enforcement remains disabled |
+| [`browser-attestation/`](browser-attestation/) | One-shot real system-browser App Check provider observation | Fresh provider token obtained through the default macOS browser; all six claims retained, temporary Hosting disabled/deleted, route verified 404, and every execution/recovery entrypoint retired |
 | [`signing-overlap/`](signing-overlap/) | Monotone second KMS version creation and 60/330-second overlap rollout contract | Version 2 enabled after one direct request; two atomic claims retained and one-shot entrypoints retired; runtime, Terraform, IAM, ingress and requests unchanged |
 | [`browser-relay/`](browser-relay/) | Closed live browser, two-relay, signing-key and rollback acceptance plan | Reviewed but not deployed; every `LIVE-*` case is pending and the package grants no cloud mutation |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
@@ -555,9 +560,11 @@ custom-provider App Check enforcement, private Home routing and rotation, and
 both audience-bound token signatures. Its Workflow, verifier, fixtures and
 temporary permissions are absent.
 
-Browser App Check live-provider attestation remains a distinct blocker because
-an Admin custom-provider token does not exercise browser attestation. Relay
-token-refresh integration, trusted-source/edge admission, the managed-service
+The standalone browser App Check live-provider prerequisite is now closed. The
+default macOS browser obtained a fresh provider token through the exact staging
+Hosting origin; its token bytes never left the page, and the temporary route was
+disabled, deleted and independently observed as HTTP 404. Relay token-refresh
+integration, trusted-source/edge admission, the managed-service
 fault matrix, monitoring and billing-alert validation, secret and signing-key
 rotation, migration rehearsal, and every broader `STAGE-*` observation remain
 open blockers.
@@ -578,11 +585,11 @@ The browser App Check API, its single
 domain-restricted score key and the exact non-deletable provider registration
 are applied, independently converged and retired as one-shot entrypoints.
 Version 2 activation is complete; removing version 1 remains a separate guarded
-gate after its complete 330-second retention. The next browser attestation step
-is a bounded real system-browser SDK/token-shape observation with enforcement
-still disabled. It uses one ephemeral `127.0.0.1` callback because Conductor's
-Browser tab is a localhost preview, and it must not reuse the consumed
-registration drivers or retired Playwright path.
+gate after its complete 330-second retention. The browser-attestation package
+used one ephemeral `127.0.0.1` callback because Conductor's Browser tab is a
+localhost preview; that operation and all recovery paths are now permanently
+retired. The full browser-relay matrix must acquire fresh credentials and cannot
+reuse the consumed token or callback.
 Separate guarded implementations must also exist for the temporary edge
 transition, relays, runner, metrics and rollback. The plan records these as open
 preconditions instead of promoting local fixtures to live evidence.

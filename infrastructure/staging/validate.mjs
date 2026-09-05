@@ -5,6 +5,7 @@ import { dirname, resolve } from 'node:path';
 
 import { BOOTSTRAP_RESOURCE_ADDRESSES } from './bootstrap/saved-plan.mjs';
 import { validateAuthProbeEvidence } from './auth-probe/evidence.mjs';
+import { validatePreflightEvidence } from './browser-attestation/preflight-evidence.mjs';
 import {
   BROWSER_RELAY_PLAN_PATH,
   BROWSER_RELAY_PLAN_SHA256,
@@ -34,7 +35,7 @@ const SERVICE_IDS = [
 
 const SERVICE_STATES = [
   'initialized_closed_custom_token_lifecycle_validated',
-  'admin_custom_provider_validated_system_browser_attestation_pending',
+  'admin_custom_provider_and_system_browser_attestation_validated_enforcement_disabled',
   'private_fixture_lifecycle_validated_no_persistent_application_data',
   'private_schema_2_two_key_version_2_current_runtime_active_user_relay_acceptance_succeeded',
   'private_bucket_created_no_application_mutation',
@@ -121,7 +122,6 @@ const IAM_BINDINGS = [
 ];
 
 const REQUIRED_BLOCKERS = [
-  'app-check-browser-provider-attestation',
   'relay-token-refresh-integration',
   'trusted-source-and-edge-admission',
   'live-managed-service-fault-matrix',
@@ -2827,6 +2827,7 @@ function validateEvidence(value) {
     'user_relay_probe',
     'browser_relay_plan',
     'browser_app_check_prerequisite',
+    'browser_app_check_attestation',
     'signing_key_overlap_prerequisite',
     'retired_recovery_workflow',
     'staging_rows',
@@ -3931,6 +3932,122 @@ function validateEvidence(value) {
     browserAppCheckProvider.token_ttl,
     'evidence.browser_app_check_prerequisite.terraform_state.app_check_token_ttl',
   );
+  const browserAttestation = record(
+    evidence.browser_app_check_attestation,
+    'evidence.browser_app_check_attestation',
+    [
+      'state',
+      'observed_at',
+      'repository_commit',
+      'result_path',
+      'result_sha256',
+      'firebase_sdk_version',
+      'firebase_app_id',
+      'hosting_origin',
+      'operation_claim',
+      'browser_session',
+      'browser_invocations',
+      'loopback_observations',
+      'force_refresh_requested',
+      'provider_token_obtained',
+      'jwt_shape_validated',
+      'configured_token_ttl',
+      'local_post_validation',
+      'hosting_version_status',
+      'hosting_releases_created',
+      'hosting_site_disabled',
+      'runner_http_status_after_cleanup',
+      'public_window_milliseconds',
+      'app_check_enforcement_records',
+      'debug_tokens',
+      'firebase_auth_used',
+      'control_plane_invoked',
+      'app_check_token_committed',
+      'raw_browser_error_committed',
+      'entrypoints_retired',
+    ],
+  );
+  const expectedBrowserAttestation = {
+    state: 'real_system_browser_provider_token_obtained_and_retired',
+    observed_at: '2026-09-05T18:01:23.632Z',
+    repository_commit: 'e5ec8d97b051ee6c942ad2574cca24b679509876',
+    result_path: 'browser-attestation/preflight-v6-result.json',
+    result_sha256: 'cd4a750c3f2be1985b84dacfb8f76ea117dc1651a91d197c915c0c1dc43bfed2',
+    firebase_sdk_version: '12.18.0',
+    firebase_app_id: '1:1072737219170:web:5053ca93bf25d7373cd73b',
+    hosting_origin: 'https://miakapp-v4-staging.web.app',
+    browser_session: 'macos-default-system-browser',
+    browser_invocations: 1,
+    loopback_observations: 1,
+    force_refresh_requested: true,
+    provider_token_obtained: true,
+    jwt_shape_validated: true,
+    configured_token_ttl: '3600s',
+    hosting_version_status: 'DELETED',
+    hosting_releases_created: 2,
+    hosting_site_disabled: true,
+    runner_http_status_after_cleanup: 404,
+    public_window_milliseconds: 8749,
+    app_check_enforcement_records: 0,
+    debug_tokens: 0,
+    firebase_auth_used: false,
+    control_plane_invoked: false,
+    app_check_token_committed: false,
+    raw_browser_error_committed: false,
+    entrypoints_retired: true,
+  };
+  for (const [field, expected] of Object.entries(expectedBrowserAttestation)) {
+    exact(
+      browserAttestation[field],
+      expected,
+      `evidence.browser_app_check_attestation.${field}`,
+    );
+  }
+  const browserAttestationClaim = record(
+    browserAttestation.operation_claim,
+    'evidence.browser_app_check_attestation.operation_claim',
+    [
+      'object',
+      'generation',
+      'size_bytes',
+      'sha256',
+      'retry_authorized',
+      'deletion_authorized',
+    ],
+  );
+  const expectedBrowserAttestationClaim = {
+    object: 'terraform/browser-attestation/operations/live-browser-attestation-v6.json',
+    generation: '1788631267013181',
+    size_bytes: 686,
+    sha256: '9e9716a1aa9247c196125ab355c2c413a733dbc3d54a7d4fe203dbf12dffeb7b',
+    retry_authorized: false,
+    deletion_authorized: false,
+  };
+  for (const [field, expected] of Object.entries(expectedBrowserAttestationClaim)) {
+    exact(
+      browserAttestationClaim[field],
+      expected,
+      `evidence.browser_app_check_attestation.operation_claim.${field}`,
+    );
+  }
+  const browserAttestationPostValidation = record(
+    browserAttestation.local_post_validation,
+    'evidence.browser_app_check_attestation.local_post_validation',
+    ['state', 'stage', 'code', 'cause'],
+  );
+  const expectedBrowserAttestationPostValidation = {
+    state: 'rejected_after_provider_success',
+    stage: 'token-ttl-validation',
+    code: 'token-ttl-rejected',
+    cause: 'public_get_token_result_contains_token_only',
+  };
+  for (const [field, expected] of Object.entries(expectedBrowserAttestationPostValidation)) {
+    exact(
+      browserAttestationPostValidation[field],
+      expected,
+      `evidence.browser_app_check_attestation.local_post_validation.${field}`,
+    );
+  }
   const signingOverlap = record(
     evidence.signing_key_overlap_prerequisite,
     'evidence.signing_key_overlap_prerequisite',
@@ -4082,10 +4199,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 54, 'manifest.revision');
+  exact(manifest.revision, 55, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_2_current_runtime_deployed_signing_overlap_active_user_relay_acceptance_succeeded_system_browser_v6_plan_reviewed_app_check_provider_registered',
+    'private_control_plane_two_key_version_2_current_runtime_deployed_signing_overlap_active_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_enforcement_disabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -4511,6 +4628,88 @@ export function validateCommittedEvidence(
     browserAppCheck.app_check_provider,
     'evidence.browser_app_check_prerequisite.app_check_provider',
   );
+  const browserAttestationManifest = manifest.evidence.browser_app_check_attestation;
+  const browserAttestationPath = committedEvidencePath(
+    stagingRoot,
+    browserAttestationManifest.result_path,
+    'browser-attestation/preflight-v6-result.json',
+    'evidence.browser_app_check_attestation.result_path',
+  );
+  const browserAttestation = validatedEvidenceFile(
+    browserAttestationPath,
+    validatePreflightEvidence,
+    'evidence.browser_app_check_attestation.result_path',
+  );
+  exact(
+    fileSha256(browserAttestationPath),
+    browserAttestationManifest.result_sha256,
+    'evidence.browser_app_check_attestation.result_sha256',
+  );
+  exact(
+    browserAttestation.state,
+    'provider_token_obtained_after_verified_publication',
+    'evidence.browser_app_check_attestation.state',
+  );
+  exactFields(browserAttestationManifest, {
+    observed_at: browserAttestation.completed_at,
+    repository_commit: browserAttestation.repository_commit,
+    firebase_sdk_version: browserAttestation.firebase_sdk_version,
+    firebase_app_id: browserAttestation.app_check.firebase_app_id,
+    browser_session: browserAttestation.browser.session,
+    browser_invocations: browserAttestation.browser.invocations,
+    loopback_observations: browserAttestation.browser.loopback_observations,
+    force_refresh_requested: browserAttestation.app_check.force_refresh_requested,
+    provider_token_obtained: browserAttestation.app_check.provider_token_obtained,
+    jwt_shape_validated: browserAttestation.browser.jwt_three_segments_validated,
+    configured_token_ttl: browserAttestation.app_check.configured_token_ttl,
+    hosting_version_status: browserAttestation.hosting.version_status,
+    hosting_releases_created: browserAttestation.hosting.releases_created,
+    hosting_site_disabled: browserAttestation.hosting.site_disabled,
+    runner_http_status_after_cleanup:
+      browserAttestation.hosting.runner_http_status_after_cleanup,
+    public_window_milliseconds: browserAttestation.hosting.public_window_milliseconds,
+    app_check_enforcement_records: browserAttestation.app_check.enforcement_records,
+    debug_tokens: browserAttestation.app_check.debug_tokens,
+    firebase_auth_used: browserAttestation.firebase_auth_used,
+    control_plane_invoked: browserAttestation.control_plane_invoked,
+    app_check_token_committed: browserAttestation.credential_material_committed,
+    raw_browser_error_committed: browserAttestation.browser.raw_browser_error_retained,
+    entrypoints_retired: browserAttestation.entrypoints_retired,
+  }, 'evidence.browser_app_check_attestation');
+  exactFields(browserAttestationManifest.operation_claim, {
+    object: browserAttestation.operation_claim.object,
+    generation: browserAttestation.operation_claim.generation,
+    size_bytes: browserAttestation.operation_claim.size_bytes,
+    sha256: browserAttestation.operation_claim.sha256,
+    retry_authorized: browserAttestation.operation_claim.retry_authorized,
+    deletion_authorized: browserAttestation.operation_claim.deletion_authorized,
+  }, 'evidence.browser_app_check_attestation.operation_claim');
+  exactFields(browserAttestationManifest.local_post_validation, {
+    state: 'rejected_after_provider_success',
+    stage: browserAttestation.browser.local_failure_stage,
+    code: browserAttestation.browser.local_failure_code,
+    cause: browserAttestation.browser.local_failure_cause,
+  }, 'evidence.browser_app_check_attestation.local_post_validation');
+  exact(
+    browserAttestation.app_check.real_browser_attestation,
+    true,
+    'evidence.browser_app_check_attestation.provider_token_obtained',
+  );
+  exact(
+    browserAttestation.browser.app_check_token_retained,
+    false,
+    'evidence.browser_app_check_attestation.app_check_token_committed',
+  );
+  exact(
+    browserAttestationManifest.firebase_app_id,
+    browserAppCheckManifest.app_check_provider.firebase_app_id,
+    'evidence.browser_app_check_attestation.firebase_app_id',
+  );
+  exact(
+    browserAttestationManifest.configured_token_ttl,
+    browserAppCheckManifest.app_check_provider.token_ttl,
+    'evidence.browser_app_check_attestation.configured_token_ttl',
+  );
   const signingOverlapManifest = manifest.evidence.signing_key_overlap_prerequisite;
   const signingOverlapPath = committedEvidencePath(
     stagingRoot,
@@ -4579,6 +4778,7 @@ export function validateCommittedEvidence(
     userRelayProbeRetirement: authProbeRetirement,
     browserRelayPlan,
     browserAppCheck,
+    browserAttestation,
     signingOverlap,
   });
 }
@@ -4602,7 +4802,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; signing-key versions 1 and 2 are published with version 2 current, and the browser App Check provider remains registered with enforcement disabled.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; signing-key version 2 is current, and a real system-browser App Check provider token was obtained with enforcement still disabled.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';

@@ -645,7 +645,7 @@ current consumer.
    on current revision `control-plane-00008-saz` while version 1 remains
    published, with unchanged source, IAM, internal-only ingress and scale and
    without a live request. Retiring-key removal and secret
-   rotation, browser App Check provider attestation, source/edge admission,
+   rotation, source/edge admission,
    monitoring, migration rehearsal and real staging fault evidence remain
    required before closing relay-integration and staging-only RFC 0004 Section
    18 gates.
@@ -680,7 +680,7 @@ current consumer.
     on its first exact saved-plan apply. Its two additional atomic global claims
     and direct-cloud sandwiches bound the operation and provider-PATCH boundary;
     the exact provider now has a one-hour TTL and default 0.5 minimum score while
-    enforcement, debug tokens, browser traffic and assessments remain absent.
+    enforcement and debug tokens remain absent.
     No recovery ran. Registration and unused recovery entrypoints are retired,
     and sanitized state/claim evidence is committed. A second software Ed25519
     signing version then converged after the first and only guarded direct REST
@@ -690,11 +690,18 @@ current consumer.
     private ingress and scale 0..1. Version 2 is now selected on current revision
     `control-plane-00008-saz` while version 1 remains published, with the same
     source, ingress and scale. Next retire version 1 through a separate guarded
-    operation after the complete lease bound, then
-    exercise bounded real browser SDK attestation with enforcement disabled and implement the
-    temporary edge, two relays,
+    operation after the complete lease bound, then implement the temporary
+    edge, two relays,
     three-engine runner and rollback guards. Execute the matrix once before
     wiring the real client and opaque broker into the production web shell.
+15. **Done 2026-09-05** — obtain one fresh reCAPTCHA Enterprise-backed App
+    Check token through the exact staging Hosting origin in the default macOS
+    browser. The challenge-bound loopback result proved the provider call
+    resolved with a bounded three-segment JWT; no token or claims left the page.
+    Temporary Hosting was disabled and deleted after an 8,749 ms public window,
+    the runner was independently observed as HTTP 404, and every one-shot
+    execution and recovery entrypoint is retired. The complete authenticated
+    browser-relay matrix remains separate and must mint fresh credentials.
 
 ## 9. Evidence that would change this plan
 

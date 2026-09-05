@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import {
   CLAIM_OBJECT,
@@ -1386,4 +1388,56 @@ test('pins the exact sanitized result of the retired system-browser operation', 
   const tampered = structuredClone(evidence);
   tampered.browser.failure_classification = 'raw-error';
   assert.throws(() => validatePreflightEvidenceValue(tampered));
+});
+
+test('pins the real provider token observation and verified v6 Hosting retirement', () => {
+  const path = new URL('../browser-attestation/preflight-v6-result.json', import.meta.url);
+  const evidence = validatePreflightEvidence(path);
+  assert.equal(evidence.state, 'provider_token_obtained_after_verified_publication');
+  assert.equal(evidence.execution_result, 'local_post_validation_rejected_after_provider_success');
+  assert.equal(evidence.operation_claim.object, CLAIM_OBJECT);
+  assert.equal(evidence.operation_claim.generation, '1788631267013181');
+  assert.equal(
+    evidence.operation_claim.sha256,
+    '9e9716a1aa9247c196125ab355c2c413a733dbc3d54a7d4fe203dbf12dffeb7b',
+  );
+  assert.equal(evidence.hosting.version_status, 'DELETED');
+  assert.equal(evidence.hosting.releases_created, 2);
+  assert.equal(evidence.hosting.site_disabled, true);
+  assert.equal(evidence.hosting.runner_http_status_after_cleanup, 404);
+  assert.equal(evidence.hosting.public_window_milliseconds, 8749);
+  assert.equal(evidence.browser.provider_token_request_resolved, true);
+  assert.equal(evidence.browser.token_string_bounds_validated, true);
+  assert.equal(evidence.browser.jwt_three_segments_validated, true);
+  assert.equal(evidence.browser.local_failure_stage, 'token-ttl-validation');
+  assert.equal(evidence.browser.local_failure_code, 'token-ttl-rejected');
+  assert.equal(
+    evidence.browser.local_failure_cause,
+    'public_get_token_result_contains_token_only',
+  );
+  assert.equal(evidence.browser.app_check_token_retained, false);
+  assert.equal(evidence.app_check.force_refresh_requested, true);
+  assert.equal(evidence.app_check.provider_token_obtained, true);
+  assert.equal(evidence.app_check.real_browser_attestation, true);
+  assert.deepEqual(evidence.firebase_public_token_result_fields, ['token']);
+  assert.equal(evidence.entrypoints_retired, true);
+  assert.equal(evidence.retry_authorized, false);
+  const tampered = structuredClone(evidence);
+  tampered.app_check.provider_token_obtained = false;
+  assert.throws(() => validatePreflightEvidenceValue(tampered));
+});
+
+test('retires every consumed browser-attestation entrypoint before cloud access', () => {
+  const root = fileURLToPath(new URL('../../..', import.meta.url));
+  for (const entrypoint of ['apply.mjs', 'plan.mjs', 'recovery-apply.mjs', 'recovery-plan.mjs']) {
+    const result = spawnSync(
+      process.execPath,
+      [`infrastructure/staging/browser-attestation/${entrypoint}`],
+      { cwd: root, encoding: 'utf8', env: {} },
+    );
+    assert.equal(result.status, 1, entrypoint);
+    assert.equal(result.stdout, '', entrypoint);
+    assert.match(result.stderr, /permanently retired/u, entrypoint);
+    assert.doesNotMatch(result.stderr, /Usage:|stack|gcloud|Firebase Hosting/u, entrypoint);
+  }
 });

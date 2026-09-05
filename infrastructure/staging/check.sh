@@ -133,7 +133,8 @@ node infrastructure/staging/browser-attestation/preflight-evidence.mjs \
   infrastructure/staging/browser-attestation/preflight-v2-result.json \
   infrastructure/staging/browser-attestation/preflight-v3-result.json \
   infrastructure/staging/browser-attestation/preflight-v4-result.json \
-  infrastructure/staging/browser-attestation/preflight-v5-result.json
+  infrastructure/staging/browser-attestation/preflight-v5-result.json \
+  infrastructure/staging/browser-attestation/preflight-v6-result.json
 node infrastructure/staging/signing-overlap/guard.mjs \
   "${repository_root}/infrastructure/staging/signing-overlap"
 node --check infrastructure/staging/signing-overlap/claim.mjs
