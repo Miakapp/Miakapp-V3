@@ -3,7 +3,7 @@
 Date: 2026-09-04
 
 Status: local audience-bound control-plane, SDK and relay evidence complete;
-source deployed to private staging; bounded acceptance pending
+private staging exchange accepted and probe retired
 
 ## Purpose and safety boundary
 
@@ -150,25 +150,22 @@ Independent inventory made no Function request and retained internal-only
 ingress, scale 0..1, zero public invokers and zero user-managed keys. This is
 deployment evidence, not acceptance evidence for the exchange route.
 
-The bounded acceptance implementation, with zero delta to the control-plane
-workload, IAM and topology, now lives under
+The bounded acceptance implementation, with zero persistent delta to the
+control-plane workload, IAM and topology, lives under
 [`../../infrastructure/staging/auth-probe/`](../../infrastructure/staging/auth-probe/).
-It uses an unscheduled Workflow for internal transport and a separate
+It used an unscheduled Workflow for internal transport and a separate
 internal-only scale-to-zero verifier to validate both Ed25519 credentials
-without publishing token material. Four temporary least-privilege IAM bindings
-have a hard expiry, and the fixed private Home plus no-email Firebase user are
-deleted and independently checked. Two attempted generations were applied and
-retired without invocation after compile failures; the corrected source then
-passed a zero-execution compile-only deployment. Generation 3 is prepared but
-has not yet been armed or invoked; its exact saved plan and retirement remain
-mandatory. It intentionally retains the enabled Cloud Asset API, nine disabled
-custom roles across three one-shot generations and one keyless no-role verifier
-identity after a successful generation-3 retirement.
-The verifier has one exact service-level binding for the probe identity, but is
-not described as Workflow-only: staging project inheritance also authorizes the
-Owner, two default Editor service accounts, and the Cloud Functions and Cloud
-Run service agents. Inventory must attest that closed five-principal inherited
-set and reject any additional service-level binding.
+without publishing token material. Two attempted generations retired without
+invocation after compile failures. Generation 3 then ran exactly once, passed
+three negative controls and two signed exchanges across a relay rotation, and
+retired successfully. The fixed private Home and no-email Firebase user are
+deleted and independently absent. The Workflow, verifier and four temporary
+least-privilege IAM bindings are absent. The root intentionally retains the
+enabled Cloud Asset API, nine disabled and unassigned custom roles across three
+one-shot generations, and one keyless no-role verifier identity. During the
+run, project inheritance meant the verifier was not Workflow-only; inventory
+pinned the acknowledged five-principal inherited set and rejected additional
+service-level bindings.
 
 Recovery is split when its inventory precondition is unavailable: Cloud Asset is
 enabled and imported by an API-only authorization, then the operator must render
@@ -197,10 +194,11 @@ identity boundary.
 
 ## Staging acceptance
 
-Keep the control plane private while testing the HTTP exchange through a bounded,
-unscheduled internal probe. Use one synthetic Firebase user, one real staging
-App Check token and one synthetic Home. Delete the user and retire temporary
-probe capability after the run. The zero-delta control-plane phase covers:
+The control-plane phase completed through one bounded, unscheduled internal
+probe while ingress remained private. It used one synthetic Firebase user, one
+genuine staging Admin custom-provider App Check token and one synthetic Home,
+then deleted both fixtures and retired all temporary probe capability. The
+successful result covers:
 
 1. no App Check token: `401 invalid_app_check_token`, no Home read or signing;
 2. invalid Firebase token: `401 invalid_firebase_token`, no Home read or signing;

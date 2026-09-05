@@ -1,6 +1,6 @@
 # Private staging control-plane workload
 
-Status: audience-bound source applied, converged and source-verified; bounded acceptance probe pending
+Status: audience-bound source applied, converged, source-verified and accepted by one retired bounded probe
 
 This is the third, workload-only Terraform state for `miakapp-v4-staging`. It
 reads but never owns the reconciled bootstrap and foundation states. Its GCS
@@ -166,9 +166,12 @@ data resources, one output, nothing tainted, and SHA-256
 The current canonical non-secret [`result.json`](result.json) has SHA-256
 `cfdb18b9dd6604cd92977cbd447dd0684f4b731ca84d2f7aa3f772cbd3bc3056`.
 The updater's next before-state is pinned to the deployed commit/source tuple.
-The separate bounded user-relay acceptance probe remains pending; the older
-discovery and Auth/App Check artifacts below remain evidence for revision
-`control-plane-00003-hum`, not claims about the new revision.
+That deployment artifact correctly records no request during source inventory.
+The separate bounded user-relay probe later made five requests to this exact
+revision, validated three negative controls and two signed relay exchanges, and
+retired. Its current digest-pinned evidence lives under
+[`../auth-probe/`](../auth-probe/). The older discovery artifact below remains
+evidence for revision `control-plane-00003-hum`, not a claim about this revision.
 
 ## Successful private discovery
 

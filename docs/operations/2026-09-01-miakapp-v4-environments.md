@@ -349,7 +349,12 @@ independent inventory verified the copied bytes, internal-only ingress, scale
 0..1, zero public invokers and zero user-managed keys without making a request.
 The current sanitized deployment result is digest-pinned under
 [`../../infrastructure/staging/workload/`](../../infrastructure/staging/workload/);
-the bounded user-relay acceptance probe remains pending.
+the separate bounded user-relay probe subsequently executed once against that
+exact revision. It proved invalid-Firebase, missing-App-Check and missing-Home
+failures, verified two signed credentials across an authoritative relay
+rotation, removed both synthetic fixtures, and retired its Workflow, verifier
+and temporary bindings. Its sanitized evidence is digest-pinned under
+[`../../infrastructure/staging/auth-probe/`](../../infrastructure/staging/auth-probe/).
 
 The pinned local relay-authentication path now includes signing-key overlap,
 key-changing `REAUTH`, concurrent cache refresh, expiry, unknown-`kid` abuse,
