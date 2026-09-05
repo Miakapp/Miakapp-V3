@@ -6,6 +6,7 @@ import {
   ProductionConfigurationError,
   parseProductionSecurityConfig,
 } from '../../src/production-config.js';
+import { STAGING_BROWSER_RELAY_EDGE_PROFILE } from '../../src/staging-browser-relay-edge-profile.js';
 
 const publicJwk = (() => {
   const exported = generateKeyPairSync('ed25519').publicKey.export({ format: 'jwk' });
@@ -181,7 +182,12 @@ describe('production security configuration', () => {
     }
   });
 
-  test('binds each environment to one exact access-token issuer', () => {
+  test('binds each environment to its reviewed access-token issuers', () => {
+    const edge = candidate();
+    edge.issuer = STAGING_BROWSER_RELAY_EDGE_PROFILE.issuer;
+    expect(parseProductionSecurityConfig(edge).issuer)
+      .toBe(STAGING_BROWSER_RELAY_EDGE_PROFILE.issuer);
+
     expectInvalid((value) => { value.issuer = 'https://control.miakapp.com'; });
 
     const production = candidate();
@@ -260,6 +266,7 @@ describe('production security configuration', () => {
       'http://control.staging.miakapp.com',
       'https://control.staging.miakapp.com/',
       'https://control.example.test',
+      'https://other-control-plane-od.a.run.app',
       'https://user@control.staging.miakapp.com',
       'https://control.staging.miakapp.com?key=value',
     ]) {

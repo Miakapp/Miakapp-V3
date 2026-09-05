@@ -6,6 +6,7 @@ import {
   type ProductionEnvironment,
   type ProductionSecurityConfig,
 } from './production-config.js';
+import { STAGING_BROWSER_RELAY_EDGE_PROFILE } from './staging-browser-relay-edge-profile.js';
 import type { DeploymentConfig } from './types.js';
 
 const MAXIMUM_ORIGINS = 8;
@@ -56,6 +57,7 @@ export interface ProductionRuntimeConfig {
   readonly appCheckAppId: string;
   readonly componentBucket: string;
   readonly serviceAccountEmail: string;
+  readonly networkProfile: 'canonical' | typeof STAGING_BROWSER_RELAY_EDGE_PROFILE.id;
 }
 
 function fail(): never {
@@ -85,6 +87,7 @@ function origin(value: unknown, environment: ProductionEnvironment): string {
   const exactOrigin = parsed.origin;
   const stagingHost = parsed.hostname === 'staging.miakapp.com'
     || parsed.hostname.endsWith('.staging.miakapp.com');
+  const stagingBrowserRelayOrigin = value === STAGING_BROWSER_RELAY_EDGE_PROFILE.allowedOrigin;
   const productionHost = parsed.hostname === 'miakapp.com'
     || parsed.hostname.endsWith('.miakapp.com');
   if (parsed.protocol !== 'https:'
@@ -92,10 +95,30 @@ function origin(value: unknown, environment: ProductionEnvironment): string {
     || parsed.username.length !== 0
     || parsed.password.length !== 0
     || parsed.port.length !== 0
-    || (environment === 'staging' ? !stagingHost : !productionHost || stagingHost)) {
+    || (environment === 'staging'
+      ? !stagingHost && !stagingBrowserRelayOrigin
+      : !productionHost || stagingHost)) {
     fail();
   }
   return exactOrigin;
+}
+
+function networkProfile(
+  security: ProductionSecurityConfig,
+  allowedOrigins: readonly string[],
+): ProductionRuntimeConfig['networkProfile'] {
+  const usesBrowserRelayIssuer = security.issuer === STAGING_BROWSER_RELAY_EDGE_PROFILE.issuer;
+  const usesBrowserRelayOrigin = allowedOrigins.includes(
+    STAGING_BROWSER_RELAY_EDGE_PROFILE.allowedOrigin,
+  );
+  if (usesBrowserRelayIssuer !== usesBrowserRelayOrigin
+    || (usesBrowserRelayOrigin
+      && (security.environment !== 'staging'
+        || allowedOrigins.length !== 1
+        || allowedOrigins[0] !== STAGING_BROWSER_RELAY_EDGE_PROFILE.allowedOrigin))) {
+    fail();
+  }
+  return usesBrowserRelayIssuer ? STAGING_BROWSER_RELAY_EDGE_PROFILE.id : 'canonical';
 }
 
 function origins(value: unknown, environment: ProductionEnvironment): readonly string[] {
@@ -134,14 +157,16 @@ export function parseProductionRuntimeConfig(input: unknown): ProductionRuntimeC
   const componentBucket = candidate.component_bucket;
   if (typeof componentBucket !== 'string'
     || componentBucket !== COMPONENT_BUCKETS[security.environment]) fail();
+  const allowedOrigins = origins(candidate.allowed_origins, security.environment);
   return Object.freeze({
     schema: candidate.schema,
     environment: security.environment,
     security,
-    allowedOrigins: origins(candidate.allowed_origins, security.environment),
+    allowedOrigins,
     appCheckAppId: appId(candidate.app_check_app_id),
     componentBucket,
     serviceAccountEmail: SERVICE_ACCOUNTS[security.environment],
+    networkProfile: networkProfile(security, allowedOrigins),
   });
 }
 
