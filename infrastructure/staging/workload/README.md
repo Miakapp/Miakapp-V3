@@ -215,7 +215,11 @@ yet claim key overlap.
 The dedicated wrappers refuse every delta except an in-place Function update
 and an in-place deployment-guard update. The source object, copied source,
 build configuration, IAM, ingress, identities and scale must remain unchanged.
-The source updater fails closed while this migration is pending.
+The source object lifecycle ignores the local archive path and its provider-
+derived `detect_md5hash` sentinel during this metadata-preserving migration;
+the plan still pins the deterministic package digest and rejects any source
+identity or metadata change. The source updater fails closed while this
+migration is pending.
 
 After merging the reviewed implementation, render a fresh private plan only
 from exact `origin/main`:

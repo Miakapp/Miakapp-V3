@@ -1004,7 +1004,10 @@ test('keeps the pinned source updater on a saved Terraform plan without live req
     /runtime_config_sha256\s+= "20be750358ffbc2136bab26bca6338b430ea6480ae9874f3fe5e7132c5e0db10"/,
   );
   assert.match(workloadSource, /repository-commit = local\.source_repository_commit/);
-  assert.match(workloadSource, /ignore_changes = \[source\]/);
+  assert.match(
+    workloadSource,
+    /ignore_changes = \[\s*detect_md5hash,\s*source,\s*\]/,
+  );
   assert.doesNotMatch(
     `${planSource}\n${applySource}\n${runtimePlanSource}\n${runtimeApplySource}`,
     /\b(?:curl|destroy)\b|functions deploy|run deploy|executions run/u,

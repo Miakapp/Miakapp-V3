@@ -74,7 +74,10 @@ resource "google_storage_bucket_object" "source" {
   }
 
   lifecycle {
-    ignore_changes = [source]
+    ignore_changes = [
+      detect_md5hash,
+      source,
+    ]
   }
 }
 
