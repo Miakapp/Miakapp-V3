@@ -89,6 +89,7 @@ const ATTEMPT_MARKER = 'registration-mutation-attempted.json';
 const ATTEMPT_CLAIM_RECEIPT = 'global-registration-attempt-claim.json';
 const PROVIDER_ATTEMPT_CLAIM_RECEIPT = 'global-provider-attempt-claim.json';
 const FALLBACK_STATE = 'errored.tfstate';
+export const APP_CHECK_REGISTRATION_CONSUMED = true;
 process.umask(0o077);
 
 function reject(message) {
@@ -588,8 +589,15 @@ async function main() {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  main().catch((error) => {
-    console.error(error instanceof Error ? error.message : 'Browser App Check registration failed');
+  if (APP_CHECK_REGISTRATION_CONSUMED) {
+    console.error(
+      'The browser App Check provider registration has already converged; this apply path is permanently retired.',
+    );
     process.exitCode = 1;
-  });
+  } else {
+    main().catch((error) => {
+      console.error(error instanceof Error ? error.message : 'Browser App Check registration failed');
+      process.exitCode = 1;
+    });
+  }
 }

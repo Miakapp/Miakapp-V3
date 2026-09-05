@@ -682,7 +682,7 @@ function validateTerraform(value) {
   ]);
   exact(
     terraform.state,
-    'all_seven_roots_converged_browser_app_check_score_key_created',
+    'all_seven_roots_converged_browser_app_check_provider_registered',
     'terraform.state',
   );
   exact(
@@ -3448,8 +3448,12 @@ function validateEvidence(value) {
       'result_sha256',
       'terraform_plan_sha256',
       'baseline_sha256',
+      'terraform_apply_reported_success',
+      'state_recovery',
       'final_inventory_sha256',
-      'global_attempt_claim',
+      'global_key_attempt_claim',
+      'global_registration_attempt_claim',
+      'global_provider_attempt_claim',
       'terraform_state',
       'recaptcha_api_enabled',
       'direct_key_inventory',
@@ -3458,10 +3462,11 @@ function validateEvidence(value) {
       'cloud_asset_recaptcha_keys',
       'recaptcha_keys_created',
       'recaptcha_key',
-      'app_check_registered',
+      'app_check_provider',
       'app_check_enforcement_records',
       'debug_tokens',
       'public_site_key_committed',
+      'raw_provider_config_committed',
       'legacy_secret_retrievals_by_driver',
       'public_endpoints_created',
       'fixed_cost_services',
@@ -3470,39 +3475,43 @@ function validateEvidence(value) {
       'assessments_initiated_by_driver',
       'apply_executed',
       'entrypoints_retired',
+      'recovery_entrypoints_retired',
       'private_bundle_committed',
       'raw_plan_committed',
       'raw_state_committed',
     ],
   );
   const expectedBrowserAppCheck = {
-    state: 'domain_restricted_score_key_created_app_check_unregistered',
-    observed_at: '2026-09-05T08:25:17.683Z',
+    state: 'nondeletable_app_check_provider_registered_enforcement_disabled',
+    observed_at: '2026-09-05T10:21:22.000Z',
     terraform_root: 'browser-app-check',
-    repository_commit: 'ec541acce307d32f2816097065f7bff1e3f0f7d0',
+    repository_commit: '67c6947231c2b4a515e74a3b7a27ea972f1dcd15',
     result_path: 'browser-app-check/result.json',
-    result_sha256: '7322ca772fcf92ead230b37753f076df38026b7fb65423ab2f2974c019acbdb2',
-    terraform_plan_sha256: 'dd45c80ed38dbe5e681713442ddaa02e1dc78d2a3ce6f9365b7bbc04f96e248b',
-    baseline_sha256: '2c48ce0b837881e148a0aa9b9dd42eea66905bf96c41655424ee326fade5d75e',
-    final_inventory_sha256: '15dc000a5a9729c3e9f88a7aba8f5c6807c7207dd08dda3339db567c6bd2dd90',
+    result_sha256: '9310b4aea71c11c33efcb5b92059e8424aec0999ea3f2759aeb3d9bec32e6436',
+    terraform_plan_sha256: '9af7eaf470ce1a65f3737823135604a31ea6cbbd2575bd1afcc17d00033dfee7',
+    baseline_sha256: '4545f379199b8b41d6dbabd24fb073f63ae6863cbbf88cdc4c65bd6658e445ef',
+    terraform_apply_reported_success: true,
+    state_recovery: null,
+    final_inventory_sha256: '9ca5fd3ba22c4238024a8db82613053f86b2f53c47b3197844b0c4300fdd5ad3',
     recaptcha_api_enabled: true,
     direct_key_inventory: 'readable',
     authoritative_recaptcha_keys: 1,
     cloud_asset_inventory: 'readable_eventually_consistent',
     cloud_asset_recaptcha_keys: 1,
     recaptcha_keys_created: 1,
-    app_check_registered: false,
     app_check_enforcement_records: 0,
     debug_tokens: 0,
     public_site_key_committed: false,
+    raw_provider_config_committed: false,
     legacy_secret_retrievals_by_driver: 0,
     public_endpoints_created: 0,
     fixed_cost_services: 0,
-    coordination_objects_created: 1,
+    coordination_objects_created: 3,
     browser_requests_initiated_by_driver: 0,
     assessments_initiated_by_driver: 0,
     apply_executed: true,
     entrypoints_retired: true,
+    recovery_entrypoints_retired: true,
     private_bundle_committed: false,
     raw_plan_committed: false,
     raw_state_committed: false,
@@ -3531,23 +3540,31 @@ function validateEvidence(value) {
       'outputs',
       'tainted_resources',
       'recaptcha_key_name_sha256',
+      'app_check_config_name',
+      'app_check_config_id',
+      'app_check_site_key_sha256',
+      'app_check_token_ttl',
       'raw_contents_committed',
     ],
   );
   const expectedBrowserAppCheckState = {
-    schema: 'miakapp.staging-browser-app-check-state/1',
+    schema: 'miakapp.staging-browser-app-check-registration-state/1',
     object: 'terraform/browser-app-check/default.tfstate',
-    generation: '1788596623837355',
-    sha256: '954c7c6ea4187ee59764cca2d4fb0cf359cc8a580dc1f12d96cad46ae2741f9f',
-    size_bytes: 14139,
+    generation: '1788603682439071',
+    sha256: 'e05629171f5efd2bfe68657a5fd1567de0b5e0769948ef751ff0a3aba26f41dc',
+    size_bytes: 15925,
     terraform_version: '1.11.3',
-    serial: 4,
+    serial: 5,
     lineage_sha256: 'f6640c6c40b21a544f3ddc3ee8005f8a1d9d2eaa19dd79ba5fca5709394d9601',
-    managed_resources: 3,
+    managed_resources: 4,
     data_resources: 2,
     outputs: 1,
     tainted_resources: 0,
     recaptcha_key_name_sha256: '997f375ee6db0535dd3934dcc6ffb941f10efd5516e29b27c4caa6b8157851fb',
+    app_check_config_name: 'projects/1072737219170/apps/1:1072737219170:web:5053ca93bf25d7373cd73b/recaptchaEnterpriseConfig',
+    app_check_config_id: 'projects/miakapp-v4-staging/apps/1:1072737219170:web:5053ca93bf25d7373cd73b/recaptchaEnterpriseConfig',
+    app_check_site_key_sha256: '8a76f0f2cc0e0b002ed66c7f7d01ac28a6d44cb74ad2d33c3a7b0f0203e58546',
+    app_check_token_ttl: '3600s',
     raw_contents_committed: false,
   };
   for (const [field, expected] of Object.entries(expectedBrowserAppCheckState)) {
@@ -3557,9 +3574,9 @@ function validateEvidence(value) {
       `evidence.browser_app_check_prerequisite.terraform_state.${field}`,
     );
   }
-  const browserAppCheckClaim = record(
-    browserAppCheck.global_attempt_claim,
-    'evidence.browser_app_check_prerequisite.global_attempt_claim',
+  const browserAppCheckKeyClaim = record(
+    browserAppCheck.global_key_attempt_claim,
+    'evidence.browser_app_check_prerequisite.global_key_attempt_claim',
     [
       'schema',
       'bucket',
@@ -3575,7 +3592,7 @@ function validateEvidence(value) {
       'raw_contents_committed',
     ],
   );
-  const expectedBrowserAppCheckClaim = {
+  const expectedBrowserAppCheckKeyClaim = {
     schema: 'miakapp.staging-browser-app-check-key-attempt-claim-receipt/1',
     bucket: 'miakapp-v4-staging-tfstate-1072737219170',
     object: 'terraform/browser-app-check/operations/recaptcha-key-create-attempt.json',
@@ -3589,11 +3606,127 @@ function validateEvidence(value) {
     deletion_authorized: false,
     raw_contents_committed: false,
   };
-  for (const [field, expected] of Object.entries(expectedBrowserAppCheckClaim)) {
+  for (const [field, expected] of Object.entries(expectedBrowserAppCheckKeyClaim)) {
     exact(
-      browserAppCheckClaim[field],
+      browserAppCheckKeyClaim[field],
       expected,
-      `evidence.browser_app_check_prerequisite.global_attempt_claim.${field}`,
+      `evidence.browser_app_check_prerequisite.global_key_attempt_claim.${field}`,
+    );
+  }
+  const browserAppCheckRegistrationClaim = record(
+    browserAppCheck.global_registration_attempt_claim,
+    'evidence.browser_app_check_prerequisite.global_registration_attempt_claim',
+    [
+      'schema',
+      'bucket',
+      'object',
+      'generation',
+      'size_bytes',
+      'sha256',
+      'repository_commit',
+      'terraform_plan_sha256',
+      'baseline_sha256',
+      'operator_user_sha256',
+      'expires_at',
+      'firebase_app_id',
+      'app_check_config_name',
+      'recaptcha_key_resource_name_sha256',
+      'app_check_site_key_sha256',
+      'app_check_token_ttl',
+      'app_check_minimum_valid_score',
+      'terraform_state_generation',
+      'retry_authorized',
+      'deletion_authorized',
+      'raw_contents_committed',
+    ],
+  );
+  const expectedBrowserAppCheckRegistrationClaim = {
+    schema: 'miakapp.staging-browser-app-check-registration-attempt-claim-receipt/1',
+    bucket: 'miakapp-v4-staging-tfstate-1072737219170',
+    object: 'terraform/browser-app-check/operations/app-check-registration-attempt.json',
+    generation: '1788603676767807',
+    size_bytes: 1355,
+    sha256: 'efa002afdd53d3a33417dbcf0b16215ed14d6711a8a1d666afde664dc95e65b5',
+    repository_commit: '67c6947231c2b4a515e74a3b7a27ea972f1dcd15',
+    terraform_plan_sha256: '9af7eaf470ce1a65f3737823135604a31ea6cbbd2575bd1afcc17d00033dfee7',
+    baseline_sha256: '4545f379199b8b41d6dbabd24fb073f63ae6863cbbf88cdc4c65bd6658e445ef',
+    operator_user_sha256: 'd1c8514ac6eb5c13205cfec40dd6cc2072f33eb4279172df17273aa7c54a181c',
+    expires_at: '2026-09-05T12:20:35.739Z',
+    firebase_app_id: '1:1072737219170:web:5053ca93bf25d7373cd73b',
+    app_check_config_name: 'projects/1072737219170/apps/1:1072737219170:web:5053ca93bf25d7373cd73b/recaptchaEnterpriseConfig',
+    recaptcha_key_resource_name_sha256: '997f375ee6db0535dd3934dcc6ffb941f10efd5516e29b27c4caa6b8157851fb',
+    app_check_site_key_sha256: '8a76f0f2cc0e0b002ed66c7f7d01ac28a6d44cb74ad2d33c3a7b0f0203e58546',
+    app_check_token_ttl: '3600s',
+    app_check_minimum_valid_score: 0.5,
+    terraform_state_generation: '1788596623837355',
+    retry_authorized: false,
+    deletion_authorized: false,
+    raw_contents_committed: false,
+  };
+  for (const [field, expected] of Object.entries(expectedBrowserAppCheckRegistrationClaim)) {
+    exact(
+      browserAppCheckRegistrationClaim[field],
+      expected,
+      `evidence.browser_app_check_prerequisite.global_registration_attempt_claim.${field}`,
+    );
+  }
+  const browserAppCheckProviderClaim = record(
+    browserAppCheck.global_provider_attempt_claim,
+    'evidence.browser_app_check_prerequisite.global_provider_attempt_claim',
+    [
+      'schema',
+      'bucket',
+      'object',
+      'generation',
+      'size_bytes',
+      'sha256',
+      'repository_commit',
+      'terraform_plan_sha256',
+      'baseline_sha256',
+      'registration_claim_generation',
+      'registration_claim_sha256',
+      'operator_user_sha256',
+      'firebase_app_id',
+      'app_check_config_name',
+      'recaptcha_key_resource_name_sha256',
+      'app_check_site_key_sha256',
+      'app_check_token_ttl',
+      'app_check_minimum_valid_score',
+      'terraform_state_generation',
+      'retry_authorized',
+      'deletion_authorized',
+      'raw_contents_committed',
+    ],
+  );
+  const expectedBrowserAppCheckProviderClaim = {
+    schema: 'miakapp.staging-browser-app-check-provider-attempt-claim-receipt/1',
+    bucket: 'miakapp-v4-staging-tfstate-1072737219170',
+    object: 'terraform/browser-app-check/operations/app-check-provider-attempt.json',
+    generation: '1788603679291215',
+    size_bytes: 1452,
+    sha256: '8d20e8da6ce315ba9f5ef062547dac56bea19ad20323a983f4b7bbfe2f415d12',
+    repository_commit: '67c6947231c2b4a515e74a3b7a27ea972f1dcd15',
+    terraform_plan_sha256: '9af7eaf470ce1a65f3737823135604a31ea6cbbd2575bd1afcc17d00033dfee7',
+    baseline_sha256: '4545f379199b8b41d6dbabd24fb073f63ae6863cbbf88cdc4c65bd6658e445ef',
+    registration_claim_generation: '1788603676767807',
+    registration_claim_sha256: 'efa002afdd53d3a33417dbcf0b16215ed14d6711a8a1d666afde664dc95e65b5',
+    operator_user_sha256: 'd1c8514ac6eb5c13205cfec40dd6cc2072f33eb4279172df17273aa7c54a181c',
+    firebase_app_id: '1:1072737219170:web:5053ca93bf25d7373cd73b',
+    app_check_config_name: 'projects/1072737219170/apps/1:1072737219170:web:5053ca93bf25d7373cd73b/recaptchaEnterpriseConfig',
+    recaptcha_key_resource_name_sha256: '997f375ee6db0535dd3934dcc6ffb941f10efd5516e29b27c4caa6b8157851fb',
+    app_check_site_key_sha256: '8a76f0f2cc0e0b002ed66c7f7d01ac28a6d44cb74ad2d33c3a7b0f0203e58546',
+    app_check_token_ttl: '3600s',
+    app_check_minimum_valid_score: 0.5,
+    terraform_state_generation: '1788596623837355',
+    retry_authorized: false,
+    deletion_authorized: false,
+    raw_contents_committed: false,
+  };
+  for (const [field, expected] of Object.entries(expectedBrowserAppCheckProviderClaim)) {
+    exact(
+      browserAppCheckProviderClaim[field],
+      expected,
+      `evidence.browser_app_check_prerequisite.global_provider_attempt_claim.${field}`,
     );
   }
   const browserAppCheckKey = record(
@@ -3658,6 +3791,90 @@ function validateEvidence(value) {
     browserAppCheckState.recaptcha_key_name_sha256,
     browserAppCheckKey.name_sha256,
     'evidence.browser_app_check_prerequisite.recaptcha_key.name_sha256',
+  );
+  const browserAppCheckProvider = record(
+    browserAppCheck.app_check_provider,
+    'evidence.browser_app_check_prerequisite.app_check_provider',
+    [
+      'name',
+      'firebase_app_id',
+      'token_ttl',
+      'minimum_valid_score',
+      'site_key_sha256',
+      'registered',
+      'deletion_api_available',
+    ],
+  );
+  const expectedBrowserAppCheckProvider = {
+    name: 'projects/1072737219170/apps/1:1072737219170:web:5053ca93bf25d7373cd73b/recaptchaEnterpriseConfig',
+    firebase_app_id: '1:1072737219170:web:5053ca93bf25d7373cd73b',
+    token_ttl: '3600s',
+    minimum_valid_score: 0.5,
+    site_key_sha256: '8a76f0f2cc0e0b002ed66c7f7d01ac28a6d44cb74ad2d33c3a7b0f0203e58546',
+    registered: true,
+    deletion_api_available: false,
+  };
+  for (const [field, expected] of Object.entries(expectedBrowserAppCheckProvider)) {
+    exact(
+      browserAppCheckProvider[field],
+      expected,
+      `evidence.browser_app_check_prerequisite.app_check_provider.${field}`,
+    );
+  }
+  exact(
+    browserAppCheckProviderClaim.registration_claim_generation,
+    browserAppCheckRegistrationClaim.generation,
+    'evidence.browser_app_check_prerequisite.global_provider_attempt_claim.registration_claim_generation',
+  );
+  exact(
+    browserAppCheckProviderClaim.registration_claim_sha256,
+    browserAppCheckRegistrationClaim.sha256,
+    'evidence.browser_app_check_prerequisite.global_provider_attempt_claim.registration_claim_sha256',
+  );
+  for (const [claim, path] of [
+    [browserAppCheckRegistrationClaim, 'global_registration_attempt_claim'],
+    [browserAppCheckProviderClaim, 'global_provider_attempt_claim'],
+  ]) {
+    exact(
+      claim.app_check_config_name,
+      browserAppCheckProvider.name,
+      `evidence.browser_app_check_prerequisite.${path}.app_check_config_name`,
+    );
+    exact(
+      claim.firebase_app_id,
+      browserAppCheckProvider.firebase_app_id,
+      `evidence.browser_app_check_prerequisite.${path}.firebase_app_id`,
+    );
+    exact(
+      claim.app_check_site_key_sha256,
+      browserAppCheckProvider.site_key_sha256,
+      `evidence.browser_app_check_prerequisite.${path}.app_check_site_key_sha256`,
+    );
+    exact(
+      claim.app_check_token_ttl,
+      browserAppCheckProvider.token_ttl,
+      `evidence.browser_app_check_prerequisite.${path}.app_check_token_ttl`,
+    );
+    exact(
+      claim.app_check_minimum_valid_score,
+      browserAppCheckProvider.minimum_valid_score,
+      `evidence.browser_app_check_prerequisite.${path}.app_check_minimum_valid_score`,
+    );
+  }
+  exact(
+    browserAppCheckState.app_check_config_name,
+    browserAppCheckProvider.name,
+    'evidence.browser_app_check_prerequisite.terraform_state.app_check_config_name',
+  );
+  exact(
+    browserAppCheckState.app_check_site_key_sha256,
+    browserAppCheckProvider.site_key_sha256,
+    'evidence.browser_app_check_prerequisite.terraform_state.app_check_site_key_sha256',
+  );
+  exact(
+    browserAppCheckState.app_check_token_ttl,
+    browserAppCheckProvider.token_ttl,
+    'evidence.browser_app_check_prerequisite.terraform_state.app_check_token_ttl',
   );
   const retiredRecoveryWorkflow = record(
     evidence.retired_recovery_workflow,
@@ -3727,10 +3944,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 46, 'manifest.revision');
+  exact(manifest.revision, 47, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_schema_2_single_key_runtime_deployed_user_relay_acceptance_succeeded_live_browser_plan_reviewed_app_check_score_key_created',
+    'private_control_plane_schema_2_single_key_runtime_deployed_user_relay_acceptance_succeeded_live_browser_plan_reviewed_app_check_provider_registered',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -4091,14 +4308,16 @@ export function validateCommittedEvidence(
     repository_commit: browserAppCheck.repository_commit,
     terraform_plan_sha256: browserAppCheck.terraform_plan_sha256,
     baseline_sha256: browserAppCheck.baseline_sha256,
+    terraform_apply_reported_success: browserAppCheck.terraform_apply_reported_success,
+    state_recovery: browserAppCheck.state_recovery,
     final_inventory_sha256: browserAppCheck.final_inventory_sha256,
     recaptcha_api_enabled: browserAppCheck.recaptcha_api_enabled,
     authoritative_recaptcha_keys: browserAppCheck.authoritative_recaptcha_keys,
     cloud_asset_recaptcha_keys: browserAppCheck.cloud_asset_recaptcha_keys,
-    app_check_registered: browserAppCheck.app_check_registered,
     app_check_enforcement_records: browserAppCheck.app_check_enforcement_records,
     debug_tokens: browserAppCheck.debug_tokens,
     public_site_key_committed: browserAppCheck.public_site_key_committed,
+    raw_provider_config_committed: browserAppCheck.raw_provider_config_committed,
     legacy_secret_retrievals_by_driver: browserAppCheck.legacy_secret_retrievals_by_driver,
     public_endpoints_created: browserAppCheck.public_endpoints_created,
     fixed_cost_services: browserAppCheck.fixed_cost_services,
@@ -4108,9 +4327,19 @@ export function validateCommittedEvidence(
     assessments_initiated_by_driver: browserAppCheck.assessments_initiated_by_driver,
   }, 'evidence.browser_app_check_prerequisite');
   exactFields(
-    browserAppCheckManifest.global_attempt_claim,
-    browserAppCheck.global_attempt_claim,
-    'evidence.browser_app_check_prerequisite.global_attempt_claim',
+    browserAppCheckManifest.global_key_attempt_claim,
+    browserAppCheck.global_key_attempt_claim,
+    'evidence.browser_app_check_prerequisite.global_key_attempt_claim',
+  );
+  exactFields(
+    browserAppCheckManifest.global_registration_attempt_claim,
+    browserAppCheck.global_registration_attempt_claim,
+    'evidence.browser_app_check_prerequisite.global_registration_attempt_claim',
+  );
+  exactFields(
+    browserAppCheckManifest.global_provider_attempt_claim,
+    browserAppCheck.global_provider_attempt_claim,
+    'evidence.browser_app_check_prerequisite.global_provider_attempt_claim',
   );
   exactFields(
     browserAppCheckManifest.terraform_state,
@@ -4138,6 +4367,11 @@ export function validateCommittedEvidence(
     browserAppCheckManifest.recaptcha_key.allowed_domains,
     browserAppCheck.recaptcha_key.allowed_domains,
     'evidence.browser_app_check_prerequisite.recaptcha_key.allowed_domains',
+  );
+  exactFields(
+    browserAppCheckManifest.app_check_provider,
+    browserAppCheck.app_check_provider,
+    'evidence.browser_app_check_prerequisite.app_check_provider',
   );
   exact(manifest.runtime.live_request_performed, false, 'runtime.live_request_performed');
   return Object.freeze({
@@ -4170,7 +4404,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; the private user-relay exchange is retired, the live browser-relay matrix is reviewed but not deployed, and one domain-restricted browser App Check score key is created while provider registration remains absent.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; the private user-relay exchange is retired, the live browser-relay matrix is reviewed but not deployed, and one domain-restricted browser App Check score key plus its non-deletable provider registration have converged with enforcement disabled.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';

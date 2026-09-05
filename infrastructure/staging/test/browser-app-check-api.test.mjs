@@ -349,7 +349,7 @@ function metadata() {
   });
 }
 
-test('root contains the applied key prerequisite and guarded registration phase', () => {
+test('root contains the converged key and provider prerequisites', () => {
   validateBrowserAppCheckRoot(browserRoot);
   const keySource = terraformSource.slice(
     terraformSource.indexOf('resource "google_recaptcha_enterprise_key" "browser_app_check"'),

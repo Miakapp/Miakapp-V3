@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import {
   chmodSync,
   mkdtempSync,
@@ -9,6 +10,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import {
   DEFAULT_RISK_SCORE,
@@ -40,6 +42,18 @@ import {
   validateBrowserAppCheckRegistrationAuthorization,
   validateBrowserAppCheckRegistrationPlanMetadata,
 } from '../browser-app-check/registration-contract.mjs';
+import {
+  APP_CHECK_REGISTRATION_CONSUMED as APPLY_APP_CHECK_REGISTRATION_CONSUMED,
+} from '../browser-app-check/registration-apply.mjs';
+import {
+  APP_CHECK_REGISTRATION_CONSUMED as PLAN_APP_CHECK_REGISTRATION_CONSUMED,
+} from '../browser-app-check/registration-plan.mjs';
+import {
+  APP_CHECK_REGISTRATION_RECOVERY_RETIRED as APPLY_APP_CHECK_REGISTRATION_RECOVERY_RETIRED,
+} from '../browser-app-check/registration-recovery-apply.mjs';
+import {
+  APP_CHECK_REGISTRATION_RECOVERY_RETIRED as PLAN_APP_CHECK_REGISTRATION_RECOVERY_RETIRED,
+} from '../browser-app-check/registration-recovery-plan.mjs';
 import {
   BROWSER_APP_CHECK_PROVIDER_ATTEMPT_BUCKET,
   BROWSER_APP_CHECK_PROVIDER_ATTEMPT_OBJECT,
@@ -1249,4 +1263,35 @@ test('keeps public evidence hash-only and enforcement-free', () => {
   assert.equal(output.public_endpoints_created, 0);
   assert.equal(output.fixed_cost_services, 0);
   assert.equal(canonicalJson(output).includes(SITE_KEY), false);
+});
+
+test('consumed registration and unused recovery entrypoints are permanently retired before cloud access', () => {
+  assert.equal(PLAN_APP_CHECK_REGISTRATION_CONSUMED, true);
+  assert.equal(APPLY_APP_CHECK_REGISTRATION_CONSUMED, true);
+  assert.equal(PLAN_APP_CHECK_REGISTRATION_RECOVERY_RETIRED, true);
+  assert.equal(APPLY_APP_CHECK_REGISTRATION_RECOVERY_RETIRED, true);
+  for (const [entrypoint, message] of [
+    ['registration-plan.mjs', 'planner is permanently retired'],
+    ['registration-apply.mjs', 'apply path is permanently retired'],
+    ['registration-recovery-plan.mjs', 'recovery planner is permanently retired'],
+    ['registration-recovery-apply.mjs', 'recovery apply path is permanently retired'],
+  ]) {
+    const result = spawnSync(
+      process.execPath,
+      [fileURLToPath(new URL(`../browser-app-check/${entrypoint}`, import.meta.url))],
+      {
+        cwd: fileURLToPath(new URL('../../../', import.meta.url)),
+        env: {
+          PATH: process.env.PATH,
+          GOOGLE_APPLICATION_CREDENTIALS: '/must-not-be-read',
+          GOOGLE_OAUTH_ACCESS_TOKEN: 'must-not-be-read',
+        },
+        encoding: 'utf8',
+      },
+    );
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, '');
+    assert.match(result.stderr, new RegExp(message, 'u'));
+    assert.doesNotMatch(result.stderr, /gcloud|terraform|credential|token/u);
+  }
 });
