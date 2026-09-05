@@ -29,7 +29,10 @@ import {
 import { validateAuthProbeRoot } from './guard.mjs';
 import { observeAuthProbeRetirement } from './inventory.mjs';
 import { requireSyntheticFixturesAbsent } from './invoke.mjs';
-import { readAndValidateAuthProbePlan } from './validate-plan.mjs';
+import {
+  readAndValidateAuthProbeOutputOnlyPlan,
+  readAndValidateAuthProbePlan,
+} from './validate-plan.mjs';
 import { AUTH_PROBE_RETIRED_STATE_ADDRESSES } from './retirement-recovery.mjs';
 
 const RETIRE_AUTHORIZATION = 'MIAKAPP_STAGING_AUTH_PROBE_RETIRE_AUTHORIZATION';
@@ -43,6 +46,42 @@ function validateRetiredState(value) {
   if (!isDeepStrictEqual(addresses.sort(), AUTH_PROBE_RETIRED_STATE_ADDRESSES)) {
     throw new Error('Retired Auth-probe Terraform state contains an unexpected resource');
   }
+}
+
+function reconcileStateOutputs(bundle, environment) {
+  const planPath = join(bundle, 'retire-output-recovery.tfplan');
+  const planned = run('terraform', [
+    'plan',
+    '-var=armed=false',
+    '-input=false',
+    '-lock-timeout=5m',
+    '-no-color',
+    '-detailed-exitcode',
+    `-out=${planPath}`,
+  ], {
+    cwd: authProbeRoot,
+    env: environment,
+    allowedStatuses: [0, 2],
+    diagnosticDirectory: bundle,
+    description: 'retire-output-recovery-plan',
+  });
+  if (planned.status === 0) return;
+  const shown = run('terraform', ['show', '-json', planPath], {
+    cwd: authProbeRoot,
+    env: environment,
+    diagnosticDirectory: bundle,
+    description: 'retire-output-recovery-show',
+  });
+  const planJsonPath = join(bundle, 'retire-output-recovery.tfplan.json');
+  writePrivateFile(planJsonPath, Buffer.from(shown.stdout), 0o400);
+  readAndValidateAuthProbeOutputOnlyPlan(planJsonPath);
+  run('terraform', ['apply', '-input=false', '-auto-approve', '-no-color', planPath], {
+    cwd: authProbeRoot,
+    env: environment,
+    diagnosticDirectory: bundle,
+    description: 'retire-output-recovery-apply',
+  });
+  chmodSync(planPath, 0o400);
 }
 
 async function main() {
@@ -105,6 +144,7 @@ async function main() {
       description: 'terraform-retire-apply',
     });
     await requireSyntheticFixturesAbsent({ cleanup: true });
+    reconcileStateOutputs(bundle, environment);
     run('terraform', [
       'plan',
       '-var=armed=false',

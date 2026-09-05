@@ -1,6 +1,6 @@
 main:
   steps:
-    - initialize:
+    - initialize_contract:
         assign:
           - project_id: miakapp-v4-staging
           - project_number: "1072737219170"
@@ -18,6 +18,8 @@ main:
           - relay_b: wss://relay-b.probe.invalid/ws
           - firestore_document_url: https://firestore.googleapis.com/v1/projects/miakapp-v4-staging/databases/(default)/documents/controlHomes/miakapp-v4-staging-user-relay-probe-v1
           - public_firestore_document_url: https://firestore.googleapis.com/v1/projects/miakapp-v4-staging/databases/(default)/documents/homes/miakapp-v4-staging-user-relay-probe-v1
+    - initialize_state:
+        assign:
           - firebase_id_token: null
           - app_check_token: null
           - cloud_run_id_token: null

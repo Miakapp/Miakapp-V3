@@ -75,6 +75,7 @@ import {
   validateSuccessfulAuthProbeExecution,
 } from '../auth-probe/invoke.mjs';
 import {
+  validateAuthProbeOutputOnlyPlanAgainstPolicy,
   validateAuthProbePersistentRecoveryPlanAgainstPolicy,
   validateAuthProbePlanAgainstPolicy,
 } from '../auth-probe/validate-plan.mjs';
@@ -94,7 +95,7 @@ const CREATED_AT = '2026-09-05T00:00:00.000Z';
 const WORKFLOW_REVISION = '000001-abc';
 const PREVIOUS_WORKLOAD_SOURCE_SHA256 = '6674c0353ec9c73fcfe0d3a63d17850f057a5f2a547a5855989e28f011249b1e';
 const PREVIOUS_WORKLOAD_COMMIT = '022f10e2dc15f32a8a6679b38ce7f1a04582e450';
-const PREVIOUS_WORKFLOW_SOURCE_SHA256 = '3ddd522a3ef819d3665fe96502d568d2827bf8d0bc8917911e5d50e07a08c755';
+const PREVIOUS_WORKFLOW_SOURCE_SHA256 = '32040da6ce0b5fdd3c3bdaa1cc972aab99bbdd442ff36141de2667fff128600e';
 const VERIFIER_SERVICE_RESOURCE = `projects/${PROJECT_ID}/locations/${REGION}/services/${VERIFIER_SERVICE_NAME}`;
 const probeRoot = new URL('../auth-probe/', import.meta.url);
 const terraformFiles = readdirSync(probeRoot).filter((name) => name.endsWith('.tf')).sort();
@@ -222,16 +223,13 @@ function guardInput(previous = false) {
     verifier_service_uri: VERIFIER_SERVICE_URI,
     verifier_identity: VERIFIER_ACCOUNT,
     verifier_image: WORKLOAD_IMAGE,
-    capability_expiry: previous ? RETIRED_CAPABILITY_EXPIRY : CAPABILITY_EXPIRY,
-  };
-  if (previous) return value;
-  return {
-    ...value,
+    capability_expiry: CAPABILITY_EXPIRY,
     role_generation: 2,
     custom_role_name: CUSTOM_ROLE_NAME,
     firestore_role_name: FIRESTORE_ROLE_NAME,
     signer_role_name: SIGNER_ROLE_NAME,
   };
+  return value;
 }
 
 function roleValue({ id, name, title, description, permissions }, stage = 'GA') {
@@ -541,6 +539,65 @@ function syntheticPlan(profile) {
         };
       }),
   };
+}
+
+function dormantOutput({ legacy = false } = {}) {
+  return {
+    schema: legacy ? 'miakapp.staging-auth-probe/1' : 'miakapp.staging-auth-probe/2',
+    project_id: PROJECT_ID,
+    project_number: PROJECT_NUMBER,
+    region: REGION,
+    armed: false,
+    asset_inventory_api: CLOUD_ASSET_SERVICE,
+    custom_role: legacy ? RETIRED_CUSTOM_ROLE_NAME : CUSTOM_ROLE_NAME,
+    signer_role: legacy ? RETIRED_SIGNER_ROLE_NAME : SIGNER_ROLE_NAME,
+    firestore_role: legacy ? RETIRED_FIRESTORE_ROLE_NAME : FIRESTORE_ROLE_NAME,
+    ...(legacy ? {} : {
+      role_generation: 2,
+      retired_custom_roles: [
+        RETIRED_CUSTOM_ROLE_NAME,
+        RETIRED_FIRESTORE_ROLE_NAME,
+        RETIRED_SIGNER_ROLE_NAME,
+      ],
+    }),
+    workflow_name: null,
+    workflow_revision: null,
+    workflow_service_account: null,
+    workflow_source_sha256: legacy
+      ? '3ddd522a3ef819d3665fe96502d568d2827bf8d0bc8917911e5d50e07a08c755'
+      : WORKFLOW_SOURCE_SHA256,
+    verifier_service_name: null,
+    verifier_service_uri: null,
+    verifier_service_account: VERIFIER_ACCOUNT,
+    verifier_source_sha256: VERIFIER_SOURCE_SHA256,
+    verifier_image: WORKLOAD_IMAGE,
+    firebase_app_id: FIREBASE_APP_ID,
+    function_name: 'control-plane',
+    function_uri: FUNCTION_URI,
+    destination_path: '/v1/user-relay-tokens:exchange',
+    capability_expiry: legacy ? RETIRED_CAPABILITY_EXPIRY : CAPABILITY_EXPIRY,
+    scheduled: false,
+    retry: false,
+  };
+}
+
+function syntheticOutputRecoveryPlan() {
+  const plan = syntheticPlan('retire-finalize');
+  for (const resource of plan.resource_changes) {
+    const value = resourceValue(resource.address, 'retire');
+    resource.change = { actions: ['no-op'], before: value, after: structuredClone(value) };
+  }
+  plan.output_changes = {
+    staging_auth_probe: {
+      actions: ['update'],
+      before: dormantOutput({ legacy: true }),
+      after: dormantOutput(),
+      after_unknown: false,
+      before_sensitive: false,
+      after_sensitive: false,
+    },
+  };
+  return plan;
 }
 
 function syntheticPersistentRecoveryPlan(expectedMutations) {
@@ -1449,7 +1506,56 @@ test('allows only exact saved-plan recreation of dormant persistent resources', 
   ), /unapproved mutation/u);
 });
 
+test('reconciles only the exact stale dormant output without cloud mutations', () => {
+  const plan = syntheticOutputRecoveryPlan();
+  assert.deepEqual(validateAuthProbeOutputOnlyPlanAgainstPolicy(plan), {
+    create: 0,
+    update: 0,
+    delete: 0,
+    state_outputs: 1,
+  });
+
+  const infrastructureMutation = structuredClone(plan);
+  const authRoleChange = infrastructureMutation.resource_changes.find(({ address }) => (
+    address === 'google_project_iam_custom_role.auth_probe_generation_2'
+  ));
+  authRoleChange.change.actions = ['update'];
+  assert.throws(
+    () => validateAuthProbeOutputOnlyPlanAgainstPolicy(infrastructureMutation),
+    /infrastructure mutation/u,
+  );
+
+  const broadenedOutput = structuredClone(plan);
+  broadenedOutput.output_changes.staging_auth_probe.after.custom_role = 'roles/owner';
+  assert.throws(
+    () => validateAuthProbeOutputOnlyPlanAgainstPolicy(broadenedOutput),
+    /recovered output/u,
+  );
+
+  const extraOutput = structuredClone(plan);
+  extraOutput.output_changes.unreviewed = structuredClone(
+    extraOutput.output_changes.staging_auth_probe,
+  );
+  assert.throws(
+    () => validateAuthProbeOutputOnlyPlanAgainstPolicy(extraOutput),
+    /output recovery names/u,
+  );
+});
+
 test('pins a no-secret one-shot audience-bound user-relay Workflow', () => {
+  for (const [step, expectedAssignments] of [
+    ['initialize_contract', 16],
+    ['initialize_state', 43],
+  ]) {
+    const match = WORKFLOW_SOURCE.match(new RegExp(
+      `    - ${step}:\\n        assign:\\n((?:          - [^\\n]+\\n)+)`,
+      'u',
+    ));
+    assert.ok(match, `${step} assignment block is missing`);
+    const assignments = match[1].trimEnd().split('\n');
+    assert.equal(assignments.length, expectedAssignments);
+    assert.ok(assignments.length <= 50, `${step} exceeds the Workflows assignment limit`);
+  }
   const stages = [
     'initialize', 'web_config', 'initial_home', 'initial_user', 'auth_custom_token',
     'auth_exchange', 'app_check_custom_token', 'app_check_exchange', 'cloud_run_identity',
@@ -1703,6 +1809,8 @@ test('drivers require exact plans, two-fixture cleanup and a separate retirement
   assert.match(retirementDrivers, /-var=armed=false/);
   assert.match(retirementDrivers, /validateAuthProbeRetireAuthorization/);
   assert.match(retirementDrivers, /observeAuthProbeRetirement/);
+  assert.match(retirementDrivers, /readAndValidateAuthProbeOutputOnlyPlan/);
+  assert.match(retirementRecoveryDrivers, /readAndValidateAuthProbeOutputOnlyPlan/);
   assert.match(checkSource, /user-relay-verifier\.test\.mjs/);
   assert.equal(WORKLOAD_FUNCTION_REVISION, 'control-plane-00004-yis');
 });
