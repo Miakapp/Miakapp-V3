@@ -21,8 +21,10 @@ export const RUNNER_URL = `${HOSTING_ORIGIN}${RUNNER_PATH}`;
 export const STATE_BUCKET = `${PROJECT_ID}-tfstate-${PROJECT_NUMBER}`;
 export const PRIOR_CLAIM_OBJECT =
   'terraform/browser-attestation/operations/live-browser-attestation.json';
-export const CLAIM_OBJECT =
+export const SECOND_PRIOR_CLAIM_OBJECT =
   'terraform/browser-attestation/operations/live-browser-attestation-v2.json';
+export const CLAIM_OBJECT =
+  'terraform/browser-attestation/operations/live-browser-attestation-v3.json';
 export const PRIOR_CLAIM_GENERATION = '1788616557403719';
 export const PRIOR_CLAIM_SIZE_BYTES = 671;
 export const PRIOR_CLAIM_SHA256 =
@@ -33,6 +35,16 @@ export const PREFLIGHT_METADATA_SHA256 =
   'de5b108f513906242771779bb5b714c9ff85a557db3d3ec9cfc3a7a6bc88eb0d';
 export const PREFLIGHT_VERSION_NAME_SHA256 =
   'faf679b105232f95bcbf16d666b6d6159bebb9e88f35cd6ee55219c7462bd512';
+export const SECOND_PRIOR_CLAIM_GENERATION = '1788617641293074';
+export const SECOND_PRIOR_CLAIM_SIZE_BYTES = 674;
+export const SECOND_PRIOR_CLAIM_SHA256 =
+  '50a4c647f04903ad007dd470262c4298908e7adfde57573e4e6766efd6702e33';
+export const PREFLIGHT_V2_REPOSITORY_COMMIT =
+  '4fba5cf19ed4bf316b4e23676a8efc8a2bc0695a';
+export const PREFLIGHT_V2_METADATA_SHA256 =
+  'dbabd91442b9bd42b6b8afe934dcc9a433aad51abc375847491fc9dcbffa30bb';
+export const PREFLIGHT_V2_VERSION_NAME_SHA256 =
+  'd0dc444702b93d17043a794280cfc41e65d9a0b5242c83e36f2f9b8f0c402b6e';
 export const OPERATOR_USER_SHA256 =
   'd1c8514ac6eb5c13205cfec40dd6cc2072f33eb4279172df17273aa7c54a181c';
 export const APP_CHECK_SITE_KEY_SHA256 =
@@ -152,7 +164,7 @@ export function attestationAuthorization(metadataBytes, repositoryCommit) {
     || !COMMIT.test(repositoryCommit)) {
     reject('Browser-attestation authorization inputs are invalid');
   }
-  return `run-browser-app-check-attestation-v2:${PROJECT_ID}:${sha256(metadataBytes)}:${repositoryCommit}`;
+  return `run-browser-app-check-attestation-v3:${PROJECT_ID}:${sha256(metadataBytes)}:${repositoryCommit}`;
 }
 
 export function validateAttestationAuthorization(value, metadataBytes, repositoryCommit) {
@@ -174,15 +186,9 @@ function validateBaseline(value) {
     'hosting_site_type',
     'hosting_version_count',
     'operation_claim_present',
-    'prior_operation_claim',
-    'retired_preflight_version_name_sha256',
+    'prior_operation_claims',
+    'retired_preflight_version_name_sha256s',
   ], 'Browser-attestation baseline');
-  const priorClaim = exactKeys(baseline.prior_operation_claim, [
-    'generation',
-    'object',
-    'sha256',
-    'size_bytes',
-  ], 'Prior browser-attestation operation claim');
   if (!SHA256.test(baseline.app_check_config_sha256)
     || baseline.app_check_enforcement_records !== 0
     || baseline.debug_tokens !== 0
@@ -190,15 +196,26 @@ function validateBaseline(value) {
     || baseline.hosting_release_count !== 0
     || baseline.hosting_site !== HOSTING_SITE
     || baseline.hosting_site_type !== 'DEFAULT_SITE'
-    || baseline.hosting_version_count !== 1
+    || baseline.hosting_version_count !== 2
     || baseline.operation_claim_present !== false
-    || baseline.retired_preflight_version_name_sha256 !== PREFLIGHT_VERSION_NAME_SHA256
-    || !isDeepStrictEqual(priorClaim, {
-      object: PRIOR_CLAIM_OBJECT,
-      generation: PRIOR_CLAIM_GENERATION,
-      size_bytes: PRIOR_CLAIM_SIZE_BYTES,
-      sha256: PRIOR_CLAIM_SHA256,
-    })) {
+    || !isDeepStrictEqual(baseline.retired_preflight_version_name_sha256s, [
+      PREFLIGHT_VERSION_NAME_SHA256,
+      PREFLIGHT_V2_VERSION_NAME_SHA256,
+    ])
+    || !isDeepStrictEqual(baseline.prior_operation_claims, [
+      {
+        object: PRIOR_CLAIM_OBJECT,
+        generation: PRIOR_CLAIM_GENERATION,
+        size_bytes: PRIOR_CLAIM_SIZE_BYTES,
+        sha256: PRIOR_CLAIM_SHA256,
+      },
+      {
+        object: SECOND_PRIOR_CLAIM_OBJECT,
+        generation: SECOND_PRIOR_CLAIM_GENERATION,
+        size_bytes: SECOND_PRIOR_CLAIM_SIZE_BYTES,
+        sha256: SECOND_PRIOR_CLAIM_SHA256,
+      },
+    ])) {
     reject('Browser-attestation baseline differs from the reviewed retired preflight boundary');
   }
   return baseline;
@@ -273,8 +290,8 @@ export function buildAttestationMetadata({
   validateBaseline(baseline);
   validateArtifact(artifact);
   return Object.freeze({
-    schema: 'miakapp.staging-browser-attestation-plan/2',
-    operation: 'attest-browser-app-check-and-disable-hosting-v2',
+    schema: 'miakapp.staging-browser-attestation-plan/3',
+    operation: 'attest-browser-app-check-and-disable-hosting-v3',
     project_id: PROJECT_ID,
     project_number: PROJECT_NUMBER,
     hosting_site: HOSTING_SITE,
@@ -361,8 +378,8 @@ export function validateAttestationMetadata(value, now = Date.now()) {
   const expires = canonicalTimestamp(metadata.expires_at, 'Browser-attestation expiry time');
   const baseline = validateBaseline(metadata.baseline);
   validateArtifact(metadata.artifact);
-  if (metadata.schema !== 'miakapp.staging-browser-attestation-plan/2'
-    || metadata.operation !== 'attest-browser-app-check-and-disable-hosting-v2'
+  if (metadata.schema !== 'miakapp.staging-browser-attestation-plan/3'
+    || metadata.operation !== 'attest-browser-app-check-and-disable-hosting-v3'
     || metadata.project_id !== PROJECT_ID
     || metadata.project_number !== PROJECT_NUMBER
     || metadata.hosting_site !== HOSTING_SITE

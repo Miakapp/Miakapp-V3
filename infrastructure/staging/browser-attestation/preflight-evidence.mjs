@@ -4,8 +4,12 @@ import { fileURLToPath } from 'node:url';
 import { canonicalJson, sha256 } from './contract.mjs';
 
 const MAXIMUM_EVIDENCE_BYTES = 8 * 1024;
-const EXPECTED_RESULT_SHA256 =
-  '24746d2dde348ff5703f83a88e35ec45706629dab812a5727f0e97d626d6fce7';
+const EXPECTED_RESULT_SHA256 = Object.freeze({
+  'miakapp.staging-browser-attestation-preflight-result/1':
+    '24746d2dde348ff5703f83a88e35ec45706629dab812a5727f0e97d626d6fce7',
+  'miakapp.staging-browser-attestation-preflight-result/2':
+    'e59f17fc9113f4f8ebdc8867453f74094300901c5b42c3884cddab04c8af6431',
+});
 
 function reject(message) {
   throw new Error(`Browser-attestation preflight evidence ${message}`);
@@ -13,7 +17,7 @@ function reject(message) {
 
 export function validatePreflightEvidenceValue(value) {
   if (value === null || Array.isArray(value) || typeof value !== 'object'
-    || sha256(Buffer.from(canonicalJson(value), 'utf8')) !== EXPECTED_RESULT_SHA256) {
+    || sha256(Buffer.from(canonicalJson(value), 'utf8')) !== EXPECTED_RESULT_SHA256[value.schema]) {
     reject('does not match the exact sanitized result');
   }
   return Object.freeze(value);
@@ -39,15 +43,17 @@ export function validatePreflightEvidence(path) {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  if (process.argv.length !== 3 || process.argv[2] === undefined) {
-    console.error('Usage: node preflight-evidence.mjs <preflight-result.json>');
+  if (process.argv.length < 3) {
+    console.error('Usage: node preflight-evidence.mjs <preflight-result.json> [...]');
     process.exitCode = 2;
   } else {
     try {
-      const result = validatePreflightEvidence(process.argv[2]);
-      process.stdout.write(
-        `Validated ${result.schema} for ${result.project_id}; the first Hosting version was finalized and deleted before any release or browser invocation.\n`,
-      );
+      for (const path of process.argv.slice(2)) {
+        const result = validatePreflightEvidence(path);
+        process.stdout.write(
+          `Validated ${result.schema} for ${result.project_id}; its Hosting version was deleted before any release or browser invocation.\n`,
+        );
+      }
     } catch (error) {
       console.error(error instanceof Error ? error.message : 'Browser-attestation preflight evidence failed');
       process.exitCode = 1;

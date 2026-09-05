@@ -14,8 +14,8 @@ export function buildOperationClaim(metadataBytes, metadata) {
     throw new Error('Browser-attestation claim requires exact metadata bytes');
   }
   return Object.freeze({
-    schema: 'miakapp.staging-browser-attestation-claim/2',
-    operation: 'attest-browser-app-check-and-disable-hosting-v2',
+    schema: 'miakapp.staging-browser-attestation-claim/3',
+    operation: 'attest-browser-app-check-and-disable-hosting-v3',
     project_id: PROJECT_ID,
     project_number: PROJECT_NUMBER,
     hosting_site: HOSTING_SITE,
@@ -52,7 +52,7 @@ export async function createOperationClaim(session, metadataBytes, metadata, fet
     throw new Error('Browser-attestation operation claim response is malformed');
   }
   return Object.freeze({
-    schema: 'miakapp.staging-browser-attestation-claim-receipt/2',
+    schema: 'miakapp.staging-browser-attestation-claim-receipt/3',
     bucket: STATE_BUCKET,
     object: CLAIM_OBJECT,
     generation: value.generation,
