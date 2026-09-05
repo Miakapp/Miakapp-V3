@@ -17,6 +17,7 @@ export const REGION = 'europe-west9';
 export const TERRAFORM_VERSION = '1.11.3';
 export const OPERATOR_USER_SHA256 = 'd1c8514ac6eb5c13205cfec40dd6cc2072f33eb4279172df17273aa7c54a181c';
 export const RUNTIME_CONFIG_SHA256 = 'b794181400bf5ace6aaa9ffc4be00e4c4f6a59519284baa7f73bca3c042c4ff8';
+export const TARGET_RUNTIME_CONFIG_SHA256 = '20be750358ffbc2136bab26bca6338b430ea6480ae9874f3fe5e7132c5e0db10';
 export const PLAN_TTL_MILLISECONDS = 2 * 60 * 60 * 1_000;
 
 const SHA256 = /^[0-9a-f]{64}$/u;
@@ -223,8 +224,31 @@ export function validateWorkloadUpdateAuthorization(value, planBytes, repository
   }
 }
 
+export function workloadRuntimeMigrationAuthorization(planBytes, repositoryCommit) {
+  if (!Buffer.isBuffer(planBytes) || planBytes.byteLength === 0 || !COMMIT.test(repositoryCommit)) {
+    reject('Workload runtime migration authorization inputs are invalid');
+  }
+  return `migrate-private-runtime:${PROJECT_ID}:${sha256(planBytes)}:${repositoryCommit}`;
+}
+
+export function validateWorkloadRuntimeMigrationAuthorization(
+  value,
+  planBytes,
+  repositoryCommit,
+) {
+  const expected = Buffer.from(
+    workloadRuntimeMigrationAuthorization(planBytes, repositoryCommit),
+    'utf8',
+  );
+  const actual = Buffer.from(typeof value === 'string' ? value : '', 'utf8');
+  if (actual.byteLength !== expected.byteLength || !timingSafeEqual(actual, expected)) {
+    reject('Exact staging workload runtime migration authorization is missing or invalid');
+  }
+}
+
 function buildMetadata({
   repositoryCommit,
+  sourceRepositoryCommit = repositoryCommit,
   createdAt,
   packageResult,
   planBytes,
@@ -232,12 +256,14 @@ function buildMetadata({
   summary,
 }, profile) {
   if (!COMMIT.test(repositoryCommit)
+    || !COMMIT.test(sourceRepositoryCommit)
     || !SHA256.test(packageResult.archive_sha256)
     || !Buffer.isBuffer(planBytes)
     || !Buffer.isBuffer(planJsonBytes)
     || !plainObject(profile)
     || typeof profile.schema !== 'string'
-    || typeof profile.operation !== 'string') {
+    || typeof profile.operation !== 'string'
+    || !SHA256.test(profile.runtimeConfigSha256)) {
     reject('Workload plan metadata inputs are invalid');
   }
   const createdMilliseconds = canonicalTimestamp(createdAt, 'created_at');
@@ -248,10 +274,11 @@ function buildMetadata({
     project_number: PROJECT_NUMBER,
     region: REGION,
     repository_commit: repositoryCommit,
+    source_repository_commit: sourceRepositoryCommit,
     created_at: createdAt,
     expires_at: new Date(createdMilliseconds + PLAN_TTL_MILLISECONDS).toISOString(),
     operator_user_sha256: OPERATOR_USER_SHA256,
-    runtime_config_sha256: RUNTIME_CONFIG_SHA256,
+    runtime_config_sha256: profile.runtimeConfigSha256,
     source_archive_sha256: packageResult.archive_sha256,
     source_archive_bytes: packageResult.archive_bytes,
     source_files: packageResult.files,
@@ -268,6 +295,7 @@ export function buildPlanMetadata(input) {
   return buildMetadata(input, {
     schema: 'miakapp.staging-workload-plan/1',
     operation: 'deploy-initial-private-control-plane',
+    runtimeConfigSha256: RUNTIME_CONFIG_SHA256,
   });
 }
 
@@ -275,6 +303,15 @@ export function buildWorkloadUpdatePlanMetadata(input) {
   return buildMetadata(input, {
     schema: 'miakapp.staging-workload-update-plan/1',
     operation: 'replace-pinned-control-plane-source',
+    runtimeConfigSha256: RUNTIME_CONFIG_SHA256,
+  });
+}
+
+export function buildWorkloadRuntimeMigrationPlanMetadata(input) {
+  return buildMetadata(input, {
+    schema: 'miakapp.staging-workload-runtime-migration-plan/1',
+    operation: 'migrate-pinned-runtime-schema',
+    runtimeConfigSha256: TARGET_RUNTIME_CONFIG_SHA256,
   });
 }
 
@@ -286,6 +323,7 @@ function validateMetadata(value, now, profile) {
     'project_number',
     'region',
     'repository_commit',
+    'source_repository_commit',
     'created_at',
     'expires_at',
     'operator_user_sha256',
@@ -306,8 +344,9 @@ function validateMetadata(value, now, profile) {
     || metadata.project_number !== PROJECT_NUMBER
     || metadata.region !== REGION
     || !COMMIT.test(metadata.repository_commit)
+    || !COMMIT.test(metadata.source_repository_commit)
     || metadata.operator_user_sha256 !== OPERATOR_USER_SHA256
-    || metadata.runtime_config_sha256 !== RUNTIME_CONFIG_SHA256
+    || metadata.runtime_config_sha256 !== profile.runtimeConfigSha256
     || !SHA256.test(metadata.source_archive_sha256)
     || !Number.isSafeInteger(metadata.source_archive_bytes)
     || metadata.source_archive_bytes < 1
@@ -334,6 +373,7 @@ export function validatePlanMetadata(value, now = Date.now()) {
   return validateMetadata(value, now, {
     schema: 'miakapp.staging-workload-plan/1',
     operation: 'deploy-initial-private-control-plane',
+    runtimeConfigSha256: RUNTIME_CONFIG_SHA256,
   });
 }
 
@@ -341,6 +381,15 @@ export function validateWorkloadUpdatePlanMetadata(value, now = Date.now()) {
   return validateMetadata(value, now, {
     schema: 'miakapp.staging-workload-update-plan/1',
     operation: 'replace-pinned-control-plane-source',
+    runtimeConfigSha256: RUNTIME_CONFIG_SHA256,
+  });
+}
+
+export function validateWorkloadRuntimeMigrationPlanMetadata(value, now = Date.now()) {
+  return validateMetadata(value, now, {
+    schema: 'miakapp.staging-workload-runtime-migration-plan/1',
+    operation: 'migrate-pinned-runtime-schema',
+    runtimeConfigSha256: TARGET_RUNTIME_CONFIG_SHA256,
   });
 }
 
@@ -364,4 +413,8 @@ export function readPlanMetadata(path, now = Date.now()) {
 
 export function readWorkloadUpdatePlanMetadata(path, now = Date.now()) {
   return readMetadata(path, now, validateWorkloadUpdatePlanMetadata);
+}
+
+export function readWorkloadRuntimeMigrationPlanMetadata(path, now = Date.now()) {
+  return readMetadata(path, now, validateWorkloadRuntimeMigrationPlanMetadata);
 }

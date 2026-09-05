@@ -131,11 +131,13 @@ export function observeDeployedWorkload({
   repositoryRoot,
   repositoryCommit,
   sourceArchiveSha256,
+  runtimeConfigSha256 = RUNTIME_CONFIG_SHA256,
   operatorUserSha256 = OPERATOR_USER_SHA256,
   observedAt = new Date().toISOString(),
   spawn = spawnSync,
 }) {
-  if (!/^[0-9a-f]{64}$/u.test(operatorUserSha256)) {
+  if (!/^[0-9a-f]{64}$/u.test(operatorUserSha256)
+    || !/^[0-9a-f]{64}$/u.test(runtimeConfigSha256)) {
     reject('Independent staging workload inventory policy is invalid');
   }
   const command = (args) => jsonCommand(args, repositoryRoot, spawn);
@@ -223,8 +225,8 @@ export function observeDeployedWorkload({
   ], 'Function environment names');
   exact(environment.MIAKAPP_DEPLOYMENT_COMMIT, repositoryCommit, 'Function deployment commit');
   exact(environment.MIAKAPP_SOURCE_ARCHIVE_SHA256, sourceArchiveSha256, 'Function source digest');
-  if (createHash('sha256').update(environment.MIAKAPP_RUNTIME_CONFIG_JSON).digest('hex') !== RUNTIME_CONFIG_SHA256) {
-    reject('Function runtime document differs from committed activation evidence');
+  if (createHash('sha256').update(environment.MIAKAPP_RUNTIME_CONFIG_JSON).digest('hex') !== runtimeConfigSha256) {
+    reject('Function runtime document differs from the reviewed deployment evidence');
   }
 
   exactBinding(runPolicy, 'roles/run.invoker', `serviceAccount:${PROBE_ACCOUNT}`);
@@ -334,7 +336,7 @@ export function observeDeployedWorkload({
       copied_source_object: `${FUNCTION_NAME}/function-source.zip`,
       repository: REPOSITORY,
     }),
-    runtime_config_sha256: RUNTIME_CONFIG_SHA256,
+    runtime_config_sha256: runtimeConfigSha256,
     live_request_performed: false,
   });
 }

@@ -3,6 +3,8 @@ import {
   PRODUCTION_SECRET_IDS,
   type ProductionSecretPurpose,
 } from './production-config.js';
+import { isDeepStrictEqual } from 'node:util';
+
 import {
   parseProductionRuntimeConfig,
   type ProductionRuntimeConfig,
@@ -149,6 +151,75 @@ export function validateInitialStagingRuntimeDocument(
         || !/^[1-9][0-9]*$/.test(reference.resourceName.slice(resourceBase.length))) {
         fail();
       }
+    }
+    return runtime;
+  } catch {
+    throw new ProductionConfigurationError();
+  }
+}
+
+export function buildStagingRuntimeSchema2MigrationDocument(
+  initialDocument: unknown,
+): JsonValue {
+  const initial = validateInitialStagingRuntimeDocument(initialDocument);
+  const signing = initial.security.signing;
+  const keyrings = Object.fromEntries(SECRET_PURPOSES.map((purpose) => [purpose, {
+    current_version: initial.security.secretManager.keyrings[purpose].currentVersion,
+    versions: initial.security.secretManager.keyrings[purpose].versions.map((reference) => ({
+      logical_version: reference.logicalVersion,
+      resource_name: reference.resourceName,
+    })),
+  }]));
+  const document: JsonValue = {
+    schema: 'miakapp.production-runtime/2',
+    security: {
+      schema: 'miakapp.production-security/2',
+      environment: 'staging',
+      project_id: PROJECT_ID,
+      region: REGION,
+      issuer: ISSUER,
+      signing: {
+        current_kid: signing.currentKid,
+        versions: [{
+          key_version_name: signing.keyVersionName,
+          public_jwk: {
+            kty: 'OKP',
+            crv: 'Ed25519',
+            x: signing.publicJwk.x,
+            use: 'sig',
+            alg: 'EdDSA',
+            kid: signing.publicJwk.kid,
+          },
+        }],
+        rpc_timeout_ms: signing.rpcTimeoutMilliseconds,
+      },
+      secret_manager: {
+        rpc_timeout_ms: initial.security.secretManager.rpcTimeoutMilliseconds,
+        keyrings,
+      },
+    },
+    allowed_origins: [...initial.allowedOrigins],
+    app_check_app_id: initial.appCheckAppId,
+    component_bucket: initial.componentBucket,
+  };
+  parseProductionRuntimeConfig(document);
+  return document;
+}
+
+export function validateStagingRuntimeSchema2MigrationDocument(
+  initialDocument: unknown,
+  migratedDocument: unknown,
+): ProductionRuntimeConfig {
+  try {
+    const expected = buildStagingRuntimeSchema2MigrationDocument(initialDocument);
+    if (!isDeepStrictEqual(migratedDocument, expected)) fail();
+    const runtime = parseProductionRuntimeConfig(migratedDocument);
+    if (runtime.schema !== 'miakapp.production-runtime/2'
+      || runtime.security.schema !== 'miakapp.production-security/2'
+      || runtime.security.signing.versions.length !== 1
+      || runtime.security.signing.currentKid !== 'staging-access-token-v1'
+      || runtime.security.signing.keyVersionName !== SIGNING_KEY_VERSION) {
+      fail();
     }
     return runtime;
   } catch {

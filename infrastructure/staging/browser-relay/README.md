@@ -83,8 +83,9 @@ The currently deployed runtime document publishes one signing key,
 which makes the routine 60-second prepublication and 330-second retiring-key
 retention contract impossible to rehearse honestly. The schema-2 bridge is now
 merged and deployed privately in revision `control-plane-00005-biq`, but the
-runtime document must still be migrated under a separate guard and independently
-verified. `SIGNING-01` therefore remains open instead of treating source
+single-key runtime migration is only reviewed and must still be applied under
+its separate guard and independently verified. `SIGNING-01` therefore remains
+open instead of treating source
 support or the local two-key fixture as live overlap evidence.
 
 ## Matrix and evidence boundary

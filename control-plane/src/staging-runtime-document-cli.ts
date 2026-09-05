@@ -3,7 +3,9 @@ import { fileURLToPath } from 'node:url';
 import { REQUEST_JSON_LIMITS, parseRequestJson } from './json.js';
 import {
   buildInitialStagingRuntimeDocument,
+  buildStagingRuntimeSchema2MigrationDocument,
   validateInitialStagingRuntimeDocument,
+  validateStagingRuntimeSchema2MigrationDocument,
 } from './staging-runtime-document.js';
 
 async function standardInput(): Promise<Uint8Array> {
@@ -20,7 +22,8 @@ async function standardInput(): Promise<Uint8Array> {
 }
 
 async function main(): Promise<void> {
-  if (process.argv.length !== 3 || !['build', 'validate'].includes(process.argv[2] ?? '')) {
+  if (process.argv.length !== 3
+    || !['build', 'validate', 'migrate-schema-2', 'validate-schema-2'].includes(process.argv[2] ?? '')) {
     throw new Error('usage');
   }
   const input = parseRequestJson(await standardInput());
@@ -28,7 +31,20 @@ async function main(): Promise<void> {
     process.stdout.write(`${JSON.stringify(buildInitialStagingRuntimeDocument(input))}\n`);
     return;
   }
-  validateInitialStagingRuntimeDocument(input);
+  if (process.argv[2] === 'validate') {
+    validateInitialStagingRuntimeDocument(input);
+  } else if (process.argv[2] === 'migrate-schema-2') {
+    process.stdout.write(`${JSON.stringify(buildStagingRuntimeSchema2MigrationDocument(input))}\n`);
+    return;
+  } else {
+    if (input === null || Array.isArray(input) || typeof input !== 'object'
+      || Object.keys(input).length !== 2
+      || !Object.hasOwn(input, 'initial')
+      || !Object.hasOwn(input, 'migrated')) {
+      throw new Error('input');
+    }
+    validateStagingRuntimeSchema2MigrationDocument(input.initial, input.migrated);
+  }
   process.stdout.write('{"status":"valid"}\n');
 }
 
