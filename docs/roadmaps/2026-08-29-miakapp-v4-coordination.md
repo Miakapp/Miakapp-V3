@@ -626,9 +626,15 @@ current consumer.
 12. **Done 2026-09-05** — replace the active V3 Vue entry point with the first
     React trusted-host shell, a closed ABI 1 semantic renderer, an explicitly
     offline interactive adapter, fail-closed tests and a dedicated web CI gate.
-13. **Next** — design and run the separate live relay, browser, signing and
-    rollback acceptance matrix before wiring the real client and opaque broker
-    into the production web shell.
+13. **Design done 2026-09-05** — freeze the separate live relay, browser,
+    signing-key and rollback acceptance matrix as a digest-pinned closed plan.
+    It selects a reversible provider-endpoint topology, scale and invocation
+    ceilings, twelve pending semantic cases and a deterministic cleanup state;
+    it contains no deployer and claims no live evidence.
+14. **Next** — implement the plan's multi-key runtime configuration, browser App
+    Check provider, temporary edge, two relays, three-engine runner and rollback
+    guards, then execute the matrix once before wiring the real client and opaque
+    broker into the production web shell.
 
 ## 9. Evidence that would change this plan
 
