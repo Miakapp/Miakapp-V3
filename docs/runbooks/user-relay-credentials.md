@@ -142,14 +142,22 @@ evidence, not replay instructions. Generate the exact authorization from the
 fresh reviewed plan, apply once, then require a zero-change plan and independent
 source/revision inventory.
 
-That source-only phase is complete at merge commit
+The audience-bound source-only phase completed at merge commit
 `022f10e2dc15f32a8a6679b38ce7f1a04582e450`: deterministic source SHA-256
 `6674c0353ec9c73fcfe0d3a63d17850f057a5f2a547a5855989e28f011249b1e`
-is active on revision `control-plane-00004-yis`. The exact plan changed only the
-source object, Function and deployment guard, then converged to zero changes.
+was deployed on revision `control-plane-00004-yis`. The exact plan changed only
+the source object, Function and deployment guard, then converged to zero changes.
 Independent inventory made no Function request and retained internal-only
 ingress, scale 0..1, zero public invokers and zero user-managed keys. This is
 deployment evidence, not acceptance evidence for the exchange route.
+
+The subsequent bounded-overlap bridge is now merged and deployed privately at
+commit `9f217da102b394734adba7ccef3f8f70d0317306`, source SHA-256
+`d1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8`
+and revision `control-plane-00005-biq`. It preserves the existing schema-1,
+single-key runtime while adding closed schema-2 parsing and validation. Its
+guarded runtime-document migration remains open; this source deployment alone
+is not live signing-key overlap evidence.
 
 The bounded acceptance implementation, with zero persistent delta to the
 control-plane workload, IAM and topology, lives under

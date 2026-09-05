@@ -342,19 +342,29 @@ token, header, trace or raw diagnostic. The separate browser-provider
 attestation gate remains open.
 
 After those historical probes, a third source-only update deployed the
-audience-bound user-relay credential exchange as current revision
+audience-bound user-relay credential exchange as revision
 `control-plane-00004-yis`. Its saved plan changed only the deterministic source
 object, Function and deployment guard. It converged to zero changes, and
 independent inventory verified the copied bytes, internal-only ingress, scale
 0..1, zero public invokers and zero user-managed keys without making a request.
-The current sanitized deployment result is digest-pinned under
-[`../../infrastructure/staging/workload/`](../../infrastructure/staging/workload/);
-the separate bounded user-relay probe subsequently executed once against that
+The separate bounded user-relay probe subsequently executed once against that
 exact revision. It proved invalid-Firebase, missing-App-Check and missing-Home
 failures, verified two signed credentials across an authoritative relay
 rotation, removed both synthetic fixtures, and retired its Workflow, verifier
 and temporary bindings. Its sanitized evidence is digest-pinned under
 [`../../infrastructure/staging/auth-probe/`](../../infrastructure/staging/auth-probe/).
+
+A fourth guarded source-only update deployed merge commit
+`9f217da102b394734adba7ccef3f8f70d0317306` as current revision
+`control-plane-00005-biq`. The deployed source preserves the schema-1,
+single-key behavior and adds closed schema-2 support for one selected KMS signer
+and at most two KMS-validated published keys. Its saved plan changed only the
+deterministic source object, Function and deployment guard. Independent
+inventory made no request and reconfirmed the copied bytes, internal-only
+ingress, scale 0..1, zero public invokers and zero user-managed keys. The live
+runtime document remains on schema 1 with one key; its guarded migration is a
+separate gate. The current sanitized deployment result is digest-pinned under
+[`../../infrastructure/staging/workload/`](../../infrastructure/staging/workload/).
 
 The pinned local relay-authentication path now includes signing-key overlap,
 key-changing `REAUTH`, concurrent cache refresh, expiry, unknown-`kid` abuse,
