@@ -12,18 +12,13 @@ import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  PROJECT_ID,
-  REGION,
   TERRAFORM_VERSION,
   assertSafeWorkloadEnvironment,
   canonicalJson,
   childEnvironment,
   readPrivateFile,
-  readWorkloadSigningActivationPlanMetadata,
   readWorkloadUpdatePlanMetadata,
   sha256,
-  validateSigningActivationBaseline,
-  validateWorkloadSigningActivationAuthorization,
   validateWorkloadUpdateAuthorization,
   verifiedOperatorEmail,
   verifyExactMain,
@@ -31,14 +26,9 @@ import {
 } from './contract.mjs';
 import { validateWorkloadRoot } from './guard.mjs';
 import { observeDeployedWorkload } from './inventory.mjs';
-import {
-  readAndValidatePinnedSigningActivationPlan,
-  readAndValidatePinnedSourceUpdatePlan,
-} from './validate-plan.mjs';
+import { readAndValidatePinnedSourceUpdatePlan } from './validate-plan.mjs';
 
 const APPLY_AUTHORIZATION = 'MIAKAPP_STAGING_WORKLOAD_UPDATE_APPLY_AUTHORIZATION';
-const SIGNING_ACTIVATION_AUTHORIZATION =
-  'MIAKAPP_STAGING_SIGNING_ACTIVATION_APPLY_AUTHORIZATION';
 const workloadRoot = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = fileURLToPath(new URL('../../../', import.meta.url));
 process.umask(0o077);
@@ -109,44 +99,14 @@ function verifyVariables(path, metadata, bundle) {
   return variables;
 }
 
-function signingActivationBaseline() {
-  const result = run('gcloud', [
-    'functions',
-    'describe',
-    'control-plane',
-    '--gen2',
-    `--region=${REGION}`,
-    `--project=${PROJECT_ID}`,
-    '--quiet',
-    '--format=json(name,state,updateTime,serviceConfig.revision,serviceConfig.environmentVariables)',
-  ], { cwd: repositoryRoot, description: 'signing-activation-baseline' });
-  let value;
-  try {
-    value = JSON.parse(Buffer.from(result.stdout).toString('utf8'));
-  } catch {
-    throw new Error('Live signing prepublication baseline is invalid JSON');
-  }
-  return validateSigningActivationBaseline(value);
-}
-
 async function main() {
-  const signingActivation = process.argv[2] === '--signing-activate';
-  const offset = signingActivation ? 1 : 0;
-  const bundlePath = process.argv[2 + offset];
-  const authorizationName = signingActivation
-    ? SIGNING_ACTIVATION_AUTHORIZATION
-    : APPLY_AUTHORIZATION;
-  if (process.argv.length !== 3 + offset || bundlePath === undefined) {
-    const executable = signingActivation ? './signing-activate-apply.sh' : './update-apply.sh';
-    throw new Error(`Usage: ${authorizationName}=... ${executable} <private-bundle>`);
+  if (process.argv.length !== 3 || process.argv[2] === undefined) {
+    throw new Error(`Usage: ${APPLY_AUTHORIZATION}=... ./update-apply.sh <private-bundle>`);
   }
-  assertSafeWorkloadEnvironment(process.env, authorizationName);
+  assertSafeWorkloadEnvironment(process.env, APPLY_AUTHORIZATION);
   validateWorkloadRoot(new URL('./', import.meta.url));
-  const bundle = privateBundle(bundlePath);
-  const readMetadata = signingActivation
-    ? readWorkloadSigningActivationPlanMetadata
-    : readWorkloadUpdatePlanMetadata;
-  const { value: metadata } = readMetadata(join(bundle, 'metadata.json'));
+  const bundle = privateBundle(process.argv[2]);
+  const { value: metadata } = readWorkloadUpdatePlanMetadata(join(bundle, 'metadata.json'));
   verifyExactMain(repositoryRoot, metadata.repository_commit);
 
   const planPath = join(bundle, 'workload.tfplan');
@@ -163,31 +123,18 @@ async function main() {
     throw new Error('Private workload update bundle digest verification failed');
   }
   const variables = verifyVariables(variablesPath, metadata, bundle);
-  if (signingActivation) {
-    validateWorkloadSigningActivationAuthorization(
-      process.env[authorizationName],
-      planBytes,
-      metadata.repository_commit,
-    );
-    signingActivationBaseline();
-  } else {
-    validateWorkloadUpdateAuthorization(
-      process.env[authorizationName],
-      planBytes,
-      metadata.repository_commit,
-    );
-  }
+  validateWorkloadUpdateAuthorization(
+    process.env[APPLY_AUTHORIZATION],
+    planBytes,
+    metadata.repository_commit,
+  );
   const validationInput = {
     repositoryCommit: metadata.repository_commit,
     sourceRepositoryCommit: metadata.source_repository_commit,
     sourceArchiveSha256: metadata.source_archive_sha256,
     runtimeConfigSha256: metadata.runtime_config_sha256,
   };
-  if (signingActivation) {
-    readAndValidatePinnedSigningActivationPlan(planJsonPath, validationInput);
-  } else {
-    readAndValidatePinnedSourceUpdatePlan(planJsonPath, validationInput);
-  }
+  readAndValidatePinnedSourceUpdatePlan(planJsonPath, validationInput);
 
   const terraformData = join(bundle, `.terraform-update-apply-${process.pid}`);
   mkdirSync(terraformData, { mode: 0o700 });
@@ -210,8 +157,6 @@ async function main() {
     if (sha256(Buffer.from(rendered.stdout)) !== metadata.terraform_plan_json_sha256) {
       throw new Error('Terraform binary update plan no longer renders to the reviewed JSON');
     }
-    if (signingActivation) signingActivationBaseline();
-
     const applyResult = run('terraform', ['apply', '-input=false', '-auto-approve', '-no-color', planPath], {
       env: environment,
       allowedStatuses: [0, 1],
@@ -270,9 +215,7 @@ async function main() {
     process.stdout.write([
       applyFailed
         ? 'The provider returned an error after the exact update converged; live state was reconciled.'
-        : signingActivation
-          ? 'The exact private staging signing-key activation was applied and converged.'
-          : 'The exact private staging workload update was applied and converged.',
+        : 'The exact private staging workload update was applied and converged.',
       `Private result: ${resultPath}`,
       `Function: ${result.function.name}`,
       `Revision: ${result.function.revision}`,

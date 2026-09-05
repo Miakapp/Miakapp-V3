@@ -1,7 +1,7 @@
 # Miakapp 4 staging private workload boundary
 
 Status: private audience-bound user-relay acceptance succeeded and retired;
-schema-2 two-key runtime deployed privately with version 1 current; live browser-relay plan reviewed
+schema-2 two-key runtime deployed privately with version 2 current and version 1 retained; live browser-relay plan reviewed
 but not deployed; browser App Check API-only prerequisite applied and
 converged; one domain-restricted score key applied and independently converged;
 exact non-deletable App Check provider registered with enforcement disabled;
@@ -30,10 +30,10 @@ prerequisite: one non-retried Cloud KMS version creation behind two atomic GCS
 claims. Version 2 converged after the first and only direct REST request; both
 one-shot entrypoints are permanently retired. The operation kept version 1,
 the runtime document, Terraform state, IAM and private ingress unchanged. A
-later guarded workload rollout has now prepublished both public keys with
-version 1 current. A separately guarded activation may select version 2 only
-after at least 60 seconds, then must retain version 1 for at least the complete
-330-second lease bound. The additional active software version is
+later guarded workload rollout prepublished both public keys with version 1
+current, and a second guarded rollout selected version 2 after 51 minutes and
+44.897 seconds while retaining version 1. Version 1 must remain published for
+at least the complete 330-second lease bound. The additional active software version is
 bounded to USD 0.06/month at the currently documented Cloud KMS price.
 
 The [`browser-app-check/`](browser-app-check/) root applied the reCAPTCHA
@@ -134,14 +134,24 @@ The subsequent exact prepublication plan had SHA-256
 `0ff816d86e0b391da341703744663d4d0efb2a5478c4e17fed2c7b23ca5e2e24`.
 It updated only the Function and deployment guard in place, preserved source
 SHA-256 `d1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8`,
-and converged to current revision `control-plane-00007-deb` with versions 1 and
-2 published and version 1 current. The authoritative Function update time is
-`2026-09-05T11:59:31.953152089Z`. Current workload state generation
-`1788609578813791` is 49,898 bytes at serial 20 with fifteen managed resources,
-three data resources, one output and nothing tainted; its SHA-256 is
+and converged to historical revision `control-plane-00007-deb` with versions 1
+and 2 published and version 1 current. The authoritative Function update time is
+`2026-09-05T11:59:31.953152089Z`. That workload state generation
+`1788609578813791` was 49,898 bytes at serial 20 with fifteen managed resources,
+three data resources, one output and nothing tainted; its SHA-256 was
 `7233518baa49e38cbe846e148b498024c288e81222a8ed9f3cbf0cce4edab6dd`.
+
+The exact activation plan had SHA-256
+`252a404d50b891cdb49e379ff8f88b598effbee13f59b7065f44b754b84ac124`
+and changed only `current_kid` in the runtime document plus the deployment
+commit. It preserved both published keys, source, build, IAM, ingress and scale,
+then converged without a request to current revision `control-plane-00008-saz`.
+Its authoritative update time is `2026-09-05T12:52:52.140270744Z`. Current
+workload state generation `1788612775466023` is 49,898 bytes at serial 22 with
+the same resource inventory and no taint; its SHA-256 is
+`59fc885f69378118b972b76c5ae570890251215b5d232330c380d4d293ff6fd2`.
 The current canonical [`workload/result.json`](workload/result.json) has SHA-256
-`27253e9715fb901f78ce3dfd5ffd7ff0981b9dee818bde507b9170d35ffed185`.
+`bab093e5f070039c3e8f482f83bb00927406ca9284c639ca62bc69c4ae997713`.
 The discovery evidence below remains pinned to historical revision
 `control-plane-00003-hum`.
 
@@ -561,14 +571,14 @@ inside the separately authorized EUR 5 monthly boundary. App Engine, an
 external load balancer, Cloud Armor, VPC and DNS changes are absent.
 
 No live case may start yet. The production runtime now publishes both signing
-keys with version 1 current. The guarded `signing-overlap/` operation created
+keys with version 2 current and version 1 retained. The guarded `signing-overlap/` operation created
 version 2 exactly once, and the separate workload prepublication converged
 without changing source, IAM, ingress or scale.
 The browser App Check API, its single
 domain-restricted score key and the exact non-deletable provider registration
 are applied, independently converged and retired as one-shot entrypoints.
-Version 2 activation and complete 330-second version-1 retention remain
-separate guarded gates. The next browser attestation step is a bounded real browser SDK/token observation
+Version 2 activation is complete; removing version 1 remains a separate guarded
+gate after its complete 330-second retention. The next browser attestation step is a bounded real browser SDK/token observation
 with enforcement still disabled; it must not reuse the consumed registration
 drivers.
 Separate guarded implementations must also exist for the temporary edge

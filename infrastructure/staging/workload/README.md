@@ -1,9 +1,9 @@
 # Private staging control-plane workload
 
 Status: two-key schema-2 runtime deployed, converged and source-verified with
-version 1 current; an exact guarded activation target selects version 2 while
-retaining version 1; the historical audience-bound revision was accepted by
-one retired bounded probe
+version 2 current and version 1 retained; the one-time activation entry points
+are retired; the historical audience-bound revision was accepted by one
+retired bounded probe
 
 This is the third, workload-only Terraform state for `miakapp-v4-staging`. It
 reads but never owns the reconciled bootstrap and foundation states. Its GCS
@@ -234,7 +234,7 @@ The one-time schema migration wrappers are retired.
 ## Completed signing-key prepublication
 
 [`runtime-config-version-1-current.json`](runtime-config-version-1-current.json)
-preserves the exact deployed two-key document. It keeps
+preserves the exact historical prepublication document. It keeps
 `staging-access-token-v1` as `current_kid` and appends only the public JWK for
 enabled KMS version 2. Its SHA-256 is
 `c018708786fc23a15f7701093b5148c0e415a2df8045af8e170e4308c2deae37`.
@@ -256,21 +256,51 @@ Apply converged to active revision `control-plane-00007-deb`, whose
 authoritative update time is `2026-09-05T11:59:31.953152089Z`. Independent
 inventory matched the unchanged source SHA-256 in copied generation
 `1788609527738009`, internal-only ingress, scale 0..1, zero public invokers and
-zero user-managed keys without making a Function request. Current workload
-state generation `1788609578813791` is 49,898 bytes at serial 20 with fifteen
+zero user-managed keys without making a Function request. That workload
+state generation `1788609578813791` was 49,898 bytes at serial 20 with fifteen
 managed and three data resources, one output, nothing tainted, and SHA-256
 `7233518baa49e38cbe846e148b498024c288e81222a8ed9f3cbf0cce4edab6dd`.
-The current canonical non-secret [`result.json`](result.json) has SHA-256
+The canonical non-secret result at that boundary had SHA-256
 `27253e9715fb901f78ce3dfd5ffd7ff0981b9dee818bde507b9170d35ffed185`.
 
-The one-time prepublication wrappers are retired. The exact activation target
-in [`runtime-config.json`](runtime-config.json) changes only `current_kid` to
+The one-time prepublication wrappers are retired. At this historical boundary,
+version 1 remained current and the regular source updater was blocked pending a
+separately reviewed activation.
+
+## Completed signing-key activation
+
+[`runtime-config.json`](runtime-config.json) is now the exact deployed two-key
+document. It changes only `current_kid` from the prepublished document to
 `staging-access-token-v2`, retains both public versions and has SHA-256
 `40e2f83fbe8e3d27b7e53c4a666f424519fc6972ef19a7598ab9e093be0c70f7`.
-Its one-time plan and apply entry points require the exact live revision above,
-the unchanged deterministic source archive, a fresh digest-bound saved plan and
-an elapsed prepublication interval. The regular source updater remains blocked
-until this guarded activation converges.
+
+Merge commit `6a9db97deb59b6c8e919d451c922ddb246eb54b2` produced an exact
+saved plan with SHA-256
+`252a404d50b891cdb49e379ff8f88b598effbee13f59b7065f44b754b84ac124`.
+Its metadata and JSON rendering had SHA-256
+`4bab6d00b2d82d0f232dcfbbf14120957f53da43725f552adfa51cc3a556a6c9`
+and
+`fd385f4216af57d810f128ccca4e44176149d2985083d21eecc8aa62d2d3608e`.
+The plan was created 51 minutes and 44.897 seconds after the authoritative
+prepublication update. Its independent validator accepted only in-place
+Function and deployment-guard updates, with the source object, build, IAM,
+ingress, identities and scale unchanged and no live request.
+
+Apply converged to active revision `control-plane-00008-saz`, whose
+authoritative update time is `2026-09-05T12:52:52.140270744Z`. Independent
+inventory matched the unchanged source SHA-256 in copied generation
+`1788612724252705`, internal-only ingress, scale 0..1, zero public invokers and
+zero user-managed keys without making a Function request. Workload state
+generation `1788612775466023` is 49,898 bytes at serial 22 with fifteen managed
+and three data resources, one output, nothing tainted, and SHA-256
+`59fc885f69378118b972b76c5ae570890251215b5d232330c380d4d293ff6fd2`.
+The current canonical non-secret [`result.json`](result.json) has SHA-256
+`bab093e5f070039c3e8f482f83bb00927406ca9284c639ca62bc69c4ae997713`.
+
+The one-time activation wrappers are retired and the regular source updater is
+restored against this exact deployment. Version 1 remains published throughout
+the overlap window; any later retirement is a separate guarded transition and
+must not occur before 330 seconds have elapsed from the activation update time.
 
 ## Successful private discovery
 
