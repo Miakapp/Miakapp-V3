@@ -623,6 +623,18 @@ function dormantOutput({ previous = false } = {}) {
   };
 }
 
+function armedOutput() {
+  return {
+    ...dormantOutput(),
+    armed: true,
+    workflow_name: WORKFLOW_NAME,
+    workflow_revision: WORKFLOW_REVISION,
+    workflow_service_account: `projects/${PROJECT_ID}/serviceAccounts/${PROBE_ACCOUNT}`,
+    verifier_service_name: VERIFIER_SERVICE_NAME,
+    verifier_service_uri: 'https://miakapp-user-relay-verifier-aczhngqraq-od.a.run.app',
+  };
+}
+
 function syntheticOutputRecoveryPlan() {
   const plan = syntheticPlan('retire-finalize');
   for (const resource of plan.resource_changes) {
@@ -1619,6 +1631,29 @@ test('reconciles only the exact stale dormant output without cloud mutations', (
     delete: 0,
     state_outputs: 1,
   });
+
+  const postRetirement = structuredClone(plan);
+  postRetirement.output_changes.staging_auth_probe.before = armedOutput();
+  assert.deepEqual(validateAuthProbeOutputOnlyPlanAgainstPolicy(postRetirement), {
+    create: 0,
+    update: 0,
+    delete: 0,
+    state_outputs: 1,
+  });
+
+  const foreignRevision = structuredClone(postRetirement);
+  foreignRevision.output_changes.staging_auth_probe.before.workflow_revision = '../foreign';
+  assert.throws(
+    () => validateAuthProbeOutputOnlyPlanAgainstPolicy(foreignRevision),
+    /previous armed output/u,
+  );
+
+  const foreignVerifier = structuredClone(postRetirement);
+  foreignVerifier.output_changes.staging_auth_probe.before.verifier_service_uri = VERIFIER_SERVICE_URI;
+  assert.throws(
+    () => validateAuthProbeOutputOnlyPlanAgainstPolicy(foreignVerifier),
+    /previous verifier URI/u,
+  );
 
   const infrastructureMutation = structuredClone(plan);
   const authRoleChange = infrastructureMutation.resource_changes.find(({ address }) => (
