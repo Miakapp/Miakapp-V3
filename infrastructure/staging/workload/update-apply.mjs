@@ -12,13 +12,16 @@ import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
+  TARGET_RUNTIME_CONFIG_SHA256,
   TERRAFORM_VERSION,
   assertSafeWorkloadEnvironment,
   canonicalJson,
   childEnvironment,
   readPrivateFile,
+  readWorkloadSigningPrepublicationPlanMetadata,
   readWorkloadUpdatePlanMetadata,
   sha256,
+  validateWorkloadSigningPrepublicationAuthorization,
   validateWorkloadUpdateAuthorization,
   verifiedOperatorEmail,
   verifyExactMain,
@@ -26,9 +29,14 @@ import {
 } from './contract.mjs';
 import { validateWorkloadRoot } from './guard.mjs';
 import { observeDeployedWorkload } from './inventory.mjs';
-import { readAndValidatePinnedSourceUpdatePlan } from './validate-plan.mjs';
+import {
+  readAndValidatePinnedSigningPrepublicationPlan,
+  readAndValidatePinnedSourceUpdatePlan,
+} from './validate-plan.mjs';
 
 const APPLY_AUTHORIZATION = 'MIAKAPP_STAGING_WORKLOAD_UPDATE_APPLY_AUTHORIZATION';
+const SIGNING_PREPUBLICATION_AUTHORIZATION =
+  'MIAKAPP_STAGING_SIGNING_PREPUBLICATION_APPLY_AUTHORIZATION';
 const workloadRoot = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = fileURLToPath(new URL('../../../', import.meta.url));
 process.umask(0o077);
@@ -100,13 +108,25 @@ function verifyVariables(path, metadata, bundle) {
 }
 
 async function main() {
-  if (process.argv.length !== 3 || process.argv[2] === undefined) {
-    throw new Error(`Usage: ${APPLY_AUTHORIZATION}=... ./update-apply.sh <private-bundle>`);
+  const signingPrepublication = process.argv[2] === '--signing-prepublish';
+  const offset = signingPrepublication ? 1 : 0;
+  const bundlePath = process.argv[2 + offset];
+  const authorizationName = signingPrepublication
+    ? SIGNING_PREPUBLICATION_AUTHORIZATION
+    : APPLY_AUTHORIZATION;
+  if (process.argv.length !== 3 + offset || bundlePath === undefined) {
+    const executable = signingPrepublication
+      ? './signing-prepublish-apply.sh'
+      : './update-apply.sh';
+    throw new Error(`Usage: ${authorizationName}=... ${executable} <private-bundle>`);
   }
-  assertSafeWorkloadEnvironment(process.env, APPLY_AUTHORIZATION);
+  assertSafeWorkloadEnvironment(process.env, authorizationName);
   validateWorkloadRoot(new URL('./', import.meta.url));
-  const bundle = privateBundle(process.argv[2]);
-  const { value: metadata } = readWorkloadUpdatePlanMetadata(join(bundle, 'metadata.json'));
+  const bundle = privateBundle(bundlePath);
+  const readMetadata = signingPrepublication
+    ? readWorkloadSigningPrepublicationPlanMetadata
+    : readWorkloadUpdatePlanMetadata;
+  const { value: metadata } = readMetadata(join(bundle, 'metadata.json'));
   verifyExactMain(repositoryRoot, metadata.repository_commit);
 
   const planPath = join(bundle, 'workload.tfplan');
@@ -123,18 +143,33 @@ async function main() {
     throw new Error('Private workload update bundle digest verification failed');
   }
   const variables = verifyVariables(variablesPath, metadata, bundle);
-  validateWorkloadUpdateAuthorization(
-    process.env[APPLY_AUTHORIZATION],
-    planBytes,
-    metadata.repository_commit,
-  );
+  if (signingPrepublication) {
+    validateWorkloadSigningPrepublicationAuthorization(
+      process.env[authorizationName],
+      planBytes,
+      metadata.repository_commit,
+    );
+  } else {
+    validateWorkloadUpdateAuthorization(
+      process.env[authorizationName],
+      planBytes,
+      metadata.repository_commit,
+    );
+  }
   const validationInput = {
     repositoryCommit: metadata.repository_commit,
     sourceRepositoryCommit: metadata.source_repository_commit,
     sourceArchiveSha256: metadata.source_archive_sha256,
     runtimeConfigSha256: metadata.runtime_config_sha256,
   };
-  readAndValidatePinnedSourceUpdatePlan(planJsonPath, validationInput);
+  if (signingPrepublication) {
+    if (metadata.runtime_config_sha256 !== TARGET_RUNTIME_CONFIG_SHA256) {
+      throw new Error('Signing prepublication runtime digest differs from the exact target');
+    }
+    readAndValidatePinnedSigningPrepublicationPlan(planJsonPath, validationInput);
+  } else {
+    readAndValidatePinnedSourceUpdatePlan(planJsonPath, validationInput);
+  }
 
   const terraformData = join(bundle, `.terraform-update-apply-${process.pid}`);
   mkdirSync(terraformData, { mode: 0o700 });
@@ -216,7 +251,9 @@ async function main() {
     process.stdout.write([
       applyFailed
         ? 'The provider returned an error after the exact update converged; live state was reconciled.'
-        : 'The exact private staging workload update was applied and converged.',
+        : signingPrepublication
+          ? 'The exact private staging signing-key prepublication was applied and converged.'
+          : 'The exact private staging workload update was applied and converged.',
       `Private result: ${resultPath}`,
       `Function: ${result.function.name}`,
       `Revision: ${result.function.revision}`,

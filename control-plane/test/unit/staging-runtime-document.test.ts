@@ -5,6 +5,7 @@ import { describe, expect, test } from 'bun:test';
 
 import { ProductionConfigurationError } from '../../src/production-config.js';
 import { parseRequestJson } from '../../src/json.js';
+import { parseProductionRuntimeConfig } from '../../src/production-runtime-config.js';
 import {
   buildInitialStagingRuntimeDocument,
   buildStagingRuntimeSchema2MigrationDocument,
@@ -116,7 +117,7 @@ describe('initial staging runtime document', () => {
       import.meta.url,
     )));
     const migratedBytes = readFileSync(new URL(
-      '../../../infrastructure/staging/workload/runtime-config.json',
+      '../../../infrastructure/staging/workload/runtime-config-single-key.json',
       import.meta.url,
     ));
     const migrated = parseRequestJson(migratedBytes);
@@ -148,5 +149,36 @@ describe('initial staging runtime document', () => {
       expect(() => validateStagingRuntimeSchema2MigrationDocument(initial, migrated))
         .toThrow(ProductionConfigurationError);
     }
+  });
+
+  test('accepts the exact two-key prepublication target with version 1 current', () => {
+    const current = parseRequestJson(readFileSync(new URL(
+      '../../../infrastructure/staging/workload/runtime-config-single-key.json',
+      import.meta.url,
+    ))) as Record<string, any>;
+    const targetBytes = readFileSync(new URL(
+      '../../../infrastructure/staging/workload/runtime-config.json',
+      import.meta.url,
+    ));
+    expect(createHash('sha256').update(targetBytes).digest('hex'))
+      .toBe('c018708786fc23a15f7701093b5148c0e415a2df8045af8e170e4308c2deae37');
+    const target = parseRequestJson(targetBytes) as Record<string, any>;
+    const expected = structuredClone(current) as Record<string, any>;
+    expected.security.signing.versions.push({
+      key_version_name: 'projects/miakapp-v4-staging/locations/europe-west9/keyRings/miakapp-v4-staging/cryptoKeys/access-token-signing/cryptoKeyVersions/2',
+      public_jwk: {
+        kty: 'OKP',
+        crv: 'Ed25519',
+        x: 'IjvnOpjvmNbnYrlUiMwlRUYnrEuc8VS5VZ7WHd7t1VE',
+        use: 'sig',
+        alg: 'EdDSA',
+        kid: 'staging-access-token-v2',
+      },
+    });
+    expect(target).toEqual(expected);
+    const runtime = parseProductionRuntimeConfig(target);
+    expect(runtime.security.signing.currentKid).toBe('staging-access-token-v1');
+    expect(runtime.security.signing.publicJwks).toHaveLength(2);
+    expect(runtime.security.signing.publicJwk.kid).toBe('staging-access-token-v1');
   });
 });

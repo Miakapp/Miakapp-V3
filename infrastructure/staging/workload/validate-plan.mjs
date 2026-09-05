@@ -9,6 +9,7 @@ import {
   PROJECT_NUMBER,
   REGION,
   RUNTIME_CONFIG_SHA256,
+  TARGET_RUNTIME_CONFIG_SHA256,
   TERRAFORM_VERSION,
 } from './contract.mjs';
 
@@ -65,6 +66,11 @@ const PINNED_UPDATE_ACTIONS = Object.freeze({
   ...Object.fromEntries(Object.keys(MANAGED_RESOURCES).map((address) => [address, ['no-op']])),
   'google_cloudfunctions2_function.control_plane': ['update'],
   'google_storage_bucket_object.source': ['delete', 'create'],
+  'terraform_data.deployment_guard': ['update'],
+});
+const SIGNING_PREPUBLICATION_ACTIONS = Object.freeze({
+  ...Object.fromEntries(Object.keys(MANAGED_RESOURCES).map((address) => [address, ['no-op']])),
+  'google_cloudfunctions2_function.control_plane': ['update'],
   'terraform_data.deployment_guard': ['update'],
 });
 
@@ -469,6 +475,70 @@ function validatePinnedSourceUpdateChanges(plan, input, policy) {
   exact([...managedSeen].sort(), Object.keys(MANAGED_RESOURCES).sort(), 'Managed source update changes');
 }
 
+function validateSigningPrepublicationChanges(plan, input, policy) {
+  if (!Array.isArray(plan.resource_changes)) reject('Terraform resource changes are missing');
+  const managedSeen = new Set();
+  for (const change of plan.resource_changes) {
+    if (!plainObject(change) || typeof change.address !== 'string' || !plainObject(change.change)) {
+      reject('Terraform signing prepublication plan contains an invalid resource change');
+    }
+    if (change.mode === 'data') {
+      if (DATA_RESOURCES[change.address] !== change.type
+        || ![['read'], ['no-op']].some((actions) => isDeepStrictEqual(actions, change.change.actions))) {
+        reject('Terraform signing prepublication plan contains an unreviewed data read');
+      }
+      continue;
+    }
+    if (change.mode !== 'managed' || MANAGED_RESOURCES[change.address] !== change.type
+      || managedSeen.has(change.address)) {
+      reject('Terraform signing prepublication plan contains an unreviewed managed resource');
+    }
+    managedSeen.add(change.address);
+    exact(
+      change.change.actions,
+      SIGNING_PREPUBLICATION_ACTIONS[change.address],
+      `${change.address}.signing prepublication actions`,
+    );
+    if (change.change.importing !== undefined || change.change.generated_config !== undefined) {
+      reject('Terraform signing prepublication plan must not import or generate configuration');
+    }
+    if (isDeepStrictEqual(change.change.actions, ['no-op'])) {
+      exact(change.change.before, change.change.after, `${change.address}.signing prepublication no-op`);
+    } else if (change.address === 'google_cloudfunctions2_function.control_plane') {
+      validatePinnedActiveFunction(
+        change.change.before,
+        policy.previous,
+        policy.operatorUserSha256,
+      );
+      exact(change.change.after.state, 'ACTIVE', 'Prepublished Function state');
+      exact(change.change.after.environment, 'GEN_2', 'Prepublished Function generation');
+      exact(
+        change.change.after.build_config,
+        change.change.before.build_config,
+        'Signing prepublication Function build configuration',
+      );
+    } else if (change.address === 'terraform_data.deployment_guard') {
+      const before = change.change.before;
+      const after = change.change.after;
+      if (!plainObject(before) || !plainObject(after)) {
+        reject('Signing prepublication guard is incomplete');
+      }
+      validateGuardInput(before.input, policy.previous, 'Signing prepublication guard baseline');
+      exact(before.output, before.input, 'Signing prepublication guard baseline output');
+      exact(before.triggers_replace, null, 'Signing prepublication guard baseline replacement trigger');
+      validateGuardInput(after.input, input, 'Signing prepublication guard update');
+      exact(after.id, before.id, 'Signing prepublication guard stable identity');
+      exact(after.triggers_replace, null, 'Signing prepublication guard replacement trigger');
+    }
+    validateChangeValues(change, input, policy.operatorUserSha256);
+  }
+  exact(
+    [...managedSeen].sort(),
+    Object.keys(MANAGED_RESOURCES).sort(),
+    'Managed signing prepublication changes',
+  );
+}
+
 function validateResourceChanges(plan, input, operatorUserSha256) {
   if (!Array.isArray(plan.resource_changes)) reject('Terraform resource changes are missing');
   const managedSeen = new Set();
@@ -644,6 +714,40 @@ export function validatePinnedSourceUpdatePlanAgainstPolicy(plan, input, policy)
   });
 }
 
+export function validatePinnedSigningPrepublicationPlanAgainstPolicy(plan, input, policy) {
+  validatePlanEnvelope(plan, input, policy);
+  if (!plainObject(policy.previous)
+    || !/^[0-9a-f]{40}$/u.test(policy.previous.repositoryCommit ?? '')
+    || !/^[0-9a-f]{40}$/u.test(sourceRepositoryCommit(policy.previous))
+    || !/^[0-9a-f]{64}$/u.test(policy.previous.sourceArchiveSha256 ?? '')
+    || !/^[0-9a-f]{64}$/u.test(runtimeConfigSha256(policy.previous))
+    || input.repositoryCommit === policy.previous.repositoryCommit
+    || sourceRepositoryCommit(input) !== sourceRepositoryCommit(policy.previous)
+    || input.sourceArchiveSha256 !== policy.previous.sourceArchiveSha256
+    || runtimeConfigSha256(input) !== TARGET_RUNTIME_CONFIG_SHA256
+    || runtimeConfigSha256(input) === runtimeConfigSha256(policy.previous)) {
+    reject('Terraform signing prepublication baseline is invalid or unchanged');
+  }
+  validateSigningPrepublicationChanges(plan, input, policy);
+  rejectForbiddenIdentities(plan);
+  return Object.freeze({
+    create: 0,
+    update: 2,
+    delete: 0,
+    transition: 'prepublish-version-2-with-version-1-current',
+    function: 1,
+    source_replaced: false,
+    published_signing_key_versions: 2,
+    current_signing_key_version: 1,
+    minimum_instances: 0,
+    maximum_instances: 1,
+    ingress: 'internal-only',
+    unauthenticated_invokers: 0,
+    synthetic_invokers: 1,
+    fcm_permissions: 1,
+  });
+}
+
 export function validateInitialWorkloadPlan(plan, input) {
   return validateWorkloadPlanAgainstPolicy(plan, input, {
     operatorUserSha256: OPERATOR_USER_SHA256,
@@ -662,6 +766,17 @@ export function validatePinnedSourceUpdatePlan(
   operatorUserSha256 = OPERATOR_USER_SHA256,
 ) {
   return validatePinnedSourceUpdatePlanAgainstPolicy(plan, input, {
+    operatorUserSha256,
+    previous: PINNED_UPDATE_BASELINE,
+  });
+}
+
+export function validatePinnedSigningPrepublicationPlan(
+  plan,
+  input,
+  operatorUserSha256 = OPERATOR_USER_SHA256,
+) {
+  return validatePinnedSigningPrepublicationPlanAgainstPolicy(plan, input, {
     operatorUserSha256,
     previous: PINNED_UPDATE_BASELINE,
   });
@@ -691,12 +806,17 @@ export function readAndValidatePinnedSourceUpdatePlan(path, input) {
   return validatePinnedSourceUpdatePlan(readPlan(path), input);
 }
 
+export function readAndValidatePinnedSigningPrepublicationPlan(path, input) {
+  return validatePinnedSigningPrepublicationPlan(readPlan(path), input);
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const recovery = process.argv[2] === '--recover-failed-build';
   const update = process.argv[2] === '--update-pinned-source';
-  const offset = recovery || update ? 1 : 0;
+  const signingPrepublication = process.argv[2] === '--signing-prepublish';
+  const offset = recovery || update || signingPrepublication ? 1 : 0;
   if (process.argv.length !== 5 + offset) {
-    console.error('Usage: node validate-plan.mjs [--recover-failed-build|--update-pinned-source] <plan.json> <repository-commit> <source-sha256>');
+    console.error('Usage: node validate-plan.mjs [--recover-failed-build|--update-pinned-source|--signing-prepublish] <plan.json> <repository-commit> <source-sha256>');
     process.exitCode = 2;
   } else {
     try {
@@ -704,12 +824,18 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         ? readAndValidateFailedBuildRecoveryPlan
         : update
           ? readAndValidatePinnedSourceUpdatePlan
-          : readAndValidateInitialWorkloadPlan;
+          : signingPrepublication
+            ? readAndValidatePinnedSigningPrepublicationPlan
+            : readAndValidateInitialWorkloadPlan;
       const summary = validate(process.argv[2 + offset], {
         repositoryCommit: process.argv[3 + offset],
-        sourceRepositoryCommit: process.argv[3 + offset],
+        sourceRepositoryCommit: signingPrepublication
+          ? PINNED_UPDATE_BASELINE.sourceRepositoryCommit
+          : process.argv[3 + offset],
         sourceArchiveSha256: process.argv[4 + offset],
-        runtimeConfigSha256: RUNTIME_CONFIG_SHA256,
+        runtimeConfigSha256: signingPrepublication
+          ? TARGET_RUNTIME_CONFIG_SHA256
+          : RUNTIME_CONFIG_SHA256,
       });
       process.stdout.write(`${JSON.stringify(summary)}\n`);
     } catch (error) {
