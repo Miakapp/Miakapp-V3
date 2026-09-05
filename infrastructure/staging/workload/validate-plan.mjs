@@ -9,6 +9,7 @@ import {
   PROJECT_NUMBER,
   REGION,
   RUNTIME_CONFIG_SHA256,
+  TARGET_RUNTIME_CONFIG_SHA256,
   TERRAFORM_VERSION,
 } from './contract.mjs';
 
@@ -51,7 +52,10 @@ const REPOSITORY = `projects/${PROJECT_ID}/locations/${REGION}/repositories/miak
 const BUILD_ACCOUNT_RESOURCE = `projects/${PROJECT_ID}/serviceAccounts/${BUILD_ACCOUNT}`;
 export const PINNED_UPDATE_BASELINE = Object.freeze({
   repositoryCommit: '9f217da102b394734adba7ccef3f8f70d0317306',
+  sourceRepositoryCommit: '9f217da102b394734adba7ccef3f8f70d0317306',
   sourceArchiveSha256: 'd1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8',
+  runtimeConfigSha256: RUNTIME_CONFIG_SHA256,
+  legacyGuard: true,
 });
 const RECOVERY_ACTIONS = Object.freeze({
   ...Object.fromEntries(Object.keys(MANAGED_RESOURCES).map((address) => [address, ['no-op']])),
@@ -65,6 +69,11 @@ const PINNED_UPDATE_ACTIONS = Object.freeze({
   'google_storage_bucket_object.source': ['delete', 'create'],
   'terraform_data.deployment_guard': ['update'],
 });
+const RUNTIME_MIGRATION_ACTIONS = Object.freeze({
+  ...Object.fromEntries(Object.keys(MANAGED_RESOURCES).map((address) => [address, ['no-op']])),
+  'google_cloudfunctions2_function.control_plane': ['update'],
+  'terraform_data.deployment_guard': ['update'],
+});
 
 function reject(message) {
   throw new Error(message);
@@ -76,6 +85,14 @@ function plainObject(value) {
 
 function exact(value, expected, path) {
   if (!isDeepStrictEqual(value, expected)) reject(`${path} does not match the reviewed value`);
+}
+
+function sourceRepositoryCommit(input) {
+  return input.sourceRepositoryCommit ?? input.repositoryCommit;
+}
+
+function runtimeConfigSha256(input) {
+  return input.runtimeConfigSha256 ?? RUNTIME_CONFIG_SHA256;
 }
 
 function isReviewedProductLabel(path, value) {
@@ -198,7 +215,11 @@ function validateChangeValues(change, input, operatorUserSha256) {
       exact(after.name, `sources/${input.sourceArchiveSha256}.zip`, `${address}.name`);
       exact(after.content_type, 'application/zip', `${address}.content_type`);
       exact(after.metadata?.sha256, input.sourceArchiveSha256, `${address}.metadata.sha256`);
-      exact(after.metadata?.['repository-commit'], input.repositoryCommit, `${address}.metadata.commit`);
+      exact(
+        after.metadata?.['repository-commit'],
+        sourceRepositoryCommit(input),
+        `${address}.metadata.commit`,
+      );
       if (typeof after.source !== 'string' || !after.source.endsWith('/control-plane.zip')) {
         reject(`${address}.source is not the private deterministic package`);
       }
@@ -313,7 +334,7 @@ function validateChangeValues(change, input, operatorUserSha256) {
       exact(environment.MIAKAPP_DEPLOYMENT_COMMIT, input.repositoryCommit, 'Function commit');
       exact(environment.MIAKAPP_SOURCE_ARCHIVE_SHA256, input.sourceArchiveSha256, 'Function source digest');
       if (createHash('sha256').update(environment.MIAKAPP_RUNTIME_CONFIG_JSON).digest('hex')
-        !== RUNTIME_CONFIG_SHA256) {
+        !== runtimeConfigSha256(input)) {
         reject('Function runtime document does not match the committed evidence');
       }
       break;
@@ -326,7 +347,12 @@ function validateChangeValues(change, input, operatorUserSha256) {
 function validateGuardInput(value, input, path) {
   if (!plainObject(value)) reject(`${path} is missing`);
   exact(Object.keys(value).sort(), [
-    'bootstrap', 'foundation', 'runtime_config', 'source_archive', 'source_commit',
+    'bootstrap',
+    'deployment_commit',
+    'foundation',
+    'runtime_config',
+    'source_archive',
+    'source_commit',
   ], `${path} fields`);
   exact(value.bootstrap, {
     apply_provider: `projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/miakapp-github/providers/staging-apply`,
@@ -361,9 +387,21 @@ function validateGuardInput(value, input, path) {
     ],
     signing_key: `projects/${PROJECT_ID}/locations/${REGION}/keyRings/${PROJECT_ID}/cryptoKeys/access-token-signing`,
   }, `${path}.foundation`);
-  exact(value.runtime_config, RUNTIME_CONFIG_SHA256, `${path}.runtime_config`);
+  exact(value.deployment_commit, input.repositoryCommit, `${path}.deployment_commit`);
+  exact(value.runtime_config, runtimeConfigSha256(input), `${path}.runtime_config`);
   exact(value.source_archive, input.sourceArchiveSha256, `${path}.source_archive`);
-  exact(value.source_commit, input.repositoryCommit, `${path}.source_commit`);
+  exact(value.source_commit, sourceRepositoryCommit(input), `${path}.source_commit`);
+}
+
+function validateLegacyGuardInput(value, input, path) {
+  if (!plainObject(value)) reject(`${path} is missing`);
+  exact(Object.keys(value).sort(), [
+    'bootstrap', 'foundation', 'runtime_config', 'source_archive', 'source_commit',
+  ], `${path} fields`);
+  validateGuardInput({
+    ...value,
+    deployment_commit: input.repositoryCommit,
+  }, input, path);
 }
 
 function validatePinnedSourceObjectBaseline(value, input) {
@@ -372,7 +410,7 @@ function validatePinnedSourceObjectBaseline(value, input) {
   exact(value.name, `sources/${input.sourceArchiveSha256}.zip`, 'Pinned source object name');
   exact(value.content_type, 'application/zip', 'Pinned source object content type');
   exact(value.metadata, {
-    'repository-commit': input.repositoryCommit,
+    'repository-commit': sourceRepositoryCommit(input),
     sha256: input.sourceArchiveSha256,
   }, 'Pinned source object metadata');
   exact(value.deletion_policy, 'DELETE', 'Pinned source object deletion policy');
@@ -437,7 +475,11 @@ function validatePinnedSourceUpdateChanges(plan, input, policy) {
       const before = change.change.before;
       const after = change.change.after;
       if (!plainObject(before) || !plainObject(after)) reject('Deployment guard update is incomplete');
-      validateGuardInput(before.input, policy.previous, 'Deployment guard baseline');
+      if (policy.previous.legacyGuard === true) {
+        validateLegacyGuardInput(before.input, policy.previous, 'Deployment guard baseline');
+      } else {
+        validateGuardInput(before.input, policy.previous, 'Deployment guard baseline');
+      }
       exact(before.output, before.input, 'Deployment guard baseline output');
       exact(before.triggers_replace, null, 'Deployment guard baseline replacement trigger');
       validateGuardInput(after.input, input, 'Deployment guard update');
@@ -447,6 +489,68 @@ function validatePinnedSourceUpdateChanges(plan, input, policy) {
     validateChangeValues(change, input, policy.operatorUserSha256);
   }
   exact([...managedSeen].sort(), Object.keys(MANAGED_RESOURCES).sort(), 'Managed source update changes');
+}
+
+function validateRuntimeMigrationChanges(plan, input, policy) {
+  if (!Array.isArray(plan.resource_changes)) reject('Terraform resource changes are missing');
+  const managedSeen = new Set();
+  for (const change of plan.resource_changes) {
+    if (!plainObject(change) || typeof change.address !== 'string' || !plainObject(change.change)) {
+      reject('Terraform runtime migration plan contains an invalid resource change');
+    }
+    if (change.mode === 'data') {
+      if (DATA_RESOURCES[change.address] !== change.type
+        || ![['read'], ['no-op']].some((actions) => isDeepStrictEqual(actions, change.change.actions))) {
+        reject('Terraform runtime migration plan contains an unreviewed data read');
+      }
+      continue;
+    }
+    if (change.mode !== 'managed' || MANAGED_RESOURCES[change.address] !== change.type
+      || managedSeen.has(change.address)) {
+      reject('Terraform runtime migration plan contains an unreviewed managed resource');
+    }
+    managedSeen.add(change.address);
+    exact(
+      change.change.actions,
+      RUNTIME_MIGRATION_ACTIONS[change.address],
+      `${change.address}.runtime migration actions`,
+    );
+    if (change.change.importing !== undefined || change.change.generated_config !== undefined) {
+      reject('Terraform runtime migration plan must not import or generate configuration');
+    }
+    if (isDeepStrictEqual(change.change.actions, ['no-op'])) {
+      exact(change.change.before, change.change.after, `${change.address}.runtime migration no-op`);
+    } else if (change.address === 'google_cloudfunctions2_function.control_plane') {
+      validatePinnedActiveFunction(
+        change.change.before,
+        policy.previous,
+        policy.operatorUserSha256,
+      );
+      exact(change.change.after.state, 'ACTIVE', 'Migrated Function state');
+      exact(change.change.after.environment, 'GEN_2', 'Migrated Function generation');
+      exact(
+        change.change.after.build_config,
+        change.change.before.build_config,
+        'Runtime migration Function build configuration',
+      );
+    } else if (change.address === 'terraform_data.deployment_guard') {
+      const before = change.change.before;
+      const after = change.change.after;
+      if (!plainObject(before) || !plainObject(after)) reject('Runtime migration guard is incomplete');
+      if (policy.previous.legacyGuard === true) {
+        validateLegacyGuardInput(before.input, policy.previous, 'Runtime migration guard baseline');
+      } else {
+        validateGuardInput(before.input, policy.previous, 'Runtime migration guard baseline');
+      }
+      exact(before.output, before.input, 'Runtime migration guard baseline output');
+      exact(before.triggers_replace, null, 'Runtime migration guard baseline replacement trigger');
+      validateGuardInput(after.input, input, 'Runtime migration guard update');
+      exact(after.id, before.id, 'Runtime migration guard stable identity');
+      exact(after.triggers_replace, null, 'Runtime migration guard replacement trigger');
+    }
+    validateChangeValues(change, input, policy.operatorUserSha256);
+  }
+  exact([...managedSeen].sort(), Object.keys(MANAGED_RESOURCES).sort(), 'Managed runtime migration changes');
 }
 
 function validateResourceChanges(plan, input, operatorUserSha256) {
@@ -549,7 +653,11 @@ function validatePlanEnvelope(plan, input, policy) {
   exact(plan.complete, true, 'Terraform plan completeness');
   exact(plan.errored, false, 'Terraform plan error state');
   if (typeof input.repositoryCommit !== 'string'
-    || typeof input.sourceArchiveSha256 !== 'string') {
+    || !/^[0-9a-f]{40}$/u.test(input.repositoryCommit)
+    || typeof input.sourceArchiveSha256 !== 'string'
+    || !/^[0-9a-f]{64}$/u.test(input.sourceArchiveSha256)
+    || !/^[0-9a-f]{40}$/u.test(sourceRepositoryCommit(input))
+    || !/^[0-9a-f]{64}$/u.test(runtimeConfigSha256(input))) {
     reject('Terraform workload validation inputs are invalid');
   }
   validateVariables(plan, input, policy.operatorUserSha256);
@@ -599,7 +707,9 @@ export function validatePinnedSourceUpdatePlanAgainstPolicy(plan, input, policy)
     || !/^[0-9a-f]{40}$/u.test(policy.previous.repositoryCommit ?? '')
     || !/^[0-9a-f]{64}$/u.test(policy.previous.sourceArchiveSha256 ?? '')
     || input.repositoryCommit === policy.previous.repositoryCommit
-    || input.sourceArchiveSha256 === policy.previous.sourceArchiveSha256) {
+    || input.sourceArchiveSha256 === policy.previous.sourceArchiveSha256
+    || runtimeConfigSha256(input) !== runtimeConfigSha256(policy.previous)
+    || policy.previous.legacyGuard === true) {
     reject('Terraform source update baseline is invalid or unchanged');
   }
   validatePinnedSourceUpdateChanges(plan, input, policy);
@@ -610,6 +720,40 @@ export function validatePinnedSourceUpdatePlanAgainstPolicy(plan, input, policy)
     delete: 1,
     replacement: 'deterministic-source-object',
     function: 1,
+    minimum_instances: 0,
+    maximum_instances: 1,
+    ingress: 'internal-only',
+    unauthenticated_invokers: 0,
+    synthetic_invokers: 1,
+    fcm_permissions: 1,
+  });
+}
+
+export function validatePinnedRuntimeMigrationPlanAgainstPolicy(plan, input, policy) {
+  validatePlanEnvelope(plan, input, policy);
+  if (!plainObject(policy.previous)
+    || !/^[0-9a-f]{40}$/u.test(policy.previous.repositoryCommit ?? '')
+    || !/^[0-9a-f]{40}$/u.test(sourceRepositoryCommit(policy.previous))
+    || !/^[0-9a-f]{64}$/u.test(policy.previous.sourceArchiveSha256 ?? '')
+    || !/^[0-9a-f]{64}$/u.test(runtimeConfigSha256(policy.previous))
+    || input.repositoryCommit === policy.previous.repositoryCommit
+    || sourceRepositoryCommit(input) !== sourceRepositoryCommit(policy.previous)
+    || input.sourceArchiveSha256 !== policy.previous.sourceArchiveSha256
+    || runtimeConfigSha256(input) !== TARGET_RUNTIME_CONFIG_SHA256
+    || runtimeConfigSha256(input) === runtimeConfigSha256(policy.previous)
+    || policy.previous.legacyGuard !== true) {
+    reject('Terraform runtime migration baseline is invalid or unchanged');
+  }
+  validateRuntimeMigrationChanges(plan, input, policy);
+  rejectForbiddenIdentities(plan);
+  return Object.freeze({
+    create: 0,
+    update: 2,
+    delete: 0,
+    migration: 'single-key-schema-1-to-schema-2',
+    function: 1,
+    source_replaced: false,
+    signing_key_versions: 1,
     minimum_instances: 0,
     maximum_instances: 1,
     ingress: 'internal-only',
@@ -642,6 +786,17 @@ export function validatePinnedSourceUpdatePlan(
   });
 }
 
+export function validatePinnedRuntimeMigrationPlan(
+  plan,
+  input,
+  operatorUserSha256 = OPERATOR_USER_SHA256,
+) {
+  return validatePinnedRuntimeMigrationPlanAgainstPolicy(plan, input, {
+    operatorUserSha256,
+    previous: PINNED_UPDATE_BASELINE,
+  });
+}
+
 function readPlan(path) {
   const bytes = readFileSync(path);
   if (bytes.byteLength === 0 || bytes.byteLength > MAXIMUM_PLAN_BYTES) {
@@ -666,12 +821,17 @@ export function readAndValidatePinnedSourceUpdatePlan(path, input) {
   return validatePinnedSourceUpdatePlan(readPlan(path), input);
 }
 
+export function readAndValidatePinnedRuntimeMigrationPlan(path, input) {
+  return validatePinnedRuntimeMigrationPlan(readPlan(path), input);
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const recovery = process.argv[2] === '--recover-failed-build';
   const update = process.argv[2] === '--update-pinned-source';
-  const offset = recovery || update ? 1 : 0;
+  const runtimeMigration = process.argv[2] === '--migrate-runtime-schema';
+  const offset = recovery || update || runtimeMigration ? 1 : 0;
   if (process.argv.length !== 5 + offset) {
-    console.error('Usage: node validate-plan.mjs [--recover-failed-build|--update-pinned-source] <plan.json> <repository-commit> <source-sha256>');
+    console.error('Usage: node validate-plan.mjs [--recover-failed-build|--update-pinned-source|--migrate-runtime-schema] <plan.json> <repository-commit> <source-sha256>');
     process.exitCode = 2;
   } else {
     try {
@@ -679,10 +839,18 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         ? readAndValidateFailedBuildRecoveryPlan
         : update
           ? readAndValidatePinnedSourceUpdatePlan
-          : readAndValidateInitialWorkloadPlan;
+          : runtimeMigration
+            ? readAndValidatePinnedRuntimeMigrationPlan
+            : readAndValidateInitialWorkloadPlan;
       const summary = validate(process.argv[2 + offset], {
         repositoryCommit: process.argv[3 + offset],
+        sourceRepositoryCommit: runtimeMigration
+          ? PINNED_UPDATE_BASELINE.sourceRepositoryCommit
+          : process.argv[3 + offset],
         sourceArchiveSha256: process.argv[4 + offset],
+        runtimeConfigSha256: runtimeMigration
+          ? TARGET_RUNTIME_CONFIG_SHA256
+          : RUNTIME_CONFIG_SHA256,
       });
       process.stdout.write(`${JSON.stringify(summary)}\n`);
     } catch (error) {

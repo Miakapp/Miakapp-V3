@@ -5,12 +5,16 @@ import test from 'node:test';
 
 import {
   PROJECT_ID,
+  TARGET_RUNTIME_CONFIG_SHA256,
   buildPlanMetadata,
+  buildWorkloadRuntimeMigrationPlanMetadata,
   buildWorkloadUpdatePlanMetadata,
   assertSafeWorkloadEnvironment,
   validatePlanMetadata,
+  validateWorkloadRuntimeMigrationPlanMetadata,
   validateWorkloadUpdatePlanMetadata,
   workloadAuthorization,
+  workloadRuntimeMigrationAuthorization,
   workloadUpdateAuthorization,
 } from '../workload/contract.mjs';
 import { validateWorkloadRoot } from '../workload/guard.mjs';
@@ -19,6 +23,8 @@ import { observeDeployedWorkload } from '../workload/inventory.mjs';
 import {
   PINNED_UPDATE_BASELINE,
   validateFailedBuildRecoveryPlanAgainstPolicy,
+  validatePinnedRuntimeMigrationPlan,
+  validatePinnedRuntimeMigrationPlanAgainstPolicy,
   validatePinnedSourceUpdatePlan,
   validatePinnedSourceUpdatePlanAgainstPolicy,
   validateWorkloadPlanAgainstPolicy,
@@ -32,6 +38,7 @@ const PREVIOUS_SOURCE_SHA256 = '3'.repeat(64);
 const OPERATOR_EMAIL = 'operator@example.test';
 const OPERATOR_SHA256 = createHash('sha256').update(OPERATOR_EMAIL).digest('hex');
 const RUNTIME_CONFIG = readFileSync(new URL('../activation/runtime-config.json', import.meta.url), 'utf8');
+const TARGET_RUNTIME_CONFIG = readFileSync(new URL('../workload/runtime-config.json', import.meta.url), 'utf8');
 const RUNTIME_ACCOUNT = `miakapp-control-plane@${PROJECT_ID}.iam.gserviceaccount.com`;
 const BUILD_ACCOUNT = `miakapp-control-build@${PROJECT_ID}.iam.gserviceaccount.com`;
 const PROBE_ACCOUNT = `miakapp-staging-probe@${PROJECT_ID}.iam.gserviceaccount.com`;
@@ -321,8 +328,10 @@ function validateSyntheticRecoveryPlan(plan = syntheticRecoveryPlan()) {
   });
 }
 
-function guardInput(repositoryCommit, sourceArchiveSha256) {
-  return {
+function guardInput(repositoryCommit, sourceArchiveSha256, options = {}) {
+  const sourceCommit = options.sourceRepositoryCommit ?? repositoryCommit;
+  const runtimeConfig = options.runtimeConfig ?? RUNTIME_CONFIG;
+  const input = {
     bootstrap: {
       apply_provider: 'projects/1072737219170/locations/global/workloadIdentityPools/miakapp-github/providers/staging-apply',
       bootstrap_prefix: 'terraform/bootstrap',
@@ -356,10 +365,12 @@ function guardInput(repositoryCommit, sourceArchiveSha256) {
       ],
       signing_key: `projects/${PROJECT_ID}/locations/europe-west9/keyRings/${PROJECT_ID}/cryptoKeys/access-token-signing`,
     },
-    runtime_config: createHash('sha256').update(RUNTIME_CONFIG).digest('hex'),
+    runtime_config: createHash('sha256').update(runtimeConfig).digest('hex'),
     source_archive: sourceArchiveSha256,
-    source_commit: repositoryCommit,
+    source_commit: sourceCommit,
   };
+  if (options.legacy !== true) input.deployment_commit = repositoryCommit;
+  return input;
 }
 
 function sourceObjectValue(repositoryCommit, sourceArchiveSha256, generation) {
@@ -380,7 +391,12 @@ function sourceObjectValue(repositoryCommit, sourceArchiveSha256, generation) {
   };
 }
 
-function functionValue(repositoryCommit, sourceArchiveSha256, generation) {
+function functionValue(
+  repositoryCommit,
+  sourceArchiveSha256,
+  generation,
+  runtimeConfig = RUNTIME_CONFIG,
+) {
   const value = structuredClone(plannedValue('google_cloudfunctions2_function.control_plane'));
   value.build_config[0].source[0].storage_source[0].object = `sources/${sourceArchiveSha256}.zip`;
   if (generation !== undefined) {
@@ -389,7 +405,7 @@ function functionValue(repositoryCommit, sourceArchiveSha256, generation) {
   value.service_config[0].environment_variables = {
     LOG_EXECUTION_ID: 'true',
     MIAKAPP_DEPLOYMENT_COMMIT: repositoryCommit,
-    MIAKAPP_RUNTIME_CONFIG_JSON: RUNTIME_CONFIG,
+    MIAKAPP_RUNTIME_CONFIG_JSON: runtimeConfig,
     MIAKAPP_SOURCE_ARCHIVE_SHA256: sourceArchiveSha256,
   };
   return value;
@@ -463,6 +479,88 @@ function validateSyntheticPinnedSourceUpdatePlan(plan = syntheticPinnedSourceUpd
   });
 }
 
+function syntheticPinnedRuntimeMigrationPlan() {
+  const plan = syntheticPlan();
+  for (const resource of plan.resource_changes) {
+    resource.change.actions = ['no-op'];
+    resource.change.before = structuredClone(resource.change.after);
+  }
+
+  const source = plan.resource_changes.find(
+    ({ address }) => address === 'google_storage_bucket_object.source',
+  );
+  source.change = {
+    actions: ['no-op'],
+    before: sourceObjectValue(PREVIOUS_COMMIT, SOURCE_SHA256, 123),
+    after: sourceObjectValue(PREVIOUS_COMMIT, SOURCE_SHA256, 123),
+  };
+
+  const functionResource = plan.resource_changes.find(
+    ({ address }) => address === 'google_cloudfunctions2_function.control_plane',
+  );
+  const beforeFunction = {
+    ...functionValue(PREVIOUS_COMMIT, SOURCE_SHA256, 123, RUNTIME_CONFIG),
+    state: 'ACTIVE',
+    environment: 'GEN_2',
+  };
+  functionResource.change = {
+    actions: ['update'],
+    before: beforeFunction,
+    after: {
+      ...functionValue(COMMIT, SOURCE_SHA256, 123, TARGET_RUNTIME_CONFIG),
+      state: 'ACTIVE',
+      environment: 'GEN_2',
+    },
+  };
+
+  const deploymentGuard = plan.resource_changes.find(
+    ({ address }) => address === 'terraform_data.deployment_guard',
+  );
+  const previousGuardInput = guardInput(PREVIOUS_COMMIT, SOURCE_SHA256, {
+    sourceRepositoryCommit: PREVIOUS_COMMIT,
+    runtimeConfig: RUNTIME_CONFIG,
+    legacy: true,
+  });
+  deploymentGuard.change = {
+    actions: ['update'],
+    before: {
+      id: 'stable-guard-id',
+      input: previousGuardInput,
+      output: structuredClone(previousGuardInput),
+      triggers_replace: null,
+    },
+    after: {
+      id: 'stable-guard-id',
+      input: guardInput(COMMIT, SOURCE_SHA256, {
+        sourceRepositoryCommit: PREVIOUS_COMMIT,
+        runtimeConfig: TARGET_RUNTIME_CONFIG,
+      }),
+      triggers_replace: null,
+    },
+  };
+  return plan;
+}
+
+function validateSyntheticPinnedRuntimeMigrationPlan(
+  plan = syntheticPinnedRuntimeMigrationPlan(),
+) {
+  return validatePinnedRuntimeMigrationPlanAgainstPolicy(plan, {
+    repositoryCommit: COMMIT,
+    sourceRepositoryCommit: PREVIOUS_COMMIT,
+    sourceArchiveSha256: SOURCE_SHA256,
+    runtimeConfigSha256: TARGET_RUNTIME_CONFIG_SHA256,
+  }, {
+    operatorUserSha256: OPERATOR_SHA256,
+    previous: {
+      repositoryCommit: PREVIOUS_COMMIT,
+      sourceRepositoryCommit: PREVIOUS_COMMIT,
+      sourceArchiveSha256: SOURCE_SHA256,
+      runtimeConfigSha256: createHash('sha256').update(RUNTIME_CONFIG).digest('hex'),
+      legacyGuard: true,
+    },
+  });
+}
+
 test('accepts only the reviewed initial workload graph', () => {
   assert.deepEqual(validateSyntheticPlan(), {
     create: 15,
@@ -513,7 +611,10 @@ test('accepts only the bounded in-place recovery from the failed first build', (
 test('accepts only the next update from the pinned active source', () => {
   assert.deepEqual(PINNED_UPDATE_BASELINE, {
     repositoryCommit: '9f217da102b394734adba7ccef3f8f70d0317306',
+    sourceRepositoryCommit: '9f217da102b394734adba7ccef3f8f70d0317306',
     sourceArchiveSha256: 'd1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8',
+    runtimeConfigSha256: 'b794181400bf5ace6aaa9ffc4be00e4c4f6a59519284baa7f73bca3c042c4ff8',
+    legacyGuard: true,
   });
   assert.deepEqual(validateSyntheticPinnedSourceUpdatePlan(), {
     create: 1,
@@ -542,38 +643,21 @@ test('accepts only the next update from the pinned active source', () => {
     assert.throws(() => validateSyntheticPinnedSourceUpdatePlan(plan));
   }
 
-  const activePlan = syntheticPinnedSourceUpdatePlan();
-  const activeSource = plannedChange(activePlan, 'google_storage_bucket_object.source');
-  activeSource.before = sourceObjectValue(
-    PINNED_UPDATE_BASELINE.repositoryCommit,
-    PINNED_UPDATE_BASELINE.sourceArchiveSha256,
-    123,
-  );
-  const activeFunction = plannedChange(activePlan, 'google_cloudfunctions2_function.control_plane');
-  activeFunction.before = {
-    ...functionValue(
-      PINNED_UPDATE_BASELINE.repositoryCommit,
-      PINNED_UPDATE_BASELINE.sourceArchiveSha256,
-      123,
-    ),
-    state: 'ACTIVE',
-    environment: 'GEN_2',
-  };
-  const activeGuard = plannedChange(activePlan, 'terraform_data.deployment_guard');
-  activeGuard.before.input = guardInput(
-    PINNED_UPDATE_BASELINE.repositoryCommit,
-    PINNED_UPDATE_BASELINE.sourceArchiveSha256,
-  );
-  activeGuard.before.output = structuredClone(activeGuard.before.input);
-  assert.deepEqual(validatePinnedSourceUpdatePlan(activePlan, {
+  assert.throws(() => validatePinnedSourceUpdatePlan(syntheticPinnedSourceUpdatePlan(), {
     repositoryCommit: COMMIT,
     sourceArchiveSha256: SOURCE_SHA256,
-  }, OPERATOR_SHA256), {
-    create: 1,
+  }, OPERATOR_SHA256), /baseline/);
+});
+
+test('accepts only the pinned single-key schema-2 runtime migration', () => {
+  assert.deepEqual(validateSyntheticPinnedRuntimeMigrationPlan(), {
+    create: 0,
     update: 2,
-    delete: 1,
-    replacement: 'deterministic-source-object',
+    delete: 0,
+    migration: 'single-key-schema-1-to-schema-2',
     function: 1,
+    source_replaced: false,
+    signing_key_versions: 1,
     minimum_instances: 0,
     maximum_instances: 1,
     ingress: 'internal-only',
@@ -581,41 +665,18 @@ test('accepts only the next update from the pinned active source', () => {
     synthetic_invokers: 1,
     fcm_permissions: 1,
   });
-
-  const superseded = {
-    repositoryCommit: '60322c69c92b8ccf5f3d1bc87ba264a00e5dca05',
-    sourceArchiveSha256: '86f4818dfcb4021e5578638d6fb1e9b7da31ea245528cbdc8573dabecdfca358',
-  };
-  for (const makeSuperseded of [
-    (plan) => {
-      plannedChange(plan, 'google_storage_bucket_object.source').before = sourceObjectValue(
-        superseded.repositoryCommit,
-        superseded.sourceArchiveSha256,
-        123,
-      );
-    },
-    (plan) => {
-      plannedChange(plan, 'google_cloudfunctions2_function.control_plane').before = {
-        ...functionValue(superseded.repositoryCommit, superseded.sourceArchiveSha256, 123),
-        state: 'ACTIVE',
-        environment: 'GEN_2',
-      };
-    },
-    (plan) => {
-      const supersededGuard = plannedChange(plan, 'terraform_data.deployment_guard');
-      supersededGuard.before.input = guardInput(
-        superseded.repositoryCommit,
-        superseded.sourceArchiveSha256,
-      );
-      supersededGuard.before.output = structuredClone(supersededGuard.before.input);
-    },
+  for (const mutate of [
+    (plan) => { plannedChange(plan, 'google_cloudfunctions2_function.control_plane').actions = ['delete', 'create']; },
+    (plan) => { plannedChange(plan, 'google_cloudfunctions2_function.control_plane').after.build_config[0].source[0].storage_source[0].generation = 124; },
+    (plan) => { plannedChange(plan, 'google_cloudfunctions2_function.control_plane').after.service_config[0].ingress_settings = 'ALLOW_ALL'; },
+    (plan) => { plannedChange(plan, 'google_cloudfunctions2_function.control_plane').after.service_config[0].environment_variables.MIAKAPP_RUNTIME_CONFIG_JSON = RUNTIME_CONFIG; },
+    (plan) => { plannedChange(plan, 'google_storage_bucket_object.source').actions = ['delete', 'create']; },
+    (plan) => { plannedChange(plan, 'terraform_data.deployment_guard').after.input.source_commit = COMMIT; },
+    (plan) => { plannedChange(plan, 'google_project_iam_member.runtime_fcm').actions = ['update']; },
   ]) {
-    const supersededPlan = structuredClone(activePlan);
-    makeSuperseded(supersededPlan);
-    assert.throws(() => validatePinnedSourceUpdatePlan(supersededPlan, {
-      repositoryCommit: COMMIT,
-      sourceArchiveSha256: SOURCE_SHA256,
-    }, OPERATOR_SHA256));
+    const plan = syntheticPinnedRuntimeMigrationPlan();
+    mutate(plan);
+    assert.throws(() => validateSyntheticPinnedRuntimeMigrationPlan(plan));
   }
 });
 
@@ -706,6 +767,34 @@ test('binds authorization and expiring metadata to exact private bytes', () => {
     updateMetadata,
   );
   assert.throws(() => validatePlanMetadata(updateMetadata, Date.parse(createdAt)));
+
+  assert.equal(
+    workloadRuntimeMigrationAuthorization(planBytes, COMMIT),
+    `migrate-private-runtime:${PROJECT_ID}:${createHash('sha256').update(planBytes).digest('hex')}:${COMMIT}`,
+  );
+  const runtimeMetadata = buildWorkloadRuntimeMigrationPlanMetadata({
+    repositoryCommit: COMMIT,
+    sourceRepositoryCommit: PREVIOUS_COMMIT,
+    createdAt,
+    packageResult: {
+      archive_sha256: SOURCE_SHA256,
+      archive_bytes: 42,
+      files: ['package.json', 'lib/production-entrypoint.js'],
+    },
+    planBytes,
+    planJsonBytes: Buffer.from('{}'),
+    summary: { create: 0, update: 2, delete: 0 },
+  });
+  assert.equal(runtimeMetadata.source_repository_commit, PREVIOUS_COMMIT);
+  assert.equal(runtimeMetadata.runtime_config_sha256, TARGET_RUNTIME_CONFIG_SHA256);
+  assert.equal(
+    validateWorkloadRuntimeMigrationPlanMetadata(runtimeMetadata, Date.parse(createdAt)),
+    runtimeMetadata,
+  );
+  assert.throws(() => validateWorkloadUpdatePlanMetadata(
+    runtimeMetadata,
+    Date.parse(createdAt),
+  ));
 });
 
 test('rejects ambient cloud overrides and accepts only the selected confirmation', () => {
@@ -845,6 +934,22 @@ test('independently accepts the exact private live inventory without making a re
   assert.equal(responses.length, 0);
 });
 
+test('independently validates the target runtime document during migration inventory', () => {
+  const responses = inventoryResponses();
+  responses[0].serviceConfig.environmentVariables.MIAKAPP_RUNTIME_CONFIG_JSON =
+    TARGET_RUNTIME_CONFIG;
+  const result = observeDeployedWorkload({
+    repositoryRoot: '/tmp/repository',
+    repositoryCommit: COMMIT,
+    sourceArchiveSha256: SOURCE_SHA256,
+    runtimeConfigSha256: TARGET_RUNTIME_CONFIG_SHA256,
+    operatorUserSha256: OPERATOR_SHA256,
+    spawn: inventorySpawn(responses),
+  });
+  assert.equal(result.runtime_config_sha256, TARGET_RUNTIME_CONFIG_SHA256);
+  assert.equal(result.live_request_performed, false);
+});
+
 test('rejects an unreviewed project log writer', () => {
   const responses = inventoryResponses(['serviceAccount:foreign@example.test']);
   assert.throws(() => observeDeployedWorkload({
@@ -875,13 +980,35 @@ test('workload root guard accepts only the closed executable inventory', () => {
 test('keeps the pinned source updater on a saved Terraform plan without live requests', () => {
   const planSource = readFileSync(new URL('../workload/update-plan.mjs', import.meta.url), 'utf8');
   const applySource = readFileSync(new URL('../workload/update-apply.mjs', import.meta.url), 'utf8');
+  const runtimePlanSource = readFileSync(new URL('../workload/runtime-plan.sh', import.meta.url), 'utf8');
+  const runtimeApplySource = readFileSync(new URL('../workload/runtime-apply.sh', import.meta.url), 'utf8');
+  const localsSource = readFileSync(new URL('../workload/locals.tf', import.meta.url), 'utf8');
+  const workloadSource = readFileSync(new URL('../workload/workload.tf', import.meta.url), 'utf8');
   assert.match(planSource, /readAndValidatePinnedSourceUpdatePlan/);
   assert.match(planSource, /buildWorkloadUpdatePlanMetadata/);
   assert.match(applySource, /readAndValidatePinnedSourceUpdatePlan/);
   assert.match(applySource, /validateWorkloadUpdateAuthorization/);
   assert.match(applySource, /'apply', '-input=false', '-auto-approve', '-no-color', planPath/);
   assert.match(applySource, /observeDeployedWorkload/);
-  assert.doesNotMatch(`${planSource}\n${applySource}`, /\b(?:curl|destroy)\b|functions deploy|run deploy|executions run/u);
+  assert.match(planSource, /readAndValidatePinnedRuntimeMigrationPlan/);
+  assert.match(applySource, /validateWorkloadRuntimeMigrationAuthorization/);
+  assert.match(runtimePlanSource, /--runtime-migration/);
+  assert.match(runtimeApplySource, /--runtime-migration/);
+  assert.match(planSource, /guarded runtime migration must converge/);
+  assert.match(
+    localsSource,
+    /source_repository_commit\s+= "9f217da102b394734adba7ccef3f8f70d0317306"/,
+  );
+  assert.match(
+    localsSource,
+    /runtime_config_sha256\s+= "20be750358ffbc2136bab26bca6338b430ea6480ae9874f3fe5e7132c5e0db10"/,
+  );
+  assert.match(workloadSource, /repository-commit = local\.source_repository_commit/);
+  assert.match(workloadSource, /ignore_changes = \[source\]/);
+  assert.doesNotMatch(
+    `${planSource}\n${applySource}\n${runtimePlanSource}\n${runtimeApplySource}`,
+    /\b(?:curl|destroy)\b|functions deploy|run deploy|executions run/u,
+  );
 });
 
 test('pins the exact non-secret live workload result', () => {
