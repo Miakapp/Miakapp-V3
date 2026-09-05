@@ -15,6 +15,13 @@ import {
   PROJECT_ID,
   PROJECT_NUMBER,
   REGION,
+  RETIRED_CAPABILITY_EXPIRY,
+  RETIRED_CUSTOM_ROLE_ID,
+  RETIRED_CUSTOM_ROLE_NAME,
+  RETIRED_FIRESTORE_ROLE_ID,
+  RETIRED_FIRESTORE_ROLE_NAME,
+  RETIRED_SIGNER_ROLE_ID,
+  RETIRED_SIGNER_ROLE_NAME,
   SIGNER_ROLE_ID,
   SIGNER_ROLE_NAME,
   SIGNER_ROLE_PERMISSIONS,
@@ -36,6 +43,8 @@ const PROBE_MEMBER = `serviceAccount:${PROBE_ACCOUNT}`;
 const VERIFIER_MEMBER = `serviceAccount:${VERIFIER_ACCOUNT}`;
 const EXPIRY_EXPRESSION = `request.time < timestamp(\"${CAPABILITY_EXPIRY}\")`;
 const FIRESTORE_EXPRESSION = `resource.name == \"projects/${PROJECT_ID}/databases/(default)\" && ${EXPIRY_EXPRESSION}`;
+const RETIRED_EXPIRY_EXPRESSION = `request.time < timestamp(\"${RETIRED_CAPABILITY_EXPIRY}\")`;
+const RETIRED_FIRESTORE_EXPRESSION = `resource.name == \"projects/${PROJECT_ID}/databases/(default)\" && ${RETIRED_EXPIRY_EXPRESSION}`;
 const PROJECT_ROLE_PREFIX = `projects/${PROJECT_ID}/roles/`;
 const ROLE_INVOKE_PERMISSION = 'run.routes.invoke';
 const IAM_ETAG = /^(?:[A-Za-z0-9_-]{4})*(?:[A-Za-z0-9_-]{2}==|[A-Za-z0-9_-]{3}=)?$/u;
@@ -212,10 +221,25 @@ const VERIFIER_CONDITION = Object.freeze({
   description: 'Expires invocation of the temporary verifier independently of cleanup.',
   expression: EXPIRY_EXPRESSION,
 });
+const RETIRED_FIREBASE_CONDITION = Object.freeze({
+  title: 'temporary_user_relay_probe',
+  description: 'Expires the user-relay probe Firebase capability independently of cleanup.',
+  expression: RETIRED_EXPIRY_EXPRESSION,
+});
+const RETIRED_SIGNER_CONDITION = Object.freeze({
+  title: 'temporary_user_relay_probe',
+  description: 'Expires the user-relay probe self-signing capability independently of cleanup.',
+  expression: RETIRED_EXPIRY_EXPRESSION,
+});
+const RETIRED_FIRESTORE_CONDITION = Object.freeze({
+  title: 'temporary_user_relay_probe_default_database',
+  description: 'Limits the temporary probe fixture capability to the default database and arm window.',
+  expression: RETIRED_FIRESTORE_EXPRESSION,
+});
 const PROJECT_RESOURCE = `//cloudresourcemanager.googleapis.com/projects/${PROJECT_ID}`;
 const PROBE_ACCOUNT_POLICY_RESOURCE = `//iam.googleapis.com/projects/${PROJECT_ID}/serviceAccounts/${PROBE_ACCOUNT}`;
 const CUSTOM_ROLE_BINDING_BOUNDARIES = Object.freeze({
-  'google_project_iam_custom_role.auth_probe': Object.freeze({
+  'google_project_iam_custom_role.auth_probe_generation_2': Object.freeze({
     roleName: CUSTOM_ROLE_NAME,
     bindingKey: 'project_role_binding',
     resource: PROJECT_RESOURCE,
@@ -223,7 +247,7 @@ const CUSTOM_ROLE_BINDING_BOUNDARIES = Object.freeze({
     member: PROBE_MEMBER,
     condition: FIREBASE_CONDITION,
   }),
-  'google_project_iam_custom_role.auth_probe_firestore': Object.freeze({
+  'google_project_iam_custom_role.auth_probe_firestore_generation_2': Object.freeze({
     roleName: FIRESTORE_ROLE_NAME,
     bindingKey: 'firestore_role_binding',
     resource: PROJECT_RESOURCE,
@@ -231,13 +255,37 @@ const CUSTOM_ROLE_BINDING_BOUNDARIES = Object.freeze({
     member: PROBE_MEMBER,
     condition: FIRESTORE_CONDITION,
   }),
-  'google_project_iam_custom_role.auth_probe_signer': Object.freeze({
+  'google_project_iam_custom_role.auth_probe_signer_generation_2': Object.freeze({
     roleName: SIGNER_ROLE_NAME,
     bindingKey: 'self_signer_binding',
     resource: PROBE_ACCOUNT_POLICY_RESOURCE,
     assetType: 'iam.googleapis.com/ServiceAccount',
     member: PROBE_MEMBER,
     condition: SIGNER_CONDITION,
+  }),
+  'google_project_iam_custom_role.auth_probe_generation_1': Object.freeze({
+    roleName: RETIRED_CUSTOM_ROLE_NAME,
+    bindingKey: 'retired_project_role_binding',
+    resource: PROJECT_RESOURCE,
+    assetType: 'cloudresourcemanager.googleapis.com/Project',
+    member: PROBE_MEMBER,
+    condition: RETIRED_FIREBASE_CONDITION,
+  }),
+  'google_project_iam_custom_role.auth_probe_firestore_generation_1': Object.freeze({
+    roleName: RETIRED_FIRESTORE_ROLE_NAME,
+    bindingKey: 'retired_firestore_role_binding',
+    resource: PROJECT_RESOURCE,
+    assetType: 'cloudresourcemanager.googleapis.com/Project',
+    member: PROBE_MEMBER,
+    condition: RETIRED_FIRESTORE_CONDITION,
+  }),
+  'google_project_iam_custom_role.auth_probe_signer_generation_1': Object.freeze({
+    roleName: RETIRED_SIGNER_ROLE_NAME,
+    bindingKey: 'retired_self_signer_binding',
+    resource: PROBE_ACCOUNT_POLICY_RESOURCE,
+    assetType: 'iam.googleapis.com/ServiceAccount',
+    member: PROBE_MEMBER,
+    condition: RETIRED_SIGNER_CONDITION,
   }),
 });
 
@@ -356,29 +404,62 @@ export function observeCustomRole(
   });
 }
 
-function observeCustomRoles({ allowAbsent = false, stages = ['GA'] } = {}) {
+function observeCurrentCustomRoles({ allowAbsent = false, stages = ['GA'] } = {}) {
   return Object.freeze({
     firebase: observeCustomRole(CUSTOM_ROLE_ID, {
       name: CUSTOM_ROLE_NAME,
-      title: 'Miakapp staging Auth probe',
-      description: 'Dormant least-privilege role for the bounded staging Auth and App Check probe.',
+      title: 'Miakapp staging user-relay Auth probe 2',
+      description: 'Generation 2 least-privilege role for the bounded staging user-relay probe.',
       permissions: CUSTOM_ROLE_PERMISSIONS,
       stages,
     }, { allowAbsent }),
     firestore: observeCustomRole(FIRESTORE_ROLE_ID, {
       name: FIRESTORE_ROLE_NAME,
-      title: 'Miakapp staging probe Firestore access',
-      description: 'Dormant database-scoped CRUD role for bounded staging probe fixtures.',
+      title: 'Miakapp staging user-relay Firestore probe 2',
+      description: 'Generation 2 database-scoped CRUD role for bounded staging user-relay fixtures.',
       permissions: FIRESTORE_ROLE_PERMISSIONS,
       stages,
     }, { allowAbsent }),
     signer: observeCustomRole(SIGNER_ROLE_ID, {
       name: SIGNER_ROLE_NAME,
-      title: 'Miakapp staging probe signer',
-      description: 'Dormant self-scoped signing role for bounded staging probes.',
+      title: 'Miakapp staging user-relay signer probe 2',
+      description: 'Generation 2 self-scoped signing role for the bounded staging user-relay probe.',
       permissions: SIGNER_ROLE_PERMISSIONS,
       stages,
     }, { allowAbsent }),
+  });
+}
+
+function observeRetiredCustomRoles() {
+  return Object.freeze({
+    retired_firebase: observeCustomRole(RETIRED_CUSTOM_ROLE_ID, {
+      name: RETIRED_CUSTOM_ROLE_NAME,
+      title: 'Miakapp staging Auth probe',
+      description: 'Dormant least-privilege role for the bounded staging Auth and App Check probe.',
+      permissions: CUSTOM_ROLE_PERMISSIONS,
+      stages: ['DISABLED'],
+    }),
+    retired_firestore: observeCustomRole(RETIRED_FIRESTORE_ROLE_ID, {
+      name: RETIRED_FIRESTORE_ROLE_NAME,
+      title: 'Miakapp staging probe Firestore access',
+      description: 'Dormant database-scoped CRUD role for bounded staging probe fixtures.',
+      permissions: FIRESTORE_ROLE_PERMISSIONS,
+      stages: ['DISABLED'],
+    }),
+    retired_signer: observeCustomRole(RETIRED_SIGNER_ROLE_ID, {
+      name: RETIRED_SIGNER_ROLE_NAME,
+      title: 'Miakapp staging probe signer',
+      description: 'Dormant self-scoped signing role for bounded staging probes.',
+      permissions: SIGNER_ROLE_PERMISSIONS,
+      stages: ['DISABLED'],
+    }),
+  });
+}
+
+function observeCustomRoles(options = {}) {
+  return Object.freeze({
+    ...observeCurrentCustomRoles(options),
+    ...observeRetiredCustomRoles(),
   });
 }
 
@@ -484,6 +565,34 @@ export function observeVerifierIdentity(
   });
 }
 
+function observeCurrentRoleBindingStates(projectPolicy, serviceAccountPolicy) {
+  return Object.freeze({
+    project_role_binding: conditionalBindingPresence(
+      projectPolicy, CUSTOM_ROLE_NAME, PROBE_MEMBER, FIREBASE_CONDITION,
+    ),
+    firestore_role_binding: conditionalBindingPresence(
+      projectPolicy, FIRESTORE_ROLE_NAME, PROBE_MEMBER, FIRESTORE_CONDITION,
+    ),
+    self_signer_binding: conditionalBindingPresence(
+      serviceAccountPolicy, SIGNER_ROLE_NAME, PROBE_MEMBER, SIGNER_CONDITION,
+    ),
+  });
+}
+
+function observeRetiredRoleBindingStates(projectPolicy, serviceAccountPolicy) {
+  return Object.freeze({
+    retired_project_role_binding: conditionalBindingPresence(
+      projectPolicy, RETIRED_CUSTOM_ROLE_NAME, PROBE_MEMBER, RETIRED_FIREBASE_CONDITION,
+    ),
+    retired_firestore_role_binding: conditionalBindingPresence(
+      projectPolicy, RETIRED_FIRESTORE_ROLE_NAME, PROBE_MEMBER, RETIRED_FIRESTORE_CONDITION,
+    ),
+    retired_self_signer_binding: conditionalBindingPresence(
+      serviceAccountPolicy, RETIRED_SIGNER_ROLE_NAME, PROBE_MEMBER, RETIRED_SIGNER_CONDITION,
+    ),
+  });
+}
+
 function observePolicies(expectedBindings, cloudAssetApi) {
   const projectPolicy = gcloudJson([
     'projects', 'get-iam-policy', PROJECT_ID,
@@ -499,24 +608,19 @@ function observePolicies(expectedBindings, cloudAssetApi) {
   ], { description: 'auth-probe-verifier-policy-inventory' });
   noPublicPrincipal(projectPolicy, serviceAccountPolicy, verifierPolicy);
   const verifierInvokerBinding = validateVerifierServicePolicy(verifierPolicy, expectedBindings);
-  const states = Object.freeze({
-    project_role_binding: conditionalBindingPresence(
-      projectPolicy, CUSTOM_ROLE_NAME, PROBE_MEMBER, FIREBASE_CONDITION,
-    ),
-    firestore_role_binding: conditionalBindingPresence(
-      projectPolicy, FIRESTORE_ROLE_NAME, PROBE_MEMBER, FIRESTORE_CONDITION,
-    ),
-    self_signer_binding: conditionalBindingPresence(
-      serviceAccountPolicy, SIGNER_ROLE_NAME, PROBE_MEMBER, SIGNER_CONDITION,
-    ),
-    verifier_invoker_binding: verifierInvokerBinding,
-  });
-  if (Object.values(states).some((present) => present !== expectedBindings)) {
+  const roleStates = observeCurrentRoleBindingStates(projectPolicy, serviceAccountPolicy);
+  const retiredStates = observeRetiredRoleBindingStates(projectPolicy, serviceAccountPolicy);
+  if (Object.values(roleStates).some((present) => present !== expectedBindings)) {
     reject('Auth-probe temporary IAM binding inventory is not exact');
   }
+  if (Object.values(retiredStates).some(Boolean)) {
+    reject('Retired Auth-probe role generation remains assigned');
+  }
   return Object.freeze({
-    ...states,
-    custom_role_bindings: observeCustomRoleBindings(states),
+    ...roleStates,
+    ...retiredStates,
+    verifier_invoker_binding: verifierInvokerBinding,
+    custom_role_bindings: observeCustomRoleBindings({ ...roleStates, ...retiredStates }),
     public_principals: 0,
     probe_identity: observeProbeIdentity(),
     verifier_inherited_invokers: observeInheritedVerifierInvokers(projectPolicy),
@@ -767,36 +871,35 @@ export function observeAuthProbeArmPreflight() {
     `--project=${PROJECT_ID}`,
   ], { description: 'auth-probe-arm-service-account-policy' });
   noPublicPrincipal(projectPolicy, serviceAccountPolicy);
-  const states = Object.freeze({
-    project_role_binding: conditionalBindingPresence(
-      projectPolicy, CUSTOM_ROLE_NAME, PROBE_MEMBER, FIREBASE_CONDITION,
-    ),
-    firestore_role_binding: conditionalBindingPresence(
-      projectPolicy, FIRESTORE_ROLE_NAME, PROBE_MEMBER, FIRESTORE_CONDITION,
-    ),
-    self_signer_binding: conditionalBindingPresence(
-      serviceAccountPolicy, SIGNER_ROLE_NAME, PROBE_MEMBER, SIGNER_CONDITION,
-    ),
-  });
+  const states = observeCurrentRoleBindingStates(projectPolicy, serviceAccountPolicy);
+  const retiredStates = observeRetiredRoleBindingStates(projectPolicy, serviceAccountPolicy);
   if (Object.values(states).some(Boolean)) {
     reject('Auth-probe arm preflight found a live temporary IAM binding');
   }
-  const customRoles = observeCustomRoles({ allowAbsent: true, stages: ['GA', 'DISABLED'] });
-  if (Object.values(customRoles).some((role) => role?.deleted === true)) {
+  if (Object.values(retiredStates).some(Boolean)) {
+    reject('Retired Auth-probe role generation remains assigned');
+  }
+  const currentCustomRoles = observeCurrentCustomRoles({
+    allowAbsent: true,
+    stages: ['GA', 'DISABLED'],
+  });
+  const retiredCustomRoles = observeRetiredCustomRoles();
+  if (Object.values(currentCustomRoles).some((role) => role?.deleted === true)) {
     reject('Auth-probe arm preflight found a soft-deleted custom role');
   }
-  if (Object.values(customRoles).some((role) => role?.stage === 'DISABLED')) {
+  if (Object.values(currentCustomRoles).some((role) => role?.stage === 'DISABLED')) {
     reject('Auth-probe one-shot role generation has already been retired');
   }
-  const supplementalCustomRoleBindings = observeCustomRoleBindings(states);
+  const supplementalCustomRoleBindings = observeCustomRoleBindings({ ...states, ...retiredStates });
   const probeIdentity = observeProbeIdentity();
   return Object.freeze({
     schema: 'miakapp.staging-user-relay-probe-arm-preflight/1',
     project_id: PROJECT_ID,
     cloud_asset_api: true,
     probe_identity: probeIdentity,
-    custom_roles: customRoles,
+    custom_roles: Object.freeze({ ...currentCustomRoles, ...retiredCustomRoles }),
     direct_temporary_bindings_present: false,
+    retired_role_bindings_present: false,
     supplemental_custom_role_bindings: supplementalCustomRoleBindings,
     temporary_services_present: false,
   });
@@ -836,18 +939,12 @@ export function observeAuthProbeRetirement() {
     `--project=${PROJECT_ID}`,
   ], { description: 'auth-probe-retired-service-account-policy' });
   noPublicPrincipal(projectPolicy, serviceAccountPolicy);
-  const states = Object.freeze({
-    project_role_binding: conditionalBindingPresence(
-      projectPolicy, CUSTOM_ROLE_NAME, PROBE_MEMBER, FIREBASE_CONDITION,
-    ),
-    firestore_role_binding: conditionalBindingPresence(
-      projectPolicy, FIRESTORE_ROLE_NAME, PROBE_MEMBER, FIRESTORE_CONDITION,
-    ),
-    self_signer_binding: conditionalBindingPresence(
-      serviceAccountPolicy, SIGNER_ROLE_NAME, PROBE_MEMBER, SIGNER_CONDITION,
-    ),
-  });
+  const states = observeCurrentRoleBindingStates(projectPolicy, serviceAccountPolicy);
+  const retiredStates = observeRetiredRoleBindingStates(projectPolicy, serviceAccountPolicy);
   if (Object.values(states).some(Boolean)) reject('Dormant Auth-probe capability remains assigned');
+  if (Object.values(retiredStates).some(Boolean)) {
+    reject('Retired Auth-probe role generation remains assigned');
+  }
   const customRoles = observeCustomRoles({ stages: ['DISABLED'] });
   return Object.freeze({
     schema: 'miakapp.staging-user-relay-probe-retirement/1',
@@ -856,7 +953,7 @@ export function observeAuthProbeRetirement() {
     region: REGION,
     cloud_asset_api: true,
     custom_roles: customRoles,
-    custom_role_bindings: observeCustomRoleBindings(states),
+    custom_role_bindings: observeCustomRoleBindings({ ...states, ...retiredStates }),
     probe_identity: observeProbeIdentity(),
     verifier_identity: observeVerifierIdentity(projectPolicy, { cloudAssetApi }),
     workflow_present: false,
@@ -898,22 +995,15 @@ export function observeAuthProbeTemporaryInventory() {
   if (workflowMatches.length > 1) reject('Auth-probe recovery found duplicate Workflows');
   const workflow = workflowMatches.length === 0 ? null : observeWorkflow(null);
   const customRoles = observeCustomRoles({ allowAbsent: true, stages: ['GA', 'DISABLED'] });
-  const states = Object.freeze({
-    project_role_binding: conditionalBindingPresence(
-      projectPolicy, CUSTOM_ROLE_NAME, PROBE_MEMBER, FIREBASE_CONDITION,
-    ),
-    firestore_role_binding: conditionalBindingPresence(
-      projectPolicy, FIRESTORE_ROLE_NAME, PROBE_MEMBER, FIRESTORE_CONDITION,
-    ),
-    self_signer_binding: conditionalBindingPresence(
-      serviceAccountPolicy, SIGNER_ROLE_NAME, PROBE_MEMBER, SIGNER_CONDITION,
-    ),
-  });
+  const states = observeCurrentRoleBindingStates(projectPolicy, serviceAccountPolicy);
+  const retiredStates = observeRetiredRoleBindingStates(projectPolicy, serviceAccountPolicy);
   const verifierIdentity = observeVerifierIdentity(projectPolicy, {
     allowAbsent: true,
     cloudAssetApi,
   });
-  const customRoleBindings = cloudAssetApi ? observeCustomRoleBindings(states) : null;
+  const customRoleBindings = cloudAssetApi
+    ? observeCustomRoleBindings({ ...states, ...retiredStates })
+    : null;
   return Object.freeze({
     schema: 'miakapp.staging-user-relay-probe-temporary-inventory/1',
     project_id: PROJECT_ID,
@@ -924,13 +1014,17 @@ export function observeAuthProbeTemporaryInventory() {
     custom_role_bindings: customRoleBindings,
     verifier_identity: verifierIdentity,
     persistent_resources: Object.freeze({
-      'google_project_iam_custom_role.auth_probe': customRoles.firebase?.deleted === false,
-      'google_project_iam_custom_role.auth_probe_firestore': customRoles.firestore?.deleted === false,
-      'google_project_iam_custom_role.auth_probe_signer': customRoles.signer?.deleted === false,
+      'google_project_iam_custom_role.auth_probe_generation_2': customRoles.firebase?.deleted === false,
+      'google_project_iam_custom_role.auth_probe_firestore_generation_2': customRoles.firestore?.deleted === false,
+      'google_project_iam_custom_role.auth_probe_signer_generation_2': customRoles.signer?.deleted === false,
+      'google_project_iam_custom_role.auth_probe_generation_1': customRoles.retired_firebase?.deleted === false,
+      'google_project_iam_custom_role.auth_probe_firestore_generation_1': customRoles.retired_firestore?.deleted === false,
+      'google_project_iam_custom_role.auth_probe_signer_generation_1': customRoles.retired_signer?.deleted === false,
       'google_project_service.auth_probe_asset_inventory': cloudAssetApi,
       'google_service_account.auth_probe_verifier': verifierIdentity !== null,
     }),
     ...states,
+    ...retiredStates,
     verifier_invoker_binding: verifierInvokerBinding,
     verifier_service: verifierService === null ? null : Object.freeze({
       name: verifierService.name,
