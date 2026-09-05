@@ -1,7 +1,8 @@
 # Private staging control-plane workload
 
-Status: bounded signing-key overlap bridge applied, converged and source-verified;
-the preceding audience-bound revision was accepted by one retired bounded probe
+Status: single-key schema-2 runtime migration applied, converged and
+source-verified; the historical audience-bound revision was accepted by one
+retired bounded probe
 
 This is the third, workload-only Terraform state for `miakapp-v4-staging`. It
 reads but never owns the reconciled bootstrap and foundation states. Its GCS
@@ -191,20 +192,19 @@ ingress, scale 0..1, zero public invokers, zero user-managed keys and copied
 source generation `1788581208774706` without making a Function request. The
 deployed source preserves schema-1 and single-key behavior while accepting a
 closed schema 2 that selects exactly one KMS signer and publishes at most two
-KMS-validated public keys. The live runtime document intentionally remains on
-schema 1 with one key; migrating it is a separate guarded operation.
+KMS-validated public keys. At this historical boundary, the live runtime
+document intentionally remained on schema 1 with one key.
 
-Current workload state generation `1788581270106628` is 49,242 bytes at serial
+Workload state generation `1788581270106628` was 49,242 bytes at serial
 16 with fifteen managed and three data resources, one output, nothing tainted,
 and SHA-256
 `d765cceffc696905f045a34805f9c6f1a6c45e9ba3f2224754a90a157c89b428`.
-The current canonical non-secret [`result.json`](result.json) has SHA-256
+The canonical non-secret result at that boundary had SHA-256
 `dc3324d3b812e1dafc6a6678c7427ac715ea1d2a81de527750aa958c7c71a440`.
-The updater's next before-state is pinned to this deployed commit/source tuple.
 
-## Guarded single-key schema migration
+## Completed single-key schema migration
 
-[`runtime-config.json`](runtime-config.json) is the exact proposed schema-2
+[`runtime-config.json`](runtime-config.json) is the exact deployed schema-2
 document. It is a pure transformation of the historical
 [`../activation/runtime-config.json`](../activation/runtime-config.json): the
 effective KMS key version, public JWK, issuer, origins, Firebase app, secret
@@ -212,37 +212,24 @@ versions, timeouts and component bucket remain byte-for-byte equivalent after
 parsing. It contains exactly one published signing key and therefore does not
 yet claim key overlap.
 
-The dedicated wrappers refuse every delta except an in-place Function update
-and an in-place deployment-guard update. The source object, copied source,
-build configuration, IAM, ingress, identities and scale must remain unchanged.
-The source object lifecycle ignores the local archive path and its provider-
-derived `detect_md5hash` sentinel during this metadata-preserving migration;
-the plan still pins the deterministic package digest and rejects any source
-identity or metadata change. The source updater fails closed while this
-migration is pending.
+The exact plan from deployment commit
+`e42cdd70f812580a6070f0e850daa04dbe0cee42` had SHA-256
+`f9531f2ccde649b9f4b27d63b9c2228812d7deb5101515d1572d81851ad30560`.
+It updated only the Function and deployment guard in place: zero creates, zero
+deletes, no source-object replacement and no IAM, ingress, identity or scale
+change. Apply converged to revision `control-plane-00006-wid`; independent
+inventory matched deterministic source SHA-256
+`d1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8`
+in copied generation `1788584317247647` and made no Function request.
 
-After merging the reviewed implementation, render a fresh private plan only
-from exact `origin/main`:
-
-```sh
-MIAKAPP_STAGING_WORKLOAD_RUNTIME_PLAN_CONFIRMATION=miakapp-v4-staging \
-  ./infrastructure/staging/workload/runtime-plan.sh /private/tmp
-```
-
-Review its closed summary and use only the exact short-lived
-`migrate-private-runtime:...` authorization printed by that plan:
-
-```sh
-MIAKAPP_STAGING_WORKLOAD_RUNTIME_APPLY_AUTHORIZATION='migrate-private-runtime:...' \
-  ./infrastructure/staging/workload/runtime-apply.sh \
-  /private/tmp/miakapp-staging-workload-XXXXXX
-```
-
-Apply performs no request. Completion requires a zero-change follow-up plan and
-independent inventory of the same source bytes, schema-2 runtime digest,
-internal-only ingress, scale 0..1 and zero public invokers. Until that sanitized
-result replaces the current deployment evidence, the schema-1 document remains
-the live truth.
+Current workload state generation `1788584368457557` is 49,563 bytes at serial
+18 with fifteen managed and three data resources, one output, nothing tainted,
+and SHA-256
+`746dcf402b9c6735175af9b46d9dda5f53f1788217f2b342c617838b6e2a8242`.
+The current canonical non-secret [`result.json`](result.json) has SHA-256
+`8abb27b692b6003566f510d3c03e8fa1c47926b51f263ea4dc7011838629a24c`.
+The one-time migration wrappers are retired; the regular source updater is now
+pinned to the distinct deployed-runtime and source commits.
 
 ## Successful private discovery
 

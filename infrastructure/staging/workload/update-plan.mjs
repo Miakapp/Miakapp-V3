@@ -12,11 +12,9 @@ import { buildProductionArchive } from '../../../control-plane/deployment/packag
 import {
   PROJECT_ID,
   RUNTIME_CONFIG_SHA256,
-  TARGET_RUNTIME_CONFIG_SHA256,
   TERRAFORM_VERSION,
   assertSafeWorkloadEnvironment,
   buildWorkloadUpdatePlanMetadata,
-  buildWorkloadRuntimeMigrationPlanMetadata,
   canonicalJson,
   childEnvironment,
   createPrivateBundle,
@@ -24,18 +22,15 @@ import {
   verifiedOperatorEmail,
   verifyExactMain,
   workloadUpdateAuthorization,
-  workloadRuntimeMigrationAuthorization,
   writePrivateFile,
 } from './contract.mjs';
 import { validateWorkloadRoot } from './guard.mjs';
 import {
   PINNED_UPDATE_BASELINE,
-  readAndValidatePinnedRuntimeMigrationPlan,
   readAndValidatePinnedSourceUpdatePlan,
 } from './validate-plan.mjs';
 
 const PLAN_CONFIRMATION = 'MIAKAPP_STAGING_WORKLOAD_UPDATE_PLAN_CONFIRMATION';
-const RUNTIME_PLAN_CONFIRMATION = 'MIAKAPP_STAGING_WORKLOAD_RUNTIME_PLAN_CONFIRMATION';
 const workloadRoot = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = fileURLToPath(new URL('../../../', import.meta.url));
 const manifestPath = join(repositoryRoot, 'infrastructure/staging/manifest.json');
@@ -87,20 +82,12 @@ function validateToolchain() {
 }
 
 async function main() {
-  const runtimeMigration = process.argv[2] === '--runtime-migration';
-  const offset = runtimeMigration ? 1 : 0;
-  const privateParent = process.argv[2 + offset];
-  const confirmation = runtimeMigration ? RUNTIME_PLAN_CONFIRMATION : PLAN_CONFIRMATION;
-  if (process.argv.length !== 3 + offset || privateParent === undefined) {
-    const executable = runtimeMigration ? './runtime-plan.sh' : './update-plan.sh';
-    throw new Error(`Usage: ${confirmation}=${PROJECT_ID} ${executable} <private-parent>`);
+  if (process.argv.length !== 3 || process.argv[2] === undefined) {
+    throw new Error(`Usage: ${PLAN_CONFIRMATION}=${PROJECT_ID} ./update-plan.sh <private-parent>`);
   }
-  assertSafeWorkloadEnvironment(process.env, confirmation);
-  if (process.env[confirmation] !== PROJECT_ID) {
-    throw new Error(`Set ${confirmation}=${PROJECT_ID} to acknowledge the exact private update target`);
-  }
-  if (!runtimeMigration && RUNTIME_CONFIG_SHA256 !== TARGET_RUNTIME_CONFIG_SHA256) {
-    throw new Error('The guarded runtime migration must converge before another source update');
+  assertSafeWorkloadEnvironment(process.env, PLAN_CONFIRMATION);
+  if (process.env[PLAN_CONFIRMATION] !== PROJECT_ID) {
+    throw new Error(`Set ${PLAN_CONFIRMATION}=${PROJECT_ID} to acknowledge the exact private update target`);
   }
   validateWorkloadRoot(new URL('./', import.meta.url));
   validateToolchain();
@@ -111,23 +98,19 @@ async function main() {
   const repositoryCommit = verifyExactMain(repositoryRoot);
   const operatorEmail = verifiedOperatorEmail(repositoryRoot);
   const runtimeConfigPath = join(workloadRoot, 'runtime-config.json');
-  const runtimeConfigSha256 = runtimeMigration
-    ? TARGET_RUNTIME_CONFIG_SHA256
-    : RUNTIME_CONFIG_SHA256;
-  if (sha256(readFileSync(runtimeConfigPath)) !== runtimeConfigSha256) {
+  if (sha256(readFileSync(runtimeConfigPath)) !== RUNTIME_CONFIG_SHA256) {
     throw new Error('Committed staging runtime configuration does not match the reviewed digest');
   }
 
-  const bundle = createPrivateBundle(privateParent, repositoryRoot);
+  const bundle = createPrivateBundle(process.argv[2], repositoryRoot);
   const terraformData = join(bundle, 'terraform-data');
   mkdirSync(terraformData, { mode: 0o700 });
   try {
     const archivePath = join(bundle, 'control-plane.zip');
     const packageResult = buildProductionArchive(archivePath);
     verifyExactMain(repositoryRoot, repositoryCommit);
-    if (runtimeMigration
-      && packageResult.archive_sha256 !== PINNED_UPDATE_BASELINE.sourceArchiveSha256) {
-      throw new Error('Runtime migration source differs from the exact deployed package');
+    if (packageResult.archive_sha256 === PINNED_UPDATE_BASELINE.sourceArchiveSha256) {
+      throw new Error('Pinned workload update requires new deterministic source bytes');
     }
 
     const variablesPath = join(bundle, 'workload.auto.tfvars.json');
@@ -183,20 +166,13 @@ async function main() {
     writePrivateFile(planJsonPath, planJsonBytes, 0o400);
     const validationInput = {
       repositoryCommit,
-      sourceRepositoryCommit: runtimeMigration
-        ? PINNED_UPDATE_BASELINE.sourceRepositoryCommit
-        : repositoryCommit,
+      sourceRepositoryCommit: repositoryCommit,
       sourceArchiveSha256: packageResult.archive_sha256,
-      runtimeConfigSha256,
+      runtimeConfigSha256: RUNTIME_CONFIG_SHA256,
     };
-    const summary = runtimeMigration
-      ? readAndValidatePinnedRuntimeMigrationPlan(planJsonPath, validationInput)
-      : readAndValidatePinnedSourceUpdatePlan(planJsonPath, validationInput);
+    const summary = readAndValidatePinnedSourceUpdatePlan(planJsonPath, validationInput);
     const planBytes = readFileSync(planPath);
-    const buildMetadata = runtimeMigration
-      ? buildWorkloadRuntimeMigrationPlanMetadata
-      : buildWorkloadUpdatePlanMetadata;
-    const metadata = buildMetadata({
+    const metadata = buildWorkloadUpdatePlanMetadata({
       repositoryCommit,
       sourceRepositoryCommit: validationInput.sourceRepositoryCommit,
       createdAt: new Date().toISOString(),
@@ -215,12 +191,8 @@ async function main() {
       `Private workload update bundle: ${bundle}`,
       `Plan SHA-256: ${metadata.terraform_plan_sha256}`,
       `Source SHA-256: ${metadata.source_archive_sha256}`,
-      `Authorization: ${runtimeMigration
-        ? workloadRuntimeMigrationAuthorization(planBytes, repositoryCommit)
-        : workloadUpdateAuthorization(planBytes, repositoryCommit)}`,
-      runtimeMigration
-        ? 'Planned delta: two in-place updates; source, IAM, ingress and scale unchanged; one signing key; no live request.'
-        : 'Planned delta: one reproducible source replacement and two in-place updates; IAM, ingress and scale unchanged; no live request.',
+      `Authorization: ${workloadUpdateAuthorization(planBytes, repositoryCommit)}`,
+      'Planned delta: one reproducible source replacement and two in-place updates; IAM, ingress and scale unchanged; no live request.',
       '',
     ].join('\n'));
   } finally {

@@ -13,29 +13,22 @@ import { fileURLToPath } from 'node:url';
 
 import {
   TERRAFORM_VERSION,
-  TARGET_RUNTIME_CONFIG_SHA256,
   assertSafeWorkloadEnvironment,
   canonicalJson,
   childEnvironment,
   readPrivateFile,
   readWorkloadUpdatePlanMetadata,
-  readWorkloadRuntimeMigrationPlanMetadata,
   sha256,
   validateWorkloadUpdateAuthorization,
-  validateWorkloadRuntimeMigrationAuthorization,
   verifiedOperatorEmail,
   verifyExactMain,
   writePrivateFile,
 } from './contract.mjs';
 import { validateWorkloadRoot } from './guard.mjs';
 import { observeDeployedWorkload } from './inventory.mjs';
-import {
-  readAndValidatePinnedRuntimeMigrationPlan,
-  readAndValidatePinnedSourceUpdatePlan,
-} from './validate-plan.mjs';
+import { readAndValidatePinnedSourceUpdatePlan } from './validate-plan.mjs';
 
 const APPLY_AUTHORIZATION = 'MIAKAPP_STAGING_WORKLOAD_UPDATE_APPLY_AUTHORIZATION';
-const RUNTIME_APPLY_AUTHORIZATION = 'MIAKAPP_STAGING_WORKLOAD_RUNTIME_APPLY_AUTHORIZATION';
 const workloadRoot = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = fileURLToPath(new URL('../../../', import.meta.url));
 process.umask(0o077);
@@ -107,23 +100,13 @@ function verifyVariables(path, metadata, bundle) {
 }
 
 async function main() {
-  const runtimeMigration = process.argv[2] === '--runtime-migration';
-  const offset = runtimeMigration ? 1 : 0;
-  const bundlePath = process.argv[2 + offset];
-  const authorizationName = runtimeMigration
-    ? RUNTIME_APPLY_AUTHORIZATION
-    : APPLY_AUTHORIZATION;
-  if (process.argv.length !== 3 + offset || bundlePath === undefined) {
-    const executable = runtimeMigration ? './runtime-apply.sh' : './update-apply.sh';
-    throw new Error(`Usage: ${authorizationName}=... ${executable} <private-bundle>`);
+  if (process.argv.length !== 3 || process.argv[2] === undefined) {
+    throw new Error(`Usage: ${APPLY_AUTHORIZATION}=... ./update-apply.sh <private-bundle>`);
   }
-  assertSafeWorkloadEnvironment(process.env, authorizationName);
+  assertSafeWorkloadEnvironment(process.env, APPLY_AUTHORIZATION);
   validateWorkloadRoot(new URL('./', import.meta.url));
-  const bundle = privateBundle(bundlePath);
-  const readMetadata = runtimeMigration
-    ? readWorkloadRuntimeMigrationPlanMetadata
-    : readWorkloadUpdatePlanMetadata;
-  const { value: metadata } = readMetadata(join(bundle, 'metadata.json'));
+  const bundle = privateBundle(process.argv[2]);
+  const { value: metadata } = readWorkloadUpdatePlanMetadata(join(bundle, 'metadata.json'));
   verifyExactMain(repositoryRoot, metadata.repository_commit);
 
   const planPath = join(bundle, 'workload.tfplan');
@@ -140,30 +123,18 @@ async function main() {
     throw new Error('Private workload update bundle digest verification failed');
   }
   const variables = verifyVariables(variablesPath, metadata, bundle);
-  if (runtimeMigration) {
-    validateWorkloadRuntimeMigrationAuthorization(
-      process.env[authorizationName],
-      planBytes,
-      metadata.repository_commit,
-    );
-  } else {
-    validateWorkloadUpdateAuthorization(
-      process.env[authorizationName],
-      planBytes,
-      metadata.repository_commit,
-    );
-  }
+  validateWorkloadUpdateAuthorization(
+    process.env[APPLY_AUTHORIZATION],
+    planBytes,
+    metadata.repository_commit,
+  );
   const validationInput = {
     repositoryCommit: metadata.repository_commit,
     sourceRepositoryCommit: metadata.source_repository_commit,
     sourceArchiveSha256: metadata.source_archive_sha256,
     runtimeConfigSha256: metadata.runtime_config_sha256,
   };
-  if (runtimeMigration) {
-    readAndValidatePinnedRuntimeMigrationPlan(planJsonPath, validationInput);
-  } else {
-    readAndValidatePinnedSourceUpdatePlan(planJsonPath, validationInput);
-  }
+  readAndValidatePinnedSourceUpdatePlan(planJsonPath, validationInput);
 
   const terraformData = join(bundle, `.terraform-update-apply-${process.pid}`);
   mkdirSync(terraformData, { mode: 0o700 });
@@ -236,9 +207,7 @@ async function main() {
       repositoryRoot,
       repositoryCommit: metadata.repository_commit,
       sourceArchiveSha256: metadata.source_archive_sha256,
-      runtimeConfigSha256: runtimeMigration
-        ? TARGET_RUNTIME_CONFIG_SHA256
-        : metadata.runtime_config_sha256,
+      runtimeConfigSha256: metadata.runtime_config_sha256,
     });
     const resultPath = join(bundle, 'result.json');
     writePrivateFile(resultPath, Buffer.from(canonicalJson(result), 'utf8'), 0o400);
@@ -247,9 +216,7 @@ async function main() {
     process.stdout.write([
       applyFailed
         ? 'The provider returned an error after the exact update converged; live state was reconciled.'
-        : runtimeMigration
-          ? 'The exact private staging runtime migration was applied and converged.'
-          : 'The exact private staging workload update was applied and converged.',
+        : 'The exact private staging workload update was applied and converged.',
       `Private result: ${resultPath}`,
       `Function: ${result.function.name}`,
       `Revision: ${result.function.revision}`,
