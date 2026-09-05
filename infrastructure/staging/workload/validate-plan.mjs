@@ -50,8 +50,8 @@ const GCF_SOURCE_CONDITION = Object.freeze({
 const REPOSITORY = `projects/${PROJECT_ID}/locations/${REGION}/repositories/miakapp-control-plane`;
 const BUILD_ACCOUNT_RESOURCE = `projects/${PROJECT_ID}/serviceAccounts/${BUILD_ACCOUNT}`;
 export const PINNED_UPDATE_BASELINE = Object.freeze({
-  repositoryCommit: '60322c69c92b8ccf5f3d1bc87ba264a00e5dca05',
-  sourceArchiveSha256: '86f4818dfcb4021e5578638d6fb1e9b7da31ea245528cbdc8573dabecdfca358',
+  repositoryCommit: '022f10e2dc15f32a8a6679b38ce7f1a04582e450',
+  sourceArchiveSha256: '6674c0353ec9c73fcfe0d3a63d17850f057a5f2a547a5855989e28f011249b1e',
 });
 const RECOVERY_ACTIONS = Object.freeze({
   ...Object.fromEntries(Object.keys(MANAGED_RESOURCES).map((address) => [address, ['no-op']])),

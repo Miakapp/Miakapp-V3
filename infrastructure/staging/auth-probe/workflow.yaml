@@ -7,25 +7,59 @@ main:
           - firebase_app_id: "1:1072737219170:web:5053ca93bf25d7373cd73b"
           - probe_service_account: miakapp-staging-probe@miakapp-v4-staging.iam.gserviceaccount.com
           - function_uri: https://control-plane-aczhngqraq-od.a.run.app
-          - destination_path: /v1/push-destinations
-          - synthetic_uid: miakapp-v4-staging-auth-probe-v1
+          - verifier_uri: https://miakapp-user-relay-verifier-1072737219170.europe-west9.run.app
+          - discovery_path: /.well-known/miakapp-control-plane
+          - jwks_path: /.well-known/jwks.json
+          - exchange_path: /v1/user-relay-tokens:exchange
+          - synthetic_uid: miakapp-v4-staging-user-relay-probe-v1
+          - synthetic_home_id: miakapp-v4-staging-user-relay-probe-v1
+          - synthetic_owner_uid: miakapp-v4-staging-user-relay-owner-v1
+          - relay_a: wss://relay-a.probe.invalid/ws
+          - relay_b: wss://relay-b.probe.invalid/ws
+          - firestore_document_url: https://firestore.googleapis.com/v1/projects/miakapp-v4-staging/databases/(default)/documents/controlHomes/miakapp-v4-staging-user-relay-probe-v1
+          - public_firestore_document_url: https://firestore.googleapis.com/v1/projects/miakapp-v4-staging/databases/(default)/documents/homes/miakapp-v4-staging-user-relay-probe-v1
           - firebase_id_token: null
           - app_check_token: null
           - cloud_run_id_token: null
           - web_config: null
+          - first_access_token: null
+          - first_expires_at_ms: null
+          - second_access_token: null
+          - second_expires_at_ms: null
+          - home_update_time: null
+          - initial_home_response: null
+          - initial_public_home_response: null
+          - cleanup_home: null
+          - cleanup_home_delete: null
+          - residual_home: null
+          - residual_public_home: null
+          - cleanup_user_lookup: null
+          - cleanup_user_delete: null
+          - residual_user_lookup: null
           - probe_failed: false
-          - cleanup_failed: false
+          - home_cleanup_failed: false
+          - user_cleanup_failed: false
+          - public_home_check_failed: false
           - synthetic_user_created: false
           - synthetic_user_deleted: false
           - synthetic_user_absence_verified: false
-          - delete_response: null
-          - user_lookup: null
-          - initial_user_lookup: null
-          - created_user_lookup: null
+          - synthetic_home_created: false
+          - synthetic_home_deleted: false
+          - synthetic_home_absence_verified: false
+          - public_home_absence_before_verified: false
+          - public_home_absence_after_verified: false
+          - relay_rotated: false
+          - invalid_firebase_status: 0
+          - invalid_firebase_code: ""
           - missing_app_check_status: 0
           - missing_app_check_code: ""
-          - first_status: 0
-          - replay_status: 0
+          - missing_home_status: 0
+          - missing_home_code: ""
+          - first_exchange_status: 0
+          - second_exchange_status: 0
+          - tokens_verified: false
+          - discovery_valid: false
+          - jwks_valid: false
           - probe_stage: initialize
     - run_probe:
         try:
@@ -44,7 +78,59 @@ main:
             - validate_web_config:
                 switch:
                   - condition: ${web_config.code != 200 or web_config.body.projectId != project_id or web_config.body.appId != firebase_app_id or len(web_config.body.apiKey) < 20}
-                    raise: Auth probe Firebase Web configuration mismatch
+                    raise: User-relay probe Firebase Web configuration mismatch
+            - enter_initial_home_stage:
+                assign:
+                  - probe_stage: initial_home
+            - require_initial_public_home_absence:
+                try:
+                  call: http.get
+                  args:
+                    url: ${public_firestore_document_url}
+                    timeout: 30
+                    auth:
+                      type: OAuth2
+                  result: initial_public_home_response
+                except:
+                  as: initial_public_home_error
+                  steps:
+                    - validate_initial_public_home_absence:
+                        switch:
+                          - condition: ${"HttpError" in initial_public_home_error.tags and initial_public_home_error.code == 404}
+                            assign:
+                              - public_home_absence_before_verified: true
+                          - condition: true
+                            raise: User-relay probe public Home cannot be safely inspected
+                    - clear_initial_public_home_error:
+                        assign:
+                          - initial_public_home_error: null
+            - reject_present_initial_public_home:
+                switch:
+                  - condition: ${initial_public_home_response != null}
+                    raise: User-relay probe public Home already exists
+            - require_initial_home_absence:
+                try:
+                  call: http.get
+                  args:
+                    url: ${firestore_document_url}
+                    timeout: 30
+                    auth:
+                      type: OAuth2
+                  result: initial_home_response
+                except:
+                  as: initial_home_error
+                  steps:
+                    - validate_initial_home_absence:
+                        switch:
+                          - condition: ${not("HttpError" in initial_home_error.tags) or initial_home_error.code != 404}
+                            raise: User-relay probe synthetic Home already exists or cannot be inspected
+                    - clear_initial_home_error:
+                        assign:
+                          - initial_home_error: null
+            - reject_present_initial_home:
+                switch:
+                  - condition: ${initial_home_response != null}
+                    raise: User-relay probe synthetic Home already exists
             - enter_initial_user_stage:
                 assign:
                   - probe_stage: initial_user
@@ -62,10 +148,7 @@ main:
             - require_initial_user_absence:
                 switch:
                   - condition: ${initial_user_lookup.code != 200 or "users" in initial_user_lookup.body}
-                    raise: Auth probe synthetic identity already exists
-            - clear_initial_user_lookup:
-                assign:
-                  - initial_user_lookup: null
+                    raise: User-relay probe synthetic identity already exists
             - set_token_times:
                 assign:
                   - issued_at: ${math.floor(sys.now())}
@@ -74,15 +157,6 @@ main:
             - enter_auth_custom_token_stage:
                 assign:
                   - probe_stage: auth_custom_token
-            - build_auth_claims:
-                assign:
-                  - auth_claims:
-                      aud: https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit
-                      iat: ${issued_at}
-                      exp: ${auth_expires_at}
-                      iss: ${probe_service_account}
-                      sub: ${probe_service_account}
-                      uid: ${synthetic_uid}
             - sign_auth_custom_token:
                 call: http.post
                 args:
@@ -91,58 +165,29 @@ main:
                   auth:
                     type: OAuth2
                   body:
-                    payload: ${json.encode_to_string(auth_claims)}
+                    payload: ${json.encode_to_string({"aud":"https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit","iat":issued_at,"exp":auth_expires_at,"iss":probe_service_account,"sub":probe_service_account,"uid":synthetic_uid})}
                 result: auth_signature
             - enter_auth_exchange_stage:
                 assign:
                   - probe_stage: auth_exchange
             - exchange_auth_custom_token:
-                try:
-                  call: http.post
-                  args:
-                    url: https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken
-                    timeout: 30
-                    query:
-                      key: ${web_config.body.apiKey}
-                    body:
-                      token: ${auth_signature.body.signedJwt}
-                      returnSecureToken: true
-                  result: auth_exchange
-                except:
-                  as: auth_exchange_error
-                  steps:
-                    - classify_auth_exchange_error:
-                        switch:
-                          - condition: ${map.get(auth_exchange_error, "code") == 400 and map.get(auth_exchange_error, ["body", "error", "message"]) != null and text.match_regex(map.get(auth_exchange_error, ["body", "error", "message"]), "^INVALID_CUSTOM_TOKEN")}
-                            assign:
-                              - probe_stage: auth_exchange_invalid_custom_token
-                          - condition: ${map.get(auth_exchange_error, "code") == 400 and map.get(auth_exchange_error, ["body", "error", "message"]) != null and text.match_regex(map.get(auth_exchange_error, ["body", "error", "message"]), "^CREDENTIAL_MISMATCH")}
-                            assign:
-                              - probe_stage: auth_exchange_credential_mismatch
-                          - condition: ${map.get(auth_exchange_error, "code") == 400}
-                            assign:
-                              - probe_stage: auth_exchange_bad_request
-                          - condition: ${map.get(auth_exchange_error, "code") == 403}
-                            assign:
-                              - probe_stage: auth_exchange_forbidden
-                          - condition: true
-                            assign:
-                              - probe_stage: auth_exchange_http_error
-                    - clear_auth_exchange_error:
-                        assign:
-                          - auth_exchange_error: null
-                    - raise_bounded_auth_exchange_error:
-                        raise: Auth probe Firebase Auth exchange request failed
-            - enter_auth_exchange_validation_stage:
-                assign:
-                  - probe_stage: auth_exchange_validation
+                call: http.post
+                args:
+                  url: https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken
+                  timeout: 30
+                  query:
+                    key: ${web_config.body.apiKey}
+                  body:
+                    token: ${auth_signature.body.signedJwt}
+                    returnSecureToken: true
+                result: auth_exchange
             - retain_auth_identity:
                 assign:
                   - firebase_id_token: ${auth_exchange.body.idToken}
             - validate_auth_exchange:
                 switch:
-                  - condition: ${auth_exchange.code != 200 or len(auth_exchange.body.idToken) < 100 or len(auth_exchange.body.refreshToken) < 100 or auth_exchange.body.isNewUser != true or auth_exchange.body.expiresIn != "3600"}
-                    raise: Auth probe synthetic Firebase identity mismatch
+                  - condition: ${auth_exchange.code != 200 or len(firebase_id_token) < 100 or len(auth_exchange.body.refreshToken) < 100 or auth_exchange.body.isNewUser != true or auth_exchange.body.expiresIn != "3600"}
+                    raise: User-relay probe synthetic Firebase identity mismatch
             - verify_created_user:
                 call: http.post
                 args:
@@ -157,29 +202,17 @@ main:
             - validate_created_user:
                 switch:
                   - condition: ${created_user_lookup.code != 200 or not("users" in created_user_lookup.body) or len(created_user_lookup.body.users) != 1 or created_user_lookup.body.users[0].localId != synthetic_uid or "email" in created_user_lookup.body.users[0]}
-                    raise: Auth probe synthetic Firebase identity lookup mismatch
+                    raise: User-relay probe synthetic Firebase identity lookup mismatch
             - record_created_user:
                 assign:
                   - synthetic_user_created: true
-            - clear_auth_exchange:
-                assign:
                   - auth_signature: null
                   - auth_exchange: null
-                  - auth_claims: null
                   - created_user_lookup: null
+                  - initial_user_lookup: null
             - enter_app_check_custom_token_stage:
                 assign:
                   - probe_stage: app_check_custom_token
-            - build_app_check_claims:
-                assign:
-                  - app_check_claims:
-                      iss: ${probe_service_account}
-                      sub: ${probe_service_account}
-                      app_id: ${firebase_app_id}
-                      aud: https://firebaseappcheck.googleapis.com/google.firebase.appcheck.v1.TokenExchangeService
-                      iat: ${issued_at}
-                      exp: ${app_check_expires_at}
-                      ttl: 1800s
             - sign_app_check_custom_token:
                 call: http.post
                 args:
@@ -188,7 +221,7 @@ main:
                   auth:
                     type: OAuth2
                   body:
-                    payload: ${json.encode_to_string(app_check_claims)}
+                    payload: ${json.encode_to_string({"iss":probe_service_account,"sub":probe_service_account,"app_id":firebase_app_id,"aud":"https://firebaseappcheck.googleapis.com/google.firebase.appcheck.v1.TokenExchangeService","iat":issued_at,"exp":app_check_expires_at,"ttl":"1800s"})}
                 result: app_check_signature
             - enter_app_check_exchange_stage:
                 assign:
@@ -207,13 +240,12 @@ main:
             - validate_app_check_exchange:
                 switch:
                   - condition: ${app_check_exchange.code != 200 or len(app_check_exchange.body.token) < 100 or app_check_exchange.body.ttl != "1800s"}
-                    raise: Auth probe App Check exchange mismatch
+                    raise: User-relay probe App Check exchange mismatch
             - retain_app_check_token:
                 assign:
                   - app_check_token: ${app_check_exchange.body.token}
                   - app_check_signature: null
                   - app_check_exchange: null
-                  - app_check_claims: null
             - enter_cloud_run_identity_stage:
                 assign:
                   - probe_stage: cloud_run_identity
@@ -231,200 +263,676 @@ main:
             - validate_cloud_run_identity:
                 switch:
                   - condition: ${cloud_run_identity.code != 200 or len(cloud_run_identity.body.token) < 100}
-                    raise: Auth probe Cloud Run identity mismatch
+                    raise: User-relay probe Cloud Run identity mismatch
             - retain_cloud_run_token:
                 assign:
                   - cloud_run_id_token: ${cloud_run_identity.body.token}
                   - cloud_run_identity: null
+            - enter_discovery_stage:
+                assign:
+                  - probe_stage: discovery
+            - read_discovery:
+                call: http.get
+                args:
+                  url: ${function_uri + discovery_path}
+                  timeout: 30
+                  headers:
+                    Accept: application/json
+                    X-Serverless-Authorization: ${"Bearer " + cloud_run_id_token}
+                result: discovery_response
+            - validate_discovery_envelope:
+                switch:
+                  - condition: ${discovery_response.code != 200 or len(discovery_response.body) != 7 or not("schema" in discovery_response.body) or not("issuer" in discovery_response.body) or not("jwks_uri" in discovery_response.body) or not("exchange_endpoint" in discovery_response.body)}
+                    raise: User-relay probe discovery envelope mismatch
+            - validate_discovery_routes:
+                switch:
+                  - condition: ${not("user_relay_exchange_endpoint" in discovery_response.body) or not("push_audience" in discovery_response.body) or not("components_audience" in discovery_response.body) or discovery_response.body.schema != "miakapp.control-plane-discovery/1"}
+                    raise: User-relay probe discovery routes mismatch
+            - validate_discovery_core_values:
+                switch:
+                  - condition: ${discovery_response.body.issuer != "https://control.staging.miakapp.com" or discovery_response.body.jwks_uri != "https://control.staging.miakapp.com/.well-known/jwks.json" or discovery_response.body.exchange_endpoint != "https://control.staging.miakapp.com/v1/access-tokens:exchange"}
+                    raise: User-relay probe discovery core value mismatch
+            - validate_discovery_audiences:
+                switch:
+                  - condition: ${discovery_response.body.user_relay_exchange_endpoint != "https://control.staging.miakapp.com/v1/user-relay-tokens:exchange" or discovery_response.body.push_audience != "https://control.staging.miakapp.com/v1/push" or discovery_response.body.components_audience != "https://control.staging.miakapp.com/v1/components"}
+                    raise: User-relay probe discovery mismatch
+            - record_discovery:
+                assign:
+                  - discovery_valid: true
+                  - discovery_response: null
+            - enter_jwks_stage:
+                assign:
+                  - probe_stage: jwks
+            - read_jwks:
+                call: http.get
+                args:
+                  url: ${function_uri + jwks_path}
+                  timeout: 30
+                  headers:
+                    Accept: application/json
+                    X-Serverless-Authorization: ${"Bearer " + cloud_run_id_token}
+                result: jwks_response
+            - validate_jwks_envelope:
+                switch:
+                  - condition: ${jwks_response.code != 200 or len(jwks_response.body) != 1 or not("keys" in jwks_response.body) or len(jwks_response.body.keys) != 1 or len(jwks_response.body.keys[0]) != 6}
+                    raise: User-relay probe JWKS envelope mismatch
+            - validate_jwks_fields:
+                switch:
+                  - condition: ${not("kty" in jwks_response.body.keys[0]) or not("crv" in jwks_response.body.keys[0]) or not("x" in jwks_response.body.keys[0]) or not("use" in jwks_response.body.keys[0]) or not("alg" in jwks_response.body.keys[0]) or not("kid" in jwks_response.body.keys[0])}
+                    raise: User-relay probe JWKS fields mismatch
+            - validate_jwks_key_material:
+                switch:
+                  - condition: ${jwks_response.body.keys[0].kty != "OKP" or jwks_response.body.keys[0].crv != "Ed25519" or jwks_response.body.keys[0].x != "eINmaVIFYgARhSMf1pBb9yRstrT_6LfO5d12WFL5Dsw"}
+                    raise: User-relay probe JWKS key material mismatch
+            - validate_jwks_metadata:
+                switch:
+                  - condition: ${jwks_response.body.keys[0].use != "sig" or jwks_response.body.keys[0].alg != "EdDSA" or jwks_response.body.keys[0].kid != "staging-access-token-v1"}
+                    raise: User-relay probe JWKS mismatch
+            - record_jwks:
+                assign:
+                  - jwks_valid: true
+                  - jwks_response: null
+            - enter_invalid_firebase_stage:
+                assign:
+                  - probe_stage: invalid_firebase
+            - reject_invalid_firebase:
+                try:
+                  call: http.post
+                  args:
+                    url: ${function_uri + exchange_path}
+                    timeout: 30
+                    headers:
+                      Accept: application/json
+                      Authorization: Bearer invalid-staging-user-relay-probe-token
+                      Content-Type: application/json
+                      X-Firebase-AppCheck: ${app_check_token}
+                      X-Serverless-Authorization: ${"Bearer " + cloud_run_id_token}
+                    body:
+                      home_id: ${synthetic_home_id}
+                      reason: initial
+                except:
+                  as: invalid_firebase_error
+                  steps:
+                    - validate_invalid_firebase_error:
+                        switch:
+                          - condition: ${not("HttpError" in invalid_firebase_error.tags) or invalid_firebase_error.code != 401 or invalid_firebase_error.body.error.code != "invalid_firebase_token"}
+                            raise: User-relay probe invalid-Firebase control mismatch
+                    - record_invalid_firebase_error:
+                        assign:
+                          - invalid_firebase_status: ${invalid_firebase_error.code}
+                          - invalid_firebase_code: ${invalid_firebase_error.body.error.code}
+                          - invalid_firebase_error: null
             - enter_missing_app_check_stage:
                 assign:
                   - probe_stage: missing_app_check
             - reject_missing_app_check:
                 try:
-                  call: http.get
+                  call: http.post
                   args:
-                    url: ${function_uri + destination_path}
+                    url: ${function_uri + exchange_path}
                     timeout: 30
                     headers:
                       Accept: application/json
                       Authorization: ${"Bearer " + firebase_id_token}
+                      Content-Type: application/json
                       X-Serverless-Authorization: ${"Bearer " + cloud_run_id_token}
+                    body:
+                      home_id: ${synthetic_home_id}
+                      reason: initial
                 except:
-                  as: missing_error
+                  as: missing_app_check_error
                   steps:
-                    - validate_missing_error:
+                    - validate_missing_app_check_error:
                         switch:
-                          - condition: ${not("HttpError" in missing_error.tags) or missing_error.code != 401 or missing_error.body.error.code != "invalid_app_check_token"}
-                            raise: Auth probe missing-App-Check control mismatch
-                    - record_missing_error:
+                          - condition: ${not("HttpError" in missing_app_check_error.tags) or missing_app_check_error.code != 401 or missing_app_check_error.body.error.code != "invalid_app_check_token"}
+                            raise: User-relay probe missing-App-Check control mismatch
+                    - record_missing_app_check_error:
                         assign:
-                          - missing_app_check_status: ${missing_error.code}
-                          - missing_app_check_code: ${missing_error.body.error.code}
-            - require_missing_rejection:
-                switch:
-                  - condition: ${missing_app_check_status != 401 or missing_app_check_code != "invalid_app_check_token"}
-                    raise: Auth probe missing-App-Check request was unexpectedly accepted
-            - enter_first_authenticated_read_stage:
+                          - missing_app_check_status: ${missing_app_check_error.code}
+                          - missing_app_check_code: ${missing_app_check_error.body.error.code}
+                          - missing_app_check_error: null
+            - enter_missing_home_stage:
                 assign:
-                  - probe_stage: first_authenticated_read
-            - first_authenticated_read:
-                call: http.get
+                  - probe_stage: missing_home
+            - reject_missing_home:
+                try:
+                  call: http.post
+                  args:
+                    url: ${function_uri + exchange_path}
+                    timeout: 30
+                    headers:
+                      Accept: application/json
+                      Authorization: ${"Bearer " + firebase_id_token}
+                      Content-Type: application/json
+                      X-Firebase-AppCheck: ${app_check_token}
+                      X-Serverless-Authorization: ${"Bearer " + cloud_run_id_token}
+                    body:
+                      home_id: ${synthetic_home_id}
+                      reason: initial
+                except:
+                  as: missing_home_error
+                  steps:
+                    - validate_missing_home_error:
+                        switch:
+                          - condition: ${not("HttpError" in missing_home_error.tags) or missing_home_error.code != 404 or missing_home_error.body.error.code != "home_not_found"}
+                            raise: User-relay probe missing-Home control mismatch
+                    - record_missing_home_error:
+                        assign:
+                          - missing_home_status: ${missing_home_error.code}
+                          - missing_home_code: ${missing_home_error.body.error.code}
+                          - missing_home_error: null
+            - enter_home_create_stage:
+                assign:
+                  - probe_stage: home_create
+                  - home_timestamp: ${time.format(sys.now())}
+            - create_synthetic_home:
+                call: http.post
                 args:
-                  url: ${function_uri + destination_path}
+                  url: https://firestore.googleapis.com/v1/projects/miakapp-v4-staging/databases/(default)/documents/controlHomes
+                  timeout: 30
+                  query:
+                    documentId: ${synthetic_home_id}
+                  auth:
+                    type: OAuth2
+                  body:
+                    fields:
+                      schema:
+                        stringValue: miakapp.control-home/1
+                      home_id:
+                        stringValue: ${synthetic_home_id}
+                      owner_uid:
+                        stringValue: ${synthetic_owner_uid}
+                      relay_url:
+                        stringValue: ${relay_a}
+                      active_key_count:
+                        integerValue: "0"
+                      retained_key_count:
+                        integerValue: "0"
+                      created_at:
+                        timestampValue: ${home_timestamp}
+                      updated_at:
+                        timestampValue: ${home_timestamp}
+                      probe_marker:
+                        stringValue: miakapp.staging-user-relay-probe/1
+                result: home_create_response
+            - validate_created_home:
+                switch:
+                  - condition: ${home_create_response.code != 200 or home_create_response.body.name != "projects/miakapp-v4-staging/databases/(default)/documents/controlHomes/miakapp-v4-staging-user-relay-probe-v1" or len(home_create_response.body.updateTime) < 20}
+                    raise: User-relay probe synthetic Home creation mismatch
+            - record_created_home:
+                assign:
+                  - synthetic_home_created: true
+                  - home_update_time: ${home_create_response.body.updateTime}
+                  - home_create_response: null
+            - enter_first_exchange_stage:
+                assign:
+                  - probe_stage: first_exchange
+            - first_exchange:
+                call: http.post
+                args:
+                  url: ${function_uri + exchange_path}
                   timeout: 30
                   headers:
                     Accept: application/json
                     Authorization: ${"Bearer " + firebase_id_token}
+                    Content-Type: application/json
                     X-Firebase-AppCheck: ${app_check_token}
                     X-Serverless-Authorization: ${"Bearer " + cloud_run_id_token}
-                result: first_response
-            - validate_first_read:
+                  body:
+                    home_id: ${synthetic_home_id}
+                    reason: initial
+                result: first_exchange_response
+            - validate_first_exchange:
                 switch:
-                  - condition: ${first_response.code != 200 or first_response.body.schema != "miakapp.push-destination-list/1" or len(first_response.body.destinations) != 0}
-                    raise: Auth probe first authenticated read mismatch
-            - enter_replay_authenticated_read_stage:
+                  - condition: ${first_exchange_response.code != 200 or first_exchange_response.body.schema != "miakapp.user-relay-token/1" or first_exchange_response.body.token_type != "Bearer" or first_exchange_response.body.relay_url != relay_a or len(first_exchange_response.body.access_token) < 100}
+                    raise: User-relay probe first exchange mismatch
+            - retain_first_access_token:
                 assign:
-                  - probe_stage: replay_authenticated_read
-            - replay_authenticated_read:
-                call: http.get
+                  - first_exchange_status: ${first_exchange_response.code}
+                  - first_access_token: ${first_exchange_response.body.access_token}
+                  - first_expires_at_ms: ${first_exchange_response.body.expires_at_ms}
+                  - first_exchange_response: null
+            - enter_home_rotation_stage:
+                assign:
+                  - probe_stage: home_rotation
+                  - rotation_timestamp: ${time.format(sys.now())}
+            - rotate_synthetic_home:
+                call: http.patch
                 args:
-                  url: ${function_uri + destination_path}
+                  url: ${firestore_document_url + "?updateMask.fieldPaths=relay_url&updateMask.fieldPaths=updated_at&currentDocument.updateTime=" + text.url_encode(home_update_time)}
+                  timeout: 30
+                  auth:
+                    type: OAuth2
+                  body:
+                    fields:
+                      relay_url:
+                        stringValue: ${relay_b}
+                      updated_at:
+                        timestampValue: ${rotation_timestamp}
+                result: home_rotation_response
+            - validate_home_rotation:
+                switch:
+                  - condition: ${home_rotation_response.code != 200 or home_rotation_response.body.fields.relay_url.stringValue != relay_b or len(home_rotation_response.body.updateTime) < 20}
+                    raise: User-relay probe synthetic Home rotation mismatch
+            - record_home_rotation:
+                assign:
+                  - relay_rotated: true
+                  - home_update_time: ${home_rotation_response.body.updateTime}
+                  - home_rotation_response: null
+            - enter_second_exchange_stage:
+                assign:
+                  - probe_stage: second_exchange
+            - second_exchange:
+                call: http.post
+                args:
+                  url: ${function_uri + exchange_path}
                   timeout: 30
                   headers:
                     Accept: application/json
                     Authorization: ${"Bearer " + firebase_id_token}
+                    Content-Type: application/json
                     X-Firebase-AppCheck: ${app_check_token}
                     X-Serverless-Authorization: ${"Bearer " + cloud_run_id_token}
-                result: replay_response
-            - validate_replay_read:
+                  body:
+                    home_id: ${synthetic_home_id}
+                    reason: reconnect
+                result: second_exchange_response
+            - validate_second_exchange:
                 switch:
-                  - condition: ${replay_response.code != 200 or replay_response.body.schema != "miakapp.push-destination-list/1" or len(replay_response.body.destinations) != 0}
-                    raise: Auth probe replay-policy read mismatch
+                  - condition: ${second_exchange_response.code != 200 or second_exchange_response.body.schema != "miakapp.user-relay-token/1" or second_exchange_response.body.token_type != "Bearer" or second_exchange_response.body.relay_url != relay_b or len(second_exchange_response.body.access_token) < 100}
+                    raise: User-relay probe second exchange mismatch
+            - retain_second_access_token:
+                assign:
+                  - second_exchange_status: ${second_exchange_response.code}
+                  - second_access_token: ${second_exchange_response.body.access_token}
+                  - second_expires_at_ms: ${second_exchange_response.body.expires_at_ms}
+                  - second_exchange_response: null
+            - enter_token_verification_stage:
+                assign:
+                  - probe_stage: token_verification
+            - verify_access_tokens:
+                call: http.post
+                args:
+                  url: ${verifier_uri + "/verify"}
+                  timeout: 30
+                  auth:
+                    type: OIDC
+                    audience: ${verifier_uri}
+                  headers:
+                    Content-Type: application/json
+                  body:
+                    schema: miakapp.staging-user-relay-jwt-verification-request/1
+                    token_one:
+                      access_token: ${first_access_token}
+                      expires_at_ms: ${first_expires_at_ms}
+                    token_two:
+                      access_token: ${second_access_token}
+                      expires_at_ms: ${second_expires_at_ms}
+                result: token_verification
+            - validate_token_verification:
+                switch:
+                  - condition: ${token_verification.code != 200 or token_verification.body.schema != "miakapp.staging-user-relay-jwt-verification/1" or token_verification.body.verified != true or token_verification.body.token_count != 2 or token_verification.body.kid != "staging-access-token-v1"}
+                    raise: User-relay probe token verification mismatch
             - record_success:
                 assign:
                   - probe_stage: success
-                  - first_status: ${first_response.code}
-                  - replay_status: ${replay_response.code}
-                  - first_response: null
-                  - replay_response: null
+                  - tokens_verified: true
+                  - token_verification: null
         except:
           as: probe_error
           steps:
             - record_probe_failure:
                 assign:
                   - probe_failed: true
-    - delete_synthetic_user:
-        switch:
-          - condition: ${firebase_id_token != null}
-            steps:
-              - delete_user:
-                  try:
-                    call: http.post
-                    args:
-                      url: https://identitytoolkit.googleapis.com/v1/accounts:delete
-                      timeout: 30
-                      query:
-                        key: ${web_config.body.apiKey}
-                      body:
-                        idToken: ${firebase_id_token}
-                    result: delete_response
-                  except:
-                    as: cleanup_error
-                    steps:
-                      - record_cleanup_failure:
-                          assign:
-                            - cleanup_failed: true
-              - record_user_deletion:
-                  switch:
-                    - condition: ${not(cleanup_failed) and delete_response.code == 200}
-                      assign:
-                        - synthetic_user_deleted: true
-                    - condition: true
-                      assign:
-                        - cleanup_failed: true
-              - verify_user_absence:
-                  try:
-                    call: http.post
-                    args:
-                      url: https://identitytoolkit.googleapis.com/v1/projects/miakapp-v4-staging/accounts:lookup
-                      timeout: 30
-                      auth:
-                        type: OAuth2
-                      body:
-                        localId:
-                          - ${synthetic_uid}
-                    result: user_lookup
-                  except:
-                    as: lookup_error
-                    steps:
-                      - record_lookup_failure:
-                          assign:
-                            - cleanup_failed: true
-              - record_user_absence:
-                  switch:
-                    - condition: ${not(cleanup_failed) and user_lookup.code == 200 and not("users" in user_lookup.body)}
-                      assign:
-                        - synthetic_user_absence_verified: true
-                    - condition: true
-                      assign:
-                        - cleanup_failed: true
-    - clear_ephemeral_material:
+    - clear_product_credentials:
         assign:
-          - firebase_id_token: null
           - app_check_token: null
           - cloud_run_id_token: null
-          - web_config: null
-          - delete_response: null
-          - user_lookup: null
-          - created_user_lookup: null
+          - first_access_token: null
+          - second_access_token: null
+          - first_expires_at_ms: null
+          - second_expires_at_ms: null
+          - probe_error: null
+    - cleanup_private_home_domain:
+        try:
+          steps:
+            - inspect_synthetic_home_for_cleanup:
+                try:
+                  call: http.get
+                  args:
+                    url: ${firestore_document_url}
+                    timeout: 30
+                    auth:
+                      type: OAuth2
+                  result: cleanup_home
+                except:
+                  as: cleanup_home_error
+                  steps:
+                    - classify_absent_cleanup_home:
+                        switch:
+                          - condition: ${"HttpError" in cleanup_home_error.tags and cleanup_home_error.code == 404}
+                            assign:
+                              - synthetic_home_absence_verified: true
+                          - condition: true
+                            assign:
+                              - home_cleanup_failed: true
+                    - clear_cleanup_home_error:
+                        assign:
+                          - cleanup_home_error: null
+            - delete_synthetic_home:
+                switch:
+                  - condition: ${cleanup_home != null}
+                    steps:
+                      - validate_cleanup_home:
+                          switch:
+                            - condition: ${cleanup_home.code != 200 or cleanup_home.body.fields.probe_marker.stringValue != "miakapp.staging-user-relay-probe/1" or cleanup_home.body.fields.home_id.stringValue != synthetic_home_id or cleanup_home.body.fields.owner_uid.stringValue != synthetic_owner_uid or len(cleanup_home.body.updateTime) < 20}
+                              assign:
+                                - home_cleanup_failed: true
+                      - delete_reviewed_cleanup_home:
+                          switch:
+                            - condition: ${not(home_cleanup_failed)}
+                              steps:
+                                - delete_cleanup_home:
+                                    try:
+                                      call: http.delete
+                                      args:
+                                        url: ${firestore_document_url + "?currentDocument.updateTime=" + text.url_encode(cleanup_home.body.updateTime)}
+                                        timeout: 30
+                                        auth:
+                                          type: OAuth2
+                                      result: cleanup_home_delete
+                                    except:
+                                      as: cleanup_home_delete_error
+                                      steps:
+                                        - record_cleanup_home_delete_failure:
+                                            assign:
+                                              - home_cleanup_failed: true
+                                        - clear_cleanup_home_delete_error:
+                                            assign:
+                                              - cleanup_home_delete_error: null
+                                - record_cleanup_home_delete:
+                                    switch:
+                                      - condition: ${not(home_cleanup_failed) and cleanup_home_delete.code == 200}
+                                        assign:
+                                          - synthetic_home_deleted: true
+                                      - condition: true
+                                        assign:
+                                          - home_cleanup_failed: true
+            - verify_synthetic_home_absence:
+                try:
+                  call: http.get
+                  args:
+                    url: ${firestore_document_url}
+                    timeout: 30
+                    auth:
+                      type: OAuth2
+                  result: residual_home
+                except:
+                  as: residual_home_error
+                  steps:
+                    - record_synthetic_home_absence:
+                        switch:
+                          - condition: ${"HttpError" in residual_home_error.tags and residual_home_error.code == 404}
+                            assign:
+                              - synthetic_home_absence_verified: true
+                          - condition: true
+                            assign:
+                              - home_cleanup_failed: true
+                    - clear_residual_home_error:
+                        assign:
+                          - residual_home_error: null
+            - record_present_residual_home:
+                switch:
+                  - condition: ${residual_home != null}
+                    assign:
+                      - home_cleanup_failed: true
+        except:
+          as: private_home_cleanup_error
+          steps:
+            - record_private_home_domain_failure:
+                assign:
+                  - home_cleanup_failed: true
+                  - private_home_cleanup_error: null
+    - inspect_public_home_domain:
+        try:
+          steps:
+            - verify_public_home_absence:
+                try:
+                  call: http.get
+                  args:
+                    url: ${public_firestore_document_url}
+                    timeout: 30
+                    auth:
+                      type: OAuth2
+                  result: residual_public_home
+                except:
+                  as: residual_public_home_error
+                  steps:
+                    - record_public_home_absence:
+                        switch:
+                          - condition: ${"HttpError" in residual_public_home_error.tags and residual_public_home_error.code == 404}
+                            assign:
+                              - public_home_absence_after_verified: true
+                          - condition: true
+                            assign:
+                              - public_home_check_failed: true
+                    - clear_residual_public_home_error:
+                        assign:
+                          - residual_public_home_error: null
+            - reject_present_public_home:
+                switch:
+                  - condition: ${residual_public_home != null}
+                    assign:
+                      - public_home_check_failed: true
+        except:
+          as: public_home_inspection_error
+          steps:
+            - record_public_home_domain_failure:
+                assign:
+                  - public_home_check_failed: true
+                  - public_home_inspection_error: null
+    - cleanup_firebase_user_domain:
+        try:
+          steps:
+            - inspect_synthetic_user_for_cleanup:
+                try:
+                  call: http.post
+                  args:
+                    url: https://identitytoolkit.googleapis.com/v1/projects/miakapp-v4-staging/accounts:lookup
+                    timeout: 30
+                    auth:
+                      type: OAuth2
+                    body:
+                      localId:
+                        - ${synthetic_uid}
+                  result: cleanup_user_lookup
+                except:
+                  as: cleanup_user_lookup_error
+                  steps:
+                    - record_cleanup_user_lookup_failure:
+                        assign:
+                          - user_cleanup_failed: true
+                    - clear_cleanup_user_lookup_error:
+                        assign:
+                          - cleanup_user_lookup_error: null
+            - delete_synthetic_user:
+                switch:
+                  - condition: ${cleanup_user_lookup != null and "users" in cleanup_user_lookup.body}
+                    steps:
+                      - validate_cleanup_user:
+                          switch:
+                            - condition: ${len(cleanup_user_lookup.body.users) != 1 or cleanup_user_lookup.body.users[0].localId != synthetic_uid or "email" in cleanup_user_lookup.body.users[0]}
+                              assign:
+                                - user_cleanup_failed: true
+                      - delete_reviewed_cleanup_user:
+                          switch:
+                            - condition: ${not(user_cleanup_failed) and firebase_id_token != null}
+                              steps:
+                                - delete_cleanup_user:
+                                    try:
+                                      call: http.post
+                                      args:
+                                        url: https://identitytoolkit.googleapis.com/v1/accounts:delete
+                                        timeout: 30
+                                        query:
+                                          key: ${web_config.body.apiKey}
+                                        body:
+                                          idToken: ${firebase_id_token}
+                                      result: cleanup_user_delete
+                                    except:
+                                      as: cleanup_user_delete_error
+                                      steps:
+                                        - record_cleanup_user_delete_failure:
+                                            assign:
+                                              - user_cleanup_failed: true
+                                        - clear_cleanup_user_delete_error:
+                                            assign:
+                                              - cleanup_user_delete_error: null
+                                - record_cleanup_user_deletion:
+                                    switch:
+                                      - condition: ${not(user_cleanup_failed) and cleanup_user_delete.code == 200}
+                                        assign:
+                                          - synthetic_user_deleted: true
+                                      - condition: true
+                                        assign:
+                                          - user_cleanup_failed: true
+                            - condition: true
+                              assign:
+                                - user_cleanup_failed: true
+                  - condition: ${cleanup_user_lookup != null and not("users" in cleanup_user_lookup.body)}
+                    assign:
+                      - synthetic_user_absence_verified: true
+            - verify_synthetic_user_absence:
+                try:
+                  call: http.post
+                  args:
+                    url: https://identitytoolkit.googleapis.com/v1/projects/miakapp-v4-staging/accounts:lookup
+                    timeout: 30
+                    auth:
+                      type: OAuth2
+                    body:
+                      localId:
+                        - ${synthetic_uid}
+                  result: residual_user_lookup
+                except:
+                  as: residual_user_lookup_error
+                  steps:
+                    - record_residual_user_lookup_failure:
+                        assign:
+                          - user_cleanup_failed: true
+                    - clear_residual_user_lookup_error:
+                        assign:
+                          - residual_user_lookup_error: null
+            - record_synthetic_user_absence:
+                switch:
+                  - condition: ${residual_user_lookup != null and not("users" in residual_user_lookup.body)}
+                    assign:
+                      - synthetic_user_absence_verified: true
+                  - condition: true
+                    assign:
+                      - user_cleanup_failed: true
+        except:
+          as: firebase_user_cleanup_error
+          steps:
+            - record_firebase_user_domain_failure:
+                assign:
+                  - user_cleanup_failed: true
+                  - firebase_user_cleanup_error: null
+    - clear_ephemeral_material:
+        assign:
+          - cleanup_home: null
+          - cleanup_home_delete: null
+          - residual_home: null
+          - initial_public_home_response: null
+          - residual_public_home: null
+          - cleanup_user_lookup: null
+          - cleanup_user_delete: null
+          - residual_user_lookup: null
           - issued_at: null
           - auth_expires_at: null
           - app_check_expires_at: null
-    - require_cleanup:
+          - home_timestamp: null
+          - rotation_timestamp: null
+          - home_update_time: null
+          - firebase_id_token: null
+          - web_config: null
+    - require_cleanup_and_success:
         switch:
-          - condition: ${cleanup_failed or (synthetic_user_created and (not(synthetic_user_deleted) or not(synthetic_user_absence_verified)))}
-            raise: Auth probe synthetic identity cleanup failed
+          - condition: ${home_cleanup_failed or user_cleanup_failed or public_home_check_failed or not(synthetic_home_absence_verified) or not(synthetic_user_absence_verified) or not(public_home_absence_before_verified) or not(public_home_absence_after_verified)}
+            raise: User-relay probe synthetic fixture cleanup failed
           - condition: ${probe_failed}
-            raise: ${"Auth probe failed at bounded stage " + probe_stage}
-          - condition: ${not(synthetic_user_created) or not(synthetic_user_deleted) or not(synthetic_user_absence_verified)}
-            raise: Auth probe synthetic identity lifecycle mismatch
-          - condition: ${missing_app_check_status != 401 or first_status != 200 or replay_status != 200}
-            raise: Auth probe result invariant failed
+            raise: ${"User-relay probe failed at bounded stage " + probe_stage}
+          - condition: ${not(synthetic_user_created) or not(synthetic_user_deleted) or not(synthetic_home_created) or not(synthetic_home_deleted) or not(relay_rotated)}
+            raise: User-relay probe synthetic lifecycle mismatch
+          - condition: ${invalid_firebase_status != 401 or missing_app_check_status != 401 or missing_home_status != 404 or first_exchange_status != 200 or second_exchange_status != 200}
+            raise: User-relay probe response invariant failed
+          - condition: ${not(discovery_valid) or not(jwks_valid) or not(tokens_verified)}
+            raise: User-relay probe cryptographic invariant failed
     - return_sanitized_result:
         return:
-          schema: miakapp.staging-auth-app-check-workflow-result/1
+          schema: miakapp.staging-user-relay-workflow-result/1
           project_id: ${project_id}
           project_number: ${project_number}
           firebase_app_id: ${firebase_app_id}
           route:
-            method: GET
-            path: ${destination_path}
-            product_requests: 3
-            successful_reads: 2
-            expected_application_writes: 0
+            method: POST
+            path: ${exchange_path}
+            product_requests: 5
+            successful_exchanges: 2
+            negative_controls: 3
             retries: 0
           cloud_run:
             authentication_header: X-Serverless-Authorization
+            verifier_uri: ${verifier_uri}
+            verifier_ingress: internal-only
           firebase_auth:
             token_source: execution-scoped-custom-token
-            missing_app_check_reached: true
             synthetic_user_created: ${synthetic_user_created}
             synthetic_user_deleted: ${synthetic_user_deleted}
             synthetic_user_absence_verified: ${synthetic_user_absence_verified}
+            verified_email_present: false
           app_check:
             token_source: admin-custom-provider
             token_consumption: false
-            first_use_accepted: true
             replay_accepted: true
+          firestore:
+            collection: controlHomes
+            synthetic_home_created: ${synthetic_home_created}
+            relay_rotated: ${relay_rotated}
+            synthetic_home_deleted: ${synthetic_home_deleted}
+            synthetic_home_absence_verified: ${synthetic_home_absence_verified}
+            public_home_written: ${not(public_home_absence_before_verified and public_home_absence_after_verified)}
+            owner_matches_authenticated_user: false
+          metadata:
+            discovery_valid: ${discovery_valid}
+            jwks_valid: ${jwks_valid}
           responses:
+            invalid_firebase:
+              status: ${invalid_firebase_status}
+              code: ${invalid_firebase_code}
             missing_app_check:
               status: ${missing_app_check_status}
               code: ${missing_app_check_code}
-            first_authenticated_read:
-              status: ${first_status}
-              schema: miakapp.push-destination-list/1
-              destination_count: 0
-            replay_authenticated_read:
-              status: ${replay_status}
-              schema: miakapp.push-destination-list/1
-              destination_count: 0
+            missing_home:
+              status: ${missing_home_status}
+              code: ${missing_home_code}
+            first_exchange:
+              status: ${first_exchange_status}
+              relay_url: ${relay_a}
+            second_exchange:
+              status: ${second_exchange_status}
+              relay_url: ${relay_b}
+          tokens:
+            algorithm: EdDSA
+            key_id: staging-access-token-v1
+            type: at+jwt
+            ttl_seconds: 300
+            signatures_valid: ${tokens_verified}
+            audiences_changed: true
+            distinct_tokens: true
+            distinct_jti: true
+            scope: relay:user
+            role: user
+            verified_email_present: false
+            client_id_present: false
+            coordinator_present: false

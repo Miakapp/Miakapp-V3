@@ -26,6 +26,7 @@ import { observeAuthProbeTemporaryInventory } from './inventory.mjs';
 import {
   buildAuthProbeRetirementRecoveryInventory,
   inspectAuthProbeState,
+  requiresAuthProbeRetirementRecovery,
 } from './retirement-recovery.mjs';
 
 const PLAN_CONFIRMATION = 'MIAKAPP_STAGING_AUTH_PROBE_RETIRE_RECOVERY_PLAN_CONFIRMATION';
@@ -65,10 +66,8 @@ async function main() {
       inspectAuthProbeState(pulled.stdout),
       observeAuthProbeTemporaryInventory(),
     );
-    if (inventory.missing_temporaries.length === 0
-      && inventory.absent_remote_temporaries.length === 0
-      && inventory.custom_role_state_action === null) {
-      throw new Error('No state-missing Auth-probe resource exists; use the normal retirement plan');
+    if (!requiresAuthProbeRetirementRecovery(inventory)) {
+      throw new Error('No Auth-probe recovery or finalization action exists; use the normal retirement plan');
     }
     const metadata = buildAuthProbeRetirementRecoveryMetadata({
       repositoryCommit,
@@ -83,11 +82,18 @@ async function main() {
     verifyExactMain(repositoryRoot, repositoryCommit);
     process.stdout.write([
       `Private Auth-probe bundle: ${bundle}`,
+      `Recovery phase: ${metadata.recovery_phase}`,
       `State-missing temporary resources: ${metadata.missing_temporaries.length}`,
       `State-tracked resources already absent live: ${metadata.absent_remote_temporaries.length}`,
-      `Custom role state action: ${metadata.custom_role_state_action ?? 'none'}`,
+      `Persistent resource state actions: ${metadata.persistent_state_actions.length}`,
+      `Guard state action: ${metadata.guard_state_action?.action ?? 'none'}`,
+      `Retirement finalization: ${metadata.retirement_finalization_required ? 'required' : 'not required'}`,
       `Authorization: ${authProbeRetirementRecoveryAuthorization(metadata)}`,
-      'The recovery can only remove exact live temporaries absent from state or adopt the exact dormant custom role.',
+      metadata.recovery_phase === 'cloud_asset_api_prerequisite'
+        ? 'This phase can only enable and import Cloud Asset API; rerun planning afterward for a fresh complete inventory.'
+        : (metadata.retirement_finalization_required
+          ? 'This phase can only finalize the exact zero-temporary graph and regenerate retirement evidence.'
+          : 'The recovery can only retire exact live temporaries, reconcile exact dormant persistent resources, or repair the state-only guard.'),
       '',
     ].join('\n'));
   } finally {

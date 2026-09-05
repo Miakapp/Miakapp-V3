@@ -29,14 +29,14 @@ const SERVICE_STATES = [
   'initialized_closed_custom_token_lifecycle_validated',
   'admin_custom_provider_validated_browser_attestation_pending',
   'foundation_created_no_application_mutation',
-  'private_deployment_active_source_verified_discovery_validated',
+  'private_deployment_active_source_verified_user_relay_acceptance_pending',
   'private_bucket_created_no_application_mutation',
   'signing_key_version_enabled_public_key_validated',
   'five_initial_versions_enabled_runtime_access_validated',
   'api_enabled_one_permission_runtime_role_applied_uninvoked',
   'api_enabled_runtime_deployed_no_application_log_validation',
   'api_enabled_runtime_deployed_no_metric_validation',
-  'api_enabled_discovery_retained_auth_probe_succeeded_and_retired',
+  'api_enabled_historical_probes_retired_user_relay_acceptance_pending',
 ];
 
 const ENABLED_SERVICE_APIS = [
@@ -115,6 +115,7 @@ const IAM_BINDINGS = [
 
 const REQUIRED_BLOCKERS = [
   'app-check-browser-provider-attestation',
+  'audience-bound-user-relay-staging-acceptance',
   'relay-token-refresh-integration',
   'trusted-source-and-edge-admission',
   'live-managed-service-fault-matrix',
@@ -241,7 +242,7 @@ function validateProject(value) {
   }
   exact(
     project.lifecycle,
-    'firebase_auth_initialized_private_control_plane_auth_app_check_validated',
+    'firebase_auth_initialized_private_control_plane_user_relay_acceptance_pending',
     'project.lifecycle',
   );
   exact(project.creation_authorized, false, 'project.creation_authorized');
@@ -417,7 +418,7 @@ function validateRuntime(value) {
     'projects/miakapp-v4-staging/locations/europe-west9/services/control-plane',
     'runtime.service',
   );
-  exact(runtime.revision, 'control-plane-00003-hum', 'runtime.revision');
+  exact(runtime.revision, 'control-plane-00004-yis', 'runtime.revision');
   exact(runtime.uri, 'https://control-plane-aczhngqraq-od.a.run.app', 'runtime.uri');
   exact(runtime.minimum_instances, 0, 'runtime.minimum_instances');
   exact(runtime.maximum_instances, 1, 'runtime.maximum_instances');
@@ -432,7 +433,7 @@ function validateRuntime(value) {
   exact(runtime.ingress, 'ALLOW_INTERNAL_ONLY', 'runtime.ingress');
   exact(
     runtime.source_archive_sha256,
-    '86f4818dfcb4021e5578638d6fb1e9b7da31ea245528cbdc8573dabecdfca358',
+    '6674c0353ec9c73fcfe0d3a63d17850f057a5f2a547a5855989e28f011249b1e',
     'runtime.source_archive_sha256',
   );
   exact(
@@ -441,7 +442,7 @@ function validateRuntime(value) {
     'runtime.runtime_config_sha256',
   );
   exact(runtime.user_managed_keys, 0, 'runtime.user_managed_keys');
-  exact(runtime.live_request_performed, true, 'runtime.live_request_performed');
+  exact(runtime.live_request_performed, false, 'runtime.live_request_performed');
 }
 
 function validateData(value) {
@@ -643,6 +644,8 @@ function validateTerraform(value) {
     'automation_root',
     'workload_root',
     'probe_root',
+    'firebase_auth_root',
+    'auth_probe_root',
     'terraform_version',
     'providers',
     'backend',
@@ -667,7 +670,7 @@ function validateTerraform(value) {
   ]);
   exact(
     terraform.state,
-    'foundation_private_workload_and_probe_complete',
+    'bootstrap_foundation_workload_probe_and_firebase_auth_converged_auth_probe_acceptance_pending',
     'terraform.state',
   );
   exact(
@@ -691,6 +694,8 @@ function validateTerraform(value) {
   exact(terraform.automation_root, 'automation', 'terraform.automation_root');
   exact(terraform.workload_root, 'workload', 'terraform.workload_root');
   exact(terraform.probe_root, 'probe', 'terraform.probe_root');
+  exact(terraform.firebase_auth_root, 'firebase-auth', 'terraform.firebase_auth_root');
+  exact(terraform.auth_probe_root, 'auth-probe', 'terraform.auth_probe_root');
   exact(terraform.terraform_version, '1.11.3', 'terraform.terraform_version');
   if (!Array.isArray(terraform.providers)) reject('terraform.providers', 'must be an array');
   if (terraform.providers.length !== 2) reject('terraform.providers', 'must contain exactly 2 entries');
@@ -710,6 +715,8 @@ function validateTerraform(value) {
     'foundation_prefix',
     'workload_prefix',
     'probe_prefix',
+    'firebase_auth_prefix',
+    'auth_probe_prefix',
     'bootstrap_migration_template',
     'bootstrap_migration_state',
     'locking_enabled',
@@ -719,7 +726,7 @@ function validateTerraform(value) {
   exact(backend.type, 'gcs', 'terraform.backend.type');
   exact(
     backend.state,
-    'bootstrap_foundation_workload_and_probe_state_present',
+    'all_six_terraform_state_roots_present',
     'terraform.backend.state',
   );
   exact(backend.bucket, 'miakapp-v4-staging-tfstate-1072737219170', 'terraform.backend.bucket');
@@ -727,6 +734,12 @@ function validateTerraform(value) {
   exact(backend.foundation_prefix, 'terraform/foundation', 'terraform.backend.foundation_prefix');
   exact(backend.workload_prefix, 'terraform/workload', 'terraform.backend.workload_prefix');
   exact(backend.probe_prefix, 'terraform/probe', 'terraform.backend.probe_prefix');
+  exact(
+    backend.firebase_auth_prefix,
+    'terraform/firebase-auth',
+    'terraform.backend.firebase_auth_prefix',
+  );
+  exact(backend.auth_probe_prefix, 'terraform/auth-probe', 'terraform.backend.auth_probe_prefix');
   exact(
     backend.bootstrap_migration_template,
     'bootstrap/backend.gcs.tf.example',
@@ -2897,9 +2910,9 @@ function validateEvidence(value) {
   ]);
   const expectedWorkload = {
     state: 'active_internal_only_source_verified',
-    observed_at: '2026-09-04T02:23:35.075Z',
-    inventory_repository_commit: '60322c69c92b8ccf5f3d1bc87ba264a00e5dca05',
-    deployed_repository_commit: '60322c69c92b8ccf5f3d1bc87ba264a00e5dca05',
+    observed_at: '2026-09-04T21:23:53.111Z',
+    inventory_repository_commit: '022f10e2dc15f32a8a6679b38ce7f1a04582e450',
+    deployed_repository_commit: '022f10e2dc15f32a8a6679b38ce7f1a04582e450',
     initial_plan_sha256: 'b59167718fdad5edfa440f5d59f6e0eb1dff9277b20e1f829ebbb233296cdf05',
     initial_plan_result: 'failed_build_missing_conditional_source_read',
     recovery_configuration_commit: '488da23cd7eb4c08baa9296724b87b7df34a1122',
@@ -2907,10 +2920,10 @@ function validateEvidence(value) {
     output_reconciliation_plan_sha256: 'a31bda9269b138b270d58a6bb992ab7902d1fc73074c0f8f2543bdf0c8f09623',
     output_reconciliation_resource_changes: 0,
     result_path: 'workload/result.json',
-    result_sha256: 'dfe8900cd90fe53cbb85ac656ddce42c26fef64c9bbed462688c0e0755363e15',
-    source_archive_sha256: '86f4818dfcb4021e5578638d6fb1e9b7da31ea245528cbdc8573dabecdfca358',
+    result_sha256: 'cfdb18b9dd6604cd92977cbd447dd0684f4b731ca84d2f7aa3f772cbd3bc3056',
+    source_archive_sha256: '6674c0353ec9c73fcfe0d3a63d17850f057a5f2a547a5855989e28f011249b1e',
     runtime_config_sha256: 'b794181400bf5ace6aaa9ffc4be00e4c4f6a59519284baa7f73bca3c042c4ff8',
-    function_revision: 'control-plane-00003-hum',
+    function_revision: 'control-plane-00004-yis',
     ingress: 'ALLOW_INTERNAL_ONLY',
     unauthenticated_invokers: 0,
     minimum_instances: 0,
@@ -2947,8 +2960,8 @@ function validateEvidence(value) {
     false,
     'evidence.workload_deployment.recovery_plan_result.function_replaced',
   );
-  if (!Array.isArray(workload.source_updates) || workload.source_updates.length !== 2) {
-    reject('evidence.workload_deployment.source_updates', 'must contain exactly 2 entries');
+  if (!Array.isArray(workload.source_updates) || workload.source_updates.length !== 3) {
+    reject('evidence.workload_deployment.source_updates', 'must contain exactly 3 entries');
   }
   const expectedSourceUpdates = [
     {
@@ -2970,6 +2983,16 @@ function validateEvidence(value) {
       terraform_state_generation: '1788488610045265',
       terraform_state_serial: 12,
       terraform_state_sha256: '3adbde5e684736080d47b239031a2bb469787641ccf0f87c409d2b3a3b180145',
+    },
+    {
+      purpose: 'audience_bound_user_relay_credentials',
+      repository_commit: '022f10e2dc15f32a8a6679b38ce7f1a04582e450',
+      plan_sha256: 'eeb7bf638d7b46212994513eb2decc8405991e6907b6838caa04f6eba07cffa3',
+      source_archive_sha256: '6674c0353ec9c73fcfe0d3a63d17850f057a5f2a547a5855989e28f011249b1e',
+      function_revision: 'control-plane-00004-yis',
+      terraform_state_generation: '1788557027934706',
+      terraform_state_serial: 14,
+      terraform_state_sha256: '4f2977ce6e8c736cbdf31d58ba1da81f4291ace4c9d5d0d7d21a727c063cfc6e',
     },
   ];
   workload.source_updates.forEach((value, index) => {
@@ -3007,11 +3030,11 @@ function validateEvidence(value) {
   );
   const expectedWorkloadState = {
     object: 'terraform/workload/default.tfstate',
-    generation: '1788488610045265',
-    sha256: '3adbde5e684736080d47b239031a2bb469787641ccf0f87c409d2b3a3b180145',
-    size_bytes: 49242,
+    generation: '1788557027934706',
+    sha256: '4f2977ce6e8c736cbdf31d58ba1da81f4291ace4c9d5d0d7d21a727c063cfc6e',
+    size_bytes: 49283,
     terraform_version: '1.11.3',
-    serial: 12,
+    serial: 14,
     lineage_sha256: 'aecd871c255da2bb3d30e7a7cc7b76be229e1eccc1fce2c4e41fed5a4a4b4b3a',
     managed_resources: 15,
     data_resources: 3,
@@ -3320,10 +3343,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 37, 'manifest.revision');
+  exact(manifest.revision, 39, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_auth_app_check_validated',
+    'private_control_plane_source_verified_user_relay_acceptance_pending',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -3376,6 +3399,17 @@ function fileSha256(path) {
 function exactFields(value, expected, path) {
   for (const [field, expectedValue] of Object.entries(expected)) {
     exact(value[field], expectedValue, `${path}.${field}`);
+  }
+}
+
+function validateHistoricalWorkloadTuple(sourceUpdates, observed, path) {
+  const matches = sourceUpdates.filter((update) => (
+    update.repository_commit === observed.deployment_commit
+    && update.source_archive_sha256 === observed.source_sha256
+    && update.function_revision === observed.function_revision
+  ));
+  if (matches.length !== 1) {
+    reject(path, 'must match exactly one recorded workload source update');
   }
 }
 
@@ -3437,6 +3471,7 @@ export function validateCommittedEvidence(
     ingress: workload.function.ingress,
     source_archive_sha256: workload.source_archive_sha256,
     runtime_config_sha256: workload.runtime_config_sha256,
+    live_request_performed: workload.live_request_performed,
   }, 'runtime');
 
   const probeManifest = manifest.evidence.private_probe;
@@ -3452,15 +3487,11 @@ export function validateCommittedEvidence(
     'evidence.private_probe.result_path',
   );
   exact(fileSha256(probePath), probeManifest.result_sha256, 'evidence.private_probe.result_sha256');
-  exactFields(probe.workload, {
-    deployment_commit: workload.repository_commit,
-    source_sha256: workload.source_archive_sha256,
-    function_revision: workload.function.revision,
-    function_uri: workload.function.uri,
-    ingress: workload.function.ingress,
-    unauthenticated_invokers: workload.function.unauthenticated_invokers,
-    probe_user_managed_keys: workload.identities.user_managed_keys.probe,
-  }, 'evidence.private_probe.result.workload');
+  validateHistoricalWorkloadTuple(
+    workloadManifest.source_updates,
+    probe.workload,
+    'evidence.private_probe.result.workload',
+  );
   exactFields(probeManifest, {
     state: probe.claims.secure_runtime_served_discovery
       ? 'secure_runtime_discovery_succeeded'
@@ -3491,12 +3522,6 @@ export function validateCommittedEvidence(
     workflow_retries: probe.request.workflow_retries,
     scheduled_triggers: probe.workflow.scheduled_triggers,
   }, 'evidence.private_probe.executions');
-  exact(
-    manifest.runtime.live_request_performed,
-    probe.recovery_execution.count_after === probe.recovery_execution.count_before + 1,
-    'runtime.live_request_performed',
-  );
-
   const firebaseAuthManifest = manifest.evidence.firebase_auth_baseline;
   const firebaseAuthPath = committedEvidencePath(
     stagingRoot,
@@ -3595,16 +3620,16 @@ export function validateCommittedEvidence(
     temporary_bindings_present: authProbeRetirement.temporary_bindings_present,
     recurring_compute: authProbeRetirement.recurring_compute,
   }, 'evidence.auth_app_check_probe');
-  exactFields(authProbe.workload, {
-    deployment_commit: workload.repository_commit,
-    source_sha256: workload.source_archive_sha256,
-    function_revision: workload.function.revision,
-    expected_function_revision: workload.function.revision,
-    function_uri: workload.function.uri,
-    ingress: workload.function.ingress,
-    unauthenticated_invokers: workload.function.unauthenticated_invokers,
-    probe_user_managed_keys: workload.identities.user_managed_keys.probe,
-  }, 'evidence.auth_app_check_probe.result.workload');
+  exact(
+    authProbe.workload.expected_function_revision,
+    authProbe.workload.function_revision,
+    'evidence.auth_app_check_probe.result.workload.expected_function_revision',
+  );
+  validateHistoricalWorkloadTuple(
+    workloadManifest.source_updates,
+    authProbe.workload,
+    'evidence.auth_app_check_probe.result.workload',
+  );
   exact(
     authProbe.app_check.firebase_app_id,
     manifest.evidence.activation_material.firebase_app_id,
@@ -3643,7 +3668,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; the internal-only control plane served its exact discovery document and passed the retired Firebase Auth/App Check probe.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; the current private control-plane source is verified, user-relay acceptance is pending, and historical Firebase Auth/App Check evidence remains retired.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';

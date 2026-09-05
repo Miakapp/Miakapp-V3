@@ -54,8 +54,8 @@ The diagnostic Function deployment changed no ingress, IAM, network, scaling
 or runtime document. It removed assumptions about optional Cloud Run project
 environment variables and emits only a fixed initialization event plus a
 coarse stage. No error message, stack, resource name, execution identifier or
-trace context is logged by that diagnostic. Active revision
-`control-plane-00003-hum` is pinned to source SHA-256
+trace context is logged by that diagnostic. The revision active for this
+historical execution, `control-plane-00003-hum`, is pinned to source SHA-256
 `86f4818dfcb4021e5578638d6fb1e9b7da31ea245528cbdc8573dabecdfca358`.
 
 The revised recovery path pinned both existing failures, the diagnostic
@@ -66,7 +66,7 @@ retry. That execution succeeded in 956 ms and returned HTTP 200 with the exact
 three executions: two failures and one success.
 
 `recover.sh` is now consumed. Its two-execution preflight fails closed against
-the current three-execution inventory, so it cannot make a fourth request.
+the recorded three-execution inventory, so it cannot make a fourth request.
 `invoke.sh` also remains consumed because it accepts only an empty execution
 history.
 

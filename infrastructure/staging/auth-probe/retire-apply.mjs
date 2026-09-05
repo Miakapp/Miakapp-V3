@@ -28,8 +28,9 @@ import {
 } from './cli.mjs';
 import { validateAuthProbeRoot } from './guard.mjs';
 import { observeAuthProbeRetirement } from './inventory.mjs';
-import { requireSyntheticUserAbsent } from './invoke.mjs';
+import { requireSyntheticFixturesAbsent } from './invoke.mjs';
 import { readAndValidateAuthProbePlan } from './validate-plan.mjs';
+import { AUTH_PROBE_RETIRED_STATE_ADDRESSES } from './retirement-recovery.mjs';
 
 const RETIRE_AUTHORIZATION = 'MIAKAPP_STAGING_AUTH_PROBE_RETIRE_AUTHORIZATION';
 process.umask(0o077);
@@ -39,13 +40,7 @@ function validateRetiredState(value) {
     .split('\n')
     .map((entry) => entry.trim())
     .filter(Boolean);
-  const expected = [
-    'data.terraform_remote_state.firebase_auth',
-    'data.terraform_remote_state.workload',
-    'google_project_iam_custom_role.auth_probe',
-    'terraform_data.auth_probe_guard',
-  ];
-  if (!isDeepStrictEqual(addresses.sort(), expected.sort())) {
+  if (!isDeepStrictEqual(addresses.sort(), AUTH_PROBE_RETIRED_STATE_ADDRESSES)) {
     throw new Error('Retired Auth-probe Terraform state contains an unexpected resource');
   }
 }
@@ -109,7 +104,7 @@ async function main() {
       diagnosticDirectory: bundle,
       description: 'terraform-retire-apply',
     });
-    await requireSyntheticUserAbsent({ cleanup: true });
+    await requireSyntheticFixturesAbsent({ cleanup: true });
     run('terraform', [
       'plan',
       '-var=armed=false',
@@ -138,7 +133,7 @@ async function main() {
     process.stdout.write([
       'The exact Auth-probe retirement plan was applied and converged.',
       `Private retirement result: ${retirementPath}`,
-      'Workflow removed; temporary IAM bindings removed; custom role retained dormant and unassigned.',
+      'Workflow and verifier service removed; temporary IAM bindings removed; dormant roles disabled and the verifier identity retained keyless.',
       '',
     ].join('\n'));
   } finally {
