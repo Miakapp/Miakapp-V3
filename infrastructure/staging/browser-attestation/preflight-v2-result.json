@@ -1,0 +1,42 @@
+{
+  "schema": "miakapp.staging-browser-attestation-preflight-result/2",
+  "operation": "attest-browser-app-check-and-disable-hosting-v2",
+  "state": "consumed_before_release",
+  "failure_stage": "hosting_version_finalization",
+  "project_id": "miakapp-v4-staging",
+  "project_number": "1072737219170",
+  "repository_commit": "4fba5cf19ed4bf316b4e23676a8efc8a2bc0695a",
+  "plan_metadata_sha256": "dbabd91442b9bd42b6b8afe934dcc9a433aad51abc375847491fc9dcbffa30bb",
+  "operation_claim": {
+    "bucket": "miakapp-v4-staging-tfstate-1072737219170",
+    "object": "terraform/browser-attestation/operations/live-browser-attestation-v2.json",
+    "generation": "1788617641293074",
+    "size_bytes": 674,
+    "sha256": "50a4c647f04903ad007dd470262c4298908e7adfde57573e4e6766efd6702e33",
+    "retry_authorized": false,
+    "deletion_authorized": false,
+    "raw_contents_committed": false
+  },
+  "hosting": {
+    "site": "miakapp-v4-staging",
+    "version_name_sha256": "d0dc444702b93d17043a794280cfc41e65d9a0b5242c83e36f2f9b8f0c402b6e",
+    "version_status": "DELETED",
+    "create_time": "2026-09-05T14:14:04.368714Z",
+    "finalize_time_after_cleanup": null,
+    "delete_time": "2026-09-05T14:14:07.130370Z",
+    "finalization_validated_by_driver": false,
+    "releases_created": 0,
+    "site_ever_released": false,
+    "runner_http_status_after_cleanup": 404
+  },
+  "app_check": {
+    "enforcement_records": 0,
+    "debug_tokens": 0,
+    "browser_invocations": 0,
+    "assessments": 0
+  },
+  "firebase_auth_used": false,
+  "control_plane_invoked": false,
+  "credential_material_committed": false,
+  "private_bundle_committed": false
+}

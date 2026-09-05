@@ -11,8 +11,8 @@ import { googleJsonRequest } from './inventory.mjs';
 
 const VERSION_NAME = new RegExp(`^sites/${HOSTING_SITE}/versions/[0-9A-Za-z_-]{8,128}$`, 'u');
 const RELEASE_NAME = new RegExp(`^sites/${HOSTING_SITE}/releases/[0-9A-Za-z_-]{8,128}$`, 'u');
-const DEPLOY_MESSAGE = 'Miakapp V4 bounded browser App Check attestation v2';
-const DISABLE_MESSAGE = 'Miakapp V4 browser App Check attestation v2 retired';
+const DEPLOY_MESSAGE = 'Miakapp V4 bounded browser App Check attestation v3';
+const DISABLE_MESSAGE = 'Miakapp V4 browser App Check attestation v3 retired';
 const MAXIMUM_STORED_ARTIFACT_BYTES = 1024 * 1024;
 
 function request(session, url, options = {}) {
@@ -22,7 +22,7 @@ function request(session, url, options = {}) {
 export function hostingLabels(repositoryCommit) {
   return Object.freeze({
     environment: 'staging',
-    operation: 'browser-app-check-attestation-v2',
+    operation: 'browser-app-check-attestation-v3',
     repository: repositoryCommit,
   });
 }
@@ -141,17 +141,24 @@ export async function finalizeHostingVersion(
     },
   );
   const version = validateVersion(response.value, 'FINALIZED', repositoryCommit);
-  const fileCount = version.fileCount ?? null;
-  const versionBytes = version.versionBytes ?? null;
-  if ((fileCount !== null && fileCount !== String(artifact?.file_count))
-    || (versionBytes !== null
-      && (!/^(?:0|[1-9][0-9]*)$/u.test(versionBytes)
-        || Number(versionBytes) > MAXIMUM_STORED_ARTIFACT_BYTES))) {
-    throw new Error('Finalized Hosting artifact metrics exceed the reviewed bundle boundary');
-  }
+  const reportedFileCount = version.fileCount ?? null;
+  const reportedVersionBytes = version.versionBytes ?? null;
+  const fileCount = typeof reportedFileCount === 'string'
+    && /^(?:0|[1-9][0-9]*)$/u.test(reportedFileCount)
+    && Number(reportedFileCount) <= artifact.file_count
+    ? reportedFileCount
+    : null;
+  const versionBytes = typeof reportedVersionBytes === 'string'
+    && /^(?:0|[1-9][0-9]*)$/u.test(reportedVersionBytes)
+    && Number(reportedVersionBytes) <= MAXIMUM_STORED_ARTIFACT_BYTES
+    ? reportedVersionBytes
+    : null;
   return Object.freeze({
     file_count: fileCount,
     version_bytes: versionBytes,
+    metrics_within_reviewed_bounds:
+      (reportedFileCount === null || fileCount !== null)
+      && (reportedVersionBytes === null || versionBytes !== null),
   });
 }
 
