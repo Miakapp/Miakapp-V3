@@ -35,11 +35,11 @@ function rejects(mutator, pattern = /drifted|invalid|must|reviewed|credential/u)
   );
 }
 
-test('accepts the reviewed browser-relay design without claiming live evidence', () => {
+test('accepts the rebased browser-relay design without claiming live evidence', () => {
   const validated = validateBrowserRelayPlan(planPath);
   assert.equal(validated.schema, 'miakapp.staging-browser-relay-plan/1');
-  assert.equal(validated.revision, 4);
-  assert.equal(validated.state, 'reviewed_not_deployed');
+  assert.equal(validated.revision, 5);
+  assert.equal(validated.state, 'rebased_reviewed_not_deployed');
   assert.equal(validated.target.project_id, 'miakapp-v4-staging');
   assert.equal(validated.target.cloud_mutation_authorized_by_document, false);
   assert.equal(validated.target.public_ingress_currently_active, false);
@@ -71,12 +71,16 @@ test('pins a reversible scale-to-zero topology and a bounded public window', () 
   assert.equal(validated.budgets.stress_test, false);
   assert.equal(validated.baseline.control_plane.runtime_schema, 'miakapp.production-runtime/2');
   assert.equal(validated.baseline.control_plane.security_schema, 'miakapp.production-security/2');
-  assert.equal(validated.baseline.control_plane.published_signing_keys, 1);
+  assert.equal(validated.baseline.control_plane.published_signing_keys, 2);
+  assert.equal(validated.baseline.control_plane.current_signing_key_version, 2);
   assert.equal(validated.baseline.control_plane.overlap_schema_supported_by_source, true);
   assert.equal(validated.baseline.app_check.browser_provider_inventory, 'readable_registered_recaptcha_enterprise');
+  assert.equal(validated.baseline.app_check.browser_attestation_validated, true);
+  assert.equal(validated.baseline.application_data.firebase_auth_users, 0);
+  assert.equal(validated.baseline.application_data.application_fixture_collections, 0);
   assert.deepEqual(
     validated.preconditions.filter(({ state }) => state === 'satisfied').map(({ id }) => id),
-    ['PIN-01', 'APP-CHECK-01'],
+    ['PIN-01', 'SIGNING-01', 'APP-CHECK-01'],
   );
 });
 
@@ -89,9 +93,15 @@ test('pins all pending matrix rows and routine signing-key timing', () => {
   assert.equal(validated.matrix.every(({ state, maximum_runs }) => (
     state === 'pending' && maximum_runs === 1
   )), true);
-  assert.equal(validated.signing_rotation.state, 'blocked_by_single_published_key_runtime_config');
+  assert.equal(validated.signing_rotation.state, 'two_key_runtime_ready_rehearsal_entry_pending');
+  assert.equal(validated.signing_rotation.baseline_current_version, 2);
+  assert.deepEqual(validated.signing_rotation.baseline_published_versions, [1, 2]);
+  assert.equal(validated.signing_rotation.rehearsal_entry_current_version, 1);
+  assert.equal(validated.signing_rotation.acceptance_target_current_version, 2);
   assert.equal(validated.signing_rotation.prepublication_seconds, 60);
   assert.equal(validated.signing_rotation.retiring_key_retention_seconds, 330);
+  assert.equal(validated.signing_rotation.new_kms_version_required, false);
+  assert.equal(validated.signing_rotation.version_recreation_allowed, false);
   assert.equal(validated.signing_rotation.republish_removed_private_key, false);
 });
 
@@ -104,9 +114,12 @@ test('rejects target, evidence and public-baseline escalation', () => {
   rejects((candidate) => { candidate.baseline.control_plane.ingress = 'ALLOW_ALL'; });
   rejects((candidate) => { candidate.baseline.control_plane.unauthenticated_invokers = 1; });
   rejects((candidate) => { candidate.baseline.control_plane.runtime_schema = 'miakapp.production-runtime/1'; });
-  rejects((candidate) => { candidate.baseline.control_plane.published_signing_keys = 2; });
+  rejects((candidate) => { candidate.baseline.control_plane.published_signing_keys = 1; });
+  rejects((candidate) => { candidate.baseline.control_plane.current_signing_key_version = 1; });
   rejects((candidate) => { candidate.baseline.control_plane.overlap_schema_supported_by_source = false; });
-  rejects((candidate) => { candidate.baseline.app_check.browser_attestation_validated = true; });
+  rejects((candidate) => { candidate.baseline.app_check.browser_attestation_validated = false; });
+  rejects((candidate) => { candidate.baseline.application_data.firebase_auth_users = 1; });
+  rejects((candidate) => { candidate.baseline.application_data.application_fixture_collections = 1; });
   rejects((candidate) => { candidate.evidence.state = 'succeeded'; });
   rejects((candidate) => { candidate.evidence.completed_case_ids.push('LIVE-01'); });
 });
@@ -128,7 +141,7 @@ test('rejects fixed-cost, scale, duration, volume and free-tier drift', () => {
 });
 
 test('rejects omitted blockers, reordered cases and false key-rotation claims', () => {
-  rejects((candidate) => { candidate.preconditions[1].state = 'satisfied'; });
+  rejects((candidate) => { candidate.preconditions[3].state = 'satisfied'; });
   rejects((candidate) => { candidate.preconditions.pop(); });
   rejects((candidate) => { candidate.matrix.reverse(); });
   rejects((candidate) => { candidate.matrix[4].state = 'succeeded'; });
@@ -136,6 +149,9 @@ test('rejects omitted blockers, reordered cases and false key-rotation claims', 
   rejects((candidate) => { candidate.signing_rotation.state = 'ready'; });
   rejects((candidate) => { candidate.signing_rotation.prepublication_seconds = 59; });
   rejects((candidate) => { candidate.signing_rotation.retiring_key_retention_seconds = 329; });
+  rejects((candidate) => { candidate.signing_rotation.rehearsal_entry_current_version = 2; });
+  rejects((candidate) => { candidate.signing_rotation.new_kms_version_required = true; });
+  rejects((candidate) => { candidate.signing_rotation.version_recreation_allowed = true; });
   rejects((candidate) => { candidate.signing_rotation.republish_removed_private_key = true; });
 });
 

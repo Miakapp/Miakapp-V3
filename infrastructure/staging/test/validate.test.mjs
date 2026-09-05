@@ -31,10 +31,10 @@ function rejects(mutator, pattern) {
 
 test('accepts the successful and retired private user-relay probe', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 55);
+  assert.equal(validated.revision, 56);
   assert.equal(
     validated.status,
-    'private_control_plane_two_key_version_2_current_runtime_deployed_signing_overlap_active_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_enforcement_disabled',
+    'private_control_plane_two_key_version_2_current_runtime_deployed_signing_overlap_active_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rebased_enforcement_disabled',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
@@ -736,9 +736,17 @@ test('accepts the successful and retired private user-relay probe', () => {
   assert.equal(userRelayProbe.token_material_committed, false);
   assert.equal(userRelayProbe.raw_diagnostics_committed, false);
   assert.deepEqual(validated.evidence.browser_relay_plan, {
-    state: 'reviewed_not_deployed',
+    state: 'rebased_reviewed_not_deployed',
     path: 'browser-relay/plan.json',
-    sha256: '7cbf154c3d3d77ad74a806533bbaaed27f7ab333287762334b0a31abc9c2874c',
+    sha256: '51fc7b8031da8fbd6162aacfc8e39a2bf25b1c96e496851a6d6847d4588e0b23',
+    baseline_observed_at: '2026-09-05T18:28:41.130Z',
+    baseline_control_plane_revision: 'control-plane-00008-saz',
+    baseline_published_signing_keys: 2,
+    baseline_current_signing_key_version: 2,
+    browser_attestation_validated: true,
+    firebase_auth_users: 0,
+    application_fixture_collections: 0,
+    open_preconditions: 6,
     cloud_mutation_authorized_by_plan: false,
     acceptance_executed: false,
     public_ingress_active: false,
@@ -981,7 +989,7 @@ test('cross-checks manifest claims against all committed evidence artifacts', ()
   assert.equal(evidence.userRelayProbe.execution.state, 'SUCCEEDED');
   assert.equal(evidence.userRelayProbeRetirement.workflow_present, false);
   assert.equal(evidence.userRelayProbeRetirement.verifier_service_present, false);
-  assert.equal(evidence.browserRelayPlan.state, 'reviewed_not_deployed');
+  assert.equal(evidence.browserRelayPlan.state, 'rebased_reviewed_not_deployed');
   assert.equal(evidence.browserRelayPlan.evidence.state, 'absent');
 
   const workloadDigestDrift = manifest();
@@ -1792,6 +1800,12 @@ test('requires every remaining blocker and staging evidence row', () => {
   rejects((candidate) => {
     candidate.evidence.browser_relay_plan.completed_cases = 1;
   }, /evidence\.browser_relay_plan\.completed_cases/);
+  rejects((candidate) => {
+    candidate.evidence.browser_relay_plan.browser_attestation_validated = false;
+  }, /evidence\.browser_relay_plan\.browser_attestation_validated/);
+  rejects((candidate) => {
+    candidate.evidence.browser_relay_plan.baseline_current_signing_key_version = 1;
+  }, /evidence\.browser_relay_plan\.baseline_current_signing_key_version/);
   rejects((candidate) => {
     candidate.evidence.browser_app_check_prerequisite.recaptcha_api_enabled = false;
   }, /evidence\.browser_app_check_prerequisite\.recaptcha_api_enabled/);

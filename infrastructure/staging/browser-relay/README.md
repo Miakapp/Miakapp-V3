@@ -1,9 +1,9 @@
 # Staging browser-relay acceptance plan
 
-This directory freezes the first reviewable plan for live browser, relay,
+This directory freezes the rebased reviewable plan for live browser, relay,
 signing-key and rollback acceptance. It contains no Terraform, deployer,
 invocation wrapper, credential or result. Reading or validating it authorizes no
-cloud mutation. The committed state is `reviewed_not_deployed`, all `LIVE-*`
+cloud mutation. The committed state is `rebased_reviewed_not_deployed`, all `LIVE-*`
 cases are pending and the canonical staging manifest still records private
 control-plane ingress.
 
@@ -73,38 +73,46 @@ and [reCAPTCHA billing](https://cloud.google.com/recaptcha/docs/billing-informat
 
 ## Preconditions
 
-The immutable cross-repository pins, readable registered reCAPTCHA Enterprise
-provider and standalone real-browser token observation are satisfied today.
-The complete authenticated browser case remains part of `LIVE-02`. Before any
+Revision 5 was rebased from an independent read-only observation on
+2026-09-05T18:28:41.130Z. It verified `control-plane-00008-saz`, private ingress,
+zero unauthenticated invokers, two enabled and published signing versions with
+version 2 current, a registered reCAPTCHA Enterprise provider, the prior real
+browser token result, zero enforcement records, zero debug tokens, zero Firebase
+Auth users, zero application fixture collections, zero relay services and an
+HTTP 404 runner route. Firestore contained only ten bounded admission/audit
+documents across its three expected technical collections; no Home or user
+collection existed.
+
+The immutable cross-repository pins, two-key runtime, readable provider and
+standalone real-browser token observation are therefore satisfied today. The
+complete authenticated browser case remains part of `LIVE-02`. Before any
 public transition, separate reviewed implementation must still provide:
 
-1. a production runtime configuration that publishes one active and one
-   retiring signing key while selecting exactly one KMS signer;
+1. a guarded configuration-only rehearsal entry that temporarily selects
+   version 1 while keeping versions 1 and 2 published;
 2. a digest-bound and reversible control-plane ingress transition;
 3. two digest-pinned relay services using a keyless no-role identity;
 4. a three-engine runner that emits closed semantic counters only;
 5. allow-listed metric and billing observations; and
 6. a rollback plan that is rendered and checked before the live window opens.
 
-`plan.json` intentionally retains the earlier observation-time baseline. Its
-next implementation revision must rebase the complete live inventory, including
-the attestation result and current signing-key/runtime state, before authorizing
-any public transition.
-
 The currently deployed runtime document publishes both signing keys with
-version 2 current and version 1 retained. This completes the publication and
-activation halves of the routine 60-second prepublication and 330-second
-retiring-key retention contract. The guarded
+version 2 current and version 1 retained. This completes the platform support
+for the routine 60-second prepublication and 330-second retiring-key retention
+contract. The guarded
 `signing-overlap/` package now freezes the one-shot second-version creation and
 subsequent 60/330-second rollout. Version 2 converged after one direct KMS
 request, both coordination claims remain durable and its one-shot entrypoints
 are retired. The schema-2 bridge, shape migration and two-key prepublication
 were deployed privately through revision `control-plane-00007-deb`; the later
 activation converged on revision `control-plane-00008-saz` without changing
-source, build, IAM, ingress or scale and made no live request. `SIGNING-01`
-remains open only for the separately guarded retirement of version 1 after the
-complete lease bound. Schema support
-or the local two-key fixture is not live overlap evidence.
+source, build, IAM, ingress or scale and made no live request. `SIGNING-01` is
+now satisfied. To exercise a forward version-1-to-version-2 transition on a
+live socket without creating a third KMS version, `ROTATION-ENTRY-01` requires a
+separate reversible configuration-only entry transition before acceptance.
+Version 2 stays published throughout; the matrix then activates it on the live
+socket and retires version 1 only after the complete lease bound. Schema support
+or the local two-key fixture alone is not live overlap evidence.
 
 ## Matrix and evidence boundary
 

@@ -3,7 +3,7 @@
 Date: 2026-09-04
 
 Status: local audience-bound control-plane, SDK and relay evidence complete;
-private staging exchange accepted, live browser-relay plan reviewed but not deployed
+private staging exchange accepted, live browser-relay plan rebased but not deployed
 
 ## Purpose and safety boundary
 
@@ -194,7 +194,8 @@ manual investigation.
 The current staging inventory contains neither a browser runner nor two relay
 endpoints. The separate, digest-pinned
 [`browser-relay/plan.json`](../../infrastructure/staging/browser-relay/plan.json)
-now reviews the required topology, cost and rollback shape:
+now rebases the private `control-plane-00008-saz`, two-key and completed browser
+App Check state and reviews the required topology, cost and rollback shape:
 
 - two canonical TLS relay endpoints running the pinned merged Miakapp-Server;
 - one bounded, unscheduled runner using the pinned browser artifact;
@@ -202,8 +203,8 @@ now reviews the required topology, cost and rollback shape:
   API cannot authenticate a Cloud Run IAM handshake, with exact Origin and
   application-layer authentication on every credential-bearing path;
 - zero minimum instances or otherwise ephemeral execution, hard scaling and
-  invocation ceilings, and an estimated incremental cost below the authorized
-  monthly envelope; and
+invocation ceilings, and an estimated incremental cost below the authorized
+monthly envelope; and
 - deterministic teardown plus retained revision and semantic evidence.
 
 The selected staging profile uses the existing Hosting `web.app` origin and
@@ -213,6 +214,13 @@ DNS dependency. Both relays remain scale 0..1 under a keyless identity with no
 runtime role; the local runner is unscheduled and may launch three times. One
 acceptance execution is allowed, with a EUR 1 projected stop threshold that does
 not assume a free tier.
+
+The rotation rehearsal reuses KMS versions 1 and 2. A separate guarded
+configuration-only entry transition selects version 1 while both public keys
+remain published; the live socket then observes activation of version 2. No
+third version is created. Version 1 remains published for the complete
+330-second post-issuance bound before it is removed and disabled, never
+destroyed.
 
 This is design evidence only. All twelve `LIVE-*` rows remain pending and the
 plan contains no deployment or invocation entrypoint. Runtime multi-key
