@@ -17,10 +17,11 @@ locals {
   function_entry_point = "controlPlane"
   fcm_role_id          = "miakapp.controlPlaneFcmSender"
 
-  operator_user_sha256  = "d1c8514ac6eb5c13205cfec40dd6cc2072f33eb4279172df17273aa7c54a181c"
-  runtime_config_path   = "${path.module}/runtime-config.json"
-  runtime_config_sha256 = "20be750358ffbc2136bab26bca6338b430ea6480ae9874f3fe5e7132c5e0db10"
-  runtime_config_json   = file(local.runtime_config_path)
+  operator_user_sha256     = "d1c8514ac6eb5c13205cfec40dd6cc2072f33eb4279172df17273aa7c54a181c"
+  source_repository_commit = "9f217da102b394734adba7ccef3f8f70d0317306"
+  runtime_config_path      = "${path.module}/runtime-config.json"
+  runtime_config_sha256    = "c018708786fc23a15f7701093b5148c0e415a2df8045af8e170e4308c2deae37"
+  runtime_config_json      = file(local.runtime_config_path)
   expected_foundation_secret_ids = [
     "miakapp-audit-hmac",
     "miakapp-component-hmac",

@@ -19,6 +19,9 @@ const ALLOWED_FILES = Object.freeze([
   'providers.tf',
   'result.json',
   'runtime-config.json',
+  'runtime-config-single-key.json',
+  'signing-prepublish-apply.sh',
+  'signing-prepublish-plan.sh',
   'terraform-cli.tfrc',
   'update-apply.mjs',
   'update-apply.sh',
@@ -61,7 +64,14 @@ export function validateWorkloadRoot(rootUrl) {
     throw new Error('Workload test entries must be regular files');
   }
   exactNames(tests.map(({ name }) => name), ALLOWED_TEST_FILES, 'Workload test files');
-  for (const executable of ['apply.sh', 'plan.sh', 'update-apply.sh', 'update-plan.sh']) {
+  for (const executable of [
+    'apply.sh',
+    'plan.sh',
+    'signing-prepublish-apply.sh',
+    'signing-prepublish-plan.sh',
+    'update-apply.sh',
+    'update-plan.sh',
+  ]) {
     if ((lstatSync(new URL(executable, rootUrl)).mode & 0o111) === 0) {
       throw new Error(`${executable} must be executable`);
     }

@@ -1,8 +1,9 @@
 # Private staging control-plane workload
 
 Status: single-key schema-2 runtime migration applied, converged and
-source-verified; the historical audience-bound revision was accepted by one
-retired bounded probe
+source-verified; two-key/version-1-current prepublication plan guarded but not
+applied; the historical audience-bound revision was accepted by one retired
+bounded probe
 
 This is the third, workload-only Terraform state for `miakapp-v4-staging`. It
 reads but never owns the reconciled bootstrap and foundation states. Its GCS
@@ -204,13 +205,13 @@ The canonical non-secret result at that boundary had SHA-256
 
 ## Completed single-key schema migration
 
-[`runtime-config.json`](runtime-config.json) is the exact deployed schema-2
-document. It is a pure transformation of the historical
+The deployed schema-2 document is a pure transformation of the historical
 [`../activation/runtime-config.json`](../activation/runtime-config.json): the
 effective KMS key version, public JWK, issuer, origins, Firebase app, secret
 versions, timeouts and component bucket remain byte-for-byte equivalent after
 parsing. It contains exactly one published signing key and therefore does not
-yet claim key overlap.
+yet claim key overlap. Its exact digest is
+`20be750358ffbc2136bab26bca6338b430ea6480ae9874f3fe5e7132c5e0db10`.
 
 The exact plan from deployment commit
 `e42cdd70f812580a6070f0e850daa04dbe0cee42` had SHA-256
@@ -228,8 +229,24 @@ and SHA-256
 `746dcf402b9c6735175af9b46d9dda5f53f1788217f2b342c617838b6e2a8242`.
 The current canonical non-secret [`result.json`](result.json) has SHA-256
 `8abb27b692b6003566f510d3c03e8fa1c47926b51f263ea4dc7011838629a24c`.
-The one-time migration wrappers are retired; the regular source updater is now
-pinned to the distinct deployed-runtime and source commits.
+The one-time migration wrappers are retired. The regular source updater remains
+pinned to the distinct deployed-runtime and source commits and is blocked while
+a reviewed runtime transition is pending.
+
+## Guarded signing-key prepublication
+
+[`runtime-config.json`](runtime-config.json) is now the exact pending
+prepublication target. It preserves `staging-access-token-v1` as `current_kid`
+and appends only the public JWK for enabled KMS version 2. Its SHA-256 is
+`c018708786fc23a15f7701093b5148c0e415a2df8045af8e170e4308c2deae37`.
+
+`signing-prepublish-plan.sh` and `signing-prepublish-apply.sh` form a fresh
+two-hour, exact-commit saved-plan boundary. The validator permits only the
+Function and deployment guard to update in place. It requires the deterministic
+source archive and its historical source metadata to remain unchanged, checks
+all thirteen other managed resources as no-ops, and rejects any IAM, ingress,
+identity, scale, source, import, generated configuration or live-request delta.
+This package prepares but does not itself claim that prepublication is live.
 
 ## Successful private discovery
 
