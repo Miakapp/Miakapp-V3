@@ -1,6 +1,7 @@
 # Miakapp 4 staging private workload boundary
 
-Status: private control plane active, source-verified, and Auth/App Check-validated
+Status: audience-bound source active and source-verified; Auth/App Check validated
+on the preceding revision; bounded user-relay acceptance pending
 
 This directory contains the closed description and observed state of
 `miakapp-v4-staging`. The bounded foundation recovery has completed; its active
@@ -9,15 +10,17 @@ workload and both unscheduled private probes were applied and converged. One
 bounded discovery request succeeded after two controlled failures. A later
 single-execution probe validated real Firebase Auth and Admin custom-provider
 App Check enforcement, deleted its synthetic user, and retired all temporary
-capability. This revision does not authorize public ingress, additional live
-requests, destroy, or production changes.
+capability. The current source-only revision has not received a request. This
+evidence does not authorize public ingress, additional live requests, destroy,
+or production changes.
 
 ## Current truth
 
 Project `miakapp-v4-staging` (`1072737219170`) now has one active Gen 2 Function
 backed by one Cloud Run service. It still has no App Engine application, public
-ingress, unauthenticated invoker or minimum instance. Its bounded requests came
-only through unscheduled private Workflows. The bootstrap is complete.
+ingress, unauthenticated invoker or minimum instance. All bounded requests in
+the committed evidence targeted the preceding revision through unscheduled
+private Workflows. The bootstrap is complete.
 Protected foundation applies
 on 2026-09-03 created all thirteen declared APIs, the deletion-protected Paris
 Firestore database and three active TTL fields, one software Ed25519 signing
@@ -63,15 +66,19 @@ That workload state generation `1788481082158679` was 49,241 bytes at serial
 tainted resource. Raw plan and state bytes remain private; the completed private
 bundle was permanently deleted.
 
-Two later, saved-plan source corrections changed no IAM, ingress, network,
+Three later, saved-plan source updates changed no IAM, ingress, network,
 scaling or runtime document. Current merge commit
-`60322c69c92b8ccf5f3d1bc87ba264a00e5dca05` produced source SHA-256
-`86f4818dfcb4021e5578638d6fb1e9b7da31ea245528cbdc8573dabecdfca358`
-and active revision `control-plane-00003-hum`. Current workload state generation
-`1788488610045265` is 49,242 bytes at serial 12 with fifteen managed resources,
+`022f10e2dc15f32a8a6679b38ce7f1a04582e450` produced source SHA-256
+`6674c0353ec9c73fcfe0d3a63d17850f057a5f2a547a5855989e28f011249b1e`
+and active revision `control-plane-00004-yis`. Current workload state generation
+`1788557027934706` is 49,283 bytes at serial 14 with fifteen managed resources,
 three data resources, one output and nothing tainted. The current canonical
 [`workload/result.json`](workload/result.json) has SHA-256
-`dfe8900cd90fe53cbb85ac656ddce42c26fef64c9bbed462688c0e0755363e15`.
+`cfdb18b9dd6604cd92977cbd447dd0684f4b731ca84d2f7aa3f772cbd3bc3056`.
+The latest source contains the audience-bound user-relay credential exchange;
+its separate bounded acceptance probe has not run yet. The discovery and Auth/
+App Check evidence below remains pinned to historical revision
+`control-plane-00003-hum`.
 
 The private probe deployment created only the Workflows API guard and one
 unscheduled Workflow. Its third and final execution succeeded after two pinned
@@ -96,6 +103,43 @@ The digest-pinned [`auth-probe/result.json`](auth-probe/result.json) and
 [`auth-probe/retirement.json`](auth-probe/retirement.json) contain no execution
 identifier, token material or raw diagnostic. Browser-provider attestation is
 not claimed by this evidence.
+
+The same independent `auth-probe` state root is now prepared for the bounded
+audience-bound user-relay acceptance run. Its reviewed arm plan may create one
+internal-only scale-to-zero verifier service, one unscheduled Workflow and four
+hard-expiring IAM bindings, while retaining three disabled custom roles and a
+keyless no-role verifier identity after retirement. It also enables and retains
+the Cloud Asset API for supplemental project-wide IAM discovery; because that
+inventory is eventually consistent, it is not used to authorize role
+restoration. The Workflow
+uses one fixed
+no-email user and one private marker-guarded `controlHomes` document, performs
+exactly seven Function requests (two metadata `GET`s and five exchange `POST`s),
+verifies two Ed25519 credentials internally, then independently cleans the
+private fixture and user and checks that the lowercase public `homes` path stayed
+absent. This graph has not yet
+been applied or invoked; [`auth-probe/README.md`](auth-probe/README.md) is the
+authoritative lifecycle and cost boundary. Retirement removes the service and
+Workflow, removes the temporary bindings, and disables all three roles; the Cloud Asset API, roles and verifier
+identity remain as inert persistent infrastructure until a separately reviewed
+teardown.
+
+The verifier's service policy contains exactly one conditioned binding for the
+probe identity, but project inheritance also permits five authenticated staging
+principals with `run.routes.invoke`: the Owner, two default Editor service
+accounts, and the Cloud Functions and Cloud Run service agents. The live
+inventory resolves role permissions, pins that inherited set, rejects extra
+service-level bindings and makes no Workflow-only claim.
+
+Interrupted retirement is state-and-live inventoried. A disabled Cloud Asset API
+is restored alone before a mandatory fresh authorization. A soft-deleted probe
+role is never restored automatically: eventual IAM-policy inventory cannot
+authoritatively exclude a recent descendant binding, so recovery fails closed
+for manual investigation. A tracked role whose recoverable definition cannot be
+observed is never recreated under a generic Terraform create path. When all six
+temporaries are absent live and in state, an explicit digest-bound finalization
+can disable the remaining exact roles or, if already disabled, regenerate the
+retirement evidence after exact fixture cleanup and convergence checks.
 
 The earlier authorized bootstrap apply completed:
 
@@ -190,7 +234,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`workload/`](workload/) | Deterministic production package, private Gen 2 Function, dedicated build/probe identities, and one-permission FCM role | Applied and converged; current internal-only revision independently source-verified |
 | [`probe/`](probe/) | Isolated Workflows API and one fixed, unscheduled, keyless internal discovery probe | Applied and consumed; exactly two failures followed by one validated HTTP 200 discovery response |
 | [`firebase-auth/`](firebase-auth/) | Closed Firebase Authentication initialization with no end-user sign-in provider | Non-deletable resource initialized, state-adopted, reconciled, and independently validated |
-| [`auth-probe/`](auth-probe/) | Dormant synthetic Firebase Auth and custom-provider App Check Workflow with temporary least-privilege IAM | One bounded execution succeeded; synthetic user and all temporary capability retired; sanitized evidence committed |
+| [`auth-probe/`](auth-probe/) | Historical Auth/App Check evidence plus a guarded audience-bound user-relay Workflow and internal verifier | Historical probe retired; new bounded graph reviewed locally but not yet applied or invoked |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
 | [`TEARDOWN.md`](TEARDOWN.md) | Manual recovery and teardown rehearsal | Documentation only |
@@ -236,13 +280,16 @@ staging confirmation.
 Repository validation itself costs nothing. Planning adds only bounded API
 reads, temporary locks, and short-lived private saved-plan objects. The state
 bucket currently stores the 61,864-byte bootstrap state, the 53,619-byte
-complete foundation state, the 49,242-byte workload state, the 13,596-byte probe
-state, and recovery generations. The live Firestore database is the project's
+complete foundation state, the 49,283-byte workload state, the 13,596-byte probe
+state, the 11,010-byte Firebase Auth state, the 16,821-byte Auth-probe state, and
+recovery generations across all six Terraform prefixes. The live Firestore database is the project's
 free-tier database; the five secret containers now each have one enabled
 version. Secret Manager versions, the software KMS key version, Storage and
 Artifact Registry bytes, build operations, and retained object versions remain
 usage-metered. The deployed Function remains scale-to-zero, its deployment
-inventory made no request, and the unscheduled Workflow has no idle compute.
+inventory made no request, and no probe Workflow or verifier is currently
+active. If armed, the user-relay verifier remains scale 0..1 and the Workflow is
+unscheduled; both are retired immediately after one bounded execution.
 Budget alerts at EUR 2, EUR 5, and EUR 10 are alarms rather than hard caps.
 
 ## Remote-state bootstrap boundary

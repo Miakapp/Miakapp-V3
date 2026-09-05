@@ -1,6 +1,6 @@
 # Private staging control-plane workload
 
-Status: applied, converged, source-verified, and successfully probed through private ingress
+Status: audience-bound source applied, converged and source-verified; bounded acceptance probe pending
 
 This is the third, workload-only Terraform state for `miakapp-v4-staging`. It
 reads but never owns the reconciled bootstrap and foundation states. Its GCS
@@ -140,18 +140,35 @@ invokers and zero user-managed keys. Workload state generation
 data resources, nothing tainted, and SHA-256
 `3adbde5e684736080d47b239031a2bb469787641ccf0f87c409d2b3a3b180145`.
 
-The current canonical non-secret [`result.json`](result.json) records that
-deployment inventory with SHA-256
+The canonical non-secret result at that historical boundary had SHA-256
 `dfe8900cd90fe53cbb85ac656ddce42c26fef64c9bbed462688c0e0755363e15`.
-It remains scoped to deployment, so `live_request_performed` is false there.
+That inventory was scoped to deployment, so `live_request_performed` was false.
 
-The saved-plan updater's next before-state is pinned to this exact active
-deployment: commit `60322c69c92b8ccf5f3d1bc87ba264a00e5dca05` and source
-SHA-256 `86f4818dfcb4021e5578638d6fb1e9b7da31ea245528cbdc8573dabecdfca358`.
-That tuple was independently reobserved on 2026-09-04 before repinning. The
-repin itself changes no cloud resource; any subsequent update must still render
-the exact guarded source replacement and in-place Function/guard changes from
-that live baseline.
+## Audience-bound user-relay credential source
+
+After the local cross-repository gate passed, merge commit
+`022f10e2dc15f32a8a6679b38ce7f1a04582e450` produced deterministic source
+SHA-256 `6674c0353ec9c73fcfe0d3a63d17850f057a5f2a547a5855989e28f011249b1e`.
+Its exact saved plan had SHA-256
+`eeb7bf638d7b46212994513eb2decc8405991e6907b6838caa04f6eba07cffa3`
+and contained only one source-object replacement plus in-place Function and
+deployment-guard updates. IAM, ingress, identities, runtime configuration and
+scale did not change.
+
+The plan applied once and converged to active revision
+`control-plane-00004-yis`. Independent inventory verified internal-only
+ingress, scale 0..1, zero public invokers, zero user-managed keys and the copied
+source bytes without making a Function request. Workload state generation
+`1788557027934706` is 49,283 bytes at serial 14 with fifteen managed and three
+data resources, one output, nothing tainted, and SHA-256
+`4f2977ce6e8c736cbdf31d58ba1da81f4291ace4c9d5d0d7d21a727c063cfc6e`.
+
+The current canonical non-secret [`result.json`](result.json) has SHA-256
+`cfdb18b9dd6604cd92977cbd447dd0684f4b731ca84d2f7aa3f772cbd3bc3056`.
+The updater's next before-state is pinned to the deployed commit/source tuple.
+The separate bounded user-relay acceptance probe remains pending; the older
+discovery and Auth/App Check artifacts below remain evidence for revision
+`control-plane-00003-hum`, not claims about the new revision.
 
 ## Successful private discovery
 

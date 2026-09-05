@@ -1,5 +1,5 @@
 variable "armed" {
-  description = "Temporarily installs the one-shot Auth and App Check probe capability."
+  description = "Temporarily installs the one-shot audience-bound user-relay probe capability."
   type        = bool
   default     = false
 }

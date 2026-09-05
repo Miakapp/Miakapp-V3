@@ -29,7 +29,10 @@ import {
   validateToolchain,
 } from './cli.mjs';
 import { validateAuthProbeRoot } from './guard.mjs';
-import { observeAuthProbeDeployment } from './inventory.mjs';
+import {
+  observeAuthProbeArmPreflight,
+  observeAuthProbeDeployment,
+} from './inventory.mjs';
 import { readAndValidateAuthProbePlan } from './validate-plan.mjs';
 
 const APPLY_AUTHORIZATION = 'MIAKAPP_STAGING_AUTH_PROBE_APPLY_AUTHORIZATION';
@@ -92,6 +95,10 @@ async function main() {
     if (sha256(Buffer.from(shown.stdout)) !== metadata.terraform_plan_json_sha256) {
       throw new Error('Terraform arm plan no longer renders to the reviewed JSON');
     }
+    // This reused identity receives all temporary probe capabilities. Its
+    // keyless property must therefore be observed immediately before the
+    // first privilege mutation, independently of the older workload result.
+    observeAuthProbeArmPreflight();
     mutationAttempted = true;
     const applied = run('terraform', [
       'apply', '-input=false', '-auto-approve', '-no-color', planPath,

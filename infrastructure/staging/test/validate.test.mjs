@@ -29,18 +29,18 @@ function rejects(mutator, pattern) {
   );
 }
 
-test('accepts the private workload and successful retired Auth/App Check probe', () => {
+test('accepts the source-verified private workload with user-relay acceptance pending', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 37);
+  assert.equal(validated.revision, 39);
   assert.equal(
     validated.status,
-    'private_control_plane_auth_app_check_validated',
+    'private_control_plane_source_verified_user_relay_acceptance_pending',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
   assert.equal(
     validated.project.lifecycle,
-    'firebase_auth_initialized_private_control_plane_auth_app_check_validated',
+    'firebase_auth_initialized_private_control_plane_user_relay_acceptance_pending',
   );
   assert.equal(validated.bootstrap.billing_enabled, true);
   assert.equal(validated.bootstrap.firebase_apps, 1);
@@ -75,14 +75,14 @@ test('accepts the private workload and successful retired Auth/App Check probe',
     'initialized_closed_custom_token_lifecycle_validated',
     'admin_custom_provider_validated_browser_attestation_pending',
     'foundation_created_no_application_mutation',
-    'private_deployment_active_source_verified_discovery_validated',
+    'private_deployment_active_source_verified_user_relay_acceptance_pending',
     'private_bucket_created_no_application_mutation',
     'signing_key_version_enabled_public_key_validated',
     'five_initial_versions_enabled_runtime_access_validated',
     'api_enabled_one_permission_runtime_role_applied_uninvoked',
     'api_enabled_runtime_deployed_no_application_log_validation',
     'api_enabled_runtime_deployed_no_metric_validation',
-    'api_enabled_discovery_retained_auth_probe_succeeded_and_retired',
+    'api_enabled_historical_probes_retired_user_relay_acceptance_pending',
   ]);
   assert.equal(
     validated.security.iam.foundation_resource_bindings_state,
@@ -97,16 +97,19 @@ test('accepts the private workload and successful retired Auth/App Check probe',
     'managed_in_reconciled_remote_bootstrap_state',
   );
   assert.equal(validated.runtime.deployment_state, 'ACTIVE');
-  assert.equal(validated.runtime.revision, 'control-plane-00003-hum');
+  assert.equal(validated.runtime.revision, 'control-plane-00004-yis');
   assert.equal(validated.runtime.ingress, 'ALLOW_INTERNAL_ONLY');
   assert.equal(validated.runtime.user_managed_keys, 0);
-  assert.equal(validated.runtime.live_request_performed, true);
+  assert.equal(validated.runtime.live_request_performed, false);
   assert.equal(
     validated.security.iam.runtime_identity_state,
     'private_runtime_deployed_zero_user_managed_keys',
   );
   assert.deepEqual(validated.security.iam.unresolved_permissions, []);
-  assert.equal(validated.terraform.state, 'foundation_private_workload_and_probe_complete');
+  assert.equal(
+    validated.terraform.state,
+    'bootstrap_foundation_workload_probe_and_firebase_auth_converged_auth_probe_acceptance_pending',
+  );
   assert.equal(
     validated.terraform.supported_workflow,
     'guarded_private_saved_plans_applied_and_converged',
@@ -119,8 +122,12 @@ test('accepts the private workload and successful retired Auth/App Check probe',
   );
   assert.equal(validated.terraform.backend.type, 'gcs');
   assert.equal(validated.terraform.probe_root, 'probe');
-  assert.equal(validated.terraform.backend.state, 'bootstrap_foundation_workload_and_probe_state_present');
+  assert.equal(validated.terraform.firebase_auth_root, 'firebase-auth');
+  assert.equal(validated.terraform.auth_probe_root, 'auth-probe');
+  assert.equal(validated.terraform.backend.state, 'all_six_terraform_state_roots_present');
   assert.equal(validated.terraform.backend.probe_prefix, 'terraform/probe');
+  assert.equal(validated.terraform.backend.firebase_auth_prefix, 'terraform/firebase-auth');
+  assert.equal(validated.terraform.backend.auth_probe_prefix, 'terraform/auth-probe');
   assert.equal(
     validated.terraform.backend.bootstrap_migration_state,
     'complete_remote_state_reconciled',
@@ -580,7 +587,7 @@ test('accepts the private workload and successful retired Auth/App Check probe',
   );
   assert.equal(
     validated.evidence.workload_deployment.result_sha256,
-    'dfe8900cd90fe53cbb85ac656ddce42c26fef64c9bbed462688c0e0755363e15',
+    'cfdb18b9dd6604cd92977cbd447dd0684f4b731ca84d2f7aa3f772cbd3bc3056',
   );
   assert.deepEqual(validated.evidence.workload_deployment.recovery_plan_result, {
     create: 2,
@@ -588,12 +595,12 @@ test('accepts the private workload and successful retired Auth/App Check probe',
     delete: 0,
     function_replaced: false,
   });
-  assert.equal(validated.evidence.workload_deployment.source_updates.length, 2);
+  assert.equal(validated.evidence.workload_deployment.source_updates.length, 3);
   assert.equal(
-    validated.evidence.workload_deployment.source_updates[1].function_revision,
-    'control-plane-00003-hum',
+    validated.evidence.workload_deployment.source_updates[2].function_revision,
+    'control-plane-00004-yis',
   );
-  assert.equal(validated.evidence.workload_deployment.terraform_state.serial, 12);
+  assert.equal(validated.evidence.workload_deployment.terraform_state.serial, 14);
   assert.equal(validated.evidence.workload_deployment.terraform_state.managed_resources, 15);
   assert.equal(validated.evidence.workload_deployment.terraform_state.tainted_resources, 0);
   assert.equal(validated.evidence.workload_deployment.terraform_state.raw_contents_committed, false);
@@ -650,6 +657,10 @@ test('accepts the private workload and successful retired Auth/App Check probe',
   assert.equal(validated.evidence.auth_app_check_probe.raw_diagnostics_committed, false);
   assert.equal(
     validated.readiness.required_blockers.includes('app-check-browser-provider-attestation'),
+    true,
+  );
+  assert.equal(
+    validated.readiness.required_blockers.includes('audience-bound-user-relay-staging-acceptance'),
     true,
   );
   assert.equal(
@@ -712,7 +723,9 @@ test('accepts the private workload and successful retired Auth/App Check probe',
 
 test('cross-checks manifest claims against all committed evidence artifacts', () => {
   const evidence = validateCommittedEvidence(manifest());
-  assert.equal(evidence.workload.function.revision, 'control-plane-00003-hum');
+  assert.equal(evidence.workload.function.revision, 'control-plane-00004-yis');
+  assert.equal(evidence.probe.workload.function_revision, 'control-plane-00003-hum');
+  assert.equal(evidence.authProbe.workload.function_revision, 'control-plane-00003-hum');
   assert.equal(evidence.probe.response.status, 200);
   assert.equal(evidence.firebaseAuth.external_identity_providers, 0);
   assert.equal(evidence.authProbe.execution.state, 'SUCCEEDED');
@@ -1218,7 +1231,7 @@ test('enforces scale-to-zero, one maximum instance, and private ingress', () => 
     candidate.runtime.user_managed_keys = 1;
   }, /runtime\.user_managed_keys/);
   rejects((candidate) => {
-    candidate.runtime.live_request_performed = false;
+    candidate.runtime.live_request_performed = true;
   }, /runtime\.live_request_performed/);
 });
 
@@ -1508,8 +1521,8 @@ test('rejects drift from the public workload deployment evidence', () => {
     candidate.evidence.workload_deployment.recovery_plan_result.function_replaced = true;
   }, /evidence\.workload_deployment\.recovery_plan_result\.function_replaced/);
   rejects((candidate) => {
-    candidate.evidence.workload_deployment.source_updates[1].plan_sha256 = '0'.repeat(64);
-  }, /evidence\.workload_deployment\.source_updates\[1\]\.plan_sha256/);
+    candidate.evidence.workload_deployment.source_updates[2].plan_sha256 = '0'.repeat(64);
+  }, /evidence\.workload_deployment\.source_updates\[2\]\.plan_sha256/);
   rejects((candidate) => {
     candidate.evidence.workload_deployment.terraform_state.tainted_resources = 1;
   }, /evidence\.workload_deployment\.terraform_state\.tainted_resources/);
