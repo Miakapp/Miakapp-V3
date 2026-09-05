@@ -1,6 +1,6 @@
 # Staging browser App Check attestation
 
-Status: v4 safely retired; reviewed system-browser v5 operation not yet planned or executed
+Status: v5 safely retired; reviewed system-browser v6 operation not yet planned or executed
 
 This package closes only the real Web App Check attestation prerequisite for
 `miakapp-v4-staging`. It does not expose or invoke the control plane, create a
@@ -9,7 +9,7 @@ or exercise Home data.
 
 ## Retained history
 
-Four live one-shot operations have been safely consumed. The first three
+Five live one-shot operations have been safely consumed. The first three
 created one Hosting version each and deleted it before any release or browser
 invocation. They established the asynchronous Hosting metrics and reused-file
 response shapes required by the current driver.
@@ -19,20 +19,30 @@ files and all security headers were verified from the public origin. A headed,
 operator-local Playwright Chromium then failed to obtain a valid App Check
 attestation. Cleanup created the expected `SITE_DISABLE` release, deleted the
 version and proved the runner returned HTTP 404. No token was retained. That
-result invalidates the Playwright execution path; v5 cannot launch or import
+result invalidates the Playwright execution path; later operations cannot launch or import
 Playwright.
 
-The four committed preflight result files contain only hashes, timestamps and
+The fifth operation proved the full default-system-browser and loopback path:
+the runner loaded in the operator's browser and returned one challenge-bound
+closed failure before cleanup disabled Hosting, deleted the version and proved
+HTTP 404. The failure remained intentionally unclassified inside the page. A
+review of the pinned Firebase SDK then found that its client exchange uses
+`content-firebaseappcheck.googleapis.com`, while the v5 CSP had allowed the
+similarly named configuration API host instead. The v6 CSP allows only the
+actual client exchange origin, and its failure result adds a small closed
+stage/code taxonomy without exposing provider messages.
+
+The five committed preflight result files contain only hashes, timestamps and
 stable counts. `preflight-evidence.mjs` pins their exact canonical SHA-256
 values. All immutable claims, deleted versions and release records remain as
 historical evidence and cannot be reused or deleted by this package.
 
-## System-browser v5 boundary
+## System-browser v6 boundary
 
-The v5 planner requires all four exact historical claims and deleted versions,
-the two exact v4 release records, the registered reCAPTCHA Enterprise provider,
+The v6 planner requires all five exact historical claims and deleted versions,
+the four exact v4/v5 release records, the registered reCAPTCHA Enterprise provider,
 zero enforcement records, zero debug tokens, one active Firebase Web app and
-no v5 claim. It builds two private, digest-pinned files from Firebase JavaScript
+no v6 claim. It builds two private, digest-pinned files from Firebase JavaScript
 SDK 12.18.0. The public Firebase configuration and reCAPTCHA site key are
 injected only into that private build; neither value is committed.
 
@@ -41,8 +51,8 @@ The apply path is one-shot and requires a local macOS session with
 
 1. validate the short-lived plan, clean `origin/main` commit, dependency lock,
    operator identity and complete live baseline;
-2. create one atomic, non-deleted v5 GCS operation claim;
-3. create and release one v5-labelled Hosting version containing only the two
+2. create one atomic, non-deleted v6 GCS operation claim;
+3. create and release one v6-labelled Hosting version containing only the two
    reviewed files below `/__acceptance/app-check/`;
 4. verify both public files byte-for-byte by SHA-256 and verify every reviewed
    response header;
@@ -56,8 +66,10 @@ The apply path is one-shot and requires a local macOS session with
 
 The page calls the production reCAPTCHA Enterprise provider at most once. Its
 window promise returns only success/failure state, token shape, TTL and duration
-counters plus the non-secret challenge. The App Check token and raw provider
-errors never leave the page. The callback result crosses from the public runner
+counters plus the non-secret challenge. On failure it returns only an allowlisted
+stage and code derived from the pinned SDK error code and coarse HTTP class. The
+App Check token, provider message, stack and arbitrary error values never leave
+the page. The callback result crosses from the public runner
 to loopback in a URL fragment, which is not sent with the initial HTTP request;
 the local bridge removes it from the address bar before a same-origin POST. The
 driver hashes and removes the challenge before writing private result evidence.
@@ -86,11 +98,11 @@ MIAKAPP_STAGING_BROWSER_ATTESTATION_PLAN_CONFIRMATION=miakapp-v4-staging \
   ./infrastructure/staging/browser-attestation/plan.sh /absolute/private/parent
 ```
 
-The planner prints an exact v5 authorization bound to the canonical metadata
+The planner prints an exact v6 authorization bound to the canonical metadata
 and repository commit. Apply the bundle once from the local macOS session:
 
 ```sh
-MIAKAPP_STAGING_BROWSER_ATTESTATION_APPLY_AUTHORIZATION='run-interactive-browser-app-check-attestation-v5:...' \
+MIAKAPP_STAGING_BROWSER_ATTESTATION_APPLY_AUTHORIZATION='run-interactive-browser-app-check-attestation-v6:...' \
   ./infrastructure/staging/browser-attestation/apply.sh /absolute/private/bundle
 ```
 
@@ -109,15 +121,15 @@ MIAKAPP_STAGING_BROWSER_ATTESTATION_RECOVERY_CONFIRMATION=miakapp-v4-staging \
   /absolute/private/attestation-bundle
 ```
 
-The planner prints a separate exact v5 recovery authorization. Its apply path
+The planner prints a separate exact v6 recovery authorization. Its apply path
 creates at most one required `SITE_DISABLE` release, deletes at most the one
-exact v5-labelled version and proves the runner is HTTP 404. Each recovery
+exact v6-labelled version and proves the runner is HTTP 404. Each recovery
 bundle is one-shot and bound to the immutable operation claim plus the complete
 pre-recovery Hosting inventory. It never deletes the default Hosting site, any
 operation claim, any retained historical version or release, or the App Check
 provider.
 
-Ordinary v5 failure evidence contains only a closed stage, cleanup booleans and
+Ordinary v6 failure evidence contains only a closed stage, cleanup booleans and
 non-sensitive counters. API keys, reCAPTCHA site keys, access tokens, App Check
 tokens, challenges, raw browser errors and network traces must remain absent
 from committed evidence.

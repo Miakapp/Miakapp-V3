@@ -8,6 +8,10 @@ import test from 'node:test';
 import {
   CLAIM_OBJECT,
   FIREBASE_APP_ID,
+  FIFTH_PRIOR_CLAIM_GENERATION,
+  FIFTH_PRIOR_CLAIM_OBJECT,
+  FIFTH_PRIOR_CLAIM_SHA256,
+  FIFTH_PRIOR_CLAIM_SIZE_BYTES,
   FOURTH_PRIOR_CLAIM_GENERATION,
   FOURTH_PRIOR_CLAIM_OBJECT,
   FOURTH_PRIOR_CLAIM_SHA256,
@@ -36,6 +40,15 @@ import {
   PREFLIGHT_V4_METADATA_SHA256,
   PREFLIGHT_V4_REPOSITORY_COMMIT,
   PREFLIGHT_V4_VERSION_NAME_SHA256,
+  PREFLIGHT_V5_DEPLOY_MESSAGE,
+  PREFLIGHT_V5_DEPLOY_RELEASE_NAME_SHA256,
+  PREFLIGHT_V5_DEPLOY_RELEASE_TIME,
+  PREFLIGHT_V5_DISABLE_MESSAGE,
+  PREFLIGHT_V5_DISABLE_RELEASE_NAME_SHA256,
+  PREFLIGHT_V5_DISABLE_RELEASE_TIME,
+  PREFLIGHT_V5_METADATA_SHA256,
+  PREFLIGHT_V5_REPOSITORY_COMMIT,
+  PREFLIGHT_V5_VERSION_NAME_SHA256,
   PREFLIGHT_VERSION_NAME_SHA256,
   PRIOR_CLAIM_GENERATION,
   PRIOR_CLAIM_OBJECT,
@@ -57,6 +70,7 @@ import {
   sha256,
   validateAttestationAuthorization,
   validateAttestationMetadata,
+  validateBrowserResult,
 } from '../browser-attestation/contract.mjs';
 import {
   buildAttestationArtifact,
@@ -114,10 +128,20 @@ const THIRD_HISTORICAL_VERSION = `sites/${HOSTING_SITE}/versions/${'j'.repeat(32
 const THIRD_HISTORICAL_VERSION_SHA256 = sha256(Buffer.from(THIRD_HISTORICAL_VERSION));
 const FOURTH_HISTORICAL_VERSION = `sites/${HOSTING_SITE}/versions/${'k'.repeat(32)}`;
 const FOURTH_HISTORICAL_VERSION_SHA256 = sha256(Buffer.from(FOURTH_HISTORICAL_VERSION));
+const FIFTH_HISTORICAL_VERSION = `sites/${HOSTING_SITE}/versions/${'n'.repeat(32)}`;
+const FIFTH_HISTORICAL_VERSION_SHA256 = sha256(Buffer.from(FIFTH_HISTORICAL_VERSION));
 const HISTORICAL_DEPLOY_RELEASE = `sites/${HOSTING_SITE}/releases/${'l'.repeat(32)}`;
 const HISTORICAL_DEPLOY_RELEASE_SHA256 = sha256(Buffer.from(HISTORICAL_DEPLOY_RELEASE));
 const HISTORICAL_DISABLE_RELEASE = `sites/${HOSTING_SITE}/releases/${'m'.repeat(32)}`;
 const HISTORICAL_DISABLE_RELEASE_SHA256 = sha256(Buffer.from(HISTORICAL_DISABLE_RELEASE));
+const FIFTH_HISTORICAL_DEPLOY_RELEASE = `sites/${HOSTING_SITE}/releases/${'o'.repeat(32)}`;
+const FIFTH_HISTORICAL_DEPLOY_RELEASE_SHA256 = sha256(
+  Buffer.from(FIFTH_HISTORICAL_DEPLOY_RELEASE),
+);
+const FIFTH_HISTORICAL_DISABLE_RELEASE = `sites/${HOSTING_SITE}/releases/${'p'.repeat(32)}`;
+const FIFTH_HISTORICAL_DISABLE_RELEASE_SHA256 = sha256(
+  Buffer.from(FIFTH_HISTORICAL_DISABLE_RELEASE),
+);
 
 function priorClaimReceipt() {
   return {
@@ -156,6 +180,16 @@ function fourthPriorClaimReceipt() {
     generation: FOURTH_PRIOR_CLAIM_GENERATION,
     size_bytes: FOURTH_PRIOR_CLAIM_SIZE_BYTES,
     sha256: FOURTH_PRIOR_CLAIM_SHA256,
+  };
+}
+
+function fifthPriorClaimReceipt() {
+  return {
+    bucket: STATE_BUCKET,
+    object: FIFTH_PRIOR_CLAIM_OBJECT,
+    generation: FIFTH_PRIOR_CLAIM_GENERATION,
+    size_bytes: FIFTH_PRIOR_CLAIM_SIZE_BYTES,
+    sha256: FIFTH_PRIOR_CLAIM_SHA256,
   };
 }
 
@@ -233,6 +267,24 @@ function priorClaims() {
       },
       receipt: fourthPriorClaimReceipt(),
     },
+    {
+      value: {
+        schema: 'miakapp.staging-browser-attestation-claim/5',
+        operation: 'attest-interactive-browser-app-check-and-disable-hosting-v5',
+        project_id: PROJECT_ID,
+        project_number: PROJECT_NUMBER,
+        hosting_site: HOSTING_SITE,
+        repository_commit: PREFLIGHT_V5_REPOSITORY_COMMIT,
+        metadata_sha256: PREFLIGHT_V5_METADATA_SHA256,
+        baseline_sha256: '5'.repeat(64),
+        created_at: '2026-09-05T17:37:52.741Z',
+        expires_at: '2026-09-05T19:37:52.741Z',
+        maximum_attestation_attempts: 1,
+        retry_authorized: false,
+        deletion_authorized: false,
+      },
+      receipt: fifthPriorClaimReceipt(),
+    },
   ];
 }
 
@@ -292,6 +344,20 @@ function fourthHistoricalVersion() {
   };
 }
 
+function fifthHistoricalVersion() {
+  return {
+    name: FIFTH_HISTORICAL_VERSION,
+    status: 'DELETED',
+    labels: {
+      environment: 'staging',
+      operation: 'browser-app-check-attestation-v5',
+      repository: PREFLIGHT_V5_REPOSITORY_COMMIT,
+    },
+    file_count: null,
+    version_bytes: null,
+  };
+}
+
 function historicalReleases() {
   return [
     {
@@ -307,6 +373,20 @@ function historicalReleases() {
       version_name: null,
       message: PREFLIGHT_V4_DISABLE_MESSAGE,
       release_time: PREFLIGHT_V4_DISABLE_RELEASE_TIME,
+    },
+    {
+      name: FIFTH_HISTORICAL_DEPLOY_RELEASE,
+      type: 'DEPLOY',
+      version_name: FIFTH_HISTORICAL_VERSION,
+      message: PREFLIGHT_V5_DEPLOY_MESSAGE,
+      release_time: PREFLIGHT_V5_DEPLOY_RELEASE_TIME,
+    },
+    {
+      name: FIFTH_HISTORICAL_DISABLE_RELEASE,
+      type: 'SITE_DISABLE',
+      version_name: null,
+      message: PREFLIGHT_V5_DISABLE_MESSAGE,
+      release_time: PREFLIGHT_V5_DISABLE_RELEASE_TIME,
     },
   ];
 }
@@ -333,6 +413,11 @@ function retiredVersionExpectations() {
       operation: 'browser-app-check-attestation-v4',
       repository_commit: PREFLIGHT_V4_REPOSITORY_COMMIT,
     },
+    {
+      name_sha256: FIFTH_HISTORICAL_VERSION_SHA256,
+      operation: 'browser-app-check-attestation-v5',
+      repository_commit: PREFLIGHT_V5_REPOSITORY_COMMIT,
+    },
   ];
 }
 
@@ -352,6 +437,20 @@ function retiredReleaseExpectations() {
       message: PREFLIGHT_V4_DISABLE_MESSAGE,
       release_time: PREFLIGHT_V4_DISABLE_RELEASE_TIME,
     },
+    {
+      name_sha256: FIFTH_HISTORICAL_DEPLOY_RELEASE_SHA256,
+      type: 'DEPLOY',
+      version_name_sha256: FIFTH_HISTORICAL_VERSION_SHA256,
+      message: PREFLIGHT_V5_DEPLOY_MESSAGE,
+      release_time: PREFLIGHT_V5_DEPLOY_RELEASE_TIME,
+    },
+    {
+      name_sha256: FIFTH_HISTORICAL_DISABLE_RELEASE_SHA256,
+      type: 'SITE_DISABLE',
+      version_name_sha256: null,
+      message: PREFLIGHT_V5_DISABLE_MESSAGE,
+      release_time: PREFLIGHT_V5_DISABLE_RELEASE_TIME,
+    },
   ];
 }
 
@@ -359,8 +458,8 @@ function baseline() {
   return {
     hosting_site: HOSTING_SITE,
     hosting_site_type: 'DEFAULT_SITE',
-    hosting_version_count: 4,
-    hosting_release_count: 2,
+    hosting_version_count: 5,
+    hosting_release_count: 4,
     firebase_app_config_sha256: HASH,
     app_check_config_sha256: 'c'.repeat(64),
     app_check_enforcement_records: 0,
@@ -391,16 +490,25 @@ function baseline() {
         size_bytes: FOURTH_PRIOR_CLAIM_SIZE_BYTES,
         sha256: FOURTH_PRIOR_CLAIM_SHA256,
       },
+      {
+        object: FIFTH_PRIOR_CLAIM_OBJECT,
+        generation: FIFTH_PRIOR_CLAIM_GENERATION,
+        size_bytes: FIFTH_PRIOR_CLAIM_SIZE_BYTES,
+        sha256: FIFTH_PRIOR_CLAIM_SHA256,
+      },
     ],
     retired_preflight_version_name_sha256s: [
       PREFLIGHT_VERSION_NAME_SHA256,
       PREFLIGHT_V2_VERSION_NAME_SHA256,
       PREFLIGHT_V3_VERSION_NAME_SHA256,
       PREFLIGHT_V4_VERSION_NAME_SHA256,
+      PREFLIGHT_V5_VERSION_NAME_SHA256,
     ],
     retired_release_name_sha256s: [
       PREFLIGHT_V4_DEPLOY_RELEASE_NAME_SHA256,
       PREFLIGHT_V4_DISABLE_RELEASE_NAME_SHA256,
+      PREFLIGHT_V5_DEPLOY_RELEASE_NAME_SHA256,
+      PREFLIGHT_V5_DISABLE_RELEASE_NAME_SHA256,
     ],
   };
 }
@@ -560,6 +668,7 @@ test('observes only the retired preflight Hosting and registered provider baseli
           secondHistoricalVersion(),
           thirdHistoricalVersion(),
           fourthHistoricalVersion(),
+          fifthHistoricalVersion(),
         ],
       });
     }
@@ -612,10 +721,13 @@ test('observes only the retired preflight Hosting and registered provider baseli
       SECOND_HISTORICAL_VERSION_SHA256,
       THIRD_HISTORICAL_VERSION_SHA256,
       FOURTH_HISTORICAL_VERSION_SHA256,
+      FIFTH_HISTORICAL_VERSION_SHA256,
     ],
     retired_release_name_sha256s: [
       HISTORICAL_DEPLOY_RELEASE_SHA256,
       HISTORICAL_DISABLE_RELEASE_SHA256,
+      FIFTH_HISTORICAL_DEPLOY_RELEASE_SHA256,
+      FIFTH_HISTORICAL_DISABLE_RELEASE_SHA256,
     ],
   });
   assert.equal(observed.site_key, siteKey);
@@ -677,7 +789,7 @@ test('opens one default macOS browser and sanitizes one loopback result', async 
   assert.equal(launch.options.stdio, 'ignore');
 
   const observed = {
-    schema: 'miakapp.browser-app-check-attestation/2',
+    schema: 'miakapp.browser-app-check-attestation/3',
     state: 'passed',
     challenge,
     attestation_attempts: 1,
@@ -712,11 +824,12 @@ test('opens one default macOS browser and sanitizes one loopback result', async 
 test('accepts a closed failure for cleanup and rejects raw token fields', async () => {
   const challenge = 'a'.repeat(64);
   const failure = {
-    schema: 'miakapp.browser-app-check-attestation/2',
+    schema: 'miakapp.browser-app-check-attestation/3',
     state: 'failed',
     challenge,
     attestation_attempts: 1,
-    failure: 'provider-or-token-shape-rejected',
+    failure_stage: 'provider-token-request',
+    failure_code: 'app-check-fetch-network-error',
   };
   const failed = await observeSystemBrowserAttestation(
     challenge,
@@ -728,6 +841,25 @@ test('accepts a closed failure for cleanup and rejects raw token fields', async 
     },
   );
   assert.equal(failed.state, 'failed');
+  assert.equal(failed.failure_stage, 'provider-token-request');
+  assert.equal(failed.failure_code, 'app-check-fetch-network-error');
+  assert.throws(() => validateBrowserResult({
+    ...failure,
+    failure_code: 'raw-provider-message',
+  }, challenge));
+  assert.throws(() => validateBrowserResult({
+    ...failure,
+    failure_stage: 'token-format-validation',
+  }, challenge));
+
+  const runnerSource = readFileSync(
+    new URL('../browser-attestation/runner.mjs', import.meta.url),
+    'utf8',
+  );
+  assert.match(runnerSource, /app-check-fetch-network-error/u);
+  assert.match(runnerSource, /\[400, 401, 403, 404, 409, 429\]/u);
+  assert.match(runnerSource, /app-check-exchange-http-\$\{status\}/u);
+  assert.doesNotMatch(runnerSource, /error\?\.message|error\.message|error\?\.stack|error\.stack/u);
 
   await assert.rejects(observeSystemBrowserAttestation(
     challenge,
@@ -735,7 +867,7 @@ test('accepts a closed failure for cleanup and rejects raw token fields', async 
     {
       async launchImplementation(value) {
         await submitLoopbackResult(value, {
-          schema: 'miakapp.browser-app-check-attestation/2',
+          schema: 'miakapp.browser-app-check-attestation/3',
           state: 'passed',
           challenge,
           attestation_attempts: 1,
@@ -768,11 +900,12 @@ test('rejects callback drift and bounds loopback by bridge, size, deadline and a
   ));
 
   const valid = {
-    schema: 'miakapp.browser-app-check-attestation/2',
+    schema: 'miakapp.browser-app-check-attestation/3',
     state: 'failed',
     challenge,
     attestation_attempts: 1,
-    failure: 'provider-or-token-shape-rejected',
+    failure_stage: 'provider-token-request',
+    failure_code: 'app-check-exchange-http-403',
   };
   const bridged = await observeSystemBrowserAttestation(
     challenge,
@@ -856,7 +989,7 @@ test('uses one atomic non-retry claim bound to the exact plan', async () => {
   const plan = metadata();
   const bytes = Buffer.from(canonicalJson(plan));
   const claim = buildOperationClaim(bytes, plan);
-  assert.equal(claim.schema, 'miakapp.staging-browser-attestation-claim/5');
+  assert.equal(claim.schema, 'miakapp.staging-browser-attestation-claim/6');
   assert.equal(claim.retry_authorized, false);
   assert.equal(claim.deletion_authorized, false);
   let body;
@@ -885,9 +1018,17 @@ test('drives the exact Hosting REST lifecycle and verifies public headers', asyn
   const session = { accessToken: 'test-access-token-with-enough-length' };
   const labels = {
     environment: 'staging',
-    operation: 'browser-app-check-attestation-v5',
+    operation: 'browser-app-check-attestation-v6',
     repository: COMMIT,
   };
+  assert.match(
+    HOSTING_HEADERS['Content-Security-Policy'],
+    /connect-src[^;]*https:\/\/content-firebaseappcheck\.googleapis\.com/u,
+  );
+  assert.doesNotMatch(
+    HOSTING_HEADERS['Content-Security-Policy'],
+    /(?:^|\s)https:\/\/firebaseappcheck\.googleapis\.com(?:\s|;|$)/u,
+  );
   const config = { headers: [{ glob: '**', headers: HOSTING_HEADERS }] };
   const created = await createHostingVersion(session, COMMIT, async () => jsonResponse({
     name: VERSION,
@@ -1043,11 +1184,11 @@ test('reads the immutable claim contents at the exact observed generation', asyn
   assert.match(seen[1], /alt=media&generation=456/u);
 });
 
-test('binds interrupted Hosting recovery to one v5 version while retaining all history', () => {
+test('binds interrupted Hosting recovery to one v6 version while retaining all history', () => {
   const plan = metadata();
   const labels = {
     environment: 'staging',
-    operation: 'browser-app-check-attestation-v5',
+    operation: 'browser-app-check-attestation-v6',
     repository: COMMIT,
   };
   const hosting = {
@@ -1057,6 +1198,7 @@ test('binds interrupted Hosting recovery to one v5 version while retaining all h
       secondHistoricalVersion(),
       thirdHistoricalVersion(),
       fourthHistoricalVersion(),
+      fifthHistoricalVersion(),
       {
         name: VERSION,
         status: 'FINALIZED',
@@ -1108,9 +1250,9 @@ test('binds interrupted Hosting recovery to one v5 version while retaining all h
   ));
 
   const retired = structuredClone(hosting);
-  retired.versions[4].status = 'DELETED';
-  retired.versions[4].file_count = null;
-  retired.versions[4].version_bytes = null;
+  retired.versions[5].status = 'DELETED';
+  retired.versions[5].file_count = null;
+  retired.versions[5].version_bytes = null;
   retired.releases.push({
     name: `sites/${HOSTING_SITE}/releases/${'e'.repeat(32)}`,
     type: 'SITE_DISABLE',
@@ -1127,7 +1269,7 @@ test('binds interrupted Hosting recovery to one v5 version while retaining all h
   assert.equal(retiredSummary.delete_version, false);
 
   const unreviewed = structuredClone(hosting);
-  unreviewed.versions[4].labels.repository = 'f'.repeat(40);
+  unreviewed.versions[5].labels.repository = 'f'.repeat(40);
   assert.throws(() => validateInterruptedHostingInventory(
     unreviewed,
     plan,
@@ -1141,7 +1283,7 @@ test('binds interrupted Hosting recovery to one v5 version while retaining all h
     inventoryValidationOptions,
   ));
   const redeployed = structuredClone(retired);
-  redeployed.releases[2].release_time = '2026-09-05T15:03:00Z';
+  redeployed.releases[4].release_time = '2026-09-05T15:03:00Z';
   assert.throws(() => validateInterruptedHostingInventory(
     redeployed,
     plan,
@@ -1219,5 +1361,29 @@ test('pins the exact sanitized result of the retired automated browser operation
   assert.equal(evidence.retry_authorized, false);
   const tampered = structuredClone(evidence);
   tampered.app_check.real_browser_attestation = true;
+  assert.throws(() => validatePreflightEvidenceValue(tampered));
+});
+
+test('pins the exact sanitized result of the retired system-browser operation', () => {
+  const path = new URL('../browser-attestation/preflight-v5-result.json', import.meta.url);
+  const evidence = validatePreflightEvidence(path);
+  assert.equal(evidence.state, 'attestation_failed_after_verified_publication');
+  assert.equal(evidence.failure_stage, 'system_browser_attestation');
+  assert.equal(evidence.operation_claim.object, FIFTH_PRIOR_CLAIM_OBJECT);
+  assert.equal(evidence.operation_claim.generation, FIFTH_PRIOR_CLAIM_GENERATION);
+  assert.equal(evidence.operation_claim.sha256, FIFTH_PRIOR_CLAIM_SHA256);
+  assert.equal(evidence.hosting.version_name_sha256, PREFLIGHT_V5_VERSION_NAME_SHA256);
+  assert.equal(evidence.hosting.releases_created, 2);
+  assert.equal(evidence.hosting.site_disabled, true);
+  assert.equal(evidence.hosting.runner_http_status_after_cleanup, 404);
+  assert.equal(evidence.browser.session, 'macos-default-system-browser');
+  assert.equal(evidence.browser.loopback_observations, 1);
+  assert.equal(evidence.browser.failure_classification, 'provider-or-token-shape-rejected');
+  assert.equal(evidence.browser.raw_browser_error_retained, false);
+  assert.equal(evidence.app_check.enforcement_records, 0);
+  assert.equal(evidence.app_check.debug_tokens, 0);
+  assert.equal(evidence.retry_authorized, false);
+  const tampered = structuredClone(evidence);
+  tampered.browser.failure_classification = 'raw-error';
   assert.throws(() => validatePreflightEvidenceValue(tampered));
 });
