@@ -31,7 +31,7 @@ const PLAN_CONFIRMATION = 'MIAKAPP_STAGING_WORKLOAD_PLAN_CONFIRMATION';
 const workloadRoot = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = fileURLToPath(new URL('../../../', import.meta.url));
 const manifestPath = join(repositoryRoot, 'infrastructure/staging/manifest.json');
-const runtimeConfigPath = join(workloadRoot, 'runtime-config.json');
+const runtimeConfigPath = join(workloadRoot, 'runtime-config-version-1-current.json');
 process.umask(0o077);
 
 function run(command, args, options = {}) {

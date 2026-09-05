@@ -1,9 +1,10 @@
 # Miakapp 4 staging private workload boundary
 
 Status: private audience-bound user-relay acceptance succeeded and retired;
-schema-2 two-key runtime deployed privately with version 2 current and version 1 retained; live browser-relay plan rebased
-but not deployed; guarded version-1 rehearsal-entry tooling prepared but not
-applied; real system-browser App Check provider token obtained and its
+schema-2 two-key runtime deployed privately with version 1 current for the
+browser-relay rehearsal and version 2 retained; live browser-relay plan rebased
+but not deployed; guarded rehearsal entry converged and its one-shot tooling
+retired; real system-browser App Check provider token obtained and its
 temporary Hosting route retired; browser App Check API-only prerequisite applied and
 converged; one domain-restricted score key applied and independently converged;
 exact non-deletable App Check provider registered with enforcement disabled;
@@ -22,9 +23,10 @@ additional live requests, destroy, or production changes.
 
 The separate [`browser-relay/`](browser-relay/) package now freezes the rebased
 closed live topology, cost, signing-key and rollback matrix. It records twelve
-pending cases and six open implementation preconditions. The App Check provider
-standalone real-browser attestation and two-key runtime prerequisites are satisfied, while the
-complete authenticated `LIVE-02` relay case remains pending.
+pending cases and five open implementation preconditions. The App Check
+provider, standalone real-browser attestation, two-key runtime and guarded
+rotation-entry prerequisites are satisfied, while the complete authenticated
+`LIVE-02` relay case remains pending.
 It contains no deployer or result and does not change the private cloud baseline
 described below.
 
@@ -34,9 +36,10 @@ claims. Version 2 converged after the first and only direct REST request; both
 one-shot entrypoints are permanently retired. The operation kept version 1,
 the runtime document, Terraform state, IAM and private ingress unchanged. A
 later guarded workload rollout prepublished both public keys with version 1
-current, and a second guarded rollout selected version 2 after 51 minutes and
-44.897 seconds while retaining version 1. Version 1 must remain published for
-at least the complete 330-second lease bound. The additional active software version is
+current, a second guarded rollout selected version 2 after 51 minutes and
+44.897 seconds, and the browser-relay rehearsal entry reselected version 1
+while retaining version 2. Version 2 stays published for the live forward
+transition. The additional active software version is
 bounded to USD 0.06/month at the currently documented Cloud KMS price.
 
 The [`browser-app-check/`](browser-app-check/) root applied the reCAPTCHA
@@ -150,13 +153,27 @@ The exact activation plan had SHA-256
 `252a404d50b891cdb49e379ff8f88b598effbee13f59b7065f44b754b84ac124`
 and changed only `current_kid` in the runtime document plus the deployment
 commit. It preserved both published keys, source, build, IAM, ingress and scale,
-then converged without a request to current revision `control-plane-00008-saz`.
-Its authoritative update time is `2026-09-05T12:52:52.140270744Z`. Current
-workload state generation `1788612775466023` is 49,898 bytes at serial 22 with
+then converged without a request to historical revision `control-plane-00008-saz`.
+Its authoritative update time is `2026-09-05T12:52:52.140270744Z`. Workload
+state at that boundary was generation `1788612775466023`, 49,898 bytes at
+serial 22 with
 the same resource inventory and no taint; its SHA-256 is
 `59fc885f69378118b972b76c5ae570890251215b5d232330c380d4d293ff6fd2`.
-The current canonical [`workload/result.json`](workload/result.json) has SHA-256
+The canonical result at that boundary had SHA-256
 `bab093e5f070039c3e8f482f83bb00927406ca9284c639ca62bc69c4ae997713`.
+
+The subsequent guarded rehearsal-entry plan had SHA-256
+`e0dec2a8b92545a0fdb89ac4f0e449bbac25f6332111dfd705921eaf6ceb5e29`
+and reselected version 1 while retaining both published keys. It again changed
+only the Function and deployment guard, preserved source, build, IAM, private
+ingress and scale, and made no Function request. It converged to current
+revision `control-plane-00009-kur` at
+`2026-09-05T19:04:13.514360614Z`. Current workload state generation
+`1788635059003671` is 49,898 bytes at serial 24 with the same inventory and no
+taint; its SHA-256 is
+`07c0c7ef2d3130e440282a8923c15723deca39cf2d150c742bd7da4767d59283`.
+The current canonical [`workload/result.json`](workload/result.json) has SHA-256
+`5259f61aa65ceca3e45e162ea59045ee4947d9cec04e5a301261314f526b067c`.
 The discovery evidence below remains pinned to historical revision
 `control-plane-00003-hum`.
 
@@ -312,7 +329,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`browser-app-check/`](browser-app-check/) | Guarded reCAPTCHA Enterprise API, score key and App Check provider prerequisites | API, one globally serialized domain-restricted score key and exact non-deletable provider applied and converged; all consumed/recovery entrypoints retired; enforcement remains disabled |
 | [`browser-attestation/`](browser-attestation/) | One-shot real system-browser App Check provider observation | Fresh provider token obtained through the default macOS browser; all six claims retained, temporary Hosting disabled/deleted, route verified 404, and every execution/recovery entrypoint retired |
 | [`signing-overlap/`](signing-overlap/) | Monotone second KMS version creation and 60/330-second overlap rollout contract | Version 2 enabled after one direct request; two atomic claims retained and one-shot entrypoints retired; runtime, Terraform, IAM, ingress and requests unchanged |
-| [`browser-relay/`](browser-relay/) | Closed live browser, two-relay, signing-key and rollback acceptance plan | Rebases the current private `00008`/two-key/App Check baseline; not deployed, every `LIVE-*` case pending, and no cloud mutation granted |
+| [`browser-relay/`](browser-relay/) | Closed live browser, two-relay, signing-key and rollback acceptance plan | Rebases the current private `00009`/two-key/version-1-entry/App Check baseline; not deployed, every `LIVE-*` case pending, and no cloud mutation granted |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
 | [`TEARDOWN.md`](TEARDOWN.md) | Manual recovery and teardown rehearsal | Documentation only |
@@ -572,9 +589,9 @@ open blockers.
 
 The digest-pinned [`browser-relay/plan.json`](browser-relay/plan.json) is now
 rebased from an independent read-only observation of the private
-`control-plane-00008-saz` state. It verified zero Firebase Auth users, zero
+`control-plane-00009-kur` state. It verified zero Firebase Auth users, zero
 application fixture collections, zero relays, a disabled Hosting route, two
-published signing keys with version 2 current, and the completed browser App
+published signing keys with version 1 current, and the completed browser App
 Check attestation. It selects the bounded shape for the next work: the existing Hosting `web.app`
 origin, temporary direct provider endpoints, two scale-0..1 no-role relays, a
 local unscheduled three-engine runner, one execution and a maximum twenty-minute
@@ -583,13 +600,12 @@ inside the separately authorized EUR 5 monthly boundary. App Engine, an
 external load balancer, Cloud Armor, VPC and DNS changes are absent.
 
 No live case may start yet. The production runtime now publishes both signing
-keys with version 2 current and version 1 retained. The guarded `signing-overlap/` operation created
-version 2 exactly once, and the separate workload prepublication converged
-without changing source, IAM, ingress or scale. The next guarded signing step is
-a reversible configuration-only rehearsal entry that selects version 1 while
-leaving both keys published. Its one-shot plan/apply implementation now pins the
-exact private revision and unchanged source; it has not yet been applied, so
-the browser-relay precondition remains open. The live matrix can then activate version 2 on the
+keys with version 1 current and version 2 retained. The guarded
+`signing-overlap/` operation created version 2 exactly once, and separate
+workload plans prepublished both keys, activated version 2 and then converged
+the reversible browser-relay rehearsal entry back to version 1 without changing
+source, IAM, ingress or scale. Its one-shot entrypoints are retired and the
+browser-relay precondition is satisfied. The live matrix can activate version 2 on the
 same socket, wait the full 330-second retirement bound, and disable rather than
 destroy version 1; no third KMS version is required.
 The browser App Check API, its single

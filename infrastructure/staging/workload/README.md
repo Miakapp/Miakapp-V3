@@ -1,10 +1,9 @@
 # Private staging control-plane workload
 
 Status: two-key schema-2 runtime deployed, converged and source-verified with
-version 2 current and version 1 retained; the one-time activation entry points
-are retired; an unapplied guarded browser-relay rehearsal entry can select
-version 1 without unpublishing version 2; the historical audience-bound revision
-was accepted by one retired bounded probe
+version 1 current for the browser-relay rehearsal and version 2 retained; all
+one-time activation and rehearsal-entry points are retired; the historical
+audience-bound revision was accepted by one retired bounded probe
 
 This is the third, workload-only Terraform state for `miakapp-v4-staging`. It
 reads but never owns the reconciled bootstrap and foundation states. Its GCS
@@ -270,8 +269,9 @@ separately reviewed activation.
 
 ## Completed signing-key activation
 
-[`runtime-config.json`](runtime-config.json) is now the exact deployed two-key
-document. It changes only `current_kid` from the prepublished document to
+[`runtime-config.json`](runtime-config.json) records the exact historical
+two-key activation document. It changes only `current_kid` from the
+prepublished document to
 `staging-access-token-v2`, retains both public versions and has SHA-256
 `40e2f83fbe8e3d27b7e53c4a666f424519fc6972ef19a7598ab9e093be0c70f7`.
 
@@ -295,7 +295,7 @@ zero user-managed keys without making a Function request. Workload state
 generation `1788612775466023` is 49,898 bytes at serial 22 with fifteen managed
 and three data resources, one output, nothing tainted, and SHA-256
 `59fc885f69378118b972b76c5ae570890251215b5d232330c380d4d293ff6fd2`.
-The current canonical non-secret [`result.json`](result.json) has SHA-256
+The canonical non-secret result at that historical boundary had SHA-256
 `bab093e5f070039c3e8f482f83bb00927406ca9284c639ca62bc69c4ae997713`.
 
 The one-time activation wrappers are retired and the regular source updater is
@@ -303,46 +303,45 @@ restored against this exact deployment. Version 1 remains published throughout
 the overlap window; any later retirement is a separate guarded transition and
 must not occur before 330 seconds have elapsed from the activation update time.
 
-## Guarded browser-relay rotation entry
+## Completed browser-relay rotation entry
 
 The browser-relay acceptance matrix needs a forward version-1-to-version-2
-transition on an already open WebSocket. The current staging baseline already
-has version 2 current, so a new one-shot, reversible configuration-only entry
-temporarily selects the historical two-key
+transition on an already open WebSocket. A one-shot, reversible
+configuration-only entry selected the historical two-key
 [`runtime-config-version-1-current.json`](runtime-config-version-1-current.json).
 Both public JWKs and both enabled KMS versions remain present; no third key is
 created.
 
-The default Terraform variable remains `false`, so merging this tooling cannot
-change the live runtime. The exact plan is produced only through:
+Merge commit `eaa7bb46ed06206fcd0c0dec100a069c54b259cf` produced exact saved
+plan SHA-256
+`e0dec2a8b92545a0fdb89ac4f0e449bbac25f6332111dfd705921eaf6ceb5e29`.
+Its metadata and JSON rendering had SHA-256
+`a63c66c6787ea4b619fedf7237fef265389f167a7492089eedcc23e7cb8a8619`
+and
+`857d3b2cfbc779d9a67413a2367f23eb86db6ab9261d62b9a34eafea66c13254`.
+The validator accepted only in-place Function and deployment-guard updates and
+required all thirteen other managed resources to remain no-ops. Source, build,
+IAM, private ingress, identities and scale were unchanged; no Function request
+was made.
 
-```sh
-MIAKAPP_STAGING_BROWSER_RELAY_ENTRY_PLAN_CONFIRMATION=miakapp-v4-staging \
-  ./infrastructure/staging/workload/browser-relay-entry-plan.sh /private/tmp
-```
+Apply converged to current revision `control-plane-00009-kur`, whose
+authoritative update time is `2026-09-05T19:04:13.514360614Z`. Independent
+inventory matched unchanged source SHA-256
+`d1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8`
+in copied generation `1788635007869418`, internal-only ingress, scale 0..1,
+zero public invokers and zero user-managed keys. Both KMS versions remain
+enabled and both public keys remain published, with version 1 current. Workload
+state generation `1788635059003671` is 49,898 bytes at serial 24 with fifteen
+managed and three data resources, one output, nothing tainted, and SHA-256
+`07c0c7ef2d3130e440282a8923c15723deca39cf2d150c742bd7da4767d59283`.
+The current canonical non-secret [`result.json`](result.json) has SHA-256
+`5259f61aa65ceca3e45e162ea59045ee4947d9cec04e5a301261314f526b067c`.
 
-Planning requires the exact active `control-plane-00008-saz` revision and its
-authoritative update time, the unchanged deterministic source archive, a clean
-checkout at `origin/main`, User ADC for the reviewed operator and Terraform
-1.11.3. The validator permits only in-place updates to the Function runtime
-environment and deployment guard. It requires the source object and build
-configuration to be identical and rejects IAM, ingress, identity, scale,
-replacement, import, generated configuration and live-request changes.
-
-Apply requires the fresh digest-bound token printed by that plan:
-
-```sh
-MIAKAPP_STAGING_BROWSER_RELAY_ENTRY_APPLY_AUTHORIZATION='enter-browser-relay-rotation-rehearsal:...' \
-  ./infrastructure/staging/workload/browser-relay-entry-apply.sh \
-  /private/tmp/miakapp-staging-workload-XXXXXX
-```
-
-The exact baseline is checked again immediately before apply. A successful
-apply must converge with version 1 current, both keys published, internal-only
-ingress, scale 0..1, zero public invokers and no Function request. Repeating the
-operation fails because the baseline revision has changed. The regular source
-update wrappers are deliberately blocked until the result is recorded and
-these one-shot entrypoints are retired.
+The one-shot entry wrappers and selector are retired. The default Terraform
+graph now directly describes this version-1-current state, and the regular
+source updater is restored against the exact deployed revision. Re-entering the
+historical transition requires new reviewed tooling; it cannot replay these
+consumed plan bytes.
 
 ## Successful private discovery
 

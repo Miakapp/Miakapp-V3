@@ -41,9 +41,3 @@ variable "operator_user_email" {
     error_message = "The operator identity must be a canonical lowercase user email."
   }
 }
-
-variable "browser_relay_rotation_entry" {
-  description = "Select the reviewed two-key runtime with signing version 1 current for the browser-relay rehearsal entry."
-  type        = bool
-  default     = false
-}
