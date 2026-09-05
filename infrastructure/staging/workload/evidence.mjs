@@ -3,7 +3,7 @@ import { lstatSync, readFileSync } from 'node:fs';
 import { isDeepStrictEqual } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
-const RESULT_SHA256 = 'bab093e5f070039c3e8f482f83bb00927406ca9284c639ca62bc69c4ae997713';
+const RESULT_SHA256 = '5259f61aa65ceca3e45e162ea59045ee4947d9cec04e5a301261314f526b067c';
 const MAXIMUM_RESULT_BYTES = 8 * 1024;
 
 function reject(message) {
@@ -21,16 +21,16 @@ function expectedResult() {
     project_id: projectId,
     project_number: projectNumber,
     region,
-    observed_at: '2026-09-05T12:53:00.364Z',
-    repository_commit: '6a9db97deb59b6c8e919d451c922ddb246eb54b2',
+    observed_at: '2026-09-05T19:04:24.200Z',
+    repository_commit: 'eaa7bb46ed06206fcd0c0dec100a069c54b259cf',
     source_archive_sha256: sourceSha256,
-    source_generation: '1788612724252705',
+    source_generation: '1788635007869418',
     function: {
       name: `projects/${projectId}/locations/${region}/functions/control-plane`,
       state: 'ACTIVE',
       generation: 2,
       service: `projects/${projectId}/locations/${region}/services/control-plane`,
-      revision: 'control-plane-00008-saz',
+      revision: 'control-plane-00009-kur',
       uri: 'https://control-plane-aczhngqraq-od.a.run.app',
       ingress: 'ALLOW_INTERNAL_ONLY',
       unauthenticated_invokers: 0,
@@ -67,7 +67,7 @@ function expectedResult() {
       copied_source_object: 'control-plane/function-source.zip',
       repository: `projects/${projectId}/locations/${region}/repositories/miakapp-control-plane`,
     },
-    runtime_config_sha256: '40e2f83fbe8e3d27b7e53c4a666f424519fc6972ef19a7598ab9e093be0c70f7',
+    runtime_config_sha256: 'c018708786fc23a15f7701093b5148c0e415a2df8045af8e170e4308c2deae37',
     live_request_performed: false,
   };
 }
@@ -104,7 +104,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       const result = validateWorkloadEvidence(process.argv[2]);
       console.log([
         `Validated ${result.schema} for ${result.project_id}.`,
-        'The current internal-only Gen 2 Function deployment is active, schema-2, two-key/version-2-current and source-verified; its deployment inventory made no request.',
+        'The current internal-only Gen 2 Function deployment is active, schema-2, two-key/version-1-current and source-verified; its deployment inventory made no request.',
       ].join(' '));
     } catch (error) {
       console.error(error instanceof Error ? error.message : 'Staging workload evidence is invalid');

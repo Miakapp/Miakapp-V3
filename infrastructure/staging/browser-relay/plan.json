@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-browser-relay-plan/1",
-  "revision": 5,
-  "state": "rebased_reviewed_not_deployed",
+  "revision": 6,
+  "state": "rotation_entry_converged_reviewed_not_deployed",
   "target": {
     "project_id": "miakapp-v4-staging",
     "project_number": "1072737219170",
@@ -17,8 +17,8 @@
     "acceptance_executed": false
   },
   "pins": {
-    "miakapp_v3_commit": "b8daf28a655acad15d0b9fe148d850c65a0d26dd",
-    "deployed_control_plane_commit": "6a9db97deb59b6c8e919d451c922ddb246eb54b2",
+    "miakapp_v3_commit": "eaa7bb46ed06206fcd0c0dec100a069c54b259cf",
+    "deployed_control_plane_commit": "eaa7bb46ed06206fcd0c0dec100a069c54b259cf",
     "deployed_control_plane_source_sha256": "d1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8",
     "miakapi_commit": "a798a746847ba3d5c16128a08b33353269e770a4",
     "miakapp_server_commit": "9a7e33de3a684b6cd9e82231db7c9af8bf41a0a1",
@@ -30,18 +30,18 @@
     "terraform_version": "1.11.3"
   },
   "baseline": {
-    "observed_at": "2026-09-05T18:28:41.130Z",
+    "observed_at": "2026-09-05T19:04:24.200Z",
     "control_plane": {
       "service": "control-plane",
-      "revision": "control-plane-00008-saz",
+      "revision": "control-plane-00009-kur",
       "uri": "https://control-plane-aczhngqraq-od.a.run.app",
       "issuer": "https://control.staging.miakapp.com",
       "allowed_origin": "https://app.staging.miakapp.com",
       "runtime_schema": "miakapp.production-runtime/2",
       "security_schema": "miakapp.production-security/2",
-      "runtime_config_sha256": "40e2f83fbe8e3d27b7e53c4a666f424519fc6972ef19a7598ab9e093be0c70f7",
+      "runtime_config_sha256": "c018708786fc23a15f7701093b5148c0e415a2df8045af8e170e4308c2deae37",
       "published_signing_keys": 2,
-      "current_signing_key_version": 2,
+      "current_signing_key_version": 1,
       "overlap_schema_supported_by_source": true,
       "ingress": "ALLOW_INTERNAL_ONLY",
       "unauthenticated_invokers": 0,
@@ -227,7 +227,7 @@
     {
       "id": "SIGNING-01",
       "state": "satisfied",
-      "requirement": "two_key_runtime_publishes_versions_1_and_2_with_version_2_current"
+      "requirement": "two_key_runtime_publishes_versions_1_and_2_with_guarded_current_key_selection"
     },
     {
       "id": "APP-CHECK-01",
@@ -236,7 +236,7 @@
     },
     {
       "id": "ROTATION-ENTRY-01",
-      "state": "open",
+      "state": "satisfied",
       "requirement": "guarded_config_only_rehearsal_entry_selects_version_1_without_unpublishing_version_2"
     },
     {
@@ -401,11 +401,11 @@
     }
   ],
   "signing_rotation": {
-    "state": "two_key_runtime_ready_rehearsal_entry_pending",
+    "state": "rehearsal_entry_converged_version_1_current",
     "token_lease_seconds": 300,
     "prepublication_seconds": 60,
     "retiring_key_retention_seconds": 330,
-    "baseline_current_version": 2,
+    "baseline_current_version": 1,
     "baseline_published_versions": [
       1,
       2

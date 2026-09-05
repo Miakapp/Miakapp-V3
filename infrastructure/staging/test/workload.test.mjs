@@ -4,22 +4,11 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import {
-  BROWSER_RELAY_ENTRY_BASELINE_DEPLOYMENT_COMMIT,
-  BROWSER_RELAY_ENTRY_BASELINE_FUNCTION_REVISION,
-  BROWSER_RELAY_ENTRY_BASELINE_FUNCTION_UPDATED_AT,
-  BROWSER_RELAY_ENTRY_BASELINE_SOURCE_REPOSITORY_COMMIT,
-  BROWSER_RELAY_ENTRY_BASELINE_SOURCE_SHA256,
-  BROWSER_RELAY_ENTRY_RUNTIME_CONFIG_SHA256,
   PROJECT_ID,
   RUNTIME_CONFIG_SHA256,
-  browserRelayRotationEntryAuthorization,
-  buildBrowserRelayRotationEntryPlanMetadata,
   buildPlanMetadata,
   buildWorkloadUpdatePlanMetadata,
   assertSafeWorkloadEnvironment,
-  validateBrowserRelayRotationEntryAuthorization,
-  validateBrowserRelayRotationEntryBaseline,
-  validateBrowserRelayRotationEntryPlanMetadata,
   validatePlanMetadata,
   validateWorkloadUpdatePlanMetadata,
   workloadAuthorization,
@@ -31,8 +20,6 @@ import { observeDeployedWorkload } from '../workload/inventory.mjs';
 import {
   PINNED_UPDATE_BASELINE,
   validateFailedBuildRecoveryPlanAgainstPolicy,
-  validatePinnedBrowserRelayRotationEntryPlan,
-  validatePinnedBrowserRelayRotationEntryPlanAgainstPolicy,
   validatePinnedSourceUpdatePlan,
   validatePinnedSourceUpdatePlanAgainstPolicy,
   validateWorkloadPlanAgainstPolicy,
@@ -51,10 +38,6 @@ const HISTORICAL_RUNTIME_CONFIG = readFileSync(
   'utf8',
 );
 const RUNTIME_CONFIG = readFileSync(
-  new URL('../workload/runtime-config.json', import.meta.url),
-  'utf8',
-);
-const BROWSER_RELAY_ENTRY_RUNTIME_CONFIG = readFileSync(
   new URL('../workload/runtime-config-version-1-current.json', import.meta.url),
   'utf8',
 );
@@ -250,7 +233,6 @@ function syntheticPlan() {
     complete: true,
     errored: false,
     variables: {
-      browser_relay_rotation_entry: { value: false },
       operator_user_email: { value: OPERATOR_EMAIL },
       repository_commit: { value: COMMIT },
       source_archive_path: { value: '/private/tmp/control-plane.zip' },
@@ -539,98 +521,6 @@ function validateSyntheticExactPinnedSourceUpdatePlan(
   }, OPERATOR_SHA256);
 }
 
-function syntheticBrowserRelayRotationEntryPlan(options = {}) {
-  const plan = syntheticPlan();
-  plan.variables.browser_relay_rotation_entry.value = true;
-  plan.variables.source_archive_sha256.value = PINNED_UPDATE_BASELINE.sourceArchiveSha256;
-  for (const resource of plan.resource_changes) {
-    resource.change.actions = ['no-op'];
-    resource.change.before = structuredClone(resource.change.after);
-  }
-
-  const source = plan.resource_changes.find(
-    ({ address }) => address === 'google_storage_bucket_object.source',
-  );
-  const sourceValue = sourceObjectValue(
-    PINNED_UPDATE_BASELINE.sourceRepositoryCommit,
-    PINNED_UPDATE_BASELINE.sourceArchiveSha256,
-    123,
-  );
-  source.change = {
-    actions: ['no-op'],
-    before: sourceValue,
-    after: structuredClone(sourceValue),
-  };
-
-  const functionResource = plan.resource_changes.find(
-    ({ address }) => address === 'google_cloudfunctions2_function.control_plane',
-  );
-  functionResource.change = {
-    actions: ['update'],
-    before: {
-      ...functionValue(
-        PINNED_UPDATE_BASELINE.repositoryCommit,
-        PINNED_UPDATE_BASELINE.sourceArchiveSha256,
-        123,
-        options.beforeRuntimeConfig ?? RUNTIME_CONFIG,
-      ),
-      state: 'ACTIVE',
-      environment: 'GEN_2',
-    },
-    after: {
-      ...functionValue(
-        COMMIT,
-        PINNED_UPDATE_BASELINE.sourceArchiveSha256,
-        123,
-        options.afterRuntimeConfig ?? BROWSER_RELAY_ENTRY_RUNTIME_CONFIG,
-      ),
-      state: 'ACTIVE',
-      environment: 'GEN_2',
-    },
-  };
-
-  const deploymentGuard = plan.resource_changes.find(
-    ({ address }) => address === 'terraform_data.deployment_guard',
-  );
-  const beforeGuard = guardInput(
-    PINNED_UPDATE_BASELINE.repositoryCommit,
-    PINNED_UPDATE_BASELINE.sourceArchiveSha256,
-    {
-      sourceRepositoryCommit: PINNED_UPDATE_BASELINE.sourceRepositoryCommit,
-      runtimeConfig: options.beforeRuntimeConfig ?? RUNTIME_CONFIG,
-    },
-  );
-  deploymentGuard.change = {
-    actions: ['update'],
-    before: {
-      id: 'stable-guard-id',
-      input: beforeGuard,
-      output: structuredClone(beforeGuard),
-      triggers_replace: null,
-    },
-    after: {
-      id: 'stable-guard-id',
-      input: guardInput(COMMIT, PINNED_UPDATE_BASELINE.sourceArchiveSha256, {
-        sourceRepositoryCommit: PINNED_UPDATE_BASELINE.sourceRepositoryCommit,
-        runtimeConfig: options.afterRuntimeConfig ?? BROWSER_RELAY_ENTRY_RUNTIME_CONFIG,
-      }),
-      triggers_replace: null,
-    },
-  };
-  return plan;
-}
-
-function browserRelayRotationEntryInput(overrides = {}) {
-  return {
-    repositoryCommit: COMMIT,
-    sourceRepositoryCommit: PINNED_UPDATE_BASELINE.sourceRepositoryCommit,
-    sourceArchiveSha256: PINNED_UPDATE_BASELINE.sourceArchiveSha256,
-    runtimeConfigSha256: BROWSER_RELAY_ENTRY_RUNTIME_CONFIG_SHA256,
-    browserRelayRotationEntry: true,
-    ...overrides,
-  };
-}
-
 test('accepts only the reviewed initial workload graph', () => {
   assert.deepEqual(validateSyntheticPlan(), {
     create: 15,
@@ -680,10 +570,10 @@ test('accepts only the bounded in-place recovery from the failed first build', (
 
 test('accepts only the next update from the pinned active source', () => {
   assert.deepEqual(PINNED_UPDATE_BASELINE, {
-    repositoryCommit: '6a9db97deb59b6c8e919d451c922ddb246eb54b2',
+    repositoryCommit: 'eaa7bb46ed06206fcd0c0dec100a069c54b259cf',
     sourceRepositoryCommit: '9f217da102b394734adba7ccef3f8f70d0317306',
     sourceArchiveSha256: 'd1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8',
-    runtimeConfigSha256: '40e2f83fbe8e3d27b7e53c4a666f424519fc6972ef19a7598ab9e093be0c70f7',
+    runtimeConfigSha256: 'c018708786fc23a15f7701093b5148c0e415a2df8045af8e170e4308c2deae37',
   });
   const expected = {
     create: 1,
@@ -750,92 +640,6 @@ test('accepts only the next update from the pinned active source', () => {
     syntheticExactPinnedSourceUpdatePlan(),
     { runtimeConfigSha256: '0'.repeat(64) },
   ));
-});
-
-test('accepts only the config-only browser-relay rotation entry', () => {
-  assert.equal(
-    createHash('sha256').update(RUNTIME_CONFIG).digest('hex'),
-    RUNTIME_CONFIG_SHA256,
-  );
-  assert.equal(
-    createHash('sha256').update(BROWSER_RELAY_ENTRY_RUNTIME_CONFIG).digest('hex'),
-    BROWSER_RELAY_ENTRY_RUNTIME_CONFIG_SHA256,
-  );
-  const expected = {
-    create: 0,
-    update: 2,
-    delete: 0,
-    transition: 'browser-relay-rehearsal-version-2-to-version-1',
-    function: 1,
-    source_replaced: false,
-    published_signing_key_versions: 2,
-    current_signing_key_version: 1,
-    minimum_instances: 0,
-    maximum_instances: 1,
-    ingress: 'internal-only',
-    unauthenticated_invokers: 0,
-    synthetic_invokers: 1,
-    fcm_permissions: 1,
-  };
-  assert.deepEqual(
-    validatePinnedBrowserRelayRotationEntryPlan(
-      syntheticBrowserRelayRotationEntryPlan(),
-      browserRelayRotationEntryInput(),
-      OPERATOR_SHA256,
-    ),
-    expected,
-  );
-  assert.deepEqual(
-    validatePinnedBrowserRelayRotationEntryPlanAgainstPolicy(
-      syntheticBrowserRelayRotationEntryPlan(),
-      browserRelayRotationEntryInput(),
-      {
-        operatorUserSha256: OPERATOR_SHA256,
-        previous: PINNED_UPDATE_BASELINE,
-      },
-    ),
-    expected,
-  );
-
-  for (const mutate of [
-    (plan) => { plannedChange(plan, 'google_storage_bucket_object.source').actions = ['update']; },
-    (plan) => {
-      plannedChange(plan, 'google_cloudfunctions2_function.control_plane').actions = [
-        'delete', 'create',
-      ];
-    },
-    (plan) => {
-      plannedChange(plan, 'google_cloudfunctions2_function.control_plane')
-        .after.build_config[0].runtime = 'nodejs24';
-    },
-    (plan) => {
-      plannedChange(plan, 'google_cloudfunctions2_function.control_plane')
-        .after.service_config[0].ingress_settings = 'ALLOW_ALL';
-    },
-    (plan) => {
-      plannedChange(plan, 'terraform_data.deployment_guard').after.input.source_commit = COMMIT;
-    },
-    (plan) => { plannedChange(plan, 'google_project_iam_member.runtime_fcm').actions = ['update']; },
-  ]) {
-    const plan = syntheticBrowserRelayRotationEntryPlan();
-    mutate(plan);
-    assert.throws(() => validatePinnedBrowserRelayRotationEntryPlan(
-      plan,
-      browserRelayRotationEntryInput(),
-      OPERATOR_SHA256,
-    ));
-  }
-  for (const input of [
-    { sourceArchiveSha256: '0'.repeat(64) },
-    { runtimeConfigSha256: RUNTIME_CONFIG_SHA256 },
-    { browserRelayRotationEntry: false },
-  ]) {
-    assert.throws(() => validatePinnedBrowserRelayRotationEntryPlan(
-      syntheticBrowserRelayRotationEntryPlan(),
-      browserRelayRotationEntryInput(input),
-      OPERATOR_SHA256,
-    ));
-  }
 });
 
 test('rejects updates, public principals, foreign resources and wider ingress', () => {
@@ -925,93 +729,6 @@ test('binds authorization and expiring metadata to exact private bytes', () => {
     updateMetadata,
   );
   assert.throws(() => validatePlanMetadata(updateMetadata, Date.parse(createdAt)));
-
-  const entryBaseline = {
-    name: `projects/${PROJECT_ID}/locations/europe-west9/functions/control-plane`,
-    state: 'ACTIVE',
-    updateTime: BROWSER_RELAY_ENTRY_BASELINE_FUNCTION_UPDATED_AT,
-    serviceConfig: {
-      revision: BROWSER_RELAY_ENTRY_BASELINE_FUNCTION_REVISION,
-      environmentVariables: {
-        LOG_EXECUTION_ID: 'true',
-        MIAKAPP_DEPLOYMENT_COMMIT: BROWSER_RELAY_ENTRY_BASELINE_DEPLOYMENT_COMMIT,
-        MIAKAPP_RUNTIME_CONFIG_JSON: RUNTIME_CONFIG,
-        MIAKAPP_SOURCE_ARCHIVE_SHA256: BROWSER_RELAY_ENTRY_BASELINE_SOURCE_SHA256,
-      },
-    },
-  };
-  assert.deepEqual(validateBrowserRelayRotationEntryBaseline(entryBaseline), {
-    function_revision: BROWSER_RELAY_ENTRY_BASELINE_FUNCTION_REVISION,
-    function_updated_at: BROWSER_RELAY_ENTRY_BASELINE_FUNCTION_UPDATED_AT,
-    current_signing_key_version: 2,
-    published_signing_key_versions: 2,
-  });
-  for (const mutate of [
-    (value) => { value.updateTime = '2026-09-05T12:52:53.140270744Z'; },
-    (value) => { value.serviceConfig.revision = 'control-plane-00009-foreign'; },
-    (value) => {
-      value.serviceConfig.environmentVariables.MIAKAPP_RUNTIME_CONFIG_JSON =
-        BROWSER_RELAY_ENTRY_RUNTIME_CONFIG;
-    },
-  ]) {
-    const value = structuredClone(entryBaseline);
-    mutate(value);
-    assert.throws(() => validateBrowserRelayRotationEntryBaseline(value));
-  }
-
-  const entryAuthorization = browserRelayRotationEntryAuthorization(planBytes, COMMIT);
-  assert.equal(
-    entryAuthorization,
-    `enter-browser-relay-rotation-rehearsal:${PROJECT_ID}:${createHash('sha256').update(planBytes).digest('hex')}:${COMMIT}`,
-  );
-  assert.doesNotThrow(() => validateBrowserRelayRotationEntryAuthorization(
-    entryAuthorization,
-    planBytes,
-    COMMIT,
-  ));
-  assert.throws(() => validateBrowserRelayRotationEntryAuthorization(
-    `${entryAuthorization}x`,
-    planBytes,
-    COMMIT,
-  ));
-
-  const entryMetadata = buildBrowserRelayRotationEntryPlanMetadata({
-    repositoryCommit: COMMIT,
-    sourceRepositoryCommit: BROWSER_RELAY_ENTRY_BASELINE_SOURCE_REPOSITORY_COMMIT,
-    createdAt,
-    packageResult: {
-      archive_sha256: BROWSER_RELAY_ENTRY_BASELINE_SOURCE_SHA256,
-      archive_bytes: 42,
-      files: ['package.json', 'lib/production-entrypoint.js'],
-    },
-    planBytes,
-    planJsonBytes: Buffer.from('{}'),
-    summary: { create: 0, update: 2, delete: 0 },
-  });
-  assert.equal(
-    validateBrowserRelayRotationEntryPlanMetadata(entryMetadata, Date.parse(createdAt)),
-    entryMetadata,
-  );
-  assert.equal(
-    entryMetadata.runtime_config_sha256,
-    BROWSER_RELAY_ENTRY_RUNTIME_CONFIG_SHA256,
-  );
-  assert.throws(() => validateWorkloadUpdatePlanMetadata(
-    entryMetadata,
-    Date.parse(createdAt),
-  ));
-  for (const mutate of [
-    (value) => { value.repository_commit = BROWSER_RELAY_ENTRY_BASELINE_DEPLOYMENT_COMMIT; },
-    (value) => { value.source_repository_commit = COMMIT; },
-    (value) => { value.source_archive_sha256 = '0'.repeat(64); },
-  ]) {
-    const value = structuredClone(entryMetadata);
-    mutate(value);
-    assert.throws(() => validateBrowserRelayRotationEntryPlanMetadata(
-      value,
-      Date.parse(createdAt),
-    ));
-  }
 
 });
 
@@ -1192,40 +909,33 @@ test('workload root guard accepts only the closed executable inventory', () => {
   assert.doesNotThrow(() => validateWorkloadRoot(new URL('../workload/', import.meta.url)));
 });
 
-test('guards the browser-relay rotation entry and blocks regular source updates', () => {
+test('keeps regular source updates pinned after the browser-relay rotation entry', () => {
+  const initialPlanSource = readFileSync(new URL('../workload/plan.mjs', import.meta.url), 'utf8');
   const planSource = readFileSync(new URL('../workload/update-plan.mjs', import.meta.url), 'utf8');
   const applySource = readFileSync(new URL('../workload/update-apply.mjs', import.meta.url), 'utf8');
   const localsSource = readFileSync(new URL('../workload/locals.tf', import.meta.url), 'utf8');
-  const foundationSource = readFileSync(new URL('../workload/foundation.tf', import.meta.url), 'utf8');
-  const variablesSource = readFileSync(new URL('../workload/variables.tf', import.meta.url), 'utf8');
   const workloadSource = readFileSync(new URL('../workload/workload.tf', import.meta.url), 'utf8');
-  assert.match(planSource, /readAndValidatePinnedBrowserRelayRotationEntryPlan/);
-  assert.match(planSource, /buildBrowserRelayRotationEntryPlanMetadata/);
-  assert.match(planSource, /browserRelayRotationEntryAuthorization/);
-  assert.match(planSource, /validateBrowserRelayRotationEntryBaseline/);
-  assert.match(applySource, /readAndValidatePinnedBrowserRelayRotationEntryPlan/);
-  assert.match(applySource, /validateBrowserRelayRotationEntryAuthorization/);
-  assert.match(applySource, /validateBrowserRelayRotationEntryBaseline/);
+  assert.match(planSource, /readAndValidatePinnedSourceUpdatePlan/);
+  assert.match(planSource, /buildWorkloadUpdatePlanMetadata/);
+  assert.match(applySource, /readAndValidatePinnedSourceUpdatePlan/);
+  assert.match(applySource, /validateWorkloadUpdateAuthorization/);
   assert.match(applySource, /'apply', '-input=false', '-auto-approve', '-no-color', planPath/);
   assert.match(applySource, /observeDeployedWorkload/);
-  assert.match(planSource, /Regular source updates remain blocked/);
-  assert.match(applySource, /Regular source updates remain blocked/);
-  assert.match(variablesSource, /variable "browser_relay_rotation_entry"/);
-  assert.match(variablesSource, /default\s+= false/);
-  assert.match(
-    localsSource,
-    /runtime-config-version-1-current\.json/,
+  assert.match(planSource, /requires new deterministic source bytes/);
+  assert.match(planSource, /runtime-config-version-1-current\.json/);
+  assert.doesNotMatch(planSource, /join\(workloadRoot, 'runtime-config\.json'\)/);
+  assert.match(initialPlanSource, /runtime-config-version-1-current\.json/);
+  assert.doesNotMatch(initialPlanSource, /join\(workloadRoot, 'runtime-config\.json'\)/);
+  assert.doesNotMatch(
+    `${planSource}\n${applySource}`,
+    /SigningActivation|signing.activation|signing-activate/u,
   );
   assert.match(
     localsSource,
-    /c018708786fc23a15f7701093b5148c0e415a2df8045af8e170e4308c2deae37/,
+    /runtime_config_sha256\s+= "c018708786fc23a15f7701093b5148c0e415a2df8045af8e170e4308c2deae37"/,
   );
-  assert.match(
-    localsSource,
-    /source_repository_commit[\s\S]*9f217da102b394734adba7ccef3f8f70d0317306/,
-  );
-  assert.match(workloadSource, /repository-commit = local\.source_repository_commit/);
-  assert.match(foundationSource, /source_commit\s+= local\.source_repository_commit/);
+  assert.doesNotMatch(localsSource, /source_repository_commit/);
+  assert.match(workloadSource, /repository-commit = var\.repository_commit/);
   assert.match(
     workloadSource,
     /ignore_changes = \[\s*detect_md5hash,\s*source,\s*\]/,
@@ -1241,15 +951,15 @@ test('pins the exact non-secret live workload result', () => {
     new URL('../workload/result.json', import.meta.url),
   );
   assert.equal(result.function.state, 'ACTIVE');
-  assert.equal(result.repository_commit, '6a9db97deb59b6c8e919d451c922ddb246eb54b2');
+  assert.equal(result.repository_commit, 'eaa7bb46ed06206fcd0c0dec100a069c54b259cf');
   assert.equal(
     result.source_archive_sha256,
     'd1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8',
   );
-  assert.equal(result.function.revision, 'control-plane-00008-saz');
+  assert.equal(result.function.revision, 'control-plane-00009-kur');
   assert.equal(
     result.runtime_config_sha256,
-    '40e2f83fbe8e3d27b7e53c4a666f424519fc6972ef19a7598ab9e093be0c70f7',
+    'c018708786fc23a15f7701093b5148c0e415a2df8045af8e170e4308c2deae37',
   );
   assert.equal(result.function.ingress, 'ALLOW_INTERNAL_ONLY');
   assert.equal(result.function.unauthenticated_invokers, 0);
