@@ -710,9 +710,12 @@ current consumer.
     while version 2 stayed published, with the same source, ingress and scale.
     Its one-shot tooling is retired. The bounded staging edge-profile source is
     now current on private revision `control-plane-00010-vop`; it rejects mixed
-    issuer/origin pairs, and the canonical profile remains active. Next implement
-    the temporary edge transition, two relays,
-    three-engine runner and rollback guards. Execute the matrix once before
+    issuer/origin pairs, and the canonical profile remains active. A dormant,
+    non-CLI edge state machine now enforces public-last transition,
+    private-first rollback, a 900-second callback ceiling, a 1,200-second public
+    ceiling and IAM-independent emergency ingress closure. Next bind it to an
+    atomic single-use operation and implement the two relays, three-engine runner,
+    monitoring and complete rollback guards. Execute the matrix once before
     retiring version 1 after the complete lease bound and wiring the real client
     and opaque broker into the production web shell. This reuses the existing
     keys and does not create a third KMS version.

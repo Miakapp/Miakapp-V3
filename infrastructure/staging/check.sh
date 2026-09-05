@@ -113,6 +113,13 @@ node --check infrastructure/staging/browser-relay/guard.mjs
 node --check infrastructure/staging/browser-relay/validate.mjs
 node infrastructure/staging/browser-relay/validate.mjs \
   infrastructure/staging/browser-relay/plan.json
+node infrastructure/staging/browser-relay-edge/guard.mjs \
+  "${repository_root}/infrastructure/staging/browser-relay-edge"
+node --check infrastructure/staging/browser-relay-edge/cloud.mjs
+node --check infrastructure/staging/browser-relay-edge/guard.mjs
+node --check infrastructure/staging/browser-relay-edge/inventory.mjs
+node --check infrastructure/staging/browser-relay-edge/runtime.mjs
+node --check infrastructure/staging/browser-relay-edge/window.mjs
 node infrastructure/staging/browser-attestation/guard.mjs \
   "${repository_root}/infrastructure/staging/browser-attestation"
 node --check infrastructure/staging/browser-attestation/apply.mjs
@@ -226,6 +233,7 @@ node --test \
   infrastructure/staging/test/browser-app-check-key.test.mjs \
   infrastructure/staging/test/browser-app-check-registration.test.mjs \
   infrastructure/staging/test/browser-attestation.test.mjs \
+  infrastructure/staging/test/browser-relay-edge.test.mjs \
   infrastructure/staging/test/browser-relay.test.mjs \
   infrastructure/staging/test/bootstrap.test.mjs \
   infrastructure/staging/test/firebase-auth.test.mjs \
