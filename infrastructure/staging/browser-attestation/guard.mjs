@@ -64,6 +64,21 @@ export function validateBrowserAttestationRoot(rootUrl) {
   if (/from\s+['"]playwright['"]|chromium\.launch|operator-local-playwright/u.test(driver)) {
     throw new Error('Browser-attestation driver must not restore the retired Playwright path');
   }
+  if (!driver.includes("const LOOPBACK_HOST = '127.0.0.1'")
+    || !driver.includes("const SYSTEM_BROWSER_LAUNCHER = '/usr/bin/open'")
+    || !driver.includes('server.listen(0, LOOPBACK_HOST)')
+    || !driver.includes('server.maxRequestsPerSocket = 2')
+    || !driver.includes('request.headers.origin !== expectedOrigin')
+    || !driver.includes("window.history.replaceState(null, '', window.location.pathname)")
+    || !driver.includes('fetch(window.location.pathname')
+    || !driver.includes('shell: false')
+    || !runner.includes("callback.hostname !== '127.0.0.1'")
+    || !runner.includes("JSON.stringify(['callback', 'challenge'])")
+    || !runner.includes('window.location.replace(')
+    || !runner.includes('encodeURIComponent(JSON.stringify(result))')
+    || /process\.stdin|single-tty-json-line|operator-connected-interactive|0\.0\.0\.0|shell:\s*true/u.test(driver)) {
+    throw new Error('Browser-attestation driver differs from the reviewed system-browser loopback boundary');
+  }
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

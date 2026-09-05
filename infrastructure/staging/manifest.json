@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 52,
-  "status": "private_control_plane_two_key_version_2_current_runtime_deployed_signing_overlap_active_user_relay_acceptance_succeeded_interactive_browser_plan_reviewed_app_check_provider_registered",
+  "revision": 53,
+  "status": "private_control_plane_two_key_version_2_current_runtime_deployed_signing_overlap_active_user_relay_acceptance_succeeded_system_browser_plan_reviewed_app_check_provider_registered",
   "environment": "staging",
   "project": {
     "project_id": "miakapp-v4-staging",
@@ -137,7 +137,7 @@
     },
     {
       "id": "firebase-app-check",
-      "state": "admin_custom_provider_validated_interactive_browser_attestation_pending"
+      "state": "admin_custom_provider_validated_system_browser_attestation_pending"
     },
     {
       "id": "firestore",
