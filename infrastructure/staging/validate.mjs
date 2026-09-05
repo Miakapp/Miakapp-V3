@@ -5,6 +5,11 @@ import { dirname, resolve } from 'node:path';
 
 import { BOOTSTRAP_RESOURCE_ADDRESSES } from './bootstrap/saved-plan.mjs';
 import { validateAuthProbeEvidence } from './auth-probe/evidence.mjs';
+import {
+  BROWSER_RELAY_PLAN_PATH,
+  BROWSER_RELAY_PLAN_SHA256,
+  validateBrowserRelayPlan,
+} from './browser-relay/contract.mjs';
 import { validateFirebaseAuthEvidence } from './firebase-auth/evidence.mjs';
 import { validateProbeEvidence } from './probe/evidence.mjs';
 import { validateWorkloadEvidence } from './workload/evidence.mjs';
@@ -2782,6 +2787,7 @@ function validateEvidence(value) {
     'private_probe',
     'firebase_auth_baseline',
     'user_relay_probe',
+    'browser_relay_plan',
     'retired_recovery_workflow',
     'staging_rows',
     'fault_matrix',
@@ -3304,6 +3310,35 @@ function validateEvidence(value) {
   for (const [field, expected] of Object.entries(expectedUserRelayProbe)) {
     exact(userRelayProbe[field], expected, `evidence.user_relay_probe.${field}`);
   }
+  const browserRelayPlan = record(
+    evidence.browser_relay_plan,
+    'evidence.browser_relay_plan',
+    [
+      'state',
+      'path',
+      'sha256',
+      'cloud_mutation_authorized_by_plan',
+      'acceptance_executed',
+      'public_ingress_active',
+      'relay_services',
+      'runner_present',
+      'completed_cases',
+    ],
+  );
+  const expectedBrowserRelayPlan = {
+    state: 'reviewed_not_deployed',
+    path: BROWSER_RELAY_PLAN_PATH,
+    sha256: BROWSER_RELAY_PLAN_SHA256,
+    cloud_mutation_authorized_by_plan: false,
+    acceptance_executed: false,
+    public_ingress_active: false,
+    relay_services: 0,
+    runner_present: false,
+    completed_cases: 0,
+  };
+  for (const [field, expected] of Object.entries(expectedBrowserRelayPlan)) {
+    exact(browserRelayPlan[field], expected, `evidence.browser_relay_plan.${field}`);
+  }
   const retiredRecoveryWorkflow = record(
     evidence.retired_recovery_workflow,
     'evidence.retired_recovery_workflow',
@@ -3372,10 +3407,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 40, 'manifest.revision');
+  exact(manifest.revision, 41, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_user_relay_acceptance_succeeded_and_retired',
+    'private_control_plane_user_relay_acceptance_succeeded_live_browser_plan_reviewed',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -3688,6 +3723,33 @@ export function validateCommittedEvidence(
     authProbe.project_id,
     'evidence.user_relay_probe.result.project_id',
   );
+  const browserRelayPlanManifest = manifest.evidence.browser_relay_plan;
+  const browserRelayPlanPath = committedEvidencePath(
+    stagingRoot,
+    browserRelayPlanManifest.path,
+    BROWSER_RELAY_PLAN_PATH,
+    'evidence.browser_relay_plan.path',
+  );
+  const browserRelayPlan = validatedEvidenceFile(
+    browserRelayPlanPath,
+    validateBrowserRelayPlan,
+    'evidence.browser_relay_plan.path',
+  );
+  exact(
+    fileSha256(browserRelayPlanPath),
+    browserRelayPlanManifest.sha256,
+    'evidence.browser_relay_plan.sha256',
+  );
+  exactFields(browserRelayPlanManifest, {
+    state: browserRelayPlan.state,
+    cloud_mutation_authorized_by_plan:
+      browserRelayPlan.target.cloud_mutation_authorized_by_document,
+    acceptance_executed: browserRelayPlan.target.acceptance_executed,
+    public_ingress_active: browserRelayPlan.target.public_ingress_currently_active,
+    relay_services: browserRelayPlan.baseline.relay_services,
+    runner_present: browserRelayPlan.baseline.browser_runner_present,
+    completed_cases: browserRelayPlan.evidence.completed_case_ids.length,
+  }, 'evidence.browser_relay_plan');
   exact(manifest.runtime.live_request_performed, true, 'runtime.live_request_performed');
   return Object.freeze({
     workload,
@@ -3695,6 +3757,7 @@ export function validateCommittedEvidence(
     firebaseAuth,
     userRelayProbe: authProbe,
     userRelayProbeRetirement: authProbeRetirement,
+    browserRelayPlan,
   });
 }
 
@@ -3717,7 +3780,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; the private user-relay exchange succeeded, both synthetic fixtures were removed, and all temporary probe capability is retired.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; the private user-relay exchange succeeded and retired, while the separate live browser-relay matrix is reviewed but not deployed.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';
