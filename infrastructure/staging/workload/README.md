@@ -2,8 +2,9 @@
 
 Status: two-key schema-2 runtime deployed, converged and source-verified with
 version 2 current and version 1 retained; the one-time activation entry points
-are retired; the historical audience-bound revision was accepted by one
-retired bounded probe
+are retired; an unapplied guarded browser-relay rehearsal entry can select
+version 1 without unpublishing version 2; the historical audience-bound revision
+was accepted by one retired bounded probe
 
 This is the third, workload-only Terraform state for `miakapp-v4-staging`. It
 reads but never owns the reconciled bootstrap and foundation states. Its GCS
@@ -301,6 +302,47 @@ The one-time activation wrappers are retired and the regular source updater is
 restored against this exact deployment. Version 1 remains published throughout
 the overlap window; any later retirement is a separate guarded transition and
 must not occur before 330 seconds have elapsed from the activation update time.
+
+## Guarded browser-relay rotation entry
+
+The browser-relay acceptance matrix needs a forward version-1-to-version-2
+transition on an already open WebSocket. The current staging baseline already
+has version 2 current, so a new one-shot, reversible configuration-only entry
+temporarily selects the historical two-key
+[`runtime-config-version-1-current.json`](runtime-config-version-1-current.json).
+Both public JWKs and both enabled KMS versions remain present; no third key is
+created.
+
+The default Terraform variable remains `false`, so merging this tooling cannot
+change the live runtime. The exact plan is produced only through:
+
+```sh
+MIAKAPP_STAGING_BROWSER_RELAY_ENTRY_PLAN_CONFIRMATION=miakapp-v4-staging \
+  ./infrastructure/staging/workload/browser-relay-entry-plan.sh /private/tmp
+```
+
+Planning requires the exact active `control-plane-00008-saz` revision and its
+authoritative update time, the unchanged deterministic source archive, a clean
+checkout at `origin/main`, User ADC for the reviewed operator and Terraform
+1.11.3. The validator permits only in-place updates to the Function runtime
+environment and deployment guard. It requires the source object and build
+configuration to be identical and rejects IAM, ingress, identity, scale,
+replacement, import, generated configuration and live-request changes.
+
+Apply requires the fresh digest-bound token printed by that plan:
+
+```sh
+MIAKAPP_STAGING_BROWSER_RELAY_ENTRY_APPLY_AUTHORIZATION='enter-browser-relay-rotation-rehearsal:...' \
+  ./infrastructure/staging/workload/browser-relay-entry-apply.sh \
+  /private/tmp/miakapp-staging-workload-XXXXXX
+```
+
+The exact baseline is checked again immediately before apply. A successful
+apply must converge with version 1 current, both keys published, internal-only
+ingress, scale 0..1, zero public invokers and no Function request. Repeating the
+operation fails because the baseline revision has changed. The regular source
+update wrappers are deliberately blocked until the result is recorded and
+these one-shot entrypoints are retired.
 
 ## Successful private discovery
 

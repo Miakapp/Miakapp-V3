@@ -6,6 +6,8 @@ const ALLOWED_FILES = Object.freeze([
   'README.md',
   'apply.mjs',
   'apply.sh',
+  'browser-relay-entry-apply.sh',
+  'browser-relay-entry-plan.sh',
   'contract.mjs',
   'evidence.mjs',
   'foundation.tf',
@@ -65,6 +67,8 @@ export function validateWorkloadRoot(rootUrl) {
   exactNames(tests.map(({ name }) => name), ALLOWED_TEST_FILES, 'Workload test files');
   for (const executable of [
     'apply.sh',
+    'browser-relay-entry-apply.sh',
+    'browser-relay-entry-plan.sh',
     'plan.sh',
     'update-apply.sh',
     'update-plan.sh',
