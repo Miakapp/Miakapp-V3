@@ -146,7 +146,10 @@ for manual investigation. A tracked role whose recoverable definition cannot be
 observed is never recreated under a generic Terraform create path. When all six
 temporaries are absent live and in state, an explicit digest-bound finalization
 can disable the remaining exact roles or, if already disabled, regenerate the
-retirement evidence after exact fixture cleanup and convergence checks.
+retirement evidence after exact fixture cleanup and convergence checks. Its
+output-only finalizer accepts both the preceding dormant generation and the
+current armed output left by a successful targeted retirement; all managed
+resources must remain no-ops.
 
 The earlier authorized bootstrap apply completed:
 
