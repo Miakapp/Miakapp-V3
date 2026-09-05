@@ -59,16 +59,16 @@ export function validateInterruptedHostingInventory(inventory, sourceMetadata, o
     || inventory.site?.type !== 'DEFAULT_SITE'
     || !Array.isArray(inventory.versions)
     || !Array.isArray(inventory.releases)
-    || inventory.versions.length < 2
-    || inventory.versions.length > 3
+    || inventory.versions.length < 3
+    || inventory.versions.length > 4
     || inventory.releases.length > 3) {
-    reject('Browser-attestation recovery inventory exceeds the reviewed historical-plus-v3 boundary');
+    reject('Browser-attestation recovery inventory exceeds the reviewed historical-plus-v4 boundary');
   }
   const historicalVersions = validateRetiredPreflightVersions(inventory, options);
   const historicalNames = new Set(historicalVersions.map(({ name }) => name));
   const currentVersions = inventory.versions.filter(({ name }) => !historicalNames.has(name));
   if (currentVersions.length > 1) {
-    reject('Browser-attestation recovery found more than one v3 Hosting version');
+    reject('Browser-attestation recovery found more than one v4 Hosting version');
   }
   const [version] = currentVersions;
   if (version !== undefined
@@ -150,8 +150,8 @@ export function buildRecoveryMetadata({
     reject('Browser-attestation recovery metadata inputs are invalid');
   }
   return Object.freeze({
-    schema: 'miakapp.staging-browser-attestation-recovery-plan/3',
-    operation: 'disable-and-delete-interrupted-browser-attestation-v3',
+    schema: 'miakapp.staging-browser-attestation-recovery-plan/4',
+    operation: 'disable-and-delete-interrupted-browser-attestation-v4',
     project_id: PROJECT_ID,
     project_number: PROJECT_NUMBER,
     hosting_site: HOSTING_SITE,
@@ -215,8 +215,8 @@ export function validateRecoveryMetadata(value, now = Date.now()) {
   ], 'Browser-attestation recovery safety');
   const created = canonicalTimestamp(metadata.created_at, 'Browser-attestation recovery creation time');
   const expires = canonicalTimestamp(metadata.expires_at, 'Browser-attestation recovery expiry time');
-  if (metadata.schema !== 'miakapp.staging-browser-attestation-recovery-plan/3'
-    || metadata.operation !== 'disable-and-delete-interrupted-browser-attestation-v3'
+  if (metadata.schema !== 'miakapp.staging-browser-attestation-recovery-plan/4'
+    || metadata.operation !== 'disable-and-delete-interrupted-browser-attestation-v4'
     || metadata.project_id !== PROJECT_ID
     || metadata.project_number !== PROJECT_NUMBER
     || metadata.hosting_site !== HOSTING_SITE
@@ -274,7 +274,7 @@ export function recoveryAuthorization(metadataBytes, repositoryCommit) {
     || !COMMIT.test(repositoryCommit)) {
     reject('Browser-attestation recovery authorization inputs are invalid');
   }
-  return `recover-browser-app-check-attestation-v3:${PROJECT_ID}:${sha256(metadataBytes)}:${repositoryCommit}`;
+  return `recover-browser-app-check-attestation-v4:${PROJECT_ID}:${sha256(metadataBytes)}:${repositoryCommit}`;
 }
 
 export function validateRecoveryAuthorization(value, metadataBytes, repositoryCommit) {
