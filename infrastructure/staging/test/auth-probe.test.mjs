@@ -1449,6 +1449,17 @@ test('validates the exact arm and retirement plans and rejects privilege drift',
     () => validateAuthProbePlanAgainstPolicy(canonicalInvokerRetirement, 'retire'),
     /name does not match/u,
   );
+  const providerRetirement = syntheticPlan('retire');
+  const providerVerifier = providerRetirement.resource_changes.find(({ address }) => (
+    address === 'google_cloud_run_v2_service.auth_probe_verifier[0]'
+  )).change.before;
+  providerVerifier.iap_enabled = false;
+  assert.doesNotThrow(() => validateAuthProbePlanAgainstPolicy(providerRetirement, 'retire'));
+  providerVerifier.iap_enabled = true;
+  assert.throws(
+    () => validateAuthProbePlanAgainstPolicy(providerRetirement, 'retire'),
+    /iap_enabled/u,
+  );
   const finalized = validateAuthProbePlanAgainstPolicy(syntheticPlan('retire-finalize'), 'retire-finalize');
   assert.equal(finalized.delete, 0);
   assert.equal(finalized.update, 3);
