@@ -11,6 +11,7 @@ import {
   type SignedAccessToken,
 } from './crypto.js';
 import {
+  type PinnedSigningKeyVersionReference,
   type PinnedSecretKeyringConfig,
   type ProductionSecretPurpose,
   type ProductionSecurityConfig,
@@ -266,6 +267,31 @@ function sameEd25519Key(actual: JsonWebKey, expected: SigningPublicJwk): boolean
     && actual.d === undefined;
 }
 
+async function loadKmsPublicKey(
+  reference: PinnedSigningKeyVersionReference,
+  client: KmsClient,
+  timeout: number,
+): Promise<KeyObject> {
+  const response = firstResponse<KmsPublicKeyResponse>(
+    await client.getPublicKey(
+      { name: reference.keyVersionName },
+      callOptions(timeout),
+    ),
+  );
+  const pem = response.pem;
+  if (response.name !== reference.keyVersionName
+    || (response.algorithm !== KMS_ED25519_ALGORITHM && response.algorithm !== 40)
+    || typeof pem !== 'string'
+    || pem.length === 0
+    || Buffer.byteLength(pem, 'utf8') > MAXIMUM_PEM_BYTES
+    || checksumNumber(response.pemCrc32c) !== crc32c(Buffer.from(pem, 'utf8'))) {
+    fail();
+  }
+  const publicJwk = publicJwkFromPem(pem);
+  if (!sameEd25519Key(publicJwk, reference.publicJwk)) fail();
+  return createPublicKey({ key: reference.publicJwk, format: 'jwk' });
+}
+
 export class KmsAccessTokenSigner {
   readonly #client: KmsClient;
   readonly #issuer: string;
@@ -292,24 +318,18 @@ export class KmsAccessTokenSigner {
     client: KmsClient,
   ): Promise<KmsAccessTokenSigner> {
     try {
-      const response = firstResponse<KmsPublicKeyResponse>(
-        await client.getPublicKey(
-          { name: config.signing.keyVersionName },
-          callOptions(config.signing.rpcTimeoutMilliseconds),
+      const publicKeys = await Promise.all(config.signing.versions.map(async (reference) => ({
+        keyVersionName: reference.keyVersionName,
+        publicKey: await loadKmsPublicKey(
+          reference,
+          client,
+          config.signing.rpcTimeoutMilliseconds,
         ),
-      );
-      const pem = response.pem;
-      if (response.name !== config.signing.keyVersionName
-        || (response.algorithm !== KMS_ED25519_ALGORITHM && response.algorithm !== 40)
-        || typeof pem !== 'string'
-        || pem.length === 0
-        || Buffer.byteLength(pem, 'utf8') > MAXIMUM_PEM_BYTES
-        || checksumNumber(response.pemCrc32c) !== crc32c(Buffer.from(pem, 'utf8'))) {
-        fail();
-      }
-      const publicJwk = publicJwkFromPem(pem);
-      if (!sameEd25519Key(publicJwk, config.signing.publicJwk)) fail();
-      const publicKey = createPublicKey({ key: config.signing.publicJwk, format: 'jwk' });
+      })));
+      const publicKey = publicKeys.find((entry) => (
+        entry.keyVersionName === config.signing.keyVersionName
+      ))?.publicKey;
+      if (publicKey === undefined) fail();
       return new KmsAccessTokenSigner(client, config, publicKey);
     } catch {
       return fail();

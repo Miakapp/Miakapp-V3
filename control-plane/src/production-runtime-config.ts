@@ -47,7 +47,9 @@ const CREDENTIAL_AND_ENDPOINT_OVERRIDES = Object.freeze([
 ] as const);
 
 export interface ProductionRuntimeConfig {
-  readonly schema: 'miakapp.production-runtime/1';
+  readonly schema:
+    | 'miakapp.production-runtime/1'
+    | 'miakapp.production-runtime/2';
   readonly environment: ProductionEnvironment;
   readonly security: ProductionSecurityConfig;
   readonly allowedOrigins: readonly string[];
@@ -120,13 +122,20 @@ export function parseProductionRuntimeConfig(input: unknown): ProductionRuntimeC
     'app_check_app_id',
     'component_bucket',
   ]);
-  if (candidate.schema !== 'miakapp.production-runtime/1') fail();
+  if (candidate.schema !== 'miakapp.production-runtime/1'
+    && candidate.schema !== 'miakapp.production-runtime/2') fail();
   const security = parseProductionSecurityConfig(candidate.security);
+  if ((candidate.schema === 'miakapp.production-runtime/1'
+      && security.schema !== 'miakapp.production-security/1')
+    || (candidate.schema === 'miakapp.production-runtime/2'
+      && security.schema !== 'miakapp.production-security/2')) {
+    fail();
+  }
   const componentBucket = candidate.component_bucket;
   if (typeof componentBucket !== 'string'
     || componentBucket !== COMPONENT_BUCKETS[security.environment]) fail();
   return Object.freeze({
-    schema: 'miakapp.production-runtime/1',
+    schema: candidate.schema,
     environment: security.environment,
     security,
     allowedOrigins: origins(candidate.allowed_origins, security.environment),
@@ -194,6 +203,6 @@ export function createProductionDeploymentConfig(
     networkKeyVersion: secrets.networkKeyVersion,
     networkHmacKeyForVersion: secrets.networkHmacKeyForVersion,
     signingPublicJwk: signing.publicJwk,
-    signingPublicJwks: Object.freeze([signing.publicJwk]),
+    signingPublicJwks: signing.publicJwks,
   });
 }

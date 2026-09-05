@@ -28,7 +28,10 @@ const generated = generateKeyPairSync('ed25519');
 const secondKey = generateKeyPairSync('ed25519');
 const exportedPublic = generated.publicKey.export({ format: 'jwk' });
 const exportedPrivate = generated.privateKey.export({ format: 'jwk' });
-if (exportedPublic.x === undefined || exportedPrivate.d === undefined) {
+const secondPublic = secondKey.publicKey.export({ format: 'jwk' });
+if (exportedPublic.x === undefined
+  || exportedPrivate.d === undefined
+  || secondPublic.x === undefined) {
   throw new Error('Generated Ed25519 fixture is invalid');
 }
 const KID = 'staging-access-token-v1';
@@ -42,6 +45,15 @@ const PUBLIC_JWK = Object.freeze({
 });
 const PRIVATE_JWK = Object.freeze({ ...exportedPrivate, kid: KID }) as JsonWebKey & { readonly kid: string };
 const PEM = generated.publicKey.export({ type: 'spki', format: 'pem' }).toString();
+const SECOND_PEM = secondKey.publicKey.export({ type: 'spki', format: 'pem' }).toString();
+const RETIRING_PUBLIC_JWK = Object.freeze({
+  ...PUBLIC_JWK,
+  x: secondPublic.x,
+});
+const ROTATING_PUBLIC_JWK = Object.freeze({
+  ...PUBLIC_JWK,
+  kid: 'staging-access-token-v2',
+});
 
 function reference(secretId: string, logicalVersion = 'v1', resourceVersion = '1') {
   return {
@@ -60,6 +72,47 @@ function config() {
     signing: {
       key_version_name: 'projects/miakapp-v4-staging/locations/europe-west9/keyRings/miakapp-v4-staging/cryptoKeys/access-token-signing/cryptoKeyVersions/1',
       public_jwk: PUBLIC_JWK,
+      rpc_timeout_ms: 2_000,
+    },
+    secret_manager: {
+      rpc_timeout_ms: 1_500,
+      keyrings: {
+        homeKeyPepper: {
+          current_version: 'v2',
+          versions: [
+            reference('miakapp-home-key-pepper'),
+            reference('miakapp-home-key-pepper', 'v2', '2'),
+          ],
+        },
+        componentHmac: { current_version: 'v1', versions: [reference('miakapp-component-hmac')] },
+        pushHmac: { current_version: 'v1', versions: [reference('miakapp-push-hmac')] },
+        auditHmac: { current_version: 'v1', versions: [reference('miakapp-audit-hmac')] },
+        networkHmac: { current_version: 'v1', versions: [reference('miakapp-network-hmac')] },
+      },
+    },
+  });
+}
+
+function rotationConfig() {
+  const legacy = config();
+  return parseProductionSecurityConfig({
+    schema: 'miakapp.production-security/2',
+    environment: 'staging',
+    project_id: 'miakapp-v4-staging',
+    region: 'europe-west9',
+    issuer: 'https://control.staging.miakapp.com',
+    signing: {
+      current_kid: 'staging-access-token-v2',
+      versions: [
+        {
+          key_version_name: legacy.signing.keyVersionName,
+          public_jwk: RETIRING_PUBLIC_JWK,
+        },
+        {
+          key_version_name: legacy.signing.keyVersionName.replace('/1', '/2'),
+          public_jwk: ROTATING_PUBLIC_JWK,
+        },
+      ],
       rpc_timeout_ms: 2_000,
     },
     secret_manager: {
@@ -113,7 +166,10 @@ class RecordingSecretManager implements SecretManagerClient {
   }
 }
 
-type PublicKeyTransform = (response: KmsPublicKeyResponse) => KmsPublicKeyResponse;
+type PublicKeyTransform = (
+  response: KmsPublicKeyResponse,
+  request: Readonly<{ readonly name: string }>,
+) => KmsPublicKeyResponse;
 type SignatureTransform = (response: KmsSignResponse) => KmsSignResponse;
 
 class RecordingKms implements KmsClient {
@@ -148,7 +204,7 @@ class RecordingKms implements KmsClient {
       algorithm: 'EC_SIGN_ED25519',
       pem: PEM,
       pemCrc32c: { value: crc32c(Buffer.from(PEM, 'utf8')) },
-    })];
+    }, request)];
   }
 
   async asymmetricSign(
@@ -320,6 +376,42 @@ describe('production cloud security boundaries', () => {
       signingPublicJwk: PUBLIC_JWK,
       signingPrivateJwk: PRIVATE_JWK,
     }).sign(GRANT));
+  });
+
+  test('validates both public keys but signs with only the selected KMS version', async () => {
+    const kms = new RecordingKms((response, request) => request.name.endsWith('/1')
+      ? {
+        ...response,
+        pem: SECOND_PEM,
+        pemCrc32c: { value: crc32c(Buffer.from(SECOND_PEM, 'utf8')) },
+      }
+      : response);
+    const rotating = rotationConfig();
+    const signer = await KmsAccessTokenSigner.create(rotating, kms);
+    const signed = await signer.sign(GRANT);
+    const header = JSON.parse(
+      Buffer.from(signed.token.split('.')[0]!, 'base64url').toString('utf8'),
+    ) as Record<string, unknown>;
+
+    expect(rotating.signing.publicJwks).toEqual([
+      RETIRING_PUBLIC_JWK,
+      ROTATING_PUBLIC_JWK,
+    ]);
+    expect(rotating.signing.keyVersionName).toEndWith('/cryptoKeyVersions/2');
+    expect(kms.publicKeyCalls.map((call) => call.request.name)).toEqual(
+      rotating.signing.versions.map((version) => version.keyVersionName),
+    );
+    expect(kms.signCalls).toHaveLength(1);
+    expect(kms.signCalls[0]?.request.name).toBe(rotating.signing.keyVersionName);
+    expect(header.kid).toBe('staging-access-token-v2');
+  });
+
+  test('fails closed when either published public key mismatches its KMS version', async () => {
+    const kms = new RecordingKms();
+
+    await expectDependencyError(() => KmsAccessTokenSigner.create(rotationConfig(), kms));
+    expect(kms.publicKeyCalls).toHaveLength(2);
+    expect(kms.signCalls).toHaveLength(0);
   });
 
   test('binds the KMS signature to the closed user access-token claims', async () => {

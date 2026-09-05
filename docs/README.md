@@ -88,7 +88,8 @@ disconnect matrix, browser-provider attestation, live relay topology, public
 ingress and broader staging acceptance remain open. The staging manifest now
 pins the separate browser-relay plan, making its intended resource, cost,
 exposure and rollback boundary reviewable without pretending that the required
-runtime adapters exist or that a public edge has already been deployed.
+runtime and staging adapters have been deployed or that a public edge already
+exists.
 
 Repository-specific implementation plans must link back to these documents and
 must not redefine a shared contract locally.
