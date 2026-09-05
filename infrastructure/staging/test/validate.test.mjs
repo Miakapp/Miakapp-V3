@@ -31,16 +31,16 @@ function rejects(mutator, pattern) {
 
 test('accepts the successful and retired private user-relay probe', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 42);
+  assert.equal(validated.revision, 43);
   assert.equal(
     validated.status,
-    'private_control_plane_signing_overlap_bridge_deployed_user_relay_acceptance_succeeded_live_browser_plan_reviewed',
+    'private_control_plane_schema_2_single_key_runtime_deployed_user_relay_acceptance_succeeded_live_browser_plan_reviewed',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
   assert.equal(
     validated.project.lifecycle,
-    'firebase_auth_initialized_private_control_plane_user_relay_acceptance_succeeded',
+    'firebase_auth_initialized_private_control_plane_schema_2_user_relay_acceptance_succeeded',
   );
   assert.equal(validated.bootstrap.billing_enabled, true);
   assert.equal(validated.bootstrap.firebase_apps, 1);
@@ -75,7 +75,7 @@ test('accepts the successful and retired private user-relay probe', () => {
     'initialized_closed_custom_token_lifecycle_validated',
     'admin_custom_provider_validated_browser_attestation_pending',
     'private_fixture_lifecycle_validated_no_persistent_application_data',
-    'private_signing_overlap_bridge_active_user_relay_acceptance_succeeded',
+    'private_schema_2_single_key_runtime_active_user_relay_acceptance_succeeded',
     'private_bucket_created_no_application_mutation',
     'signing_key_version_enabled_public_key_validated',
     'five_initial_versions_enabled_runtime_access_validated',
@@ -97,10 +97,13 @@ test('accepts the successful and retired private user-relay probe', () => {
     'managed_in_reconciled_remote_bootstrap_state',
   );
   assert.equal(validated.runtime.deployment_state, 'ACTIVE');
-  assert.equal(validated.runtime.revision, 'control-plane-00005-biq');
+  assert.equal(validated.runtime.revision, 'control-plane-00006-wid');
+  assert.equal(validated.runtime.runtime_schema, 'miakapp.production-runtime/2');
+  assert.equal(validated.runtime.security_schema, 'miakapp.production-security/2');
+  assert.equal(validated.runtime.published_signing_keys, 1);
   assert.equal(validated.runtime.ingress, 'ALLOW_INTERNAL_ONLY');
   assert.equal(validated.runtime.user_managed_keys, 0);
-  assert.equal(validated.runtime.live_request_performed, true);
+  assert.equal(validated.runtime.live_request_performed, false);
   assert.equal(
     validated.security.iam.runtime_identity_state,
     'private_runtime_deployed_zero_user_managed_keys',
@@ -583,11 +586,11 @@ test('accepts the successful and retired private user-relay probe', () => {
   });
   assert.equal(
     validated.evidence.workload_deployment.state,
-    'active_internal_only_source_verified',
+    'active_internal_only_schema_2_single_key_source_verified',
   );
   assert.equal(
     validated.evidence.workload_deployment.result_sha256,
-    'dc3324d3b812e1dafc6a6678c7427ac715ea1d2a81de527750aa958c7c71a440',
+    '8abb27b692b6003566f510d3c03e8fa1c47926b51f263ea4dc7011838629a24c',
   );
   assert.deepEqual(validated.evidence.workload_deployment.recovery_plan_result, {
     create: 2,
@@ -600,7 +603,22 @@ test('accepts the successful and retired private user-relay probe', () => {
     validated.evidence.workload_deployment.source_updates[3].function_revision,
     'control-plane-00005-biq',
   );
-  assert.equal(validated.evidence.workload_deployment.terraform_state.serial, 16);
+  assert.equal(validated.evidence.workload_deployment.runtime_migrations.length, 1);
+  assert.deepEqual(
+    validated.evidence.workload_deployment.runtime_migrations[0].plan_result,
+    {
+      create: 0,
+      update: 2,
+      delete: 0,
+      source_replaced: false,
+      function_replaced: false,
+    },
+  );
+  assert.equal(
+    validated.evidence.workload_deployment.runtime_migrations[0].function_revision,
+    'control-plane-00006-wid',
+  );
+  assert.equal(validated.evidence.workload_deployment.terraform_state.serial, 18);
   assert.equal(validated.evidence.workload_deployment.terraform_state.managed_resources, 15);
   assert.equal(validated.evidence.workload_deployment.terraform_state.tainted_resources, 0);
   assert.equal(validated.evidence.workload_deployment.terraform_state.raw_contents_committed, false);
@@ -669,7 +687,7 @@ test('accepts the successful and retired private user-relay probe', () => {
   assert.deepEqual(validated.evidence.browser_relay_plan, {
     state: 'reviewed_not_deployed',
     path: 'browser-relay/plan.json',
-    sha256: '900bee3c4ba365bcf76da2e0c2d1510c1dc8921d1f32c99847c94a19f301ede5',
+    sha256: '330491f9f59b3638dfac55731d48b903ecf1f278ace696c2885e7644bb815319',
     cloud_mutation_authorized_by_plan: false,
     acceptance_executed: false,
     public_ingress_active: false,
@@ -745,7 +763,7 @@ test('accepts the successful and retired private user-relay probe', () => {
 
 test('cross-checks manifest claims against all committed evidence artifacts', () => {
   const evidence = validateCommittedEvidence(manifest());
-  assert.equal(evidence.workload.function.revision, 'control-plane-00005-biq');
+  assert.equal(evidence.workload.function.revision, 'control-plane-00006-wid');
   assert.equal(evidence.probe.workload.function_revision, 'control-plane-00003-hum');
   assert.equal(evidence.userRelayProbe.workload.function_revision, 'control-plane-00004-yis');
   assert.equal(evidence.probe.response.status, 200);
@@ -1269,10 +1287,19 @@ test('enforces scale-to-zero, one maximum instance, and private ingress', () => 
     candidate.runtime.runtime_config_sha256 = '0'.repeat(64);
   }, /runtime\.runtime_config_sha256/);
   rejects((candidate) => {
+    candidate.runtime.runtime_schema = 'miakapp.production-runtime/1';
+  }, /runtime\.runtime_schema/);
+  rejects((candidate) => {
+    candidate.runtime.security_schema = 'miakapp.production-security/1';
+  }, /runtime\.security_schema/);
+  rejects((candidate) => {
+    candidate.runtime.published_signing_keys = 2;
+  }, /runtime\.published_signing_keys/);
+  rejects((candidate) => {
     candidate.runtime.user_managed_keys = 1;
   }, /runtime\.user_managed_keys/);
   rejects((candidate) => {
-    candidate.runtime.live_request_performed = false;
+    candidate.runtime.live_request_performed = true;
   }, /runtime\.live_request_performed/);
 });
 
@@ -1576,6 +1603,12 @@ test('rejects drift from the public workload deployment evidence', () => {
   rejects((candidate) => {
     candidate.evidence.workload_deployment.source_updates[2].plan_sha256 = '0'.repeat(64);
   }, /evidence\.workload_deployment\.source_updates\[2\]\.plan_sha256/);
+  rejects((candidate) => {
+    candidate.evidence.workload_deployment.runtime_migrations[0].plan_result.update = 3;
+  }, /evidence\.workload_deployment\.runtime_migrations\[0\]\.plan_result\.update/);
+  rejects((candidate) => {
+    candidate.evidence.workload_deployment.runtime_migrations[0].plan_result.source_replaced = true;
+  }, /evidence\.workload_deployment\.runtime_migrations\[0\]\.plan_result\.source_replaced/);
   rejects((candidate) => {
     candidate.evidence.workload_deployment.terraform_state.tainted_resources = 1;
   }, /evidence\.workload_deployment\.terraform_state\.tainted_resources/);

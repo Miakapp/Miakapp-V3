@@ -1,6 +1,6 @@
 {
   "schema": "miakapp.staging-browser-relay-plan/1",
-  "revision": 2,
+  "revision": 3,
   "state": "reviewed_not_deployed",
   "target": {
     "project_id": "miakapp-v4-staging",
@@ -17,8 +17,8 @@
     "acceptance_executed": false
   },
   "pins": {
-    "miakapp_v3_commit": "9f217da102b394734adba7ccef3f8f70d0317306",
-    "deployed_control_plane_commit": "9f217da102b394734adba7ccef3f8f70d0317306",
+    "miakapp_v3_commit": "e42cdd70f812580a6070f0e850daa04dbe0cee42",
+    "deployed_control_plane_commit": "e42cdd70f812580a6070f0e850daa04dbe0cee42",
     "deployed_control_plane_source_sha256": "d1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8",
     "miakapi_commit": "a798a746847ba3d5c16128a08b33353269e770a4",
     "miakapp_server_commit": "9a7e33de3a684b6cd9e82231db7c9af8bf41a0a1",
@@ -30,15 +30,15 @@
     "terraform_version": "1.11.3"
   },
   "baseline": {
-    "observed_at": "2026-09-05T04:07:54.932Z",
+    "observed_at": "2026-09-05T04:59:33.349Z",
     "control_plane": {
       "service": "control-plane",
-      "revision": "control-plane-00005-biq",
+      "revision": "control-plane-00006-wid",
       "uri": "https://control-plane-aczhngqraq-od.a.run.app",
       "issuer": "https://control.staging.miakapp.com",
       "allowed_origin": "https://app.staging.miakapp.com",
-      "runtime_schema": "miakapp.production-runtime/1",
-      "security_schema": "miakapp.production-security/1",
+      "runtime_schema": "miakapp.production-runtime/2",
+      "security_schema": "miakapp.production-security/2",
       "published_signing_keys": 1,
       "overlap_schema_supported_by_source": true,
       "ingress": "ALLOW_INTERNAL_ONLY",
