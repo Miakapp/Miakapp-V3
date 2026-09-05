@@ -134,7 +134,8 @@ its audience was the Firebase project, so the selected relay received a reusable
 user bearer. It is now a historical synthetic-only fixture profile. RFC 0005's
 current path issues a short-lived credential bound to the exact relay, Home, UID
 and user role, and the production relay rejects Firebase source tokens. That path
-has complete local two-relay evidence; staging acceptance remains a production
+has complete local two-relay evidence plus one successful bounded private
+control-plane probe; live relay/browser staging acceptance remains a production
 gate. This is credential attenuation, not an end-to-end encryption claim.
 
 This is not end-to-end encryption. A relay that terminates WSS can observe,
@@ -661,8 +662,10 @@ Absent in v3; non-negotiable in Miakapp 4.
   WebKit run valid, tampered, declaration-shadowing, egress, storage,
   invalid-tree, state/capability, lifecycle, flood and pre/post-activation
   infinite-loop bundles against the RFC 0002 broker and headers. This proves the
-  architecture selection, not complete RFC conformance. The production React
-  host, delivery path and SDK must pass every Section 18 item.
+  architecture selection, not complete RFC conformance. The React host now has
+  a production-shaped semantic renderer and an offline preview adapter; its
+  broker lifecycle, delivery path and SDK integration must still pass every
+  Section 18 item.
 - **Migration — oracle and shared adapter contract implemented; runtime open**:
   `synthetic-home/` provides a closed, bounded fictional inventory and ten
   deterministic capsules for state, actions, notification intents, persisted
@@ -846,8 +849,9 @@ vertical-slice exit gates.
    WebSocket and a source-to-token routing handoff across two relays with no
    overlapping transport. Its historical Firebase-direct profile is
    synthetic-only. Arbitrary self-hosted relay selection remains disabled until
-   staging acceptance; the React host, component bridge and complete fault matrix
-   also remain open.
+   live relay/browser staging acceptance; the React host foundation now exists,
+   while its component bridge integration and the complete fault matrix remain
+   open.
 
 Implementation work remains limited by its corresponding gate. The relay now
 implements the local RFC 0001, 0004 and 0005 boundary; MiakAPI implements the

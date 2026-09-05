@@ -34,10 +34,12 @@ as sufficient evidence.
 - `test/contract.test.ts` covers schemas, limits, and byte verification.
 - `test/runtime.spec.ts` exercises the real browser boundary.
 
-This is an architectural boundary subset, not the production React host,
-Firebase artifact-delivery path, generated-component SDK, dual-release activator,
-or complete RFC conformance suite. It supports the architecture selection and
-leaves those production concerns behind the accepted ABI and explicit exit gate.
+This remains an architectural boundary subset. The repository root now contains
+the first production-shaped React semantic renderer, but it uses an explicitly
+offline preview adapter and is not yet connected to this broker. Firebase
+artifact delivery, generated-component SDK, dual-release activation, complete
+host lifecycle and full RFC conformance remain behind the accepted ABI and
+explicit exit gate.
 
 ## Run
 
