@@ -4,7 +4,7 @@ Status: private audience-bound user-relay acceptance succeeded and retired;
 schema-2 single-key runtime deployed privately; live browser-relay plan reviewed
 but not deployed; browser App Check API-only prerequisite applied and
 converged; one domain-restricted score key applied and independently converged;
-App Check registration still absent
+guarded non-deletable App Check registration ready but not applied
 
 This directory contains the closed description and observed state of
 `miakapp-v4-staging`. The bounded foundation recovery has completed; its active
@@ -29,8 +29,15 @@ domain-restricted score key. Direct and eventual Cloud Asset inventories now
 both corroborate the key, while App Check registration and enforcement remain
 absent. The API-only and key plan/apply entrypoints are retired. A private
 atomic GCS claim permanently serializes the consumed one-shot creation across
-every independently copied bundle. Provider registration remains excluded
-because Firebase exposes no provider-configuration delete operation.
+every independently copied bundle. A separate one-shot registration gate is now
+implemented with two atomic claims: one consumes the reviewed operation and a
+second marks the global provider-attempt boundary immediately before Terraform.
+Fresh-child recovery permits only the demonstrably pre-PATCH boundary or exact
+registered-provider state repair; a present second claim with an absent provider
+fails closed even when the source bundle was independently copied.
+The provider remains absent until that exact saved plan is applied. Firebase
+exposes no provider-configuration delete operation, so browser traffic and
+enforcement remain excluded.
 
 ## Current truth
 
@@ -268,7 +275,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`probe/`](probe/) | Isolated Workflows API and one fixed, unscheduled, keyless internal discovery probe | Applied and consumed; exactly two failures followed by one validated HTTP 200 discovery response |
 | [`firebase-auth/`](firebase-auth/) | Closed Firebase Authentication initialization with no end-user sign-in provider | Non-deletable resource initialized, state-adopted, reconciled, and independently validated |
 | [`auth-probe/`](auth-probe/) | Guarded audience-bound user-relay Workflow, internal verifier and sanitized evidence | Generation 3 succeeded once and retired; both fixtures and every temporary capability are absent; all nine one-shot roles are disabled |
-| [`browser-app-check/`](browser-app-check/) | Guarded reCAPTCHA Enterprise API and single score-key prerequisites | API and one globally serialized domain-restricted score key applied and converged; both entrypoint generations retired; registration and enforcement pending |
+| [`browser-app-check/`](browser-app-check/) | Guarded reCAPTCHA Enterprise API, score key and App Check provider prerequisites | API and one globally serialized domain-restricted score key applied and converged; key entrypoints retired; separately serialized non-deletable provider gate ready but not applied; traffic and enforcement pending |
 | [`browser-relay/`](browser-relay/) | Closed live browser, two-relay, signing-key and rollback acceptance plan | Reviewed but not deployed; every `LIVE-*` case is pending and the package grants no cloud mutation |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
@@ -534,8 +541,9 @@ external load balancer, Cloud Armor, VPC and DNS changes are absent.
 No live case may start yet. The production runtime must first support an active
 plus retiring public signing key. The browser App Check API and its single
 domain-restricted score key are applied, independently converged and retired as
-one-shot entrypoints. The next browser attestation step is site-key registration
-through a separate non-deletable exact plan.
+one-shot entrypoints. The next browser attestation step is the implemented
+site-key registration gate: one non-deletable exact saved plan with no browser
+traffic or enforcement.
 Separate guarded implementations must also exist for the temporary edge
 transition, relays, runner, metrics and rollback. The plan records these as open
 preconditions instead of promoting local fixtures to live evidence.

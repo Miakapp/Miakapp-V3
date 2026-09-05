@@ -349,7 +349,7 @@ function metadata() {
   });
 }
 
-test('root contains the applied API prerequisite and guarded key-only phase', () => {
+test('root contains the applied key prerequisite and guarded registration phase', () => {
   validateBrowserAppCheckRoot(browserRoot);
   const keySource = terraformSource.slice(
     terraformSource.indexOf('resource "google_recaptcha_enterprise_key" "browser_app_check"'),
@@ -361,7 +361,23 @@ test('root contains the applied API prerequisite and guarded key-only phase', ()
   assert.match(keySource, /integration_type\s+= "SCORE"/u);
   assert.match(keySource, /deletion_policy\s+= "DELETE"/u);
   assert.match(keySource, /lifecycle\s*\{\s*prevent_destroy\s+= true\s*\}/u);
-  assert.doesNotMatch(terraformSource, /google_firebase_app_check_recaptcha_enterprise_config/u);
+  const registrationSource = terraformSource.slice(
+    terraformSource.indexOf(
+      'resource "google_firebase_app_check_recaptcha_enterprise_config" "browser_app_check"',
+    ),
+  );
+  assert.match(
+    registrationSource,
+    /^resource "google_firebase_app_check_recaptcha_enterprise_config" "browser_app_check"/u,
+  );
+  assert.match(registrationSource, /provider = google-beta/u);
+  assert.match(registrationSource, /site_key\s+= google_recaptcha_enterprise_key\.browser_app_check\.name/u);
+  assert.match(registrationSource, /token_ttl\s+= "3600s"/u);
+  assert.match(registrationSource, /lifecycle\s*\{\s*prevent_destroy\s+= true\s*\}/u);
+  assert.match(
+    registrationSource,
+    /depends_on = \[google_recaptcha_enterprise_key\.browser_app_check\]/u,
+  );
 });
 
 test('root guard rejects extra files and symbolic links', () => {

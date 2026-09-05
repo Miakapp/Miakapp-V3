@@ -103,8 +103,18 @@ function safeEqual(actual, expected) {
     && timingSafeEqual(actualBytes, expectedBytes);
 }
 
-export function createPrivateBrowserAppCheckBundle(parentPath, repositoryRoot) {
+export function createPrivateBrowserAppCheckBundle(
+  parentPath,
+  repositoryRoot,
+  prefix = 'miakapp-staging-browser-app-check-',
+) {
   if (!isAbsolute(parentPath)) reject('Browser App Check bundle parent must be absolute');
+  if (![
+    'miakapp-staging-browser-app-check-',
+    'miakapp-staging-browser-app-check-recovery-',
+  ].includes(prefix)) {
+    reject('Browser App Check bundle prefix is invalid');
+  }
   const parent = realpathSync(parentPath);
   const repository = realpathSync(repositoryRoot);
   const relation = relative(repository, parent);
@@ -113,7 +123,7 @@ export function createPrivateBrowserAppCheckBundle(parentPath, repositoryRoot) {
     || relation === '' || (!relation.startsWith(`..${sep}`) && relation !== '..')) {
     reject('Browser App Check bundle parent must be a private directory outside the repository');
   }
-  const directory = mkdtempSync(join(parent, 'miakapp-staging-browser-app-check-'));
+  const directory = mkdtempSync(join(parent, prefix));
   chmodSync(directory, 0o700);
   return realpathSync(directory);
 }

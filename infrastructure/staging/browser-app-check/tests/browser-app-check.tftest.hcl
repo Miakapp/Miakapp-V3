@@ -2,7 +2,7 @@ mock_provider "google" {}
 
 mock_provider "google-beta" {}
 
-run "creates_only_the_domain_restricted_score_key_prerequisite" {
+run "registers_only_the_exact_browser_app_check_provider" {
   command = plan
 
   override_data {
@@ -63,13 +63,18 @@ run "creates_only_the_domain_restricted_score_key_prerequisite" {
       length(google_recaptcha_enterprise_key.browser_app_check.waf_settings) == 0 &&
       output.staging_browser_app_check_key.recaptcha_api_enabled == true &&
       output.staging_browser_app_check_key.recaptcha_key_created == true &&
-      output.staging_browser_app_check_key.app_check_registered == false &&
+      google_firebase_app_check_recaptcha_enterprise_config.browser_app_check.project == "miakapp-v4-staging" &&
+      google_firebase_app_check_recaptcha_enterprise_config.browser_app_check.app_id == "1:1072737219170:web:5053ca93bf25d7373cd73b" &&
+      google_firebase_app_check_recaptcha_enterprise_config.browser_app_check.token_ttl == "3600s" &&
+      output.staging_browser_app_check_key.schema == "miakapp.staging-browser-app-check-registration/1" &&
+      output.staging_browser_app_check_key.app_check_registered == true &&
+      output.staging_browser_app_check_key.app_check_token_ttl == "3600s" &&
       output.staging_browser_app_check_key.app_check_enforcement == false &&
       output.staging_browser_app_check_key.debug_tokens == 0 &&
       output.staging_browser_app_check_key.public_endpoints_created == 0 &&
       output.staging_browser_app_check_key.fixed_cost_services == 0
     )
-    error_message = "The key phase must create only the exact domain-restricted score key without registering or enforcing App Check."
+    error_message = "The registration phase must bind only the exact domain-restricted score key without enforcing App Check."
   }
 }
 
