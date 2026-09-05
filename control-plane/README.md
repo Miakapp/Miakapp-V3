@@ -239,9 +239,13 @@ validates every declared public key against its exact KMS version, then uses onl
 the selected version for signing. It reads each declared 32-byte
 secret once, checks the returned resource name and CRC32C, then binds the KMS
 public keys to the configured JWKS keys. The staging and production project IDs
-are also bound respectively to `https://control.staging.miakapp.com` and
-`https://control.miakapp.com`; they cannot mint tokens carrying the other
-environment's issuer. Each token uses one `AsymmetricSign` request over the exact
+are bound to reviewed issuers and cannot mint tokens carrying the other
+environment's issuer. Production accepts only `https://control.miakapp.com`.
+Staging additionally recognizes one project-specific `run.app` issuer solely
+when it is paired atomically with the exact staging Hosting `web.app` origin;
+this closed `staging-browser-relay-acceptance` profile supports the bounded
+browser-relay matrix without trusting arbitrary provider domains. Each token
+uses one `AsymmetricSign` request over the exact
 JWS signing input with automatic client retries disabled; the response name,
 request-integrity acknowledgement, signature CRC32C and signature itself are
 verified against an independent immutable copy before release. Production client
@@ -252,9 +256,10 @@ Secret Manager payloads and complete KMS signing material.
 The complete isolated production composition now lives in
 [`src/production-runtime-config.ts`](src/production-runtime-config.ts) and
 [`src/production-runtime.ts`](src/production-runtime.ts). Its closed runtime
-document binds the exact staging or production project, issuer, origins, App
-Check app, dedicated component bucket and dedicated runtime service-account
-email. It rejects every emulator variable, Google SDK debug logging, credential
+document binds the exact staging or production project, issuer/origin profile,
+App Check app, dedicated component bucket and dedicated runtime service-account
+email. Mixed canonical/acceptance profiles fail closed. It rejects every
+emulator variable, Google SDK debug logging, credential
 file override, metadata-host override, HTTP/HTTPS/gRPC proxy override,
 quota-project override and Google Cloud universe override. Every Google client
 is constructed with a metadata-only credential pinned to that service account
