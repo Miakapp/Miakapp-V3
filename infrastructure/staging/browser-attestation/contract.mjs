@@ -361,8 +361,8 @@ export function buildAttestationMetadata({
     artifact,
     firebase_sdk_version: FIREBASE_SDK_VERSION,
     browser: Object.freeze({
-      session: 'operator-connected-interactive',
-      observation_channel: 'single-tty-json-line',
+      session: 'macos-default-system-browser',
+      observation_channel: 'ephemeral-loopback-fragment-post',
       maximum_invocations: 1,
     }),
     safety: Object.freeze({
@@ -440,8 +440,8 @@ export function validateAttestationMetadata(value, now = Date.now()) {
     || metadata.app_check_site_key_sha256 !== APP_CHECK_SITE_KEY_SHA256
     || metadata.firebase_sdk_version !== FIREBASE_SDK_VERSION
     || !isDeepStrictEqual(browser, {
-      session: 'operator-connected-interactive',
-      observation_channel: 'single-tty-json-line',
+      session: 'macos-default-system-browser',
+      observation_channel: 'ephemeral-loopback-fragment-post',
       maximum_invocations: 1,
     })
     || !isDeepStrictEqual(safety, {
@@ -506,7 +506,7 @@ export function validateBrowserResult(value, expectedChallenge) {
     || actual.byteLength !== expected.byteLength
     || !timingSafeEqual(actual, expected)
     || result.attestation_attempts !== 1) {
-    reject('Browser-attestation result differs from the exact interactive challenge');
+    reject('Browser-attestation result differs from the exact system-browser challenge');
   }
   if (result.state === 'failed') {
     if (result.failure !== 'provider-or-token-shape-rejected') {

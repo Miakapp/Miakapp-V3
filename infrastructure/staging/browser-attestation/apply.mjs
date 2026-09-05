@@ -6,8 +6,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { readAndVerifyArtifact, validatePinnedPackageVersions } from './artifact.mjs';
 import {
   createBrowserChallenge,
-  interactiveRunnerUrl,
-  readBrowserAttestation,
+  observeSystemBrowserAttestation,
   sanitizedBrowserResult,
   validateBrowserPreflight,
 } from './browser.mjs';
@@ -203,25 +202,22 @@ async function main() {
     failureStage = 'public_artifact_verification';
     publicArtifactEvidence = await waitForRunner(artifacts, undefined, interactiveDeadline);
     throwIfInterrupted(interruption.signal);
-    failureStage = 'interactive_browser_attestation';
+    failureStage = 'system_browser_attestation';
     const challenge = createBrowserChallenge();
-    const runnerUrl = interactiveRunnerUrl(challenge);
     process.stdout.write([
-      'INTERACTIVE_BROWSER_READY',
-      `Runner URL: ${runnerUrl}`,
+      'SYSTEM_BROWSER_ATTESTATION_READY',
       `Observation deadline: ${new Date(interactiveDeadline).toISOString()}`,
-      'Open the exact URL in the connected interactive browser, await window.__MIAKAPP_BROWSER_ATTESTATION__, then send JSON.stringify(result) as one terminal line.',
-      'The runner returns only semantic evidence; never paste or return an App Check token.',
+      'Opening the exact runner in the default macOS browser; bounded semantic evidence returns through an ephemeral loopback listener.',
+      'The App Check token and raw provider errors never leave the public runner.',
       '',
     ].join('\n'));
-    browserResult = await readBrowserAttestation(
-      process.stdin,
+    browserResult = await observeSystemBrowserAttestation(
       challenge,
       interactiveDeadline,
       { signal: interruption.signal },
     );
     if (browserResult.state !== 'passed') {
-      throw new Error('Interactive browser App Check attestation returned the closed failure shape');
+      throw new Error('System browser App Check attestation returned the closed failure shape');
     }
   } catch (error) {
     operationError = error;
@@ -279,9 +275,9 @@ async function main() {
         runner_404_validated: releaseAttempted,
         public_window_milliseconds: publicWindowMilliseconds,
       }),
-      interactive_browser_requested: failureStage === 'interactive_browser_attestation',
-      interactive_observation_received: browserResult !== undefined,
-      interactive_observation_state: browserResult?.state ?? null,
+      system_browser_requested: failureStage === 'system_browser_attestation',
+      loopback_observation_received: browserResult !== undefined,
+      loopback_observation_state: browserResult?.state ?? null,
       challenge_retained: false,
       firebase_auth_used: false,
       control_plane_invoked: false,
@@ -353,7 +349,8 @@ async function main() {
       firebase_app_id: FIREBASE_APP_ID,
       provider: 'recaptcha-enterprise',
       real_browser_attestation: true,
-      maximum_assessments: 1,
+      operator_attestation_attempts: browserResult.attestation_attempts,
+      public_origin_assessment_count_observed: false,
       enforcement_records: appCheck.service_enforcement_records,
       debug_tokens: appCheck.debug_tokens,
     }),
@@ -365,7 +362,7 @@ async function main() {
   const resultBytes = Buffer.from(canonicalJson(result), 'utf8');
   writePrivateFile(join(bundle, 'result.json'), resultBytes, 0o400);
   process.stdout.write([
-    'The bounded interactive-browser App Check attestation succeeded and Hosting was disabled.',
+    'The bounded system-browser App Check attestation succeeded and Hosting was disabled.',
     `Private result: ${join(bundle, 'result.json')}`,
     `Result SHA-256: ${sha256(resultBytes)}`,
     `Public window: ${publicWindowMilliseconds} ms`,
