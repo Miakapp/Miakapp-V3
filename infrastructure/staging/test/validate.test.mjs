@@ -31,10 +31,10 @@ function rejects(mutator, pattern) {
 
 test('accepts the successful and retired private user-relay probe', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 43);
+  assert.equal(validated.revision, 44);
   assert.equal(
     validated.status,
-    'private_control_plane_schema_2_single_key_runtime_deployed_user_relay_acceptance_succeeded_live_browser_plan_reviewed',
+    'private_control_plane_schema_2_single_key_runtime_deployed_user_relay_acceptance_succeeded_live_browser_plan_reviewed_app_check_api_guarded',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
@@ -111,7 +111,7 @@ test('accepts the successful and retired private user-relay probe', () => {
   assert.deepEqual(validated.security.iam.unresolved_permissions, []);
   assert.equal(
     validated.terraform.state,
-    'bootstrap_foundation_workload_probe_firebase_auth_and_user_relay_acceptance_converged',
+    'six_deployed_roots_converged_browser_app_check_empty_backend_guarded',
   );
   assert.equal(
     validated.terraform.supported_workflow,
@@ -127,10 +127,18 @@ test('accepts the successful and retired private user-relay probe', () => {
   assert.equal(validated.terraform.probe_root, 'probe');
   assert.equal(validated.terraform.firebase_auth_root, 'firebase-auth');
   assert.equal(validated.terraform.auth_probe_root, 'auth-probe');
-  assert.equal(validated.terraform.backend.state, 'all_six_terraform_state_roots_present');
+  assert.equal(validated.terraform.browser_app_check_root, 'browser-app-check');
+  assert.equal(
+    validated.terraform.backend.state,
+    'all_six_deployed_roots_plus_empty_browser_app_check_root_present',
+  );
   assert.equal(validated.terraform.backend.probe_prefix, 'terraform/probe');
   assert.equal(validated.terraform.backend.firebase_auth_prefix, 'terraform/firebase-auth');
   assert.equal(validated.terraform.backend.auth_probe_prefix, 'terraform/auth-probe');
+  assert.equal(
+    validated.terraform.backend.browser_app_check_prefix,
+    'terraform/browser-app-check',
+  );
   assert.equal(
     validated.terraform.backend.bootstrap_migration_state,
     'complete_remote_state_reconciled',
@@ -694,6 +702,32 @@ test('accepts the successful and retired private user-relay probe', () => {
     relay_services: 0,
     runner_present: false,
     completed_cases: 0,
+  });
+  assert.deepEqual(validated.evidence.browser_app_check_prerequisite, {
+    state: 'guarded_api_only_empty_backend_initialized',
+    observed_at: '2026-09-05T06:44:16.000Z',
+    terraform_root: 'browser-app-check',
+    terraform_state: {
+      object: 'terraform/browser-app-check/default.tfstate',
+      generation: '1788588916588868',
+      sha256: '7f80cac767df4b54265a6e72ae6660d252ea6d247f506d1640f4ac9792dc3137',
+      size_bytes: 181,
+      terraform_version: '1.11.3',
+      serial: 1,
+      lineage_sha256: 'f6640c6c40b21a544f3ddc3ee8005f8a1d9d2eaa19dd79ba5fca5709394d9601',
+      managed_resources: 0,
+      data_resources: 0,
+      outputs: 0,
+      raw_contents_committed: false,
+    },
+    recaptcha_api_enabled: false,
+    direct_key_inventory: 'unavailable_service_disabled',
+    cloud_asset_inventory: 'readable_eventually_consistent',
+    cloud_asset_recaptcha_keys: 0,
+    app_check_registered: false,
+    app_check_enforcement_records: 0,
+    debug_tokens: 0,
+    apply_executed: false,
   });
   assert.equal(
     validated.readiness.required_blockers.includes('app-check-browser-provider-attestation'),
@@ -1573,6 +1607,12 @@ test('requires every remaining blocker and staging evidence row', () => {
   rejects((candidate) => {
     candidate.evidence.browser_relay_plan.completed_cases = 1;
   }, /evidence\.browser_relay_plan\.completed_cases/);
+  rejects((candidate) => {
+    candidate.evidence.browser_app_check_prerequisite.recaptcha_api_enabled = true;
+  }, /evidence\.browser_app_check_prerequisite\.recaptcha_api_enabled/);
+  rejects((candidate) => {
+    candidate.evidence.browser_app_check_prerequisite.terraform_state.generation = '1';
+  }, /evidence\.browser_app_check_prerequisite\.terraform_state\.generation/);
 });
 
 test('rejects drift from the public activation evidence and initialized versions', () => {

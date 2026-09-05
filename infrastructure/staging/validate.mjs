@@ -14,7 +14,7 @@ import { validateFirebaseAuthEvidence } from './firebase-auth/evidence.mjs';
 import { validateProbeEvidence } from './probe/evidence.mjs';
 import { validateWorkloadEvidence } from './workload/evidence.mjs';
 
-const MAX_MANIFEST_BYTES = 64 * 1024;
+const MAX_MANIFEST_BYTES = 96 * 1024;
 
 const SERVICE_IDS = [
   'firebase-auth',
@@ -656,6 +656,7 @@ function validateTerraform(value) {
     'probe_root',
     'firebase_auth_root',
     'auth_probe_root',
+    'browser_app_check_root',
     'terraform_version',
     'providers',
     'backend',
@@ -680,7 +681,7 @@ function validateTerraform(value) {
   ]);
   exact(
     terraform.state,
-    'bootstrap_foundation_workload_probe_firebase_auth_and_user_relay_acceptance_converged',
+    'six_deployed_roots_converged_browser_app_check_empty_backend_guarded',
     'terraform.state',
   );
   exact(
@@ -706,6 +707,11 @@ function validateTerraform(value) {
   exact(terraform.probe_root, 'probe', 'terraform.probe_root');
   exact(terraform.firebase_auth_root, 'firebase-auth', 'terraform.firebase_auth_root');
   exact(terraform.auth_probe_root, 'auth-probe', 'terraform.auth_probe_root');
+  exact(
+    terraform.browser_app_check_root,
+    'browser-app-check',
+    'terraform.browser_app_check_root',
+  );
   exact(terraform.terraform_version, '1.11.3', 'terraform.terraform_version');
   if (!Array.isArray(terraform.providers)) reject('terraform.providers', 'must be an array');
   if (terraform.providers.length !== 2) reject('terraform.providers', 'must contain exactly 2 entries');
@@ -727,6 +733,7 @@ function validateTerraform(value) {
     'probe_prefix',
     'firebase_auth_prefix',
     'auth_probe_prefix',
+    'browser_app_check_prefix',
     'bootstrap_migration_template',
     'bootstrap_migration_state',
     'locking_enabled',
@@ -736,7 +743,7 @@ function validateTerraform(value) {
   exact(backend.type, 'gcs', 'terraform.backend.type');
   exact(
     backend.state,
-    'all_six_terraform_state_roots_present',
+    'all_six_deployed_roots_plus_empty_browser_app_check_root_present',
     'terraform.backend.state',
   );
   exact(backend.bucket, 'miakapp-v4-staging-tfstate-1072737219170', 'terraform.backend.bucket');
@@ -750,6 +757,11 @@ function validateTerraform(value) {
     'terraform.backend.firebase_auth_prefix',
   );
   exact(backend.auth_probe_prefix, 'terraform/auth-probe', 'terraform.backend.auth_probe_prefix');
+  exact(
+    backend.browser_app_check_prefix,
+    'terraform/browser-app-check',
+    'terraform.backend.browser_app_check_prefix',
+  );
   exact(
     backend.bootstrap_migration_template,
     'bootstrap/backend.gcs.tf.example',
@@ -2794,6 +2806,7 @@ function validateEvidence(value) {
     'firebase_auth_baseline',
     'user_relay_probe',
     'browser_relay_plan',
+    'browser_app_check_prerequisite',
     'retired_recovery_workflow',
     'staging_rows',
     'fault_matrix',
@@ -3422,6 +3435,81 @@ function validateEvidence(value) {
   for (const [field, expected] of Object.entries(expectedBrowserRelayPlan)) {
     exact(browserRelayPlan[field], expected, `evidence.browser_relay_plan.${field}`);
   }
+  const browserAppCheck = record(
+    evidence.browser_app_check_prerequisite,
+    'evidence.browser_app_check_prerequisite',
+    [
+      'state',
+      'observed_at',
+      'terraform_root',
+      'terraform_state',
+      'recaptcha_api_enabled',
+      'direct_key_inventory',
+      'cloud_asset_inventory',
+      'cloud_asset_recaptcha_keys',
+      'app_check_registered',
+      'app_check_enforcement_records',
+      'debug_tokens',
+      'apply_executed',
+    ],
+  );
+  const expectedBrowserAppCheck = {
+    state: 'guarded_api_only_empty_backend_initialized',
+    observed_at: '2026-09-05T06:44:16.000Z',
+    terraform_root: 'browser-app-check',
+    recaptcha_api_enabled: false,
+    direct_key_inventory: 'unavailable_service_disabled',
+    cloud_asset_inventory: 'readable_eventually_consistent',
+    cloud_asset_recaptcha_keys: 0,
+    app_check_registered: false,
+    app_check_enforcement_records: 0,
+    debug_tokens: 0,
+    apply_executed: false,
+  };
+  for (const [field, expected] of Object.entries(expectedBrowserAppCheck)) {
+    exact(
+      browserAppCheck[field],
+      expected,
+      `evidence.browser_app_check_prerequisite.${field}`,
+    );
+  }
+  const browserAppCheckState = record(
+    browserAppCheck.terraform_state,
+    'evidence.browser_app_check_prerequisite.terraform_state',
+    [
+      'object',
+      'generation',
+      'sha256',
+      'size_bytes',
+      'terraform_version',
+      'serial',
+      'lineage_sha256',
+      'managed_resources',
+      'data_resources',
+      'outputs',
+      'raw_contents_committed',
+    ],
+  );
+  const expectedBrowserAppCheckState = {
+    object: 'terraform/browser-app-check/default.tfstate',
+    generation: '1788588916588868',
+    sha256: '7f80cac767df4b54265a6e72ae6660d252ea6d247f506d1640f4ac9792dc3137',
+    size_bytes: 181,
+    terraform_version: '1.11.3',
+    serial: 1,
+    lineage_sha256: 'f6640c6c40b21a544f3ddc3ee8005f8a1d9d2eaa19dd79ba5fca5709394d9601',
+    managed_resources: 0,
+    data_resources: 0,
+    outputs: 0,
+    raw_contents_committed: false,
+  };
+  for (const [field, expected] of Object.entries(expectedBrowserAppCheckState)) {
+    exact(
+      browserAppCheckState[field],
+      expected,
+      `evidence.browser_app_check_prerequisite.terraform_state.${field}`,
+    );
+  }
   const retiredRecoveryWorkflow = record(
     evidence.retired_recovery_workflow,
     'evidence.retired_recovery_workflow',
@@ -3490,10 +3578,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 43, 'manifest.revision');
+  exact(manifest.revision, 44, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_schema_2_single_key_runtime_deployed_user_relay_acceptance_succeeded_live_browser_plan_reviewed',
+    'private_control_plane_schema_2_single_key_runtime_deployed_user_relay_acceptance_succeeded_live_browser_plan_reviewed_app_check_api_guarded',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -3863,7 +3951,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; the private user-relay exchange succeeded and retired, while the separate live browser-relay matrix is reviewed but not deployed.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; the private user-relay exchange is retired, the live browser-relay matrix is reviewed but not deployed, and the browser App Check API-only prerequisite is guarded.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';
