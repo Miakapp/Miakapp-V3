@@ -12,23 +12,27 @@ import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
+  PROJECT_ID,
+  REGION,
   TERRAFORM_VERSION,
   assertSafeWorkloadEnvironment,
   canonicalJson,
   childEnvironment,
+  readBrowserRelayRotationEntryPlanMetadata,
   readPrivateFile,
-  readWorkloadUpdatePlanMetadata,
   sha256,
-  validateWorkloadUpdateAuthorization,
+  validateBrowserRelayRotationEntryAuthorization,
+  validateBrowserRelayRotationEntryBaseline,
   verifiedOperatorEmail,
   verifyExactMain,
   writePrivateFile,
 } from './contract.mjs';
 import { validateWorkloadRoot } from './guard.mjs';
 import { observeDeployedWorkload } from './inventory.mjs';
-import { readAndValidatePinnedSourceUpdatePlan } from './validate-plan.mjs';
+import { readAndValidatePinnedBrowserRelayRotationEntryPlan } from './validate-plan.mjs';
 
-const APPLY_AUTHORIZATION = 'MIAKAPP_STAGING_WORKLOAD_UPDATE_APPLY_AUTHORIZATION';
+const ROTATION_ENTRY_AUTHORIZATION =
+  'MIAKAPP_STAGING_BROWSER_RELAY_ENTRY_APPLY_AUTHORIZATION';
 const workloadRoot = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = fileURLToPath(new URL('../../../', import.meta.url));
 process.umask(0o077);
@@ -90,6 +94,14 @@ function verifyVariables(path, metadata, bundle) {
     throw new Error('Private workload update variables are invalid JSON');
   }
   if (canonicalJson(variables) !== bytes.toString('utf8')
+    || JSON.stringify(Object.keys(variables).sort()) !== JSON.stringify([
+      'browser_relay_rotation_entry',
+      'operator_user_email',
+      'repository_commit',
+      'source_archive_path',
+      'source_archive_sha256',
+    ])
+    || variables.browser_relay_rotation_entry !== true
     || variables.repository_commit !== metadata.repository_commit
     || variables.source_archive_sha256 !== metadata.source_archive_sha256
     || variables.source_archive_path !== join(bundle, 'control-plane.zip')
@@ -99,14 +111,43 @@ function verifyVariables(path, metadata, bundle) {
   return variables;
 }
 
-async function main() {
-  if (process.argv.length !== 3 || process.argv[2] === undefined) {
-    throw new Error(`Usage: ${APPLY_AUTHORIZATION}=... ./update-apply.sh <private-bundle>`);
+function browserRelayRotationEntryBaseline() {
+  const result = run('gcloud', [
+    'functions',
+    'describe',
+    'control-plane',
+    '--gen2',
+    `--region=${REGION}`,
+    `--project=${PROJECT_ID}`,
+    '--quiet',
+    '--format=json(name,state,updateTime,serviceConfig.revision,serviceConfig.environmentVariables)',
+  ], { cwd: repositoryRoot, description: 'browser-relay-rotation-entry-baseline' });
+  let value;
+  try {
+    value = JSON.parse(Buffer.from(result.stdout).toString('utf8'));
+  } catch {
+    throw new Error('Live browser-relay rotation-entry baseline is invalid JSON');
   }
-  assertSafeWorkloadEnvironment(process.env, APPLY_AUTHORIZATION);
+  return validateBrowserRelayRotationEntryBaseline(value);
+}
+
+async function main() {
+  const rotationEntry = process.argv[2] === '--browser-relay-rotation-entry';
+  const offset = rotationEntry ? 1 : 0;
+  const bundlePath = process.argv[2 + offset];
+  if (process.argv.length !== 3 + offset || bundlePath === undefined) {
+    const executable = rotationEntry ? './browser-relay-entry-apply.sh' : './update-apply.sh';
+    throw new Error(`Usage: ${ROTATION_ENTRY_AUTHORIZATION}=... ${executable} <private-bundle>`);
+  }
+  if (!rotationEntry) {
+    throw new Error('Regular source updates remain blocked until the browser-relay rotation entry is recorded and its one-shot tooling is retired');
+  }
+  assertSafeWorkloadEnvironment(process.env, ROTATION_ENTRY_AUTHORIZATION);
   validateWorkloadRoot(new URL('./', import.meta.url));
-  const bundle = privateBundle(process.argv[2]);
-  const { value: metadata } = readWorkloadUpdatePlanMetadata(join(bundle, 'metadata.json'));
+  const bundle = privateBundle(bundlePath);
+  const { value: metadata } = readBrowserRelayRotationEntryPlanMetadata(
+    join(bundle, 'metadata.json'),
+  );
   verifyExactMain(repositoryRoot, metadata.repository_commit);
 
   const planPath = join(bundle, 'workload.tfplan');
@@ -123,8 +164,8 @@ async function main() {
     throw new Error('Private workload update bundle digest verification failed');
   }
   const variables = verifyVariables(variablesPath, metadata, bundle);
-  validateWorkloadUpdateAuthorization(
-    process.env[APPLY_AUTHORIZATION],
+  validateBrowserRelayRotationEntryAuthorization(
+    process.env[ROTATION_ENTRY_AUTHORIZATION],
     planBytes,
     metadata.repository_commit,
   );
@@ -133,10 +174,12 @@ async function main() {
     sourceRepositoryCommit: metadata.source_repository_commit,
     sourceArchiveSha256: metadata.source_archive_sha256,
     runtimeConfigSha256: metadata.runtime_config_sha256,
+    browserRelayRotationEntry: true,
   };
-  readAndValidatePinnedSourceUpdatePlan(planJsonPath, validationInput);
+  readAndValidatePinnedBrowserRelayRotationEntryPlan(planJsonPath, validationInput);
+  browserRelayRotationEntryBaseline();
 
-  const terraformData = join(bundle, `.terraform-update-apply-${process.pid}`);
+  const terraformData = join(bundle, `.terraform-browser-relay-entry-apply-${process.pid}`);
   mkdirSync(terraformData, { mode: 0o700 });
   const environment = terraformEnvironment(terraformData);
   try {
@@ -157,6 +200,7 @@ async function main() {
     if (sha256(Buffer.from(rendered.stdout)) !== metadata.terraform_plan_json_sha256) {
       throw new Error('Terraform binary update plan no longer renders to the reviewed JSON');
     }
+    browserRelayRotationEntryBaseline();
     const applyResult = run('terraform', ['apply', '-input=false', '-auto-approve', '-no-color', planPath], {
       env: environment,
       allowedStatuses: [0, 1],
@@ -215,7 +259,7 @@ async function main() {
     process.stdout.write([
       applyFailed
         ? 'The provider returned an error after the exact update converged; live state was reconciled.'
-        : 'The exact private staging workload update was applied and converged.',
+        : 'The exact private browser-relay rotation entry was applied and converged.',
       `Private result: ${resultPath}`,
       `Function: ${result.function.name}`,
       `Revision: ${result.function.revision}`,

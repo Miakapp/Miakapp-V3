@@ -86,10 +86,14 @@ collection existed.
 The immutable cross-repository pins, two-key runtime, readable provider and
 standalone real-browser token observation are therefore satisfied today. The
 complete authenticated browser case remains part of `LIVE-02`. Before any
-public transition, separate reviewed implementation must still provide:
+public transition, the first remaining prerequisite now has reviewed one-shot
+plan/apply tooling under `workload/`, but remains open until its exact saved
+plan is applied, independently converged and retired. The remaining work must
+provide:
 
-1. a guarded configuration-only rehearsal entry that temporarily selects
-   version 1 while keeping versions 1 and 2 published;
+1. convergence and retirement of the guarded configuration-only rehearsal
+   entry that temporarily selects version 1 while keeping versions 1 and 2
+   published;
 2. a digest-bound and reversible control-plane ingress transition;
 3. two digest-pinned relay services using a keyless no-role identity;
 4. a three-engine runner that emits closed semantic counters only;
