@@ -1,7 +1,7 @@
 # Miakapp 4 staging private workload boundary
 
 Status: private audience-bound user-relay acceptance succeeded and retired;
-schema-2 two-key runtime deployed privately with version 2 current and version 1 retained; live browser-relay plan reviewed
+schema-2 two-key runtime deployed privately with version 2 current and version 1 retained; live browser-relay plan rebased
 but not deployed; real system-browser App Check provider token obtained and its
 temporary Hosting route retired; browser App Check API-only prerequisite applied and
 converged; one domain-restricted score key applied and independently converged;
@@ -19,10 +19,10 @@ exchanges across a relay rotation. It removed both synthetic fixtures and all
 temporary capability. This evidence does not authorize public ingress,
 additional live requests, destroy, or production changes.
 
-The separate [`browser-relay/`](browser-relay/) package now freezes the first
+The separate [`browser-relay/`](browser-relay/) package now freezes the rebased
 closed live topology, cost, signing-key and rollback matrix. It records twelve
 pending cases and six open implementation preconditions. The App Check provider
-and standalone real-browser attestation prerequisites are satisfied, while the
+standalone real-browser attestation and two-key runtime prerequisites are satisfied, while the
 complete authenticated `LIVE-02` relay case remains pending.
 It contains no deployer or result and does not change the private cloud baseline
 described below.
@@ -311,7 +311,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`browser-app-check/`](browser-app-check/) | Guarded reCAPTCHA Enterprise API, score key and App Check provider prerequisites | API, one globally serialized domain-restricted score key and exact non-deletable provider applied and converged; all consumed/recovery entrypoints retired; enforcement remains disabled |
 | [`browser-attestation/`](browser-attestation/) | One-shot real system-browser App Check provider observation | Fresh provider token obtained through the default macOS browser; all six claims retained, temporary Hosting disabled/deleted, route verified 404, and every execution/recovery entrypoint retired |
 | [`signing-overlap/`](signing-overlap/) | Monotone second KMS version creation and 60/330-second overlap rollout contract | Version 2 enabled after one direct request; two atomic claims retained and one-shot entrypoints retired; runtime, Terraform, IAM, ingress and requests unchanged |
-| [`browser-relay/`](browser-relay/) | Closed live browser, two-relay, signing-key and rollback acceptance plan | Reviewed but not deployed; every `LIVE-*` case is pending and the package grants no cloud mutation |
+| [`browser-relay/`](browser-relay/) | Closed live browser, two-relay, signing-key and rollback acceptance plan | Rebases the current private `00008`/two-key/App Check baseline; not deployed, every `LIVE-*` case pending, and no cloud mutation granted |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
 | [`TEARDOWN.md`](TEARDOWN.md) | Manual recovery and teardown rehearsal | Documentation only |
@@ -569,8 +569,12 @@ fault matrix, monitoring and billing-alert validation, secret and signing-key
 rotation, migration rehearsal, and every broader `STAGE-*` observation remain
 open blockers.
 
-The digest-pinned [`browser-relay/plan.json`](browser-relay/plan.json) now
-selects the bounded shape for the next work: the existing Hosting `web.app`
+The digest-pinned [`browser-relay/plan.json`](browser-relay/plan.json) is now
+rebased from an independent read-only observation of the private
+`control-plane-00008-saz` state. It verified zero Firebase Auth users, zero
+application fixture collections, zero relays, a disabled Hosting route, two
+published signing keys with version 2 current, and the completed browser App
+Check attestation. It selects the bounded shape for the next work: the existing Hosting `web.app`
 origin, temporary direct provider endpoints, two scale-0..1 no-role relays, a
 local unscheduled three-engine runner, one execution and a maximum twenty-minute
 public window. It assumes no free tier and stops at a EUR 1 projected increment,
@@ -580,12 +584,15 @@ external load balancer, Cloud Armor, VPC and DNS changes are absent.
 No live case may start yet. The production runtime now publishes both signing
 keys with version 2 current and version 1 retained. The guarded `signing-overlap/` operation created
 version 2 exactly once, and the separate workload prepublication converged
-without changing source, IAM, ingress or scale.
+without changing source, IAM, ingress or scale. The next guarded signing step is
+a reversible configuration-only rehearsal entry that selects version 1 while
+leaving both keys published. The live matrix can then activate version 2 on the
+same socket, wait the full 330-second retirement bound, and disable rather than
+destroy version 1; no third KMS version is required.
 The browser App Check API, its single
 domain-restricted score key and the exact non-deletable provider registration
 are applied, independently converged and retired as one-shot entrypoints.
-Version 2 activation is complete; removing version 1 remains a separate guarded
-gate after its complete 330-second retention. The browser-attestation package
+Version 2 activation is complete. The browser-attestation package
 used one ephemeral `127.0.0.1` callback because Conductor's Browser tab is a
 localhost preview; that operation and all recovery paths are now permanently
 retired. The full browser-relay matrix must acquire fresh credentials and cannot

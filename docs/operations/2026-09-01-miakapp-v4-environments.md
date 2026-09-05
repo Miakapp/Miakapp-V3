@@ -390,6 +390,16 @@ bytes and claims never left the page; Hosting was disabled and deleted after an
 8,749 ms public window, and the runner now returns HTTP 404. Enforcement remains
 disabled and all execution plus recovery entrypoints are retired.
 
+The browser-relay plan was then rebased by an independent read-only observation
+at `2026-09-05T18:28:41.130Z`. It reconfirmed private
+`control-plane-00008-saz`, zero unauthenticated invokers, zero relay services,
+zero Firebase Auth users, zero application fixture collections, two enabled and
+published signing versions with version 2 current, the registered provider and
+completed browser attestation, and a disabled Hosting runner returning HTTP
+404. The remaining Firestore documents are confined to the three expected
+bounded admission/audit collections. This observation granted no deployment or
+public-ingress authority.
+
 The pinned local relay-authentication path now includes signing-key overlap,
 key-changing `REAUTH`, concurrent cache refresh, expiry, unknown-`kid` abuse,
 JWKS outage and bounded recovery. A separate pinned local gate now exercises the

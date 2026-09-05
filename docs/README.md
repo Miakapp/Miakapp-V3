@@ -40,7 +40,8 @@ implemented across several repositories.
   rollback for audience-bound browser relay credentials.
 - [`../infrastructure/staging/browser-relay/`](../infrastructure/staging/browser-relay/)
   — digest-pinned closed plan for the live browser, two-relay, signing-key and
-  rollback matrix; reviewed but not deployed, with every live case pending.
+  rollback matrix; rebased against the current private two-key/App Check state
+  but not deployed, with every live case pending.
 - [`../infrastructure/staging/`](../infrastructure/staging/)
   — closed staging intent, digest-pinned live evidence, credential-free policy
   validator and teardown rehearsal. Cloud mutation remains behind separate
@@ -88,8 +89,9 @@ standalone provider-attestation prerequisite was later closed when the default
 system browser obtained one real reCAPTCHA Enterprise-backed App Check token
 and the temporary Hosting route was retired. The complete disconnect matrix,
 authenticated browser-relay flow, live relay topology, public ingress and
-broader staging acceptance remain open. The staging manifest now
-pins the separate browser-relay plan, making its intended resource, cost,
+broader staging acceptance remain open. The staging manifest now pins the
+rebased browser-relay plan and its zero-user, zero-fixture, zero-relay baseline,
+making its intended resource, cost,
 exposure and rollback boundary reviewable without pretending that the required
 runtime and staging adapters have been deployed or that a public edge already
 exists.
