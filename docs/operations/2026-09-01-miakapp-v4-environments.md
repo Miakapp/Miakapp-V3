@@ -414,6 +414,17 @@ completed browser attestation, and a disabled Hosting runner returning HTTP
 bounded admission/audit collections. This observation granted no deployment or
 public-ingress authority.
 
+The next guarded increment reviews, but has not yet executed, one private relay
+image build. It binds the exact merged Miakapp-Server tree to a deterministic
+53,098-byte archive, one digest-pinned Cloud Build Docker builder, verified
+SHA-256 source provenance and a hardened `/ping` smoke test. A generation-zero
+GCS claim permits at most one build and no retry or deletion. The existing
+private source bucket and Artifact Registry repository are reused; the
+operation creates no service, IAM binding, credential, public ingress or fixed
+cost. Independent inventory found the claim, source object, matching build and
+`miakapp-server` package absent while `control-plane` remained the only Cloud
+Run service.
+
 The pinned local relay-authentication path now includes signing-key overlap,
 key-changing `REAUTH`, concurrent cache refresh, expiry, unknown-`kid` abuse,
 JWKS outage and bounded recovery. A separate pinned local gate now exercises the
