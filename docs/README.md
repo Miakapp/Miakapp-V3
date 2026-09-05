@@ -38,6 +38,9 @@ implemented across several repositories.
 - [`runbooks/user-relay-credentials.md`](runbooks/user-relay-credentials.md)
   — dependency order, privacy-safe validation, staging cost gate, monitoring and
   rollback for audience-bound browser relay credentials.
+- [`../infrastructure/staging/browser-relay/`](../infrastructure/staging/browser-relay/)
+  — digest-pinned closed plan for the live browser, two-relay, signing-key and
+  rollback matrix; reviewed but not deployed, with every live case pending.
 - [`../infrastructure/staging/`](../infrastructure/staging/)
   — closed staging intent, digest-pinned live evidence, credential-free policy
   validator and teardown rehearsal. Cloud mutation remains behind separate
@@ -82,10 +85,10 @@ credentials and exact loopback Origins. One bounded private staging probe now
 also proves live Firebase Auth/App Check enforcement, KMS-backed user-relay signing,
 audience rotation and cleanup on the deployed control plane. The complete
 disconnect matrix, browser-provider attestation, live relay topology, public
-ingress and broader staging acceptance remain open. The
-staging manifest makes their intended resource, cost and isolation boundary
-reviewable without pretending that every production adapter or a public edge
-already exists.
+ingress and broader staging acceptance remain open. The staging manifest now
+pins the separate browser-relay plan, making its intended resource, cost,
+exposure and rollback boundary reviewable without pretending that the required
+runtime adapters exist or that a public edge has already been deployed.
 
 Repository-specific implementation plans must link back to these documents and
 must not redefine a shared contract locally.

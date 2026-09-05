@@ -1,0 +1,426 @@
+{
+  "schema": "miakapp.staging-browser-relay-plan/1",
+  "revision": 1,
+  "state": "reviewed_not_deployed",
+  "target": {
+    "project_id": "miakapp-v4-staging",
+    "project_number": "1072737219170",
+    "region": "europe-west9",
+    "data_policy": "synthetic_only",
+    "forbidden_project_ids": [
+      "demo-miakapp-v4",
+      "miakapp-3",
+      "miakapp-v4"
+    ],
+    "cloud_mutation_authorized_by_document": false,
+    "public_ingress_currently_active": false,
+    "acceptance_executed": false
+  },
+  "pins": {
+    "miakapp_v3_commit": "97be39a13a8d937dcfc700d0179fd29f6a912b02",
+    "deployed_control_plane_commit": "022f10e2dc15f32a8a6679b38ce7f1a04582e450",
+    "deployed_control_plane_source_sha256": "6674c0353ec9c73fcfe0d3a63d17850f057a5f2a547a5855989e28f011249b1e",
+    "miakapi_commit": "a798a746847ba3d5c16128a08b33353269e770a4",
+    "miakapp_server_commit": "9a7e33de3a684b6cd9e82231db7c9af8bf41a0a1",
+    "protocol_contract_commit": "cc3bcd70fdb4b058f990ca2607693a2043faebaf",
+    "node_version": "22.22.0",
+    "bun_version": "1.2.23",
+    "go_version": "1.26.6",
+    "playwright_version": "1.62.1",
+    "terraform_version": "1.11.3"
+  },
+  "baseline": {
+    "observed_at": "2026-09-05T03:26:41.000Z",
+    "control_plane": {
+      "service": "control-plane",
+      "revision": "control-plane-00004-yis",
+      "uri": "https://control-plane-aczhngqraq-od.a.run.app",
+      "issuer": "https://control.staging.miakapp.com",
+      "allowed_origin": "https://app.staging.miakapp.com",
+      "ingress": "ALLOW_INTERNAL_ONLY",
+      "unauthenticated_invokers": 0,
+      "minimum_instances": 0,
+      "maximum_instances": 1
+    },
+    "hosting": {
+      "site": "miakapp-v4-staging",
+      "default_origin": "https://miakapp-v4-staging.web.app",
+      "custom_domain_dns_records_present": false
+    },
+    "app_check": {
+      "firebase_app_id": "1:1072737219170:web:5053ca93bf25d7373cd73b",
+      "browser_provider_inventory": "operator_read_permission_unavailable",
+      "service_enforcement_records": 0,
+      "browser_attestation_validated": false
+    },
+    "cloud_run_services": [
+      "control-plane"
+    ],
+    "relay_services": 0,
+    "browser_runner_present": false,
+    "app_engine_application_present": false
+  },
+  "topology": {
+    "profile": "temporary_public_provider_endpoints",
+    "application": {
+      "origin": "https://miakapp-v4-staging.web.app",
+      "hosting_site": "miakapp-v4-staging",
+      "runner_path": "/__acceptance/browser-relay/",
+      "runner_public_without_credentials": true,
+      "credential_material_in_static_artifact": false
+    },
+    "control_plane_edge": {
+      "uri": "https://control-plane-aczhngqraq-od.a.run.app",
+      "issuer_during_window": "https://control-plane-aczhngqraq-od.a.run.app",
+      "ingress_before": "ALLOW_INTERNAL_ONLY",
+      "ingress_during": "ALLOW_ALL",
+      "ingress_after": "ALLOW_INTERNAL_ONLY",
+      "unauthenticated_invokers_before": 0,
+      "unauthenticated_invokers_during": 1,
+      "unauthenticated_invokers_after": 0,
+      "maximum_public_window_seconds": 1200,
+      "minimum_instances": 0,
+      "maximum_instances": 1,
+      "application_boundary": "exact_cors_and_route_authentication",
+      "cacheable_public_routes": [
+        "/.well-known/jwks.json",
+        "/.well-known/miakapp-control-plane"
+      ]
+    },
+    "relays": [
+      {
+        "id": "relay-a",
+        "service_name": "miakapp-staging-relay-a",
+        "endpoint_before_apply": null,
+        "endpoint_source": "observed_cloud_run_uri_with_wss_scheme_and_ws_path",
+        "websocket_path": "/ws",
+        "health_path": "/ping",
+        "ingress": "INGRESS_TRAFFIC_ALL",
+        "unauthenticated_invoker": true,
+        "application_authentication": "audience_bound_relay_user_hello",
+        "allowed_origin": "https://miakapp-v4-staging.web.app",
+        "service_account": "miakapp-staging-relay@miakapp-v4-staging.iam.gserviceaccount.com",
+        "runtime_iam_roles": [],
+        "minimum_instances": 0,
+        "maximum_instances": 1,
+        "concurrency": 8,
+        "request_timeout_seconds": 900,
+        "cpu": 1,
+        "memory_mib": 256,
+        "cpu_idle": true
+      },
+      {
+        "id": "relay-b",
+        "service_name": "miakapp-staging-relay-b",
+        "endpoint_before_apply": null,
+        "endpoint_source": "observed_cloud_run_uri_with_wss_scheme_and_ws_path",
+        "websocket_path": "/ws",
+        "health_path": "/ping",
+        "ingress": "INGRESS_TRAFFIC_ALL",
+        "unauthenticated_invoker": true,
+        "application_authentication": "audience_bound_relay_user_hello",
+        "allowed_origin": "https://miakapp-v4-staging.web.app",
+        "service_account": "miakapp-staging-relay@miakapp-v4-staging.iam.gserviceaccount.com",
+        "runtime_iam_roles": [],
+        "minimum_instances": 0,
+        "maximum_instances": 1,
+        "concurrency": 8,
+        "request_timeout_seconds": 900,
+        "cpu": 1,
+        "memory_mib": 256,
+        "cpu_idle": true
+      }
+    ],
+    "runner": {
+      "kind": "operator_local_playwright",
+      "cloud_compute_resources": 0,
+      "unscheduled": true,
+      "maximum_invocations": 3,
+      "credential_delivery": "process_memory_to_page_argument",
+      "browser_credentials_persisted": false,
+      "trace_recording": false,
+      "har_recording": false,
+      "video_recording": false,
+      "websocket_frame_recording": false,
+      "browsers": [
+        "chromium",
+        "firefox",
+        "webkit"
+      ]
+    },
+    "fixed_cost_services": {
+      "app_engine": false,
+      "external_load_balancer": false,
+      "cloud_armor": false,
+      "vpc_connector": false,
+      "cloud_nat": false,
+      "minimum_instances": false
+    }
+  },
+  "budgets": {
+    "currency": "EUR",
+    "authorized_monthly_incremental_eur": 5,
+    "planned_incremental_upper_bound_eur": 1,
+    "free_tier_assumed": false,
+    "stress_test": false,
+    "maximum_public_window_seconds": 1200,
+    "maximum_acceptance_executions": 1,
+    "maximum_cloud_builds": 4,
+    "maximum_browser_invocations": 3,
+    "maximum_recaptcha_assessments": 16,
+    "maximum_control_plane_exchanges": 16,
+    "maximum_kms_signatures": 16,
+    "maximum_firestore_writes": 64,
+    "maximum_relay_services": 2,
+    "maximum_instances_per_service": 1,
+    "maximum_total_relay_instance_seconds": 2400,
+    "maximum_control_plane_public_instance_seconds": 1200,
+    "stop_conditions": [
+      "credential_or_private_traffic_in_diagnostics",
+      "firebase_or_app_check_token_on_websocket",
+      "identity_or_audience_binding_failure",
+      "invocation_or_signing_count_above_plan",
+      "projected_incremental_cost_above_one_eur",
+      "public_window_above_twenty_minutes",
+      "rollback_precondition_failure",
+      "unexpected_project_or_persistent_iam_mutation"
+    ]
+  },
+  "preconditions": [
+    {
+      "id": "PIN-01",
+      "state": "satisfied",
+      "requirement": "merged_cross_repository_commits_and_artifacts_are_digest_pinned"
+    },
+    {
+      "id": "SIGNING-01",
+      "state": "open",
+      "requirement": "production_runtime_accepts_one_active_and_one_retiring_public_signing_key"
+    },
+    {
+      "id": "APP-CHECK-01",
+      "state": "open",
+      "requirement": "browser_provider_inventory_is_readable_and_recaptcha_enterprise_is_registered"
+    },
+    {
+      "id": "EDGE-01",
+      "state": "open",
+      "requirement": "temporary_public_control_plane_transition_is_separate_guarded_and_reversible"
+    },
+    {
+      "id": "RELAY-01",
+      "state": "open",
+      "requirement": "two_digest_pinned_relay_services_have_bounded_terraform_and_teardown"
+    },
+    {
+      "id": "RUNNER-01",
+      "state": "open",
+      "requirement": "three_engine_runner_emits_only_closed_semantic_counters"
+    },
+    {
+      "id": "MONITORING-01",
+      "state": "open",
+      "requirement": "allowlisted_metrics_and_budget_alerts_are_observed_before_public_ingress"
+    },
+    {
+      "id": "ROLLBACK-01",
+      "state": "open",
+      "requirement": "rollback_plan_is_digest_bound_and_preflighted_before_acceptance"
+    }
+  ],
+  "matrix": [
+    {
+      "id": "LIVE-01",
+      "state": "pending",
+      "maximum_runs": 1,
+      "assertions": [
+        "exact_project_region_and_pins",
+        "zero_preexisting_synthetic_fixtures",
+        "zero_public_relay_services",
+        "private_control_plane_baseline",
+        "rollback_plan_ready"
+      ]
+    },
+    {
+      "id": "LIVE-02",
+      "state": "pending",
+      "maximum_runs": 1,
+      "assertions": [
+        "real_browser_provider_attestation",
+        "exact_firebase_app_id",
+        "missing_and_invalid_app_check_denied",
+        "no_token_consumption_mode"
+      ]
+    },
+    {
+      "id": "LIVE-03",
+      "state": "pending",
+      "maximum_runs": 1,
+      "assertions": [
+        "exact_origin_cors_and_preflight",
+        "foreign_origin_denied",
+        "source_and_uid_admission_observed",
+        "no_authenticated_response_cache"
+      ]
+    },
+    {
+      "id": "LIVE-04",
+      "state": "pending",
+      "maximum_runs": 1,
+      "assertions": [
+        "chromium_initial_exchange_and_hello",
+        "authoritative_snapshot_and_patch",
+        "one_call_completes",
+        "source_credentials_confined_to_https"
+      ]
+    },
+    {
+      "id": "LIVE-05",
+      "state": "pending",
+      "maximum_runs": 1,
+      "assertions": [
+        "new_jwk_prepublished_for_sixty_seconds",
+        "same_relay_scheduled_reauthentication",
+        "new_kid_accepted_on_existing_socket",
+        "one_browser_websocket"
+      ]
+    },
+    {
+      "id": "LIVE-06",
+      "state": "pending",
+      "maximum_runs": 1,
+      "assertions": [
+        "authoritative_route_changes_to_relay_b",
+        "already_issued_atomic_credential_is_reused",
+        "old_socket_closes_before_new_socket_opens",
+        "state_and_call_recover_on_relay_b"
+      ]
+    },
+    {
+      "id": "LIVE-07",
+      "state": "pending",
+      "maximum_runs": 1,
+      "assertions": [
+        "wrong_relay_audience_denied",
+        "wrong_home_denied",
+        "wrong_role_denied",
+        "unknown_kid_refresh_is_bounded"
+      ]
+    },
+    {
+      "id": "LIVE-08",
+      "state": "pending",
+      "maximum_runs": 1,
+      "assertions": [
+        "disconnect_reconnect_and_resync_are_bounded",
+        "no_physical_call_replay",
+        "uncertain_effect_is_outcome_unknown",
+        "maximum_one_active_browser_socket"
+      ]
+    },
+    {
+      "id": "LIVE-09",
+      "state": "pending",
+      "maximum_runs": 1,
+      "assertions": [
+        "visibility_pause_resume_is_bounded",
+        "bfcache_restore_revalidates_identity",
+        "sign_out_stops_and_discards_immediately",
+        "identity_tuple_change_requires_new_session"
+      ]
+    },
+    {
+      "id": "LIVE-10",
+      "state": "pending",
+      "maximum_runs": 1,
+      "assertions": [
+        "firefox_initial_session_and_teardown",
+        "webkit_initial_session_and_teardown",
+        "no_browser_specific_credential_persistence"
+      ]
+    },
+    {
+      "id": "LIVE-11",
+      "state": "pending",
+      "maximum_runs": 1,
+      "assertions": [
+        "prior_jwk_retained_for_three_hundred_thirty_seconds",
+        "prior_jwk_removed_after_lease_bound",
+        "prior_kms_version_disabled_not_destroyed",
+        "new_sessions_continue_on_active_key"
+      ]
+    },
+    {
+      "id": "LIVE-12",
+      "state": "pending",
+      "maximum_runs": 1,
+      "assertions": [
+        "runner_removed_before_session_drain",
+        "control_plane_returns_private",
+        "relay_services_and_temporary_iam_are_absent",
+        "synthetic_fixtures_are_absent",
+        "terraform_converges_and_cost_stays_bounded"
+      ]
+    }
+  ],
+  "signing_rotation": {
+    "state": "blocked_by_single_published_key_runtime_config",
+    "token_lease_seconds": 300,
+    "prepublication_seconds": 60,
+    "retiring_key_retention_seconds": 330,
+    "published_keys_before": 1,
+    "published_keys_during_overlap": 2,
+    "published_keys_after_retirement": 1,
+    "prior_key_after_retirement": "disabled_not_destroyed",
+    "ordinary_rollback": "select_still_published_non_compromised_key",
+    "republish_removed_private_key": false
+  },
+  "evidence": {
+    "state": "absent",
+    "committed_result_path": null,
+    "completed_case_ids": [],
+    "allowed_observations": [
+      "bounded_counts",
+      "durations",
+      "public_key_ids",
+      "revision_ids",
+      "stable_outcome_classes"
+    ],
+    "forbidden_observations": [
+      "browser_storage",
+      "email",
+      "execution_identifier",
+      "firebase_uid",
+      "har",
+      "home_traffic",
+      "raw_request_or_response",
+      "token",
+      "trace_context",
+      "video",
+      "websocket_frame"
+    ]
+  },
+  "rollback": {
+    "state": "designed_not_executed",
+    "ordered_steps": [
+      "remove_acceptance_runner_route",
+      "stop_browser_and_coordinator_without_replay",
+      "remove_public_relay_traffic_and_services",
+      "restore_private_control_plane_ingress_and_invoker_policy",
+      "delete_synthetic_fixtures_and_temporary_bindings",
+      "verify_zero_unexpected_traffic_and_zero_change_plans"
+    ],
+    "required_final_state": {
+      "control_plane_ingress": "ALLOW_INTERNAL_ONLY",
+      "control_plane_unauthenticated_invokers": 0,
+      "relay_services": 0,
+      "runner_route_present": false,
+      "synthetic_users": 0,
+      "synthetic_homes": 0,
+      "temporary_iam_bindings": 0,
+      "minimum_instances": 0,
+      "terraform_convergence": "no_changes",
+      "miakapp_3_touched": false
+    }
+  }
+}

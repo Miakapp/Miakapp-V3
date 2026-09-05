@@ -106,6 +106,13 @@ node --check infrastructure/staging/auth-probe/verifier.mjs
 node infrastructure/staging/auth-probe/evidence.mjs \
   infrastructure/staging/auth-probe/result.json \
   infrastructure/staging/auth-probe/retirement.json
+node infrastructure/staging/browser-relay/guard.mjs \
+  "${repository_root}/infrastructure/staging/browser-relay"
+node --check infrastructure/staging/browser-relay/contract.mjs
+node --check infrastructure/staging/browser-relay/guard.mjs
+node --check infrastructure/staging/browser-relay/validate.mjs
+node infrastructure/staging/browser-relay/validate.mjs \
+  infrastructure/staging/browser-relay/plan.json
 bash -n \
   infrastructure/staging/automation/apply.sh \
   infrastructure/staging/automation/inspect-plan.sh \
@@ -141,6 +148,7 @@ bash -n \
 node --test \
   infrastructure/staging/test/activation.test.mjs \
   infrastructure/staging/test/auth-probe.test.mjs \
+  infrastructure/staging/test/browser-relay.test.mjs \
   infrastructure/staging/test/bootstrap.test.mjs \
   infrastructure/staging/test/firebase-auth.test.mjs \
   infrastructure/staging/test/foundation-state.test.mjs \

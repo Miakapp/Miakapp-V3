@@ -1,7 +1,7 @@
 # Miakapp 4 staging private workload boundary
 
 Status: private audience-bound user-relay acceptance succeeded and retired;
-browser App Check attestation remains open
+live browser-relay plan reviewed but not deployed
 
 This directory contains the closed description and observed state of
 `miakapp-v4-staging`. The bounded foundation recovery has completed; its active
@@ -13,6 +13,12 @@ three negative controls and two successful, cryptographically verified
 exchanges across a relay rotation. It removed both synthetic fixtures and all
 temporary capability. This evidence does not authorize public ingress,
 additional live requests, destroy, or production changes.
+
+The separate [`browser-relay/`](browser-relay/) package now freezes the first
+closed live topology, cost, signing-key and rollback matrix. It records twelve
+pending cases and seven open implementation preconditions. It contains no
+deployer or result and does not change the private cloud baseline described
+below.
 
 ## Current truth
 
@@ -229,6 +235,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`probe/`](probe/) | Isolated Workflows API and one fixed, unscheduled, keyless internal discovery probe | Applied and consumed; exactly two failures followed by one validated HTTP 200 discovery response |
 | [`firebase-auth/`](firebase-auth/) | Closed Firebase Authentication initialization with no end-user sign-in provider | Non-deletable resource initialized, state-adopted, reconciled, and independently validated |
 | [`auth-probe/`](auth-probe/) | Guarded audience-bound user-relay Workflow, internal verifier and sanitized evidence | Generation 3 succeeded once and retired; both fixtures and every temporary capability are absent; all nine one-shot roles are disabled |
+| [`browser-relay/`](browser-relay/) | Closed live browser, two-relay, signing-key and rollback acceptance plan | Reviewed but not deployed; every `LIVE-*` case is pending and the package grants no cloud mutation |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
 | [`TEARDOWN.md`](TEARDOWN.md) | Manual recovery and teardown rehearsal | Documentation only |
@@ -275,7 +282,7 @@ Repository validation itself costs nothing. Planning adds only bounded API
 reads, temporary locks, and short-lived private saved-plan objects. The state
 bucket currently stores the 61,864-byte bootstrap state, the 53,619-byte
 complete foundation state, the 49,283-byte workload state, the 13,596-byte probe
-state, the 11,010-byte Firebase Auth state, the 16,821-byte Auth-probe state, and
+state, the 11,010-byte Firebase Auth state, the 35,312-byte Auth-probe state, and
 recovery generations across all six Terraform prefixes. The live Firestore database is the project's
 free-tier database; the five secret containers now each have one enabled
 version. Secret Manager versions, the software KMS key version, Storage and
@@ -475,3 +482,18 @@ token-refresh integration, trusted-source/edge admission, the managed-service
 fault matrix, monitoring and billing-alert validation, secret and signing-key
 rotation, migration rehearsal, and every broader `STAGE-*` observation remain
 open blockers.
+
+The digest-pinned [`browser-relay/plan.json`](browser-relay/plan.json) now
+selects the bounded shape for the next work: the existing Hosting `web.app`
+origin, temporary direct provider endpoints, two scale-0..1 no-role relays, a
+local unscheduled three-engine runner, one execution and a maximum twenty-minute
+public window. It assumes no free tier and stops at a EUR 1 projected increment,
+inside the separately authorized EUR 5 monthly boundary. App Engine, an
+external load balancer, Cloud Armor, VPC and DNS changes are absent.
+
+No live case may start yet. The production runtime must first support an active
+plus retiring public signing key, the real browser App Check provider must be
+inventoried and registered, and separate guarded implementations must exist for
+the temporary edge transition, relays, runner, metrics and rollback. The plan
+records these as open preconditions instead of promoting local fixtures to live
+evidence.
