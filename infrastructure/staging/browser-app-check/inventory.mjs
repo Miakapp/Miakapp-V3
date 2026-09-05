@@ -17,6 +17,7 @@ import {
 import {
   verifiedOperatorSession,
 } from './cli.mjs';
+import { APP_CHECK_SITE_KEY_SHA256 } from './registration-contract.mjs';
 
 const MAXIMUM_RESPONSE_BYTES = 8 * 1024 * 1024;
 const RECAPTCHA_KEY_NAME = new RegExp(
@@ -131,6 +132,26 @@ export function validateUnregisteredAppCheckConfig(value) {
     token_ttl: value.tokenTtl,
     minimum_valid_score: value.riskAnalysis.minValidScore,
     site_key_configured: false,
+  });
+}
+
+export function validateRegisteredAppCheckConfig(value, recaptchaKey) {
+  exactKeys(value, ['name', 'riskAnalysis', 'siteKey', 'tokenTtl'], 'App Check configuration');
+  exactKeys(value.riskAnalysis, ['minValidScore'], 'App Check risk analysis');
+  const key = validateNormalizedRecaptchaKey(recaptchaKey);
+  if (value.name !== FIREBASE_APP_CONFIG_NAME
+    || value.tokenTtl !== INTENDED_TOKEN_TTL
+    || value.riskAnalysis.minValidScore !== DEFAULT_RISK_SCORE
+    || value.siteKey !== key.name.split('/').at(-1)) {
+    reject('App Check configuration does not match the reviewed registered provider');
+  }
+  return Object.freeze({
+    name: value.name,
+    token_ttl: value.tokenTtl,
+    minimum_valid_score: value.riskAnalysis.minValidScore,
+    site_key_sha256: sha256(Buffer.from(value.siteKey, 'utf8')),
+    recaptcha_key_resource_name_sha256: key.name_sha256,
+    site_key_configured: true,
   });
 }
 
@@ -398,8 +419,75 @@ export function validateBrowserAppCheckKeyInventory(value) {
   return Object.freeze(value);
 }
 
-export async function observeBrowserAppCheckInventory(session) {
-  const operator = session ?? await verifiedOperatorSession();
+export function validateCurrentBrowserAppCheckKeyInventory(value) {
+  const inventory = validateBrowserAppCheckKeyInventory(value);
+  const key = inventory.recaptcha_keys[0];
+  if (key.name_sha256 !== '997f375ee6db0535dd3934dcc6ffb941f10efd5516e29b27c4caa6b8157851fb'
+    || key.create_time !== '2026-09-05T08:23:36Z'
+    || inventory.recaptcha_asset_keys.length !== 1) {
+    reject('Browser App Check key inventory is not the exact registration prerequisite');
+  }
+  return inventory;
+}
+
+export function validateBrowserAppCheckRegistrationInventory(value) {
+  exactKeys(value, [
+    'schema',
+    'project_id',
+    'project_number',
+    'firebase_web_app',
+    'recaptcha_api_enabled',
+    'recaptcha_key_inventory',
+    'recaptcha_keys',
+    'recaptcha_asset_inventory',
+    'recaptcha_asset_keys',
+    'app_check',
+    'service_enforcement_records',
+    'debug_tokens',
+  ], 'Browser App Check registration inventory');
+  if (value.schema !== 'miakapp.staging-browser-app-check-registration-inventory/1'
+    || value.project_id !== PROJECT_ID
+    || value.project_number !== PROJECT_NUMBER
+    || !isDeepStrictEqual(value.firebase_web_app, {
+      app_id: FIREBASE_APP_ID,
+      name: FIREBASE_APP_NAME,
+      display_name: FIREBASE_APP_DISPLAY_NAME,
+      platform: 'WEB',
+      state: 'ACTIVE',
+    })
+    || value.recaptcha_api_enabled !== true
+    || value.recaptcha_key_inventory !== 'readable'
+    || !Array.isArray(value.recaptcha_keys)
+    || value.recaptcha_keys.length !== 1
+    || value.recaptcha_asset_inventory !== 'readable_eventually_consistent'
+    || !Array.isArray(value.recaptcha_asset_keys)
+    || value.recaptcha_asset_keys.length !== 1
+    || value.service_enforcement_records !== 0
+    || value.debug_tokens !== 0) {
+    reject('Browser App Check registration inventory has drifted from the reviewed boundary');
+  }
+  const key = value.recaptcha_keys[0];
+  validateNormalizedRecaptchaKey(key);
+  if (key.name_sha256 !== '997f375ee6db0535dd3934dcc6ffb941f10efd5516e29b27c4caa6b8157851fb'
+    || key.create_time !== '2026-09-05T08:23:36Z'
+    || !isDeepStrictEqual(value.app_check, {
+      name: FIREBASE_APP_CONFIG_NAME,
+      token_ttl: INTENDED_TOKEN_TTL,
+      minimum_valid_score: DEFAULT_RISK_SCORE,
+      site_key_sha256: APP_CHECK_SITE_KEY_SHA256,
+      recaptcha_key_resource_name_sha256: key.name_sha256,
+      site_key_configured: true,
+    })
+    || value.recaptcha_asset_keys.some((assetName) => {
+      if (typeof assetName !== 'string' || !RECAPTCHA_ASSET_NAME.test(assetName)) return true;
+      return assetName.split('/').at(-1) !== key.name.split('/').at(-1);
+    })) {
+    reject('Registered App Check provider does not match the exact staging key');
+  }
+  return Object.freeze(value);
+}
+
+async function observeBrowserAppCheckInventoryWithConfig(operator, validateConfig) {
   if (!plainObject(operator) || typeof operator.accessToken !== 'string') {
     reject('Browser App Check inventory requires a verified operator session');
   }
@@ -443,7 +531,7 @@ export async function observeBrowserAppCheckInventory(session) {
       : Object.freeze(keys.map(({ name }) => name).sort()),
     recaptcha_asset_inventory: 'readable_eventually_consistent',
     recaptcha_asset_keys: Object.freeze(assetKeys),
-    app_check: validateUnregisteredAppCheckConfig(config),
+    app_check: validateConfig(config),
     service_enforcement_records: validateEmptyCollection(
       services,
       'services',
@@ -455,6 +543,14 @@ export async function observeBrowserAppCheckInventory(session) {
       'App Check debug-token inventory',
     ),
   });
+}
+
+export async function observeBrowserAppCheckInventory(session) {
+  const operator = session ?? await verifiedOperatorSession();
+  return observeBrowserAppCheckInventoryWithConfig(
+    operator,
+    validateUnregisteredAppCheckConfig,
+  );
 }
 
 export async function observeBrowserAppCheckKeyInventory(session) {
@@ -481,4 +577,60 @@ export async function observeBrowserAppCheckKeyInventory(session) {
     schema: 'miakapp.staging-browser-app-check-key-inventory/1',
     recaptcha_keys: Object.freeze(afterKeys),
   });
+}
+
+export async function observeBrowserAppCheckRegistrationInventory(session) {
+  const operator = session ?? await verifiedOperatorSession();
+  if (!plainObject(operator) || typeof operator.accessToken !== 'string') {
+    reject('Browser App Check registration inventory requires a verified operator session');
+  }
+  const beforeKeys = (await recaptchaKeys(operator.accessToken))
+    .map(validateRecaptchaKeyRecord)
+    .sort((left, right) => left.name.localeCompare(right.name));
+  if (beforeKeys.length !== 1) {
+    reject('Browser App Check registration requires exactly one reCAPTCHA key');
+  }
+  const base = await observeBrowserAppCheckInventoryWithConfig(
+    operator,
+    (config) => validateRegisteredAppCheckConfig(config, beforeKeys[0]),
+  );
+  const afterKeys = (await recaptchaKeys(operator.accessToken))
+    .map(validateRecaptchaKeyRecord)
+    .sort((left, right) => left.name.localeCompare(right.name));
+  if (!isDeepStrictEqual(beforeKeys, afterKeys)
+    || !isDeepStrictEqual(
+      base.recaptcha_keys.map(canonicalRecaptchaKeyName),
+      afterKeys.map(({ name }) => name),
+    )) {
+    reject('Authoritative reCAPTCHA key inventory changed during registration observation');
+  }
+  return validateBrowserAppCheckRegistrationInventory(Object.freeze({
+    ...base,
+    schema: 'miakapp.staging-browser-app-check-registration-inventory/1',
+    recaptcha_keys: Object.freeze(afterKeys),
+  }));
+}
+
+export async function observeBrowserAppCheckRegistrationRecoveryInventory(session) {
+  try {
+    const inventory = await observeBrowserAppCheckRegistrationInventory(session);
+    return Object.freeze({
+      provider_status: 'registered',
+      inventory,
+    });
+  } catch {
+    // A second, independently strict observation distinguishes an unregistered
+    // provider from a transient error or foreign provider configuration.
+  }
+  try {
+    const inventory = validateCurrentBrowserAppCheckKeyInventory(
+      await observeBrowserAppCheckKeyInventory(session),
+    );
+    return Object.freeze({
+      provider_status: 'unregistered',
+      inventory,
+    });
+  } catch {
+    return reject('Live App Check provider matches neither reviewed recovery profile');
+  }
 }

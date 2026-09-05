@@ -661,8 +661,15 @@ current consumer.
     domain-restricted score key are live and converged, with an atomic private
     GCS claim preventing concurrent independent bundles from repeating
     creation. Their consumed entrypoints are retired and sanitized evidence is
-    committed; App Check registration remains a separate non-deletable gate.
-    Next implement the browser App Check provider,
+    committed. The separate non-deletable App Check registration gate is now
+    implemented with two atomic global claims, exact direct-cloud sandwiches and
+    a no-replay recovery path. The distinct provider-attempt claim serializes
+    even copied bundles and permits the exact saved plan only when a claimed
+    operation demonstrably stopped before that global boundary; registered
+    ambiguous outcomes use fresh one-shot child bundles for
+    import, state-only reimport or output reconciliation. It is not yet applied.
+    Next execute and
+    evidence that exact provider registration, then implement the
     temporary edge, two relays,
     three-engine runner and rollback guards. Execute the matrix once before
     wiring the real client and opaque broker into the production web shell.

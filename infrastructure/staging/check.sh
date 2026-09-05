@@ -126,9 +126,17 @@ node --check infrastructure/staging/browser-app-check/key-apply.mjs
 node --check infrastructure/staging/browser-app-check/key-contract.mjs
 node --check infrastructure/staging/browser-app-check/key-plan.mjs
 node --check infrastructure/staging/browser-app-check/plan.mjs
+node --check infrastructure/staging/browser-app-check/registration-apply.mjs
+node --check infrastructure/staging/browser-app-check/registration-claim.mjs
+node --check infrastructure/staging/browser-app-check/registration-contract.mjs
+node --check infrastructure/staging/browser-app-check/registration-plan.mjs
+node --check infrastructure/staging/browser-app-check/registration-recovery-apply.mjs
+node --check infrastructure/staging/browser-app-check/registration-recovery-plan.mjs
+node --check infrastructure/staging/browser-app-check/registration-recovery.mjs
 node --check infrastructure/staging/browser-app-check/state.mjs
 node --check infrastructure/staging/browser-app-check/validate-key-plan.mjs
 node --check infrastructure/staging/browser-app-check/validate-plan.mjs
+node --check infrastructure/staging/browser-app-check/validate-registration-plan.mjs
 node infrastructure/staging/browser-app-check/evidence.mjs \
   infrastructure/staging/browser-app-check/result.json
 bash -n \
@@ -166,12 +174,17 @@ bash -n \
   infrastructure/staging/browser-app-check/apply.sh \
   infrastructure/staging/browser-app-check/key-apply.sh \
   infrastructure/staging/browser-app-check/key-plan.sh \
-  infrastructure/staging/browser-app-check/plan.sh
+  infrastructure/staging/browser-app-check/plan.sh \
+  infrastructure/staging/browser-app-check/registration-apply.sh \
+  infrastructure/staging/browser-app-check/registration-plan.sh \
+  infrastructure/staging/browser-app-check/registration-recovery-apply.sh \
+  infrastructure/staging/browser-app-check/registration-recovery-plan.sh
 node --test \
   infrastructure/staging/test/activation.test.mjs \
   infrastructure/staging/test/auth-probe.test.mjs \
   infrastructure/staging/test/browser-app-check-api.test.mjs \
   infrastructure/staging/test/browser-app-check-key.test.mjs \
+  infrastructure/staging/test/browser-app-check-registration.test.mjs \
   infrastructure/staging/test/browser-relay.test.mjs \
   infrastructure/staging/test/bootstrap.test.mjs \
   infrastructure/staging/test/firebase-auth.test.mjs \

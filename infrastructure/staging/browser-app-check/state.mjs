@@ -1,15 +1,28 @@
 import { isDeepStrictEqual } from 'node:util';
 
 import {
+  FIREBASE_APP_CONFIG_NAME,
+  FIREBASE_APP_ID,
   INITIAL_TERRAFORM_STATE,
   PROJECT_ID,
   TERRAFORM_VERSION,
   sha256,
 } from './contract.mjs';
-import { API_PREREQUISITE_TERRAFORM_STATE } from './key-contract.mjs';
+import {
+  API_PREREQUISITE_TERRAFORM_STATE,
+  KEY_PREREQUISITE_TERRAFORM_STATE,
+} from './key-contract.mjs';
 import {
   browserAppCheckKeyOutput,
 } from './validate-key-plan.mjs';
+import {
+  APP_CHECK_REGISTRATION_TTL,
+  APP_CHECK_SITE_KEY_SHA256,
+  RECAPTCHA_KEY_RESOURCE_NAME_SHA256,
+} from './registration-contract.mjs';
+import {
+  browserAppCheckRegistrationOutput,
+} from './validate-registration-plan.mjs';
 
 const STATE_BUCKET = 'miakapp-v4-staging-tfstate-1072737219170';
 const STATE_LINEAGE = '8193b94a-1d8f-4143-a878-29342f91c0e2';
@@ -24,6 +37,14 @@ const STATE_RESOURCE_SHAPES = Object.freeze({
   key: Object.freeze([
     'data.google_firebase_web_app.staging@provider["registry.terraform.io/hashicorp/google-beta"]',
     'data.terraform_remote_state.foundation@provider["terraform.io/builtin/terraform"]',
+    'managed.google_project_service.recaptcha_enterprise@provider["registry.terraform.io/hashicorp/google"]',
+    'managed.google_recaptcha_enterprise_key.browser_app_check@provider["registry.terraform.io/hashicorp/google"]',
+    'managed.terraform_data.browser_app_check_guard@provider["terraform.io/builtin/terraform"]',
+  ]),
+  registration: Object.freeze([
+    'data.google_firebase_web_app.staging@provider["registry.terraform.io/hashicorp/google-beta"]',
+    'data.terraform_remote_state.foundation@provider["terraform.io/builtin/terraform"]',
+    'managed.google_firebase_app_check_recaptcha_enterprise_config.browser_app_check@provider["registry.terraform.io/hashicorp/google-beta"]',
     'managed.google_project_service.recaptcha_enterprise@provider["registry.terraform.io/hashicorp/google"]',
     'managed.google_recaptcha_enterprise_key.browser_app_check@provider["registry.terraform.io/hashicorp/google"]',
     'managed.terraform_data.browser_app_check_guard@provider["terraform.io/builtin/terraform"]',
@@ -236,6 +257,7 @@ export function validateBrowserAppCheckKeyState(metadata, bytes) {
     || !isDeepStrictEqual(key.android_settings, [])
     || !isDeepStrictEqual(key.ios_settings, [])
     || !isDeepStrictEqual(key.testing_options, [])
+    || key.timeouts !== null
     || !isDeepStrictEqual(key.waf_settings, [])
     || !Array.isArray(key.web_settings)
     || key.web_settings.length !== 1) {
@@ -314,6 +336,165 @@ export function validateBrowserAppCheckKeyState(metadata, bytes) {
   });
 }
 
+export function validateCurrentBrowserAppCheckKeyState(metadata, bytes) {
+  const observed = validateBrowserAppCheckKeyState(metadata, bytes);
+  const {
+    recaptcha_key_name: ignoredKeyName,
+    ...sanitized
+  } = observed;
+  void ignoredKeyName;
+  if (!isDeepStrictEqual(sanitized, KEY_PREREQUISITE_TERRAFORM_STATE)) {
+    reject('Browser App Check key state is not the exact registration prerequisite');
+  }
+  return KEY_PREREQUISITE_TERRAFORM_STATE;
+}
+
+function registrationOutputType(value) {
+  return ['object', Object.fromEntries(
+    Object.entries(value).map(([field, entry]) => [
+      field,
+      Array.isArray(entry)
+        ? ['list', 'string']
+        : typeof entry === 'boolean' ? 'bool' : typeof entry,
+    ]),
+  )];
+}
+
+export function validateBrowserAppCheckRegistrationState(metadata, bytes) {
+  if (!plainObject(metadata) || metadata.bucket !== STATE_BUCKET
+    || metadata.name !== KEY_PREREQUISITE_TERRAFORM_STATE.object
+    || !/^\d+$/u.test(metadata.generation)
+    || BigInt(metadata.generation) <= BigInt(KEY_PREREQUISITE_TERRAFORM_STATE.generation)
+    || !/^\d+$/u.test(metadata.size)
+    || !Buffer.isBuffer(bytes)
+    || Number(metadata.size) !== bytes.byteLength
+    || bytes.byteLength === 0 || bytes.byteLength > MAXIMUM_STATE_BYTES) {
+    reject('Browser App Check registration state metadata is malformed');
+  }
+  const state = parseState(bytes, 'Browser App Check registration state');
+  const inventory = resourceShapes(state, 'Browser App Check registration state');
+  const keyResource = state.resources.find((resource) => resource.mode === 'managed'
+    && resource.type === 'google_recaptcha_enterprise_key'
+    && resource.name === 'browser_app_check');
+  const key = keyResource?.instances?.[0]?.attributes;
+  const configResource = state.resources.find((resource) => resource.mode === 'managed'
+    && resource.type === 'google_firebase_app_check_recaptcha_enterprise_config'
+    && resource.name === 'browser_app_check');
+  const config = configResource?.instances?.[0]?.attributes;
+  const expectedId = `projects/${PROJECT_ID}/apps/${FIREBASE_APP_ID}/recaptchaEnterpriseConfig`;
+  if (!plainObject(key) || typeof key.id !== 'string'
+    || sha256(Buffer.from(key.id, 'utf8')) !== RECAPTCHA_KEY_RESOURCE_NAME_SHA256
+    || typeof key.name !== 'string'
+    || !isDeepStrictEqual(Object.keys(key).sort(), [
+      'android_settings',
+      'create_time',
+      'deletion_policy',
+      'display_name',
+      'effective_labels',
+      'id',
+      'ios_settings',
+      'labels',
+      'name',
+      'project',
+      'terraform_labels',
+      'testing_options',
+      'timeouts',
+      'waf_settings',
+      'web_settings',
+    ].sort())
+    || key.id !== `projects/${PROJECT_ID}/keys/${key.name}`
+    || key.project !== PROJECT_ID
+    || key.display_name !== 'Miakapp V4 staging browser App Check'
+    || key.create_time !== '2026-09-05T08:23:36Z'
+    || key.deletion_policy !== 'DELETE'
+    || !isDeepStrictEqual(key.labels, {
+      environment: 'staging',
+      'managed-by': 'terraform',
+      product: 'miakapp-v4',
+      purpose: 'browser-app-check',
+    })
+    || !isDeepStrictEqual(key.effective_labels, key.labels)
+    || !isDeepStrictEqual(key.terraform_labels, key.labels)
+    || !isDeepStrictEqual(key.android_settings, [])
+    || !isDeepStrictEqual(key.ios_settings, [])
+    || !isDeepStrictEqual(key.testing_options, [])
+    || key.timeouts !== null
+    || !isDeepStrictEqual(key.waf_settings, [])
+    || !Array.isArray(key.web_settings)
+    || key.web_settings.length !== 1
+    || !plainObject(key.web_settings[0])
+    || Object.keys(key.web_settings[0]).some((field) => ![
+      'allow_all_domains',
+      'allow_amp_traffic',
+      'allowed_domains',
+      'challenge_security_preference',
+      'challenge_settings',
+      'integration_type',
+    ].includes(field))
+    || key.web_settings[0].allow_all_domains !== false
+    || key.web_settings[0].allow_amp_traffic !== false
+    || !isDeepStrictEqual(key.web_settings[0].allowed_domains, ['miakapp-v4-staging.web.app'])
+    || ![undefined, '', 'CHALLENGE_SECURITY_PREFERENCE_UNSPECIFIED']
+      .includes(key.web_settings[0].challenge_security_preference)
+    || !isDeepStrictEqual(key.web_settings[0].challenge_settings, [])
+    || key.web_settings[0].integration_type !== 'SCORE'
+    || !plainObject(config)
+    || !isDeepStrictEqual(Object.keys(config).sort(), [
+      'app_id',
+      'id',
+      'name',
+      'project',
+      'site_key',
+      'timeouts',
+      'token_ttl',
+    ].sort())
+    || config.app_id !== FIREBASE_APP_ID
+    || config.id !== expectedId
+    || config.name !== FIREBASE_APP_CONFIG_NAME
+    || config.project !== PROJECT_ID
+    || config.site_key !== key.name
+    || sha256(Buffer.from(config.site_key, 'utf8')) !== APP_CHECK_SITE_KEY_SHA256
+    || config.timeouts !== null
+    || config.token_ttl !== APP_CHECK_REGISTRATION_TTL) {
+    reject('Browser App Check registration state resource has drifted');
+  }
+  const expectedOutput = browserAppCheckRegistrationOutput();
+  const output = state.outputs.staging_browser_app_check_key;
+  if (!plainObject(output)
+    || !isDeepStrictEqual(Object.keys(output).sort(), ['type', 'value'])
+    || !isDeepStrictEqual(output.value, expectedOutput)
+    || !isDeepStrictEqual(output.type, registrationOutputType(expectedOutput))) {
+    reject('Browser App Check registration state output does not match the reviewed result');
+  }
+  if (!Number.isSafeInteger(state.serial)
+    || state.serial <= KEY_PREREQUISITE_TERRAFORM_STATE.serial
+    || !isDeepStrictEqual(state.check_results, PASSED_GUARD_CHECK_RESULTS)
+    || !isDeepStrictEqual(Object.keys(state.outputs), ['staging_browser_app_check_key'])
+    || !isDeepStrictEqual(inventory.shapes, [...STATE_RESOURCE_SHAPES.registration].sort())
+    || inventory.tainted_resources !== 0) {
+    reject('Browser App Check registration state does not match the expected post-apply inventory');
+  }
+  return Object.freeze({
+    schema: 'miakapp.staging-browser-app-check-registration-state/1',
+    object: metadata.name,
+    generation: metadata.generation,
+    size_bytes: bytes.byteLength,
+    sha256: sha256(bytes),
+    terraform_version: state.terraform_version,
+    serial: state.serial,
+    lineage_sha256: KEY_PREREQUISITE_TERRAFORM_STATE.lineage_sha256,
+    managed_resources: 4,
+    data_resources: 2,
+    outputs: 1,
+    tainted_resources: 0,
+    recaptcha_key_name_sha256: RECAPTCHA_KEY_RESOURCE_NAME_SHA256,
+    app_check_config_name: config.name,
+    app_check_config_id: config.id,
+    app_check_site_key_sha256: APP_CHECK_SITE_KEY_SHA256,
+    app_check_token_ttl: config.token_ttl,
+  });
+}
+
 async function observeState(session, generation) {
   if (!plainObject(session) || typeof session.accessToken !== 'string') {
     reject('Browser App Check state inventory requires a verified operator session');
@@ -358,8 +539,28 @@ export async function observeBrowserAppCheckKeyState(session) {
   return validateBrowserAppCheckKeyState(observed.metadata, observed.bytes);
 }
 
+export async function observeCurrentBrowserAppCheckKeyState(session) {
+  const observed = await readBrowserAppCheckKeyStateBytes(session);
+  return validateCurrentBrowserAppCheckKeyState(observed.metadata, observed.bytes);
+}
+
+export async function observeBrowserAppCheckRegistrationState(session) {
+  const observed = await observeState(session);
+  return validateBrowserAppCheckRegistrationState(observed.metadata, observed.bytes);
+}
+
+export async function readBrowserAppCheckRegistrationStateBytes(session) {
+  const observed = await observeState(session);
+  validateBrowserAppCheckRegistrationState(observed.metadata, observed.bytes);
+  return observed;
+}
+
 export async function readBrowserAppCheckKeyStateBytes(session) {
   const observed = await observeState(session);
   validateBrowserAppCheckKeyState(observed.metadata, observed.bytes);
   return observed;
+}
+
+export async function readBrowserAppCheckStateBytes(session) {
+  return observeState(session);
 }
