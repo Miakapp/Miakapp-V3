@@ -1369,6 +1369,14 @@ test('pins a no-secret one-shot audience-bound user-relay Workflow', () => {
   assert.match(WORKFLOW_SOURCE, /idToken: \$\{firebase_id_token\}/);
   assert.doesNotMatch(WORKFLOW_SOURCE, /projects\/miakapp-v4-staging\/accounts:delete/);
   assert.doesNotMatch(terraformSource, /firebaseauth\.users\.delete/);
+  assert.match(WORKFLOW_SOURCE, /auth_custom_token_claims:\n(?:\s{22}.+\n){6}/u);
+  assert.match(WORKFLOW_SOURCE, /app_check_custom_token_claims:\n(?:\s{22}.+\n){7}/u);
+  assert.doesNotMatch(WORKFLOW_SOURCE, /json\.encode_to_string\(\{/u);
+  for (const line of WORKFLOW_SOURCE.split('\n').filter((source) => (
+    source.includes('${') && source.slice(source.indexOf('${'), source.lastIndexOf('}')).includes(':')
+  ))) {
+    assert.match(line, /:\s+'\$\{.*\}'$/u);
+  }
   assert.match(WORKFLOW_SOURCE, /len\(jwks_response\.body\) != 1/);
   assert.match(WORKFLOW_SOURCE, /len\(jwks_response\.body\.keys\[0\]\) != 6/);
   const expressions = WORKFLOW_SOURCE.split('\n').flatMap((line, index) => {
