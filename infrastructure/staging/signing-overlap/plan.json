@@ -1,0 +1,86 @@
+{
+  "schema": "miakapp.staging-signing-overlap-plan/1",
+  "revision": 1,
+  "state": "reviewed_key_version_absent",
+  "target": {
+    "project_id": "miakapp-v4-staging",
+    "project_number": "1072737219170",
+    "region": "europe-west9",
+    "data_policy": "synthetic_only",
+    "forbidden_project_ids": [
+      "demo-miakapp-v4",
+      "miakapp-3",
+      "miakapp-v4"
+    ],
+    "public_ingress_authorized": false,
+    "live_request_authorized": false
+  },
+  "key": {
+    "name": "projects/miakapp-v4-staging/locations/europe-west9/keyRings/miakapp-v4-staging/cryptoKeys/access-token-signing",
+    "purpose": "ASYMMETRIC_SIGN",
+    "algorithm": "EC_SIGN_ED25519",
+    "protection_level": "SOFTWARE",
+    "destroy_scheduled_duration": "2592000s",
+    "automatic_rotation": false,
+    "expected_existing_version": "projects/miakapp-v4-staging/locations/europe-west9/keyRings/miakapp-v4-staging/cryptoKeys/access-token-signing/cryptoKeyVersions/1",
+    "expected_created_version": "projects/miakapp-v4-staging/locations/europe-west9/keyRings/miakapp-v4-staging/cryptoKeys/access-token-signing/cryptoKeyVersions/2",
+    "maximum_versions_after_creation": 2
+  },
+  "baseline": {
+    "reviewed_repository_commit": "8f098afb40f82aa4511f3a911a4357cb7e51da8e",
+    "deployed_repository_commit": "e42cdd70f812580a6070f0e850daa04dbe0cee42",
+    "runtime_config_sha256": "20be750358ffbc2136bab26bca6338b430ea6480ae9874f3fe5e7132c5e0db10",
+    "runtime_schema": "miakapp.production-runtime/2",
+    "current_kid": "staging-access-token-v1",
+    "published_kids": [
+      "staging-access-token-v1"
+    ],
+    "kms_version_count": 1,
+    "control_plane_ingress": "ALLOW_INTERNAL_ONLY",
+    "control_plane_unauthenticated_invokers": 0
+  },
+  "mutation": {
+    "operation": "create-second-signing-key-version",
+    "transport": "single_direct_rest_post",
+    "maximum_kms_version_creations": 1,
+    "maximum_coordination_objects_created": 2,
+    "automatic_retry": false,
+    "created_version_enabled": true,
+    "existing_version_changed": false,
+    "runtime_changed_by_creation": false,
+    "terraform_state_changed_by_creation": false,
+    "key_version_managed_outside_terraform": true
+  },
+  "coordination": {
+    "bucket": "miakapp-v4-staging-tfstate-1072737219170",
+    "gate_object": "terraform/signing-overlap/operations/version-2-create-gate.json",
+    "attempt_object": "terraform/signing-overlap/operations/version-2-create-attempt.json",
+    "creation_precondition": "ifGenerationMatch=0",
+    "claims_contain_credentials": false,
+    "claims_are_deleted_by_driver": false,
+    "attempt_claim_is_irreversible_boundary": true
+  },
+  "rollout": {
+    "stages": [
+      "create_version_2_without_runtime_change",
+      "prepublish_versions_1_and_2_with_version_1_current",
+      "observe_prepublication_for_at_least_60_seconds",
+      "activate_version_2_while_retaining_version_1",
+      "retain_version_1_for_at_least_330_seconds",
+      "retire_version_1_only_after_acceptance"
+    ],
+    "prepublication_seconds": 60,
+    "retiring_key_retention_seconds": 330,
+    "maximum_published_keys": 2,
+    "republish_removed_private_key": false,
+    "version_1_destruction_authorized": false
+  },
+  "cost": {
+    "currency": "USD",
+    "maximum_incremental_monthly_usd": 0.06,
+    "pricing_checked_on": "2026-09-05",
+    "pricing_source": "https://cloud.google.com/security/products/security-key-management",
+    "key_admin_operations_free": true,
+    "stress_test": false
+  }
+}
