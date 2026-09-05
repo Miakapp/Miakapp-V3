@@ -455,8 +455,12 @@ function validateVerifierAccount(value, address) {
 function validateAssetInventoryService(value, address) {
   exact(value.project, PROJECT_ID, `${address}.project`);
   exact(value.service, CLOUD_ASSET_SERVICE, `${address}.service`);
-  exact(value.disable_dependent_services, false, `${address}.disable_dependent_services`);
-  exact(value.disable_on_destroy, false, `${address}.disable_on_destroy`);
+  if (![false, null].includes(value.disable_dependent_services)) {
+    reject(`${address}.disable_dependent_services does not match the reviewed value`);
+  }
+  if (![false, null].includes(value.disable_on_destroy)) {
+    reject(`${address}.disable_on_destroy does not match the reviewed value`);
+  }
   if (value.id !== undefined) exact(value.id, `${PROJECT_ID}/${CLOUD_ASSET_SERVICE}`, `${address}.id`);
 }
 
