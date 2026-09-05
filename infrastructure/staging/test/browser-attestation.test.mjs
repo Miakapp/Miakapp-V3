@@ -884,3 +884,23 @@ test('pins the exact sanitized result of the consumed v3 preflight', () => {
   tampered.hosting.site_ever_released = true;
   assert.throws(() => validatePreflightEvidenceValue(tampered));
 });
+
+test('pins the exact sanitized result of the retired automated browser operation', () => {
+  const path = new URL('../browser-attestation/preflight-v4-result.json', import.meta.url);
+  const evidence = validatePreflightEvidence(path);
+  assert.equal(evidence.state, 'attestation_failed_after_verified_publication');
+  assert.equal(evidence.failure_stage, 'browser_attestation');
+  assert.equal(evidence.hosting.artifact_files_verified, 2);
+  assert.equal(evidence.hosting.artifact_content_bytes_verified, 40716);
+  assert.equal(evidence.hosting.releases_created, 2);
+  assert.equal(evidence.hosting.site_disabled, true);
+  assert.equal(evidence.hosting.runner_http_status_after_cleanup, 404);
+  assert.equal(evidence.app_check.automated_browser_invocations, 1);
+  assert.equal(evidence.app_check.real_browser_attestation, false);
+  assert.equal(evidence.app_check.enforcement_records, 0);
+  assert.equal(evidence.app_check.debug_tokens, 0);
+  assert.equal(evidence.retry_authorized, false);
+  const tampered = structuredClone(evidence);
+  tampered.app_check.real_browser_attestation = true;
+  assert.throws(() => validatePreflightEvidenceValue(tampered));
+});
