@@ -27,6 +27,7 @@ import {
   validateToolchain,
 } from './cli.mjs';
 import { validateAuthProbeRoot } from './guard.mjs';
+import { observeCloudAssetApi } from './inventory.mjs';
 import { readAndValidateAuthProbePlan } from './validate-plan.mjs';
 
 const PLAN_CONFIRMATION = 'MIAKAPP_STAGING_AUTH_PROBE_PLAN_CONFIRMATION';
@@ -45,6 +46,7 @@ async function main() {
   validateStagingManifest();
   const repositoryCommit = verifyExactMain(repositoryRoot);
   verifiedOperatorEmail(repositoryRoot);
+  observeCloudAssetApi();
 
   const bundle = createPrivateAuthProbeBundle(process.argv[2], repositoryRoot);
   await validateFirebaseAuthConvergence(bundle, 'plan');

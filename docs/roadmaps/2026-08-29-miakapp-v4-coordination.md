@@ -323,7 +323,7 @@ application or public ingress. One scale-to-zero Gen 2 Function and its backing
 Cloud Run service are now active with internal-only ingress. An unscheduled
 private Workflow returned the exact discovery document after two controlled
 failures, without opening public ingress or making an application mutation.
-Credential-free checks validate all four Terraform roots with mock providers.
+Credential-free checks validate all six Terraform roots with mock providers.
 
 The one-shot protected recovery is complete and its active workflow is removed.
 PR #30 configuration commit
@@ -397,6 +397,15 @@ requests carrying a real Admin custom-provider App Check token returned HTTP
 browser attestation. The identity was deleted and independently verified absent;
 the Workflow and both temporary IAM bindings were retired. Only closed,
 digest-pinned result and retirement summaries are public.
+
+A twelfth staging slice deploys the merged audience-bound user-relay exchange
+as source-only revision `control-plane-00004-yis`. Its saved plan replaced only
+the deterministic source object and updated the Function and deployment guard
+in place. The plan converged to zero changes; independent inventory verified
+the copied source, internal-only ingress, scale 0..1, zero public invokers and
+zero user-managed keys without making a request. The earlier discovery and Auth/
+App Check probes remain historical evidence for revision
+`control-plane-00003-hum`; the bounded live user-relay acceptance probe is next.
 
 Deliverables:
 
@@ -567,7 +576,10 @@ current consumer.
    same-socket post-lease reauthentication path. The complete audience-bound
    local gate now adds an Auth-emulator user, signed synthetic App Check source,
    exact control-plane exchange, local relay verification and a no-overlap
-   authoritative handoff across two real relays. Live KMS signing-key and secret
+   authoritative handoff across two real relays. The merged exchange source is
+   now active on private staging revision `control-plane-00004-yis`; deployment
+   inventory made no request, so its bounded acceptance probe remains open. Live
+   KMS signing-key and secret
    rotation, browser App Check provider attestation, source/edge admission,
    monitoring, migration rehearsal and real staging fault evidence remain
    required before closing relay-integration and staging-only RFC 0004 Section
@@ -579,9 +591,10 @@ current consumer.
 10. **Done 2026-09-04** — replace the Firebase-direct relay credential with an
     audience/home/user/role-bound short lease, pin the real exchange and verifier,
     and prove a serialized two-relay routing handoff in Chromium.
-11. **Next** — deploy only the merged compatible revisions to the private staging
-    boundary and execute the bounded live source, signing, relay and rollback
-    acceptance matrix before wiring the client into the production web shell.
+11. **Next** — execute the bounded private user-relay exchange probe against the
+    deployed merged control plane, then design and run the separate live relay,
+    browser, signing and rollback acceptance matrix before wiring the client into
+    the production web shell.
 
 ## 9. Evidence that would change this plan
 

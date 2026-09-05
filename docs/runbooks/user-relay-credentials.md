@@ -3,7 +3,7 @@
 Date: 2026-09-04
 
 Status: local audience-bound control-plane, SDK and relay evidence complete;
-staging acceptance pending
+source deployed to private staging; bounded acceptance pending
 
 ## Purpose and safety boundary
 
@@ -140,6 +140,39 @@ Historical authorization strings and private plan directories are consumed
 evidence, not replay instructions. Generate the exact authorization from the
 fresh reviewed plan, apply once, then require a zero-change plan and independent
 source/revision inventory.
+
+That source-only phase is complete at merge commit
+`022f10e2dc15f32a8a6679b38ce7f1a04582e450`: deterministic source SHA-256
+`6674c0353ec9c73fcfe0d3a63d17850f057a5f2a547a5855989e28f011249b1e`
+is active on revision `control-plane-00004-yis`. The exact plan changed only the
+source object, Function and deployment guard, then converged to zero changes.
+Independent inventory made no Function request and retained internal-only
+ingress, scale 0..1, zero public invokers and zero user-managed keys. This is
+deployment evidence, not acceptance evidence for the exchange route.
+
+The bounded acceptance implementation, with zero delta to the control-plane
+workload, IAM and topology, now lives under
+[`../../infrastructure/staging/auth-probe/`](../../infrastructure/staging/auth-probe/).
+It uses an unscheduled Workflow for internal transport and a separate
+internal-only scale-to-zero verifier to validate both Ed25519 credentials
+without publishing token material. Four temporary least-privilege IAM bindings
+have a hard expiry, and the fixed private Home plus no-email Firebase user are
+deleted and independently checked. The reviewed implementation has not yet
+been applied or invoked; its exact saved plan and retirement remain mandatory.
+It intentionally retains the enabled Cloud Asset API, three disabled custom
+roles and one keyless no-role verifier identity after retirement.
+The verifier has one exact service-level binding for the probe identity, but is
+not described as Workflow-only: staging project inheritance also authorizes the
+Owner, two default Editor service accounts, and the Cloud Functions and Cloud
+Run service agents. Inventory must attest that closed five-principal inherited
+set and reject any additional service-level binding.
+
+Recovery is split when its inventory precondition is unavailable: Cloud Asset is
+enabled and imported by an API-only authorization, then the operator must render
+a fresh complete recovery. A soft-deleted probe role is not restored
+automatically. Cloud Asset IAM-policy results are eventually consistent and
+cannot authorize a safe undelete, so this exceptional case fails closed for
+manual investigation.
 
 The current staging inventory contains neither a browser runner nor two relay
 endpoints. Before the browser case below, prepare and review a separate topology,
