@@ -31,10 +31,10 @@ function rejects(mutator, pattern) {
 
 test('accepts the successful and retired private user-relay probe', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 60);
+  assert.equal(validated.revision, 61);
   assert.equal(
     validated.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rebased_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_prerequisite_declared_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rebased_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_reviewed_not_built_enforcement_disabled',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
@@ -54,6 +54,14 @@ test('accepts the successful and retired private user-relay probe', () => {
     'staging-apply': 'disabled',
     'staging-plan': 'disabled',
   });
+  assert.equal(
+    validated.bootstrap.enabled_service_apis.includes('containeranalysis.googleapis.com'),
+    true,
+  );
+  assert.equal(
+    validated.bootstrap.enabled_service_apis.includes('containerscanning.googleapis.com'),
+    false,
+  );
   assert.equal(validated.bootstrap.kms_key_rings.length, 1);
   assert.deepEqual(validated.bootstrap.secrets, [
     'miakapp-audit-hmac',
@@ -757,6 +765,45 @@ test('accepts the successful and retired private user-relay probe', () => {
   assert.equal(userRelayProbe.retained_disabled_custom_roles, 9);
   assert.equal(userRelayProbe.token_material_committed, false);
   assert.equal(userRelayProbe.raw_diagnostics_committed, false);
+  assert.deepEqual(validated.evidence.foundation_container_analysis_adoption, {
+    state: 'container_analysis_enabled_foundation_converged_scanning_disabled',
+    observed_at: '2026-09-05T23:33:50.000Z',
+    terraform_root: 'terraform',
+    configuration_commit: '9feaae67f6e72a32a8df2d5b8d8f777f4f7640f7',
+    terraform_version: '1.11.3',
+    private_plan_sha256: 'e0163206d78ad293f6d6c2e0067401858e27a50fcbe33984597205f81c16c297',
+    resource_address: 'google_project_service.required["containeranalysis.googleapis.com"]',
+    service: 'containeranalysis.googleapis.com',
+    deletion_policy: 'PREVENT',
+    result: { create: 1, update: 0, delete: 0 },
+    state_before: {
+      generation: '1788456706865449',
+      sha256: 'e2eca5fc0934a51a4c9a56650665285717772fd350b59e87d18b1ec2da04d8b0',
+      size_bytes: 53619,
+      serial: 6,
+      managed_resources: 33,
+      data_resources: 3,
+      outputs: 1,
+      lineage_sha256: '113390906103bdbefa4bac8b5d9549f7d867c38e8e9c4bef989977a12222c7d4',
+    },
+    state_after: {
+      generation: '1788650355101579',
+      sha256: 'd02467774f19e3bbd0a596113d843e4dac99b14558c3655cd370104d3e04c32d',
+      size_bytes: 54484,
+      serial: 7,
+      managed_resources: 34,
+      data_resources: 3,
+      outputs: 1,
+      lineage_sha256: '113390906103bdbefa4bac8b5d9549f7d867c38e8e9c4bef989977a12222c7d4',
+    },
+    container_analysis_api_enabled: true,
+    container_scanning_api_enabled: false,
+    convergence_plan_no_changes: true,
+    new_fixed_cost_services: 0,
+    apply_succeeded: true,
+    raw_plan_committed: false,
+    raw_state_committed: false,
+  });
   assert.deepEqual(validated.evidence.browser_relay_plan, {
     state: 'relay_process_admission_merged_root_reviewed_not_deployed',
     path: 'browser-relay/plan.json',
@@ -777,11 +824,13 @@ test('accepts the successful and retired private user-relay probe', () => {
     completed_cases: 0,
   });
   assert.deepEqual(validated.evidence.browser_relay_image, {
-    state: 'v1_consumed_verified_provenance_failed_not_deployable',
+    state: 'v1_failed_container_analysis_converged_v2_recovery_reviewed_not_built',
     profile_path: 'browser-relay-image/profile.json',
-    profile_sha256: '2afcfc7b5f0b9fb524a59bd81cd5dcd98f73bf58c2619640b6a42bbbd0958981',
-    result_path: 'browser-relay-image/result-v1.json',
-    result_sha256: 'c24b5cc5fe3a48a6a35365e6c404734aaf657832af8ce16c7a67c1c8e94ec1a9',
+    profile_sha256: '6ab86de257a4e85d51a47d528240b3862a79120d1383bab6a9092011abd3f76b',
+    v1_profile_path: 'browser-relay-image/profile-v1.json',
+    v1_profile_sha256: '2afcfc7b5f0b9fb524a59bd81cd5dcd98f73bf58c2619640b6a42bbbd0958981',
+    v1_result_path: 'browser-relay-image/result-v1.json',
+    v1_result_sha256: 'c24b5cc5fe3a48a6a35365e6c404734aaf657832af8ce16c7a67c1c8e94ec1a9',
     browser_relay_plan_sha256: '4a5c13999d9f7f328b1b8b867bbd86d4c5e80cb980d9eb1324028ea0e5785343',
     relay_services_profile_sha256: 'bc9b231cc9724f19a26ef5c3bbd6da6a69ec79b00cb976e77c73015d5db10db7',
     source_repository: 'https://github.com/Miakapp/Miakapp-Server.git',
@@ -789,15 +838,20 @@ test('accepts the successful and retired private user-relay probe', () => {
     source_tree: '0468ea08cd2d51b3e656c4adea9bb09b4a8a6ea1',
     source_archive_sha256: '93fd720736453e3555be625bbb993194f48a5388821169c939674b04088f158e',
     source_archive_bytes: 53098,
+    source_object_generation: '1788648564283151',
+    source_reuse_required: true,
+    source_upload_authorized: false,
     builder_digest: 'sha256:3d00b6c1a9b862621c30fc74d4f2abfc62bcbdee631ed3febd31e7edbdf6252c',
     machine_type: 'E2_MEDIUM',
     requested_verify_option: 'VERIFIED',
     maximum_builds: 1,
-    attempted_builds: 1,
-    private_image_present: true,
+    v1_attempted_builds: 1,
+    v2_attempted_builds: 0,
+    v2_claim_present: false,
+    v1_private_image_present: true,
     verified_image_present: false,
     deployment_authorized: false,
-    container_analysis_api_enabled: false,
+    container_analysis_api_enabled: true,
     container_scanning_api_enabled: false,
     relay_services: 0,
     public_ingress_active: false,
@@ -1046,6 +1100,15 @@ test('cross-checks manifest claims against all committed evidence artifacts', ()
     evidence.relayServicesProfile.pins.miakapp_server_commit,
     'df10674e034f30eec80760f5ec94bc108cff026f',
   );
+  assert.equal(evidence.browserRelayImageProfile.schema, 'miakapp.staging-browser-relay-image-profile/2');
+  assert.equal(
+    evidence.browserRelayImageV1Profile.schema,
+    'miakapp.staging-browser-relay-image-profile/1',
+  );
+  assert.equal(
+    evidence.browserRelayImageV1Result.state,
+    'build_and_smoke_succeeded_verified_provenance_failed_not_deployable',
+  );
 
   const workloadDigestDrift = manifest();
   workloadDigestDrift.evidence.workload_deployment.result_sha256 = '0'.repeat(64);
@@ -1126,6 +1189,22 @@ test('cross-checks manifest claims against all committed evidence artifacts', ()
     (error) => error instanceof StagingManifestError
       && /evidence\.browser_relay_image\.profile_path/.test(error.message),
   );
+
+  const browserRelayImageV1DigestDrift = manifest();
+  browserRelayImageV1DigestDrift.evidence.browser_relay_image.v1_profile_sha256 = '0'.repeat(64);
+  assert.throws(
+    () => validateCommittedEvidence(browserRelayImageV1DigestDrift),
+    (error) => error instanceof StagingManifestError
+      && /evidence\.browser_relay_image\.v1_profile_sha256/.test(error.message),
+  );
+
+  const browserRelayImageV1PathDrift = manifest();
+  browserRelayImageV1PathDrift.evidence.browser_relay_image.v1_profile_path = '../../v1.json';
+  assert.throws(
+    () => validateCommittedEvidence(browserRelayImageV1PathDrift),
+    (error) => error instanceof StagingManifestError
+      && /evidence\.browser_relay_image\.v1_profile_path/.test(error.message),
+  );
 });
 
 test('rejects unknown fields including embedded secret material', () => {
@@ -1173,6 +1252,21 @@ test('rejects drift from the historical billing-linked bootstrap inventory', () 
   rejects((candidate) => {
     candidate.bootstrap.unreviewed = true;
   }, /bootstrap must contain exactly/);
+});
+
+test('rejects drift from the converged Container Analysis adoption evidence', () => {
+  rejects((candidate) => {
+    candidate.evidence.foundation_container_analysis_adoption.result.create = 0;
+  }, /evidence\.foundation_container_analysis_adoption\.result\.create/);
+  rejects((candidate) => {
+    candidate.evidence.foundation_container_analysis_adoption.state_after.generation = '1';
+  }, /evidence\.foundation_container_analysis_adoption\.state_after\.generation/);
+  rejects((candidate) => {
+    candidate.evidence.foundation_container_analysis_adoption.container_scanning_api_enabled = true;
+  }, /evidence\.foundation_container_analysis_adoption\.container_scanning_api_enabled/);
+  rejects((candidate) => {
+    candidate.evidence.foundation_container_analysis_adoption.convergence_plan_no_changes = false;
+  }, /evidence\.foundation_container_analysis_adoption\.convergence_plan_no_changes/);
 });
 
 test('rejects authorization and bootstrap completion drift', () => {

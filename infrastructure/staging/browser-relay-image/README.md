@@ -1,60 +1,63 @@
-# Consumed staging relay image build v1
+# Guarded staging relay image verification recovery
 
-Status: one build submitted; build and smoke steps succeeded; verified
-provenance failed; image not authorized for deployment; v1 entrypoints retired
+Status: Container Analysis prerequisite converged; one distinct v2 recovery
+build reviewed but not executed; no relay service or public ingress created
 
-This package records the first guarded regional Cloud Build for the exact
-merged Miakapp-Server source required by the browser-relay acceptance plan. The
-build and bounded `/ping` smoke test succeeded, and Cloud Build pushed one
-private Artifact Registry image. Cloud Build then marked the build `FAILURE`
-because the Container Analysis metadata API was disabled, so it could not emit
-the requested verified provenance. The pushed digest is retained for audit but
-is explicitly not authorized for deployment.
+This package prepares one new regional Cloud Build to recover verified
+provenance for the exact merged Miakapp-Server source required by the
+browser-relay acceptance plan. The build must start the image with the complete
+bounded relay profile and return the exact `/ping` response. Deployment remains
+forbidden until a successful result identifies an immutable digest.
 
-The source bundle is the deterministic `git archive` of only `.dockerignore`,
-`Dockerfile`, `go.mod`, `go.sum`, `cmd/` and `internal/` at merge
-`df10674e034f30eec80760f5ec94bc108cff026f`. The Dockerfile, archive, Git tree,
-module files, two digest-pinned base images and digest-pinned Cloud Build Docker
-builder were independently checked before submission.
+## Consumed v1 attempt
 
-Cloud Build used the existing `miakapp-control-build` identity. That account can
-read the existing private source bucket, write only to the existing Artifact
-Registry repository and emit Cloud Logging entries; this operation created no
-IAM binding or credential. The request used `E2_MEDIUM`, a 900-second timeout,
-SHA-256 source provenance and `requestedVerifyOption=VERIFIED`. The failed
-attempt still resolved the exact immutable source generation and reported its
-SHA-256 and MD5 hashes. The committed
-[`result-v1.json`](result-v1.json) pins the sanitized claim, build, source and
-private image observations without storing credentials or log contents.
+The first guarded build and smoke steps succeeded, and Cloud Build pushed one
+private Artifact Registry image. Cloud Build then marked that build `FAILURE`
+because the Container Analysis metadata API was disabled, so the requested
+verified provenance could not be emitted. The original claim permits no retry.
 
-## Consumed one-shot boundary
+[`profile-v1.json`](profile-v1.json) and
+[`result-v1.json`](result-v1.json) preserve the exact reviewed profile and
+sanitized outcome. The pushed v1 digest is retained for audit but is explicitly
+not authorized for deployment. No v1 mutation entrypoint remains.
 
-Planning performed only authenticated reads and wrote a mode-0700 bundle
-outside the repository. Applying required an authorization bound to the
-metadata bytes and clean execution commit, then atomically created
-`operations/browser-relay-image-build-v1.json` with generation precondition
-zero. The claim permitted one build request and no retry or deletion. Exactly
-one matching build exists.
+## V2 recovery boundary
 
-Both v1 entrypoints now fail before operator, source or cloud access, and the
-original claim and source object remain durable. A future v2 build must use a
-different claim, build tag and image tag. The source archive remains as a
-content-addressed object so the recovery build can reuse and independently
-recheck the same bytes.
+The recovery reuses source object generation `1788648564283151`, whose 53,098
+bytes have SHA-256
+`93fd720736453e3555be625bbb993194f48a5388821169c939674b04088f158e`.
+Planning independently recreates the deterministic archive from merge
+`df10674e034f30eec80760f5ec94bc108cff026f` and requires those exact bytes, but
+applying is not allowed to upload or replace the existing object.
 
-The prerequisite fix adds `containeranalysis.googleapis.com`, which stores
-build metadata. `containerscanning.googleapis.com` remains disabled:
-vulnerability scanning is not authorized or required for this recovery.
+The v2 operation uses all three of the following identities distinct from v1:
 
-The operation created no Cloud Run service, runtime identity, public IAM
-member, request, fixture or browser runner. A separately reviewed v2 operation
-must complete verified provenance before an immutable digest can be bound into
-the dormant relay-services Terraform profile.
+- claim `operations/browser-relay-image-build-v2.json`;
+- Cloud Build tag `miakapp-relay-image-v2`; and
+- Artifact Registry tag ending in `-verified-v2`.
 
-## Retired operator flow
+The atomic claim uses GCS generation precondition zero and permanently limits
+the recovery to one build request with no retry or deletion. The build uses the
+existing keyless `miakapp-control-build` identity, the digest-pinned Docker
+builder, `E2_MEDIUM`, a 900-second timeout, SHA-256 source provenance and
+`requestedVerifyOption=VERIFIED`. Polling uses the regional Cloud Build
+operations endpoint. A successful response is rejected unless the exact source
+generation and SHA-256, builder digest, smoke step, image digest, runtime config
+and verified-provenance settings all match.
 
-The historical commands below are retained only to identify the consumed
-boundary. They now fail immediately and must not be run or replayed:
+`containeranalysis.googleapis.com` is now enabled and owned by the converged
+foundation Terraform state. `containerscanning.googleapis.com` remains
+disabled: vulnerability scanning is neither authorized nor required. The API
+prerequisite added no fixed-cost service.
+
+This operation creates no Cloud Run service, runtime identity, IAM binding,
+public principal, browser request or persistent credential. A later reviewed
+change must bind the successful immutable digest into the dormant relay-services
+Terraform profile before any private bootstrap plan can exist.
+
+## Operator flow
+
+From a clean checkout of the exact public `origin/main` commit:
 
 ```sh
 MIAKAPP_STAGING_RELAY_IMAGE_PLAN_CONFIRMATION=miakapp-v4-staging \
@@ -66,5 +69,7 @@ MIAKAPP_STAGING_RELAY_IMAGE_APPLY_AUTHORIZATION='<exact value from plan>' \
   /absolute/private/relay-image-bundle
 ```
 
-Full command output, the private bundle and credentials remain outside the
-repository. Only the bounded non-secret result is committed.
+Both entrypoints reject Google, Git, proxy, Terraform, Firebase and unrelated
+Miakapp environment overrides. Full output, the plan bundle and credentials
+remain outside the repository; only bounded non-secret evidence may be
+committed afterward.

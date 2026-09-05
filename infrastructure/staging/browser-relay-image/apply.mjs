@@ -6,7 +6,6 @@ import {
   buildRelayImageResult,
   inspectPublishedRelayImage,
   submitRelayImageBuild,
-  uploadRelayImageSource,
   validateCompletedRelayImageBuild,
   waitForRelayImageBuild,
 } from './cloud.mjs';
@@ -22,10 +21,10 @@ import {
   writePrivateFile,
 } from './contract.mjs';
 import { validateRelayImageRoot } from './guard.mjs';
-import { rejectRelayImageV1Replay } from './result.mjs';
 import {
   normalizePreparedRelayImageInventory,
   observeRelayImageInventory,
+  relayImageSourceReceipt,
   sameRelayImageBaseline,
   validateFinalRelayImageInventory,
   validateRelayImageBaseline,
@@ -56,7 +55,6 @@ async function retryReadOnly(description, operation, attempts = 5) {
 }
 
 async function main() {
-  rejectRelayImageV1Replay();
   const profile = validateRelayImageProfile();
   if (process.argv.length !== 3 || process.argv[2] === undefined) {
     throw new Error(`Usage: ${APPLY_AUTHORIZATION}=... ./apply.sh <private-relay-image-bundle>`);
@@ -68,7 +66,7 @@ async function main() {
   const { value: metadata, bytes: metadataBytes } = readRelayImageMetadata(
     join(bundle, 'metadata.json'),
   );
-  const archive = readRelaySourceArchive(join(bundle, 'source.tar.gz'));
+  readRelaySourceArchive(join(bundle, 'source.tar.gz'));
   verifyExactMain(repositoryRoot, metadata.repository_commit);
   validateRelayImageAuthorization(
     process.env[APPLY_AUTHORIZATION],
@@ -95,16 +93,15 @@ async function main() {
     throw new Error('Staging state changed after the atomic relay image claim');
   }
 
-  const sourceReceipt = await uploadRelayImageSource(session, archive);
+  const sourceReceipt = relayImageSourceReceipt(baseline);
   const prepared = await observeRelayImageInventory(session);
   if (!sameRelayImageBaseline(
     normalizePreparedRelayImageInventory(prepared, {
       claim: claimReceipt,
-      source: sourceReceipt,
     }),
     baseline,
   )) {
-    throw new Error('Staging state changed after the immutable relay source upload');
+    throw new Error('Staging state changed before the v2 relay image build');
   }
   verifyExactMain(repositoryRoot, metadata.repository_commit);
 
@@ -153,7 +150,7 @@ async function main() {
   const resultPath = join(bundle, 'result.json');
   writePrivateFile(resultPath, Buffer.from(canonicalJson(result), 'utf8'), 0o400);
   process.stdout.write([
-    `Verified private relay image: ${publication.digest_reference}`,
+    `Recovered verified private relay image: ${publication.digest_reference}`,
     `Compressed bytes: ${publication.compressed_bytes}`,
     `Private result: ${resultPath}`,
     'Cloud Run services created: 0; IAM bindings created: 0; public ingress created: false.',
