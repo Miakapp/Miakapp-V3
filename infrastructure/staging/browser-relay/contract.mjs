@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { lstatSync, readFileSync } from 'node:fs';
 import { isDeepStrictEqual } from 'node:util';
 
-export const BROWSER_RELAY_PLAN_SHA256 = '7cbf154c3d3d77ad74a806533bbaaed27f7ab333287762334b0a31abc9c2874c';
+export const BROWSER_RELAY_PLAN_SHA256 = '51fc7b8031da8fbd6162aacfc8e39a2bf25b1c96e496851a6d6847d4588e0b23';
 export const BROWSER_RELAY_PLAN_PATH = 'browser-relay/plan.json';
 
 const MAXIMUM_PLAN_BYTES = 16 * 1024;
@@ -143,8 +143,11 @@ function validateBaseline(value) {
     'control_plane',
     'hosting',
     'app_check',
+    'signing_keys',
+    'application_data',
     'cloud_run_services',
     'relay_services',
+    'relay_service_account_present',
     'browser_runner_present',
     'app_engine_application_present',
   ], 'baseline');
@@ -153,12 +156,23 @@ function validateBaseline(value) {
   exact(baseline.control_plane.unauthenticated_invokers, 0, 'baseline.control_plane.unauthenticated_invokers');
   exact(baseline.control_plane.runtime_schema, 'miakapp.production-runtime/2', 'baseline.control_plane.runtime_schema');
   exact(baseline.control_plane.security_schema, 'miakapp.production-security/2', 'baseline.control_plane.security_schema');
-  exact(baseline.control_plane.published_signing_keys, 1, 'baseline.control_plane.published_signing_keys');
+  exact(baseline.control_plane.runtime_config_sha256, '40e2f83fbe8e3d27b7e53c4a666f424519fc6972ef19a7598ab9e093be0c70f7', 'baseline.control_plane.runtime_config_sha256');
+  exact(baseline.control_plane.published_signing_keys, 2, 'baseline.control_plane.published_signing_keys');
+  exact(baseline.control_plane.current_signing_key_version, 2, 'baseline.control_plane.current_signing_key_version');
   exact(baseline.control_plane.overlap_schema_supported_by_source, true, 'baseline.control_plane.overlap_schema_supported_by_source');
+  exact(baseline.hosting.site_disabled, true, 'baseline.hosting.site_disabled');
+  exact(baseline.hosting.all_versions_deleted, true, 'baseline.hosting.all_versions_deleted');
+  exact(baseline.hosting.browser_relay_route_status, 404, 'baseline.hosting.browser_relay_route_status');
+  exact(baseline.app_check.service_enforcement_records, 0, 'baseline.app_check.service_enforcement_records');
+  exact(baseline.app_check.debug_tokens, 0, 'baseline.app_check.debug_tokens');
+  exact(baseline.app_check.browser_attestation_validated, true, 'baseline.app_check.browser_attestation_validated');
+  exact(baseline.signing_keys.enabled_versions, [1, 2], 'baseline.signing_keys.enabled_versions');
+  exact(baseline.application_data.firebase_auth_users, 0, 'baseline.application_data.firebase_auth_users');
+  exact(baseline.application_data.application_fixture_collections, 0, 'baseline.application_data.application_fixture_collections');
   exact(baseline.relay_services, 0, 'baseline.relay_services');
+  exact(baseline.relay_service_account_present, false, 'baseline.relay_service_account_present');
   exact(baseline.browser_runner_present, false, 'baseline.browser_runner_present');
   exact(baseline.app_engine_application_present, false, 'baseline.app_engine_application_present');
-  exact(baseline.app_check.browser_attestation_validated, false, 'baseline.app_check.browser_attestation_validated');
 }
 
 function validateRelay(value, expected, path) {
@@ -259,14 +273,14 @@ function validateBudgets(value) {
 }
 
 function validatePreconditions(value) {
-  if (!Array.isArray(value) || value.length !== 8) {
-    reject('preconditions must contain exactly eight entries');
+  if (!Array.isArray(value) || value.length !== 9) {
+    reject('preconditions must contain exactly nine entries');
   }
   value.forEach((entry, index) => {
     exactKeys(entry, ['id', 'state', 'requirement'], `preconditions[${index}]`);
     exact(entry, expectedPlan.preconditions[index], `preconditions[${index}]`);
   });
-  exact(value.filter(({ state }) => state === 'satisfied').map(({ id }) => id), ['PIN-01', 'APP-CHECK-01'], 'satisfied preconditions');
+  exact(value.filter(({ state }) => state === 'satisfied').map(({ id }) => id), ['PIN-01', 'SIGNING-01', 'APP-CHECK-01'], 'satisfied preconditions');
   exact(value.filter(({ state }) => state === 'open').length, 6, 'open precondition count');
 }
 
@@ -292,19 +306,36 @@ function validateSigningRotation(value) {
     'token_lease_seconds',
     'prepublication_seconds',
     'retiring_key_retention_seconds',
+    'baseline_current_version',
+    'baseline_published_versions',
+    'rehearsal_entry_current_version',
+    'rehearsal_entry_published_versions',
+    'acceptance_target_current_version',
+    'acceptance_target_published_versions',
     'published_keys_before',
     'published_keys_during_overlap',
     'published_keys_after_retirement',
+    'new_kms_version_required',
+    'version_recreation_allowed',
     'prior_key_after_retirement',
     'ordinary_rollback',
     'republish_removed_private_key',
   ], 'signing_rotation');
   exact(rotation, expectedPlan.signing_rotation, 'signing_rotation');
-  exact(rotation.state, 'blocked_by_single_published_key_runtime_config', 'signing_rotation.state');
+  exact(rotation.state, 'two_key_runtime_ready_rehearsal_entry_pending', 'signing_rotation.state');
   exact(rotation.token_lease_seconds, 300, 'signing_rotation.token_lease_seconds');
   exact(rotation.prepublication_seconds, 60, 'signing_rotation.prepublication_seconds');
   exact(rotation.retiring_key_retention_seconds, 330, 'signing_rotation.retiring_key_retention_seconds');
+  exact(rotation.baseline_current_version, 2, 'signing_rotation.baseline_current_version');
+  exact(rotation.baseline_published_versions, [1, 2], 'signing_rotation.baseline_published_versions');
+  exact(rotation.rehearsal_entry_current_version, 1, 'signing_rotation.rehearsal_entry_current_version');
+  exact(rotation.rehearsal_entry_published_versions, [1, 2], 'signing_rotation.rehearsal_entry_published_versions');
+  exact(rotation.acceptance_target_current_version, 2, 'signing_rotation.acceptance_target_current_version');
+  exact(rotation.acceptance_target_published_versions, [1, 2], 'signing_rotation.acceptance_target_published_versions');
+  exact(rotation.published_keys_before, 2, 'signing_rotation.published_keys_before');
   exact(rotation.published_keys_during_overlap, 2, 'signing_rotation.published_keys_during_overlap');
+  exact(rotation.new_kms_version_required, false, 'signing_rotation.new_kms_version_required');
+  exact(rotation.version_recreation_allowed, false, 'signing_rotation.version_recreation_allowed');
   exact(rotation.republish_removed_private_key, false, 'signing_rotation.republish_removed_private_key');
 }
 
@@ -354,8 +385,8 @@ export function validateBrowserRelayPlanValue(value) {
     'rollback',
   ], 'plan');
   exact(plan.schema, 'miakapp.staging-browser-relay-plan/1', 'plan.schema');
-  exact(plan.revision, 4, 'plan.revision');
-  exact(plan.state, 'reviewed_not_deployed', 'plan.state');
+  exact(plan.revision, 5, 'plan.revision');
+  exact(plan.state, 'rebased_reviewed_not_deployed', 'plan.state');
   validateTarget(plan.target);
   validatePins(plan.pins);
   validateBaseline(plan.baseline);
