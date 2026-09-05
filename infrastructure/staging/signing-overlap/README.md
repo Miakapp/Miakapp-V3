@@ -1,8 +1,12 @@
 # Staging signing-key overlap gate
 
-This directory owns the guarded creation of the second software Ed25519 key
-version used to rehearse bounded signing-key overlap in `miakapp-v4-staging`.
-It does not change the control-plane runtime, ingress, IAM or Terraform state.
+This directory records the converged creation of the second software Ed25519
+key version used to rehearse bounded signing-key overlap in
+`miakapp-v4-staging`. The exact sanitized result is committed as
+[`result.json`](result.json); it contains only the public JWK and immutable
+coordination receipts. No credential, raw state or private bundle is committed.
+The creation did not change the control-plane runtime, ingress, IAM or
+Terraform state.
 
 The Cloud KMS API assigns key-version IDs sequentially and exposes no caller
 request ID for version creation. A blind retry could therefore create version
@@ -20,7 +24,13 @@ The boundary is monotone:
 - after the attempt claim, the KMS creation must never be retried. Recovery may
   only adopt an independently observed exact version 2 or stop on ambiguity.
 
-## Reviewed sequence
+## Retired one-shot sequence
+
+Version 2 converged after the first and only direct KMS request on
+2026-09-05. Both planning and apply entrypoints are now permanently retired and
+fail before validating the environment, invoking a tool or reading cloud state.
+The commands below are retained only as historical documentation and must not
+be run.
 
 From the exact merged `origin/main` commit, create a private read-only plan:
 
@@ -42,8 +52,8 @@ delete either global claim. If the process stops after mutation begins, inspect
 the private diagnostics and build a fresh, separately reviewed recovery from
 the two pinned claims and authoritative KMS inventory.
 
-On success the private result contains the public JWK for version 2 and no
-credential. A later reviewed workload change will prepublish versions 1 and 2
+The committed result contains the public JWK for version 2 and no credential.
+A later reviewed workload change will prepublish versions 1 and 2
 while version 1 remains current. Only after at least 60 seconds may another
 reviewed change activate version 2, and version 1 remains published for at
 least the complete 330-second token lease bound.
