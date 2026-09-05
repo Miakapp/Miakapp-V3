@@ -50,6 +50,9 @@ export function validateBrowserAttestationRoot(rootUrl) {
   }
   const index = readFileSync(new URL('index.html', rootUrl), 'utf8');
   const runner = readFileSync(new URL('runner.mjs', rootUrl), 'utf8');
+  const driver = ['apply.mjs', 'browser.mjs', 'plan.mjs']
+    .map((name) => readFileSync(new URL(name, rootUrl), 'utf8'))
+    .join('\n');
   const combined = `${index}\n${runner}`;
   if (!index.includes('<script type="module" src="/runner.mjs"></script>')
     || !runner.includes('__MIAKAPP_FIREBASE_CONFIG__')
@@ -57,6 +60,9 @@ export function validateBrowserAttestationRoot(rootUrl) {
     || /miakapp-3|demo-miakapp-v4|projects\/miakapp-v4(?:\/|\b)/u.test(combined)
     || /AIza[0-9A-Za-z_-]{20,}|-----BEGIN|\bya29\.|\beyJ[A-Za-z0-9_-]{8,}\./u.test(combined)) {
     throw new Error('Browser-attestation source contains a target, public key or credential literal');
+  }
+  if (/from\s+['"]playwright['"]|chromium\.launch|operator-local-playwright/u.test(driver)) {
+    throw new Error('Browser-attestation driver must not restore the retired Playwright path');
   }
 }
 
