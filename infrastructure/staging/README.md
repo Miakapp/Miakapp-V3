@@ -2,7 +2,8 @@
 
 Status: private audience-bound user-relay acceptance succeeded and retired;
 schema-2 single-key runtime deployed privately; live browser-relay plan reviewed
-but not deployed
+but not deployed; browser App Check API-only prerequisite guarded but not
+applied
 
 This directory contains the closed description and observed state of
 `miakapp-v4-staging`. The bounded foundation recovery has completed; its active
@@ -20,6 +21,13 @@ closed live topology, cost, signing-key and rollback matrix. It records twelve
 pending cases and seven open implementation preconditions. It contains no
 deployer or result and does not change the private cloud baseline described
 below.
+
+The new [`browser-app-check/`](browser-app-check/) root implements only the
+first reversible provider prerequisite: reCAPTCHA Enterprise API enablement. It
+creates no key. While the API is disabled, direct key existence is explicitly
+unknown; the apply driver stops after enablement and requires the now-readable
+authoritative key list to be empty. Provider registration remains excluded
+because Firebase exposes no provider-configuration delete operation.
 
 ## Current truth
 
@@ -257,6 +265,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`probe/`](probe/) | Isolated Workflows API and one fixed, unscheduled, keyless internal discovery probe | Applied and consumed; exactly two failures followed by one validated HTTP 200 discovery response |
 | [`firebase-auth/`](firebase-auth/) | Closed Firebase Authentication initialization with no end-user sign-in provider | Non-deletable resource initialized, state-adopted, reconciled, and independently validated |
 | [`auth-probe/`](auth-probe/) | Guarded audience-bound user-relay Workflow, internal verifier and sanitized evidence | Generation 3 succeeded once and retired; both fixtures and every temporary capability are absent; all nine one-shot roles are disabled |
+| [`browser-app-check/`](browser-app-check/) | Guarded reCAPTCHA Enterprise API-only prerequisite | Canonical empty serial-1 state exists; API apply and every key/registration/enforcement mutation remain pending |
 | [`browser-relay/`](browser-relay/) | Closed live browser, two-relay, signing-key and rollback acceptance plan | Reviewed but not deployed; every `LIVE-*` case is pending and the package grants no cloud mutation |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
@@ -305,7 +314,11 @@ reads, temporary locks, and short-lived private saved-plan objects. The state
 bucket currently stores the 61,864-byte bootstrap state, the 53,619-byte
 complete foundation state, the 49,563-byte workload state, the 13,596-byte probe
 state, the 11,010-byte Firebase Auth state, the 35,312-byte Auth-probe state, and
-recovery generations across all six Terraform prefixes. The live Firestore database is the project's
+recovery generations across the six deployed Terraform prefixes. A non-applying
+browser App Check plan also initialized a 181-byte canonical empty serial-1
+state at generation `1788588916588868` under the seventh prefix,
+`terraform/browser-app-check`; it contains no managed resource, data resource
+or output. The live Firestore database is the project's
 free-tier database; the five secret containers now each have one enabled
 version. Secret Manager versions, the software KMS key version, Storage and
 Artifact Registry bytes, build operations, and retained object versions remain
@@ -474,7 +487,7 @@ npm run test:staging-manifest
 The gate validates bounded closed manifests, all reviewed inventories,
 the retired recovery policy and historical blueprint, pinned actions and providers,
 exact locks for macOS
-ARM64 and Linux AMD64, all six Terraform roots with mock providers, script syntax,
+ARM64 and Linux AMD64, all seven Terraform roots with mock providers, script syntax,
 private-plan handling, the exact recovery addresses, actions, planned values,
 partial prior state, critical expression references and checks, the
 complete simulated migration-only recovery state
@@ -514,8 +527,10 @@ inside the separately authorized EUR 5 monthly boundary. App Engine, an
 external load balancer, Cloud Armor, VPC and DNS changes are absent.
 
 No live case may start yet. The production runtime must first support an active
-plus retiring public signing key, the real browser App Check provider must be
-inventoried and registered, and separate guarded implementations must exist for
-the temporary edge transition, relays, runner, metrics and rollback. The plan
-records these as open preconditions instead of promoting local fixtures to live
-evidence.
+plus retiring public signing key. The browser App Check API-only prerequisite
+must first be planned, applied and authoritatively inventoried. A fresh
+reversible key plan may follow only from a directly readable empty key list;
+site-key registration then requires a separate non-deletable exact plan.
+Separate guarded implementations must also exist for the temporary edge
+transition, relays, runner, metrics and rollback. The plan records these as open
+preconditions instead of promoting local fixtures to live evidence.
