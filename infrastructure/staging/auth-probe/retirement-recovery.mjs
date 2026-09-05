@@ -59,7 +59,7 @@ export const TEMPORARY_ADDRESS_BY_KIND = Object.freeze({
 });
 const MAXIMUM_STATE_BYTES = 32 * 1024 * 1024;
 const TERRAFORM_DATA_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
-const IAM_ETAG = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u;
+const IAM_ETAG = /^(?:[A-Za-z0-9_-]{4})*(?:[A-Za-z0-9_-]{2}==|[A-Za-z0-9_-]{3}=)?$/u;
 const CLOUD_ASSET_ADDRESS = 'google_project_service.auth_probe_asset_inventory';
 const VERIFIER_SERVICE_RESOURCE = `projects/${PROJECT_ID}/locations/${REGION}/services/${VERIFIER_SERVICE_NAME}`;
 const CUSTOM_ROLE_RECOVERY = Object.freeze({
