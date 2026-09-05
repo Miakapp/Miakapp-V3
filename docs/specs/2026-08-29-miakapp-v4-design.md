@@ -794,7 +794,8 @@ vertical-slice exit gates.
    security-critical boundary subset in Chromium, Firefox and WebKit. The
    production host and complete conformance matrix remain vertical-slice work.
 3. **Platform control plane — base contract closed 2026-08-31; audience-bound
-   user relay credential complete locally, staging open** — RFC 0004 defines owner
+   user relay credential complete locally and in one bounded private staging
+   probe, broader staging open** — RFC 0004 defines owner
    bootstrap, the private Home Key registry, exact coarse scopes, signed
    resource-specific access tokens, JWKS rotation, Firebase user-token
    verification, push grants, publisher authorization, quotas and audit. The
@@ -818,11 +819,14 @@ vertical-slice exit gates.
    instance of the production cache proves 32-way refresh coalescing,
    unknown-`kid` abuse bounds, conditional expiry, fail-closed JWKS outage and
    bounded recovery. The local lifecycle stops after overlap and activation; it
-   does not remove the retiring key. Real App Check enforcement, FCM
+   does not remove the retiring key. A bounded private staging probe now proves
+   Admin custom-provider App Check enforcement and KMS-backed user-relay signing
+   on the deployed control plane. Browser App Check attestation, FCM
    acceptance/delivery, production Storage/KMS and Firebase certificates,
-   trusted edge admission, browser and network faults, complete Section 18 and
-   staging behavior remain implementation exit gates. The audience-bound local
-   path now adds Auth-emulator and signed synthetic App Check sources, exact
+   trusted edge admission, browser and network faults, the rest of Section 18
+   and broader staging behavior remain implementation exit gates. The
+   audience-bound local path now adds Auth-emulator and signed synthetic App
+   Check sources, exact
    `relay:user` signing and verification, and a serialized authoritative handoff
    across two real relays in Chromium.
 4. **MiakAPI coordinator API — closed 2026-08-30; broader agent experience open**

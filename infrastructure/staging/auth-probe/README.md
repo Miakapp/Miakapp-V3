@@ -1,22 +1,19 @@
 # Staging audience-bound user-relay probe
 
-This Terraform root owns one bounded, private, single-execution acceptance probe
-for the audience-bound user-relay exchange deployed on Miakapp V4 staging. It
-uses the independent GCS backend prefix `terraform/auth-probe`; its safe default
-is `armed = false`.
+This Terraform root executed one bounded, private, single-execution acceptance
+probe for the audience-bound user-relay exchange deployed on Miakapp V4 staging.
+It uses the independent GCS backend prefix `terraform/auth-probe`; its safe and
+current state is `armed = false`.
 
-The committed `result.json` and `retirement.json` currently preserve the
-preceding Firebase Auth/App Check probe against historical revision
-`control-plane-00003-hum`. Two user-relay arm generations were fully retired
-without an execution after Workflows rejected their source at creation time:
-generation 1 used an invalid inline map expression, and generation 2 exceeded
-the 50-assignment per-step limit. Their six role IDs remain disabled and
-unassigned. The source now splits initialization into two bounded steps and was
-accepted by the real Google Workflows compiler in a compile-only deployment
-that had zero executions and was immediately deleted. A reviewed generation-3
-role set and later expiry are now prepared for the next arm. The
-historical evidence remains valid until a successful generation runs, retires,
-and replaces it with a digest-pinned sanitized result.
+The committed `result.json` and `retirement.json` preserve the successful
+generation-3 run against current revision `control-plane-00004-yis`. Generation
+1 was rejected by Workflows for an invalid inline map expression, and generation
+2 exceeded the 50-assignment per-step limit; neither executed. Generation 3
+performed exactly one execution, passed all three negative controls, returned
+and verified two audience-bound Ed25519 credentials across a relay rotation,
+removed both synthetic fixtures, and retired the Workflow, verifier and every
+temporary binding. All nine role IDs across the three immutable generations are
+disabled and unassigned.
 
 The root consumes the exact private workload state and closed Firebase
 Authentication baseline from [`../firebase-auth/`](../firebase-auth/). Planning,
@@ -26,12 +23,11 @@ Terraform output cannot conceal live authentication drift.
 
 ## Security and cost boundary
 
-The configured persistent graph contains:
+The retired persistent graph contains:
 
-- six retained custom roles across generations 1 and 2, fixed at `DISABLED`,
-  plus three generation-3 least-privilege roles for Firebase token operations,
-  self-scoped JWT/OIDC signing, and default-database fixture CRUD; generation 3
-  is also dormant and disabled unless the one-shot root is explicitly armed;
+- nine retained custom roles across generations 1 through 3, fixed at
+  `DISABLED` and unassigned; the generation-3 roles covered Firebase token
+  operations, self-scoped JWT/OIDC signing and default-database fixture CRUD;
 - the Cloud Asset API used as supplemental project-wide discovery for verifier
   grants and custom-role bindings, without treating its eventually consistent
   results as an undelete authorization;
@@ -58,10 +54,10 @@ permissions, requires exactly that closed inherited set, and rejects every extra
 service-level binding. Internal-only ingress, IAM enforcement and the absence of
 public principals remain mandatory.
 
-Every generation-3 temporary IAM binding independently expires at
-`2026-09-06T18:00:00Z`. Retirement is still mandatory immediately after the
-single execution; expiry is a backstop, not the cleanup mechanism. No resource
-has public ingress or a public principal. No service-account key, secret,
+Every generation-3 temporary IAM binding had an independent
+`2026-09-06T18:00:00Z` expiry as a backstop. Immediate retirement removed those
+bindings after the single execution. No retained resource has public ingress or
+a public principal. No service-account key, secret,
 scheduler, minimum instance, VPC, NAT, load balancer, or recurring compute is
 created. The reused probe identity is checked for zero user-managed keys
 immediately before Terraform applies any temporary privilege and again in the
@@ -120,9 +116,10 @@ This probe does not validate browser attestation, reCAPTCHA Enterprise, live
 relay sockets, source admission, key rotation, a relay rollback, or production.
 Those acceptance gates remain separate.
 
-## Guarded lifecycle
+## Guarded lifecycle record
 
-All commands require a clean checkout at the exact reviewed `origin/main`
+The following commands document the lifecycle used for the completed run. All
+commands require a clean checkout at the exact reviewed `origin/main`
 commit, the pinned operator identity, Terraform 1.11.3, the committed staging
 manifest, and a private artifact directory outside the repository.
 
@@ -182,8 +179,8 @@ MIAKAPP_STAGING_AUTH_PROBE_RETIRE_AUTHORIZATION='retire-user-relay-probe:...' \
   ./infrastructure/staging/auth-probe/retire-apply.sh '/private/bundle'
 ```
 
-Each role generation is intentionally one-shot. The arm preflight rejects a
-previously disabled generation-3 role and verifies that generations 1 and 2 remain
+Each role generation is intentionally one-shot. Generation 3 is consumed, so
+the arm preflight now rejects it and verifies that all three generations remain
 disabled and unassigned. Another acceptance run requires new reviewed role IDs
 and a new capability expiry instead of reactivating retained bindings.
 
@@ -235,3 +232,9 @@ binding, and any exact synthetic fixture. It retains only the Cloud Asset API,
 nine disabled custom roles across three immutable generations, the keyless no-role
 verifier identity, and the guard. Private plans, state, credentials, raw
 diagnostics, and unsanitized execution data must never be committed.
+
+The converged remote state is generation `1788574226264316`, 35,312 bytes at
+serial 27, with twelve managed resources, two data resources, one output and no
+tainted instance. Its SHA-256 is
+`88afa245c7943a44b23e32a452793c2825cf8e2bfb11ba55f95e299680b15cb2`.
+These metadata do not replace a fresh guarded plan or live inventory.

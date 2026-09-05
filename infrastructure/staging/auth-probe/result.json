@@ -1,71 +1,145 @@
 {
-  "schema": "miakapp.staging-auth-app-check-probe-result/1",
+  "schema": "miakapp.staging-user-relay-probe-result/1",
   "project_id": "miakapp-v4-staging",
   "project_number": "1072737219170",
   "region": "europe-west9",
-  "observed_at": "2026-09-04T11:33:48.986Z",
-  "repository_commit": "753601acc160c2214511c3207b9f0c47d3d7e03e",
+  "observed_at": "2026-09-05T02:00:51.901Z",
+  "repository_commit": "3f90549156148496702edfa657d5dd5c6394a32f",
   "workflow": {
-    "name": "projects/miakapp-v4-staging/locations/europe-west9/workflows/miakapp-auth-app-check-probe",
-    "revision": "000001-bb4",
+    "name": "projects/miakapp-v4-staging/locations/europe-west9/workflows/miakapp-user-relay-probe",
+    "revision": "000001-34e",
     "service_account": "miakapp-staging-probe@miakapp-v4-staging.iam.gserviceaccount.com",
-    "source_sha256": "525b97d18a2848c1d852b9d117cb20cf464bbc1d7baa85b2d44d457487cd922c",
+    "source_sha256": "b77c484f3ffb8a81fb4bf5bebfecc420ab33604e99559518fc354a4e0dcc4d56",
     "call_log_level": "LOG_NONE",
     "execution_history_level": "EXECUTION_HISTORY_BASIC",
     "scheduled_triggers": 0
   },
+  "verifier": {
+    "service_name": "miakapp-user-relay-verifier",
+    "service_uri": "https://miakapp-user-relay-verifier-1072737219170.europe-west9.run.app",
+    "revision": "miakapp-user-relay-verifier-00001-tqn",
+    "identity": "miakapp-staging-verifier@miakapp-v4-staging.iam.gserviceaccount.com",
+    "image": "europe-west9-docker.pkg.dev/miakapp-v4-staging/miakapp-control-plane/miakapp--v4--staging__europe--west9__control--plane@sha256:a650ae228afd9443e1bf0090b5b1e6e9203d08d8de5e24a894701d82a5db4503",
+    "source_sha256": "495d3d0526dc948c1bc70344769a4589b3cc3ccce415d221c983c312aa0ef735",
+    "ingress": "internal-only",
+    "public_invokers": 0,
+    "service_level_invoker_bindings": 1,
+    "workflow_only": false,
+    "inherited_invocation": {
+      "permission": "run.routes.invoke",
+      "workflow_only": false,
+      "project_level_principals": 5,
+      "owner_users": 1,
+      "default_service_accounts": 2,
+      "managed_service_agents": 2,
+      "roles": [
+        {
+          "role": "roles/cloudfunctions.standardServiceAgent",
+          "principals": 1
+        },
+        {
+          "role": "roles/editor",
+          "principals": 2
+        },
+        {
+          "role": "roles/owner",
+          "principals": 1
+        },
+        {
+          "role": "roles/run.serviceAgent",
+          "principals": 1
+        }
+      ]
+    },
+    "user_managed_keys": 0
+  },
   "execution": {
     "state": "SUCCEEDED",
-    "workflow_revision": "000001-bb4",
-    "duration_milliseconds": 7821,
+    "workflow_revision": "000001-34e",
+    "duration_milliseconds": 10786,
     "count_before": 0,
     "count_after": 1
   },
   "request": {
-    "method": "GET",
-    "path": "/v1/push-destinations",
-    "product_requests": 3,
-    "successful_reads": 2,
-    "expected_application_writes": 0,
+    "method": "POST",
+    "negative_controls": 3,
+    "path": "/v1/user-relay-tokens:exchange",
+    "product_requests": 5,
     "retries": 0,
-    "cloud_run_authentication_header": "X-Serverless-Authorization"
+    "successful_exchanges": 2
   },
   "responses": {
-    "first_authenticated_read": {
-      "destination_count": 0,
-      "schema": "miakapp.push-destination-list/1",
+    "first_exchange": {
+      "relay_url": "wss://relay-a.probe.invalid/ws",
       "status": 200
+    },
+    "invalid_firebase": {
+      "code": "invalid_firebase_token",
+      "status": 401
     },
     "missing_app_check": {
       "code": "invalid_app_check_token",
       "status": 401
     },
-    "replay_authenticated_read": {
-      "destination_count": 0,
-      "schema": "miakapp.push-destination-list/1",
+    "missing_home": {
+      "code": "home_not_found",
+      "status": 404
+    },
+    "second_exchange": {
+      "relay_url": "wss://relay-b.probe.invalid/ws",
       "status": 200
     }
   },
   "firebase_auth": {
-    "token_source": "execution-scoped-custom-token",
+    "synthetic_user_absence_verified": true,
     "synthetic_user_created": true,
     "synthetic_user_deleted": true,
+    "token_source": "execution-scoped-custom-token",
+    "verified_email_present": false,
     "workflow_absence_verified": true,
     "independent_absence_verified": true
   },
   "app_check": {
     "firebase_app_id": "1:1072737219170:web:5053ca93bf25d7373cd73b",
-    "token_source": "admin-custom-provider",
-    "token_consumption": false,
-    "first_use_accepted": true,
     "replay_accepted": true,
+    "token_consumption": false,
+    "token_source": "admin-custom-provider",
     "browser_provider_attestation_validated": false
   },
+  "firestore": {
+    "collection": "controlHomes",
+    "owner_matches_authenticated_user": false,
+    "public_home_written": false,
+    "relay_rotated": true,
+    "synthetic_home_absence_verified": true,
+    "synthetic_home_created": true,
+    "synthetic_home_deleted": true,
+    "independent_absence_verified": true
+  },
+  "metadata": {
+    "discovery_valid": true,
+    "jwks_valid": true
+  },
+  "tokens": {
+    "algorithm": "EdDSA",
+    "audiences_changed": true,
+    "client_id_present": false,
+    "coordinator_present": false,
+    "distinct_jti": true,
+    "distinct_tokens": true,
+    "key_id": "staging-access-token-v1",
+    "role": "user",
+    "scope": "relay:user",
+    "signatures_valid": true,
+    "ttl_seconds": 300,
+    "type": "at+jwt",
+    "verified_email_present": false
+  },
   "workload": {
-    "deployment_commit": "60322c69c92b8ccf5f3d1bc87ba264a00e5dca05",
-    "source_sha256": "86f4818dfcb4021e5578638d6fb1e9b7da31ea245528cbdc8573dabecdfca358",
-    "function_revision": "control-plane-00003-hum",
-    "expected_function_revision": "control-plane-00003-hum",
+    "deployment_commit": "022f10e2dc15f32a8a6679b38ce7f1a04582e450",
+    "source_sha256": "6674c0353ec9c73fcfe0d3a63d17850f057a5f2a547a5855989e28f011249b1e",
+    "function_revision": "control-plane-00004-yis",
+    "expected_function_revision": "control-plane-00004-yis",
     "function_uri": "https://control-plane-aczhngqraq-od.a.run.app",
     "ingress": "ALLOW_INTERNAL_ONLY",
     "unauthenticated_invokers": 0,
