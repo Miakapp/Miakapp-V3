@@ -38,7 +38,7 @@ function rejects(mutator, pattern = /drifted|invalid|must|reviewed|credential/u)
 test('accepts the reviewed browser-relay design without claiming live evidence', () => {
   const validated = validateBrowserRelayPlan(planPath);
   assert.equal(validated.schema, 'miakapp.staging-browser-relay-plan/1');
-  assert.equal(validated.revision, 3);
+  assert.equal(validated.revision, 4);
   assert.equal(validated.state, 'reviewed_not_deployed');
   assert.equal(validated.target.project_id, 'miakapp-v4-staging');
   assert.equal(validated.target.cloud_mutation_authorized_by_document, false);
@@ -73,6 +73,11 @@ test('pins a reversible scale-to-zero topology and a bounded public window', () 
   assert.equal(validated.baseline.control_plane.security_schema, 'miakapp.production-security/2');
   assert.equal(validated.baseline.control_plane.published_signing_keys, 1);
   assert.equal(validated.baseline.control_plane.overlap_schema_supported_by_source, true);
+  assert.equal(validated.baseline.app_check.browser_provider_inventory, 'readable_registered_recaptcha_enterprise');
+  assert.deepEqual(
+    validated.preconditions.filter(({ state }) => state === 'satisfied').map(({ id }) => id),
+    ['PIN-01', 'APP-CHECK-01'],
+  );
 });
 
 test('pins all pending matrix rows and routine signing-key timing', () => {

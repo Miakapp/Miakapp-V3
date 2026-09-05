@@ -3944,7 +3944,7 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 47, 'manifest.revision');
+  exact(manifest.revision, 48, 'manifest.revision');
   exact(
     manifest.status,
     'private_control_plane_schema_2_single_key_runtime_deployed_user_relay_acceptance_succeeded_live_browser_plan_reviewed_app_check_provider_registered',
