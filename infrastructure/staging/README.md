@@ -30,6 +30,13 @@ rotation-entry prerequisites are satisfied, while the complete authenticated
 It contains no deployer or result and does not change the private cloud baseline
 described below.
 
+The dormant [`browser-relay-services/`](browser-relay-services/) root freezes
+two scale-to-zero Cloud Run services around the newly merged finite relay
+admission profile. Its four phases solve the assigned-URL/audience bootstrap
+without opening IAM early, require a digest-only image and model public IAM as
+the final dependency. It has no execution entrypoint, saved plan, image digest
+or cloud evidence and has never been applied.
+
 The [`signing-overlap/`](signing-overlap/) package records the converged next
 prerequisite: one non-retried Cloud KMS version creation behind two atomic GCS
 claims. Version 2 converged after the first and only direct REST request; both
@@ -347,6 +354,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`signing-overlap/`](signing-overlap/) | Monotone second KMS version creation and 60/330-second overlap rollout contract | Version 2 enabled after one direct request; two atomic claims retained and one-shot entrypoints retired; runtime, Terraform, IAM, ingress and requests unchanged |
 | [`browser-relay/`](browser-relay/) | Closed live browser, two-relay, signing-key and rollback acceptance plan | Rebases the current private `00010`/two-key/version-1-entry/App Check baseline; not deployed, every `LIVE-*` case pending, and no cloud mutation granted |
 | [`browser-relay-edge/`](browser-relay-edge/) | Dormant reversible control-plane edge state machine | Pins the atomic staging issuer/origin profile and public-last/private-first transition ordering; exposes no CLI and grants no cloud mutation |
+| [`browser-relay-services/`](browser-relay-services/) | Dormant two-relay Cloud Run Terraform state machine | Pins scale 0..1, digest-only images, exact audiences, no-role runtime identity, finite process admission and public-last IAM; exposes no operator entrypoint and has not been applied |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
 | [`TEARDOWN.md`](TEARDOWN.md) | Manual recovery and teardown rehearsal | Documentation only |

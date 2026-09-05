@@ -31,10 +31,10 @@ function rejects(mutator, pattern) {
 
 test('accepts the successful and retired private user-relay probe', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 57);
+  assert.equal(validated.revision, 58);
   assert.equal(
     validated.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rebased_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rebased_bounded_relay_root_reviewed_enforcement_disabled',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
@@ -758,9 +758,9 @@ test('accepts the successful and retired private user-relay probe', () => {
   assert.equal(userRelayProbe.token_material_committed, false);
   assert.equal(userRelayProbe.raw_diagnostics_committed, false);
   assert.deepEqual(validated.evidence.browser_relay_plan, {
-    state: 'edge_profile_source_converged_reviewed_not_deployed',
+    state: 'relay_process_admission_merged_root_reviewed_not_deployed',
     path: 'browser-relay/plan.json',
-    sha256: 'b8da1ed6c073fea64bb79dc0c97c1624ccae6743114168cc554b45af45b90e49',
+    sha256: '4a5c13999d9f7f328b1b8b867bbd86d4c5e80cb980d9eb1324028ea0e5785343',
     baseline_observed_at: '2026-09-05T19:49:07.829Z',
     baseline_control_plane_revision: 'control-plane-00010-vop',
     baseline_published_signing_keys: 2,
@@ -1011,8 +1011,13 @@ test('cross-checks manifest claims against all committed evidence artifacts', ()
   assert.equal(evidence.userRelayProbe.execution.state, 'SUCCEEDED');
   assert.equal(evidence.userRelayProbeRetirement.workflow_present, false);
   assert.equal(evidence.userRelayProbeRetirement.verifier_service_present, false);
-  assert.equal(evidence.browserRelayPlan.state, 'edge_profile_source_converged_reviewed_not_deployed');
+  assert.equal(evidence.browserRelayPlan.state, 'relay_process_admission_merged_root_reviewed_not_deployed');
   assert.equal(evidence.browserRelayPlan.evidence.state, 'absent');
+  assert.equal(evidence.relayServicesProfile.state, 'dormant_no_operator_entrypoint');
+  assert.equal(
+    evidence.relayServicesProfile.pins.miakapp_server_commit,
+    'df10674e034f30eec80760f5ec94bc108cff026f',
+  );
 
   const workloadDigestDrift = manifest();
   workloadDigestDrift.evidence.workload_deployment.result_sha256 = '0'.repeat(64);

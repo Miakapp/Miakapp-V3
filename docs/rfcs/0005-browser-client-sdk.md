@@ -595,7 +595,13 @@ The replacement implementation is pinned by:
   [`a798a74`](https://github.com/Miakapp/MiakAPI/commit/a798a746847ba3d5c16128a08b33353269e770a4);
   and
 - Miakapp-Server merge
-  [`9a7e33d`](https://github.com/Miakapp/Miakapp-Server/commit/9a7e33de3a684b6cd9e82231db7c9af8bf41a0a1).
+  [`df10674`](https://github.com/Miakapp/Miakapp-Server/commit/df10674e034f30eec80760f5ec94bc108cff026f).
+
+That relay revision applies finite process admission before WebSocket upgrade:
+active connections, attempts and tracked immediate peers, live Homes and
+aggregate queued bytes are all bounded. It deliberately ignores forwarded
+client-address headers; a trusted edge is still required for end-user IP
+fairness.
 
 MiakAPI's complete gate passes 137 tests plus strict type, build, Node/browser
 isolation, external coordinator-contract and package-artifact checks. Its

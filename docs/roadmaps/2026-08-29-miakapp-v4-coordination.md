@@ -247,7 +247,10 @@ The current complete local gate pins the V3 two-relay fixture at
 MiakAPI at
 [`a798a74`](https://github.com/Miakapp/MiakAPI/commit/a798a746847ba3d5c16128a08b33353269e770a4)
 and Miakapp-Server at
-[`9a7e33d`](https://github.com/Miakapp/Miakapp-Server/commit/9a7e33de3a684b6cd9e82231db7c9af8bf41a0a1).
+[`df10674`](https://github.com/Miakapp/Miakapp-Server/commit/df10674e034f30eec80760f5ec94bc108cff026f).
+The relay pin now also enforces finite process-wide connection, attempt,
+tracked-peer, Home and aggregate queue budgets before a public staging service
+can be rendered.
 It drives an Auth-emulator identity and signed synthetic App Check token through
 the real exchange and exact `relay:user` verification, then changes the
 authoritative Home route. The browser recovers state and calls on the second
@@ -713,8 +716,12 @@ current consumer.
     issuer/origin pairs, and the canonical profile remains active. A dormant,
     non-CLI edge state machine now enforces public-last transition,
     private-first rollback, a 900-second callback ceiling, a 1,200-second public
-    ceiling and IAM-independent emergency ingress closure. Next bind it to an
-    atomic single-use operation and implement the two relays, three-engine runner,
+    ceiling and IAM-independent emergency ingress closure. A separate dormant
+    Terraform root now freezes the two relay services, their private-bootstrap,
+    private-ready, public-window and absent states, public-last IAM dependency,
+    scale-to-zero profile and matching process admission limits. It has no
+    operator entrypoint and has not been applied. Next bind both state machines
+    to an atomic single-use operation, immutable image digest, three-engine runner,
     monitoring and complete rollback guards. Execute the matrix once before
     retiring version 1 after the complete lease bound and wiring the real client
     and opaque broker into the production web shell. This reuses the existing

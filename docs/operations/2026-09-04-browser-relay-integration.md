@@ -31,7 +31,7 @@ relay, or staging acceptance. The complete audience-bound local gate is in the
 The reciprocal CI gate checks out these exact public merge commits:
 
 - MiakAPI: `a798a746847ba3d5c16128a08b33353269e770a4`;
-- Miakapp-Server: `9a7e33de3a684b6cd9e82231db7c9af8bf41a0a1`.
+- Miakapp-Server: `df10674e034f30eec80760f5ec94bc108cff026f`.
 
 Use detached worktrees at those revisions for release evidence. A developer may
 run the same commands against clean local checkouts while iterating, but must
