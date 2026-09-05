@@ -68,3 +68,23 @@ resource "google_project_service" "recaptcha_enterprise" {
 
   depends_on = [terraform_data.browser_app_check_guard]
 }
+
+resource "google_recaptcha_enterprise_key" "browser_app_check" {
+  project         = local.project_id
+  display_name    = local.recaptcha_display_name
+  labels          = local.labels
+  deletion_policy = "DELETE"
+
+  web_settings {
+    integration_type  = "SCORE"
+    allow_all_domains = false
+    allowed_domains   = [local.hosting_domain]
+    allow_amp_traffic = false
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  depends_on = [google_project_service.recaptcha_enterprise]
+}

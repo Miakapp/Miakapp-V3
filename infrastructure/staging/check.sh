@@ -116,13 +116,18 @@ node infrastructure/staging/browser-relay/validate.mjs \
 node infrastructure/staging/browser-app-check/guard.mjs \
   "${repository_root}/infrastructure/staging/browser-app-check"
 node --check infrastructure/staging/browser-app-check/apply.mjs
+node --check infrastructure/staging/browser-app-check/attempt-claim.mjs
 node --check infrastructure/staging/browser-app-check/cli.mjs
 node --check infrastructure/staging/browser-app-check/contract.mjs
 node --check infrastructure/staging/browser-app-check/evidence.mjs
 node --check infrastructure/staging/browser-app-check/guard.mjs
 node --check infrastructure/staging/browser-app-check/inventory.mjs
+node --check infrastructure/staging/browser-app-check/key-apply.mjs
+node --check infrastructure/staging/browser-app-check/key-contract.mjs
+node --check infrastructure/staging/browser-app-check/key-plan.mjs
 node --check infrastructure/staging/browser-app-check/plan.mjs
 node --check infrastructure/staging/browser-app-check/state.mjs
+node --check infrastructure/staging/browser-app-check/validate-key-plan.mjs
 node --check infrastructure/staging/browser-app-check/validate-plan.mjs
 node infrastructure/staging/browser-app-check/evidence.mjs \
   infrastructure/staging/browser-app-check/result.json
@@ -159,11 +164,14 @@ bash -n \
   infrastructure/staging/auth-probe/retire-recovery-apply.sh \
   infrastructure/staging/auth-probe/retire-recovery-plan.sh \
   infrastructure/staging/browser-app-check/apply.sh \
+  infrastructure/staging/browser-app-check/key-apply.sh \
+  infrastructure/staging/browser-app-check/key-plan.sh \
   infrastructure/staging/browser-app-check/plan.sh
 node --test \
   infrastructure/staging/test/activation.test.mjs \
   infrastructure/staging/test/auth-probe.test.mjs \
   infrastructure/staging/test/browser-app-check-api.test.mjs \
+  infrastructure/staging/test/browser-app-check-key.test.mjs \
   infrastructure/staging/test/browser-relay.test.mjs \
   infrastructure/staging/test/bootstrap.test.mjs \
   infrastructure/staging/test/firebase-auth.test.mjs \

@@ -1,7 +1,8 @@
 # Staging browser App Check prerequisite
 
 Status: API-only prerequisite applied and converged; authoritative key inventory
-empty; plan and apply entrypoints permanently retired
+empty at the last committed observation; guarded single-key implementation
+ready for a fresh saved plan but not yet applied
 
 This isolated Terraform root enabled the first reversible prerequisite for
 browser App Check in `miakapp-v4-staging`. The exact saved plan created only:
@@ -59,6 +60,63 @@ Both [plan](plan.mjs) and [apply](apply.mjs) retain the reviewed historical
 contract and validators, but direct execution now fails before tool or cloud
 access. The consumed saved plan must never be replayed.
 
+## Guarded reversible key operation
+
+The active [key planner](key-plan.mjs) and [key apply driver](key-apply.mjs)
+permit exactly one new `google_recaptcha_enterprise_key` from the applied state:
+
+- Web `SCORE` integration;
+- display name `Miakapp V4 staging browser App Check`;
+- `allow_all_domains=false` and only `miakapp-v4-staging.web.app` in the
+  allowed-domain list;
+- AMP disabled, with no testing, WAF, Android, iOS or challenge configuration;
+- the four exact staging labels, with the provider attribution label disabled;
+- no App Check registration, enforcement, debug token, endpoint, browser
+  request or assessment.
+
+Google treats an allowed domain as also allowing its subdomains. The chosen
+Firebase Hosting hostname is already the narrowest stable staging hostname, so
+this does not authorize `miakapp.com`, another Hosting site or a custom domain.
+
+The resource uses API deletion policy `DELETE` so a later reviewed teardown can
+remove it, while Terraform `prevent_destroy=true` blocks accidental removal in
+the active phase. Retirement therefore requires a distinct source change and
+saved plan. The public site-key identifier will exist in private Terraform
+state, but neither it nor its raw resource name is written to committed
+evidence. reCAPTCHA also exposes a separately retrievable legacy secret for
+some compatibility paths; these drivers never call that endpoint and never
+emit that secret.
+
+`key-plan.sh` requires the exact target confirmation
+`miakapp-v4-staging:miakapp-v4-staging.web.app`, starts from the pinned
+serial-3 state, an authoritative empty key inventory and the absence of the
+private global attempt claim, and writes its
+two-hour saved plan only to a mode-0700 directory outside the repository. Its
+validator accepts one create, two managed no-ops, zero updates, zero deletes,
+zero replacements and the output-only transition from API evidence to key
+evidence. `key-apply.sh` then requires an authorization derived from the exact
+plan bytes, baseline and merge commit.
+
+Immediately before mutation, the apply driver obtains a fresh operator token
+and revalidates the commit, saved plan, complete empty-key baseline, absent
+global claim and exact remote state. It first writes an exclusive durable local
+attempt marker. It then atomically creates the private object
+`terraform/browser-app-check/operations/recaptcha-key-create-attempt.json` in
+the versioned state bucket with the GCS `ifGenerationMatch=0` precondition.
+That one-shot create is bound to the exact plan, baseline and merge commit; only
+the process that successfully reads back its exact generation may invoke
+Terraform. Independent bundles therefore cannot both pass the creation gate.
+The claim contains hashes and operation metadata only, never a credential or
+site key, and remains live as durable coordination evidence until a separate
+reviewed retirement.
+
+Once either marker exists, that bundle is permanently non-retryable regardless
+of process outcome. An ambiguous failure must use a
+separately reviewed inventory plus import-only or evidence-finalization
+recovery; the driver preserves any Terraform fallback state and available raw
+key inventory in the private bundle. It never automatically patches or deletes
+a key or the global claim during recovery.
+
 ## Non-deletable App Check boundary
 
 This root does not declare
@@ -68,10 +126,11 @@ removing its Terraform state would not unregister it. Provider registration is
 therefore a later, explicitly non-deletable staging decision. Enforcement and
 debug-token creation are separate later decisions as well.
 
-API enablement has no fixed recurring service charge. The applied driver made
-no assessment or browser request. Usage-based reCAPTCHA cost can begin only
-once some client sends assessment traffic; no such client is configured by
-this root.
+API enablement and the coordination object have no fixed recurring service
+charge; the tiny private object consumes only metered Storage bytes. The
+applied driver made no assessment or browser request. Usage-based reCAPTCHA
+cost can begin only once some client sends assessment traffic; no such client
+is configured by this root.
 
 References:
 
@@ -81,8 +140,7 @@ References:
 
 ## Next gate
 
-Create a separate implementation and fresh saved plan for one reversible
-domain-restricted score key. That plan must start from the enabled API, the
-exact current Terraform state and a newly observed authoritative empty key
-inventory. App Check provider registration, browser SDK traffic and enforcement
-remain excluded until later gates.
+Render, review and apply the fresh single-key saved plan, then commit only its
+sanitized independently cross-linked evidence and permanently retire the
+consumed key entrypoints. App Check provider registration remains a separate
+non-deletable gate; browser SDK traffic and enforcement remain later gates.

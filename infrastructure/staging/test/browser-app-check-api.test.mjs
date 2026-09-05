@@ -354,11 +354,18 @@ function metadata() {
   });
 }
 
-test('root contains only the guarded API prerequisite implementation', () => {
+test('root contains the applied API prerequisite and guarded key-only phase', () => {
   validateBrowserAppCheckRoot(browserRoot);
+  const keySource = terraformSource.slice(
+    terraformSource.indexOf('resource "google_recaptcha_enterprise_key" "browser_app_check"'),
+  );
   assert.match(terraformSource, /prefix = "terraform\/browser-app-check"/u);
   assert.match(terraformSource, /resource "google_project_service" "recaptcha_enterprise"/u);
-  assert.doesNotMatch(terraformSource, /google_recaptcha_enterprise_key/u);
+  assert.match(keySource, /^resource "google_recaptcha_enterprise_key" "browser_app_check"/u);
+  assert.match(keySource, /allowed_domains\s+= \[local\.hosting_domain\]/u);
+  assert.match(keySource, /integration_type\s+= "SCORE"/u);
+  assert.match(keySource, /deletion_policy\s+= "DELETE"/u);
+  assert.match(keySource, /lifecycle\s*\{\s*prevent_destroy\s+= true\s*\}/u);
   assert.doesNotMatch(terraformSource, /google_firebase_app_check_recaptcha_enterprise_config/u);
 });
 
