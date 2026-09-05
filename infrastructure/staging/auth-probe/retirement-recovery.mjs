@@ -61,6 +61,7 @@ const MAXIMUM_STATE_BYTES = 32 * 1024 * 1024;
 const TERRAFORM_DATA_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
 const IAM_ETAG = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u;
 const CLOUD_ASSET_ADDRESS = 'google_project_service.auth_probe_asset_inventory';
+const VERIFIER_SERVICE_RESOURCE = `projects/${PROJECT_ID}/locations/${REGION}/services/${VERIFIER_SERVICE_NAME}`;
 const CUSTOM_ROLE_RECOVERY = Object.freeze({
   'google_project_iam_custom_role.auth_probe': Object.freeze({
     key: 'firebase',
@@ -191,7 +192,9 @@ function validateInstanceTarget(address, attributes) {
     case 'google_cloud_run_v2_service_iam_member.auth_probe_verifier_invoker[0]':
       exact(attributes.project, PROJECT_ID, `${address}.project`);
       exact(attributes.location, REGION, `${address}.location`);
-      exact(attributes.name, VERIFIER_SERVICE_NAME, `${address}.name`);
+      if (![VERIFIER_SERVICE_NAME, VERIFIER_SERVICE_RESOURCE].includes(attributes.name)) {
+        reject(`${address}.name does not match the reviewed value`);
+      }
       exact(attributes.role, 'roles/run.servicesInvoker', `${address}.role`);
       exact(attributes.member, `serviceAccount:${PROBE_ACCOUNT}`, `${address}.member`);
       break;
