@@ -2,7 +2,7 @@
   "schema": "miakapp.staging-browser-attestation-preflight-result/2",
   "operation": "attest-browser-app-check-and-disable-hosting-v2",
   "state": "consumed_before_release",
-  "failure_stage": "hosting_version_finalization",
+  "failure_stage": "before_hosting_release",
   "project_id": "miakapp-v4-staging",
   "project_number": "1072737219170",
   "repository_commit": "4fba5cf19ed4bf316b4e23676a8efc8a2bc0695a",
@@ -24,7 +24,7 @@
     "create_time": "2026-09-05T14:14:04.368714Z",
     "finalize_time_after_cleanup": null,
     "delete_time": "2026-09-05T14:14:07.130370Z",
-    "finalization_validated_by_driver": false,
+    "finalization_proven_after_cleanup": false,
     "releases_created": 0,
     "site_ever_released": false,
     "runner_http_status_after_cleanup": 404

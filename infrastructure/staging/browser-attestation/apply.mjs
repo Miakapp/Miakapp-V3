@@ -80,7 +80,7 @@ function validateFinalHostingInventory(
   const deploys = inventory.releases.filter(({ name }) => name === deployRelease.name);
   const disables = inventory.releases.filter(({ name }) => name === disableRelease.name);
   if (inventory.site.site !== HOSTING_SITE
-    || inventory.versions.length !== 3
+    || inventory.versions.length !== 4
     || versions.length !== 1
     || versions[0].status !== 'DELETED'
     || versions[0].file_count !== null
@@ -95,7 +95,7 @@ function validateFinalHostingInventory(
     || disables[0].type !== 'SITE_DISABLE'
     || disables[0].version_name !== null
     || disables[0].message !== hostingMessages.disable) {
-    throw new Error('Firebase Hosting did not converge to the exact disabled v3 state');
+    throw new Error('Firebase Hosting did not converge to the exact disabled v4 state');
   }
   return versions[0];
 }
@@ -190,7 +190,7 @@ async function main() {
   }
   if (operationError !== undefined) {
     const failure = Object.freeze({
-      schema: 'miakapp.staging-browser-attestation-failure/3',
+      schema: 'miakapp.staging-browser-attestation-failure/4',
       operation: metadata.operation,
       state: 'failed_after_bounded_cleanup',
       project_id: PROJECT_ID,
@@ -253,7 +253,7 @@ async function main() {
   verifyExactMain(repositoryRoot, metadata.repository_commit);
 
   const result = Object.freeze({
-    schema: 'miakapp.staging-browser-attestation-result/3',
+    schema: 'miakapp.staging-browser-attestation-result/4',
     operation: metadata.operation,
     project_id: PROJECT_ID,
     project_number: metadata.project_number,

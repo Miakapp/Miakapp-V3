@@ -8,7 +8,9 @@ const EXPECTED_RESULT_SHA256 = Object.freeze({
   'miakapp.staging-browser-attestation-preflight-result/1':
     '24746d2dde348ff5703f83a88e35ec45706629dab812a5727f0e97d626d6fce7',
   'miakapp.staging-browser-attestation-preflight-result/2':
-    'e59f17fc9113f4f8ebdc8867453f74094300901c5b42c3884cddab04c8af6431',
+    'c758873bb1c632531aa358a4cf8526e7e05c991b8f0329f27353494ad909f17a',
+  'miakapp.staging-browser-attestation-preflight-result/3':
+    '6e5ad639da6dc94075dc30d0f0f0839806e1e7ba944ececbff57ac2d2e821386',
 });
 
 function reject(message) {

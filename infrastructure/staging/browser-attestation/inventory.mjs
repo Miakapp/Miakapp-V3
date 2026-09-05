@@ -11,6 +11,9 @@ import {
   PREFLIGHT_V2_METADATA_SHA256,
   PREFLIGHT_V2_REPOSITORY_COMMIT,
   PREFLIGHT_V2_VERSION_NAME_SHA256,
+  PREFLIGHT_V3_METADATA_SHA256,
+  PREFLIGHT_V3_REPOSITORY_COMMIT,
+  PREFLIGHT_V3_VERSION_NAME_SHA256,
   PREFLIGHT_VERSION_NAME_SHA256,
   PRIOR_CLAIM_GENERATION,
   PRIOR_CLAIM_OBJECT,
@@ -23,6 +26,10 @@ import {
   SECOND_PRIOR_CLAIM_SHA256,
   SECOND_PRIOR_CLAIM_SIZE_BYTES,
   STATE_BUCKET,
+  THIRD_PRIOR_CLAIM_GENERATION,
+  THIRD_PRIOR_CLAIM_OBJECT,
+  THIRD_PRIOR_CLAIM_SHA256,
+  THIRD_PRIOR_CLAIM_SIZE_BYTES,
   canonicalJson,
   sha256,
 } from './contract.mjs';
@@ -214,9 +221,14 @@ export function validateRetiredPreflightVersions(inventory, options = {}) {
       operation: 'browser-app-check-attestation-v2',
       repository_commit: PREFLIGHT_V2_REPOSITORY_COMMIT,
     },
+    {
+      name_sha256: PREFLIGHT_V3_VERSION_NAME_SHA256,
+      operation: 'browser-app-check-attestation-v3',
+      repository_commit: PREFLIGHT_V3_REPOSITORY_COMMIT,
+    },
   ];
   if (!plainObject(inventory) || !Array.isArray(inventory.versions)
-    || !Array.isArray(expectedVersions) || expectedVersions.length !== 2
+    || !Array.isArray(expectedVersions) || expectedVersions.length !== 3
     || expectedVersions.some((expected) => !plainObject(expected)
       || !SHA256.test(expected.name_sha256 ?? '')
       || typeof expected.operation !== 'string'
@@ -248,7 +260,8 @@ export function validateRetiredPreflightVersions(inventory, options = {}) {
 }
 
 function validateClaimObject(objectName) {
-  if (![CLAIM_OBJECT, PRIOR_CLAIM_OBJECT, SECOND_PRIOR_CLAIM_OBJECT].includes(objectName)) {
+  if (![CLAIM_OBJECT, PRIOR_CLAIM_OBJECT, SECOND_PRIOR_CLAIM_OBJECT,
+    THIRD_PRIOR_CLAIM_OBJECT].includes(objectName)) {
     reject('Browser-attestation claim inventory object is outside the reviewed boundary');
   }
   return objectName;
@@ -334,6 +347,7 @@ export function observePriorOperationClaims(session, fetchImplementation) {
   return Promise.all([
     observeClaim(session, PRIOR_CLAIM_OBJECT, fetchImplementation),
     observeClaim(session, SECOND_PRIOR_CLAIM_OBJECT, fetchImplementation),
+    observeClaim(session, THIRD_PRIOR_CLAIM_OBJECT, fetchImplementation),
   ]);
 }
 
@@ -406,8 +420,21 @@ export async function observeAttestationBaseline(session, options = {}) {
         sha256: SECOND_PRIOR_CLAIM_SHA256,
       },
     },
+    {
+      schema: 'miakapp.staging-browser-attestation-claim/3',
+      operation: 'attest-browser-app-check-and-disable-hosting-v3',
+      repository_commit: PREFLIGHT_V3_REPOSITORY_COMMIT,
+      metadata_sha256: PREFLIGHT_V3_METADATA_SHA256,
+      receipt: {
+        bucket: STATE_BUCKET,
+        object: THIRD_PRIOR_CLAIM_OBJECT,
+        generation: THIRD_PRIOR_CLAIM_GENERATION,
+        size_bytes: THIRD_PRIOR_CLAIM_SIZE_BYTES,
+        sha256: THIRD_PRIOR_CLAIM_SHA256,
+      },
+    },
   ];
-  if (!Array.isArray(expectedPriorClaims) || expectedPriorClaims.length !== 2) {
+  if (!Array.isArray(expectedPriorClaims) || expectedPriorClaims.length !== 3) {
     reject('Prior browser-attestation claim expectations are invalid');
   }
   const [appCheck, keys, hosting, webConfigResponse, priorClaims, claimPresent] = await Promise.all([
@@ -470,7 +497,7 @@ export async function observeAttestationBaseline(session, options = {}) {
   });
   const expectedClaimPresent = options.operationClaimPresent ?? false;
   if (typeof expectedClaimPresent !== 'boolean'
-    || baseline.hosting_version_count !== 2
+    || baseline.hosting_version_count !== 3
     || baseline.hosting_release_count !== 0
     || baseline.operation_claim_present !== expectedClaimPresent) {
     reject('Browser-attestation requires the exact retired preflight boundary');
