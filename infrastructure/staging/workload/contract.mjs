@@ -17,6 +17,16 @@ export const REGION = 'europe-west9';
 export const TERRAFORM_VERSION = '1.11.3';
 export const OPERATOR_USER_SHA256 = 'd1c8514ac6eb5c13205cfec40dd6cc2072f33eb4279172df17273aa7c54a181c';
 export const RUNTIME_CONFIG_SHA256 = 'c018708786fc23a15f7701093b5148c0e415a2df8045af8e170e4308c2deae37';
+export const TARGET_RUNTIME_CONFIG_SHA256 = '40e2f83fbe8e3d27b7e53c4a666f424519fc6972ef19a7598ab9e093be0c70f7';
+export const SIGNING_PREPUBLICATION_DEPLOYMENT_COMMIT =
+  '2bdd1a9e224234318d2ffd77c61b609331ccd044';
+export const SIGNING_PREPUBLICATION_FUNCTION_REVISION = 'control-plane-00007-deb';
+export const SIGNING_PREPUBLICATION_FUNCTION_UPDATED_AT = '2026-09-05T11:59:31.953152089Z';
+export const SIGNING_PREPUBLICATION_SOURCE_REPOSITORY_COMMIT =
+  '9f217da102b394734adba7ccef3f8f70d0317306';
+export const SIGNING_PREPUBLICATION_SOURCE_SHA256 =
+  'd1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8';
+export const SIGNING_PREPUBLICATION_MINIMUM_MILLISECONDS = 60_000;
 export const PLAN_TTL_MILLISECONDS = 2 * 60 * 60 * 1_000;
 
 const SHA256 = /^[0-9a-f]{64}$/u;
@@ -223,6 +233,75 @@ export function validateWorkloadUpdateAuthorization(value, planBytes, repository
   }
 }
 
+export function workloadSigningActivationAuthorization(planBytes, repositoryCommit) {
+  if (!Buffer.isBuffer(planBytes) || planBytes.byteLength === 0 || !COMMIT.test(repositoryCommit)) {
+    reject('Workload signing activation authorization inputs are invalid');
+  }
+  return `activate-staging-signing-key:${PROJECT_ID}:${sha256(planBytes)}:${repositoryCommit}`;
+}
+
+export function validateWorkloadSigningActivationAuthorization(
+  value,
+  planBytes,
+  repositoryCommit,
+) {
+  const expected = Buffer.from(
+    workloadSigningActivationAuthorization(planBytes, repositoryCommit),
+    'utf8',
+  );
+  const actual = Buffer.from(typeof value === 'string' ? value : '', 'utf8');
+  if (actual.byteLength !== expected.byteLength || !timingSafeEqual(actual, expected)) {
+    reject('Exact staging workload signing activation authorization is missing or invalid');
+  }
+}
+
+export function validateSigningActivationBaseline(value, now = Date.now()) {
+  const baseline = exactKeys(
+    value,
+    ['name', 'serviceConfig', 'state', 'updateTime'],
+    'Signing activation Function baseline',
+  );
+  const service = exactKeys(
+    baseline.serviceConfig,
+    ['environmentVariables', 'revision'],
+    'Signing activation Function service baseline',
+  );
+  const environment = exactKeys(
+    service.environmentVariables,
+    [
+      'LOG_EXECUTION_ID',
+      'MIAKAPP_DEPLOYMENT_COMMIT',
+      'MIAKAPP_RUNTIME_CONFIG_JSON',
+      'MIAKAPP_SOURCE_ARCHIVE_SHA256',
+    ],
+    'Signing activation Function environment baseline',
+  );
+  const updatedMilliseconds = Date.parse(SIGNING_PREPUBLICATION_FUNCTION_UPDATED_AT);
+  if (!Number.isFinite(now)
+    || baseline.name !== `projects/${PROJECT_ID}/locations/${REGION}/functions/control-plane`
+    || baseline.state !== 'ACTIVE'
+    || baseline.updateTime !== SIGNING_PREPUBLICATION_FUNCTION_UPDATED_AT
+    || service.revision !== SIGNING_PREPUBLICATION_FUNCTION_REVISION
+    || environment.LOG_EXECUTION_ID !== 'true'
+    || environment.MIAKAPP_DEPLOYMENT_COMMIT !== SIGNING_PREPUBLICATION_DEPLOYMENT_COMMIT
+    || environment.MIAKAPP_SOURCE_ARCHIVE_SHA256 !== SIGNING_PREPUBLICATION_SOURCE_SHA256
+    || typeof environment.MIAKAPP_RUNTIME_CONFIG_JSON !== 'string'
+    || sha256(Buffer.from(environment.MIAKAPP_RUNTIME_CONFIG_JSON, 'utf8'))
+      !== RUNTIME_CONFIG_SHA256) {
+    reject('Live signing prepublication baseline does not match the reviewed Function revision');
+  }
+  const elapsedMilliseconds = Math.floor(now) - updatedMilliseconds;
+  if (elapsedMilliseconds < SIGNING_PREPUBLICATION_MINIMUM_MILLISECONDS) {
+    reject('Signing key version 2 cannot activate before the prepublication interval elapses');
+  }
+  return Object.freeze({
+    function_revision: SIGNING_PREPUBLICATION_FUNCTION_REVISION,
+    function_updated_at: SIGNING_PREPUBLICATION_FUNCTION_UPDATED_AT,
+    elapsed_milliseconds: elapsedMilliseconds,
+    minimum_milliseconds: SIGNING_PREPUBLICATION_MINIMUM_MILLISECONDS,
+  });
+}
+
 function buildMetadata({
   repositoryCommit,
   sourceRepositoryCommit = repositoryCommit,
@@ -281,6 +360,14 @@ export function buildWorkloadUpdatePlanMetadata(input) {
     schema: 'miakapp.staging-workload-update-plan/1',
     operation: 'replace-pinned-control-plane-source',
     runtimeConfigSha256: RUNTIME_CONFIG_SHA256,
+  });
+}
+
+export function buildWorkloadSigningActivationPlanMetadata(input) {
+  return buildMetadata(input, {
+    schema: 'miakapp.staging-workload-signing-activation-plan/1',
+    operation: 'activate-second-signing-key',
+    runtimeConfigSha256: TARGET_RUNTIME_CONFIG_SHA256,
   });
 }
 
@@ -354,6 +441,23 @@ export function validateWorkloadUpdatePlanMetadata(value, now = Date.now()) {
   });
 }
 
+export function validateWorkloadSigningActivationPlanMetadata(value, now = Date.now()) {
+  const metadata = validateMetadata(value, now, {
+    schema: 'miakapp.staging-workload-signing-activation-plan/1',
+    operation: 'activate-second-signing-key',
+    runtimeConfigSha256: TARGET_RUNTIME_CONFIG_SHA256,
+  });
+  const prepublication = Date.parse(SIGNING_PREPUBLICATION_FUNCTION_UPDATED_AT);
+  const created = Date.parse(metadata.created_at);
+  if (metadata.repository_commit === SIGNING_PREPUBLICATION_DEPLOYMENT_COMMIT
+    || metadata.source_repository_commit !== SIGNING_PREPUBLICATION_SOURCE_REPOSITORY_COMMIT
+    || metadata.source_archive_sha256 !== SIGNING_PREPUBLICATION_SOURCE_SHA256
+    || created - prepublication < SIGNING_PREPUBLICATION_MINIMUM_MILLISECONDS) {
+    reject('Signing activation plan does not match the elapsed prepublication baseline');
+  }
+  return metadata;
+}
+
 function readMetadata(path, now, validate) {
   const bytes = readPrivateFile(path, 1024 * 1024);
   let value;
@@ -374,4 +478,8 @@ export function readPlanMetadata(path, now = Date.now()) {
 
 export function readWorkloadUpdatePlanMetadata(path, now = Date.now()) {
   return readMetadata(path, now, validateWorkloadUpdatePlanMetadata);
+}
+
+export function readWorkloadSigningActivationPlanMetadata(path, now = Date.now()) {
+  return readMetadata(path, now, validateWorkloadSigningActivationPlanMetadata);
 }
