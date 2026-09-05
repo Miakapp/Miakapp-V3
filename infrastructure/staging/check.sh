@@ -165,8 +165,6 @@ bash -n \
   infrastructure/staging/terraform/plan.sh \
   infrastructure/staging/workload/apply.sh \
   infrastructure/staging/workload/plan.sh \
-  infrastructure/staging/workload/signing-activate-apply.sh \
-  infrastructure/staging/workload/signing-activate-plan.sh \
   infrastructure/staging/workload/update-apply.sh \
   infrastructure/staging/workload/update-plan.sh \
   infrastructure/staging/probe/apply.sh \

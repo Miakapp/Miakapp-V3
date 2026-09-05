@@ -21,8 +21,6 @@ const ALLOWED_FILES = Object.freeze([
   'runtime-config.json',
   'runtime-config-single-key.json',
   'runtime-config-version-1-current.json',
-  'signing-activate-apply.sh',
-  'signing-activate-plan.sh',
   'terraform-cli.tfrc',
   'update-apply.mjs',
   'update-apply.sh',
@@ -68,8 +66,6 @@ export function validateWorkloadRoot(rootUrl) {
   for (const executable of [
     'apply.sh',
     'plan.sh',
-    'signing-activate-apply.sh',
-    'signing-activate-plan.sh',
     'update-apply.sh',
     'update-plan.sh',
   ]) {
