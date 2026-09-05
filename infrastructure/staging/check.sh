@@ -113,6 +113,16 @@ node --check infrastructure/staging/browser-relay/guard.mjs
 node --check infrastructure/staging/browser-relay/validate.mjs
 node infrastructure/staging/browser-relay/validate.mjs \
   infrastructure/staging/browser-relay/plan.json
+node infrastructure/staging/browser-app-check/guard.mjs \
+  "${repository_root}/infrastructure/staging/browser-app-check"
+node --check infrastructure/staging/browser-app-check/apply.mjs
+node --check infrastructure/staging/browser-app-check/cli.mjs
+node --check infrastructure/staging/browser-app-check/contract.mjs
+node --check infrastructure/staging/browser-app-check/guard.mjs
+node --check infrastructure/staging/browser-app-check/inventory.mjs
+node --check infrastructure/staging/browser-app-check/plan.mjs
+node --check infrastructure/staging/browser-app-check/state.mjs
+node --check infrastructure/staging/browser-app-check/validate-plan.mjs
 bash -n \
   infrastructure/staging/automation/apply.sh \
   infrastructure/staging/automation/inspect-plan.sh \
@@ -144,10 +154,13 @@ bash -n \
   infrastructure/staging/auth-probe/retire-apply.sh \
   infrastructure/staging/auth-probe/retire-plan.sh \
   infrastructure/staging/auth-probe/retire-recovery-apply.sh \
-  infrastructure/staging/auth-probe/retire-recovery-plan.sh
+  infrastructure/staging/auth-probe/retire-recovery-plan.sh \
+  infrastructure/staging/browser-app-check/apply.sh \
+  infrastructure/staging/browser-app-check/plan.sh
 node --test \
   infrastructure/staging/test/activation.test.mjs \
   infrastructure/staging/test/auth-probe.test.mjs \
+  infrastructure/staging/test/browser-app-check-api.test.mjs \
   infrastructure/staging/test/browser-relay.test.mjs \
   infrastructure/staging/test/bootstrap.test.mjs \
   infrastructure/staging/test/firebase-auth.test.mjs \
@@ -159,7 +172,7 @@ node --test \
   infrastructure/staging/test/user-relay-verifier.test.mjs \
   infrastructure/staging/test/workload.test.mjs
 
-for terraform_root in bootstrap terraform workload probe firebase-auth auth-probe; do
+for terraform_root in bootstrap terraform workload probe firebase-auth auth-probe browser-app-check; do
   terraform_path="infrastructure/staging/${terraform_root}"
   terraform -chdir="$terraform_path" fmt -check -recursive
   export TF_CLI_CONFIG_FILE="${repository_root}/${terraform_path}/terraform-cli.tfrc"
