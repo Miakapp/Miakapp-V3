@@ -34,7 +34,7 @@ const SERVICE_STATES = [
   'initialized_closed_custom_token_lifecycle_validated',
   'admin_custom_provider_validated_browser_attestation_pending',
   'private_fixture_lifecycle_validated_no_persistent_application_data',
-  'private_signing_overlap_bridge_active_user_relay_acceptance_succeeded',
+  'private_schema_2_single_key_runtime_active_user_relay_acceptance_succeeded',
   'private_bucket_created_no_application_mutation',
   'signing_key_version_enabled_public_key_validated',
   'five_initial_versions_enabled_runtime_access_validated',
@@ -246,7 +246,7 @@ function validateProject(value) {
   }
   exact(
     project.lifecycle,
-    'firebase_auth_initialized_private_control_plane_user_relay_acceptance_succeeded',
+    'firebase_auth_initialized_private_control_plane_schema_2_user_relay_acceptance_succeeded',
     'project.lifecycle',
   );
   exact(project.creation_authorized, false, 'project.creation_authorized');
@@ -405,6 +405,9 @@ function validateRuntime(value) {
     'ingress',
     'source_archive_sha256',
     'runtime_config_sha256',
+    'runtime_schema',
+    'security_schema',
+    'published_signing_keys',
     'user_managed_keys',
     'live_request_performed',
   ]);
@@ -422,7 +425,7 @@ function validateRuntime(value) {
     'projects/miakapp-v4-staging/locations/europe-west9/services/control-plane',
     'runtime.service',
   );
-  exact(runtime.revision, 'control-plane-00005-biq', 'runtime.revision');
+  exact(runtime.revision, 'control-plane-00006-wid', 'runtime.revision');
   exact(runtime.uri, 'https://control-plane-aczhngqraq-od.a.run.app', 'runtime.uri');
   exact(runtime.minimum_instances, 0, 'runtime.minimum_instances');
   exact(runtime.maximum_instances, 1, 'runtime.maximum_instances');
@@ -442,11 +445,14 @@ function validateRuntime(value) {
   );
   exact(
     runtime.runtime_config_sha256,
-    'b794181400bf5ace6aaa9ffc4be00e4c4f6a59519284baa7f73bca3c042c4ff8',
+    '20be750358ffbc2136bab26bca6338b430ea6480ae9874f3fe5e7132c5e0db10',
     'runtime.runtime_config_sha256',
   );
+  exact(runtime.runtime_schema, 'miakapp.production-runtime/2', 'runtime.runtime_schema');
+  exact(runtime.security_schema, 'miakapp.production-security/2', 'runtime.security_schema');
+  exact(runtime.published_signing_keys, 1, 'runtime.published_signing_keys');
   exact(runtime.user_managed_keys, 0, 'runtime.user_managed_keys');
-  exact(runtime.live_request_performed, true, 'runtime.live_request_performed');
+  exact(runtime.live_request_performed, false, 'runtime.live_request_performed');
 }
 
 function validateData(value) {
@@ -2886,6 +2892,7 @@ function validateEvidence(value) {
     'observed_at',
     'inventory_repository_commit',
     'deployed_repository_commit',
+    'deployed_source_repository_commit',
     'initial_plan_sha256',
     'initial_plan_result',
     'recovery_configuration_commit',
@@ -2894,6 +2901,7 @@ function validateEvidence(value) {
     'output_reconciliation_plan_sha256',
     'output_reconciliation_resource_changes',
     'source_updates',
+    'runtime_migrations',
     'result_path',
     'result_sha256',
     'terraform_state',
@@ -2914,10 +2922,11 @@ function validateEvidence(value) {
     'live_request_performed',
   ]);
   const expectedWorkload = {
-    state: 'active_internal_only_source_verified',
-    observed_at: '2026-09-05T04:07:54.932Z',
-    inventory_repository_commit: '9f217da102b394734adba7ccef3f8f70d0317306',
-    deployed_repository_commit: '9f217da102b394734adba7ccef3f8f70d0317306',
+    state: 'active_internal_only_schema_2_single_key_source_verified',
+    observed_at: '2026-09-05T04:59:33.349Z',
+    inventory_repository_commit: 'e42cdd70f812580a6070f0e850daa04dbe0cee42',
+    deployed_repository_commit: 'e42cdd70f812580a6070f0e850daa04dbe0cee42',
+    deployed_source_repository_commit: '9f217da102b394734adba7ccef3f8f70d0317306',
     initial_plan_sha256: 'b59167718fdad5edfa440f5d59f6e0eb1dff9277b20e1f829ebbb233296cdf05',
     initial_plan_result: 'failed_build_missing_conditional_source_read',
     recovery_configuration_commit: '488da23cd7eb4c08baa9296724b87b7df34a1122',
@@ -2925,10 +2934,10 @@ function validateEvidence(value) {
     output_reconciliation_plan_sha256: 'a31bda9269b138b270d58a6bb992ab7902d1fc73074c0f8f2543bdf0c8f09623',
     output_reconciliation_resource_changes: 0,
     result_path: 'workload/result.json',
-    result_sha256: 'dc3324d3b812e1dafc6a6678c7427ac715ea1d2a81de527750aa958c7c71a440',
+    result_sha256: '8abb27b692b6003566f510d3c03e8fa1c47926b51f263ea4dc7011838629a24c',
     source_archive_sha256: 'd1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8',
-    runtime_config_sha256: 'b794181400bf5ace6aaa9ffc4be00e4c4f6a59519284baa7f73bca3c042c4ff8',
-    function_revision: 'control-plane-00005-biq',
+    runtime_config_sha256: '20be750358ffbc2136bab26bca6338b430ea6480ae9874f3fe5e7132c5e0db10',
+    function_revision: 'control-plane-00006-wid',
     ingress: 'ALLOW_INTERNAL_ONLY',
     unauthenticated_invokers: 0,
     minimum_instances: 0,
@@ -3025,6 +3034,70 @@ function validateEvidence(value) {
       exact(update[field], expected, `evidence.workload_deployment.source_updates[${index}].${field}`);
     }
   });
+  if (!Array.isArray(workload.runtime_migrations) || workload.runtime_migrations.length !== 1) {
+    reject('evidence.workload_deployment.runtime_migrations', 'must contain exactly 1 entry');
+  }
+  const runtimeMigration = record(
+    workload.runtime_migrations[0],
+    'evidence.workload_deployment.runtime_migrations[0]',
+    [
+      'purpose',
+      'repository_commit',
+      'source_repository_commit',
+      'plan_sha256',
+      'from_runtime_config_sha256',
+      'to_runtime_config_sha256',
+      'source_archive_sha256',
+      'plan_result',
+      'function_revision',
+      'copied_source_generation',
+      'terraform_state_generation',
+      'terraform_state_serial',
+      'terraform_state_sha256',
+      'live_request_performed',
+    ],
+  );
+  const runtimeMigrationPlanResult = record(
+    runtimeMigration.plan_result,
+    'evidence.workload_deployment.runtime_migrations[0].plan_result',
+    ['create', 'update', 'delete', 'source_replaced', 'function_replaced'],
+  );
+  const expectedRuntimeMigration = {
+    purpose: 'single_key_schema_1_to_schema_2',
+    repository_commit: 'e42cdd70f812580a6070f0e850daa04dbe0cee42',
+    source_repository_commit: '9f217da102b394734adba7ccef3f8f70d0317306',
+    plan_sha256: 'f9531f2ccde649b9f4b27d63b9c2228812d7deb5101515d1572d81851ad30560',
+    from_runtime_config_sha256: 'b794181400bf5ace6aaa9ffc4be00e4c4f6a59519284baa7f73bca3c042c4ff8',
+    to_runtime_config_sha256: '20be750358ffbc2136bab26bca6338b430ea6480ae9874f3fe5e7132c5e0db10',
+    source_archive_sha256: 'd1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8',
+    function_revision: 'control-plane-00006-wid',
+    copied_source_generation: '1788584317247647',
+    terraform_state_generation: '1788584368457557',
+    terraform_state_serial: 18,
+    terraform_state_sha256: '746dcf402b9c6735175af9b46d9dda5f53f1788217f2b342c617838b6e2a8242',
+    live_request_performed: false,
+  };
+  for (const [field, expected] of Object.entries(expectedRuntimeMigration)) {
+    exact(
+      runtimeMigration[field],
+      expected,
+      `evidence.workload_deployment.runtime_migrations[0].${field}`,
+    );
+  }
+  const expectedRuntimeMigrationPlanResult = {
+    create: 0,
+    update: 2,
+    delete: 0,
+    source_replaced: false,
+    function_replaced: false,
+  };
+  for (const [field, expected] of Object.entries(expectedRuntimeMigrationPlanResult)) {
+    exact(
+      runtimeMigrationPlanResult[field],
+      expected,
+      `evidence.workload_deployment.runtime_migrations[0].plan_result.${field}`,
+    );
+  }
   const workloadState = record(
     workload.terraform_state,
     'evidence.workload_deployment.terraform_state',
@@ -3045,11 +3118,11 @@ function validateEvidence(value) {
   );
   const expectedWorkloadState = {
     object: 'terraform/workload/default.tfstate',
-    generation: '1788581270106628',
-    sha256: 'd765cceffc696905f045a34805f9c6f1a6c45e9ba3f2224754a90a157c89b428',
-    size_bytes: 49242,
+    generation: '1788584368457557',
+    sha256: '746dcf402b9c6735175af9b46d9dda5f53f1788217f2b342c617838b6e2a8242',
+    size_bytes: 49563,
     terraform_version: '1.11.3',
-    serial: 16,
+    serial: 18,
     lineage_sha256: 'aecd871c255da2bb3d30e7a7cc7b76be229e1eccc1fce2c4e41fed5a4a4b4b3a',
     managed_resources: 15,
     data_resources: 3,
@@ -3417,10 +3490,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 42, 'manifest.revision');
+  exact(manifest.revision, 43, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_signing_overlap_bridge_deployed_user_relay_acceptance_succeeded_live_browser_plan_reviewed',
+    'private_control_plane_schema_2_single_key_runtime_deployed_user_relay_acceptance_succeeded_live_browser_plan_reviewed',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -3760,7 +3833,7 @@ export function validateCommittedEvidence(
     runner_present: browserRelayPlan.baseline.browser_runner_present,
     completed_cases: browserRelayPlan.evidence.completed_case_ids.length,
   }, 'evidence.browser_relay_plan');
-  exact(manifest.runtime.live_request_performed, true, 'runtime.live_request_performed');
+  exact(manifest.runtime.live_request_performed, false, 'runtime.live_request_performed');
   return Object.freeze({
     workload,
     probe,

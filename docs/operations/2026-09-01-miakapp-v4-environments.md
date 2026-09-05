@@ -104,11 +104,13 @@ For a low-volume staging project, the intended initial posture is:
 - no silently enabled fixed-price edge product. The ingress design and its full
   load-balancer/edge-policy baseline must be priced and accepted explicitly.
 
-The Function deployment and three bounded source updates incurred build,
-source and Artifact Registry storage plus a 49,283-byte workload state. The
-unscheduled private Workflow made exactly three bounded requests and has a
-13,596-byte state. The Function remains scale-to-zero with no recurring
-minimum-instance charge; the Workflow has no schedule or idle compute.
+The Function deployment, four bounded source updates and one runtime-only
+migration incurred build, source and Artifact Registry storage; the current
+workload state is 49,563 bytes. The historical discovery Workflow made exactly
+three bounded requests and has a 13,596-byte state. The Function remains
+scale-to-zero with no recurring minimum-instance charge. The original discovery
+Workflow remains deployed but unscheduled; the temporary Auth/App Check and
+user-relay probe Workflows are retired. No Workflow has idle compute.
 
 The private Terraform bucket stores small state objects and short-lived saved
 plans. Object Versioning and
@@ -355,15 +357,20 @@ and temporary bindings. Its sanitized evidence is digest-pinned under
 [`../../infrastructure/staging/auth-probe/`](../../infrastructure/staging/auth-probe/).
 
 A fourth guarded source-only update deployed merge commit
-`9f217da102b394734adba7ccef3f8f70d0317306` as current revision
-`control-plane-00005-biq`. The deployed source preserves the schema-1,
-single-key behavior and adds closed schema-2 support for one selected KMS signer
-and at most two KMS-validated published keys. Its saved plan changed only the
-deterministic source object, Function and deployment guard. Independent
-inventory made no request and reconfirmed the copied bytes, internal-only
-ingress, scale 0..1, zero public invokers and zero user-managed keys. The live
-runtime document remains on schema 1 with one key; its guarded migration is a
-separate gate. The current sanitized deployment result is digest-pinned under
+`9f217da102b394734adba7ccef3f8f70d0317306` as revision
+`control-plane-00005-biq`. The deployed source added closed schema-2 support for
+one selected KMS signer and at most two KMS-validated published keys while the
+live runtime remained on schema 1. Its saved plan changed only the deterministic
+source object, Function and deployment guard.
+
+A separate plan with SHA-256
+`f9531f2ccde649b9f4b27d63b9c2228812d7deb5101515d1572d81851ad30560`
+then migrated that same single-key document to schema 2 on revision
+`control-plane-00006-wid`. It performed exactly two in-place updates, no source
+replacement and no IAM, ingress or scale change. Independent inventory made no
+request and reconfirmed the copied bytes, internal-only ingress, scale 0..1,
+zero public invokers and zero user-managed keys. The current sanitized
+deployment result is digest-pinned under
 [`../../infrastructure/staging/workload/`](../../infrastructure/staging/workload/).
 
 The pinned local relay-authentication path now includes signing-key overlap,

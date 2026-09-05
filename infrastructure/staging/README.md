@@ -1,8 +1,8 @@
 # Miakapp 4 staging private workload boundary
 
 Status: private audience-bound user-relay acceptance succeeded and retired;
-bounded signing-key overlap bridge deployed privately; live browser-relay plan
-reviewed but not deployed
+schema-2 single-key runtime deployed privately; live browser-relay plan reviewed
+but not deployed
 
 This directory contains the closed description and observed state of
 `miakapp-v4-staging`. The bounded foundation recovery has completed; its active
@@ -88,16 +88,23 @@ A fourth source-only update deployed merge commit
 Exact saved plan SHA-256
 `ee98468a4ed92196109ac6f646030dca582068c6e2f2b5c1889e347322b1e3a6`
 changed only the source object, Function and deployment guard, then converged
-to active revision `control-plane-00005-biq`. The deployed source accepts the
-bounded two-key runtime schema while preserving the existing schema-1 runtime
-document and its single published key. Independent inventory made no request
-and reconfirmed internal-only ingress, scale 0..1, zero public invokers and zero
-user-managed keys. Current workload state generation `1788581270106628` is
-49,242 bytes at serial 16 with fifteen managed resources, three data resources,
-one output and nothing tainted; its SHA-256 is
-`d765cceffc696905f045a34805f9c6f1a6c45e9ba3f2224754a90a157c89b428`.
+to active revision `control-plane-00005-biq`. At that boundary, the deployed
+source accepted the bounded two-key runtime schema while the runtime document
+remained on schema 1 with one published key.
+
+A separate digest-bound plan then migrated only the Function environment and
+deployment guard in place from schema 1 to schema 2. Exact plan SHA-256
+`f9531f2ccde649b9f4b27d63b9c2228812d7deb5101515d1572d81851ad30560`
+created and deleted nothing, preserved the deterministic source bytes and
+converged to revision `control-plane-00006-wid`. The current runtime still
+publishes exactly one key, so it does not claim live key overlap. Independent
+inventory made no request and reconfirmed internal-only ingress, scale 0..1,
+zero public invokers and zero user-managed keys. Current workload state
+generation `1788584368457557` is 49,563 bytes at serial 18 with fifteen managed
+resources, three data resources, one output and nothing tainted; its SHA-256 is
+`746dcf402b9c6735175af9b46d9dda5f53f1788217f2b342c617838b6e2a8242`.
 The current canonical [`workload/result.json`](workload/result.json) has SHA-256
-`dc3324d3b812e1dafc6a6678c7427ac715ea1d2a81de527750aa958c7c71a440`.
+`8abb27b692b6003566f510d3c03e8fa1c47926b51f263ea4dc7011838629a24c`.
 The discovery evidence below remains pinned to historical revision
 `control-plane-00003-hum`.
 
@@ -296,7 +303,7 @@ staging confirmation.
 Repository validation itself costs nothing. Planning adds only bounded API
 reads, temporary locks, and short-lived private saved-plan objects. The state
 bucket currently stores the 61,864-byte bootstrap state, the 53,619-byte
-complete foundation state, the 49,283-byte workload state, the 13,596-byte probe
+complete foundation state, the 49,563-byte workload state, the 13,596-byte probe
 state, the 11,010-byte Firebase Auth state, the 35,312-byte Auth-probe state, and
 recovery generations across all six Terraform prefixes. The live Firestore database is the project's
 free-tier database; the five secret containers now each have one enabled

@@ -443,7 +443,15 @@ source, internal-only ingress, scale 0..1, zero public invokers and zero
 user-managed keys without making a request. The deployed source preserves the
 live schema-1, single-key runtime and accepts a closed schema 2 with one selected
 KMS signer and at most two KMS-validated published keys. Runtime-document
-migration and live overlap evidence remain separate gates.
+migration and live overlap evidence were separate gates at that boundary.
+
+A fifteenth staging slice applies the single-key runtime shape migration as
+revision `control-plane-00006-wid`. Exact plan SHA-256
+`f9531f2ccde649b9f4b27d63b9c2228812d7deb5101515d1572d81851ad30560`
+contains only two in-place updates and preserves the source object, copied
+source bytes, IAM, ingress, identities and scale. It converges to schema 2 with
+one selected and published key, and independent inventory makes no Function
+request. This closes the shape migration without claiming live key overlap.
 
 Deliverables:
 
@@ -619,9 +627,9 @@ current consumer.
    live probe has now validated the three negative controls, both signed token
    exchanges, authoritative relay rotation and complete two-fixture cleanup.
    Its Workflow, verifier and temporary grants are retired. The bounded
-   signing-key overlap bridge is now active privately on revision
-   `control-plane-00005-biq` while the runtime document deliberately remains on
-   schema 1 with one published key. Live KMS signing-key and secret
+   signing-key overlap bridge is active privately, and its single-key schema-2
+   runtime migration is complete on revision `control-plane-00006-wid`. The
+   runtime still publishes exactly one key. Live KMS signing-key and secret
    rotation, browser App Check provider attestation, source/edge admission,
    monitoring, migration rehearsal and real staging fault evidence remain
    required before closing relay-integration and staging-only RFC 0004 Section
@@ -647,10 +655,10 @@ current consumer.
 14. **In progress 2026-09-05** — the control-plane source now retains legacy
     single-key runtime compatibility while accepting a closed schema 2 with one
     selected KMS signer and at most two KMS-validated published public keys. Its
-    merge and private staging deployment are complete on revision
-    `control-plane-00005-biq`; the guarded single-key schema migration now has a
-    digest-bound two-update implementation but remains unapplied,
-    followed by the browser App Check provider, temporary edge, two relays,
+    merge, private source deployment and guarded single-key schema migration are
+    complete on revision `control-plane-00006-wid`, with unchanged effective
+    key and source bytes. Next implement the browser App Check provider,
+    temporary edge, two relays,
     three-engine runner and rollback guards. Execute the matrix once before
     wiring the real client and opaque broker into the production web shell.
 

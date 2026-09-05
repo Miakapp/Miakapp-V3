@@ -154,10 +154,13 @@ deployment evidence, not acceptance evidence for the exchange route.
 The subsequent bounded-overlap bridge is now merged and deployed privately at
 commit `9f217da102b394734adba7ccef3f8f70d0317306`, source SHA-256
 `d1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8`
-and revision `control-plane-00005-biq`. It preserves the existing schema-1,
-single-key runtime while adding closed schema-2 parsing and validation. Its
-guarded runtime-document migration remains open; this source deployment alone
-is not live signing-key overlap evidence.
+and historical revision `control-plane-00005-biq`. It added closed schema-2
+parsing and validation while preserving the then-active schema-1 runtime. A
+separate exact two-update plan subsequently migrated that single-key document
+to schema 2 on revision `control-plane-00006-wid`, without replacing source,
+changing IAM/ingress/scale or making a Function request. The current document
+still publishes one key; neither the source deployment nor this shape-only
+migration is live signing-key overlap evidence.
 
 The bounded acceptance implementation, with zero persistent delta to the
 control-plane workload, IAM and topology, lives under

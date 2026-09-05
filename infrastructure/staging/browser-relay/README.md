@@ -81,12 +81,13 @@ transition, separate reviewed implementation must provide:
 
 The currently deployed runtime document publishes one signing key,
 which makes the routine 60-second prepublication and 330-second retiring-key
-retention contract impossible to rehearse honestly. The schema-2 bridge is now
-merged and deployed privately in revision `control-plane-00005-biq`, but the
-single-key runtime migration is only reviewed and must still be applied under
-its separate guard and independently verified. `SIGNING-01` therefore remains
-open instead of treating source
-support or the local two-key fixture as live overlap evidence.
+retention contract impossible to rehearse honestly. The schema-2 bridge and its
+single-key runtime migration are now deployed privately in revision
+`control-plane-00006-wid`; the migration changed no effective key and made no
+live request. `SIGNING-01` remains open until a separate guard creates and
+prepublishes the second key, observes the overlap interval, switches the signer
+and retains the prior public key for the complete lease bound. Schema support
+or the local two-key fixture is not live overlap evidence.
 
 ## Matrix and evidence boundary
 
