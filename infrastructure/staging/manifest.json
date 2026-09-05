@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 48,
-  "status": "private_control_plane_schema_2_single_key_runtime_deployed_user_relay_acceptance_succeeded_live_browser_plan_reviewed_app_check_provider_registered",
+  "revision": 49,
+  "status": "private_control_plane_schema_2_single_key_runtime_deployed_second_signing_version_enabled_user_relay_acceptance_succeeded_live_browser_plan_reviewed_app_check_provider_registered",
   "environment": "staging",
   "project": {
     "project_id": "miakapp-v4-staging",
@@ -153,7 +153,7 @@
     },
     {
       "id": "cloud-kms",
-      "state": "signing_key_version_enabled_public_key_validated"
+      "state": "two_signing_key_versions_enabled_runtime_single_key_published"
     },
     {
       "id": "secret-manager",
@@ -230,7 +230,7 @@
   },
   "security": {
     "kms": {
-      "state": "created_initial_version_enabled",
+      "state": "two_versions_enabled_runtime_version_1_only",
       "location": "europe-west9",
       "key_ring": "miakapp-v4-staging",
       "key": "access-token-signing",
@@ -238,6 +238,15 @@
       "purpose": "ASYMMETRIC_SIGN",
       "algorithm": "EC_SIGN_ED25519",
       "automatic_rotation": false,
+      "enabled_versions": [
+        1,
+        2
+      ],
+      "maximum_active_versions": 2,
+      "runtime_published_versions": [
+        1
+      ],
+      "current_runtime_version": 1,
       "key_ring_deletion_supported": false
     },
     "secrets": [
@@ -1687,6 +1696,43 @@
       "private_bundle_committed": false,
       "raw_plan_committed": false,
       "raw_state_committed": false
+    },
+    "signing_key_overlap_prerequisite": {
+      "state": "version_2_enabled_runtime_unchanged_entrypoints_retired",
+      "observed_at": "2026-09-05T11:16:51.365507792Z",
+      "repository_commit": "f4d4cec280355e3577609e1d305984a8462e585a",
+      "result_path": "signing-overlap/result.json",
+      "result_sha256": "b26ccdc1051c60a976578373ae2e36fda0821a9e93a6324de121f0bbed614fbc",
+      "reviewed_plan_sha256": "0bf8ef54a508e93cab1f61c6e8f70c5f52d01e85da37d6fadd69efdb1ca636f1",
+      "plan_metadata_sha256": "efccbd0fbaf5a01f95dafa8cf6c6e71f0bdbc3f6cf19c16ba53c1c14c0424d87",
+      "baseline_sha256": "f7dfa9b3aab59ea40c9ecd23b8ffbea4db2111534dd37502430e2596d1c994da",
+      "final_inventory_sha256": "4916ee41795f23a67babd52700c6ac6316d63ef49fa1ae02b3bcaf1b3e2a673d",
+      "created_version_name": "projects/miakapp-v4-staging/locations/europe-west9/keyRings/miakapp-v4-staging/cryptoKeys/access-token-signing/cryptoKeyVersions/2",
+      "created_version": 2,
+      "created_version_state": "ENABLED",
+      "created_version_algorithm": "EC_SIGN_ED25519",
+      "created_version_protection_level": "SOFTWARE",
+      "created_public_jwk_sha256": "865c164dcea8df825ec5ebec8def049925d94cc955284c45b5a66747ab1ff4ea",
+      "enabled_versions": [
+        1,
+        2
+      ],
+      "runtime_published_versions": [
+        1
+      ],
+      "runtime_current_version": 1,
+      "kms_version_creations": 1,
+      "coordination_objects_created": 2,
+      "runtime_changed": false,
+      "terraform_state_changed": false,
+      "existing_version_changed": false,
+      "public_ingress_changed": false,
+      "live_requests_performed": 0,
+      "signatures_performed": 0,
+      "automatic_retry_performed": false,
+      "entrypoints_retired": true,
+      "private_bundle_committed": false,
+      "credential_material_committed": false
     },
     "retired_recovery_workflow": {
       "id": "349440747",

@@ -40,6 +40,10 @@ import {
 } from '../signing-overlap/claim.mjs';
 import { validateSigningOverlapRoot } from '../signing-overlap/guard.mjs';
 import {
+  validateSigningOverlapEvidence,
+  validateSigningOverlapEvidenceValue,
+} from '../signing-overlap/evidence.mjs';
+import {
   inventorySha256,
   normalizeSigningKey,
   normalizeSigningVersion,
@@ -68,6 +72,7 @@ const ROOT_FILES = [
   'claim.mjs',
   'cli.mjs',
   'contract.mjs',
+  'evidence.mjs',
   'guard.mjs',
   'inventory.mjs',
   'key-apply.mjs',
@@ -75,6 +80,7 @@ const ROOT_FILES = [
   'key-plan.mjs',
   'key-plan.sh',
   'plan.json',
+  'result.json',
 ];
 
 function rawKey() {
@@ -302,6 +308,23 @@ test('guards the exact executable package inventory', () => {
   );
 });
 
+test('pins the exact sanitized version-2 convergence evidence', () => {
+  const path = new URL('../signing-overlap/result.json', import.meta.url);
+  const result = validateSigningOverlapEvidence(path);
+  assert.equal(result.created_version.version, 2);
+  assert.equal(result.created_version.public_jwk.kid, 'staging-access-token-v2');
+  assert.equal(result.runtime_changed, false);
+  assert.equal(result.terraform_state_changed, false);
+  assert.equal(result.automatic_retry_performed, false);
+
+  const drifted = structuredClone(result);
+  drifted.kms_version_creations = 2;
+  assert.throws(
+    () => validateSigningOverlapEvidenceValue(drifted),
+    /exact sanitized result/u,
+  );
+});
+
 test('the KMS mutation is one direct non-retried REST request', async () => {
   let calls = 0;
   const result = await invokeKmsVersionCreation(
@@ -330,7 +353,7 @@ test('the KMS mutation is one direct non-retried REST request', async () => {
   );
 });
 
-test('drivers fail hostile environments before cloud access', () => {
+test('consumed one-shot drivers retire before hostile environment or cloud access', () => {
   const driver = readFileSync(
     new URL('../signing-overlap/key-apply.mjs', import.meta.url),
     'utf8',
@@ -339,18 +362,23 @@ test('drivers fail hostile environments before cloud access', () => {
   assert.equal((driver.match(/method: 'POST'/gu) ?? []).length, 1);
   assert.match(driver, /must never be retried/u);
 
-  const result = spawnSync(process.execPath, [
-    fileURLToPath(new URL('../signing-overlap/key-plan.mjs', import.meta.url)),
-    tmpdir(),
-  ], {
-    env: {
-      HOME: process.env.HOME,
-      PATH: process.env.PATH,
-      GOOGLE_APPLICATION_CREDENTIALS: '/tmp/forbidden.json',
-      MIAKAPP_STAGING_SIGNING_KEY_PLAN_CONFIRMATION: PROJECT_ID,
-    },
-    encoding: 'utf8',
-  });
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /Environment override GOOGLE_APPLICATION_CREDENTIALS is forbidden/u);
+  for (const name of ['key-plan.mjs', 'key-apply.mjs']) {
+    const result = spawnSync(process.execPath, [
+      fileURLToPath(new URL(`../signing-overlap/${name}`, import.meta.url)),
+      tmpdir(),
+    ], {
+      env: {
+        HOME: process.env.HOME,
+        PATH: process.env.PATH,
+        GOOGLE_APPLICATION_CREDENTIALS: '/tmp/forbidden.json',
+        CLOUDSDK_CORE_PROJECT: 'forbidden-project',
+        MIAKAPP_STAGING_SIGNING_KEY_PLAN_CONFIRMATION: PROJECT_ID,
+        MIAKAPP_STAGING_SIGNING_KEY_APPLY_AUTHORIZATION: 'invalid',
+      },
+      encoding: 'utf8',
+    });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /already converged.*permanently retired/u);
+    assert.doesNotMatch(result.stderr, /environment override|authorization|cloud/u);
+  }
 });

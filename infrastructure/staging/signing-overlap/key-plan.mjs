@@ -27,9 +27,13 @@ import {
 } from './inventory.mjs';
 
 const PLAN_CONFIRMATION = 'MIAKAPP_STAGING_SIGNING_KEY_PLAN_CONFIRMATION';
+export const KEY_VERSION_CREATION_CONSUMED = true;
+const RETIRED_MESSAGE =
+  'Signing-key version 2 already converged; this one-shot planning entrypoint is permanently retired';
 process.umask(0o077);
 
 async function main() {
+  if (KEY_VERSION_CREATION_CONSUMED) throw new Error(RETIRED_MESSAGE);
   if (process.argv.length !== 3 || process.argv[2] === undefined) {
     throw new Error(`Usage: ${PLAN_CONFIRMATION}=${PROJECT_ID} ./key-plan.sh <private-parent>`);
   }

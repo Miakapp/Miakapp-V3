@@ -118,10 +118,13 @@ node infrastructure/staging/signing-overlap/guard.mjs \
 node --check infrastructure/staging/signing-overlap/claim.mjs
 node --check infrastructure/staging/signing-overlap/cli.mjs
 node --check infrastructure/staging/signing-overlap/contract.mjs
+node --check infrastructure/staging/signing-overlap/evidence.mjs
 node --check infrastructure/staging/signing-overlap/guard.mjs
 node --check infrastructure/staging/signing-overlap/inventory.mjs
 node --check infrastructure/staging/signing-overlap/key-apply.mjs
 node --check infrastructure/staging/signing-overlap/key-plan.mjs
+node infrastructure/staging/signing-overlap/evidence.mjs \
+  infrastructure/staging/signing-overlap/result.json
 node infrastructure/staging/browser-app-check/guard.mjs \
   "${repository_root}/infrastructure/staging/browser-app-check"
 node --check infrastructure/staging/browser-app-check/apply.mjs
