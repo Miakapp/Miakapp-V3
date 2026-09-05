@@ -667,8 +667,12 @@ current consumer.
     the exact provider now has a one-hour TTL and default 0.5 minimum score while
     enforcement, debug tokens, browser traffic and assessments remain absent.
     No recovery ran. Registration and unused recovery entrypoints are retired,
-    and sanitized state/claim evidence is committed. Next exercise bounded real
-    browser SDK attestation with enforcement disabled, then implement the
+    and sanitized state/claim evidence is committed. A second software Ed25519
+    signing version then converged after the first and only guarded direct REST
+    request. Its two atomic claims remain durable, its one-shot entrypoints are
+    retired, and the runtime still publishes version 1 only. Next prepublish
+    both keys and activate version 2 across the required overlap window, then
+    exercise bounded real browser SDK attestation with enforcement disabled and implement the
     temporary edge, two relays,
     three-engine runner and rollback guards. Execute the matrix once before
     wiring the real client and opaque broker into the production web shell.

@@ -31,10 +31,10 @@ function rejects(mutator, pattern) {
 
 test('accepts the successful and retired private user-relay probe', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 48);
+  assert.equal(validated.revision, 49);
   assert.equal(
     validated.status,
-    'private_control_plane_schema_2_single_key_runtime_deployed_user_relay_acceptance_succeeded_live_browser_plan_reviewed_app_check_provider_registered',
+    'private_control_plane_schema_2_single_key_runtime_deployed_second_signing_version_enabled_user_relay_acceptance_succeeded_live_browser_plan_reviewed_app_check_provider_registered',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
@@ -62,7 +62,10 @@ test('accepts the successful and retired private user-relay probe', () => {
     'miakapp-network-hmac',
     'miakapp-push-hmac',
   ]);
-  assert.equal(validated.security.kms.state, 'created_initial_version_enabled');
+  assert.equal(validated.security.kms.state, 'two_versions_enabled_runtime_version_1_only');
+  assert.deepEqual(validated.security.kms.enabled_versions, [1, 2]);
+  assert.deepEqual(validated.security.kms.runtime_published_versions, [1]);
+  assert.equal(validated.security.kms.current_runtime_version, 1);
   assert.equal(
     validated.security.secrets.every((secret) => (
       secret.state === 'initial_version_1_enabled'
@@ -77,7 +80,7 @@ test('accepts the successful and retired private user-relay probe', () => {
     'private_fixture_lifecycle_validated_no_persistent_application_data',
     'private_schema_2_single_key_runtime_active_user_relay_acceptance_succeeded',
     'private_bucket_created_no_application_mutation',
-    'signing_key_version_enabled_public_key_validated',
+    'two_signing_key_versions_enabled_runtime_single_key_published',
     'five_initial_versions_enabled_runtime_access_validated',
     'api_enabled_one_permission_runtime_role_applied_uninvoked',
     'api_enabled_runtime_deployed_no_application_log_validation',
@@ -1482,6 +1485,12 @@ test('keeps KMS manual, software-backed, and explicitly non-deletable', () => {
   rejects((candidate) => {
     candidate.security.kms.key_ring_deletion_supported = true;
   }, /security\.kms\.key_ring_deletion_supported/);
+  rejects((candidate) => {
+    candidate.security.kms.enabled_versions.push(3);
+  }, /security\.kms\.enabled_versions/);
+  rejects((candidate) => {
+    candidate.security.kms.runtime_published_versions.push(2);
+  }, /security\.kms\.runtime_published_versions/);
 });
 
 test('rejects broad IAM substitution and resolved FCM access drift', () => {
@@ -1748,6 +1757,15 @@ test('requires every remaining blocker and staging evidence row', () => {
   rejects((candidate) => {
     candidate.evidence.browser_app_check_prerequisite.recovery_entrypoints_retired = false;
   }, /evidence\.browser_app_check_prerequisite\.recovery_entrypoints_retired/);
+  rejects((candidate) => {
+    candidate.evidence.signing_key_overlap_prerequisite.kms_version_creations = 2;
+  }, /evidence\.signing_key_overlap_prerequisite\.kms_version_creations/);
+  rejects((candidate) => {
+    candidate.evidence.signing_key_overlap_prerequisite.runtime_changed = true;
+  }, /evidence\.signing_key_overlap_prerequisite\.runtime_changed/);
+  rejects((candidate) => {
+    candidate.evidence.signing_key_overlap_prerequisite.entrypoints_retired = false;
+  }, /evidence\.signing_key_overlap_prerequisite\.entrypoints_retired/);
 });
 
 test('rejects drift from the public activation evidence and initialized versions', () => {

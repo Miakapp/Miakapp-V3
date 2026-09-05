@@ -45,6 +45,9 @@ import {
 const APPLY_AUTHORIZATION = 'MIAKAPP_STAGING_SIGNING_KEY_APPLY_AUTHORIZATION';
 const APPLY_MARKER = 'apply-mutation-attempted.json';
 const KMS_MARKER = 'kms-version-creation-attempted.json';
+export const KEY_VERSION_CREATION_CONSUMED = true;
+const RETIRED_MESSAGE =
+  'Signing-key version 2 already converged; this one-shot apply entrypoint is permanently retired';
 process.umask(0o077);
 
 function reject(message) {
@@ -211,6 +214,7 @@ async function captureUncertainInventory(bundle, email) {
 }
 
 async function main() {
+  if (KEY_VERSION_CREATION_CONSUMED) throw new Error(RETIRED_MESSAGE);
   if (process.argv.length !== 3 || process.argv[2] === undefined) {
     throw new Error(`Usage: ${APPLY_AUTHORIZATION}=... ./key-apply.sh <private-bundle>`);
   }

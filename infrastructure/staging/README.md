@@ -5,7 +5,7 @@ schema-2 single-key runtime deployed privately; live browser-relay plan reviewed
 but not deployed; browser App Check API-only prerequisite applied and
 converged; one domain-restricted score key applied and independently converged;
 exact non-deletable App Check provider registered with enforcement disabled;
-guarded second signing-key version creation reviewed but not applied
+second software signing-key version enabled; runtime still publishes version 1 only
 
 This directory contains the closed description and observed state of
 `miakapp-v4-staging`. The bounded foundation recovery has completed; its active
@@ -25,10 +25,12 @@ precondition is satisfied while browser attestation remains a pending live case.
 It contains no deployer or result and does not change the private cloud baseline
 described below.
 
-The [`signing-overlap/`](signing-overlap/) package freezes the next prerequisite:
-one non-retryable Cloud KMS version creation behind two atomic GCS claims. It
-keeps version 1, the runtime document, Terraform state, IAM and private ingress
-unchanged. The follow-up rollout must prepublish both public keys for at least
+The [`signing-overlap/`](signing-overlap/) package records the converged next
+prerequisite: one non-retried Cloud KMS version creation behind two atomic GCS
+claims. Version 2 converged after the first and only direct REST request; both
+one-shot entrypoints are permanently retired. The operation kept version 1,
+the runtime document, Terraform state, IAM and private ingress unchanged. The
+follow-up rollout must prepublish both public keys for at least
 60 seconds before activating version 2, then retain version 1 for at least the
 complete 330-second lease bound. The additional active software version is
 bounded to USD 0.06/month at the currently documented Cloud KMS price.
@@ -57,7 +59,9 @@ The bootstrap is complete.
 Protected foundation applies
 on 2026-09-03 created all thirteen declared APIs, the deletion-protected Paris
 Firestore database and three active TTL fields, one software Ed25519 signing
-key, and five Secret Manager containers. The eight KMS, Secret Manager and
+key, and five Secret Manager containers. A later guarded operation added exact
+software key version 2 outside Terraform while leaving version 1 and its sole
+runtime publication unchanged. The eight KMS, Secret Manager and
 component-bucket runtime IAM members are present with the exact declared
 principals and roles.
 
@@ -282,7 +286,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`firebase-auth/`](firebase-auth/) | Closed Firebase Authentication initialization with no end-user sign-in provider | Non-deletable resource initialized, state-adopted, reconciled, and independently validated |
 | [`auth-probe/`](auth-probe/) | Guarded audience-bound user-relay Workflow, internal verifier and sanitized evidence | Generation 3 succeeded once and retired; both fixtures and every temporary capability are absent; all nine one-shot roles are disabled |
 | [`browser-app-check/`](browser-app-check/) | Guarded reCAPTCHA Enterprise API, score key and App Check provider prerequisites | API, one globally serialized domain-restricted score key and exact non-deletable provider applied and converged; all consumed/recovery entrypoints retired; traffic and enforcement pending |
-| [`signing-overlap/`](signing-overlap/) | Monotone second KMS version creation and 60/330-second overlap rollout contract | Reviewed but not applied; two atomic claims prevent blind retries; no runtime, Terraform, IAM, ingress or request mutation |
+| [`signing-overlap/`](signing-overlap/) | Monotone second KMS version creation and 60/330-second overlap rollout contract | Version 2 enabled after one direct request; two atomic claims retained and one-shot entrypoints retired; runtime, Terraform, IAM, ingress and requests unchanged |
 | [`browser-relay/`](browser-relay/) | Closed live browser, two-relay, signing-key and rollback acceptance plan | Reviewed but not deployed; every `LIVE-*` case is pending and the package grants no cloud mutation |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
@@ -547,9 +551,10 @@ public window. It assumes no free tier and stops at a EUR 1 projected increment,
 inside the separately authorized EUR 5 monthly boundary. App Engine, an
 external load balancer, Cloud Armor, VPC and DNS changes are absent.
 
-No live case may start yet. The production runtime must first support an active
-plus retiring public signing key. The guarded `signing-overlap/` operation is
-the reviewed first step and has not yet created version 2. The browser App Check API, its single
+No live case may start yet. The production runtime must first publish an active
+plus retiring public signing key. The guarded `signing-overlap/` operation
+created version 2 exactly once, but the runtime still publishes version 1 only.
+The browser App Check API, its single
 domain-restricted score key and the exact non-deletable provider registration
 are applied, independently converged and retired as one-shot entrypoints. The
 next browser attestation step is a bounded real browser SDK/token observation
