@@ -10,6 +10,7 @@ import {
   createProductionDeploymentConfig,
   parseProductionRuntimeConfig,
 } from '../../src/production-runtime-config.js';
+import { STAGING_BROWSER_RELAY_EDGE_PROFILE } from '../../src/staging-browser-relay-edge-profile.js';
 
 const publicJwk = (() => {
   const exported = generateKeyPairSync('ed25519').publicKey.export({ format: 'jwk' });
@@ -103,6 +104,13 @@ function rotationCandidate(): Record<string, any> {
   return value;
 }
 
+function browserRelayEdgeCandidate(): Record<string, any> {
+  const value = rotationCandidate();
+  value.security.issuer = STAGING_BROWSER_RELAY_EDGE_PROFILE.issuer;
+  value.allowed_origins = [STAGING_BROWSER_RELAY_EDGE_PROFILE.allowedOrigin];
+  return value;
+}
+
 function productionCandidate(): Record<string, any> {
   const value = candidate();
   const productionSecurity = value.security as ReturnType<typeof security>;
@@ -145,6 +153,7 @@ describe('production runtime configuration', () => {
 
     expect(runtime).toMatchObject({
       environment: 'staging',
+      networkProfile: 'canonical',
       componentBucket: 'miakapp-v4-staging-components',
       allowedOrigins: ['https://app.staging.miakapp.com'],
       serviceAccountEmail: 'miakapp-control-plane@miakapp-v4-staging.iam.gserviceaccount.com',
@@ -173,6 +182,43 @@ describe('production runtime configuration', () => {
     const cloudAuthClient = await identity.googleAuth.getClient();
     expect('serviceAccountEmail' in cloudAuthClient
       && cloudAuthClient.serviceAccountEmail).toBe(runtime.serviceAccountEmail);
+  });
+
+  test('accepts only the exact paired staging browser-relay edge profile', () => {
+    const runtime = parseProductionRuntimeConfig(browserRelayEdgeCandidate());
+    const deployment = createProductionDeploymentConfig(runtime, secrets());
+
+    expect(runtime).toMatchObject({
+      environment: 'staging',
+      networkProfile: STAGING_BROWSER_RELAY_EDGE_PROFILE.id,
+      allowedOrigins: [STAGING_BROWSER_RELAY_EDGE_PROFILE.allowedOrigin],
+      security: { issuer: STAGING_BROWSER_RELAY_EDGE_PROFILE.issuer },
+    });
+    expect(deployment).toMatchObject({
+      issuer: STAGING_BROWSER_RELAY_EDGE_PROFILE.issuer,
+      jwksUri: `${STAGING_BROWSER_RELAY_EDGE_PROFILE.issuer}/.well-known/jwks.json`,
+      userRelayExchangeEndpoint:
+        `${STAGING_BROWSER_RELAY_EDGE_PROFILE.issuer}/v1/user-relay-tokens:exchange`,
+    });
+
+    const mutations: Array<(value: Record<string, any>) => void> = [
+      (value) => { value.security.issuer = 'https://control.staging.miakapp.com'; },
+      (value) => { value.allowed_origins = ['https://app.staging.miakapp.com']; },
+      (value) => { value.allowed_origins.push('https://app.staging.miakapp.com'); },
+      (value) => { value.allowed_origins = ['https://foreign-project.web.app']; },
+      (value) => { value.security.issuer = 'https://foreign-service-od.a.run.app'; },
+    ];
+    for (const mutate of mutations) {
+      const value = browserRelayEdgeCandidate();
+      mutate(value);
+      expect(() => parseProductionRuntimeConfig(value)).toThrow(ProductionConfigurationError);
+    }
+
+    const production = productionCandidate();
+    production.security.issuer = STAGING_BROWSER_RELAY_EDGE_PROFILE.issuer;
+    production.allowed_origins = [STAGING_BROWSER_RELAY_EDGE_PROFILE.allowedOrigin];
+    expect(() => parseProductionRuntimeConfig(production))
+      .toThrow(ProductionConfigurationError);
   });
 
   test('accepts only the matching production origin and component bucket', () => {
