@@ -30,7 +30,7 @@ export function buildRelayImageClaim(metadataBytes, metadata, attemptedAt) {
   const profile = validateRelayImageProfile();
   if (!Buffer.isBuffer(metadataBytes) || metadataBytes.byteLength === 0
     || !plainObject(metadata)
-    || metadata.schema !== 'miakapp.staging-browser-relay-image-plan/1'
+    || metadata.schema !== 'miakapp.staging-browser-relay-image-plan/2'
     || metadata.project_id !== profile.project.project_id
     || metadata.profile_sha256 !== RELAY_IMAGE_PROFILE_SHA256
     || !/^[0-9a-f]{40}$/u.test(metadata.repository_commit ?? '')
@@ -44,8 +44,8 @@ export function buildRelayImageClaim(metadataBytes, metadata, attemptedAt) {
     reject('Relay image operation claim is outside the saved-plan validity window');
   }
   return Object.freeze({
-    schema: 'miakapp.staging-browser-relay-image-claim/1',
-    operation: 'build-private-browser-relay-image',
+    schema: 'miakapp.staging-browser-relay-image-claim/2',
+    operation: 'recover-private-browser-relay-image-verification',
     bucket: profile.operation.claim_bucket,
     object: profile.operation.claim_object,
     project_id: profile.project.project_id,
@@ -54,6 +54,8 @@ export function buildRelayImageClaim(metadataBytes, metadata, attemptedAt) {
     profile_sha256: RELAY_IMAGE_PROFILE_SHA256,
     baseline_sha256: metadata.baseline_sha256,
     source_archive_sha256: profile.source.archive_sha256,
+    source_object_generation: profile.source.object_generation,
+    v1_result_sha256: profile.contracts.v1_result_sha256,
     image_tag_reference: profile.image.tag_reference,
     attempted_at: attemptedAt,
     expires_at: metadata.expires_at,
@@ -113,7 +115,7 @@ export async function createRelayImageClaim(
     reject('Relay image operation claim response is malformed');
   }
   return Object.freeze({
-    schema: 'miakapp.staging-browser-relay-image-claim-receipt/1',
+    schema: 'miakapp.staging-browser-relay-image-claim-receipt/2',
     bucket: profile.operation.claim_bucket,
     object: profile.operation.claim_object,
     generation: value.generation,

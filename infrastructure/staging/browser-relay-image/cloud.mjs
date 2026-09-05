@@ -12,7 +12,6 @@ import { googleRelayImageRequest } from './inventory.mjs';
 
 const SHA256_DIGEST = /^sha256:[0-9a-f]{64}$/u;
 const BUILD_ID = /^[0-9a-f-]{16,64}$/u;
-const GENERATION = /^[1-9][0-9]*$/u;
 const OPERATION_NAME = /^[A-Za-z0-9_.\/-]{16,512}$/u;
 const MAXIMUM_BUILD_RESPONSE_BYTES = 4 * 1024 * 1024;
 const MAXIMUM_MANIFEST_BYTES = 1024 * 1024;
@@ -51,58 +50,32 @@ function validSession(session) {
 
 function validSourceReceipt(receipt) {
   const profile = validateRelayImageProfile();
-  if (!plainObject(receipt) || receipt.bucket !== profile.source.source_bucket
+  const keys = [
+    'schema',
+    'bucket',
+    'object',
+    'generation',
+    'size_bytes',
+    'sha256',
+    'source_reused',
+    'upload_authorized',
+    'deletion_authorized',
+    'object_generation',
+  ];
+  if (!plainObject(receipt)
+    || !isDeepStrictEqual(Object.keys(receipt).sort(), keys.sort())
+    || receipt.schema !== 'miakapp.staging-browser-relay-image-source-receipt/2'
+    || receipt.bucket !== profile.source.source_bucket
     || receipt.object !== profile.source.source_object
-    || !GENERATION.test(receipt.generation ?? '')
+    || receipt.generation !== profile.source.object_generation
+    || receipt.object_generation !== profile.source.object_generation
     || receipt.size_bytes !== profile.source.archive_bytes
-    || receipt.sha256 !== profile.source.archive_sha256) {
+    || receipt.sha256 !== profile.source.archive_sha256
+    || receipt.source_reused !== true || receipt.upload_authorized !== false
+    || receipt.deletion_authorized !== false) {
     reject('Relay image source receipt is invalid');
   }
   return receipt;
-}
-
-export async function uploadRelayImageSource(
-  session,
-  archive,
-  fetchImplementation = globalThis.fetch,
-) {
-  validSession(session);
-  const profile = validateRelayImageProfile();
-  if (!Buffer.isBuffer(archive) || archive.byteLength !== profile.source.archive_bytes
-    || sha256(archive) !== profile.source.archive_sha256) {
-    reject('Relay image source upload requires the exact reviewed archive');
-  }
-  const url = new URL(
-    `https://storage.googleapis.com/upload/storage/v1/b/${profile.source.source_bucket}/o`,
-  );
-  url.searchParams.set('uploadType', 'media');
-  url.searchParams.set('name', profile.source.source_object);
-  url.searchParams.set('ifGenerationMatch', '0');
-  url.searchParams.set('fields', 'bucket,name,generation,size');
-  const response = await googleRelayImageRequest(url, session.accessToken, {
-    method: 'POST',
-    body: archive,
-    contentType: 'application/gzip',
-    description: 'Relay image immutable source upload',
-    fetchImplementation,
-    maximumResponseBytes: 64 * 1024,
-  });
-  const value = parseJson(response.bytes, 'Relay image immutable source upload');
-  if (!plainObject(value) || value.bucket !== profile.source.source_bucket
-    || value.name !== profile.source.source_object
-    || !GENERATION.test(value.generation ?? '')
-    || value.size !== String(archive.byteLength)) {
-    reject('Relay image source upload response is malformed');
-  }
-  return Object.freeze({
-    schema: 'miakapp.staging-browser-relay-image-source-receipt/1',
-    bucket: profile.source.source_bucket,
-    object: profile.source.source_object,
-    generation: value.generation,
-    size_bytes: archive.byteLength,
-    sha256: profile.source.archive_sha256,
-    deletion_authorized: false,
-  });
 }
 
 function validateOperationName(value) {
@@ -312,7 +285,7 @@ export function validateCompletedRelayImageBuild(build, sourceReceipt) {
     reject('Cloud Build result does not identify the exact builder and image digest');
   }
   return Object.freeze({
-    schema: 'miakapp.staging-browser-relay-image-build-receipt/1',
+    schema: 'miakapp.staging-browser-relay-image-build-receipt/2',
     build_id: build.id,
     status: 'SUCCESS',
     source_generation: sourceReceipt.generation,
@@ -451,8 +424,8 @@ export function buildRelayImageResult({
     reject('Relay image result inputs are invalid');
   }
   return Object.freeze({
-    schema: 'miakapp.staging-browser-relay-image-result/1',
-    state: 'private_image_built_verified_not_deployed',
+    schema: 'miakapp.staging-browser-relay-image-result/2',
+    state: 'private_image_recovered_verified_not_deployed',
     project_id: profile.project.project_id,
     project_number: profile.project.project_number,
     region: profile.project.region,
@@ -484,11 +457,21 @@ export function buildRelayImageResult({
       source_provenance_hash: buildReceipt.source_provenance_hash,
     }),
     image: publication,
+    recovery: Object.freeze({
+      v1_result_sha256: profile.contracts.v1_result_sha256,
+      v1_build_id: profile.recovery.v1_build_id,
+      v1_build_status: profile.recovery.v1_build_status,
+      v1_image_digest: profile.recovery.v1_image_digest,
+      source_reused: true,
+      source_upload_performed: false,
+    }),
     effects: Object.freeze({
+      recovery_builds_submitted: 1,
       cloud_run_services_created: 0,
       public_ingress_created: false,
       iam_bindings_created: 0,
       persistent_credentials_created: 0,
+      container_analysis_enabled: true,
       container_scanning_enabled: false,
       stress_test_executed: false,
     }),
