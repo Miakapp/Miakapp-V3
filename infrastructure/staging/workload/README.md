@@ -1,9 +1,8 @@
 # Private staging control-plane workload
 
-Status: single-key schema-2 runtime migration applied, converged and
-source-verified; two-key/version-1-current prepublication plan guarded but not
-applied; the historical audience-bound revision was accepted by one retired
-bounded probe
+Status: two-key schema-2 runtime deployed, converged and source-verified with
+version 1 current; the one-time prepublication entry points are retired; the
+historical audience-bound revision was accepted by one retired bounded probe
 
 This is the third, workload-only Terraform state for `miakapp-v4-staging`. It
 reads but never owns the reconciled bootstrap and foundation states. Its GCS
@@ -223,30 +222,49 @@ inventory matched deterministic source SHA-256
 `d1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8`
 in copied generation `1788584317247647` and made no Function request.
 
-Current workload state generation `1788584368457557` is 49,563 bytes at serial
-18 with fifteen managed and three data resources, one output, nothing tainted,
-and SHA-256
+At that historical boundary, workload state generation `1788584368457557` was
+49,563 bytes at serial 18 with fifteen managed and three data resources, one
+output, nothing tainted, and SHA-256
 `746dcf402b9c6735175af9b46d9dda5f53f1788217f2b342c617838b6e2a8242`.
-The current canonical non-secret [`result.json`](result.json) has SHA-256
+The canonical non-secret result at that boundary had SHA-256
 `8abb27b692b6003566f510d3c03e8fa1c47926b51f263ea4dc7011838629a24c`.
-The one-time migration wrappers are retired. The regular source updater remains
-pinned to the distinct deployed-runtime and source commits and is blocked while
-a reviewed runtime transition is pending.
+The one-time schema migration wrappers are retired.
 
-## Guarded signing-key prepublication
+## Completed signing-key prepublication
 
-[`runtime-config.json`](runtime-config.json) is now the exact pending
-prepublication target. It preserves `staging-access-token-v1` as `current_kid`
-and appends only the public JWK for enabled KMS version 2. Its SHA-256 is
+[`runtime-config.json`](runtime-config.json) is the exact deployed two-key
+document. It preserves `staging-access-token-v1` as `current_kid` and appends
+only the public JWK for enabled KMS version 2. Its SHA-256 is
 `c018708786fc23a15f7701093b5148c0e415a2df8045af8e170e4308c2deae37`.
 
-`signing-prepublish-plan.sh` and `signing-prepublish-apply.sh` form a fresh
-two-hour, exact-commit saved-plan boundary. The validator permits only the
-Function and deployment guard to update in place. It requires the deterministic
-source archive and its historical source metadata to remain unchanged, checks
-all thirteen other managed resources as no-ops, and rejects any IAM, ingress,
-identity, scale, source, import, generated configuration or live-request delta.
-This package prepares but does not itself claim that prepublication is live.
+Merge commit `2bdd1a9e224234318d2ffd77c61b609331ccd044` produced an exact
+saved plan with SHA-256
+`0ff816d86e0b391da341703744663d4d0efb2a5478c4e17fed2c7b23ca5e2e24`.
+Its metadata and JSON rendering had SHA-256
+`278a6aadfa0866c1e6ec8668731167c9156c413e14cccaceb535f6955bb683d0`
+and
+`9c8e83767293848fd1bdd398e428fb0c22f18bf3a00e228f3f89be560d3ab233`.
+The validator accepted only two in-place updates: the Function and deployment
+guard. It required the deterministic source archive and historical source
+metadata to remain unchanged, checked all thirteen other managed resources as
+no-ops, and rejected every IAM, ingress, identity, scale, source, import,
+generated-configuration or live-request delta.
+
+Apply converged to active revision `control-plane-00007-deb`, whose
+authoritative update time is `2026-09-05T11:59:31.953152089Z`. Independent
+inventory matched the unchanged source SHA-256 in copied generation
+`1788609527738009`, internal-only ingress, scale 0..1, zero public invokers and
+zero user-managed keys without making a Function request. Current workload
+state generation `1788609578813791` is 49,898 bytes at serial 20 with fifteen
+managed and three data resources, one output, nothing tainted, and SHA-256
+`7233518baa49e38cbe846e148b498024c288e81222a8ed9f3cbf0cce4edab6dd`.
+The current canonical non-secret [`result.json`](result.json) has SHA-256
+`27253e9715fb901f78ce3dfd5ffd7ff0981b9dee818bde507b9170d35ffed185`.
+
+The one-time prepublication wrappers are retired. The regular source updater is
+restored against this exact deployed runtime. Any later switch to version 2
+must use a separately reviewed saved plan and prove that the required overlap
+interval elapsed from the authoritative Function update time above.
 
 ## Successful private discovery
 
