@@ -1,0 +1,101 @@
+{
+  "schema": "miakapp.staging-relay-services-profile/1",
+  "state": "dormant_no_operator_entrypoint",
+  "terraform_source_sha256": "0674bea2b9ba1985910484c71cafd55356996ab3991f6794339219a7fa237037",
+  "project_id": "miakapp-v4-staging",
+  "project_number": "1072737219170",
+  "region": "europe-west9",
+  "state_backend": {
+    "bucket": "miakapp-v4-staging-tfstate-1072737219170",
+    "prefix": "terraform/browser-relay-services"
+  },
+  "pins": {
+    "miakapp_server_commit": "df10674e034f30eec80760f5ec94bc108cff026f",
+    "protocol_contract_commit": "cc3bcd70fdb4b058f990ca2607693a2043faebaf",
+    "deployed_control_plane_commit": "ba4fc9caed566fa39fc66371192fb1821b4232ff",
+    "deployed_control_plane_source_sha256": "3e94305e17ee4df07f54f13560dac0a9491de3f89fb3ddbf4ab745c62dce8c7e"
+  },
+  "image": {
+    "repository": "europe-west9-docker.pkg.dev/miakapp-v4-staging/miakapp-control-plane/miakapp-server",
+    "digest_required": true,
+    "mutable_tags_allowed": false,
+    "provenance_required": true
+  },
+  "runtime_identity": {
+    "account_id": "miakapp-staging-relay",
+    "email": "miakapp-staging-relay@miakapp-v4-staging.iam.gserviceaccount.com",
+    "project_roles": [],
+    "user_managed_keys_allowed": false
+  },
+  "control_plane": {
+    "issuer": "https://control-plane-aczhngqraq-od.a.run.app",
+    "jwks_url": "https://control-plane-aczhngqraq-od.a.run.app/.well-known/jwks.json"
+  },
+  "application": {
+    "allowed_origin": "https://miakapp-v4-staging.web.app",
+    "websocket_subprotocol": "miakapp"
+  },
+  "services": [
+    {
+      "id": "relay-a",
+      "name": "miakapp-staging-relay-a",
+      "bootstrap_audience": "wss://relay-a.bootstrap.invalid/ws",
+      "audience_pattern": "^wss://miakapp-staging-relay-a-[a-z0-9]{10}-od\\.a\\.run\\.app/ws$"
+    },
+    {
+      "id": "relay-b",
+      "name": "miakapp-staging-relay-b",
+      "bootstrap_audience": "wss://relay-b.bootstrap.invalid/ws",
+      "audience_pattern": "^wss://miakapp-staging-relay-b-[a-z0-9]{10}-od\\.a\\.run\\.app/ws$"
+    }
+  ],
+  "cloud_run": {
+    "ingress": "INGRESS_TRAFFIC_ALL",
+    "port": 3000,
+    "minimum_instances": 0,
+    "maximum_instances": 1,
+    "concurrency": 8,
+    "request_timeout_seconds": 900,
+    "cpu": "1",
+    "memory": "256Mi",
+    "cpu_idle": true,
+    "startup_cpu_boost": false,
+    "session_affinity": false,
+    "execution_environment": "EXECUTION_ENVIRONMENT_GEN2",
+    "deletion_protection": false
+  },
+  "relay_runtime": {
+    "handshake_timeout": "5s",
+    "write_timeout": "5s",
+    "ping_interval": "30s",
+    "pong_timeout": "10s",
+    "declaration_timeout": "30s",
+    "disconnect_grace": "30s",
+    "shutdown_timeout": "10s"
+  },
+  "admission": {
+    "maximum_queued_bytes_per_connection": 262144,
+    "maximum_connections": 8,
+    "maximum_connections_per_immediate_peer": 8,
+    "connection_attempts_per_minute_per_immediate_peer": 32,
+    "maximum_tracked_immediate_peers": 64,
+    "maximum_homes": 16,
+    "maximum_aggregate_queued_bytes": 4194304,
+    "trusted_client_address_source": "immediate_tcp_peer",
+    "forwarded_client_headers_trusted": false
+  },
+  "phases": [
+    "absent",
+    "private_bootstrap",
+    "private_ready",
+    "public_window"
+  ],
+  "effects": {
+    "persistent_credentials": false,
+    "secret_mounts": false,
+    "database_access": false,
+    "vpc_connector": false,
+    "minimum_instances": false,
+    "public_iam_only_in_public_window": true
+  }
+}
