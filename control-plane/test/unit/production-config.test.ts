@@ -20,6 +20,19 @@ const publicJwk = (() => {
   };
 })();
 
+const futurePublicJwk = (() => {
+  const exported = generateKeyPairSync('ed25519').publicKey.export({ format: 'jwk' });
+  if (exported.x === undefined) throw new Error('Generated Ed25519 key is invalid');
+  return {
+    kty: 'OKP',
+    crv: 'Ed25519',
+    x: exported.x,
+    use: 'sig',
+    alg: 'EdDSA',
+    kid: 'staging-access-token-v2',
+  };
+})();
+
 function keyring(secretId: string) {
   return {
     current_version: 'v1',
@@ -55,6 +68,26 @@ function candidate(): Record<string, any> {
   };
 }
 
+function rotationCandidate(): Record<string, any> {
+  const value = candidate();
+  value.schema = 'miakapp.production-security/2';
+  value.signing = {
+    current_kid: 'staging-access-token-v2',
+    versions: [
+      {
+        key_version_name: value.signing.key_version_name,
+        public_jwk: { ...publicJwk },
+      },
+      {
+        key_version_name: value.signing.key_version_name.replace('/1', '/2'),
+        public_jwk: { ...futurePublicJwk },
+      },
+    ],
+    rpc_timeout_ms: 2_000,
+  };
+  return value;
+}
+
 function expectInvalid(mutator: (value: Record<string, any>) => void): void {
   const input = candidate();
   mutator(input);
@@ -84,8 +117,49 @@ describe('production security configuration', () => {
     });
     expect(Object.isFrozen(parsed)).toBe(true);
     expect(Object.isFrozen(parsed.signing.publicJwk)).toBe(true);
+    expect(parsed.signing.publicJwks).toEqual([parsed.signing.publicJwk]);
+    expect(parsed.signing.publicJwks[0]).toBe(parsed.signing.publicJwk);
+    expect(Object.isFrozen(parsed.signing.publicJwks)).toBe(true);
     expect('signingPrivateJwk' in parsed).toBe(false);
     expect('d' in parsed.signing.publicJwk).toBe(false);
+  });
+
+  test('accepts a closed rotation document with one active signer and two published keys', () => {
+    const parsed = parseProductionSecurityConfig(rotationCandidate());
+
+    expect(parsed.schema).toBe('miakapp.production-security/2');
+    expect(parsed.signing).toMatchObject({
+      keyVersionName: 'projects/miakapp-v4-staging/locations/europe-west9/keyRings/miakapp-v4-staging/cryptoKeys/access-token-signing/cryptoKeyVersions/2',
+      publicJwk: futurePublicJwk,
+      publicJwks: [publicJwk, futurePublicJwk],
+      rpcTimeoutMilliseconds: 2_000,
+    });
+    expect(parsed.signing.publicJwks[1]).toBe(parsed.signing.publicJwk);
+    expect(parsed.signing.publicJwks.every((jwk) => Object.isFrozen(jwk))).toBe(true);
+    expect(Object.isFrozen(parsed.signing.publicJwks)).toBe(true);
+  });
+
+  test('rejects ambiguous, duplicated, unbounded, or secret-bearing signing keyrings', () => {
+    const mutations: Array<(value: Record<string, any>) => void> = [
+      (value) => { value.signing.current_kid = 'missing'; },
+      (value) => { value.signing.versions = []; },
+      (value) => { value.signing.versions.push(structuredClone(value.signing.versions[1])); },
+      (value) => { value.signing.versions[1].key_version_name = value.signing.versions[0].key_version_name; },
+      (value) => { value.signing.versions[1].public_jwk.kid = value.signing.versions[0].public_jwk.kid; },
+      (value) => { value.signing.versions[1].public_jwk.x = value.signing.versions[0].public_jwk.x; },
+      (value) => { value.signing.versions[1].public_jwk.d = 'private-material'; },
+      (value) => { value.signing.versions[1].unreviewed = true; },
+      (value) => { value.signing.unreviewed = true; },
+      (value) => {
+        value.signing.versions[1].key_version_name = value.signing.versions[1].key_version_name
+          .replace('projects/miakapp-v4-staging', 'projects/attacker-project');
+      },
+    ];
+    for (const mutate of mutations) {
+      const value = rotationCandidate();
+      mutate(value);
+      expect(() => parseProductionSecurityConfig(value)).toThrow(ProductionConfigurationError);
+    }
   });
 
   test('accepts only the explicit project paired with each non-emulator environment', () => {

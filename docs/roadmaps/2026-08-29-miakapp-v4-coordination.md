@@ -631,10 +631,13 @@ current consumer.
     It selects a reversible provider-endpoint topology, scale and invocation
     ceilings, twelve pending semantic cases and a deterministic cleanup state;
     it contains no deployer and claims no live evidence.
-14. **Next** — implement the plan's multi-key runtime configuration, browser App
-    Check provider, temporary edge, two relays, three-engine runner and rollback
-    guards, then execute the matrix once before wiring the real client and opaque
-    broker into the production web shell.
+14. **In progress 2026-09-05** — the control-plane source now retains legacy
+    single-key runtime compatibility while accepting a closed schema 2 with one
+    selected KMS signer and at most two KMS-validated published public keys. Its
+    merge, private staging deployment and guarded schema migration remain open,
+    followed by the browser App Check provider, temporary edge, two relays,
+    three-engine runner and rollback guards. Execute the matrix once before
+    wiring the real client and opaque broker into the production web shell.
 
 ## 9. Evidence that would change this plan
 

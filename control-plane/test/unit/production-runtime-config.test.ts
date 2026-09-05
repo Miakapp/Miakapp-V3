@@ -14,14 +14,27 @@ import {
 const publicJwk = (() => {
   const exported = generateKeyPairSync('ed25519').publicKey.export({ format: 'jwk' });
   if (exported.x === undefined) throw new Error('Generated Ed25519 key is invalid');
-  return {
+  return Object.freeze({
     kty: 'OKP',
     crv: 'Ed25519',
     x: exported.x,
     use: 'sig',
     alg: 'EdDSA',
     kid: 'staging-access-token-v1',
-  };
+  });
+})();
+
+const futurePublicJwk = (() => {
+  const exported = generateKeyPairSync('ed25519').publicKey.export({ format: 'jwk' });
+  if (exported.x === undefined) throw new Error('Generated Ed25519 key is invalid');
+  return Object.freeze({
+    kty: 'OKP',
+    crv: 'Ed25519',
+    x: exported.x,
+    use: 'sig',
+    alg: 'EdDSA',
+    kid: 'staging-access-token-v2',
+  });
 })();
 
 function keyring(secretId: string) {
@@ -67,6 +80,27 @@ function candidate(): Record<string, any> {
     app_check_app_id: '1:1234567890:web:0123456789abcdef',
     component_bucket: 'miakapp-v4-staging-components',
   };
+}
+
+function rotationCandidate(): Record<string, any> {
+  const value = candidate();
+  value.schema = 'miakapp.production-runtime/2';
+  value.security.schema = 'miakapp.production-security/2';
+  value.security.signing = {
+    current_kid: 'staging-access-token-v2',
+    versions: [
+      {
+        key_version_name: value.security.signing.key_version_name,
+        public_jwk: { ...publicJwk },
+      },
+      {
+        key_version_name: value.security.signing.key_version_name.replace('/1', '/2'),
+        public_jwk: { ...futurePublicJwk },
+      },
+    ],
+    rpc_timeout_ms: 2_000,
+  };
+  return value;
 }
 
 function productionCandidate(): Record<string, any> {
@@ -150,6 +184,31 @@ describe('production runtime configuration', () => {
     const wrongBucket = productionCandidate();
     wrongBucket.component_bucket = 'miakapp-v4-staging-components';
     expect(() => parseProductionRuntimeConfig(wrongBucket)).toThrow(ProductionConfigurationError);
+  });
+
+  test('derives one active KMS signer and both published JWKS keys during rotation', () => {
+    const runtime = parseProductionRuntimeConfig(rotationCandidate());
+    const deployment = createProductionDeploymentConfig(runtime, secrets());
+
+    expect(runtime.schema).toBe('miakapp.production-runtime/2');
+    expect(runtime.security.schema).toBe('miakapp.production-security/2');
+    expect(runtime.security.signing.keyVersionName).toEndWith('/cryptoKeyVersions/2');
+    expect(deployment.signingPublicJwk).toEqual(futurePublicJwk);
+    expect(deployment.signingPublicJwks).toEqual([publicJwk, futurePublicJwk]);
+    expect(deployment.signingPublicJwks[1]).toBe(deployment.signingPublicJwk);
+    expect(Object.isFrozen(deployment.signingPublicJwks)).toBe(true);
+  });
+
+  test('rejects mixed runtime and security schema generations', () => {
+    const legacyRuntime = rotationCandidate();
+    legacyRuntime.schema = 'miakapp.production-runtime/1';
+    expect(() => parseProductionRuntimeConfig(legacyRuntime))
+      .toThrow(ProductionConfigurationError);
+
+    const rotatingRuntime = candidate();
+    rotatingRuntime.schema = 'miakapp.production-runtime/2';
+    expect(() => parseProductionRuntimeConfig(rotatingRuntime))
+      .toThrow(ProductionConfigurationError);
   });
 
   test('rejects unknown fields, unsafe origins, duplicate origins, and malformed app IDs', () => {

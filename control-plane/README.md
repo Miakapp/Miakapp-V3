@@ -231,10 +231,14 @@ An isolated production-security boundary lives in
 [`src/cloud-security.ts`](src/cloud-security.ts), and
 [`src/google-cloud-clients.ts`](src/google-cloud-clients.ts). It accepts only the
 explicit staging or production project, the reviewed Paris `europe-west9`
-region, numeric Secret Manager versions and one full Ed25519 KMS key-version
-name. Initialization reads each declared 32-byte
+region, numeric Secret Manager versions and one or two full Ed25519 KMS
+key-version names. Runtime schema 1 remains accepted for the deployed single-key
+configuration. Runtime schema 2 selects exactly one active signer by `kid` while
+publishing at most one additional retiring or future public key. Initialization
+validates every declared public key against its exact KMS version, then uses only
+the selected version for signing. It reads each declared 32-byte
 secret once, checks the returned resource name and CRC32C, then binds the KMS
-public key to the configured JWKS key. The staging and production project IDs
+public keys to the configured JWKS keys. The staging and production project IDs
 are also bound respectively to `https://control.staging.miakapp.com` and
 `https://control.miakapp.com`; they cannot mint tokens carrying the other
 environment's issuer. Each token uses one `AsymmetricSign` request over the exact
@@ -271,8 +275,9 @@ still requires real attestation and wrong-app tests in `STAGE-03`.
 required `MIAKAPP_RUNTIME_CONFIG_JSON` value, rejects inputs over 16 KiB, uses
 the duplicate-key-safe JSON parser, validates the closed runtime schema, and
 requires the expected deployment environment. The document may contain only
-public configuration, a public JWK and pinned numeric resource names; raw secret
-bytes and private JWK fields are rejected.
+public configuration, at most two public JWKs and pinned numeric resource names;
+raw secret bytes and private JWK fields are rejected. Runtime/security schema 1
+and schema 2 must be paired; mixed generations fail closed.
 
 [`src/staging-runtime-document.ts`](src/staging-runtime-document.ts) is the
 staging-only initial document builder used by the guarded activation boundary.
@@ -297,7 +302,8 @@ enforcement.
 [`src/production-function-runtime.ts`](src/production-function-runtime.ts)
 single-flights initialization for each instance. Concurrent requests therefore
 perform one configuration load, one pass over the configured pinned secret
-versions and one KMS public-key read. An initialization failure is latched and
+versions and one KMS public-key read per published version (one normally, two
+during overlap). An initialization failure is latched and
 every later request receives the same redacted, non-cacheable `503` without
 another cloud attempt.
 
