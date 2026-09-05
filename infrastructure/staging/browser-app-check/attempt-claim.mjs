@@ -354,3 +354,68 @@ export async function observeBrowserAppCheckKeyAttemptClaim(
   );
   return readClaimGeneration(operator, storageMetadata, metadata, transport);
 }
+
+export async function observePinnedBrowserAppCheckKeyAttemptClaim(
+  session,
+  expectedReceipt,
+  fetchImpl = globalThis.fetch,
+) {
+  const operator = validateSession(session);
+  const transport = validateFetch(fetchImpl);
+  const expected = exactKeys(expectedReceipt, [
+    'schema',
+    'bucket',
+    'object',
+    'generation',
+    'size_bytes',
+    'sha256',
+    'repository_commit',
+    'terraform_plan_sha256',
+    'baseline_sha256',
+    'retry_authorized',
+    'deletion_authorized',
+    'raw_contents_committed',
+  ], 'Pinned browser App Check key attempt claim receipt');
+  if (expected.schema !== 'miakapp.staging-browser-app-check-key-attempt-claim-receipt/1'
+    || expected.bucket !== BROWSER_APP_CHECK_KEY_ATTEMPT_BUCKET
+    || expected.object !== BROWSER_APP_CHECK_KEY_ATTEMPT_OBJECT
+    || !/^\d+$/u.test(expected.generation ?? '')
+    || !Number.isSafeInteger(expected.size_bytes) || expected.size_bytes <= 0
+    || expected.size_bytes > MAXIMUM_RESPONSE_BYTES
+    || !SHA256.test(expected.sha256 ?? '')
+    || !COMMIT.test(expected.repository_commit ?? '')
+    || !SHA256.test(expected.terraform_plan_sha256 ?? '')
+    || !SHA256.test(expected.baseline_sha256 ?? '')
+    || expected.retry_authorized !== false
+    || expected.deletion_authorized !== false
+    || expected.raw_contents_committed !== false) {
+    reject('Pinned browser App Check key attempt claim receipt is malformed');
+  }
+  const observed = await request(
+    transport,
+    metadataUrl(expected.generation),
+    { headers: requestHeaders(operator.accessToken) },
+    'Pinned browser App Check key attempt claim metadata observation',
+  );
+  if (observed.status !== 200) {
+    reject('Pinned browser App Check key attempt claim metadata is absent');
+  }
+  const stored = validateStorageMetadata(
+    parseJson(observed.bytes, 'Pinned browser App Check key attempt claim metadata'),
+    expected.size_bytes,
+  );
+  if (stored.generation !== expected.generation) {
+    reject('Pinned browser App Check key attempt claim generation has drifted');
+  }
+  const content = await request(
+    transport,
+    mediaUrl(expected.generation),
+    { headers: requestHeaders(operator.accessToken) },
+    'Pinned browser App Check key attempt claim content observation',
+  );
+  if (content.status !== 200 || content.bytes.byteLength !== expected.size_bytes
+    || sha256(content.bytes) !== expected.sha256) {
+    reject('Pinned browser App Check key attempt claim content has drifted');
+  }
+  return Object.freeze(expected);
+}

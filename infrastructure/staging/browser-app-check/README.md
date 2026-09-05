@@ -2,7 +2,8 @@
 
 Status: domain-restricted score-key prerequisite applied and converged;
 authoritative and Cloud Asset inventories contain exactly one key; both key
-entrypoints permanently retired; App Check registration remains absent
+entrypoints permanently retired; guarded non-deletable App Check registration
+implementation ready but not applied
 
 This isolated Terraform root applied the two reversible prerequisites for
 browser App Check in `miakapp-v4-staging` as separate guarded operations. The
@@ -132,15 +133,85 @@ key; the raw key name and public site-key identifier remain absent from Git.
 
 ## Non-deletable App Check boundary
 
-This root does not declare
-`google_firebase_app_check_recaptcha_enterprise_config`. Firebase exposes GET
-and PATCH operations for that provider configuration but no delete operation;
-removing its Terraform state would not unregister it. Provider registration is
-therefore a later, explicitly non-deletable staging decision. Enforcement and
-debug-token creation are separate later decisions as well.
+This root now declares exactly one
+`google_firebase_app_check_recaptcha_enterprise_config`, bound to the existing
+score key and the one reviewed Firebase Web app. It is intentionally not live
+yet. Firebase exposes GET and PATCH operations for this provider configuration
+but no delete operation. The Google provider implements Terraform creation as a
+PATCH and deletion only by forgetting the Terraform state ID; it cannot
+unregister the provider. `prevent_destroy=true` protects the declared resource,
+and every saved-plan validator rejects update, delete, replacement or omission.
+No teardown driver exists for it.
 
-API enablement, the key and the coordination object have no fixed recurring
-service charge; the tiny private object consumes only metered Storage bytes.
+The active [registration planner](registration-plan.mjs) accepts only one
+Terraform create action for this provider, with the existing API, key and guard
+as exact no-ops. It pins:
+
+- Firebase app `1:1072737219170:web:5053ca93bf25d7373cd73b`;
+- the hash of the exact existing site-key identifier, without committing its
+  raw value;
+- token TTL `3600s` and the independently observed default minimum valid score
+  `0.5`;
+- the exact serial-4 key state and both direct and Cloud Asset key inventories;
+- zero enforcement records, debug tokens, browser requests, assessments, IAM
+  changes, public endpoints and fixed-cost services.
+
+`registration-plan.sh` requires the explicit target
+`miakapp-v4-staging:1:1072737219170:web:5053ca93bf25d7373cd73b:nondeletable`
+and writes its two-hour plan only to a private mode-0700 directory outside the
+repository. Planning is sandwiched between two identical direct-cloud and state
+observations. `registration-apply.sh` derives its authorization from the exact
+plan, baseline and merge commit. Immediately before apply it repeats that whole
+baseline with a fresh operator token, writes and fsyncs a non-retryable local
+bundle marker, then atomically creates and reads back the distinct private GCS
+object
+`terraform/browser-app-check/operations/app-check-registration-attempt.json`
+using `ifGenerationMatch=0`. One more exact inventory and state read must still
+find the provider-attempt object absent. The driver then constructs the complete
+Terraform invocation, atomically creates and reads back
+`terraform/browser-app-check/operations/app-check-provider-attempt.json`, and
+invokes Terraform with no intervening local write or fallible validation. This
+second permanent claim is the global irreversible boundary: even independently
+copied bundles cannot both issue the provider PATCH. A crash after the first
+claim but before the second remains recoverable; once the second exists, an
+absent provider is deliberately ambiguous and fails closed.
+
+Both registration claims bind the project, app/config identity, site-key and
+resource-name hashes, TTL, score, exact prerequisite state generation, plan,
+baseline, commit and operator. The first also binds the saved-plan expiry; the
+second binds the exact first-claim generation and digest. They contain no
+credential or raw site key, are never automatically deleted, and prohibit
+retry. A final observation must match the exact registered provider, unchanged
+key, `3600s` TTL, `0.5` score, zero enforcement/debug records, healthy
+four-resource Terraform state and both live claims.
+
+An ambiguous PATCH outcome must never replay the original plan. The separate
+[recovery inventory](registration-recovery-plan.mjs) and
+[claim-bound recovery](registration-recovery-apply.mjs) require the consumed
+registration claim plus exact live provider, prerequisite-claim, provider-claim
+and state snapshots. If and only if the provider remains unregistered, the state
+is still the pinned serial-4 prerequisite, and the global provider-attempt claim
+is absent, recovery may atomically acquire that second claim and immediately
+perform the first invocation of the original saved plan. Once the second claim
+exists, an unregistered provider fails closed as an ambiguous attempt.
+
+When the live provider is independently exact and registered, recovery permits
+only import of an absent address, state-only removal and reimport of the exact
+tainted partial address, or output reconciliation. The reconciliation saved
+plan must contain a provider no-op and zero cloud mutations. Every recovery
+plan creates a fresh private child bundle under the immutable source bundle;
+each child is one-shot, so a later observation can create another child without
+overwriting or deleting earlier metadata, markers or diagnostics. A missing or
+foreign provider/state combination fails closed.
+
+Provider registration alone does not enable enforcement and the drivers never
+initialize a browser SDK. The site key is a browser-visible identifier, while
+the separately retrievable legacy secret and operator credentials are not; no
+driver requests that secret or adds Firebase App Check IAM.
+
+API enablement, the key, provider registration and all three coordination objects
+have no fixed recurring service charge; the tiny private objects consume only
+metered Storage bytes.
 The applied driver made no assessment or browser request. Usage-based reCAPTCHA
 cost can begin only once some client sends assessment traffic; no such client
 is configured by this root.
@@ -153,6 +224,7 @@ References:
 
 ## Next gate
 
-Design and review the separate non-deletable App Check provider registration
-gate from this exact one-key state. Browser SDK traffic, token acceptance and
-enforcement remain later gates and must not be bundled into registration.
+Render, independently review and apply the guarded provider registration from
+this exact one-key state, commit only sanitized cross-linked evidence and retire
+the consumed registration entrypoints. Browser SDK traffic, token acceptance
+and enforcement remain later gates and must not be bundled into registration.

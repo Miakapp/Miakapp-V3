@@ -28,6 +28,37 @@ export const API_PREREQUISITE_TERRAFORM_STATE = Object.freeze({
   tainted_resources: 0,
 });
 
+export const KEY_PREREQUISITE_TERRAFORM_STATE = Object.freeze({
+  schema: 'miakapp.staging-browser-app-check-state/1',
+  object: 'terraform/browser-app-check/default.tfstate',
+  generation: '1788596623837355',
+  size_bytes: 14139,
+  sha256: '954c7c6ea4187ee59764cca2d4fb0cf359cc8a580dc1f12d96cad46ae2741f9f',
+  terraform_version: TERRAFORM_VERSION,
+  serial: 4,
+  lineage_sha256: 'f6640c6c40b21a544f3ddc3ee8005f8a1d9d2eaa19dd79ba5fca5709394d9601',
+  managed_resources: 3,
+  data_resources: 2,
+  outputs: 1,
+  tainted_resources: 0,
+  recaptcha_key_name_sha256: '997f375ee6db0535dd3934dcc6ffb941f10efd5516e29b27c4caa6b8157851fb',
+});
+
+export const KEY_PREREQUISITE_ATTEMPT_CLAIM = Object.freeze({
+  schema: 'miakapp.staging-browser-app-check-key-attempt-claim-receipt/1',
+  bucket: 'miakapp-v4-staging-tfstate-1072737219170',
+  object: 'terraform/browser-app-check/operations/recaptcha-key-create-attempt.json',
+  generation: '1788596614949831',
+  size_bytes: 665,
+  sha256: 'da1e5792f5026f3d5f599d8b6ceb6590be8985a841b3f2c614014979d0871afc',
+  repository_commit: 'ec541acce307d32f2816097065f7bff1e3f0f7d0',
+  terraform_plan_sha256: 'dd45c80ed38dbe5e681713442ddaa02e1dc78d2a3ce6f9365b7bbc04f96e248b',
+  baseline_sha256: '2c48ce0b837881e148a0aa9b9dd42eea66905bf96c41655424ee326fade5d75e',
+  retry_authorized: false,
+  deletion_authorized: false,
+  raw_contents_committed: false,
+});
+
 const SHA256 = /^[0-9a-f]{64}$/u;
 const COMMIT = /^[0-9a-f]{40}$/u;
 const TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u;
