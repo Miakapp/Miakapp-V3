@@ -55,6 +55,7 @@ import {
   validateCustomRolePolicySearch,
   validateInheritedVerifierInvokerBindings,
   validateVerifierAnnouncedUrls,
+  validateVerifierRevisionStatus,
   validateVerifierServiceEndpoints,
   validateVerifierServicePolicy,
 } from '../auth-probe/inventory.mjs';
@@ -725,6 +726,23 @@ test('accepts the real two-URL Cloud Run shape and closes the verifier IAM bound
     { url: generatedUri, address: { url: 'https://unreviewed.example.invalid' } },
     JSON.stringify(announcedUris),
   ), /service address/u);
+
+  const revisionName = `${VERIFIER_SERVICE_NAME}-00001-n8s`;
+  const revisionStatus = {
+    latestReadyRevisionName: revisionName,
+    latestCreatedRevisionName: revisionName,
+  };
+  assert.equal(validateVerifierRevisionStatus(revisionStatus, undefined), revisionName);
+  assert.equal(validateVerifierRevisionStatus(revisionStatus, null), revisionName);
+  assert.equal(validateVerifierRevisionStatus(revisionStatus, revisionName), revisionName);
+  assert.throws(
+    () => validateVerifierRevisionStatus(revisionStatus, `${VERIFIER_SERVICE_NAME}-foreign`),
+    /ready revision/u,
+  );
+  assert.throws(() => validateVerifierRevisionStatus({
+    ...revisionStatus,
+    latestCreatedRevisionName: `${VERIFIER_SERVICE_NAME}-00002-new`,
+  }, undefined), /ready revision/u);
   for (const invalid of [
     [VERIFIER_SERVICE_URI],
     [VERIFIER_SERVICE_URI, 'https://verifier.example.com'],
