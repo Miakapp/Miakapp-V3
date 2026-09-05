@@ -1,49 +1,60 @@
-# Guarded staging relay image build
+# Consumed staging relay image build v1
 
-This package prepares and executes one verified regional Cloud Build for the
-exact merged Miakapp-Server source required by the browser-relay acceptance
-plan. It publishes one private Artifact Registry tag only after the image has
-started with the complete bounded relay profile and returned the exact `/ping`
-response. Deployment must use the resulting immutable digest, never the tag.
+Status: one build submitted; build and smoke steps succeeded; verified
+provenance failed; image not authorized for deployment; v1 entrypoints retired
+
+This package records the first guarded regional Cloud Build for the exact
+merged Miakapp-Server source required by the browser-relay acceptance plan. The
+build and bounded `/ping` smoke test succeeded, and Cloud Build pushed one
+private Artifact Registry image. Cloud Build then marked the build `FAILURE`
+because the Container Analysis metadata API was disabled, so it could not emit
+the requested verified provenance. The pushed digest is retained for audit but
+is explicitly not authorized for deployment.
 
 The source bundle is the deterministic `git archive` of only `.dockerignore`,
 `Dockerfile`, `go.mod`, `go.sum`, `cmd/` and `internal/` at merge
 `df10674e034f30eec80760f5ec94bc108cff026f`. The Dockerfile, archive, Git tree,
 module files, two digest-pinned base images and digest-pinned Cloud Build Docker
-builder are all independently checked before submission.
+builder were independently checked before submission.
 
-Cloud Build uses the existing `miakapp-control-build` identity. That account can
+Cloud Build used the existing `miakapp-control-build` identity. That account can
 read the existing private source bucket, write only to the existing Artifact
-Registry repository and emit Cloud Logging entries; this package creates no IAM
-binding or credential. The request uses `E2_MEDIUM`, a 900-second timeout,
-SHA-256 source provenance and `requestedVerifyOption=VERIFIED`. A successful
-build is rejected unless Cloud Build reports the exact source generation,
-builder digest, smoke step, image digest and verified-provenance settings.
+Registry repository and emit Cloud Logging entries; this operation created no
+IAM binding or credential. The request used `E2_MEDIUM`, a 900-second timeout,
+SHA-256 source provenance and `requestedVerifyOption=VERIFIED`. The failed
+attempt still resolved the exact immutable source generation and reported its
+SHA-256 and MD5 hashes. The committed
+[`result-v1.json`](result-v1.json) pins the sanitized claim, build, source and
+private image observations without storing credentials or log contents.
 
-## One-shot boundary
+## Consumed one-shot boundary
 
-Planning performs only authenticated reads and writes a mode-0700 bundle outside
-the repository. Applying requires an authorization bound to the metadata bytes
-and clean execution commit, then atomically creates
+Planning performed only authenticated reads and wrote a mode-0700 bundle
+outside the repository. Applying required an authorization bound to the
+metadata bytes and clean execution commit, then atomically created
 `operations/browser-relay-image-build-v1.json` with generation precondition
-zero. The claim permits one build request and no retry or deletion. An ambiguous
-submission outcome requires a separately reviewed read-only recovery change;
-the apply command never submits a second build.
+zero. The claim permitted one build request and no retry or deletion. Exactly
+one matching build exists.
 
-The source archive remains as a content-addressed object so the reported build
-provenance can be independently rechecked. No container-scanning API is enabled:
-`containeranalysis.googleapis.com` may later be enabled separately to query the
-stored provenance, while the verified build itself fails if provenance
-generation fails.
+Both v1 entrypoints now fail before operator, source or cloud access, and the
+original claim and source object remain durable. A future v2 build must use a
+different claim, build tag and image tag. The source archive remains as a
+content-addressed object so the recovery build can reuse and independently
+recheck the same bytes.
 
-This operation does not create a Cloud Run service, runtime identity, public IAM
-member, request, fixture or browser runner. After the result is independently
-validated and committed, a later change must bind its digest into the dormant
-relay-services Terraform profile before any private bootstrap plan exists.
+The prerequisite fix adds `containeranalysis.googleapis.com`, which stores
+build metadata. `containerscanning.googleapis.com` remains disabled:
+vulnerability scanning is not authorized or required for this recovery.
 
-## Operator flow
+The operation created no Cloud Run service, runtime identity, public IAM
+member, request, fixture or browser runner. A separately reviewed v2 operation
+must complete verified provenance before an immutable digest can be bound into
+the dormant relay-services Terraform profile.
 
-From a clean checkout of the exact public `origin/main` commit:
+## Retired operator flow
+
+The historical commands below are retained only to identify the consumed
+boundary. They now fail immediately and must not be run or replayed:
 
 ```sh
 MIAKAPP_STAGING_RELAY_IMAGE_PLAN_CONFIRMATION=miakapp-v4-staging \
@@ -55,6 +66,5 @@ MIAKAPP_STAGING_RELAY_IMAGE_APPLY_AUTHORIZATION='<exact value from plan>' \
   /absolute/private/relay-image-bundle
 ```
 
-Both entrypoints reject Google, Git, proxy, Terraform, Firebase and unrelated
-Miakapp environment overrides. Full command output and credentials remain out of
-the repository; only bounded non-secret evidence is eligible for later commit.
+Full command output, the private bundle and credentials remain outside the
+repository. Only the bounded non-secret result is committed.

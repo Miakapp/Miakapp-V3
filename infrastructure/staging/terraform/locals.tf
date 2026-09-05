@@ -35,6 +35,7 @@ locals {
     "cloudbuild.googleapis.com",
     "cloudfunctions.googleapis.com",
     "cloudkms.googleapis.com",
+    "containeranalysis.googleapis.com",
     "eventarc.googleapis.com",
     "fcm.googleapis.com",
     "firebaseappcheck.googleapis.com",
