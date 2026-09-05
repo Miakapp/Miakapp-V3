@@ -54,8 +54,8 @@ scale-to-zero project, with the billing link removable during an authorized
 teardown, is therefore the default.
 
 The repository contains separate bootstrap, foundation, workload, discovery-probe,
-Firebase Auth and Auth-probe roots plus an applied browser App Check API-only
-root, a private versioned GCS backend, keyless plan/apply identities
+Firebase Auth and Auth-probe roots plus an applied browser App Check API and
+single-key root, a private versioned GCS backend, keyless plan/apply identities
 and a retained historical workflow blueprint. Terraform completed the final
 27-create/nine-no-op plan, but
 the wrapper rejected the complete state before migration because its output
@@ -104,12 +104,14 @@ state generation `1788574226264316` is 35,312 bytes at serial 27, with twelve
 managed resources, two data resources, one output and no tainted instance. Its
 SHA-256 is
 `88afa245c7943a44b23e32a452793c2825cf8e2bfb11ba55f95e299680b15cb2`.
-Browser-App-Check state generation `1788591686695870` is 11,057 bytes at
-serial 3, with two managed resources, two data resources, one output and no
+Browser-App-Check state generation `1788596623837355` is 14,139 bytes at
+serial 4, with three managed resources, two data resources, one output and no
 tainted instance. Its SHA-256 is
-`4c2ac56a22e2ba11e6a4dd5c195910c1a0f1e749a009660294ea05bcd8c48aa7`.
-It records only the state guard and enabled reCAPTCHA Enterprise API; direct
-post-apply inventory found zero keys.
+`954c7c6ea4187ee59764cca2d4fb0cf359cc8a580dc1f12d96cad46ae2741f9f`.
+It records the state guard, enabled reCAPTCHA Enterprise API and exactly one
+domain-restricted score key. Direct and eventual Cloud Asset post-apply
+inventories both found that same key. The private 665-byte atomic attempt claim
+remains live at generation `1788596614949831` until reviewed key retirement.
 Raw state remains private; these metadata do not establish current convergence
 by themselves.
 Raw plan and state bytes were never committed.
