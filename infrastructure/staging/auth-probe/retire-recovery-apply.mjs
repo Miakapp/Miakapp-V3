@@ -48,6 +48,7 @@ import {
   validateAuthProbeRetirementRecoveryInventory,
 } from './retirement-recovery.mjs';
 import {
+  readAndValidateAuthProbeOutputOnlyPlan,
   readAndValidateAuthProbePersistentRecoveryPlan,
   readAndValidateAuthProbePlan,
 } from './validate-plan.mjs';
@@ -394,9 +395,16 @@ async function main() {
         });
         const finalizeJsonPath = join(bundle, 'retire-recovery-finalize.tfplan.json');
         writePrivateFile(finalizeJsonPath, Buffer.from(shown.stdout), 0o400);
-        const summary = readAndValidateAuthProbePlan(finalizeJsonPath, 'retire-finalize');
-        if (summary.create !== 0 || summary.update < 1 || summary.update > 3 || summary.delete !== 0) {
-          throw new Error('Auth-probe recovery finalization is not limited to disabling custom roles');
+        let roleSummary = null;
+        try {
+          roleSummary = readAndValidateAuthProbePlan(finalizeJsonPath, 'retire-finalize');
+        } catch {
+          readAndValidateAuthProbeOutputOnlyPlan(finalizeJsonPath);
+        }
+        if (roleSummary !== null
+          && (roleSummary.create !== 0 || roleSummary.update < 1
+            || roleSummary.update > 3 || roleSummary.delete !== 0)) {
+          throw new Error('Auth-probe recovery finalization is outside the reviewed boundary');
         }
         run('terraform', [
           'apply', '-input=false', '-auto-approve', '-no-color', finalizePlanPath,

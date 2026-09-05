@@ -7,12 +7,14 @@ is `armed = false`.
 
 The committed `result.json` and `retirement.json` currently preserve the
 preceding Firebase Auth/App Check probe against historical revision
-`control-plane-00003-hum`. The first user-relay arm generation was fully retired
-without an execution after Workflows rejected its source at creation time. Its
-three role IDs remain disabled and unassigned. Generation 2 uses new role IDs
-and remains the only generation that may be armed. The historical evidence
-remains valid until generation 2 runs, retires, and replaces it with a
-digest-pinned sanitized result.
+`control-plane-00003-hum`. Two user-relay arm generations were fully retired
+without an execution after Workflows rejected their source at creation time:
+generation 1 used an invalid inline map expression, and generation 2 exceeded
+the 50-assignment per-step limit. Their six role IDs remain disabled and
+unassigned. The source now splits initialization into two bounded steps, but
+another reviewed role generation is required before it may be armed. The
+historical evidence remains valid until a successful generation runs, retires,
+and replaces it with a digest-pinned sanitized result.
 
 The root consumes the exact private workload state and closed Firebase
 Authentication baseline from [`../firebase-auth/`](../firebase-auth/). Planning,
@@ -24,10 +26,10 @@ Terraform output cannot conceal live authentication drift.
 
 The configured persistent graph contains:
 
-- three retained generation-1 custom roles fixed at `DISABLED`, plus three new
-  generation-2 least-privilege roles for Firebase token operations, self-scoped
-  JWT/OIDC signing, and default-database fixture CRUD; retirement fixes all six
-  roles at `DISABLED`;
+- three retained generation-1 custom roles plus three generation-2
+  least-privilege roles for Firebase token operations, self-scoped JWT/OIDC
+  signing, and default-database fixture CRUD; both generations are fixed at
+  `DISABLED`;
 - the Cloud Asset API used as supplemental project-wide discovery for verifier
   grants and custom-role bindings, without treating its eventually consistent
   results as an undelete authorization;
@@ -209,9 +211,11 @@ actions in the digest-bound authorization. If all six temporary resources are
 absent both live and in state while every persistent resource and the guard are
 exact, the inventory binds an explicit finalization flag into the same digest,
 TTL, operator, and commit authorization. Apply then disables any remaining GA
-roles, or skips Terraform when all three are already disabled, before cleaning
-the exact fixtures, rechecking convergence, and regenerating retirement
-evidence. This closes both a partial-arm interruption before the first
+roles. If every role is already disabled but a failed apply left only the
+non-secret Terraform output stale, a separate validator accepts exactly that
+one output update while requiring every managed resource to remain a no-op.
+Apply then cleans the exact fixtures, rechecks convergence, and regenerates
+retirement evidence. This closes both a partial-arm interruption before the first
 temporary create and a process interruption after Terraform retirement.
 
 A soft-deleted custom role is never undeleted automatically. Cloud Asset IAM
