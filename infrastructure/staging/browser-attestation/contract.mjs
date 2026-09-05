@@ -25,8 +25,10 @@ export const SECOND_PRIOR_CLAIM_OBJECT =
   'terraform/browser-attestation/operations/live-browser-attestation-v2.json';
 export const THIRD_PRIOR_CLAIM_OBJECT =
   'terraform/browser-attestation/operations/live-browser-attestation-v3.json';
-export const CLAIM_OBJECT =
+export const FOURTH_PRIOR_CLAIM_OBJECT =
   'terraform/browser-attestation/operations/live-browser-attestation-v4.json';
+export const CLAIM_OBJECT =
+  'terraform/browser-attestation/operations/live-browser-attestation-v5.json';
 export const PRIOR_CLAIM_GENERATION = '1788616557403719';
 export const PRIOR_CLAIM_SIZE_BYTES = 671;
 export const PRIOR_CLAIM_SHA256 =
@@ -57,14 +59,34 @@ export const PREFLIGHT_V3_METADATA_SHA256 =
   'c78ff6910da64cb933a866c05d70ce84c9d49cb06bb81aaffa0d755d96d0a10c';
 export const PREFLIGHT_V3_VERSION_NAME_SHA256 =
   '57bcd7fff5f5cbe7d66bbcd78c8205b558c0f7727dd2691a7de6a7a2b8dc8f21';
+export const FOURTH_PRIOR_CLAIM_GENERATION = '1788618927741289';
+export const FOURTH_PRIOR_CLAIM_SIZE_BYTES = 674;
+export const FOURTH_PRIOR_CLAIM_SHA256 =
+  '933ec73794d8b0e8f11e8379b1069b5a0ccb7942d20edcddad6b571f1650b910';
+export const PREFLIGHT_V4_REPOSITORY_COMMIT =
+  'b388f385c2df089e2ab19ba5580dec900092e089';
+export const PREFLIGHT_V4_METADATA_SHA256 =
+  '8ffa9e869072974502d2b7d693dbc19ee6abfde764c41ceef046c716f961476a';
+export const PREFLIGHT_V4_VERSION_NAME_SHA256 =
+  '17a2c9a4780a96101f510cf62d454c0c7beec6a158d8131724cd534973f6be23';
+export const PREFLIGHT_V4_DEPLOY_RELEASE_NAME_SHA256 =
+  '72ad96b2f48acff6c8cddfbf99454f6cc8c7840ab405734fe1c731f7161abce7';
+export const PREFLIGHT_V4_DISABLE_RELEASE_NAME_SHA256 =
+  '9bcb68a387fb363317c644d85f72f70d6fa7486ff24138e526f8ba5337538ddc';
+export const PREFLIGHT_V4_DEPLOY_RELEASE_TIME = '2026-09-05T14:35:33.316Z';
+export const PREFLIGHT_V4_DISABLE_RELEASE_TIME = '2026-09-05T14:35:39.637Z';
+export const PREFLIGHT_V4_DEPLOY_MESSAGE =
+  'Miakapp V4 bounded browser App Check attestation v4';
+export const PREFLIGHT_V4_DISABLE_MESSAGE =
+  'Miakapp V4 browser App Check attestation v4 retired';
 export const OPERATOR_USER_SHA256 =
   'd1c8514ac6eb5c13205cfec40dd6cc2072f33eb4279172df17273aa7c54a181c';
 export const APP_CHECK_SITE_KEY_SHA256 =
   '8a76f0f2cc0e0b002ed66c7f7d01ac28a6d44cb74ad2d33c3a7b0f0203e58546';
 export const FIREBASE_SDK_VERSION = '12.18.0';
-export const PLAYWRIGHT_VERSION = '1.62.1';
 export const PLAN_TTL_MILLISECONDS = 2 * 60 * 60 * 1_000;
 export const MAXIMUM_PUBLIC_WINDOW_MILLISECONDS = 5 * 60 * 1_000;
+export const INTERACTIVE_OBSERVATION_DEADLINE_MILLISECONDS = 2 * 60 * 1_000;
 
 export const CONTENT_SECURITY_POLICY = [
   "default-src 'none'",
@@ -176,7 +198,7 @@ export function attestationAuthorization(metadataBytes, repositoryCommit) {
     || !COMMIT.test(repositoryCommit)) {
     reject('Browser-attestation authorization inputs are invalid');
   }
-  return `run-browser-app-check-attestation-v4:${PROJECT_ID}:${sha256(metadataBytes)}:${repositoryCommit}`;
+  return `run-interactive-browser-app-check-attestation-v5:${PROJECT_ID}:${sha256(metadataBytes)}:${repositoryCommit}`;
 }
 
 export function validateAttestationAuthorization(value, metadataBytes, repositoryCommit) {
@@ -199,21 +221,27 @@ function validateBaseline(value) {
     'hosting_version_count',
     'operation_claim_present',
     'prior_operation_claims',
+    'retired_release_name_sha256s',
     'retired_preflight_version_name_sha256s',
   ], 'Browser-attestation baseline');
   if (!SHA256.test(baseline.app_check_config_sha256)
     || baseline.app_check_enforcement_records !== 0
     || baseline.debug_tokens !== 0
     || !SHA256.test(baseline.firebase_app_config_sha256)
-    || baseline.hosting_release_count !== 0
+    || baseline.hosting_release_count !== 2
     || baseline.hosting_site !== HOSTING_SITE
     || baseline.hosting_site_type !== 'DEFAULT_SITE'
-    || baseline.hosting_version_count !== 3
+    || baseline.hosting_version_count !== 4
     || baseline.operation_claim_present !== false
     || !isDeepStrictEqual(baseline.retired_preflight_version_name_sha256s, [
       PREFLIGHT_VERSION_NAME_SHA256,
       PREFLIGHT_V2_VERSION_NAME_SHA256,
       PREFLIGHT_V3_VERSION_NAME_SHA256,
+      PREFLIGHT_V4_VERSION_NAME_SHA256,
+    ])
+    || !isDeepStrictEqual(baseline.retired_release_name_sha256s, [
+      PREFLIGHT_V4_DEPLOY_RELEASE_NAME_SHA256,
+      PREFLIGHT_V4_DISABLE_RELEASE_NAME_SHA256,
     ])
     || !isDeepStrictEqual(baseline.prior_operation_claims, [
       {
@@ -233,6 +261,12 @@ function validateBaseline(value) {
         generation: THIRD_PRIOR_CLAIM_GENERATION,
         size_bytes: THIRD_PRIOR_CLAIM_SIZE_BYTES,
         sha256: THIRD_PRIOR_CLAIM_SHA256,
+      },
+      {
+        object: FOURTH_PRIOR_CLAIM_OBJECT,
+        generation: FOURTH_PRIOR_CLAIM_GENERATION,
+        size_bytes: FOURTH_PRIOR_CLAIM_SIZE_BYTES,
+        sha256: FOURTH_PRIOR_CLAIM_SHA256,
       },
     ])) {
     reject('Browser-attestation baseline differs from the reviewed retired preflight boundary');
@@ -309,8 +343,8 @@ export function buildAttestationMetadata({
   validateBaseline(baseline);
   validateArtifact(artifact);
   return Object.freeze({
-    schema: 'miakapp.staging-browser-attestation-plan/4',
-    operation: 'attest-browser-app-check-and-disable-hosting-v4',
+    schema: 'miakapp.staging-browser-attestation-plan/5',
+    operation: 'attest-interactive-browser-app-check-and-disable-hosting-v5',
     project_id: PROJECT_ID,
     project_number: PROJECT_NUMBER,
     hosting_site: HOSTING_SITE,
@@ -326,25 +360,22 @@ export function buildAttestationMetadata({
     app_check_site_key_sha256: APP_CHECK_SITE_KEY_SHA256,
     artifact,
     firebase_sdk_version: FIREBASE_SDK_VERSION,
-    playwright_version: PLAYWRIGHT_VERSION,
     browser: Object.freeze({
-      engine: 'chromium',
-      headless: false,
+      session: 'operator-connected-interactive',
+      observation_channel: 'single-tty-json-line',
       maximum_invocations: 1,
-      persistent_context: false,
     }),
     safety: Object.freeze({
       maximum_attestation_attempts: 1,
       maximum_public_window_milliseconds: MAXIMUM_PUBLIC_WINDOW_MILLISECONDS,
+      interactive_observation_deadline_milliseconds:
+        INTERACTIVE_OBSERVATION_DEADLINE_MILLISECONDS,
       app_check_enforcement_enabled: false,
       control_plane_public_ingress: false,
       firebase_auth_used: false,
       debug_provider_used: false,
-      trace_recording: false,
-      har_recording: false,
-      video_recording: false,
-      screenshot_recording: false,
       token_returned_to_driver: false,
+      raw_browser_error_returned_to_driver: false,
       rollback: 'site-disable-then-delete-version',
     }),
   });
@@ -365,7 +396,6 @@ export function validateAttestationMetadata(value, now = Date.now()) {
     'hosting_origin',
     'hosting_site',
     'operation',
-    'playwright_version',
     'project_id',
     'project_number',
     'repository_commit',
@@ -374,31 +404,28 @@ export function validateAttestationMetadata(value, now = Date.now()) {
     'schema',
   ], 'Browser-attestation metadata');
   const browser = exactKeys(metadata.browser, [
-    'engine',
-    'headless',
     'maximum_invocations',
-    'persistent_context',
+    'observation_channel',
+    'session',
   ], 'Browser-attestation browser');
   const safety = exactKeys(metadata.safety, [
     'app_check_enforcement_enabled',
     'control_plane_public_ingress',
     'debug_provider_used',
     'firebase_auth_used',
-    'har_recording',
+    'interactive_observation_deadline_milliseconds',
     'maximum_attestation_attempts',
     'maximum_public_window_milliseconds',
     'rollback',
-    'screenshot_recording',
+    'raw_browser_error_returned_to_driver',
     'token_returned_to_driver',
-    'trace_recording',
-    'video_recording',
   ], 'Browser-attestation safety');
   const created = canonicalTimestamp(metadata.created_at, 'Browser-attestation creation time');
   const expires = canonicalTimestamp(metadata.expires_at, 'Browser-attestation expiry time');
   const baseline = validateBaseline(metadata.baseline);
   validateArtifact(metadata.artifact);
-  if (metadata.schema !== 'miakapp.staging-browser-attestation-plan/4'
-    || metadata.operation !== 'attest-browser-app-check-and-disable-hosting-v4'
+  if (metadata.schema !== 'miakapp.staging-browser-attestation-plan/5'
+    || metadata.operation !== 'attest-interactive-browser-app-check-and-disable-hosting-v5'
     || metadata.project_id !== PROJECT_ID
     || metadata.project_number !== PROJECT_NUMBER
     || metadata.hosting_site !== HOSTING_SITE
@@ -412,25 +439,22 @@ export function validateAttestationMetadata(value, now = Date.now()) {
     || !SHA256.test(metadata.dependency_lock_sha256)
     || metadata.app_check_site_key_sha256 !== APP_CHECK_SITE_KEY_SHA256
     || metadata.firebase_sdk_version !== FIREBASE_SDK_VERSION
-    || metadata.playwright_version !== PLAYWRIGHT_VERSION
     || !isDeepStrictEqual(browser, {
-      engine: 'chromium',
-      headless: false,
+      session: 'operator-connected-interactive',
+      observation_channel: 'single-tty-json-line',
       maximum_invocations: 1,
-      persistent_context: false,
     })
     || !isDeepStrictEqual(safety, {
       maximum_attestation_attempts: 1,
       maximum_public_window_milliseconds: MAXIMUM_PUBLIC_WINDOW_MILLISECONDS,
+      interactive_observation_deadline_milliseconds:
+        INTERACTIVE_OBSERVATION_DEADLINE_MILLISECONDS,
       app_check_enforcement_enabled: false,
       control_plane_public_ingress: false,
       firebase_auth_used: false,
       debug_provider_used: false,
-      trace_recording: false,
-      har_recording: false,
-      video_recording: false,
-      screenshot_recording: false,
       token_returned_to_driver: false,
+      raw_browser_error_returned_to_driver: false,
       rollback: 'site-disable-then-delete-version',
     })) {
     reject('Browser-attestation metadata differs from the reviewed operation');
@@ -467,29 +491,35 @@ export function readAttestationMetadataForRecovery(path) {
   return parseAndValidateAttestationMetadata(bytes, Date.parse(value.created_at));
 }
 
-export function validateBrowserResult(value) {
-  const result = exactKeys(value, [
-    'attestation_attempts',
-    'browser_context',
-    'duration_milliseconds',
-    'engine',
-    'mode',
-    'schema',
-    'state',
-    'token_format',
-    'token_ttl_seconds',
-  ], 'Browser-attestation result');
-  if (result.schema !== 'miakapp.browser-app-check-attestation/1'
-    || result.state !== 'passed'
-    || result.engine !== 'chromium'
-    || result.mode !== 'headed'
-    || result.attestation_attempts !== 1
+export function validateBrowserResult(value, expectedChallenge) {
+  if (typeof expectedChallenge !== 'string' || !/^[0-9a-f]{64}$/u.test(expectedChallenge)) {
+    reject('Browser-attestation challenge is invalid');
+  }
+  const common = ['attestation_attempts', 'challenge', 'schema', 'state'];
+  const keys = value?.state === 'passed'
+    ? [...common, 'duration_milliseconds', 'token_format', 'token_ttl_seconds']
+    : [...common, 'failure'];
+  const result = exactKeys(value, keys, 'Browser-attestation result');
+  const expected = Buffer.from(expectedChallenge, 'utf8');
+  const actual = Buffer.from(typeof result.challenge === 'string' ? result.challenge : '', 'utf8');
+  if (result.schema !== 'miakapp.browser-app-check-attestation/2'
+    || actual.byteLength !== expected.byteLength
+    || !timingSafeEqual(actual, expected)
+    || result.attestation_attempts !== 1) {
+    reject('Browser-attestation result differs from the exact interactive challenge');
+  }
+  if (result.state === 'failed') {
+    if (result.failure !== 'provider-or-token-shape-rejected') {
+      reject('Browser-attestation failure is not the exact closed shape');
+    }
+    return Object.freeze(result);
+  }
+  if (result.state !== 'passed'
     || result.token_format !== 'jwt-three-segments'
     || !Number.isInteger(result.token_ttl_seconds)
     || result.token_ttl_seconds < 3000 || result.token_ttl_seconds > 3700
     || !Number.isInteger(result.duration_milliseconds)
-    || result.duration_milliseconds < 0 || result.duration_milliseconds > 120_000
-    || result.browser_context !== 'ephemeral-closed') {
+    || result.duration_milliseconds < 0 || result.duration_milliseconds > 90_000) {
     reject('Browser-attestation result is not the exact successful semantic shape');
   }
   return Object.freeze(result);

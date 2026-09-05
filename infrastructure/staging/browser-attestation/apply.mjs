@@ -4,11 +4,18 @@ import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 
 import { readAndVerifyArtifact, validatePinnedPackageVersions } from './artifact.mjs';
-import { runBrowserAttestation, validateBrowserPreflight } from './browser.mjs';
+import {
+  createBrowserChallenge,
+  interactiveRunnerUrl,
+  readBrowserAttestation,
+  sanitizedBrowserResult,
+  validateBrowserPreflight,
+} from './browser.mjs';
 import { createOperationClaim } from './claim.mjs';
 import {
   FIREBASE_APP_ID,
   HOSTING_SITE,
+  INTERACTIVE_OBSERVATION_DEADLINE_MILLISECONDS,
   MAXIMUM_PUBLIC_WINDOW_MILLISECONDS,
   PROJECT_ID,
   RUNNER_PATH,
@@ -36,6 +43,7 @@ import {
   observeAttestationBaseline,
   observeHostingInventory,
   sameBaseline,
+  validateRetiredAttestationReleases,
   validateRetiredPreflightVersions,
 } from './inventory.mjs';
 import { observeBrowserAppCheckRegistrationInventory } from '../browser-app-check/inventory.mjs';
@@ -54,6 +62,10 @@ process.umask(0o077);
 
 function normalizedPostClaimBaseline(value) {
   return Object.freeze({ ...value, operation_claim_present: false });
+}
+
+function throwIfInterrupted(signal) {
+  if (signal.aborted) throw new Error('Interactive browser attestation was interrupted');
 }
 
 async function disableWithBoundedRecovery(session) {
@@ -75,18 +87,24 @@ function validateFinalHostingInventory(
   deployRelease,
   disableRelease,
 ) {
-  validateRetiredPreflightVersions(inventory);
-  const versions = inventory.versions.filter(({ name }) => name === versionName);
-  const deploys = inventory.releases.filter(({ name }) => name === deployRelease.name);
-  const disables = inventory.releases.filter(({ name }) => name === disableRelease.name);
+  const retiredVersions = validateRetiredPreflightVersions(inventory);
+  const retiredReleases = validateRetiredAttestationReleases(inventory, retiredVersions);
+  const retiredVersionNames = new Set(retiredVersions.map(({ name }) => name));
+  const retiredReleaseNames = new Set(retiredReleases.map(({ name }) => name));
+  const versions = inventory.versions.filter(({ name }) => !retiredVersionNames.has(name));
+  const releases = inventory.releases.filter(({ name }) => !retiredReleaseNames.has(name));
+  const deploys = releases.filter(({ name }) => name === deployRelease.name);
+  const disables = releases.filter(({ name }) => name === disableRelease.name);
   if (inventory.site.site !== HOSTING_SITE
-    || inventory.versions.length !== 4
+    || inventory.versions.length !== 5
     || versions.length !== 1
+    || versions[0].name !== versionName
     || versions[0].status !== 'DELETED'
     || versions[0].file_count !== null
     || versions[0].version_bytes !== null
     || !isDeepStrictEqual(versions[0].labels, hostingLabels(repositoryCommit))
-    || inventory.releases.length !== 2
+    || inventory.releases.length !== 4
+    || releases.length !== 2
     || deploys.length !== 1
     || deploys[0].type !== 'DEPLOY'
     || deploys[0].version_name !== versionName
@@ -95,7 +113,7 @@ function validateFinalHostingInventory(
     || disables[0].type !== 'SITE_DISABLE'
     || disables[0].version_name !== null
     || disables[0].message !== hostingMessages.disable) {
-    throw new Error('Firebase Hosting did not converge to the exact disabled v4 state');
+    throw new Error('Firebase Hosting did not converge to the exact disabled v5 state');
   }
   return versions[0];
 }
@@ -144,6 +162,11 @@ async function main() {
     throw new Error('Live browser-attestation prerequisites changed after the atomic claim');
   }
 
+  const interruption = new AbortController();
+  const interrupt = () => interruption.abort();
+  process.on('SIGINT', interrupt);
+  process.on('SIGTERM', interrupt);
+
   let versionName;
   let deployRelease;
   let disableRelease;
@@ -151,14 +174,18 @@ async function main() {
   let finalizedMetrics;
   let publicArtifactEvidence;
   let publicStartedAt;
+  let interactiveDeadline;
   let operationError;
   let cleanupError;
   let failureStage = 'hosting_version_creation';
   let releaseAttempted = false;
   try {
+    throwIfInterrupted(interruption.signal);
     versionName = await createHostingVersion(session, metadata.repository_commit);
+    throwIfInterrupted(interruption.signal);
     failureStage = 'hosting_file_population';
     await populateHostingVersion(session, versionName, artifacts);
+    throwIfInterrupted(interruption.signal);
     failureStage = 'hosting_version_finalization';
     finalizedMetrics = await finalizeHostingVersion(
       session,
@@ -166,14 +193,36 @@ async function main() {
       metadata.repository_commit,
       metadata.artifact,
     );
+    throwIfInterrupted(interruption.signal);
     failureStage = 'hosting_version_release';
     publicStartedAt = Date.now();
+    interactiveDeadline = publicStartedAt + INTERACTIVE_OBSERVATION_DEADLINE_MILLISECONDS;
     releaseAttempted = true;
     deployRelease = await releaseHostingVersion(session, versionName);
+    throwIfInterrupted(interruption.signal);
     failureStage = 'public_artifact_verification';
-    publicArtifactEvidence = await waitForRunner(artifacts);
-    failureStage = 'browser_attestation';
-    browserResult = await runBrowserAttestation();
+    publicArtifactEvidence = await waitForRunner(artifacts, undefined, interactiveDeadline);
+    throwIfInterrupted(interruption.signal);
+    failureStage = 'interactive_browser_attestation';
+    const challenge = createBrowserChallenge();
+    const runnerUrl = interactiveRunnerUrl(challenge);
+    process.stdout.write([
+      'INTERACTIVE_BROWSER_READY',
+      `Runner URL: ${runnerUrl}`,
+      `Observation deadline: ${new Date(interactiveDeadline).toISOString()}`,
+      'Open the exact URL in the connected interactive browser, await window.__MIAKAPP_BROWSER_ATTESTATION__, then send JSON.stringify(result) as one terminal line.',
+      'The runner returns only semantic evidence; never paste or return an App Check token.',
+      '',
+    ].join('\n'));
+    browserResult = await readBrowserAttestation(
+      process.stdin,
+      challenge,
+      interactiveDeadline,
+      { signal: interruption.signal },
+    );
+    if (browserResult.state !== 'passed') {
+      throw new Error('Interactive browser App Check attestation returned the closed failure shape');
+    }
   } catch (error) {
     operationError = error;
   }
@@ -181,16 +230,33 @@ async function main() {
   try {
     if (releaseAttempted) disableRelease = await disableWithBoundedRecovery(session);
     if (versionName !== undefined) await deleteHostingVersion(session, versionName);
-    if (releaseAttempted) await waitForDisabledRunner();
+    if (releaseAttempted) {
+      await waitForDisabledRunner(
+        undefined,
+        publicStartedAt + MAXIMUM_PUBLIC_WINDOW_MILLISECONDS,
+      );
+    }
   } catch (error) {
     cleanupError = error;
+  } finally {
+    process.removeListener('SIGINT', interrupt);
+    process.removeListener('SIGTERM', interrupt);
   }
+  const publicWindowMilliseconds = publicStartedAt === undefined
+    ? null
+    : Date.now() - publicStartedAt;
   if (cleanupError !== undefined) {
     throw new Error('Browser-attestation cleanup did not prove that public Hosting was disabled');
   }
+  if (publicWindowMilliseconds !== null
+    && (publicWindowMilliseconds < 0
+      || publicWindowMilliseconds > MAXIMUM_PUBLIC_WINDOW_MILLISECONDS)) {
+    failureStage = 'public_window_boundary';
+    operationError = new Error('Browser-attestation public window exceeded the reviewed bound');
+  }
   if (operationError !== undefined) {
     const failure = Object.freeze({
-      schema: 'miakapp.staging-browser-attestation-failure/4',
+      schema: 'miakapp.staging-browser-attestation-failure/5',
       operation: metadata.operation,
       state: 'failed_after_bounded_cleanup',
       project_id: PROJECT_ID,
@@ -211,8 +277,12 @@ async function main() {
         site_disable_response_validated: disableRelease !== undefined,
         version_delete_response_validated: versionName !== undefined,
         runner_404_validated: releaseAttempted,
+        public_window_milliseconds: publicWindowMilliseconds,
       }),
-      browser_invoked: failureStage === 'browser_attestation',
+      interactive_browser_requested: failureStage === 'interactive_browser_attestation',
+      interactive_observation_received: browserResult !== undefined,
+      interactive_observation_state: browserResult?.state ?? null,
+      challenge_retained: false,
       firebase_auth_used: false,
       control_plane_invoked: false,
       credential_material_retained: false,
@@ -227,13 +297,9 @@ async function main() {
   }
   if (versionName === undefined || deployRelease === undefined || disableRelease === undefined
     || browserResult === undefined || finalizedMetrics === undefined
-    || publicArtifactEvidence === undefined || publicStartedAt === undefined) {
+    || publicArtifactEvidence === undefined || publicWindowMilliseconds === null
+    || interactiveDeadline === undefined) {
     throw new Error('Browser-attestation execution is incomplete');
-  }
-  const publicWindowMilliseconds = Date.now() - publicStartedAt;
-  if (publicWindowMilliseconds < 0
-    || publicWindowMilliseconds > MAXIMUM_PUBLIC_WINDOW_MILLISECONDS) {
-    throw new Error('Browser-attestation public window exceeded the reviewed bound');
   }
 
   const [hosting, appCheck] = await Promise.all([
@@ -253,7 +319,7 @@ async function main() {
   verifyExactMain(repositoryRoot, metadata.repository_commit);
 
   const result = Object.freeze({
-    schema: 'miakapp.staging-browser-attestation-result/4',
+    schema: 'miakapp.staging-browser-attestation-result/5',
     operation: metadata.operation,
     project_id: PROJECT_ID,
     project_number: metadata.project_number,
@@ -275,12 +341,14 @@ async function main() {
       version_status: deletedVersion.status,
       deploy_release_name_sha256: sha256(Buffer.from(deployRelease.name, 'utf8')),
       disable_release_name_sha256: sha256(Buffer.from(disableRelease.name, 'utf8')),
-      releases_created: hosting.releases.length,
+      operation_releases_created: 2,
+      total_historical_releases: hosting.releases.length,
       site_disabled: true,
       runner_route_present: false,
+      interactive_deadline_milliseconds: interactiveDeadline - publicStartedAt,
       public_window_milliseconds: publicWindowMilliseconds,
     }),
-    browser: browserResult,
+    browser: sanitizedBrowserResult(browserResult),
     app_check: Object.freeze({
       firebase_app_id: FIREBASE_APP_ID,
       provider: 'recaptcha-enterprise',
@@ -292,16 +360,16 @@ async function main() {
     firebase_auth_used: false,
     control_plane_public_ingress_changed: false,
     credential_material_returned_to_driver: false,
-    browser_storage_persisted: false,
+    persistent_browser_profile_required: false,
   });
   const resultBytes = Buffer.from(canonicalJson(result), 'utf8');
   writePrivateFile(join(bundle, 'result.json'), resultBytes, 0o400);
   process.stdout.write([
-    'The bounded real-browser App Check attestation succeeded and Hosting was disabled.',
+    'The bounded interactive-browser App Check attestation succeeded and Hosting was disabled.',
     `Private result: ${join(bundle, 'result.json')}`,
     `Result SHA-256: ${sha256(resultBytes)}`,
     `Public window: ${publicWindowMilliseconds} ms`,
-    'No token, Firebase user, control-plane request, debug provider or enforcement change was retained.',
+    'No token, Firebase user, raw browser error, control-plane request, debug provider or enforcement change was retained.',
     '',
   ].join('\n'));
 }

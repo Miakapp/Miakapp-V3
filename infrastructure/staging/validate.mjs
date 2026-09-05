@@ -34,7 +34,7 @@ const SERVICE_IDS = [
 
 const SERVICE_STATES = [
   'initialized_closed_custom_token_lifecycle_validated',
-  'admin_custom_provider_validated_browser_attestation_pending',
+  'admin_custom_provider_validated_interactive_browser_attestation_pending',
   'private_fixture_lifecycle_validated_no_persistent_application_data',
   'private_schema_2_two_key_version_2_current_runtime_active_user_relay_acceptance_succeeded',
   'private_bucket_created_no_application_mutation',
@@ -4082,10 +4082,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 51, 'manifest.revision');
+  exact(manifest.revision, 52, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_2_current_runtime_deployed_signing_overlap_active_user_relay_acceptance_succeeded_live_browser_plan_reviewed_app_check_provider_registered',
+    'private_control_plane_two_key_version_2_current_runtime_deployed_signing_overlap_active_user_relay_acceptance_succeeded_interactive_browser_plan_reviewed_app_check_provider_registered',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
