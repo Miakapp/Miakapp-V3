@@ -26,6 +26,9 @@ import {
 
 const PLAN_CONFIRMATION = 'MIAKAPP_STAGING_BROWSER_ATTESTATION_PLAN_CONFIRMATION';
 const root = fileURLToPath(new URL('./', import.meta.url));
+export const BROWSER_ATTESTATION_OPERATION_CONSUMED = true;
+const RETIRED_MESSAGE =
+  'The real system-browser App Check prerequisite is complete; this one-shot planner is permanently retired';
 process.umask(0o077);
 
 async function main() {
@@ -80,8 +83,13 @@ async function main() {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  main().catch((error) => {
-    console.error(error instanceof Error ? error.message : 'Browser-attestation planning failed');
+  if (BROWSER_ATTESTATION_OPERATION_CONSUMED) {
+    console.error(RETIRED_MESSAGE);
     process.exitCode = 1;
-  });
+  } else {
+    main().catch((error) => {
+      console.error(error instanceof Error ? error.message : 'Browser-attestation planning failed');
+      process.exitCode = 1;
+    });
+  }
 }
