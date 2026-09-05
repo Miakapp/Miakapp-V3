@@ -8,6 +8,9 @@ import {
   HOSTING_SITE,
   PREFLIGHT_METADATA_SHA256,
   PREFLIGHT_REPOSITORY_COMMIT,
+  PREFLIGHT_V2_METADATA_SHA256,
+  PREFLIGHT_V2_REPOSITORY_COMMIT,
+  PREFLIGHT_V2_VERSION_NAME_SHA256,
   PREFLIGHT_VERSION_NAME_SHA256,
   PRIOR_CLAIM_GENERATION,
   PRIOR_CLAIM_OBJECT,
@@ -15,6 +18,10 @@ import {
   PRIOR_CLAIM_SIZE_BYTES,
   PROJECT_ID,
   PROJECT_NUMBER,
+  SECOND_PRIOR_CLAIM_GENERATION,
+  SECOND_PRIOR_CLAIM_OBJECT,
+  SECOND_PRIOR_CLAIM_SHA256,
+  SECOND_PRIOR_CLAIM_SIZE_BYTES,
   STATE_BUCKET,
   canonicalJson,
   sha256,
@@ -195,36 +202,53 @@ export async function observeHostingInventory(session, fetchImplementation) {
   });
 }
 
-export function validateRetiredPreflightVersion(inventory, options = {}) {
-  const expectedNameSha256 = options.expectedVersionNameSha256
-    ?? PREFLIGHT_VERSION_NAME_SHA256;
-  const expectedRepositoryCommit = options.expectedRepositoryCommit
-    ?? PREFLIGHT_REPOSITORY_COMMIT;
+export function validateRetiredPreflightVersions(inventory, options = {}) {
+  const expectedVersions = options.expectedRetiredVersions ?? [
+    {
+      name_sha256: PREFLIGHT_VERSION_NAME_SHA256,
+      operation: 'browser-app-check-attestation',
+      repository_commit: PREFLIGHT_REPOSITORY_COMMIT,
+    },
+    {
+      name_sha256: PREFLIGHT_V2_VERSION_NAME_SHA256,
+      operation: 'browser-app-check-attestation-v2',
+      repository_commit: PREFLIGHT_V2_REPOSITORY_COMMIT,
+    },
+  ];
   if (!plainObject(inventory) || !Array.isArray(inventory.versions)
-    || !SHA256.test(expectedNameSha256)
-    || !/^[0-9a-f]{40}$/u.test(expectedRepositoryCommit)) {
+    || !Array.isArray(expectedVersions) || expectedVersions.length !== 2
+    || expectedVersions.some((expected) => !plainObject(expected)
+      || !SHA256.test(expected.name_sha256 ?? '')
+      || typeof expected.operation !== 'string'
+      || !/^[0-9a-f]{40}$/u.test(expected.repository_commit ?? ''))) {
     reject('Retired browser-attestation preflight inventory is invalid');
   }
-  const matches = inventory.versions.filter(({ name }) => (
-    sha256(Buffer.from(name, 'utf8')) === expectedNameSha256
-  ));
-  const [version] = matches;
-  if (matches.length !== 1
-    || version.status !== 'DELETED'
-    || version.file_count !== null
-    || version.version_bytes !== null
-    || !isDeepStrictEqual(version.labels, {
-      environment: 'staging',
-      operation: 'browser-app-check-attestation',
-      repository: expectedRepositoryCommit,
-    })) {
-    reject('Retired browser-attestation preflight version has drifted');
+  const retired = expectedVersions.map((expected) => {
+    const matches = inventory.versions.filter(({ name }) => (
+      sha256(Buffer.from(name, 'utf8')) === expected.name_sha256
+    ));
+    const [version] = matches;
+    if (matches.length !== 1
+      || version.status !== 'DELETED'
+      || version.file_count !== null
+      || version.version_bytes !== null
+      || !isDeepStrictEqual(version.labels, {
+        environment: 'staging',
+        operation: expected.operation,
+        repository: expected.repository_commit,
+      })) {
+      reject('Retired browser-attestation preflight version has drifted');
+    }
+    return version;
+  });
+  if (new Set(retired.map(({ name }) => name)).size !== retired.length) {
+    reject('Retired browser-attestation preflight versions must be distinct');
   }
-  return version;
+  return Object.freeze(retired);
 }
 
 function validateClaimObject(objectName) {
-  if (![CLAIM_OBJECT, PRIOR_CLAIM_OBJECT].includes(objectName)) {
+  if (![CLAIM_OBJECT, PRIOR_CLAIM_OBJECT, SECOND_PRIOR_CLAIM_OBJECT].includes(objectName)) {
     reject('Browser-attestation claim inventory object is outside the reviewed boundary');
   }
   return objectName;
@@ -306,14 +330,17 @@ export function observeOperationClaim(session, fetchImplementation) {
   return observeClaim(session, CLAIM_OBJECT, fetchImplementation);
 }
 
-export function observePriorOperationClaim(session, fetchImplementation) {
-  return observeClaim(session, PRIOR_CLAIM_OBJECT, fetchImplementation);
+export function observePriorOperationClaims(session, fetchImplementation) {
+  return Promise.all([
+    observeClaim(session, PRIOR_CLAIM_OBJECT, fetchImplementation),
+    observeClaim(session, SECOND_PRIOR_CLAIM_OBJECT, fetchImplementation),
+  ]);
 }
 
-function validatePriorOperationClaim(claim, expectedReceipt) {
+function validatePriorOperationClaim(claim, expected) {
   const value = claim?.value;
   if (!plainObject(value)
-    || !isDeepStrictEqual(claim.receipt, expectedReceipt)
+    || !isDeepStrictEqual(claim.receipt, expected.receipt)
     || !isDeepStrictEqual(Object.keys(value).sort(), [
       'baseline_sha256',
       'created_at',
@@ -329,13 +356,13 @@ function validatePriorOperationClaim(claim, expectedReceipt) {
       'retry_authorized',
       'schema',
     ].sort())
-    || value.schema !== 'miakapp.staging-browser-attestation-claim/1'
-    || value.operation !== 'attest-browser-app-check-and-disable-hosting'
+    || value.schema !== expected.schema
+    || value.operation !== expected.operation
     || value.project_id !== PROJECT_ID
     || value.project_number !== PROJECT_NUMBER
     || value.hosting_site !== HOSTING_SITE
-    || value.repository_commit !== PREFLIGHT_REPOSITORY_COMMIT
-    || value.metadata_sha256 !== PREFLIGHT_METADATA_SHA256
+    || value.repository_commit !== expected.repository_commit
+    || value.metadata_sha256 !== expected.metadata_sha256
     || !SHA256.test(value.baseline_sha256 ?? '')
     || typeof value.created_at !== 'string'
     || typeof value.expires_at !== 'string'
@@ -352,14 +379,38 @@ export async function observeAttestationBaseline(session, options = {}) {
     reject('Browser-attestation inventory requires a verified operator session');
   }
   const fetchImplementation = options.fetchImplementation;
-  const expectedPriorClaimReceipt = options.expectedPriorClaimReceipt ?? Object.freeze({
-    bucket: STATE_BUCKET,
-    object: PRIOR_CLAIM_OBJECT,
-    generation: PRIOR_CLAIM_GENERATION,
-    size_bytes: PRIOR_CLAIM_SIZE_BYTES,
-    sha256: PRIOR_CLAIM_SHA256,
-  });
-  const [appCheck, keys, hosting, webConfigResponse, priorClaim, claimPresent] = await Promise.all([
+  const expectedPriorClaims = options.expectedPriorClaims ?? [
+    {
+      schema: 'miakapp.staging-browser-attestation-claim/1',
+      operation: 'attest-browser-app-check-and-disable-hosting',
+      repository_commit: PREFLIGHT_REPOSITORY_COMMIT,
+      metadata_sha256: PREFLIGHT_METADATA_SHA256,
+      receipt: {
+        bucket: STATE_BUCKET,
+        object: PRIOR_CLAIM_OBJECT,
+        generation: PRIOR_CLAIM_GENERATION,
+        size_bytes: PRIOR_CLAIM_SIZE_BYTES,
+        sha256: PRIOR_CLAIM_SHA256,
+      },
+    },
+    {
+      schema: 'miakapp.staging-browser-attestation-claim/2',
+      operation: 'attest-browser-app-check-and-disable-hosting-v2',
+      repository_commit: PREFLIGHT_V2_REPOSITORY_COMMIT,
+      metadata_sha256: PREFLIGHT_V2_METADATA_SHA256,
+      receipt: {
+        bucket: STATE_BUCKET,
+        object: SECOND_PRIOR_CLAIM_OBJECT,
+        generation: SECOND_PRIOR_CLAIM_GENERATION,
+        size_bytes: SECOND_PRIOR_CLAIM_SIZE_BYTES,
+        sha256: SECOND_PRIOR_CLAIM_SHA256,
+      },
+    },
+  ];
+  if (!Array.isArray(expectedPriorClaims) || expectedPriorClaims.length !== 2) {
+    reject('Prior browser-attestation claim expectations are invalid');
+  }
+  const [appCheck, keys, hosting, webConfigResponse, priorClaims, claimPresent] = await Promise.all([
     (options.observeRegistration ?? observeBrowserAppCheckRegistrationInventory)(session),
     (options.observeKeys ?? observeRecaptchaKeyRecords)(session),
     observeHostingInventory(session, fetchImplementation),
@@ -371,7 +422,7 @@ export async function observeAttestationBaseline(session, options = {}) {
         fetchImplementation,
       },
     ),
-    (options.observePriorClaim ?? observePriorOperationClaim)(session, fetchImplementation),
+    (options.observePriorClaims ?? observePriorOperationClaims)(session, fetchImplementation),
     operationClaimPresent(session, CLAIM_OBJECT, fetchImplementation),
   ]);
   const firebaseConfig = validateWebConfig(webConfigResponse.value);
@@ -388,10 +439,14 @@ export async function observeAttestationBaseline(session, options = {}) {
     || appCheck.debug_tokens !== 0) {
     reject('Browser-attestation App Check provider differs from the registered boundary');
   }
-  validatePriorOperationClaim(priorClaim, expectedPriorClaimReceipt);
-  const retiredVersion = validateRetiredPreflightVersion(hosting, {
-    expectedVersionNameSha256: options.expectedPreflightVersionNameSha256,
-    expectedRepositoryCommit: options.expectedPreflightRepositoryCommit,
+  if (!Array.isArray(priorClaims) || priorClaims.length !== expectedPriorClaims.length) {
+    reject('Prior browser-attestation operation claim inventory is incomplete');
+  }
+  priorClaims.forEach((claim, index) => {
+    validatePriorOperationClaim(claim, expectedPriorClaims[index]);
+  });
+  const retiredVersions = validateRetiredPreflightVersions(hosting, {
+    expectedRetiredVersions: options.expectedRetiredVersions,
   });
   const baseline = Object.freeze({
     hosting_site: hosting.site.site,
@@ -403,17 +458,19 @@ export async function observeAttestationBaseline(session, options = {}) {
     app_check_enforcement_records: appCheck.service_enforcement_records,
     debug_tokens: appCheck.debug_tokens,
     operation_claim_present: claimPresent,
-    prior_operation_claim: Object.freeze({
-      object: priorClaim.receipt.object,
-      generation: priorClaim.receipt.generation,
-      size_bytes: priorClaim.receipt.size_bytes,
-      sha256: priorClaim.receipt.sha256,
-    }),
-    retired_preflight_version_name_sha256: sha256(Buffer.from(retiredVersion.name, 'utf8')),
+    prior_operation_claims: Object.freeze(priorClaims.map(({ receipt }) => Object.freeze({
+      object: receipt.object,
+      generation: receipt.generation,
+      size_bytes: receipt.size_bytes,
+      sha256: receipt.sha256,
+    }))),
+    retired_preflight_version_name_sha256s: Object.freeze(retiredVersions.map(({ name }) => (
+      sha256(Buffer.from(name, 'utf8'))
+    ))),
   });
   const expectedClaimPresent = options.operationClaimPresent ?? false;
   if (typeof expectedClaimPresent !== 'boolean'
-    || baseline.hosting_version_count !== 1
+    || baseline.hosting_version_count !== 2
     || baseline.hosting_release_count !== 0
     || baseline.operation_claim_present !== expectedClaimPresent) {
     reject('Browser-attestation requires the exact retired preflight boundary');

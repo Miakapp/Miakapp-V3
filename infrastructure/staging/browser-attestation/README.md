@@ -1,24 +1,27 @@
 # Staging browser App Check attestation
 
-Status: v1 preflight safely consumed; reviewed v2 operation not yet planned or executed
+Status: v1 and v2 preflights safely consumed; reviewed v3 operation not yet planned or executed
 
 This package closes only the real Web App Check attestation prerequisite for
 `miakapp-v4-staging`. It does not expose or invoke the control plane, create a
 Firebase user, enable App Check enforcement, deploy a relay, use a debug token or
 exercise Home data.
 
-The first live preflight atomically claimed its operation and finalized one
-Hosting version, then the bounded cleanup deleted it before any release or
-browser invocation. The committed `preflight-result.json` records only hashes,
-timestamps and stable counts; `preflight-evidence.mjs` pins its exact canonical
-SHA-256. The immutable v1 claim and deleted version are retained as historical
-evidence and cannot be reused.
+The first two live preflights each atomically claimed their operation and
+created one Hosting version. Their bounded cleanup deleted both versions before
+any release or browser invocation. The first finalization succeeded but exposed
+that Firebase's stored-byte metric is not a local artifact checksum. The second
+stopped with finalization unvalidated and likewise never reached a release. The
+committed preflight result files record only hashes, timestamps and stable
+counts; `preflight-evidence.mjs` pins their exact canonical SHA-256 values. Both
+immutable claims and deleted versions are retained as historical evidence and
+cannot be reused.
 
-The v2 planner requires that exact historical claim and deleted version, the
+The v3 planner requires both exact historical claims and deleted versions, the
 exact registered reCAPTCHA Enterprise provider, zero enforcement records, zero
-debug tokens, one active Firebase Web app, zero Hosting releases and no v2
-claim. It builds two
-private, digest-pinned files from Firebase JavaScript SDK 12.18.0. The public
+debug tokens, one active Firebase Web app, zero Hosting releases and no v3
+claim. It builds two private, digest-pinned files from Firebase JavaScript SDK
+12.18.0. The public
 Firebase configuration and reCAPTCHA site key are injected only into that
 private build; neither value is committed.
 
@@ -26,13 +29,15 @@ The apply path is intentionally one-shot:
 
 1. validate the exact short-lived plan, clean `origin/main` commit, dependency
    lock, operator and live baseline;
-2. create one new atomic, non-deleted v2 GCS operation claim;
-3. create and release one v2-labelled Hosting version containing only the
+2. create one new atomic, non-deleted v3 GCS operation claim;
+3. create and release one v3-labelled Hosting version containing only the
    reviewed HTML and JavaScript under `/__acceptance/app-check/`;
 4. launch one headed Playwright Chromium context and call the production
    reCAPTCHA Enterprise provider exactly once;
-5. verify both public files byte-for-byte by their reviewed SHA-256 and security
-   headers, then return only token shape, TTL and duration counters from the
+5. treat Firebase's asynchronously calculated file/byte counters as bounded
+   diagnostics only, and verify both public files byte-for-byte by their
+   reviewed SHA-256 and security headers, then return only token shape, TTL and
+   duration counters from the
    page, never the token; and
 6. create a `SITE_DISABLE` release, delete the served version, close the
    ephemeral browser context and verify the runner returns HTTP 404.
@@ -53,11 +58,11 @@ MIAKAPP_STAGING_BROWSER_ATTESTATION_PLAN_CONFIRMATION=miakapp-v4-staging \
   ./infrastructure/staging/browser-attestation/plan.sh /absolute/private/parent
 ```
 
-The planner prints an exact v2 authorization bound to the canonical metadata and
+The planner prints an exact v3 authorization bound to the canonical metadata and
 repository commit. Apply that bundle once:
 
 ```sh
-MIAKAPP_STAGING_BROWSER_ATTESTATION_APPLY_AUTHORIZATION='run-browser-app-check-attestation-v2:...' \
+MIAKAPP_STAGING_BROWSER_ATTESTATION_APPLY_AUTHORIZATION='run-browser-app-check-attestation-v3:...' \
   ./infrastructure/staging/browser-attestation/apply.sh /absolute/private/bundle
 ```
 
@@ -71,12 +76,15 @@ MIAKAPP_STAGING_BROWSER_ATTESTATION_RECOVERY_CONFIRMATION=miakapp-v4-staging \
   /absolute/private/attestation-bundle
 ```
 
-The planner prints a separate exact v2 authorization. Its apply path creates at
+The planner prints a separate exact v3 authorization. Its apply path creates at
 most one `SITE_DISABLE` release, deletes at most the one exact labelled version
 and proves the runner is HTTP 404. Every recovery bundle is one-shot and is
 bound to the immutable operation claim plus the complete pre-recovery Hosting
-inventory. It never deletes the default Hosting site, either operation claim,
-the retained historical version or the App Check provider.
+inventory. It never deletes the default Hosting site, any operation claim, the
+retained historical versions or the App Check provider.
+
+An ordinary v3 failure writes only its closed stage and cleanup booleans to a
+private `failure.json`; raw browser, Firebase and network errors remain absent.
 
 The successful private result may later be reduced to a committed sanitized
 artifact containing only stable counts, durations and hashes of Hosting
