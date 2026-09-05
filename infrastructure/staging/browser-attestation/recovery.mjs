@@ -15,7 +15,8 @@ import {
   readPrivateFile,
   sha256,
 } from './contract.mjs';
-import { hostingMessages } from './hosting.mjs';
+import { hostingLabels, hostingMessages } from './hosting.mjs';
+import { validateRetiredPreflightVersion } from './inventory.mjs';
 
 const COMMIT = /^[0-9a-f]{40}$/u;
 const SHA256 = /^[0-9a-f]{64}$/u;
@@ -52,40 +53,35 @@ function canonicalTimestamp(value, description) {
   return milliseconds;
 }
 
-function expectedLabels(sourceMetadata) {
-  return Object.freeze({
-    environment: 'staging',
-    operation: 'browser-app-check-attestation',
-    repository: sourceMetadata.repository_commit,
-  });
-}
-
-export function validateInterruptedHostingInventory(inventory, sourceMetadata) {
+export function validateInterruptedHostingInventory(inventory, sourceMetadata, options = {}) {
   if (!plainObject(inventory)
     || inventory.site?.site !== HOSTING_SITE
     || inventory.site?.type !== 'DEFAULT_SITE'
     || !Array.isArray(inventory.versions)
     || !Array.isArray(inventory.releases)
-    || inventory.versions.length > 1
+    || inventory.versions.length < 1
+    || inventory.versions.length > 2
     || inventory.releases.length > 3) {
-    reject('Browser-attestation recovery inventory exceeds the reviewed one-version boundary');
+    reject('Browser-attestation recovery inventory exceeds the reviewed historical-plus-v2 boundary');
   }
-  const [version] = inventory.versions;
+  const historicalVersion = validateRetiredPreflightVersion(inventory, options);
+  const currentVersions = inventory.versions.filter(({ name }) => name !== historicalVersion.name);
+  if (currentVersions.length > 1) {
+    reject('Browser-attestation recovery found more than one v2 Hosting version');
+  }
+  const [version] = currentVersions;
   if (version !== undefined
     && (!VERSION_NAME.test(version.name)
       || !['CREATED', 'FINALIZED', 'DELETED', 'ABANDONED'].includes(version.status)
-      || !isDeepStrictEqual(version.labels, expectedLabels(sourceMetadata)))) {
+      || !isDeepStrictEqual(version.labels, hostingLabels(sourceMetadata.repository_commit)))) {
     reject('Browser-attestation recovery found an unreviewed Hosting version');
   }
-  const acceptedStoredByteCounts = new Set([
-    null,
-    String(sourceMetadata.artifact.total_content_bytes),
-    String(sourceMetadata.artifact.total_gzip_bytes),
-  ]);
   if (version !== undefined
     && ((version.file_count !== null
       && version.file_count !== String(sourceMetadata.artifact.file_count))
-      || !acceptedStoredByteCounts.has(version.version_bytes))) {
+      || (version.version_bytes !== null
+        && (!/^(?:0|[1-9][0-9]*)$/u.test(version.version_bytes)
+          || Number(version.version_bytes) > 1024 * 1024)))) {
     reject('Browser-attestation recovery version size differs from the reviewed artifact');
   }
 
@@ -147,9 +143,13 @@ export function buildRecoveryMetadata({
   createdAt,
   claim,
   hostingInventory,
-}) {
+}, inventoryValidationOptions = {}) {
   const created = canonicalTimestamp(createdAt, 'Browser-attestation recovery creation time');
-  const summary = validateInterruptedHostingInventory(hostingInventory, sourceMetadata);
+  const summary = validateInterruptedHostingInventory(
+    hostingInventory,
+    sourceMetadata,
+    inventoryValidationOptions,
+  );
   if (!COMMIT.test(repositoryCommit)
     || !Buffer.isBuffer(sourceMetadataBytes)
     || sourceMetadataBytes.byteLength === 0
@@ -158,8 +158,8 @@ export function buildRecoveryMetadata({
     reject('Browser-attestation recovery metadata inputs are invalid');
   }
   return Object.freeze({
-    schema: 'miakapp.staging-browser-attestation-recovery-plan/1',
-    operation: 'disable-and-delete-interrupted-browser-attestation',
+    schema: 'miakapp.staging-browser-attestation-recovery-plan/2',
+    operation: 'disable-and-delete-interrupted-browser-attestation-v2',
     project_id: PROJECT_ID,
     project_number: PROJECT_NUMBER,
     hosting_site: HOSTING_SITE,
@@ -223,8 +223,8 @@ export function validateRecoveryMetadata(value, now = Date.now()) {
   ], 'Browser-attestation recovery safety');
   const created = canonicalTimestamp(metadata.created_at, 'Browser-attestation recovery creation time');
   const expires = canonicalTimestamp(metadata.expires_at, 'Browser-attestation recovery expiry time');
-  if (metadata.schema !== 'miakapp.staging-browser-attestation-recovery-plan/1'
-    || metadata.operation !== 'disable-and-delete-interrupted-browser-attestation'
+  if (metadata.schema !== 'miakapp.staging-browser-attestation-recovery-plan/2'
+    || metadata.operation !== 'disable-and-delete-interrupted-browser-attestation-v2'
     || metadata.project_id !== PROJECT_ID
     || metadata.project_number !== PROJECT_NUMBER
     || metadata.hosting_site !== HOSTING_SITE
@@ -282,7 +282,7 @@ export function recoveryAuthorization(metadataBytes, repositoryCommit) {
     || !COMMIT.test(repositoryCommit)) {
     reject('Browser-attestation recovery authorization inputs are invalid');
   }
-  return `recover-browser-app-check-attestation:${PROJECT_ID}:${sha256(metadataBytes)}:${repositoryCommit}`;
+  return `recover-browser-app-check-attestation-v2:${PROJECT_ID}:${sha256(metadataBytes)}:${repositoryCommit}`;
 }
 
 export function validateRecoveryAuthorization(value, metadataBytes, repositoryCommit) {
