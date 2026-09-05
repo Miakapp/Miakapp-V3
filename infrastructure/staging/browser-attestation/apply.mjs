@@ -36,7 +36,7 @@ import {
   observeAttestationBaseline,
   observeHostingInventory,
   sameBaseline,
-  validateRetiredPreflightVersion,
+  validateRetiredPreflightVersions,
 } from './inventory.mjs';
 import { observeBrowserAppCheckRegistrationInventory } from '../browser-app-check/inventory.mjs';
 import {
@@ -75,12 +75,12 @@ function validateFinalHostingInventory(
   deployRelease,
   disableRelease,
 ) {
-  validateRetiredPreflightVersion(inventory);
+  validateRetiredPreflightVersions(inventory);
   const versions = inventory.versions.filter(({ name }) => name === versionName);
   const deploys = inventory.releases.filter(({ name }) => name === deployRelease.name);
   const disables = inventory.releases.filter(({ name }) => name === disableRelease.name);
   if (inventory.site.site !== HOSTING_SITE
-    || inventory.versions.length !== 2
+    || inventory.versions.length !== 3
     || versions.length !== 1
     || versions[0].status !== 'DELETED'
     || versions[0].file_count !== null
@@ -95,7 +95,7 @@ function validateFinalHostingInventory(
     || disables[0].type !== 'SITE_DISABLE'
     || disables[0].version_name !== null
     || disables[0].message !== hostingMessages.disable) {
-    throw new Error('Firebase Hosting did not converge to the exact disabled v2 state');
+    throw new Error('Firebase Hosting did not converge to the exact disabled v3 state');
   }
   return versions[0];
 }
@@ -153,20 +153,26 @@ async function main() {
   let publicStartedAt;
   let operationError;
   let cleanupError;
+  let failureStage = 'hosting_version_creation';
   let releaseAttempted = false;
   try {
     versionName = await createHostingVersion(session, metadata.repository_commit);
+    failureStage = 'hosting_file_population';
     await populateHostingVersion(session, versionName, artifacts);
+    failureStage = 'hosting_version_finalization';
     finalizedMetrics = await finalizeHostingVersion(
       session,
       versionName,
       metadata.repository_commit,
       metadata.artifact,
     );
+    failureStage = 'hosting_version_release';
     publicStartedAt = Date.now();
     releaseAttempted = true;
     deployRelease = await releaseHostingVersion(session, versionName);
+    failureStage = 'public_artifact_verification';
     publicArtifactEvidence = await waitForRunner(artifacts);
+    failureStage = 'browser_attestation';
     browserResult = await runBrowserAttestation();
   } catch (error) {
     operationError = error;
@@ -183,7 +189,41 @@ async function main() {
     throw new Error('Browser-attestation cleanup did not prove that public Hosting was disabled');
   }
   if (operationError !== undefined) {
-    throw new Error('Browser-attestation execution failed after bounded Hosting cleanup');
+    const failure = Object.freeze({
+      schema: 'miakapp.staging-browser-attestation-failure/3',
+      operation: metadata.operation,
+      state: 'failed_after_bounded_cleanup',
+      project_id: PROJECT_ID,
+      repository_commit: metadata.repository_commit,
+      completed_at: new Date().toISOString(),
+      failed_stage: failureStage,
+      operation_claim: claim,
+      hosting: Object.freeze({
+        version_created: versionName !== undefined,
+        version_name_sha256: versionName === undefined
+          ? null
+          : sha256(Buffer.from(versionName, 'utf8')),
+        finalization_response_validated: finalizedMetrics !== undefined,
+        finalized_metrics: finalizedMetrics ?? null,
+        release_attempted: releaseAttempted,
+        deploy_response_validated: deployRelease !== undefined,
+        public_artifacts_validated: publicArtifactEvidence !== undefined,
+        site_disable_response_validated: disableRelease !== undefined,
+        version_delete_response_validated: versionName !== undefined,
+        runner_404_validated: releaseAttempted,
+      }),
+      browser_invoked: failureStage === 'browser_attestation',
+      firebase_auth_used: false,
+      control_plane_invoked: false,
+      credential_material_retained: false,
+      retry_authorized: false,
+    });
+    const failureBytes = Buffer.from(canonicalJson(failure), 'utf8');
+    const failurePath = join(bundle, 'failure.json');
+    writePrivateFile(failurePath, failureBytes, 0o400);
+    throw new Error(
+      `Browser-attestation execution failed after bounded Hosting cleanup; private evidence: ${failurePath}`,
+    );
   }
   if (versionName === undefined || deployRelease === undefined || disableRelease === undefined
     || browserResult === undefined || finalizedMetrics === undefined
@@ -213,7 +253,7 @@ async function main() {
   verifyExactMain(repositoryRoot, metadata.repository_commit);
 
   const result = Object.freeze({
-    schema: 'miakapp.staging-browser-attestation-result/2',
+    schema: 'miakapp.staging-browser-attestation-result/3',
     operation: metadata.operation,
     project_id: PROJECT_ID,
     project_number: metadata.project_number,
@@ -229,6 +269,8 @@ async function main() {
       artifact_content_bytes_verified: publicArtifactEvidence.content_bytes_verified,
       finalized_file_count: finalizedMetrics.file_count,
       finalized_version_bytes: finalizedMetrics.version_bytes,
+      finalized_metrics_within_reviewed_bounds:
+        finalizedMetrics.metrics_within_reviewed_bounds,
       version_name_sha256: sha256(Buffer.from(versionName, 'utf8')),
       version_status: deletedVersion.status,
       deploy_release_name_sha256: sha256(Buffer.from(deployRelease.name, 'utf8')),
