@@ -55,6 +55,24 @@ function candidate(): Record<string, any> {
   };
 }
 
+function rotationCandidate(): Record<string, any> {
+  const value = candidate();
+  const legacySigning = value.security.signing;
+  value.schema = 'miakapp.production-runtime/2';
+  value.security.schema = 'miakapp.production-security/2';
+  value.security.signing = {
+    current_kid: legacySigning.public_jwk.kid,
+    versions: [
+      {
+        key_version_name: legacySigning.key_version_name,
+        public_jwk: legacySigning.public_jwk,
+      },
+    ],
+    rpc_timeout_ms: legacySigning.rpc_timeout_ms,
+  };
+  return value;
+}
+
 function environment(document: string): Readonly<Record<string, string>> {
   return { [PRODUCTION_RUNTIME_CONFIG_VARIABLE]: document };
 }
@@ -90,6 +108,23 @@ describe('production runtime configuration loader', () => {
     expect(JSON.stringify(loaded.document)).not.toContain('private_key');
   });
 
+  test('loads the rotation schema while retaining legacy schema compatibility', () => {
+    const rotating = loadProductionRuntimeConfig(
+      'staging',
+      environment(JSON.stringify(rotationCandidate())),
+    );
+    const legacy = loadProductionRuntimeConfig(
+      'staging',
+      environment(JSON.stringify(candidate())),
+    );
+
+    expect(rotating.config.schema).toBe('miakapp.production-runtime/2');
+    expect(rotating.config.security.schema).toBe('miakapp.production-security/2');
+    expect(rotating.config.security.signing.publicJwks).toHaveLength(1);
+    expect(legacy.config.schema).toBe('miakapp.production-runtime/1');
+    expect(legacy.config.security.signing.publicJwks).toHaveLength(1);
+  });
+
   test('rejects absent, empty, oversized, malformed, and duplicate-key input generically', () => {
     expectInvalid(undefined);
     expectInvalid('');
@@ -118,6 +153,10 @@ describe('production runtime configuration loader', () => {
     const privateJwk = candidate();
     privateJwk.security.signing.public_jwk.d = Buffer.alloc(32, 2).toString('base64url');
     expectInvalid(JSON.stringify(privateJwk));
+
+    const mixedSchema = rotationCandidate();
+    mixedSchema.security.schema = 'miakapp.production-security/1';
+    expectInvalid(JSON.stringify(mixedSchema));
   });
 
   test('rejects mutable or noncanonical cloud resource versions', () => {
