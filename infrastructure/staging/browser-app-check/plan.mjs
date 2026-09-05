@@ -4,6 +4,7 @@ import {
   rmSync,
 } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 
 import {
@@ -35,6 +36,7 @@ import { observeInitialBrowserAppCheckState } from './state.mjs';
 import { readAndValidateBrowserAppCheckApiPlan } from './validate-plan.mjs';
 
 const PLAN_CONFIRMATION = 'MIAKAPP_STAGING_BROWSER_APP_CHECK_API_PLAN_CONFIRMATION';
+export const API_PREREQUISITE_CONSUMED = true;
 process.umask(0o077);
 
 async function observeBaseline(session) {
@@ -150,7 +152,16 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : 'Browser App Check API planning failed');
-  process.exitCode = 1;
-});
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  if (API_PREREQUISITE_CONSUMED) {
+    console.error(
+      'The browser App Check API prerequisite has already converged; this planner is permanently retired.',
+    );
+    process.exitCode = 1;
+  } else {
+    main().catch((error) => {
+      console.error(error instanceof Error ? error.message : 'Browser App Check API planning failed');
+      process.exitCode = 1;
+    });
+  }
+}
