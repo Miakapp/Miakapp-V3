@@ -15,6 +15,8 @@ const REQUIRED_FILES = Object.freeze([
   'inventory.mjs',
   'plan.mjs',
   'plan.sh',
+  'preflight-evidence.mjs',
+  'preflight-result.json',
   'recovery-apply.mjs',
   'recovery-apply.sh',
   'recovery-plan.mjs',

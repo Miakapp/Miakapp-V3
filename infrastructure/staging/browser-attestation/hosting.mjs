@@ -2,6 +2,7 @@ import { isDeepStrictEqual } from 'node:util';
 
 import {
   HOSTING_HEADERS,
+  HOSTING_ORIGIN,
   HOSTING_SITE,
   RUNNER_URL,
   sha256,
@@ -10,11 +11,20 @@ import { googleJsonRequest } from './inventory.mjs';
 
 const VERSION_NAME = new RegExp(`^sites/${HOSTING_SITE}/versions/[0-9A-Za-z_-]{8,128}$`, 'u');
 const RELEASE_NAME = new RegExp(`^sites/${HOSTING_SITE}/releases/[0-9A-Za-z_-]{8,128}$`, 'u');
-const DEPLOY_MESSAGE = 'Miakapp V4 bounded browser App Check attestation';
-const DISABLE_MESSAGE = 'Miakapp V4 browser App Check attestation retired';
+const DEPLOY_MESSAGE = 'Miakapp V4 bounded browser App Check attestation v2';
+const DISABLE_MESSAGE = 'Miakapp V4 browser App Check attestation v2 retired';
+const MAXIMUM_STORED_ARTIFACT_BYTES = 1024 * 1024;
 
 function request(session, url, options = {}) {
   return googleJsonRequest(url, session.accessToken, options);
+}
+
+export function hostingLabels(repositoryCommit) {
+  return Object.freeze({
+    environment: 'staging',
+    operation: 'browser-app-check-attestation-v2',
+    repository: repositoryCommit,
+  });
 }
 
 function servingConfig(repositoryCommit) {
@@ -25,11 +35,7 @@ function servingConfig(repositoryCommit) {
         headers: HOSTING_HEADERS,
       })]),
     }),
-    labels: Object.freeze({
-      environment: 'staging',
-      operation: 'browser-app-check-attestation',
-      repository: repositoryCommit,
-    }),
+    labels: hostingLabels(repositoryCommit),
   });
 }
 
@@ -121,6 +127,7 @@ export async function finalizeHostingVersion(
   session,
   versionName,
   repositoryCommit,
+  artifact,
   fetchImplementation,
 ) {
   const response = await request(
@@ -133,7 +140,19 @@ export async function finalizeHostingVersion(
       fetchImplementation,
     },
   );
-  return validateVersion(response.value, 'FINALIZED', repositoryCommit);
+  const version = validateVersion(response.value, 'FINALIZED', repositoryCommit);
+  const fileCount = version.fileCount ?? null;
+  const versionBytes = version.versionBytes ?? null;
+  if ((fileCount !== null && fileCount !== String(artifact?.file_count))
+    || (versionBytes !== null
+      && (!/^(?:0|[1-9][0-9]*)$/u.test(versionBytes)
+        || Number(versionBytes) > MAXIMUM_STORED_ARTIFACT_BYTES))) {
+    throw new Error('Finalized Hosting artifact metrics exceed the reviewed bundle boundary');
+  }
+  return Object.freeze({
+    file_count: fileCount,
+    version_bytes: versionBytes,
+  });
 }
 
 export async function releaseHostingVersion(session, versionName, fetchImplementation) {
@@ -200,28 +219,45 @@ function wait(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-export async function waitForRunner(indexEntry, fetchImplementation) {
+export async function waitForRunner(artifactEntries, fetchImplementation) {
+  if (!Array.isArray(artifactEntries) || artifactEntries.length !== 2) {
+    throw new Error('Public browser-attestation verification requires both reviewed files');
+  }
   for (let attempt = 0; attempt < 30; attempt += 1) {
-    let response;
+    let responses;
     try {
-      response = await (fetchImplementation ?? fetch)(`${RUNNER_URL}?publication=${attempt}`, {
-        cache: 'no-store',
-        redirect: 'error',
-        signal: AbortSignal.timeout(10_000),
-      });
+      responses = await Promise.all(artifactEntries.map(async (entry, index) => {
+        const response = await (fetchImplementation ?? fetch)(
+          `${HOSTING_ORIGIN}${entry.path}?publication=${attempt}-${index}`,
+          {
+            cache: 'no-store',
+            redirect: 'error',
+            signal: AbortSignal.timeout(10_000),
+          },
+        );
+        return Object.freeze({ entry, response });
+      }));
     } catch {
-      response = null;
+      responses = null;
     }
-    if (response?.status === 200) {
-      const bytes = Buffer.from(await response.arrayBuffer());
-      const headers = Object.fromEntries(
-        Object.keys(HOSTING_HEADERS).map((name) => [name, response.headers.get(name)]),
-      );
-      if (sha256(bytes) !== indexEntry.content_sha256
-        || !isDeepStrictEqual(headers, HOSTING_HEADERS)) {
-        throw new Error('Public browser-attestation artifact differs from the reviewed release');
+    if (responses?.every(({ response }) => response.status === 200)) {
+      let contentBytes = 0;
+      for (const { entry, response } of responses) {
+        const bytes = Buffer.from(await response.arrayBuffer());
+        const headers = Object.fromEntries(
+          Object.keys(HOSTING_HEADERS).map((name) => [name, response.headers.get(name)]),
+        );
+        if (bytes.byteLength !== entry.content_bytes
+          || sha256(bytes) !== entry.content_sha256
+          || !isDeepStrictEqual(headers, HOSTING_HEADERS)) {
+          throw new Error('Public browser-attestation artifact differs from the reviewed release');
+        }
+        contentBytes += bytes.byteLength;
       }
-      return;
+      return Object.freeze({
+        files_verified: responses.length,
+        content_bytes_verified: contentBytes,
+      });
     }
     if (attempt !== 29) await wait(2_000);
   }

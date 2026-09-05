@@ -124,9 +124,12 @@ node --check infrastructure/staging/browser-attestation/guard.mjs
 node --check infrastructure/staging/browser-attestation/hosting.mjs
 node --check infrastructure/staging/browser-attestation/inventory.mjs
 node --check infrastructure/staging/browser-attestation/plan.mjs
+node --check infrastructure/staging/browser-attestation/preflight-evidence.mjs
 node --check infrastructure/staging/browser-attestation/recovery-apply.mjs
 node --check infrastructure/staging/browser-attestation/recovery-plan.mjs
 node --check infrastructure/staging/browser-attestation/recovery.mjs
+node infrastructure/staging/browser-attestation/preflight-evidence.mjs \
+  infrastructure/staging/browser-attestation/preflight-result.json
 node infrastructure/staging/signing-overlap/guard.mjs \
   "${repository_root}/infrastructure/staging/signing-overlap"
 node --check infrastructure/staging/signing-overlap/claim.mjs

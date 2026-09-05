@@ -6,6 +6,7 @@ import test from 'node:test';
 
 import {
   APP_CHECK_SITE_KEY_SHA256,
+  CLAIM_OBJECT,
   FIREBASE_APP_ID,
   HOSTING_HEADERS,
   HOSTING_ORIGIN,
@@ -13,7 +14,15 @@ import {
   MAXIMUM_PUBLIC_WINDOW_MILLISECONDS,
   PROJECT_ID,
   PROJECT_NUMBER,
+  PREFLIGHT_METADATA_SHA256,
+  PREFLIGHT_REPOSITORY_COMMIT,
+  PREFLIGHT_VERSION_NAME_SHA256,
+  PRIOR_CLAIM_GENERATION,
+  PRIOR_CLAIM_OBJECT,
+  PRIOR_CLAIM_SHA256,
+  PRIOR_CLAIM_SIZE_BYTES,
   RUNNER_PATH,
+  STATE_BUCKET,
   attestationAuthorization,
   buildAttestationMetadata,
   canonicalJson,
@@ -29,6 +38,10 @@ import {
 import { runBrowserAttestation } from '../browser-attestation/browser.mjs';
 import { buildOperationClaim, createOperationClaim } from '../browser-attestation/claim.mjs';
 import { validateBrowserAttestationRoot } from '../browser-attestation/guard.mjs';
+import {
+  validatePreflightEvidence,
+  validatePreflightEvidenceValue,
+} from '../browser-attestation/preflight-evidence.mjs';
 import {
   createHostingVersion,
   deleteHostingVersion,
@@ -58,18 +71,72 @@ const NOW = Date.parse(CREATED_AT) + 1000;
 const HASH = 'b'.repeat(64);
 const VERSION = `sites/${HOSTING_SITE}/versions/${'c'.repeat(32)}`;
 const RELEASE = `sites/${HOSTING_SITE}/releases/${'d'.repeat(32)}`;
+const HISTORICAL_VERSION = `sites/${HOSTING_SITE}/versions/${'h'.repeat(32)}`;
+const HISTORICAL_VERSION_SHA256 = sha256(Buffer.from(HISTORICAL_VERSION));
+
+function priorClaimReceipt() {
+  return {
+    bucket: STATE_BUCKET,
+    object: PRIOR_CLAIM_OBJECT,
+    generation: PRIOR_CLAIM_GENERATION,
+    size_bytes: PRIOR_CLAIM_SIZE_BYTES,
+    sha256: PRIOR_CLAIM_SHA256,
+  };
+}
+
+function priorClaim() {
+  return {
+    value: {
+      schema: 'miakapp.staging-browser-attestation-claim/1',
+      operation: 'attest-browser-app-check-and-disable-hosting',
+      project_id: PROJECT_ID,
+      project_number: PROJECT_NUMBER,
+      hosting_site: HOSTING_SITE,
+      repository_commit: PREFLIGHT_REPOSITORY_COMMIT,
+      metadata_sha256: PREFLIGHT_METADATA_SHA256,
+      baseline_sha256: '9'.repeat(64),
+      created_at: '2026-09-05T13:55:00.000Z',
+      expires_at: '2026-09-05T15:55:00.000Z',
+      maximum_attestation_attempts: 1,
+      retry_authorized: false,
+      deletion_authorized: false,
+    },
+    receipt: priorClaimReceipt(),
+  };
+}
+
+function historicalVersion() {
+  return {
+    name: HISTORICAL_VERSION,
+    status: 'DELETED',
+    labels: {
+      environment: 'staging',
+      operation: 'browser-app-check-attestation',
+      repository: PREFLIGHT_REPOSITORY_COMMIT,
+    },
+    file_count: null,
+    version_bytes: null,
+  };
+}
 
 function baseline() {
   return {
     hosting_site: HOSTING_SITE,
     hosting_site_type: 'DEFAULT_SITE',
-    hosting_version_count: 0,
+    hosting_version_count: 1,
     hosting_release_count: 0,
     firebase_app_config_sha256: HASH,
     app_check_config_sha256: 'c'.repeat(64),
     app_check_enforcement_records: 0,
     debug_tokens: 0,
     operation_claim_present: false,
+    prior_operation_claim: {
+      object: PRIOR_CLAIM_OBJECT,
+      generation: PRIOR_CLAIM_GENERATION,
+      size_bytes: PRIOR_CLAIM_SIZE_BYTES,
+      sha256: PRIOR_CLAIM_SHA256,
+    },
+    retired_preflight_version_name_sha256: PREFLIGHT_VERSION_NAME_SHA256,
   };
 }
 
@@ -146,6 +213,10 @@ test('rejects expiry, alternate targets, extra files, enforcement and persistent
   mutateAndReject((value) => { value.hosting_site = 'miakapp-3'; });
   mutateAndReject((value) => { value.baseline.hosting_release_count = 1; });
   mutateAndReject((value) => { value.baseline.operation_claim_present = true; });
+  mutateAndReject((value) => { value.baseline.prior_operation_claim.generation = '1'; });
+  mutateAndReject((value) => {
+    value.baseline.retired_preflight_version_name_sha256 = '0'.repeat(64);
+  });
   mutateAndReject((value) => { value.artifact.file_count = 3; });
   mutateAndReject((value) => { value.browser.persistent_context = true; });
   mutateAndReject((value) => { value.safety.app_check_enforcement_enabled = true; });
@@ -204,7 +275,7 @@ test('pins the exact Firebase and Playwright package versions', () => {
   }));
 });
 
-test('observes only the empty staging Hosting and registered provider baseline', async () => {
+test('observes only the retired preflight Hosting and registered provider baseline', async () => {
   const siteKey = 'synthetic-site-key-for-inventory';
   const siteKeySha256 = sha256(Buffer.from(siteKey));
   const fetchImplementation = async (url) => {
@@ -215,7 +286,9 @@ test('observes only the empty staging Hosting and registered provider baseline',
         type: 'DEFAULT_SITE',
       });
     }
-    if (url.includes(`sites/${HOSTING_SITE}/versions`)) return jsonResponse({});
+    if (url.includes(`sites/${HOSTING_SITE}/versions`)) {
+      return jsonResponse({ versions: [historicalVersion()] });
+    }
     if (url.includes(`sites/${HOSTING_SITE}/releases`)) return jsonResponse({});
     if (url.includes('/config')) {
       return jsonResponse({
@@ -234,7 +307,9 @@ test('observes only the empty staging Hosting and registered provider baseline',
     { accessToken: 'test-access-token-with-enough-length' },
     {
       expectedSiteKeySha256: siteKeySha256,
+      expectedPreflightVersionNameSha256: HISTORICAL_VERSION_SHA256,
       fetchImplementation,
+      observePriorClaim: async () => priorClaim(),
       observeKeys: async () => [{ name: `projects/${PROJECT_ID}/keys/${siteKey}` }],
       observeRegistration: async () => ({
         app_check: { site_key_sha256: siteKeySha256 },
@@ -247,6 +322,7 @@ test('observes only the empty staging Hosting and registered provider baseline',
     ...baseline(),
     firebase_app_config_sha256: observed.baseline.firebase_app_config_sha256,
     app_check_config_sha256: observed.baseline.app_check_config_sha256,
+    retired_preflight_version_name_sha256: HISTORICAL_VERSION_SHA256,
   });
   assert.equal(observed.site_key, siteKey);
   assert.equal(observed.firebase_config.apiKey.startsWith('AIza'), true);
@@ -317,6 +393,7 @@ test('uses one atomic non-retry claim bound to the exact plan', async () => {
   const plan = metadata();
   const bytes = Buffer.from(canonicalJson(plan));
   const claim = buildOperationClaim(bytes, plan);
+  assert.equal(claim.schema, 'miakapp.staging-browser-attestation-claim/2');
   assert.equal(claim.retry_authorized, false);
   assert.equal(claim.deletion_authorized, false);
   let body;
@@ -329,13 +406,14 @@ test('uses one atomic non-retry claim bound to the exact plan', async () => {
       body = Buffer.from(init.body);
       return jsonResponse({
         bucket: 'miakapp-v4-staging-tfstate-1072737219170',
-        name: 'terraform/browser-attestation/operations/live-browser-attestation.json',
+        name: CLAIM_OBJECT,
         generation: '123',
         size: String(body.length),
       });
     },
   );
   assert.equal(receipt.generation, '123');
+  assert.equal(receipt.object, CLAIM_OBJECT);
   assert.equal(receipt.sha256, sha256(body));
   assert.equal(JSON.parse(body).metadata_sha256, sha256(bytes));
 });
@@ -344,7 +422,7 @@ test('drives the exact Hosting REST lifecycle and verifies public headers', asyn
   const session = { accessToken: 'test-access-token-with-enough-length' };
   const labels = {
     environment: 'staging',
-    operation: 'browser-app-check-attestation',
+    operation: 'browser-app-check-attestation-v2',
     repository: COMMIT,
   };
   const config = { headers: [{ glob: '**', headers: HOSTING_HEADERS }] };
@@ -361,12 +439,21 @@ test('drives the exact Hosting REST lifecycle and verifies public headers', asyn
     uploadUrl: `https://upload-firebasehosting.googleapis.com/upload/${VERSION}/files`,
   }));
   assert.equal(populated.file_count, 2);
-  await finalizeHostingVersion(session, VERSION, COMMIT, async () => jsonResponse({
-    name: VERSION,
-    status: 'FINALIZED',
-    labels,
-    config,
-  }));
+  const finalized = await finalizeHostingVersion(
+    session,
+    VERSION,
+    COMMIT,
+    artifact(),
+    async () => jsonResponse({
+      name: VERSION,
+      status: 'FINALIZED',
+      labels,
+      config,
+      fileCount: '2',
+      versionBytes: '5000',
+    }),
+  );
+  assert.deepEqual(finalized, { file_count: '2', version_bytes: '5000' });
   const deployed = await releaseHostingVersion(session, VERSION, async () => jsonResponse({
     name: RELEASE,
     type: 'DEPLOY',
@@ -384,10 +471,37 @@ test('drives the exact Hosting REST lifecycle and verifies public headers', asyn
   }));
   assert.match(disabled.name, /releases/u);
   await deleteHostingVersion(session, VERSION, async () => new Response(null, { status: 200 }));
-  const indexEntry = { content_sha256: sha256(Buffer.from('index')) };
-  await waitForRunner(indexEntry, async () => new Response('index', {
-    status: 200,
-    headers: HOSTING_HEADERS,
+  const publicBodies = new Map([
+    [RUNNER_PATH, Buffer.from('index')],
+    ['/__acceptance/app-check/assets/attestation-AbCd1234.js', Buffer.from('asset')],
+  ]);
+  const publicEntries = [...publicBodies].map(([path, bytes]) => ({
+    path,
+    content_type: path === RUNNER_PATH
+      ? 'text/html; charset=utf-8'
+      : 'text/javascript; charset=utf-8',
+    content_sha256: sha256(bytes),
+    content_bytes: bytes.byteLength,
+  }));
+  const fetchedPaths = [];
+  const publicEvidence = await waitForRunner(publicEntries, async (url) => {
+    const path = new URL(url).pathname;
+    fetchedPaths.push(path);
+    const entry = publicEntries.find((candidate) => candidate.path === path);
+    return new Response(publicBodies.get(path), {
+      status: 200,
+      headers: { ...HOSTING_HEADERS, 'Content-Type': entry.content_type },
+    });
+  });
+  assert.deepEqual(publicEvidence, { files_verified: 2, content_bytes_verified: 10 });
+  assert.deepEqual(fetchedPaths.sort(), [...publicBodies.keys()].sort());
+  await assert.rejects(() => waitForRunner(publicEntries, async (url) => {
+    const path = new URL(url).pathname;
+    const entry = publicEntries.find((candidate) => candidate.path === path);
+    return new Response(path === RUNNER_PATH ? 'index' : 'tampered', {
+      status: 200,
+      headers: { ...HOSTING_HEADERS, 'Content-Type': entry.content_type },
+    });
   }));
   await waitForDisabledRunner(async () => new Response('not found', { status: 404 }));
 });
@@ -404,8 +518,8 @@ test('reads the immutable claim contents at the exact observed generation', asyn
       seen.push(url);
       if (url.includes('/download/')) return jsonResponse(claim);
       return jsonResponse({
-        bucket: 'miakapp-v4-staging-tfstate-1072737219170',
-        name: 'terraform/browser-attestation/operations/live-browser-attestation.json',
+        bucket: STATE_BUCKET,
+        name: CLAIM_OBJECT,
         generation: '456',
         size: String(claimBytes.length),
       });
@@ -417,22 +531,25 @@ test('reads the immutable claim contents at the exact observed generation', asyn
   assert.match(seen[1], /alt=media&generation=456/u);
 });
 
-test('binds interrupted Hosting recovery to one labelled version and one-shot cleanup', () => {
+test('binds interrupted Hosting recovery to one v2 version while retaining preflight history', () => {
   const plan = metadata();
   const labels = {
     environment: 'staging',
-    operation: 'browser-app-check-attestation',
+    operation: 'browser-app-check-attestation-v2',
     repository: COMMIT,
   };
   const hosting = {
     site: { site: HOSTING_SITE, type: 'DEFAULT_SITE' },
-    versions: [{
-      name: VERSION,
-      status: 'FINALIZED',
-      labels,
-      file_count: '2',
-      version_bytes: String(plan.artifact.total_content_bytes),
-    }],
+    versions: [
+      historicalVersion(),
+      {
+        name: VERSION,
+        status: 'FINALIZED',
+        labels,
+        file_count: '2',
+        version_bytes: '5000',
+      },
+    ],
     releases: [{
       name: RELEASE,
       type: 'DEPLOY',
@@ -443,6 +560,9 @@ test('binds interrupted Hosting recovery to one labelled version and one-shot cl
   };
   const sourceBytes = Buffer.from(canonicalJson(plan));
   const claimBytes = Buffer.from(canonicalJson(buildOperationClaim(sourceBytes, plan)));
+  const inventoryValidationOptions = {
+    expectedVersionNameSha256: HISTORICAL_VERSION_SHA256,
+  };
   const recovery = buildRecoveryMetadata({
     repositoryCommit: COMMIT,
     sourceMetadata: plan,
@@ -455,7 +575,7 @@ test('binds interrupted Hosting recovery to one labelled version and one-shot cl
       },
     },
     hostingInventory: hosting,
-  });
+  }, inventoryValidationOptions);
   assert.equal(recovery.summary.site_disable_required, true);
   assert.equal(recovery.summary.delete_version, true);
   assert.equal(recovery.safety.maximum_site_disable_attempts, 1);
@@ -469,7 +589,9 @@ test('binds interrupted Hosting recovery to one labelled version and one-shot cl
   ));
 
   const retired = structuredClone(hosting);
-  retired.versions[0].status = 'DELETED';
+  retired.versions[1].status = 'DELETED';
+  retired.versions[1].file_count = null;
+  retired.versions[1].version_bytes = null;
   retired.releases.push({
     name: `sites/${HOSTING_SITE}/releases/${'e'.repeat(32)}`,
     type: 'SITE_DISABLE',
@@ -477,20 +599,54 @@ test('binds interrupted Hosting recovery to one labelled version and one-shot cl
     message: hostingMessages.disable,
     release_time: '2026-09-05T14:02:00Z',
   });
-  const retiredSummary = validateInterruptedHostingInventory(retired, plan);
+  const retiredSummary = validateInterruptedHostingInventory(
+    retired,
+    plan,
+    inventoryValidationOptions,
+  );
   assert.equal(retiredSummary.site_disable_required, false);
   assert.equal(retiredSummary.delete_version, false);
 
   const unreviewed = structuredClone(hosting);
-  unreviewed.versions[0].labels.repository = 'f'.repeat(40);
-  assert.throws(() => validateInterruptedHostingInventory(unreviewed, plan));
+  unreviewed.versions[1].labels.repository = 'f'.repeat(40);
+  assert.throws(() => validateInterruptedHostingInventory(
+    unreviewed,
+    plan,
+    inventoryValidationOptions,
+  ));
+  const lostHistory = structuredClone(hosting);
+  lostHistory.versions[0].labels.repository = 'f'.repeat(40);
+  assert.throws(() => validateInterruptedHostingInventory(
+    lostHistory,
+    plan,
+    inventoryValidationOptions,
+  ));
   const redeployed = structuredClone(retired);
   redeployed.releases[0].release_time = '2026-09-05T14:03:00Z';
-  assert.throws(() => validateInterruptedHostingInventory(redeployed, plan));
+  assert.throws(() => validateInterruptedHostingInventory(
+    redeployed,
+    plan,
+    inventoryValidationOptions,
+  ));
 });
 
 test('browser-attestation root guard rejects ambient targets and unreviewed entries', () => {
   assert.doesNotThrow(() => validateBrowserAttestationRoot(
     new URL('../browser-attestation/', import.meta.url),
   ));
+});
+
+test('pins the exact sanitized result of the consumed v1 preflight', () => {
+  const path = new URL('../browser-attestation/preflight-result.json', import.meta.url);
+  const evidence = validatePreflightEvidence(path);
+  assert.equal(evidence.state, 'consumed_before_release');
+  assert.equal(evidence.hosting.releases_created, 0);
+  assert.equal(evidence.app_check.browser_invocations, 0);
+  assert.equal(evidence.operation_claim.object, PRIOR_CLAIM_OBJECT);
+  assert.equal(evidence.operation_claim.generation, PRIOR_CLAIM_GENERATION);
+  assert.equal(evidence.operation_claim.sha256, PRIOR_CLAIM_SHA256);
+  assert.equal(evidence.hosting.version_name_sha256, PREFLIGHT_VERSION_NAME_SHA256);
+  const tampered = structuredClone(evidence);
+  tampered.hosting.site_ever_released = true;
+  assert.throws(() => validatePreflightEvidenceValue(tampered));
 });
