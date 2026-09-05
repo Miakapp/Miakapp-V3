@@ -158,9 +158,11 @@ and historical revision `control-plane-00005-biq`. It added closed schema-2
 parsing and validation while preserving the then-active schema-1 runtime. A
 separate exact two-update plan subsequently migrated that single-key document
 to schema 2 on revision `control-plane-00006-wid`, without replacing source,
-changing IAM/ingress/scale or making a Function request. The current document
-still publishes one key; neither the source deployment nor this shape-only
-migration is live signing-key overlap evidence.
+changing IAM/ingress/scale or making a Function request. A later exact plan
+prepublished versions 1 and 2 with version 1 current as revision
+`control-plane-00007-deb`, again without a source, IAM, ingress or scale change
+or a Function request. Activation of version 2 and retention of version 1 for
+the complete lease bound remain separate gates.
 
 The bounded acceptance implementation, with zero persistent delta to the
 control-plane workload, IAM and topology, lives under
