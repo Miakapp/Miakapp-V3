@@ -486,7 +486,9 @@ function validateVerifierService(value, address) {
   validateLabels(value.labels, 'user-relay-jwt-verifier', `${address}.labels`);
   exact(value.annotations, null, `${address}.annotations`);
   exact(value.custom_audiences, null, `${address}.custom_audiences`);
-  exact(value.iap_enabled, null, `${address}.iap_enabled`);
+  if (![false, null].includes(value.iap_enabled)) {
+    reject(`${address}.iap_enabled does not match the reviewed value`);
+  }
   exact(value.binary_authorization, [], `${address}.binary_authorization`);
   exact(value.build_config, [], `${address}.build_config`);
   exact(value.template?.length, 1, `${address}.template length`);
