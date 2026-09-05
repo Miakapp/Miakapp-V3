@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import {
   chmodSync,
   copyFileSync,
@@ -41,6 +42,10 @@ import {
   RELAY_IMAGE_FILES,
   validateRelayImageRoot,
 } from '../browser-relay-image/guard.mjs';
+import {
+  RELAY_IMAGE_V1_RESULT_SHA256,
+  validateRelayImageV1Result,
+} from '../browser-relay-image/result.mjs';
 import {
   normalizePreparedRelayImageInventory,
   observeRelayImageInventory,
@@ -164,10 +169,16 @@ function buildFixture() {
       resolvedStorageSource: request.source.storageSource,
       fileHashes: {
         [`gs://${sourceReceipt.bucket}/${sourceReceipt.object}#${sourceReceipt.generation}`]: {
-          fileHash: [{
-            type: 'SHA256',
-            value: Buffer.from(sourceReceipt.sha256, 'hex').toString('base64'),
-          }],
+          fileHash: [
+            {
+              type: 'SHA256',
+              value: `${Buffer.from(sourceReceipt.sha256, 'hex').toString('base64url')}=`,
+            },
+            {
+              type: 'MD5',
+              value: `${Buffer.alloc(16, 7).toString('base64url')}==`,
+            },
+          ],
         },
       },
     },
@@ -383,7 +394,10 @@ test('submits exactly the committed request and accepts one completed operation'
     sleep: async () => {},
     onStatus: (status) => statuses.push(status),
     fetchImplementation: async (url) => {
-      assert.equal(url, `https://cloudbuild.googleapis.com/v1/${operationName}`);
+      assert.equal(
+        url,
+        `https://${profile.project.region}-cloudbuild.googleapis.com/v1/${operationName}`,
+      );
       return jsonResponse({ name: operationName, done: true, response: buildFixture() });
     },
   });
@@ -407,12 +421,44 @@ test('requires exact source provenance, builder digests and successful smoke ste
     () => validateCompletedRelayImageBuild(noProvenance, sourceReceipt),
     /provenance hash/u,
   );
+  const wrongSha256 = structuredClone(build);
+  wrongSha256.sourceProvenance.fileHashes[
+    `gs://${sourceReceipt.bucket}/${sourceReceipt.object}#${sourceReceipt.generation}`
+  ].fileHash[0].value = `${Buffer.alloc(32, 9).toString('base64url')}=`;
+  assert.throws(
+    () => validateCompletedRelayImageBuild(wrongSha256, sourceReceipt),
+    /provenance hash/u,
+  );
   const failedSmoke = structuredClone(build);
   failedSmoke.steps[1].status = 'FAILURE';
   assert.throws(
     () => validateCompletedRelayImageBuild(failedSmoke, sourceReceipt),
     /successful step/u,
   );
+});
+
+test('pins the consumed v1 result and retires both mutation entrypoints', () => {
+  const result = validateRelayImageV1Result();
+  assert.equal(
+    RELAY_IMAGE_V1_RESULT_SHA256,
+    'c24b5cc5fe3a48a6a35365e6c404734aaf657832af8ce16c7a67c1c8e94ec1a9',
+  );
+  assert.equal(result.build.status, 'FAILURE');
+  assert.equal(result.build.build_step_status, 'SUCCESS');
+  assert.equal(result.build.smoke_step_status, 'SUCCESS');
+  assert.equal(result.build.verified_provenance_created, false);
+  assert.equal(result.image.deployment_authorized, false);
+  assert.equal(result.prerequisites.container_analysis_api_enabled, false);
+  for (const script of ['plan.mjs', 'apply.mjs']) {
+    const execution = spawnSync(process.execPath, [fileURLToPath(new URL(script, rootUrl))], {
+      cwd: fileURLToPath(new URL('../../../', import.meta.url)),
+      encoding: 'utf8',
+      env: { HOME: process.env.HOME, PATH: process.env.PATH },
+    });
+    assert.equal(execution.status, 1);
+    assert.match(execution.stderr, /v1 is consumed and failed provenance verification/u);
+    assert.equal(execution.stdout, '');
+  }
 });
 
 test('validates the published manifest, config, immutable digest and size', async () => {

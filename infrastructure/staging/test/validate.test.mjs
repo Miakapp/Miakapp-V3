@@ -31,10 +31,10 @@ function rejects(mutator, pattern) {
 
 test('accepts the successful and retired private user-relay probe', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 59);
+  assert.equal(validated.revision, 60);
   assert.equal(
     validated.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rebased_bounded_relay_root_reviewed_private_relay_image_build_reviewed_not_executed_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rebased_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_prerequisite_declared_enforcement_disabled',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
@@ -777,9 +777,11 @@ test('accepts the successful and retired private user-relay probe', () => {
     completed_cases: 0,
   });
   assert.deepEqual(validated.evidence.browser_relay_image, {
-    state: 'reviewed_not_built',
+    state: 'v1_consumed_verified_provenance_failed_not_deployable',
     profile_path: 'browser-relay-image/profile.json',
     profile_sha256: '2afcfc7b5f0b9fb524a59bd81cd5dcd98f73bf58c2619640b6a42bbbd0958981',
+    result_path: 'browser-relay-image/result-v1.json',
+    result_sha256: 'c24b5cc5fe3a48a6a35365e6c404734aaf657832af8ce16c7a67c1c8e94ec1a9',
     browser_relay_plan_sha256: '4a5c13999d9f7f328b1b8b867bbd86d4c5e80cb980d9eb1324028ea0e5785343',
     relay_services_profile_sha256: 'bc9b231cc9724f19a26ef5c3bbd6da6a69ec79b00cb976e77c73015d5db10db7',
     source_repository: 'https://github.com/Miakapp/Miakapp-Server.git',
@@ -791,7 +793,12 @@ test('accepts the successful and retired private user-relay probe', () => {
     machine_type: 'E2_MEDIUM',
     requested_verify_option: 'VERIFIED',
     maximum_builds: 1,
-    private_image_present: false,
+    attempted_builds: 1,
+    private_image_present: true,
+    verified_image_present: false,
+    deployment_authorized: false,
+    container_analysis_api_enabled: false,
+    container_scanning_api_enabled: false,
     relay_services: 0,
     public_ingress_active: false,
     new_fixed_cost_services: 0,

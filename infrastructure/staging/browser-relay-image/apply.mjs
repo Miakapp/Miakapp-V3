@@ -22,6 +22,7 @@ import {
   writePrivateFile,
 } from './contract.mjs';
 import { validateRelayImageRoot } from './guard.mjs';
+import { rejectRelayImageV1Replay } from './result.mjs';
 import {
   normalizePreparedRelayImageInventory,
   observeRelayImageInventory,
@@ -55,6 +56,7 @@ async function retryReadOnly(description, operation, attempts = 5) {
 }
 
 async function main() {
+  rejectRelayImageV1Replay();
   const profile = validateRelayImageProfile();
   if (process.argv.length !== 3 || process.argv[2] === undefined) {
     throw new Error(`Usage: ${APPLY_AUTHORIZATION}=... ./apply.sh <private-relay-image-bundle>`);

@@ -1,6 +1,7 @@
 # Staging Terraform foundation
 
-Status: foundation complete; recovery workflow and WIF exchange retired
+Status: foundation complete; Container Analysis metadata API adoption pending;
+recovery workflow and WIF exchange retired
 
 This root describes the ordinary protected foundation for the existing,
 billing-linked `miakapp-v4-staging` project. The deployed private workload is
@@ -12,7 +13,9 @@ Identity Federation, and CI identities belong to
 
 The foundation contains:
 
-- the exact APIs required by the eventual staging control plane;
+- the exact APIs required by the eventual staging control plane and private
+  build provenance, including the Container Analysis metadata API but not the
+  separately billed Container Scanning API;
 - the Standard default Firestore database with deletion protection and three
   TTL fields;
 - the existing private Paris component bucket and runtime service account,
