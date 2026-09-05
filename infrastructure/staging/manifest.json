@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 54,
-  "status": "private_control_plane_two_key_version_2_current_runtime_deployed_signing_overlap_active_user_relay_acceptance_succeeded_system_browser_v6_plan_reviewed_app_check_provider_registered",
+  "revision": 55,
+  "status": "private_control_plane_two_key_version_2_current_runtime_deployed_signing_overlap_active_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_enforcement_disabled",
   "environment": "staging",
   "project": {
     "project_id": "miakapp-v4-staging",
@@ -137,7 +137,7 @@
     },
     {
       "id": "firebase-app-check",
-      "state": "admin_custom_provider_validated_system_browser_attestation_pending"
+      "state": "admin_custom_provider_and_system_browser_attestation_validated_enforcement_disabled"
     },
     {
       "id": "firestore",
@@ -1250,7 +1250,6 @@
     "manual_read_only_cloud_plan_authorized": true,
     "foundation_apply_authorized": false,
     "required_blockers": [
-      "app-check-browser-provider-attestation",
       "relay-token-refresh-integration",
       "trusted-source-and-edge-admission",
       "live-managed-service-fault-matrix",
@@ -1748,6 +1747,49 @@
       "private_bundle_committed": false,
       "raw_plan_committed": false,
       "raw_state_committed": false
+    },
+    "browser_app_check_attestation": {
+      "state": "real_system_browser_provider_token_obtained_and_retired",
+      "observed_at": "2026-09-05T18:01:23.632Z",
+      "repository_commit": "e5ec8d97b051ee6c942ad2574cca24b679509876",
+      "result_path": "browser-attestation/preflight-v6-result.json",
+      "result_sha256": "cd4a750c3f2be1985b84dacfb8f76ea117dc1651a91d197c915c0c1dc43bfed2",
+      "firebase_sdk_version": "12.18.0",
+      "firebase_app_id": "1:1072737219170:web:5053ca93bf25d7373cd73b",
+      "hosting_origin": "https://miakapp-v4-staging.web.app",
+      "operation_claim": {
+        "object": "terraform/browser-attestation/operations/live-browser-attestation-v6.json",
+        "generation": "1788631267013181",
+        "size_bytes": 686,
+        "sha256": "9e9716a1aa9247c196125ab355c2c413a733dbc3d54a7d4fe203dbf12dffeb7b",
+        "retry_authorized": false,
+        "deletion_authorized": false
+      },
+      "browser_session": "macos-default-system-browser",
+      "browser_invocations": 1,
+      "loopback_observations": 1,
+      "force_refresh_requested": true,
+      "provider_token_obtained": true,
+      "jwt_shape_validated": true,
+      "configured_token_ttl": "3600s",
+      "local_post_validation": {
+        "state": "rejected_after_provider_success",
+        "stage": "token-ttl-validation",
+        "code": "token-ttl-rejected",
+        "cause": "public_get_token_result_contains_token_only"
+      },
+      "hosting_version_status": "DELETED",
+      "hosting_releases_created": 2,
+      "hosting_site_disabled": true,
+      "runner_http_status_after_cleanup": 404,
+      "public_window_milliseconds": 8749,
+      "app_check_enforcement_records": 0,
+      "debug_tokens": 0,
+      "firebase_auth_used": false,
+      "control_plane_invoked": false,
+      "app_check_token_committed": false,
+      "raw_browser_error_committed": false,
+      "entrypoints_retired": true
     },
     "signing_key_overlap_prerequisite": {
       "state": "version_2_enabled_runtime_unchanged_entrypoints_retired",

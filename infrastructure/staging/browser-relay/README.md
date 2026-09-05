@@ -26,6 +26,12 @@ without creating a relay or exposing the Function. It did not exercise a Web
 App Check provider, a browser WebSocket, a real relay process, managed key
 retirement or rollback.
 
+The later consumed `browser-attestation/` operation separately obtained one
+fresh Web App Check provider token in the default system browser. That closes
+the standalone provider prerequisite, but it did not exchange a browser user
+credential, open a relay WebSocket or execute the negative controls in
+`LIVE-02`.
+
 The browser WebSocket API cannot attach a Cloud Run IAM bearer header. A live
 browser therefore cannot connect to an IAM-only relay. This plan selects a
 short, separately reviewed public-network window with application-layer
@@ -67,10 +73,10 @@ and [reCAPTCHA billing](https://cloud.google.com/recaptcha/docs/billing-informat
 
 ## Preconditions
 
-The immutable cross-repository pins and the readable registered reCAPTCHA
-Enterprise App Check provider are satisfied today. Browser attestation itself
-remains a live acceptance case. Before any public transition, separate reviewed
-implementation must still provide:
+The immutable cross-repository pins, readable registered reCAPTCHA Enterprise
+provider and standalone real-browser token observation are satisfied today.
+The complete authenticated browser case remains part of `LIVE-02`. Before any
+public transition, separate reviewed implementation must still provide:
 
 1. a production runtime configuration that publishes one active and one
    retiring signing key while selecting exactly one KMS signer;
@@ -79,6 +85,11 @@ implementation must still provide:
 4. a three-engine runner that emits closed semantic counters only;
 5. allow-listed metric and billing observations; and
 6. a rollback plan that is rendered and checked before the live window opens.
+
+`plan.json` intentionally retains the earlier observation-time baseline. Its
+next implementation revision must rebase the complete live inventory, including
+the attestation result and current signing-key/runtime state, before authorizing
+any public transition.
 
 The currently deployed runtime document publishes both signing keys with
 version 2 current and version 1 retained. This completes the publication and
