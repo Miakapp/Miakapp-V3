@@ -1,13 +1,13 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 39,
-  "status": "private_control_plane_source_verified_user_relay_acceptance_pending",
+  "revision": 40,
+  "status": "private_control_plane_user_relay_acceptance_succeeded_and_retired",
   "environment": "staging",
   "project": {
     "project_id": "miakapp-v4-staging",
     "project_number": "1072737219170",
     "display_name": "Miakapp V4 Staging",
-    "lifecycle": "firebase_auth_initialized_private_control_plane_user_relay_acceptance_pending",
+    "lifecycle": "firebase_auth_initialized_private_control_plane_user_relay_acceptance_succeeded",
     "creation_authorized": false,
     "billing_link_authorized": false,
     "deployment_authorized": true,
@@ -141,11 +141,11 @@
     },
     {
       "id": "firestore",
-      "state": "foundation_created_no_application_mutation"
+      "state": "private_fixture_lifecycle_validated_no_persistent_application_data"
     },
     {
       "id": "cloud-functions-gen2",
-      "state": "private_deployment_active_source_verified_user_relay_acceptance_pending"
+      "state": "private_deployment_active_user_relay_acceptance_succeeded"
     },
     {
       "id": "cloud-storage",
@@ -173,7 +173,7 @@
     },
     {
       "id": "cloud-workflows",
-      "state": "api_enabled_historical_probes_retired_user_relay_acceptance_pending"
+      "state": "api_enabled_user_relay_probe_succeeded_and_retired"
     }
   ],
   "runtime": {
@@ -195,7 +195,7 @@
     "source_archive_sha256": "6674c0353ec9c73fcfe0d3a63d17850f057a5f2a547a5855989e28f011249b1e",
     "runtime_config_sha256": "b794181400bf5ace6aaa9ffc4be00e4c4f6a59519284baa7f73bca3c042c4ff8",
     "user_managed_keys": 0,
-    "live_request_performed": false
+    "live_request_performed": true
   },
   "data": {
     "firestore": {
@@ -365,7 +365,7 @@
     }
   },
   "terraform": {
-    "state": "bootstrap_foundation_workload_probe_and_firebase_auth_converged_auth_probe_acceptance_pending",
+    "state": "bootstrap_foundation_workload_probe_firebase_auth_and_user_relay_acceptance_converged",
     "supported_workflow": "guarded_private_saved_plans_applied_and_converged",
     "configuration_apply_capable": true,
     "active_cloud_workflow": "unscheduled_private_probe_retained",
@@ -1235,7 +1235,6 @@
     "foundation_apply_authorized": false,
     "required_blockers": [
       "app-check-browser-provider-attestation",
-      "audience-bound-user-relay-staging-acceptance",
       "relay-token-refresh-integration",
       "trusted-source-and-edge-admission",
       "live-managed-service-fault-matrix",
@@ -1445,33 +1444,48 @@
       "public_endpoints_created": 0,
       "persistent_credentials_created": 0
     },
-    "auth_app_check_probe": {
+    "user_relay_probe": {
       "state": "succeeded_and_retired",
-      "observed_at": "2026-09-04T11:33:48.986Z",
-      "repository_commit": "753601acc160c2214511c3207b9f0c47d3d7e03e",
-      "workflow_source_sha256": "525b97d18a2848c1d852b9d117cb20cf464bbc1d7baa85b2d44d457487cd922c",
-      "workflow_revision": "000001-bb4",
+      "observed_at": "2026-09-05T02:00:51.901Z",
+      "repository_commit": "3f90549156148496702edfa657d5dd5c6394a32f",
+      "workflow_source_sha256": "b77c484f3ffb8a81fb4bf5bebfecc420ab33604e99559518fc354a4e0dcc4d56",
+      "workflow_revision": "000001-34e",
       "result_path": "auth-probe/result.json",
-      "result_sha256": "87af1de1f94bd4f1d070fef430f6e61ee70f7b988ec81fcfb0fb2805a3edc95f",
+      "result_sha256": "62734e6418e44cef68c60fc686a456643a908098c1fff6f8d52505dbfe9c01ce",
       "retirement_path": "auth-probe/retirement.json",
-      "retirement_sha256": "595c994647f181b7f2b7a98e403c9d039b32cde6e57acd9df904d40b568e5b54",
-      "execution_duration_milliseconds": 7821,
+      "retirement_sha256": "b2f3977b83bee7e8427a5a90a04e3c3ab04b28fcb8fcfa26a9c449fef4de42ac",
+      "execution_duration_milliseconds": 10786,
       "execution_count": 1,
-      "product_requests": 3,
-      "expected_application_writes": 0,
+      "product_requests": 5,
+      "negative_controls": 3,
+      "successful_exchanges": 2,
+      "invalid_firebase_status": 401,
+      "invalid_firebase_code": "invalid_firebase_token",
       "missing_app_check_status": 401,
       "missing_app_check_code": "invalid_app_check_token",
-      "first_authenticated_status": 200,
-      "replay_authenticated_status": 200,
+      "missing_home_status": 404,
+      "missing_home_code": "home_not_found",
+      "first_exchange_status": 200,
+      "second_exchange_status": 200,
       "firebase_auth_validated": true,
       "app_check_validated": true,
       "app_check_token_consumption": false,
       "browser_provider_attestation_validated": false,
+      "token_signatures_validated": true,
+      "token_audiences_changed": true,
       "synthetic_user_created": true,
       "synthetic_user_deleted": true,
       "independent_user_absence_verified": true,
+      "synthetic_home_created": true,
+      "synthetic_home_deleted": true,
+      "independent_home_absence_verified": true,
+      "relay_rotated": true,
+      "public_home_written": false,
+      "owner_matches_authenticated_user": false,
       "workflow_present": false,
+      "verifier_service_present": false,
       "temporary_bindings_present": false,
+      "retained_disabled_custom_roles": 9,
       "recurring_compute": false,
       "private_bundle_committed": false,
       "execution_identifiers_committed": false,

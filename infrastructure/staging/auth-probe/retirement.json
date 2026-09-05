@@ -1,24 +1,202 @@
 {
-  "schema": "miakapp.staging-auth-probe-retirement/1",
+  "schema": "miakapp.staging-user-relay-probe-retirement/1",
   "project_id": "miakapp-v4-staging",
   "project_number": "1072737219170",
   "region": "europe-west9",
-  "custom_role": {
-    "name": "projects/miakapp-v4-staging/roles/miakapp.stagingAuthProbe",
-    "stage": "GA",
-    "deleted": false,
-    "permissions": [
-      "firebase.clients.get",
-      "firebaseappcheck.tokens.mint",
-      "firebaseauth.users.get",
-      "serviceusage.services.use"
-    ]
+  "cloud_asset_api": true,
+  "custom_roles": {
+    "firebase": {
+      "name": "projects/miakapp-v4-staging/roles/miakapp.stagingUserRelayAuthProbe3",
+      "stage": "DISABLED",
+      "deleted": false,
+      "etag": "BwZassbffPE=",
+      "permissions": [
+        "firebase.clients.get",
+        "firebaseappcheck.tokens.mint",
+        "firebaseauth.users.get",
+        "serviceusage.services.use"
+      ]
+    },
+    "firestore": {
+      "name": "projects/miakapp-v4-staging/roles/miakapp.stagingUserRelayFirestore3",
+      "stage": "DISABLED",
+      "deleted": false,
+      "etag": "BwZassbhSP4=",
+      "permissions": [
+        "datastore.entities.create",
+        "datastore.entities.delete",
+        "datastore.entities.get",
+        "datastore.entities.update"
+      ]
+    },
+    "signer": {
+      "name": "projects/miakapp-v4-staging/roles/miakapp.stagingUserRelaySigner3",
+      "stage": "DISABLED",
+      "deleted": false,
+      "etag": "BwZassafNR4=",
+      "permissions": [
+        "iam.serviceAccounts.getOpenIdToken",
+        "iam.serviceAccounts.signJwt"
+      ]
+    },
+    "retired_firebase": {
+      "name": "projects/miakapp-v4-staging/roles/miakapp.stagingAuthProbe",
+      "stage": "DISABLED",
+      "deleted": false,
+      "etag": "BwZasbWxrRM=",
+      "permissions": [
+        "firebase.clients.get",
+        "firebaseappcheck.tokens.mint",
+        "firebaseauth.users.get",
+        "serviceusage.services.use"
+      ]
+    },
+    "retired_firestore": {
+      "name": "projects/miakapp-v4-staging/roles/miakapp.stagingProbeFirestore",
+      "stage": "DISABLED",
+      "deleted": false,
+      "etag": "BwZasbW63qM=",
+      "permissions": [
+        "datastore.entities.create",
+        "datastore.entities.delete",
+        "datastore.entities.get",
+        "datastore.entities.update"
+      ]
+    },
+    "retired_signer": {
+      "name": "projects/miakapp-v4-staging/roles/miakapp.stagingProbeSigner",
+      "stage": "DISABLED",
+      "deleted": false,
+      "etag": "BwZasbV9yQ4=",
+      "permissions": [
+        "iam.serviceAccounts.getOpenIdToken",
+        "iam.serviceAccounts.signJwt"
+      ]
+    },
+    "retired_2_firebase": {
+      "name": "projects/miakapp-v4-staging/roles/miakapp.stagingUserRelayAuthProbe2",
+      "stage": "DISABLED",
+      "deleted": false,
+      "etag": "BwZasiHpiuY=",
+      "permissions": [
+        "firebase.clients.get",
+        "firebaseappcheck.tokens.mint",
+        "firebaseauth.users.get",
+        "serviceusage.services.use"
+      ]
+    },
+    "retired_2_firestore": {
+      "name": "projects/miakapp-v4-staging/roles/miakapp.stagingUserRelayFirestore2",
+      "stage": "DISABLED",
+      "deleted": false,
+      "etag": "BwZasiHrgv0=",
+      "permissions": [
+        "datastore.entities.create",
+        "datastore.entities.delete",
+        "datastore.entities.get",
+        "datastore.entities.update"
+      ]
+    },
+    "retired_2_signer": {
+      "name": "projects/miakapp-v4-staging/roles/miakapp.stagingUserRelaySigner2",
+      "stage": "DISABLED",
+      "deleted": false,
+      "etag": "BwZasiHAFXE=",
+      "permissions": [
+        "iam.serviceAccounts.getOpenIdToken",
+        "iam.serviceAccounts.signJwt"
+      ]
+    }
   },
-  "iam": {
-    "project_role_assigned_to_probe": false,
-    "self_signer_assigned_to_probe": false
+  "custom_role_bindings": {
+    "google_project_iam_custom_role.auth_probe_generation_3": {
+      "role_name": "projects/miakapp-v4-staging/roles/miakapp.stagingUserRelayAuthProbe3",
+      "direct_binding_present": false,
+      "indexed_binding_present": false,
+      "resource": null,
+      "asset_type": null,
+      "authoritative": false
+    },
+    "google_project_iam_custom_role.auth_probe_firestore_generation_3": {
+      "role_name": "projects/miakapp-v4-staging/roles/miakapp.stagingUserRelayFirestore3",
+      "direct_binding_present": false,
+      "indexed_binding_present": false,
+      "resource": null,
+      "asset_type": null,
+      "authoritative": false
+    },
+    "google_project_iam_custom_role.auth_probe_signer_generation_3": {
+      "role_name": "projects/miakapp-v4-staging/roles/miakapp.stagingUserRelaySigner3",
+      "direct_binding_present": false,
+      "indexed_binding_present": false,
+      "resource": null,
+      "asset_type": null,
+      "authoritative": false
+    },
+    "google_project_iam_custom_role.auth_probe_generation_1": {
+      "role_name": "projects/miakapp-v4-staging/roles/miakapp.stagingAuthProbe",
+      "direct_binding_present": false,
+      "indexed_binding_present": false,
+      "resource": null,
+      "asset_type": null,
+      "authoritative": false
+    },
+    "google_project_iam_custom_role.auth_probe_firestore_generation_1": {
+      "role_name": "projects/miakapp-v4-staging/roles/miakapp.stagingProbeFirestore",
+      "direct_binding_present": false,
+      "indexed_binding_present": false,
+      "resource": null,
+      "asset_type": null,
+      "authoritative": false
+    },
+    "google_project_iam_custom_role.auth_probe_signer_generation_1": {
+      "role_name": "projects/miakapp-v4-staging/roles/miakapp.stagingProbeSigner",
+      "direct_binding_present": false,
+      "indexed_binding_present": false,
+      "resource": null,
+      "asset_type": null,
+      "authoritative": false
+    },
+    "google_project_iam_custom_role.auth_probe_generation_2": {
+      "role_name": "projects/miakapp-v4-staging/roles/miakapp.stagingUserRelayAuthProbe2",
+      "direct_binding_present": false,
+      "indexed_binding_present": false,
+      "resource": null,
+      "asset_type": null,
+      "authoritative": false
+    },
+    "google_project_iam_custom_role.auth_probe_firestore_generation_2": {
+      "role_name": "projects/miakapp-v4-staging/roles/miakapp.stagingUserRelayFirestore2",
+      "direct_binding_present": false,
+      "indexed_binding_present": false,
+      "resource": null,
+      "asset_type": null,
+      "authoritative": false
+    },
+    "google_project_iam_custom_role.auth_probe_signer_generation_2": {
+      "role_name": "projects/miakapp-v4-staging/roles/miakapp.stagingUserRelaySigner2",
+      "direct_binding_present": false,
+      "indexed_binding_present": false,
+      "resource": null,
+      "asset_type": null,
+      "authoritative": false
+    }
+  },
+  "probe_identity": {
+    "email": "miakapp-staging-probe@miakapp-v4-staging.iam.gserviceaccount.com",
+    "disabled": false,
+    "user_managed_keys": 0
+  },
+  "verifier_identity": {
+    "email": "miakapp-staging-verifier@miakapp-v4-staging.iam.gserviceaccount.com",
+    "disabled": false,
+    "user_managed_keys": 0,
+    "project_roles": 0,
+    "all_resource_roles": 0,
+    "resource_policy_inventory": true
   },
   "workflow_present": false,
+  "verifier_service_present": false,
   "temporary_bindings_present": false,
   "recurring_compute": false
 }

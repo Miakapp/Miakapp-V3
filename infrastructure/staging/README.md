@@ -1,26 +1,26 @@
 # Miakapp 4 staging private workload boundary
 
-Status: audience-bound source active and source-verified; Auth/App Check validated
-on the preceding revision; bounded user-relay acceptance pending
+Status: private audience-bound user-relay acceptance succeeded and retired;
+browser App Check attestation remains open
 
 This directory contains the closed description and observed state of
 `miakapp-v4-staging`. The bounded foundation recovery has completed; its active
 workflow and reviewed GitHub OIDC exchange are retired. The separate private
-workload and both unscheduled private probes were applied and converged. One
+workload and its unscheduled private probes were applied and converged. One
 bounded discovery request succeeded after two controlled failures. A later
-single-execution probe validated real Firebase Auth and Admin custom-provider
-App Check enforcement, deleted its synthetic user, and retired all temporary
-capability. The current source-only revision has not received a request. This
-evidence does not authorize public ingress, additional live requests, destroy,
-or production changes.
+single-execution probe exercised the current audience-bound user-relay exchange:
+three negative controls and two successful, cryptographically verified
+exchanges across a relay rotation. It removed both synthetic fixtures and all
+temporary capability. This evidence does not authorize public ingress,
+additional live requests, destroy, or production changes.
 
 ## Current truth
 
 Project `miakapp-v4-staging` (`1072737219170`) now has one active Gen 2 Function
 backed by one Cloud Run service. It still has no App Engine application, public
-ingress, unauthenticated invoker or minimum instance. All bounded requests in
-the committed evidence targeted the preceding revision through unscheduled
-private Workflows. The bootstrap is complete.
+ingress, unauthenticated invoker or minimum instance. The latest bounded
+requests targeted the current revision through one unscheduled private Workflow.
+The bootstrap is complete.
 Protected foundation applies
 on 2026-09-03 created all thirteen declared APIs, the deletion-protected Paris
 Firestore database and three active TTL fields, one software Ed25519 signing
@@ -76,8 +76,8 @@ three data resources, one output and nothing tainted. The current canonical
 [`workload/result.json`](workload/result.json) has SHA-256
 `cfdb18b9dd6604cd92977cbd447dd0684f4b731ca84d2f7aa3f772cbd3bc3056`.
 The latest source contains the audience-bound user-relay credential exchange;
-its separate bounded acceptance probe has not run yet. The discovery and Auth/
-App Check evidence below remains pinned to historical revision
+its separate bounded acceptance probe completed successfully against this exact
+revision. The discovery evidence below remains pinned to historical revision
 `control-plane-00003-hum`.
 
 The private probe deployment created only the Workflows API guard and one
@@ -90,46 +90,30 @@ Check. The canonical [`probe/result.json`](probe/result.json) has SHA-256
 `ea3245756727eaf071f2edc6ef55ba1b730c5e3f61e38746fb7cbf36e8f4ef05`
 and contains no execution UUID, trace context, stack or raw diagnostic.
 
-Firebase Authentication is now initialized in its closed, non-deletable
-configuration with every end-user provider disabled. The separately armed Auth
-probe exchanged a signed custom token for a real Firebase ID token, proved the
-fixed no-email synthetic UID, and sent three requests through internal ingress.
-The missing-App-Check control returned `401 invalid_app_check_token`; the two
-requests carrying a real Admin custom-provider App Check token both returned an
-empty list with HTTP 200, proving the explicit reusable-token policy. The UID
-was deleted and independently verified absent. The Workflow and both temporary
-IAM bindings were then removed; the custom role remains dormant and unassigned.
-The digest-pinned [`auth-probe/result.json`](auth-probe/result.json) and
+Firebase Authentication remains initialized in its closed, non-deletable
+configuration with every end-user provider disabled. The independent
+`auth-probe` root now preserves the successful audience-bound acceptance run.
+Workflows rejected generation 1's inline map expression and generation 2's
+59-assignment initialization step during creation, so neither executed.
+Generation 3 then completed exactly one execution against
+`control-plane-00004-yis`: invalid Firebase Auth returned
+`401 invalid_firebase_token`, missing App Check returned
+`401 invalid_app_check_token`, and an absent private Home returned
+`404 home_not_found`. Two subsequent exchanges returned distinct five-minute
+Ed25519 credentials for relay A then relay B; the internal verifier validated
+both signatures, claims and changed audiences.
+
+The fixed no-email user and marker-guarded private `controlHomes` document were
+deleted and independently verified absent, while the lowercase public `homes`
+path remained absent. Retirement removed the Workflow, verifier and all four
+temporary bindings. All nine role IDs across the three immutable generations
+are disabled and unassigned. The Cloud Asset API, those inert roles, the keyless
+no-role verifier identity and the exact state guard remain without recurring
+compute. The digest-pinned [`auth-probe/result.json`](auth-probe/result.json) and
 [`auth-probe/retirement.json`](auth-probe/retirement.json) contain no execution
 identifier, token material or raw diagnostic. Browser-provider attestation is
-not claimed by this evidence.
-
-The same independent `auth-probe` state root retains two retired preparation
-generations for the bounded audience-bound user-relay acceptance run. Neither
-reached an execution: Workflows rejected generation 1's inline map expression
-and generation 2's 59-assignment initialization step during creation. All
-temporary resources were removed and all six role IDs remain disabled and
-unassigned. The corrected source splits initialization below the 50-assignment
-limit and was accepted by a real compile-only Workflows deployment with zero
-executions before that Workflow was deleted. Generation 3 is prepared with new
-role IDs and a later expiry. Retirement
-retains the immutable disabled generations plus a keyless no-role verifier
-identity. The root also enables and retains the Cloud Asset API for supplemental
-project-wide IAM discovery; because that
-inventory is eventually consistent, it is not used to authorize role
-restoration. The Workflow
-uses one fixed
-no-email user and one private marker-guarded `controlHomes` document, performs
-exactly seven Function requests (two metadata `GET`s and five exchange `POST`s),
-verifies two Ed25519 credentials internally, then independently cleans the
-private fixture and user and checks that the lowercase public `homes` path stayed
-absent. No user-relay Workflow has been invoked;
-[`auth-probe/README.md`](auth-probe/README.md) is the
-authoritative lifecycle and cost boundary. Retirement removes the service and
-Workflow, removes the temporary bindings, and disables every newly used role
-generation while prior generations stay disabled; the Cloud Asset API, roles and verifier
-identity remain as inert persistent infrastructure until a separately reviewed
-teardown.
+not claimed; [`auth-probe/README.md`](auth-probe/README.md) is the authoritative
+lifecycle and cost boundary.
 
 The verifier's service policy contains exactly one conditioned binding for the
 probe identity, but project inheritance also permits five authenticated staging
@@ -244,7 +228,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`workload/`](workload/) | Deterministic production package, private Gen 2 Function, dedicated build/probe identities, and one-permission FCM role | Applied and converged; current internal-only revision independently source-verified |
 | [`probe/`](probe/) | Isolated Workflows API and one fixed, unscheduled, keyless internal discovery probe | Applied and consumed; exactly two failures followed by one validated HTTP 200 discovery response |
 | [`firebase-auth/`](firebase-auth/) | Closed Firebase Authentication initialization with no end-user sign-in provider | Non-deletable resource initialized, state-adopted, reconciled, and independently validated |
-| [`auth-probe/`](auth-probe/) | Historical Auth/App Check evidence plus a guarded audience-bound user-relay Workflow and internal verifier | Historical probe retained; failed generations 1 and 2 retired without execution; generation 3 compiler-validated and prepared for one bounded arm |
+| [`auth-probe/`](auth-probe/) | Guarded audience-bound user-relay Workflow, internal verifier and sanitized evidence | Generation 3 succeeded once and retired; both fixtures and every temporary capability are absent; all nine one-shot roles are disabled |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
 | [`TEARDOWN.md`](TEARDOWN.md) | Manual recovery and teardown rehearsal | Documentation only |
@@ -477,12 +461,13 @@ No persistent credential or repository secret is used.
 ## Next staging gate
 
 Bootstrap, foundation, initial activation, private deployment, discovery, and
-the synthetic Firebase Auth/App Check gate are complete. Firebase Authentication
-is initialized under [`firebase-auth/`](firebase-auth/) with its exact closed
+the private user-relay acceptance gate are complete. Firebase Authentication is
+initialized under [`firebase-auth/`](firebase-auth/) with its exact closed
 configuration and no end-user provider. The one-shot sequence under
-[`auth-probe/`](auth-probe/) proved the real Firebase ID-token and Admin
-custom-provider App Check path, the V1 reusable-token policy, and complete
-synthetic-user cleanup. Its Workflow and temporary permissions are absent.
+[`auth-probe/`](auth-probe/) proved real Firebase ID-token and Admin
+custom-provider App Check enforcement, private Home routing and rotation, and
+both audience-bound token signatures. Its Workflow, verifier, fixtures and
+temporary permissions are absent.
 
 Browser App Check live-provider attestation remains a distinct blocker because
 an Admin custom-provider token does not exercise browser attestation. Relay

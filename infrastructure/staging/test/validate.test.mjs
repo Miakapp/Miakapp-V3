@@ -29,18 +29,18 @@ function rejects(mutator, pattern) {
   );
 }
 
-test('accepts the source-verified private workload with user-relay acceptance pending', () => {
+test('accepts the successful and retired private user-relay probe', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 39);
+  assert.equal(validated.revision, 40);
   assert.equal(
     validated.status,
-    'private_control_plane_source_verified_user_relay_acceptance_pending',
+    'private_control_plane_user_relay_acceptance_succeeded_and_retired',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
   assert.equal(
     validated.project.lifecycle,
-    'firebase_auth_initialized_private_control_plane_user_relay_acceptance_pending',
+    'firebase_auth_initialized_private_control_plane_user_relay_acceptance_succeeded',
   );
   assert.equal(validated.bootstrap.billing_enabled, true);
   assert.equal(validated.bootstrap.firebase_apps, 1);
@@ -74,15 +74,15 @@ test('accepts the source-verified private workload with user-relay acceptance pe
   assert.deepEqual(validated.services.map(({ state }) => state), [
     'initialized_closed_custom_token_lifecycle_validated',
     'admin_custom_provider_validated_browser_attestation_pending',
-    'foundation_created_no_application_mutation',
-    'private_deployment_active_source_verified_user_relay_acceptance_pending',
+    'private_fixture_lifecycle_validated_no_persistent_application_data',
+    'private_deployment_active_user_relay_acceptance_succeeded',
     'private_bucket_created_no_application_mutation',
     'signing_key_version_enabled_public_key_validated',
     'five_initial_versions_enabled_runtime_access_validated',
     'api_enabled_one_permission_runtime_role_applied_uninvoked',
     'api_enabled_runtime_deployed_no_application_log_validation',
     'api_enabled_runtime_deployed_no_metric_validation',
-    'api_enabled_historical_probes_retired_user_relay_acceptance_pending',
+    'api_enabled_user_relay_probe_succeeded_and_retired',
   ]);
   assert.equal(
     validated.security.iam.foundation_resource_bindings_state,
@@ -100,7 +100,7 @@ test('accepts the source-verified private workload with user-relay acceptance pe
   assert.equal(validated.runtime.revision, 'control-plane-00004-yis');
   assert.equal(validated.runtime.ingress, 'ALLOW_INTERNAL_ONLY');
   assert.equal(validated.runtime.user_managed_keys, 0);
-  assert.equal(validated.runtime.live_request_performed, false);
+  assert.equal(validated.runtime.live_request_performed, true);
   assert.equal(
     validated.security.iam.runtime_identity_state,
     'private_runtime_deployed_zero_user_managed_keys',
@@ -108,7 +108,7 @@ test('accepts the source-verified private workload with user-relay acceptance pe
   assert.deepEqual(validated.security.iam.unresolved_permissions, []);
   assert.equal(
     validated.terraform.state,
-    'bootstrap_foundation_workload_probe_and_firebase_auth_converged_auth_probe_acceptance_pending',
+    'bootstrap_foundation_workload_probe_firebase_auth_and_user_relay_acceptance_converged',
   );
   assert.equal(
     validated.terraform.supported_workflow,
@@ -643,25 +643,36 @@ test('accepts the source-verified private workload with user-relay acceptance pe
   assert.equal(validated.evidence.firebase_auth_baseline.phone_sign_in, false);
   assert.equal(validated.evidence.firebase_auth_baseline.public_endpoints_created, 0);
   assert.equal(validated.evidence.firebase_auth_baseline.persistent_credentials_created, 0);
-  assert.equal(validated.evidence.auth_app_check_probe.state, 'succeeded_and_retired');
-  assert.equal(validated.evidence.auth_app_check_probe.firebase_auth_validated, true);
-  assert.equal(validated.evidence.auth_app_check_probe.app_check_validated, true);
-  assert.equal(validated.evidence.auth_app_check_probe.missing_app_check_status, 401);
-  assert.equal(validated.evidence.auth_app_check_probe.first_authenticated_status, 200);
-  assert.equal(validated.evidence.auth_app_check_probe.replay_authenticated_status, 200);
-  assert.equal(validated.evidence.auth_app_check_probe.synthetic_user_deleted, true);
-  assert.equal(validated.evidence.auth_app_check_probe.independent_user_absence_verified, true);
-  assert.equal(validated.evidence.auth_app_check_probe.workflow_present, false);
-  assert.equal(validated.evidence.auth_app_check_probe.temporary_bindings_present, false);
-  assert.equal(validated.evidence.auth_app_check_probe.token_material_committed, false);
-  assert.equal(validated.evidence.auth_app_check_probe.raw_diagnostics_committed, false);
+  const userRelayProbe = validated.evidence.user_relay_probe;
+  assert.equal(userRelayProbe.state, 'succeeded_and_retired');
+  assert.equal(userRelayProbe.firebase_auth_validated, true);
+  assert.equal(userRelayProbe.app_check_validated, true);
+  assert.equal(userRelayProbe.invalid_firebase_status, 401);
+  assert.equal(userRelayProbe.missing_app_check_status, 401);
+  assert.equal(userRelayProbe.missing_home_status, 404);
+  assert.equal(userRelayProbe.first_exchange_status, 200);
+  assert.equal(userRelayProbe.second_exchange_status, 200);
+  assert.equal(userRelayProbe.successful_exchanges, 2);
+  assert.equal(userRelayProbe.token_signatures_validated, true);
+  assert.equal(userRelayProbe.token_audiences_changed, true);
+  assert.equal(userRelayProbe.synthetic_user_deleted, true);
+  assert.equal(userRelayProbe.independent_user_absence_verified, true);
+  assert.equal(userRelayProbe.synthetic_home_deleted, true);
+  assert.equal(userRelayProbe.independent_home_absence_verified, true);
+  assert.equal(userRelayProbe.relay_rotated, true);
+  assert.equal(userRelayProbe.workflow_present, false);
+  assert.equal(userRelayProbe.verifier_service_present, false);
+  assert.equal(userRelayProbe.temporary_bindings_present, false);
+  assert.equal(userRelayProbe.retained_disabled_custom_roles, 9);
+  assert.equal(userRelayProbe.token_material_committed, false);
+  assert.equal(userRelayProbe.raw_diagnostics_committed, false);
   assert.equal(
     validated.readiness.required_blockers.includes('app-check-browser-provider-attestation'),
     true,
   );
   assert.equal(
     validated.readiness.required_blockers.includes('audience-bound-user-relay-staging-acceptance'),
-    true,
+    false,
   );
   assert.equal(
     validated.readiness.required_blockers.includes('app-check-live-provider-and-replay-policy'),
@@ -725,11 +736,12 @@ test('cross-checks manifest claims against all committed evidence artifacts', ()
   const evidence = validateCommittedEvidence(manifest());
   assert.equal(evidence.workload.function.revision, 'control-plane-00004-yis');
   assert.equal(evidence.probe.workload.function_revision, 'control-plane-00003-hum');
-  assert.equal(evidence.authProbe.workload.function_revision, 'control-plane-00003-hum');
+  assert.equal(evidence.userRelayProbe.workload.function_revision, 'control-plane-00004-yis');
   assert.equal(evidence.probe.response.status, 200);
   assert.equal(evidence.firebaseAuth.external_identity_providers, 0);
-  assert.equal(evidence.authProbe.execution.state, 'SUCCEEDED');
-  assert.equal(evidence.authProbeRetirement.workflow_present, false);
+  assert.equal(evidence.userRelayProbe.execution.state, 'SUCCEEDED');
+  assert.equal(evidence.userRelayProbeRetirement.workflow_present, false);
+  assert.equal(evidence.userRelayProbeRetirement.verifier_service_present, false);
 
   const workloadDigestDrift = manifest();
   workloadDigestDrift.evidence.workload_deployment.result_sha256 = '0'.repeat(64);
@@ -756,19 +768,19 @@ test('cross-checks manifest claims against all committed evidence artifacts', ()
   );
 
   const authProbeDigestDrift = manifest();
-  authProbeDigestDrift.evidence.auth_app_check_probe.result_sha256 = '0'.repeat(64);
+  authProbeDigestDrift.evidence.user_relay_probe.result_sha256 = '0'.repeat(64);
   assert.throws(
     () => validateCommittedEvidence(authProbeDigestDrift),
     (error) => error instanceof StagingManifestError
-      && /evidence\.auth_app_check_probe\.result_sha256/.test(error.message),
+      && /evidence\.user_relay_probe\.result_sha256/.test(error.message),
   );
 
   const authProbeRetirementPathDrift = manifest();
-  authProbeRetirementPathDrift.evidence.auth_app_check_probe.retirement_path = '../../private.json';
+  authProbeRetirementPathDrift.evidence.user_relay_probe.retirement_path = '../../private.json';
   assert.throws(
     () => validateCommittedEvidence(authProbeRetirementPathDrift),
     (error) => error instanceof StagingManifestError
-      && /evidence\.auth_app_check_probe\.retirement_path/.test(error.message),
+      && /evidence\.user_relay_probe\.retirement_path/.test(error.message),
   );
 
   const firebaseAuthDigestDrift = manifest();
@@ -1231,7 +1243,7 @@ test('enforces scale-to-zero, one maximum instance, and private ingress', () => 
     candidate.runtime.user_managed_keys = 1;
   }, /runtime\.user_managed_keys/);
   rejects((candidate) => {
-    candidate.runtime.live_request_performed = true;
+    candidate.runtime.live_request_performed = false;
   }, /runtime\.live_request_performed/);
 });
 
@@ -1570,31 +1582,34 @@ test('rejects drift or private telemetry claims in the public probe evidence', (
   }, /evidence\.private_probe must contain exactly/);
 });
 
-test('rejects drift or private material claims in Auth/App Check evidence', () => {
+test('rejects drift or private material claims in user-relay evidence', () => {
   rejects((candidate) => {
-    candidate.evidence.auth_app_check_probe.result_sha256 = '0'.repeat(64);
-  }, /evidence\.auth_app_check_probe\.result_sha256/);
+    candidate.evidence.user_relay_probe.result_sha256 = '0'.repeat(64);
+  }, /evidence\.user_relay_probe\.result_sha256/);
   rejects((candidate) => {
-    candidate.evidence.auth_app_check_probe.missing_app_check_status = 200;
-  }, /evidence\.auth_app_check_probe\.missing_app_check_status/);
+    candidate.evidence.user_relay_probe.missing_app_check_status = 200;
+  }, /evidence\.user_relay_probe\.missing_app_check_status/);
   rejects((candidate) => {
-    candidate.evidence.auth_app_check_probe.browser_provider_attestation_validated = true;
-  }, /evidence\.auth_app_check_probe\.browser_provider_attestation_validated/);
+    candidate.evidence.user_relay_probe.browser_provider_attestation_validated = true;
+  }, /evidence\.user_relay_probe\.browser_provider_attestation_validated/);
   rejects((candidate) => {
-    candidate.evidence.auth_app_check_probe.workflow_present = true;
-  }, /evidence\.auth_app_check_probe\.workflow_present/);
+    candidate.evidence.user_relay_probe.workflow_present = true;
+  }, /evidence\.user_relay_probe\.workflow_present/);
   rejects((candidate) => {
-    candidate.evidence.auth_app_check_probe.temporary_bindings_present = true;
-  }, /evidence\.auth_app_check_probe\.temporary_bindings_present/);
+    candidate.evidence.user_relay_probe.verifier_service_present = true;
+  }, /evidence\.user_relay_probe\.verifier_service_present/);
   rejects((candidate) => {
-    candidate.evidence.auth_app_check_probe.execution_identifiers_committed = true;
-  }, /evidence\.auth_app_check_probe\.execution_identifiers_committed/);
+    candidate.evidence.user_relay_probe.temporary_bindings_present = true;
+  }, /evidence\.user_relay_probe\.temporary_bindings_present/);
   rejects((candidate) => {
-    candidate.evidence.auth_app_check_probe.token_material_committed = true;
-  }, /evidence\.auth_app_check_probe\.token_material_committed/);
+    candidate.evidence.user_relay_probe.execution_identifiers_committed = true;
+  }, /evidence\.user_relay_probe\.execution_identifiers_committed/);
   rejects((candidate) => {
-    candidate.evidence.auth_app_check_probe.private_detail = 'must-not-be-accepted';
-  }, /evidence\.auth_app_check_probe must contain exactly/);
+    candidate.evidence.user_relay_probe.token_material_committed = true;
+  }, /evidence\.user_relay_probe\.token_material_committed/);
+  rejects((candidate) => {
+    candidate.evidence.user_relay_probe.private_detail = 'must-not-be-accepted';
+  }, /evidence\.user_relay_probe must contain exactly/);
 });
 
 test('rejects drift from the initialized closed Firebase Auth evidence', () => {

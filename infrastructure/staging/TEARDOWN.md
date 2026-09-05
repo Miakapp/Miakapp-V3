@@ -93,19 +93,21 @@ three managed resources, one data resource, one output and nothing tainted. Its
 SHA-256 is
 `af7241b8d72085e0b30b7ca1a093726b2462b83160bd7566f6847d94aeb1cbf5`.
 Firebase Auth state generation `1788517368759987` is 11,010 bytes. Auth-probe
-state generation `1788521684032698` is 16,821 bytes and currently retains the
-historical dormant role and retired-probe evidence boundary. Raw state remains
-private; these metadata do not establish current convergence by themselves.
+state generation `1788574226264316` is 35,312 bytes at serial 27, with twelve
+managed resources, two data resources, one output and no tainted instance. Its
+SHA-256 is
+`88afa245c7943a44b23e32a452793c2825cf8e2bfb11ba55f95e299680b15cb2`.
+Raw state remains private; these metadata do not establish current convergence
+by themselves.
 Raw plan and state bytes were never committed.
 
-The `auth-probe` root retains two retired user-relay preparation generations;
-their six role IDs are disabled and unassigned, and neither reached an
-execution. Generation 3 has separate reviewed role IDs and its source passed a
-zero-execution compile-only Workflows deployment. If that generation is interrupted, retire its uniquely named
-Workflow, internal verifier service and four conditioned probe bindings before
-broader teardown. Preserve every role generation disabled and the keyless
-verifier identity until Terraform state and independent inventory agree; none
-creates idle compute by itself.
+The `auth-probe` root retains three retired user-relay role generations. The
+first two never executed; generation 3 completed exactly one successful bounded
+execution and was retired. All nine role IDs are disabled and unassigned, and
+the Workflow, internal verifier service and four conditioned probe bindings are
+absent. Preserve every role generation disabled and the keyless verifier
+identity until Terraform state and independent inventory agree; none creates
+idle compute by itself.
 
 The guarded Auth-probe recovery enables a missing Cloud Asset API as a separate
 prerequisite and requires a new authorization afterward. It never automatically

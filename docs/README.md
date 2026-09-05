@@ -77,8 +77,11 @@ WebSocket. The complete pinned platform gate additionally drives an
 Auth-emulator identity and signed synthetic App Check token through the real
 HTTPS exchange, exact `relay:user` verification, signing-key rotation and a
 no-overlap authoritative handoff across two real relays. It uses synthetic
-credentials and exact loopback Origins; the complete disconnect matrix, live
-KMS/Firebase behavior, public ingress and staging acceptance remain open. The
+credentials and exact loopback Origins. One bounded private staging probe now
+also proves live Firebase Auth/App Check enforcement, KMS-backed user-relay signing,
+audience rotation and cleanup on the deployed control plane. The complete
+disconnect matrix, browser-provider attestation, live relay topology, public
+ingress and broader staging acceptance remain open. The
 staging manifest makes their intended resource, cost and isolation boundary
 reviewable without pretending that every production adapter or a public edge
 already exists.

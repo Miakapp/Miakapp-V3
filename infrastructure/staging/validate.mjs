@@ -28,15 +28,15 @@ const SERVICE_IDS = [
 const SERVICE_STATES = [
   'initialized_closed_custom_token_lifecycle_validated',
   'admin_custom_provider_validated_browser_attestation_pending',
-  'foundation_created_no_application_mutation',
-  'private_deployment_active_source_verified_user_relay_acceptance_pending',
+  'private_fixture_lifecycle_validated_no_persistent_application_data',
+  'private_deployment_active_user_relay_acceptance_succeeded',
   'private_bucket_created_no_application_mutation',
   'signing_key_version_enabled_public_key_validated',
   'five_initial_versions_enabled_runtime_access_validated',
   'api_enabled_one_permission_runtime_role_applied_uninvoked',
   'api_enabled_runtime_deployed_no_application_log_validation',
   'api_enabled_runtime_deployed_no_metric_validation',
-  'api_enabled_historical_probes_retired_user_relay_acceptance_pending',
+  'api_enabled_user_relay_probe_succeeded_and_retired',
 ];
 
 const ENABLED_SERVICE_APIS = [
@@ -115,7 +115,6 @@ const IAM_BINDINGS = [
 
 const REQUIRED_BLOCKERS = [
   'app-check-browser-provider-attestation',
-  'audience-bound-user-relay-staging-acceptance',
   'relay-token-refresh-integration',
   'trusted-source-and-edge-admission',
   'live-managed-service-fault-matrix',
@@ -242,7 +241,7 @@ function validateProject(value) {
   }
   exact(
     project.lifecycle,
-    'firebase_auth_initialized_private_control_plane_user_relay_acceptance_pending',
+    'firebase_auth_initialized_private_control_plane_user_relay_acceptance_succeeded',
     'project.lifecycle',
   );
   exact(project.creation_authorized, false, 'project.creation_authorized');
@@ -442,7 +441,7 @@ function validateRuntime(value) {
     'runtime.runtime_config_sha256',
   );
   exact(runtime.user_managed_keys, 0, 'runtime.user_managed_keys');
-  exact(runtime.live_request_performed, false, 'runtime.live_request_performed');
+  exact(runtime.live_request_performed, true, 'runtime.live_request_performed');
 }
 
 function validateData(value) {
@@ -670,7 +669,7 @@ function validateTerraform(value) {
   ]);
   exact(
     terraform.state,
-    'bootstrap_foundation_workload_probe_and_firebase_auth_converged_auth_probe_acceptance_pending',
+    'bootstrap_foundation_workload_probe_firebase_auth_and_user_relay_acceptance_converged',
     'terraform.state',
   );
   exact(
@@ -2782,7 +2781,7 @@ function validateEvidence(value) {
     'workload_deployment',
     'private_probe',
     'firebase_auth_baseline',
-    'auth_app_check_probe',
+    'user_relay_probe',
     'retired_recovery_workflow',
     'staging_rows',
     'fault_matrix',
@@ -3206,7 +3205,7 @@ function validateEvidence(value) {
   for (const [field, expected] of Object.entries(expectedFirebaseAuth)) {
     exact(firebaseAuth[field], expected, `evidence.firebase_auth_baseline.${field}`);
   }
-  const authProbe = record(evidence.auth_app_check_probe, 'evidence.auth_app_check_probe', [
+  const userRelayProbe = record(evidence.user_relay_probe, 'evidence.user_relay_probe', [
     'state',
     'observed_at',
     'repository_commit',
@@ -3219,61 +3218,91 @@ function validateEvidence(value) {
     'execution_duration_milliseconds',
     'execution_count',
     'product_requests',
-    'expected_application_writes',
+    'negative_controls',
+    'successful_exchanges',
+    'invalid_firebase_status',
+    'invalid_firebase_code',
     'missing_app_check_status',
     'missing_app_check_code',
-    'first_authenticated_status',
-    'replay_authenticated_status',
+    'missing_home_status',
+    'missing_home_code',
+    'first_exchange_status',
+    'second_exchange_status',
     'firebase_auth_validated',
     'app_check_validated',
     'app_check_token_consumption',
     'browser_provider_attestation_validated',
+    'token_signatures_validated',
+    'token_audiences_changed',
     'synthetic_user_created',
     'synthetic_user_deleted',
     'independent_user_absence_verified',
+    'synthetic_home_created',
+    'synthetic_home_deleted',
+    'independent_home_absence_verified',
+    'relay_rotated',
+    'public_home_written',
+    'owner_matches_authenticated_user',
     'workflow_present',
+    'verifier_service_present',
     'temporary_bindings_present',
+    'retained_disabled_custom_roles',
     'recurring_compute',
     'private_bundle_committed',
     'execution_identifiers_committed',
     'token_material_committed',
     'raw_diagnostics_committed',
   ]);
-  const expectedAuthProbe = {
+  const expectedUserRelayProbe = {
     state: 'succeeded_and_retired',
-    observed_at: '2026-09-04T11:33:48.986Z',
-    repository_commit: '753601acc160c2214511c3207b9f0c47d3d7e03e',
-    workflow_source_sha256: '525b97d18a2848c1d852b9d117cb20cf464bbc1d7baa85b2d44d457487cd922c',
-    workflow_revision: '000001-bb4',
+    observed_at: '2026-09-05T02:00:51.901Z',
+    repository_commit: '3f90549156148496702edfa657d5dd5c6394a32f',
+    workflow_source_sha256: 'b77c484f3ffb8a81fb4bf5bebfecc420ab33604e99559518fc354a4e0dcc4d56',
+    workflow_revision: '000001-34e',
     result_path: 'auth-probe/result.json',
-    result_sha256: '87af1de1f94bd4f1d070fef430f6e61ee70f7b988ec81fcfb0fb2805a3edc95f',
+    result_sha256: '62734e6418e44cef68c60fc686a456643a908098c1fff6f8d52505dbfe9c01ce',
     retirement_path: 'auth-probe/retirement.json',
-    retirement_sha256: '595c994647f181b7f2b7a98e403c9d039b32cde6e57acd9df904d40b568e5b54',
-    execution_duration_milliseconds: 7_821,
+    retirement_sha256: 'b2f3977b83bee7e8427a5a90a04e3c3ab04b28fcb8fcfa26a9c449fef4de42ac',
+    execution_duration_milliseconds: 10_786,
     execution_count: 1,
-    product_requests: 3,
-    expected_application_writes: 0,
+    product_requests: 5,
+    negative_controls: 3,
+    successful_exchanges: 2,
+    invalid_firebase_status: 401,
+    invalid_firebase_code: 'invalid_firebase_token',
     missing_app_check_status: 401,
     missing_app_check_code: 'invalid_app_check_token',
-    first_authenticated_status: 200,
-    replay_authenticated_status: 200,
+    missing_home_status: 404,
+    missing_home_code: 'home_not_found',
+    first_exchange_status: 200,
+    second_exchange_status: 200,
     firebase_auth_validated: true,
     app_check_validated: true,
     app_check_token_consumption: false,
     browser_provider_attestation_validated: false,
+    token_signatures_validated: true,
+    token_audiences_changed: true,
     synthetic_user_created: true,
     synthetic_user_deleted: true,
     independent_user_absence_verified: true,
+    synthetic_home_created: true,
+    synthetic_home_deleted: true,
+    independent_home_absence_verified: true,
+    relay_rotated: true,
+    public_home_written: false,
+    owner_matches_authenticated_user: false,
     workflow_present: false,
+    verifier_service_present: false,
     temporary_bindings_present: false,
+    retained_disabled_custom_roles: 9,
     recurring_compute: false,
     private_bundle_committed: false,
     execution_identifiers_committed: false,
     token_material_committed: false,
     raw_diagnostics_committed: false,
   };
-  for (const [field, expected] of Object.entries(expectedAuthProbe)) {
-    exact(authProbe[field], expected, `evidence.auth_app_check_probe.${field}`);
+  for (const [field, expected] of Object.entries(expectedUserRelayProbe)) {
+    exact(userRelayProbe[field], expected, `evidence.user_relay_probe.${field}`);
   }
   const retiredRecoveryWorkflow = record(
     evidence.retired_recovery_workflow,
@@ -3343,10 +3372,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 39, 'manifest.revision');
+  exact(manifest.revision, 40, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_source_verified_user_relay_acceptance_pending',
+    'private_control_plane_user_relay_acceptance_succeeded_and_retired',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -3471,7 +3500,6 @@ export function validateCommittedEvidence(
     ingress: workload.function.ingress,
     source_archive_sha256: workload.source_archive_sha256,
     runtime_config_sha256: workload.runtime_config_sha256,
-    live_request_performed: workload.live_request_performed,
   }, 'runtime');
 
   const probeManifest = manifest.evidence.private_probe;
@@ -3557,40 +3585,42 @@ export function validateCommittedEvidence(
     persistent_credentials_created: firebaseAuth.persistent_credentials_created,
   }, 'evidence.firebase_auth_baseline');
 
-  const authProbeManifest = manifest.evidence.auth_app_check_probe;
+  const userRelayProbeManifest = manifest.evidence.user_relay_probe;
   const authProbeResultPath = committedEvidencePath(
     stagingRoot,
-    authProbeManifest.result_path,
+    userRelayProbeManifest.result_path,
     'auth-probe/result.json',
-    'evidence.auth_app_check_probe.result_path',
+    'evidence.user_relay_probe.result_path',
   );
   const authProbeRetirementPath = committedEvidencePath(
     stagingRoot,
-    authProbeManifest.retirement_path,
+    userRelayProbeManifest.retirement_path,
     'auth-probe/retirement.json',
-    'evidence.auth_app_check_probe.retirement_path',
+    'evidence.user_relay_probe.retirement_path',
   );
   let authProbeEvidence;
   try {
     authProbeEvidence = validateAuthProbeEvidence(authProbeResultPath, authProbeRetirementPath);
   } catch {
-    reject('evidence.auth_app_check_probe', 'does not match its committed artifacts');
+    reject('evidence.user_relay_probe', 'does not match its committed artifacts');
   }
   const { result: authProbe, retirement: authProbeRetirement } = authProbeEvidence;
   exact(
     fileSha256(authProbeResultPath),
-    authProbeManifest.result_sha256,
-    'evidence.auth_app_check_probe.result_sha256',
+    userRelayProbeManifest.result_sha256,
+    'evidence.user_relay_probe.result_sha256',
   );
   exact(
     fileSha256(authProbeRetirementPath),
-    authProbeManifest.retirement_sha256,
-    'evidence.auth_app_check_probe.retirement_sha256',
+    userRelayProbeManifest.retirement_sha256,
+    'evidence.user_relay_probe.retirement_sha256',
   );
-  exactFields(authProbeManifest, {
+  exactFields(userRelayProbeManifest, {
     state: authProbe.execution.state === 'SUCCEEDED'
       && authProbeRetirement.workflow_present === false
+      && authProbeRetirement.verifier_service_present === false
       && authProbeRetirement.temporary_bindings_present === false
+      && authProbeRetirement.recurring_compute === false
       ? 'succeeded_and_retired'
       : 'incomplete',
     observed_at: authProbe.observed_at,
@@ -3600,52 +3630,71 @@ export function validateCommittedEvidence(
     execution_duration_milliseconds: authProbe.execution.duration_milliseconds,
     execution_count: authProbe.execution.count_after - authProbe.execution.count_before,
     product_requests: authProbe.request.product_requests,
-    expected_application_writes: authProbe.request.expected_application_writes,
+    negative_controls: authProbe.request.negative_controls,
+    successful_exchanges: authProbe.request.successful_exchanges,
+    invalid_firebase_status: authProbe.responses.invalid_firebase.status,
+    invalid_firebase_code: authProbe.responses.invalid_firebase.code,
     missing_app_check_status: authProbe.responses.missing_app_check.status,
     missing_app_check_code: authProbe.responses.missing_app_check.code,
-    first_authenticated_status: authProbe.responses.first_authenticated_read.status,
-    replay_authenticated_status: authProbe.responses.replay_authenticated_read.status,
+    missing_home_status: authProbe.responses.missing_home.status,
+    missing_home_code: authProbe.responses.missing_home.code,
+    first_exchange_status: authProbe.responses.first_exchange.status,
+    second_exchange_status: authProbe.responses.second_exchange.status,
     firebase_auth_validated: authProbe.firebase_auth.synthetic_user_created
       && authProbe.firebase_auth.synthetic_user_deleted
       && authProbe.firebase_auth.independent_absence_verified,
-    app_check_validated: authProbe.app_check.first_use_accepted
-      && authProbe.app_check.replay_accepted,
+    app_check_validated: authProbe.app_check.replay_accepted
+      && authProbe.responses.first_exchange.status === 200
+      && authProbe.responses.second_exchange.status === 200,
     app_check_token_consumption: authProbe.app_check.token_consumption,
     browser_provider_attestation_validated:
       authProbe.app_check.browser_provider_attestation_validated,
+    token_signatures_validated: authProbe.tokens.signatures_valid,
+    token_audiences_changed: authProbe.tokens.audiences_changed,
     synthetic_user_created: authProbe.firebase_auth.synthetic_user_created,
     synthetic_user_deleted: authProbe.firebase_auth.synthetic_user_deleted,
     independent_user_absence_verified: authProbe.firebase_auth.independent_absence_verified,
+    synthetic_home_created: authProbe.firestore.synthetic_home_created,
+    synthetic_home_deleted: authProbe.firestore.synthetic_home_deleted,
+    independent_home_absence_verified: authProbe.firestore.independent_absence_verified,
+    relay_rotated: authProbe.firestore.relay_rotated,
+    public_home_written: authProbe.firestore.public_home_written,
+    owner_matches_authenticated_user: authProbe.firestore.owner_matches_authenticated_user,
     workflow_present: authProbeRetirement.workflow_present,
+    verifier_service_present: authProbeRetirement.verifier_service_present,
     temporary_bindings_present: authProbeRetirement.temporary_bindings_present,
+    retained_disabled_custom_roles: Object.values(authProbeRetirement.custom_roles).filter(
+      (role) => role.stage === 'DISABLED' && role.deleted === false,
+    ).length,
     recurring_compute: authProbeRetirement.recurring_compute,
-  }, 'evidence.auth_app_check_probe');
+  }, 'evidence.user_relay_probe');
   exact(
     authProbe.workload.expected_function_revision,
     authProbe.workload.function_revision,
-    'evidence.auth_app_check_probe.result.workload.expected_function_revision',
+    'evidence.user_relay_probe.result.workload.expected_function_revision',
   );
   validateHistoricalWorkloadTuple(
     workloadManifest.source_updates,
     authProbe.workload,
-    'evidence.auth_app_check_probe.result.workload',
+    'evidence.user_relay_probe.result.workload',
   );
   exact(
     authProbe.app_check.firebase_app_id,
     manifest.evidence.activation_material.firebase_app_id,
-    'evidence.auth_app_check_probe.result.app_check.firebase_app_id',
+    'evidence.user_relay_probe.result.app_check.firebase_app_id',
   );
   exact(
     firebaseAuth.firebase_auth.project_id,
     authProbe.project_id,
-    'evidence.auth_app_check_probe.result.project_id',
+    'evidence.user_relay_probe.result.project_id',
   );
+  exact(manifest.runtime.live_request_performed, true, 'runtime.live_request_performed');
   return Object.freeze({
     workload,
     probe,
     firebaseAuth,
-    authProbe,
-    authProbeRetirement,
+    userRelayProbe: authProbe,
+    userRelayProbeRetirement: authProbeRetirement,
   });
 }
 
@@ -3668,7 +3717,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; the current private control-plane source is verified, user-relay acceptance is pending, and historical Firebase Auth/App Check evidence remains retired.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; the private user-relay exchange succeeded, both synthetic fixtures were removed, and all temporary probe capability is retired.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';
