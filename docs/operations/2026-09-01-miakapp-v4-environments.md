@@ -369,7 +369,10 @@ then migrated that same single-key document to schema 2 on revision
 `control-plane-00006-wid`. It performed exactly two in-place updates, no source
 replacement and no IAM, ingress or scale change. Independent inventory made no
 request and reconfirmed the copied bytes, internal-only ingress, scale 0..1,
-zero public invokers and zero user-managed keys. The current sanitized
+zero public invokers and zero user-managed keys. A subsequent exact plan
+prepublished versions 1 and 2 with version 1 current on revision
+`control-plane-00007-deb`. It again changed only the Function and deployment
+guard in place, preserved the source, and made no request. The current sanitized
 deployment result is digest-pinned under
 [`../../infrastructure/staging/workload/`](../../infrastructure/staging/workload/).
 

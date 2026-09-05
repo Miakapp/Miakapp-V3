@@ -80,19 +80,18 @@ implementation must still provide:
 5. allow-listed metric and billing observations; and
 6. a rollback plan that is rendered and checked before the live window opens.
 
-The currently deployed runtime document publishes one signing key,
-which makes the routine 60-second prepublication and 330-second retiring-key
-retention contract impossible to rehearse honestly. The guarded
+The currently deployed runtime document publishes both signing keys with
+version 1 current. This completes the publication half of the routine 60-second
+prepublication and 330-second retiring-key retention contract. The guarded
 `signing-overlap/` package now freezes the one-shot second-version creation and
 subsequent 60/330-second rollout. Version 2 converged after one direct KMS
 request, both coordination claims remain durable and its one-shot entrypoints
-are retired; the runtime has not changed yet. The
-schema-2 bridge and its
-single-key runtime migration are now deployed privately in revision
-`control-plane-00006-wid`; the migration changed no effective key and made no
-live request. `SIGNING-01` remains open until a separate guard prepublishes the
-second key, observes the overlap interval, switches the signer
-and retains the prior public key for the complete lease bound. Schema support
+are retired. The schema-2 bridge, shape migration and two-key prepublication
+are now deployed privately in revision `control-plane-00007-deb`; the latest
+update changed no source, IAM, ingress or scale and made no live request.
+`SIGNING-01` remains open until a separate guard proves the overlap interval,
+switches the signer and retains the prior public key for the complete lease
+bound. Schema support
 or the local two-key fixture is not live overlap evidence.
 
 ## Matrix and evidence boundary

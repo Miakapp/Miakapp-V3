@@ -6,16 +6,12 @@ import test from 'node:test';
 import {
   PROJECT_ID,
   RUNTIME_CONFIG_SHA256,
-  TARGET_RUNTIME_CONFIG_SHA256,
   buildPlanMetadata,
-  buildWorkloadSigningPrepublicationPlanMetadata,
   buildWorkloadUpdatePlanMetadata,
   assertSafeWorkloadEnvironment,
   validatePlanMetadata,
-  validateWorkloadSigningPrepublicationPlanMetadata,
   validateWorkloadUpdatePlanMetadata,
   workloadAuthorization,
-  workloadSigningPrepublicationAuthorization,
   workloadUpdateAuthorization,
 } from '../workload/contract.mjs';
 import { validateWorkloadRoot } from '../workload/guard.mjs';
@@ -24,8 +20,6 @@ import { observeDeployedWorkload } from '../workload/inventory.mjs';
 import {
   PINNED_UPDATE_BASELINE,
   validateFailedBuildRecoveryPlanAgainstPolicy,
-  validatePinnedSigningPrepublicationPlan,
-  validatePinnedSigningPrepublicationPlanAgainstPolicy,
   validatePinnedSourceUpdatePlan,
   validatePinnedSourceUpdatePlanAgainstPolicy,
   validateWorkloadPlanAgainstPolicy,
@@ -44,10 +38,6 @@ const HISTORICAL_RUNTIME_CONFIG = readFileSync(
   'utf8',
 );
 const RUNTIME_CONFIG = readFileSync(new URL('../workload/runtime-config.json', import.meta.url), 'utf8');
-const CURRENT_RUNTIME_CONFIG = readFileSync(
-  new URL('../workload/runtime-config-single-key.json', import.meta.url),
-  'utf8',
-);
 const RUNTIME_ACCOUNT = `miakapp-control-plane@${PROJECT_ID}.iam.gserviceaccount.com`;
 const BUILD_ACCOUNT = `miakapp-control-build@${PROJECT_ID}.iam.gserviceaccount.com`;
 const PROBE_ACCOUNT = `miakapp-staging-probe@${PROJECT_ID}.iam.gserviceaccount.com`;
@@ -276,7 +266,7 @@ function validateSyntheticPlan(plan = syntheticPlan()) {
   return validateWorkloadPlanAgainstPolicy(plan, {
     repositoryCommit: COMMIT,
     sourceArchiveSha256: SOURCE_SHA256,
-    runtimeConfigSha256: TARGET_RUNTIME_CONFIG_SHA256,
+    runtimeConfigSha256: RUNTIME_CONFIG_SHA256,
   }, {
     operatorUserSha256: OPERATOR_SHA256,
   });
@@ -333,7 +323,7 @@ function validateSyntheticRecoveryPlan(plan = syntheticRecoveryPlan()) {
   return validateFailedBuildRecoveryPlanAgainstPolicy(plan, {
     repositoryCommit: COMMIT,
     sourceArchiveSha256: SOURCE_SHA256,
-    runtimeConfigSha256: TARGET_RUNTIME_CONFIG_SHA256,
+    runtimeConfigSha256: RUNTIME_CONFIG_SHA256,
   }, {
     operatorUserSha256: OPERATOR_SHA256,
   });
@@ -495,7 +485,7 @@ function syntheticExactPinnedSourceUpdatePlan() {
     previousRepositoryCommit: PINNED_UPDATE_BASELINE.repositoryCommit,
     previousSourceRepositoryCommit: PINNED_UPDATE_BASELINE.sourceRepositoryCommit,
     previousSourceArchiveSha256: PINNED_UPDATE_BASELINE.sourceArchiveSha256,
-    runtimeConfig: CURRENT_RUNTIME_CONFIG,
+    runtimeConfig: RUNTIME_CONFIG,
   });
 }
 
@@ -503,14 +493,14 @@ function validateSyntheticPinnedSourceUpdatePlan(plan = syntheticPinnedSourceUpd
   return validatePinnedSourceUpdatePlanAgainstPolicy(plan, {
     repositoryCommit: COMMIT,
     sourceArchiveSha256: SOURCE_SHA256,
-    runtimeConfigSha256: TARGET_RUNTIME_CONFIG_SHA256,
+    runtimeConfigSha256: RUNTIME_CONFIG_SHA256,
   }, {
     operatorUserSha256: OPERATOR_SHA256,
     previous: {
       repositoryCommit: PREVIOUS_COMMIT,
       sourceRepositoryCommit: PREVIOUS_SOURCE_COMMIT,
       sourceArchiveSha256: PREVIOUS_SOURCE_SHA256,
-      runtimeConfigSha256: TARGET_RUNTIME_CONFIG_SHA256,
+      runtimeConfigSha256: RUNTIME_CONFIG_SHA256,
     },
   });
 }
@@ -526,96 +516,6 @@ function validateSyntheticExactPinnedSourceUpdatePlan(
     runtimeConfigSha256: PINNED_UPDATE_BASELINE.runtimeConfigSha256,
     ...input,
   }, OPERATOR_SHA256);
-}
-
-function syntheticSigningPrepublicationPlan(options = {}) {
-  const plan = syntheticPlan();
-  plan.variables.source_archive_sha256.value = PINNED_UPDATE_BASELINE.sourceArchiveSha256;
-  for (const resource of plan.resource_changes) {
-    resource.change.actions = ['no-op'];
-    resource.change.before = structuredClone(resource.change.after);
-  }
-
-  const source = plan.resource_changes.find(
-    ({ address }) => address === 'google_storage_bucket_object.source',
-  );
-  const sourceValue = sourceObjectValue(
-    PINNED_UPDATE_BASELINE.sourceRepositoryCommit,
-    PINNED_UPDATE_BASELINE.sourceArchiveSha256,
-    123,
-  );
-  source.change = {
-    actions: ['no-op'],
-    before: sourceValue,
-    after: structuredClone(sourceValue),
-  };
-
-  const functionResource = plan.resource_changes.find(
-    ({ address }) => address === 'google_cloudfunctions2_function.control_plane',
-  );
-  functionResource.change = {
-    actions: ['update'],
-    before: {
-      ...functionValue(
-        PINNED_UPDATE_BASELINE.repositoryCommit,
-        PINNED_UPDATE_BASELINE.sourceArchiveSha256,
-        123,
-        options.beforeRuntimeConfig ?? CURRENT_RUNTIME_CONFIG,
-      ),
-      state: 'ACTIVE',
-      environment: 'GEN_2',
-    },
-    after: {
-      ...functionValue(
-        COMMIT,
-        PINNED_UPDATE_BASELINE.sourceArchiveSha256,
-        123,
-        options.afterRuntimeConfig ?? RUNTIME_CONFIG,
-      ),
-      state: 'ACTIVE',
-      environment: 'GEN_2',
-    },
-  };
-
-  const deploymentGuard = plan.resource_changes.find(
-    ({ address }) => address === 'terraform_data.deployment_guard',
-  );
-  const beforeGuard = guardInput(
-    PINNED_UPDATE_BASELINE.repositoryCommit,
-    PINNED_UPDATE_BASELINE.sourceArchiveSha256,
-    {
-      sourceRepositoryCommit: PINNED_UPDATE_BASELINE.sourceRepositoryCommit,
-      runtimeConfig: options.beforeRuntimeConfig ?? CURRENT_RUNTIME_CONFIG,
-    },
-  );
-  deploymentGuard.change = {
-    actions: ['update'],
-    before: {
-      id: 'stable-guard-id',
-      input: beforeGuard,
-      output: structuredClone(beforeGuard),
-      triggers_replace: null,
-    },
-    after: {
-      id: 'stable-guard-id',
-      input: guardInput(COMMIT, PINNED_UPDATE_BASELINE.sourceArchiveSha256, {
-        sourceRepositoryCommit: PINNED_UPDATE_BASELINE.sourceRepositoryCommit,
-        runtimeConfig: options.afterRuntimeConfig ?? RUNTIME_CONFIG,
-      }),
-      triggers_replace: null,
-    },
-  };
-  return plan;
-}
-
-function signingPrepublicationInput(overrides = {}) {
-  return {
-    repositoryCommit: COMMIT,
-    sourceRepositoryCommit: PINNED_UPDATE_BASELINE.sourceRepositoryCommit,
-    sourceArchiveSha256: PINNED_UPDATE_BASELINE.sourceArchiveSha256,
-    runtimeConfigSha256: TARGET_RUNTIME_CONFIG_SHA256,
-    ...overrides,
-  };
 }
 
 test('accepts only the reviewed initial workload graph', () => {
@@ -667,10 +567,10 @@ test('accepts only the bounded in-place recovery from the failed first build', (
 
 test('accepts only the next update from the pinned active source', () => {
   assert.deepEqual(PINNED_UPDATE_BASELINE, {
-    repositoryCommit: 'e42cdd70f812580a6070f0e850daa04dbe0cee42',
+    repositoryCommit: '2bdd1a9e224234318d2ffd77c61b609331ccd044',
     sourceRepositoryCommit: '9f217da102b394734adba7ccef3f8f70d0317306',
     sourceArchiveSha256: 'd1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8',
-    runtimeConfigSha256: '20be750358ffbc2136bab26bca6338b430ea6480ae9874f3fe5e7132c5e0db10',
+    runtimeConfigSha256: 'c018708786fc23a15f7701093b5148c0e415a2df8045af8e170e4308c2deae37',
   });
   const expected = {
     create: 1,
@@ -737,81 +637,6 @@ test('accepts only the next update from the pinned active source', () => {
     syntheticExactPinnedSourceUpdatePlan(),
     { runtimeConfigSha256: '0'.repeat(64) },
   ));
-});
-
-test('accepts only two in-place updates for signing-key prepublication', () => {
-  assert.equal(createHash('sha256').update(CURRENT_RUNTIME_CONFIG).digest('hex'), RUNTIME_CONFIG_SHA256);
-  assert.equal(createHash('sha256').update(RUNTIME_CONFIG).digest('hex'), TARGET_RUNTIME_CONFIG_SHA256);
-  const runtime = JSON.parse(RUNTIME_CONFIG);
-  assert.equal(runtime.security.signing.current_kid, 'staging-access-token-v1');
-  assert.deepEqual(
-    runtime.security.signing.versions.map(({ public_jwk: jwk }) => jwk.kid),
-    ['staging-access-token-v1', 'staging-access-token-v2'],
-  );
-  assert.equal(
-    runtime.security.signing.versions[1].public_jwk.x,
-    'IjvnOpjvmNbnYrlUiMwlRUYnrEuc8VS5VZ7WHd7t1VE',
-  );
-
-  const expected = {
-    create: 0,
-    update: 2,
-    delete: 0,
-    transition: 'prepublish-version-2-with-version-1-current',
-    function: 1,
-    source_replaced: false,
-    published_signing_key_versions: 2,
-    current_signing_key_version: 1,
-    minimum_instances: 0,
-    maximum_instances: 1,
-    ingress: 'internal-only',
-    unauthenticated_invokers: 0,
-    synthetic_invokers: 1,
-    fcm_permissions: 1,
-  };
-  assert.deepEqual(
-    validatePinnedSigningPrepublicationPlan(
-      syntheticSigningPrepublicationPlan(),
-      signingPrepublicationInput(),
-      OPERATOR_SHA256,
-    ),
-    expected,
-  );
-  assert.deepEqual(
-    validatePinnedSigningPrepublicationPlanAgainstPolicy(
-      syntheticSigningPrepublicationPlan(),
-      signingPrepublicationInput(),
-      { operatorUserSha256: OPERATOR_SHA256, previous: PINNED_UPDATE_BASELINE },
-    ),
-    expected,
-  );
-
-  for (const mutate of [
-    (plan) => { plannedChange(plan, 'google_storage_bucket_object.source').actions = ['update']; },
-    (plan) => { plannedChange(plan, 'google_cloudfunctions2_function.control_plane').actions = ['delete', 'create']; },
-    (plan) => { plannedChange(plan, 'google_cloudfunctions2_function.control_plane').after.build_config[0].runtime = 'nodejs24'; },
-    (plan) => { plannedChange(plan, 'google_cloudfunctions2_function.control_plane').after.service_config[0].ingress_settings = 'ALLOW_ALL'; },
-    (plan) => { plannedChange(plan, 'terraform_data.deployment_guard').after.input.source_commit = COMMIT; },
-    (plan) => { plannedChange(plan, 'google_project_iam_member.runtime_fcm').actions = ['update']; },
-  ]) {
-    const plan = syntheticSigningPrepublicationPlan();
-    mutate(plan);
-    assert.throws(() => validatePinnedSigningPrepublicationPlan(
-      plan,
-      signingPrepublicationInput(),
-      OPERATOR_SHA256,
-    ));
-  }
-  assert.throws(() => validatePinnedSigningPrepublicationPlan(
-    syntheticSigningPrepublicationPlan(),
-    signingPrepublicationInput({ sourceArchiveSha256: SOURCE_SHA256 }),
-    OPERATOR_SHA256,
-  ), /digest variable|baseline/u);
-  assert.throws(() => validatePinnedSigningPrepublicationPlan(
-    syntheticSigningPrepublicationPlan(),
-    signingPrepublicationInput({ runtimeConfigSha256: RUNTIME_CONFIG_SHA256 }),
-    OPERATOR_SHA256,
-  ), /baseline/u);
 });
 
 test('rejects updates, public principals, foreign resources and wider ingress', () => {
@@ -902,35 +727,6 @@ test('binds authorization and expiring metadata to exact private bytes', () => {
   );
   assert.throws(() => validatePlanMetadata(updateMetadata, Date.parse(createdAt)));
 
-  assert.equal(
-    workloadSigningPrepublicationAuthorization(planBytes, COMMIT),
-    `prepublish-staging-signing-key:${PROJECT_ID}:${createHash('sha256').update(planBytes).digest('hex')}:${COMMIT}`,
-  );
-  const signingPrepublicationMetadata = buildWorkloadSigningPrepublicationPlanMetadata({
-    repositoryCommit: COMMIT,
-    sourceRepositoryCommit: PINNED_UPDATE_BASELINE.sourceRepositoryCommit,
-    createdAt,
-    packageResult: {
-      archive_sha256: PINNED_UPDATE_BASELINE.sourceArchiveSha256,
-      archive_bytes: 42,
-      files: ['package.json', 'lib/production-entrypoint.js'],
-    },
-    planBytes,
-    planJsonBytes: Buffer.from('{}'),
-    summary: { create: 0, update: 2, delete: 0 },
-  });
-  assert.equal(
-    validateWorkloadSigningPrepublicationPlanMetadata(
-      signingPrepublicationMetadata,
-      Date.parse(createdAt),
-    ),
-    signingPrepublicationMetadata,
-  );
-  assert.equal(signingPrepublicationMetadata.runtime_config_sha256, TARGET_RUNTIME_CONFIG_SHA256);
-  assert.throws(() => validateWorkloadUpdatePlanMetadata(
-    signingPrepublicationMetadata,
-    Date.parse(createdAt),
-  ));
 });
 
 test('rejects ambient cloud overrides and accepts only the selected confirmation', () => {
@@ -946,7 +742,7 @@ test('rejects ambient cloud overrides and accepts only the selected confirmation
   }, 'MIAKAPP_STAGING_WORKLOAD_PLAN_CONFIRMATION'));
 });
 
-function inventoryResponses(extraLogWriter = [], runtimeConfig = CURRENT_RUNTIME_CONFIG) {
+function inventoryResponses(extraLogWriter = [], runtimeConfig = RUNTIME_CONFIG) {
   const functionName = `projects/${PROJECT_ID}/locations/europe-west9/functions/control-plane`;
   const sourceBucket = 'miakapp-v4-staging-function-source-1072737219170';
   const repository = `projects/${PROJECT_ID}/locations/europe-west9/repositories/miakapp-control-plane`;
@@ -1070,22 +866,6 @@ test('independently accepts the exact private live inventory without making a re
   assert.equal(responses.length, 0);
 });
 
-test('independently accepts the exact two-key prepublication inventory without a request', () => {
-  const responses = inventoryResponses([], RUNTIME_CONFIG);
-  const result = observeDeployedWorkload({
-    repositoryRoot: '/tmp/repository',
-    repositoryCommit: COMMIT,
-    sourceArchiveSha256: SOURCE_SHA256,
-    runtimeConfigSha256: TARGET_RUNTIME_CONFIG_SHA256,
-    operatorUserSha256: OPERATOR_SHA256,
-    spawn: inventorySpawn(responses),
-  });
-  assert.equal(result.runtime_config_sha256, TARGET_RUNTIME_CONFIG_SHA256);
-  assert.equal(result.function.ingress, 'ALLOW_INTERNAL_ONLY');
-  assert.equal(result.live_request_performed, false);
-  assert.equal(responses.length, 0);
-});
-
 test('rejects the historical schema-1 document from the current runtime inventory', () => {
   const responses = inventoryResponses();
   responses[0].serviceConfig.environmentVariables.MIAKAPP_RUNTIME_CONFIG_JSON =
@@ -1126,7 +906,7 @@ test('workload root guard accepts only the closed executable inventory', () => {
   assert.doesNotThrow(() => validateWorkloadRoot(new URL('../workload/', import.meta.url)));
 });
 
-test('keeps source updates blocked behind the saved signing prepublication plan', () => {
+test('keeps regular source updates pinned after signing-key prepublication', () => {
   const planSource = readFileSync(new URL('../workload/update-plan.mjs', import.meta.url), 'utf8');
   const applySource = readFileSync(new URL('../workload/update-apply.mjs', import.meta.url), 'utf8');
   const localsSource = readFileSync(new URL('../workload/locals.tf', import.meta.url), 'utf8');
@@ -1138,22 +918,16 @@ test('keeps source updates blocked behind the saved signing prepublication plan'
   assert.match(applySource, /'apply', '-input=false', '-auto-approve', '-no-color', planPath/);
   assert.match(applySource, /observeDeployedWorkload/);
   assert.match(planSource, /requires new deterministic source bytes/);
-  assert.doesNotMatch(`${planSource}\n${applySource}`, /runtimeMigration|migrate-private-runtime/);
-  assert.match(planSource, /readAndValidatePinnedSigningPrepublicationPlan/);
-  assert.match(planSource, /buildWorkloadSigningPrepublicationPlanMetadata/);
-  assert.match(planSource, /workloadSigningPrepublicationAuthorization/);
-  assert.match(applySource, /readAndValidatePinnedSigningPrepublicationPlan/);
-  assert.match(applySource, /validateWorkloadSigningPrepublicationAuthorization/);
-  assert.match(planSource, /guarded signing prepublication must converge before another source update/);
+  assert.doesNotMatch(
+    `${planSource}\n${applySource}`,
+    /runtimeMigration|migrate-private-runtime|SigningPrepublication|signing.prepublication/u,
+  );
   assert.match(
     localsSource,
     /runtime_config_sha256\s+= "c018708786fc23a15f7701093b5148c0e415a2df8045af8e170e4308c2deae37"/,
   );
-  assert.match(
-    localsSource,
-    /source_repository_commit\s+= "9f217da102b394734adba7ccef3f8f70d0317306"/,
-  );
-  assert.match(workloadSource, /repository-commit = local\.source_repository_commit/);
+  assert.doesNotMatch(localsSource, /source_repository_commit/);
+  assert.match(workloadSource, /repository-commit = var\.repository_commit/);
   assert.match(
     workloadSource,
     /ignore_changes = \[\s*detect_md5hash,\s*source,\s*\]/,
@@ -1169,15 +943,15 @@ test('pins the exact non-secret live workload result', () => {
     new URL('../workload/result.json', import.meta.url),
   );
   assert.equal(result.function.state, 'ACTIVE');
-  assert.equal(result.repository_commit, 'e42cdd70f812580a6070f0e850daa04dbe0cee42');
+  assert.equal(result.repository_commit, '2bdd1a9e224234318d2ffd77c61b609331ccd044');
   assert.equal(
     result.source_archive_sha256,
     'd1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8',
   );
-  assert.equal(result.function.revision, 'control-plane-00006-wid');
+  assert.equal(result.function.revision, 'control-plane-00007-deb');
   assert.equal(
     result.runtime_config_sha256,
-    '20be750358ffbc2136bab26bca6338b430ea6480ae9874f3fe5e7132c5e0db10',
+    'c018708786fc23a15f7701093b5148c0e415a2df8045af8e170e4308c2deae37',
   );
   assert.equal(result.function.ingress, 'ALLOW_INTERNAL_ONLY');
   assert.equal(result.function.unauthenticated_invokers, 0);
