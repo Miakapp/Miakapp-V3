@@ -50,7 +50,8 @@ const TERRAFORM_DATA_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9
 const VERIFIER_SERVICE_RESOURCE = `projects/${PROJECT_ID}/locations/${REGION}/services/${VERIFIER_SERVICE_NAME}`;
 const PREVIOUS_WORKLOAD_SOURCE_SHA256 = '6674c0353ec9c73fcfe0d3a63d17850f057a5f2a547a5855989e28f011249b1e';
 const PREVIOUS_WORKLOAD_COMMIT = '022f10e2dc15f32a8a6679b38ce7f1a04582e450';
-const PREVIOUS_WORKFLOW_SOURCE_SHA256 = '3ddd522a3ef819d3665fe96502d568d2827bf8d0bc8917911e5d50e07a08c755';
+const PREVIOUS_WORKFLOW_SOURCE_SHA256 = '32040da6ce0b5fdd3c3bdaa1cc972aab99bbdd442ff36141de2667fff128600e';
+const LEGACY_OUTPUT_WORKFLOW_SOURCE_SHA256 = '3ddd522a3ef819d3665fe96502d568d2827bf8d0bc8917911e5d50e07a08c755';
 const DATA_RESOURCES = Object.freeze({
   'data.terraform_remote_state.firebase_auth': Object.freeze({
     type: 'terraform_remote_state', provider: 'terraform', dependsOn: [],
@@ -311,15 +312,13 @@ function validateGuard(value, address, previous = false) {
     verifier_service_uri: VERIFIER_SERVICE_URI,
     verifier_identity: VERIFIER_ACCOUNT,
     verifier_image: WORKLOAD_IMAGE,
-    capability_expiry: previous ? RETIRED_CAPABILITY_EXPIRY : CAPABILITY_EXPIRY,
-  };
-  exact(input, previous ? generation : {
-    ...generation,
+    capability_expiry: CAPABILITY_EXPIRY,
     role_generation: 2,
     custom_role_name: CUSTOM_ROLE_NAME,
     firestore_role_name: FIRESTORE_ROLE_NAME,
     signer_role_name: SIGNER_ROLE_NAME,
-  }, `${address}.input`);
+  };
+  exact(input, generation, `${address}.input`);
   firebaseAuthGuard(input, address);
 }
 
@@ -717,6 +716,131 @@ export function validateAuthProbePlanAgainstPolicy(plan, profile) {
   });
 }
 
+function dormantOutput({
+  schema,
+  capabilityExpiry,
+  customRole,
+  firestoreRole,
+  signerRole,
+  workflowSourceSha256,
+  roleGeneration,
+  retiredCustomRoles,
+}) {
+  return {
+    schema,
+    project_id: PROJECT_ID,
+    project_number: PROJECT_NUMBER,
+    region: REGION,
+    armed: false,
+    asset_inventory_api: CLOUD_ASSET_SERVICE,
+    custom_role: customRole,
+    signer_role: signerRole,
+    firestore_role: firestoreRole,
+    ...(roleGeneration === undefined ? {} : { role_generation: roleGeneration }),
+    ...(retiredCustomRoles === undefined ? {} : { retired_custom_roles: retiredCustomRoles }),
+    workflow_name: null,
+    workflow_revision: null,
+    workflow_service_account: null,
+    workflow_source_sha256: workflowSourceSha256,
+    verifier_service_name: null,
+    verifier_service_uri: null,
+    verifier_service_account: VERIFIER_ACCOUNT,
+    verifier_source_sha256: VERIFIER_SOURCE_SHA256,
+    verifier_image: WORKLOAD_IMAGE,
+    firebase_app_id: FIREBASE_APP_ID,
+    function_name: FUNCTION_NAME,
+    function_uri: FUNCTION_URI,
+    destination_path: '/v1/user-relay-tokens:exchange',
+    capability_expiry: capabilityExpiry,
+    scheduled: false,
+    retry: false,
+  };
+}
+
+const LEGACY_DORMANT_OUTPUT = Object.freeze(dormantOutput({
+  schema: 'miakapp.staging-auth-probe/1',
+  capabilityExpiry: RETIRED_CAPABILITY_EXPIRY,
+  customRole: RETIRED_CUSTOM_ROLE_NAME,
+  firestoreRole: RETIRED_FIRESTORE_ROLE_NAME,
+  signerRole: RETIRED_SIGNER_ROLE_NAME,
+  workflowSourceSha256: LEGACY_OUTPUT_WORKFLOW_SOURCE_SHA256,
+}));
+const CURRENT_DORMANT_OUTPUT = Object.freeze(dormantOutput({
+  schema: 'miakapp.staging-auth-probe/2',
+  capabilityExpiry: CAPABILITY_EXPIRY,
+  customRole: CUSTOM_ROLE_NAME,
+  firestoreRole: FIRESTORE_ROLE_NAME,
+  signerRole: SIGNER_ROLE_NAME,
+  workflowSourceSha256: WORKFLOW_SOURCE_SHA256,
+  roleGeneration: 2,
+  retiredCustomRoles: [
+    RETIRED_CUSTOM_ROLE_NAME,
+    RETIRED_FIRESTORE_ROLE_NAME,
+    RETIRED_SIGNER_ROLE_NAME,
+  ],
+}));
+
+export function validateAuthProbeOutputOnlyPlanAgainstPolicy(plan) {
+  if (!plainObject(plan) || plan.format_version !== '1.2'
+    || plan.terraform_version !== TERRAFORM_VERSION || plan.applyable !== true
+    || plan.complete !== true || plan.errored !== false) {
+    reject('Terraform Auth-probe output recovery plan metadata is invalid');
+  }
+  exact(plan.variables, { armed: { value: 'false' } }, 'Terraform Auth-probe output recovery variables');
+  validateConfiguration(plan);
+  if (!Array.isArray(plan.resource_changes)) {
+    reject('Terraform Auth-probe output recovery resource changes are missing');
+  }
+
+  const managedSeen = new Set();
+  const dataSeen = new Set();
+  for (const change of plan.resource_changes) {
+    if (!plainObject(change) || typeof change.address !== 'string' || !plainObject(change.change)) {
+      reject('Terraform Auth-probe output recovery contains an invalid resource change');
+    }
+    if (change.mode === 'data') {
+      if (DATA_RESOURCES[change.address]?.type !== change.type || dataSeen.has(change.address)
+        || ![['read'], ['no-op']].some((actions) => isDeepStrictEqual(actions, change.change.actions))) {
+        reject('Terraform Auth-probe output recovery contains an unreviewed data read');
+      }
+      dataSeen.add(change.address);
+      continue;
+    }
+    if (change.mode !== 'managed' || CHANGE_RESOURCES[change.address] !== change.type
+      || !PERSISTENT_RECOVERY_RESOURCES.has(change.address) || managedSeen.has(change.address)
+      || !isDeepStrictEqual(change.change.actions, ['no-op'])
+      || change.previous_address !== undefined
+      || change.change.importing !== undefined || change.change.generated_config !== undefined) {
+      reject('Terraform Auth-probe output recovery contains an infrastructure mutation');
+    }
+    exact(change.change.before, change.change.after, `${change.address} output recovery no-op`);
+    validateResourceValue(change.address, change.change.after, 'retire');
+    managedSeen.add(change.address);
+  }
+  exact(
+    sorted(managedSeen),
+    sorted(PERSISTENT_RECOVERY_RESOURCES),
+    'Terraform Auth-probe output recovery persistent resources',
+  );
+  if (!plainObject(plan.output_changes)) {
+    reject('Terraform Auth-probe output recovery change is missing');
+  }
+  exact(Object.keys(plan.output_changes), ['staging_auth_probe'], 'Terraform Auth-probe output recovery names');
+  const output = plan.output_changes.staging_auth_probe;
+  if (!plainObject(output)) reject('Terraform Auth-probe output recovery value is missing');
+  exact(sorted(Object.keys(output)), [
+    'actions', 'after', 'after_sensitive', 'after_unknown', 'before', 'before_sensitive',
+  ], 'Terraform Auth-probe output recovery fields');
+  exact(output.actions, ['update'], 'Terraform Auth-probe output recovery actions');
+  exact(output.before, LEGACY_DORMANT_OUTPUT, 'Terraform Auth-probe previous output');
+  exact(output.after, CURRENT_DORMANT_OUTPUT, 'Terraform Auth-probe recovered output');
+  exact(output.after_unknown, false, 'Terraform Auth-probe output recovery unknown values');
+  exact(output.before_sensitive, false, 'Terraform Auth-probe previous output sensitivity');
+  exact(output.after_sensitive, false, 'Terraform Auth-probe recovered output sensitivity');
+  rejectForbiddenValues(plan);
+  return Object.freeze({ create: 0, update: 0, delete: 0, state_outputs: 1 });
+}
+
 export function validateAuthProbePersistentRecoveryPlanAgainstPolicy(plan, expectedMutations) {
   if (!plainObject(expectedMutations) || Object.keys(expectedMutations).length === 0
     || Object.entries(expectedMutations).some(([address, action]) => {
@@ -810,4 +934,18 @@ export function readAndValidateAuthProbePersistentRecoveryPlan(path, expectedMut
     return reject('Terraform Auth-probe persistent recovery plan is not valid JSON');
   }
   return validateAuthProbePersistentRecoveryPlanAgainstPolicy(plan, expectedMutations);
+}
+
+export function readAndValidateAuthProbeOutputOnlyPlan(path) {
+  const bytes = readFileSync(path);
+  if (bytes.byteLength === 0 || bytes.byteLength > MAXIMUM_PLAN_BYTES) {
+    reject('Terraform Auth-probe output recovery plan JSON size is invalid');
+  }
+  let plan;
+  try {
+    plan = JSON.parse(bytes.toString('utf8'));
+  } catch {
+    return reject('Terraform Auth-probe output recovery plan is not valid JSON');
+  }
+  return validateAuthProbeOutputOnlyPlanAgainstPolicy(plan);
 }
