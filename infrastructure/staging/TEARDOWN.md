@@ -54,8 +54,8 @@ scale-to-zero project, with the billing link removable during an authorized
 teardown, is therefore the default.
 
 The repository contains separate bootstrap, foundation, workload, discovery-probe,
-Firebase Auth and Auth-probe roots plus a guarded, not-yet-applied browser App
-Check API-only root, a private versioned GCS backend, keyless plan/apply identities
+Firebase Auth and Auth-probe roots plus an applied browser App Check API-only
+root, a private versioned GCS backend, keyless plan/apply identities
 and a retained historical workflow blueprint. Terraform completed the final
 27-create/nine-no-op plan, but
 the wrapper rejected the complete state before migration because its output
@@ -104,10 +104,12 @@ state generation `1788574226264316` is 35,312 bytes at serial 27, with twelve
 managed resources, two data resources, one output and no tainted instance. Its
 SHA-256 is
 `88afa245c7943a44b23e32a452793c2825cf8e2bfb11ba55f95e299680b15cb2`.
-Browser-App-Check state generation `1788588916588868` is the canonical
-181-byte Terraform 1.11.3 empty state at serial 1; it contains no managed
-resource, data resource or output. It was created as a backend-initialization
-side effect of a non-applying plan.
+Browser-App-Check state generation `1788591686695870` is 11,057 bytes at
+serial 3, with two managed resources, two data resources, one output and no
+tainted instance. Its SHA-256 is
+`4c2ac56a22e2ba11e6a4dd5c195910c1a0f1e749a009660294ea05bcd8c48aa7`.
+It records only the state guard and enabled reCAPTCHA Enterprise API; direct
+post-apply inventory found zero keys.
 Raw state remains private; these metadata do not establish current convergence
 by themselves.
 Raw plan and state bytes were never committed.

@@ -10,6 +10,7 @@ import {
   BROWSER_RELAY_PLAN_SHA256,
   validateBrowserRelayPlan,
 } from './browser-relay/contract.mjs';
+import { validateBrowserAppCheckApiEvidence } from './browser-app-check/evidence.mjs';
 import { validateFirebaseAuthEvidence } from './firebase-auth/evidence.mjs';
 import { validateProbeEvidence } from './probe/evidence.mjs';
 import { validateWorkloadEvidence } from './workload/evidence.mjs';
@@ -681,7 +682,7 @@ function validateTerraform(value) {
   ]);
   exact(
     terraform.state,
-    'six_deployed_roots_converged_browser_app_check_empty_backend_guarded',
+    'all_seven_roots_converged_browser_app_check_api_enabled',
     'terraform.state',
   );
   exact(
@@ -743,7 +744,7 @@ function validateTerraform(value) {
   exact(backend.type, 'gcs', 'terraform.backend.type');
   exact(
     backend.state,
-    'all_six_deployed_roots_plus_empty_browser_app_check_root_present',
+    'all_seven_terraform_state_roots_present',
     'terraform.backend.state',
   );
   exact(backend.bucket, 'miakapp-v4-staging-tfstate-1072737219170', 'terraform.backend.bucket');
@@ -3442,29 +3443,59 @@ function validateEvidence(value) {
       'state',
       'observed_at',
       'terraform_root',
+      'repository_commit',
+      'result_path',
+      'result_sha256',
+      'terraform_plan_sha256',
+      'baseline_sha256',
+      'final_inventory_sha256',
       'terraform_state',
       'recaptcha_api_enabled',
       'direct_key_inventory',
+      'authoritative_recaptcha_keys',
       'cloud_asset_inventory',
       'cloud_asset_recaptcha_keys',
+      'recaptcha_keys_created',
       'app_check_registered',
       'app_check_enforcement_records',
       'debug_tokens',
+      'public_endpoints_created',
+      'fixed_cost_services',
+      'assessments_initiated_by_driver',
       'apply_executed',
+      'entrypoints_retired',
+      'private_bundle_committed',
+      'raw_plan_committed',
+      'raw_state_committed',
     ],
   );
   const expectedBrowserAppCheck = {
-    state: 'guarded_api_only_empty_backend_initialized',
-    observed_at: '2026-09-05T06:44:16.000Z',
+    state: 'api_enabled_authoritative_key_inventory_empty',
+    observed_at: '2026-09-05T07:01:26.708Z',
     terraform_root: 'browser-app-check',
-    recaptcha_api_enabled: false,
-    direct_key_inventory: 'unavailable_service_disabled',
+    repository_commit: '0e8d5dfc3b5b8dd42d84cb165ae2a4f676f7fcdb',
+    result_path: 'browser-app-check/result.json',
+    result_sha256: '85f0dd8374881ef1b08ceb96ea79e9d0145f7b4bf77092b829c612e6561d75b9',
+    terraform_plan_sha256: 'f21835c20d9fe3dd4b2f47ac10f826a3c78b3b3e8a6e35aa4915c485c3058602',
+    baseline_sha256: '37c6b4ad32735ea5906e541f44f81d774cb160084332d71bc9ff1a820bed1866',
+    final_inventory_sha256: '88957efb77ec18b14fd4daf44a3dfd85ad2e2402366e6e4fad7f0d42940c68d8',
+    recaptcha_api_enabled: true,
+    direct_key_inventory: 'readable',
+    authoritative_recaptcha_keys: 0,
     cloud_asset_inventory: 'readable_eventually_consistent',
     cloud_asset_recaptcha_keys: 0,
+    recaptcha_keys_created: 0,
     app_check_registered: false,
     app_check_enforcement_records: 0,
     debug_tokens: 0,
-    apply_executed: false,
+    public_endpoints_created: 0,
+    fixed_cost_services: 0,
+    assessments_initiated_by_driver: 0,
+    apply_executed: true,
+    entrypoints_retired: true,
+    private_bundle_committed: false,
+    raw_plan_committed: false,
+    raw_state_committed: false,
   };
   for (const [field, expected] of Object.entries(expectedBrowserAppCheck)) {
     exact(
@@ -3487,20 +3518,22 @@ function validateEvidence(value) {
       'managed_resources',
       'data_resources',
       'outputs',
+      'tainted_resources',
       'raw_contents_committed',
     ],
   );
   const expectedBrowserAppCheckState = {
     object: 'terraform/browser-app-check/default.tfstate',
-    generation: '1788588916588868',
-    sha256: '7f80cac767df4b54265a6e72ae6660d252ea6d247f506d1640f4ac9792dc3137',
-    size_bytes: 181,
+    generation: '1788591686695870',
+    sha256: '4c2ac56a22e2ba11e6a4dd5c195910c1a0f1e749a009660294ea05bcd8c48aa7',
+    size_bytes: 11057,
     terraform_version: '1.11.3',
-    serial: 1,
+    serial: 3,
     lineage_sha256: 'f6640c6c40b21a544f3ddc3ee8005f8a1d9d2eaa19dd79ba5fca5709394d9601',
-    managed_resources: 0,
-    data_resources: 0,
-    outputs: 0,
+    managed_resources: 2,
+    data_resources: 2,
+    outputs: 1,
+    tainted_resources: 0,
     raw_contents_committed: false,
   };
   for (const [field, expected] of Object.entries(expectedBrowserAppCheckState)) {
@@ -3578,10 +3611,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 44, 'manifest.revision');
+  exact(manifest.revision, 45, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_schema_2_single_key_runtime_deployed_user_relay_acceptance_succeeded_live_browser_plan_reviewed_app_check_api_guarded',
+    'private_control_plane_schema_2_single_key_runtime_deployed_user_relay_acceptance_succeeded_live_browser_plan_reviewed_app_check_api_enabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -3921,6 +3954,38 @@ export function validateCommittedEvidence(
     runner_present: browserRelayPlan.baseline.browser_runner_present,
     completed_cases: browserRelayPlan.evidence.completed_case_ids.length,
   }, 'evidence.browser_relay_plan');
+  const browserAppCheckManifest = manifest.evidence.browser_app_check_prerequisite;
+  const browserAppCheckPath = committedEvidencePath(
+    stagingRoot,
+    browserAppCheckManifest.result_path,
+    'browser-app-check/result.json',
+    'evidence.browser_app_check_prerequisite.result_path',
+  );
+  const browserAppCheck = validatedEvidenceFile(
+    browserAppCheckPath,
+    validateBrowserAppCheckApiEvidence,
+    'evidence.browser_app_check_prerequisite.result_path',
+  );
+  exact(
+    fileSha256(browserAppCheckPath),
+    browserAppCheckManifest.result_sha256,
+    'evidence.browser_app_check_prerequisite.result_sha256',
+  );
+  exactFields(browserAppCheckManifest, {
+    repository_commit: browserAppCheck.repository_commit,
+    terraform_plan_sha256: browserAppCheck.terraform_plan_sha256,
+    baseline_sha256: browserAppCheck.baseline_sha256,
+    final_inventory_sha256: browserAppCheck.final_inventory_sha256,
+    recaptcha_api_enabled: browserAppCheck.recaptcha_api_enabled,
+    authoritative_recaptcha_keys: browserAppCheck.authoritative_recaptcha_keys,
+    cloud_asset_recaptcha_keys: browserAppCheck.cloud_asset_recaptcha_keys,
+    app_check_registered: browserAppCheck.app_check_registered,
+    app_check_enforcement_records: browserAppCheck.app_check_enforcement_records,
+    debug_tokens: browserAppCheck.debug_tokens,
+    public_endpoints_created: browserAppCheck.public_endpoints_created,
+    fixed_cost_services: browserAppCheck.fixed_cost_services,
+    assessments_initiated_by_driver: browserAppCheck.assessments_initiated_by_driver,
+  }, 'evidence.browser_app_check_prerequisite');
   exact(manifest.runtime.live_request_performed, false, 'runtime.live_request_performed');
   return Object.freeze({
     workload,
@@ -3929,6 +3994,7 @@ export function validateCommittedEvidence(
     userRelayProbe: authProbe,
     userRelayProbeRetirement: authProbeRetirement,
     browserRelayPlan,
+    browserAppCheck,
   });
 }
 
@@ -3951,7 +4017,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; the private user-relay exchange is retired, the live browser-relay matrix is reviewed but not deployed, and the browser App Check API-only prerequisite is guarded.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; the private user-relay exchange is retired, the live browser-relay matrix is reviewed but not deployed, and the browser App Check API-only prerequisite is enabled and converged.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';

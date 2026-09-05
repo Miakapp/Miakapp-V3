@@ -31,10 +31,10 @@ function rejects(mutator, pattern) {
 
 test('accepts the successful and retired private user-relay probe', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 44);
+  assert.equal(validated.revision, 45);
   assert.equal(
     validated.status,
-    'private_control_plane_schema_2_single_key_runtime_deployed_user_relay_acceptance_succeeded_live_browser_plan_reviewed_app_check_api_guarded',
+    'private_control_plane_schema_2_single_key_runtime_deployed_user_relay_acceptance_succeeded_live_browser_plan_reviewed_app_check_api_enabled',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
@@ -111,7 +111,7 @@ test('accepts the successful and retired private user-relay probe', () => {
   assert.deepEqual(validated.security.iam.unresolved_permissions, []);
   assert.equal(
     validated.terraform.state,
-    'six_deployed_roots_converged_browser_app_check_empty_backend_guarded',
+    'all_seven_roots_converged_browser_app_check_api_enabled',
   );
   assert.equal(
     validated.terraform.supported_workflow,
@@ -130,7 +130,7 @@ test('accepts the successful and retired private user-relay probe', () => {
   assert.equal(validated.terraform.browser_app_check_root, 'browser-app-check');
   assert.equal(
     validated.terraform.backend.state,
-    'all_six_deployed_roots_plus_empty_browser_app_check_root_present',
+    'all_seven_terraform_state_roots_present',
   );
   assert.equal(validated.terraform.backend.probe_prefix, 'terraform/probe');
   assert.equal(validated.terraform.backend.firebase_auth_prefix, 'terraform/firebase-auth');
@@ -704,30 +704,46 @@ test('accepts the successful and retired private user-relay probe', () => {
     completed_cases: 0,
   });
   assert.deepEqual(validated.evidence.browser_app_check_prerequisite, {
-    state: 'guarded_api_only_empty_backend_initialized',
-    observed_at: '2026-09-05T06:44:16.000Z',
+    state: 'api_enabled_authoritative_key_inventory_empty',
+    observed_at: '2026-09-05T07:01:26.708Z',
     terraform_root: 'browser-app-check',
+    repository_commit: '0e8d5dfc3b5b8dd42d84cb165ae2a4f676f7fcdb',
+    result_path: 'browser-app-check/result.json',
+    result_sha256: '85f0dd8374881ef1b08ceb96ea79e9d0145f7b4bf77092b829c612e6561d75b9',
+    terraform_plan_sha256: 'f21835c20d9fe3dd4b2f47ac10f826a3c78b3b3e8a6e35aa4915c485c3058602',
+    baseline_sha256: '37c6b4ad32735ea5906e541f44f81d774cb160084332d71bc9ff1a820bed1866',
+    final_inventory_sha256: '88957efb77ec18b14fd4daf44a3dfd85ad2e2402366e6e4fad7f0d42940c68d8',
     terraform_state: {
       object: 'terraform/browser-app-check/default.tfstate',
-      generation: '1788588916588868',
-      sha256: '7f80cac767df4b54265a6e72ae6660d252ea6d247f506d1640f4ac9792dc3137',
-      size_bytes: 181,
+      generation: '1788591686695870',
+      sha256: '4c2ac56a22e2ba11e6a4dd5c195910c1a0f1e749a009660294ea05bcd8c48aa7',
+      size_bytes: 11057,
       terraform_version: '1.11.3',
-      serial: 1,
+      serial: 3,
       lineage_sha256: 'f6640c6c40b21a544f3ddc3ee8005f8a1d9d2eaa19dd79ba5fca5709394d9601',
-      managed_resources: 0,
-      data_resources: 0,
-      outputs: 0,
+      managed_resources: 2,
+      data_resources: 2,
+      outputs: 1,
+      tainted_resources: 0,
       raw_contents_committed: false,
     },
-    recaptcha_api_enabled: false,
-    direct_key_inventory: 'unavailable_service_disabled',
+    recaptcha_api_enabled: true,
+    direct_key_inventory: 'readable',
+    authoritative_recaptcha_keys: 0,
     cloud_asset_inventory: 'readable_eventually_consistent',
     cloud_asset_recaptcha_keys: 0,
+    recaptcha_keys_created: 0,
     app_check_registered: false,
     app_check_enforcement_records: 0,
     debug_tokens: 0,
-    apply_executed: false,
+    public_endpoints_created: 0,
+    fixed_cost_services: 0,
+    assessments_initiated_by_driver: 0,
+    apply_executed: true,
+    entrypoints_retired: true,
+    private_bundle_committed: false,
+    raw_plan_committed: false,
+    raw_state_committed: false,
   });
   assert.equal(
     validated.readiness.required_blockers.includes('app-check-browser-provider-attestation'),
@@ -1608,7 +1624,7 @@ test('requires every remaining blocker and staging evidence row', () => {
     candidate.evidence.browser_relay_plan.completed_cases = 1;
   }, /evidence\.browser_relay_plan\.completed_cases/);
   rejects((candidate) => {
-    candidate.evidence.browser_app_check_prerequisite.recaptcha_api_enabled = true;
+    candidate.evidence.browser_app_check_prerequisite.recaptcha_api_enabled = false;
   }, /evidence\.browser_app_check_prerequisite\.recaptcha_api_enabled/);
   rejects((candidate) => {
     candidate.evidence.browser_app_check_prerequisite.terraform_state.generation = '1';

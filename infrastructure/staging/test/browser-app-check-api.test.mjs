@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import {
   cpSync,
   existsSync,
@@ -12,8 +13,10 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import {
+  API_PREREQUISITE_CONSUMED as APPLY_PREREQUISITE_CONSUMED,
   buildBrowserAppCheckApiResult,
   validateBrowserAppCheckTerraformOutput,
 } from '../browser-app-check/apply.mjs';
@@ -37,11 +40,18 @@ import {
 } from '../browser-app-check/contract.mjs';
 import { validateBrowserAppCheckRoot } from '../browser-app-check/guard.mjs';
 import {
+  validateBrowserAppCheckApiEvidence,
+  validateBrowserAppCheckApiEvidenceValue,
+} from '../browser-app-check/evidence.mjs';
+import {
   validateBrowserAppCheckInventory,
   validateFirebaseWebAppInventory,
   validateUnregisteredAppCheckConfig,
 } from '../browser-app-check/inventory.mjs';
 import { validateInitialBrowserAppCheckState } from '../browser-app-check/state.mjs';
+import {
+  API_PREREQUISITE_CONSUMED as PLAN_PREREQUISITE_CONSUMED,
+} from '../browser-app-check/plan.mjs';
 import { validateBrowserAppCheckApiPlan } from '../browser-app-check/validate-plan.mjs';
 
 const COMMIT = '1'.repeat(40);
@@ -57,6 +67,7 @@ const terraformSource = readdirSync(browserRoot)
 const planDriver = readFileSync(new URL('plan.mjs', browserRoot), 'utf8');
 const applyDriver = readFileSync(new URL('apply.mjs', browserRoot), 'utf8');
 const inventoryDriver = readFileSync(new URL('inventory.mjs', browserRoot), 'utf8');
+const committedResultPath = new URL('../browser-app-check/result.json', import.meta.url);
 
 function foundation() {
   return {
@@ -577,6 +588,22 @@ test('API result proves only the bounded prerequisite and zero driver assessment
   );
 });
 
+test('committed API evidence is exact, sanitized, and immutable', () => {
+  const result = validateBrowserAppCheckApiEvidence(committedResultPath);
+  assert.equal(result.repository_commit, '0e8d5dfc3b5b8dd42d84cb165ae2a4f676f7fcdb');
+  assert.equal(result.terraform_plan_sha256, 'f21835c20d9fe3dd4b2f47ac10f826a3c78b3b3e8a6e35aa4915c485c3058602');
+  assert.equal(result.authoritative_recaptcha_keys, 0);
+  assert.equal(result.assessments_initiated_by_driver, 0);
+  assert.doesNotMatch(JSON.stringify(result), /accessToken|Authorization|siteKey|execution_id/u);
+  assert.throws(
+    () => validateBrowserAppCheckApiEvidenceValue({
+      ...result,
+      authoritative_recaptcha_keys: 1,
+    }),
+    /does not match the exact sanitized result/u,
+  );
+});
+
 test('drivers enforce immediate pre-mutation revalidation and durable no-retry semantics', () => {
   const marker = applyDriver.indexOf('writeMutationAttemptMarker(bundle, freshMetadata)');
   const apply = applyDriver.indexOf("run('terraform', [\n      'apply'");
@@ -590,6 +617,31 @@ test('drivers enforce immediate pre-mutation revalidation and durable no-retry s
   assert.match(planDriver, /0 updates, 0 deletes; state guard and API only/u);
   assert.match(inventoryDriver, /unavailable_service_disabled/u);
   assert.doesNotMatch(`${planDriver}\n${applyDriver}`, /terraform', \['destroy'/u);
+});
+
+test('consumed API plan and apply entrypoints are permanently retired', () => {
+  assert.equal(PLAN_PREREQUISITE_CONSUMED, true);
+  assert.equal(APPLY_PREREQUISITE_CONSUMED, true);
+  assert.match(planDriver, /planner is permanently retired/u);
+  assert.match(applyDriver, /apply path is permanently retired/u);
+  for (const [entrypoint, message] of [
+    ['plan.mjs', 'planner is permanently retired'],
+    ['apply.mjs', 'apply path is permanently retired'],
+  ]) {
+    const result = spawnSync(process.execPath, [fileURLToPath(new URL(entrypoint, browserRoot))], {
+      cwd: fileURLToPath(new URL('../../../', import.meta.url)),
+      env: {
+        PATH: process.env.PATH,
+        GOOGLE_APPLICATION_CREDENTIALS: '/must-not-be-read',
+        GOOGLE_OAUTH_ACCESS_TOKEN: 'must-not-be-read',
+      },
+      encoding: 'utf8',
+    });
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, '');
+    assert.match(result.stderr, new RegExp(message, 'u'));
+    assert.doesNotMatch(result.stderr, /gcloud|terraform|credential|token/u);
+  }
 });
 
 test('abnormal child termination preserves private recovery diagnostics', () => {
