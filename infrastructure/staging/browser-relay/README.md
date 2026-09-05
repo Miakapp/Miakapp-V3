@@ -4,9 +4,9 @@ This directory freezes the rebased reviewable plan for live browser, relay,
 signing-key and rollback acceptance. It contains no Terraform, deployer,
 invocation wrapper, credential or result. Reading or validating it authorizes no
 cloud mutation. The committed state is
-`edge_profile_source_converged_reviewed_not_deployed`, all `LIVE-*` cases are
-pending and the canonical staging manifest still records private control-plane
-ingress.
+`relay_process_admission_merged_root_reviewed_not_deployed`, all `LIVE-*`
+cases are pending and the canonical staging manifest still records private
+control-plane ingress with zero relay services.
 
 Run the credential-free validator from the repository root:
 
@@ -74,7 +74,7 @@ and [reCAPTCHA billing](https://cloud.google.com/recaptcha/docs/billing-informat
 
 ## Preconditions
 
-Revision 7 was rebased from an independent read-only observation on
+Revision 8 retains the independent read-only observation from
 2026-09-05T19:49:07.829Z. It verified `control-plane-00010-vop`, private ingress,
 zero unauthenticated invokers, two enabled and published signing versions with
 version 1 current for the rehearsal entry, a registered reCAPTCHA Enterprise provider, the prior real
@@ -84,9 +84,12 @@ HTTP 404 runner route. Firestore contained only ten bounded admission/audit
 documents across its three expected technical collections; no Home or user
 collection existed.
 
-The immutable cross-repository pins, two-key runtime, readable provider,
+The immutable cross-repository pins, finite relay process admission, two-key runtime, readable provider,
 standalone real-browser token observation, guarded rotation entry and bounded
-edge-profile source support are therefore present today. The new source accepts
+edge-profile source support are therefore present today. Miakapp-Server merge
+`df10674e034f30eec80760f5ec94bc108cff026f` bounds active connections,
+attempts, tracked immediate peers, live Homes, per-connection queues and the
+aggregate process queue before WebSocket upgrade. The control-plane source accepts
 only the exact staging direct `run.app` issuer and exact Hosting `web.app` origin
 as an atomic pair; mixed or foreign provider domains fail closed. The deployed
 runtime remains on the canonical issuer/origin pair, so this source deployment
@@ -109,6 +112,17 @@ runtime while private, opens ingress before adding the public IAM member, and
 rolls back IAM before ingress and runtime. It has no CLI or authorization path.
 `EDGE-01` therefore remains open until a later digest-bound orchestrator adds
 the single-use claim and requires all other live preconditions.
+
+The adjacent
+[`browser-relay-services/`](../browser-relay-services/) Terraform root now
+freezes the two services and their `absent`, private-bootstrap, private-ready
+and public-window phases. It requires a digest-only image, uses one keyless
+no-role identity, agrees with the relay's finite process admission, and models
+public IAM last plus teardown in reverse dependency order. It intentionally has
+no plan/apply entrypoint and has never been applied. `RELAY-01` remains open
+until an immutable image digest, exact private plans, independently observed
+service audiences and a preflighted teardown are bound by the later one-shot
+orchestrator.
 
 The currently deployed runtime document publishes both signing keys with
 version 1 current and version 2 retained. This completes the rehearsal entry

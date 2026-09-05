@@ -120,6 +120,12 @@ node --check infrastructure/staging/browser-relay-edge/guard.mjs
 node --check infrastructure/staging/browser-relay-edge/inventory.mjs
 node --check infrastructure/staging/browser-relay-edge/runtime.mjs
 node --check infrastructure/staging/browser-relay-edge/window.mjs
+node infrastructure/staging/browser-relay-services/guard.mjs \
+  "${repository_root}/infrastructure/staging/browser-relay-services"
+node --check infrastructure/staging/browser-relay-services/contract.mjs
+node --check infrastructure/staging/browser-relay-services/guard.mjs
+node infrastructure/staging/browser-relay-services/contract.mjs \
+  infrastructure/staging/browser-relay-services/profile.json
 node infrastructure/staging/browser-attestation/guard.mjs \
   "${repository_root}/infrastructure/staging/browser-attestation"
 node --check infrastructure/staging/browser-attestation/apply.mjs
@@ -234,6 +240,7 @@ node --test \
   infrastructure/staging/test/browser-app-check-registration.test.mjs \
   infrastructure/staging/test/browser-attestation.test.mjs \
   infrastructure/staging/test/browser-relay-edge.test.mjs \
+  infrastructure/staging/test/browser-relay-services.test.mjs \
   infrastructure/staging/test/browser-relay.test.mjs \
   infrastructure/staging/test/bootstrap.test.mjs \
   infrastructure/staging/test/firebase-auth.test.mjs \
@@ -246,7 +253,7 @@ node --test \
   infrastructure/staging/test/user-relay-verifier.test.mjs \
   infrastructure/staging/test/workload.test.mjs
 
-for terraform_root in bootstrap terraform workload probe firebase-auth auth-probe browser-app-check; do
+for terraform_root in bootstrap terraform workload probe firebase-auth auth-probe browser-app-check browser-relay-services; do
   terraform_path="infrastructure/staging/${terraform_root}"
   terraform -chdir="$terraform_path" fmt -check -recursive
   export TF_CLI_CONFIG_FILE="${repository_root}/${terraform_path}/terraform-cli.tfrc"

@@ -70,7 +70,7 @@ jobs:
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           repository: Miakapp/Miakapp-Server
-          ref: 9a7e33de3a684b6cd9e82231db7c9af8bf41a0a1
+          ref: df10674e034f30eec80760f5ec94bc108cff026f
           path: .integration/miakapp-server
       - name: Check out the pinned MiakAPI coordinator SDK
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5

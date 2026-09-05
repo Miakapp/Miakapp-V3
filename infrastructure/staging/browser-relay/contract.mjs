@@ -2,10 +2,12 @@ import { createHash } from 'node:crypto';
 import { lstatSync, readFileSync } from 'node:fs';
 import { isDeepStrictEqual } from 'node:util';
 
-export const BROWSER_RELAY_PLAN_SHA256 = 'b8da1ed6c073fea64bb79dc0c97c1624ccae6743114168cc554b45af45b90e49';
+import { RELAY_SERVICES_PROFILE_SHA256 } from '../browser-relay-services/contract.mjs';
+
+export const BROWSER_RELAY_PLAN_SHA256 = '4a5c13999d9f7f328b1b8b867bbd86d4c5e80cb980d9eb1324028ea0e5785343';
 export const BROWSER_RELAY_PLAN_PATH = 'browser-relay/plan.json';
 
-const MAXIMUM_PLAN_BYTES = 16 * 1024;
+const MAXIMUM_PLAN_BYTES = 20 * 1024;
 const COMMIT = /^[0-9a-f]{40}$/u;
 const SHA256 = /^[0-9a-f]{64}$/u;
 const PRIVATE_MATERIAL = [
@@ -115,6 +117,7 @@ function validatePins(value) {
     'deployed_control_plane_source_sha256',
     'miakapi_commit',
     'miakapp_server_commit',
+    'relay_services_profile_sha256',
     'protocol_contract_commit',
     'node_version',
     'bun_version',
@@ -134,6 +137,14 @@ function validatePins(value) {
   if (!SHA256.test(pins.deployed_control_plane_source_sha256)) {
     reject('pins.deployed_control_plane_source_sha256 must be a SHA-256 digest');
   }
+  if (!SHA256.test(pins.relay_services_profile_sha256)) {
+    reject('pins.relay_services_profile_sha256 must be a SHA-256 digest');
+  }
+  exact(
+    pins.relay_services_profile_sha256,
+    RELAY_SERVICES_PROFILE_SHA256,
+    'pins.relay_services_profile_sha256',
+  );
   exact(pins, expectedPlan.pins, 'pins');
 }
 
@@ -198,6 +209,15 @@ function validateRelay(value, expected, path) {
     'cpu',
     'memory_mib',
     'cpu_idle',
+    'maximum_queued_bytes_per_connection',
+    'maximum_connections',
+    'maximum_connections_per_immediate_peer',
+    'connection_attempts_per_minute_per_immediate_peer',
+    'maximum_tracked_immediate_peers',
+    'maximum_homes',
+    'maximum_aggregate_queued_bytes',
+    'trusted_client_address_source',
+    'forwarded_client_headers_trusted',
   ], path);
   exact(relay, expected, path);
   exact(relay.endpoint_before_apply, null, `${path}.endpoint_before_apply`);
@@ -206,6 +226,15 @@ function validateRelay(value, expected, path) {
   exact(relay.maximum_instances, 1, `${path}.maximum_instances`);
   exact(relay.unauthenticated_invoker, true, `${path}.unauthenticated_invoker`);
   exact(relay.application_authentication, 'audience_bound_relay_user_hello', `${path}.application_authentication`);
+  exact(relay.maximum_queued_bytes_per_connection, 262144, `${path}.maximum_queued_bytes_per_connection`);
+  exact(relay.maximum_connections, 8, `${path}.maximum_connections`);
+  exact(relay.maximum_connections_per_immediate_peer, 8, `${path}.maximum_connections_per_immediate_peer`);
+  exact(relay.connection_attempts_per_minute_per_immediate_peer, 32, `${path}.connection_attempts_per_minute_per_immediate_peer`);
+  exact(relay.maximum_tracked_immediate_peers, 64, `${path}.maximum_tracked_immediate_peers`);
+  exact(relay.maximum_homes, 16, `${path}.maximum_homes`);
+  exact(relay.maximum_aggregate_queued_bytes, 4194304, `${path}.maximum_aggregate_queued_bytes`);
+  exact(relay.trusted_client_address_source, 'immediate_tcp_peer', `${path}.trusted_client_address_source`);
+  exact(relay.forwarded_client_headers_trusted, false, `${path}.forwarded_client_headers_trusted`);
 }
 
 function validateTopology(value) {
@@ -387,8 +416,8 @@ export function validateBrowserRelayPlanValue(value) {
     'rollback',
   ], 'plan');
   exact(plan.schema, 'miakapp.staging-browser-relay-plan/1', 'plan.schema');
-  exact(plan.revision, 7, 'plan.revision');
-  exact(plan.state, 'edge_profile_source_converged_reviewed_not_deployed', 'plan.state');
+  exact(plan.revision, 8, 'plan.revision');
+  exact(plan.state, 'relay_process_admission_merged_root_reviewed_not_deployed', 'plan.state');
   validateTarget(plan.target);
   validatePins(plan.pins);
   validateBaseline(plan.baseline);
