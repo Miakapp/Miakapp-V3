@@ -43,6 +43,7 @@ import { readAndValidateBrowserAppCheckApiPlan } from './validate-plan.mjs';
 
 const APPLY_AUTHORIZATION = 'MIAKAPP_STAGING_BROWSER_APP_CHECK_API_APPLY_AUTHORIZATION';
 const ATTEMPT_MARKER = 'mutation-attempted.json';
+export const API_PREREQUISITE_CONSUMED = true;
 process.umask(0o077);
 
 function reject(message) {
@@ -322,8 +323,15 @@ async function main() {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  main().catch((error) => {
-    console.error(error instanceof Error ? error.message : 'Browser App Check API apply failed');
+  if (API_PREREQUISITE_CONSUMED) {
+    console.error(
+      'The browser App Check API prerequisite has already converged; this apply path is permanently retired.',
+    );
     process.exitCode = 1;
-  });
+  } else {
+    main().catch((error) => {
+      console.error(error instanceof Error ? error.message : 'Browser App Check API apply failed');
+      process.exitCode = 1;
+    });
+  }
 }
