@@ -72,8 +72,8 @@ async function main() {
     `Metadata SHA-256: ${sha256(metadataBytes)}`,
     `Artifact files: ${metadata.artifact.file_count}; compressed bytes: ${metadata.artifact.total_gzip_bytes}`,
     `Authorization: ${attestationAuthorization(metadataBytes, repositoryCommit)}`,
-    'Planned boundary: one connected interactive-browser attestation, at most five public minutes, then SITE_DISABLE and version deletion.',
-    'Apply requires an interactive TTY and accepts one challenge-bound semantic JSON line before its absolute two-minute observation deadline.',
+    'Planned boundary: one default macOS system-browser attestation, at most five public minutes, then SITE_DISABLE and version deletion.',
+    'Apply opens the runner once and accepts one challenge-bound semantic result through an ephemeral 127.0.0.1 listener before its absolute two-minute observation deadline.',
     'Firebase Auth, control-plane ingress, App Check enforcement and debug providers remain unchanged.',
     '',
   ].join('\n'));
