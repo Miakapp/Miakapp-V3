@@ -38,7 +38,7 @@ const EXPIRY_EXPRESSION = `request.time < timestamp(\"${CAPABILITY_EXPIRY}\")`;
 const FIRESTORE_EXPRESSION = `resource.name == \"projects/${PROJECT_ID}/databases/(default)\" && ${EXPIRY_EXPRESSION}`;
 const PROJECT_ROLE_PREFIX = `projects/${PROJECT_ID}/roles/`;
 const ROLE_INVOKE_PERMISSION = 'run.routes.invoke';
-const IAM_ETAG = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u;
+const IAM_ETAG = /^(?:[A-Za-z0-9_-]{4})*(?:[A-Za-z0-9_-]{2}==|[A-Za-z0-9_-]{3}=)?$/u;
 const rolePermissionCache = new Map();
 
 function reject(message) {

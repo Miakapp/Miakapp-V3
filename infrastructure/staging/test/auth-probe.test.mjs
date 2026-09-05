@@ -587,7 +587,7 @@ function recoveryLiveInventory() {
         name: FIRESTORE_ROLE_NAME,
         stage: 'GA',
         deleted: false,
-        etag: 'BwAAAg==',
+        etag: 'BwZasWNah-E=',
         permissions: [...FIRESTORE_ROLE_PERMISSIONS],
       },
       signer: {
@@ -877,7 +877,7 @@ test('requires the reused probe identity to remain keyless before temporary priv
 });
 
 test('inventories exact role bindings but refuses automatic soft-deleted role recovery', () => {
-  const etag = 'BwAACA==';
+  const etag = 'BwZapfILNC0=';
   const role = observeCustomRole(CUSTOM_ROLE_ID, {
     name: CUSTOM_ROLE_NAME,
     title: 'Miakapp staging Auth probe',
@@ -919,6 +919,13 @@ test('inventories exact role bindings but refuses automatic soft-deleted role re
   assert.throws(() => buildAuthProbeRetirementRecoveryInventory(
     inspectAuthProbeState(authProbeState(addresses)), live,
   ), /soft-deleted.*manual recovery/u);
+
+  const malformedEtag = recoveryLiveInventory();
+  malformedEtag.custom_roles.firestore.etag = 'BwZasWNah*E=';
+  assert.throws(() => buildAuthProbeRetirementRecoveryInventory(
+    inspectAuthProbeState(authProbeState(addresses)),
+    malformedEtag,
+  ), /live custom-role inventory/u);
 
   const expectedRoleBinding = {
     roleName: CUSTOM_ROLE_NAME,
