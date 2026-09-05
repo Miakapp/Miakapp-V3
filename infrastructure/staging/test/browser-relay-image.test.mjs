@@ -91,7 +91,10 @@ function baselineFixture() {
     project_id: profile.project.project_id,
     project_number: profile.project.project_number,
     region: profile.project.region,
-    deployed_workload: { schema: 'validated-workload-fixture/1' },
+    deployed_workload: {
+      schema: 'validated-workload-fixture/1',
+      iam: { probe_token_role: 'roles/iam.serviceAccountOpenIdTokenCreator' },
+    },
     cloud_run_services: ['control-plane'],
     relay_package: {
       state: 'absent',
@@ -301,7 +304,7 @@ test('observes and validates only the empty private relay-image baseline', async
   };
   const inventory = await observeRelayImageInventory(session, {
     fetchImplementation,
-    observeWorkload: () => ({ schema: 'validated-workload-fixture/1' }),
+    observeWorkload: () => baselineFixture().deployed_workload,
   });
   validateRelayImageBaseline(inventory);
   assert.deepEqual(inventory, baselineFixture());
