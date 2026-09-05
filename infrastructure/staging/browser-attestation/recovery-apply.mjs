@@ -46,7 +46,7 @@ process.umask(0o077);
 
 function persistAttemptMarker(bundle, metadata) {
   const marker = Object.freeze({
-    schema: 'miakapp.staging-browser-attestation-recovery-attempt/5',
+    schema: 'miakapp.staging-browser-attestation-recovery-attempt/6',
     operation: metadata.operation,
     project_id: PROJECT_ID,
     repository_commit: metadata.repository_commit,
@@ -155,7 +155,7 @@ async function main() {
   );
   verifyExactMain(repositoryRoot, recovery.value.repository_commit);
   const result = Object.freeze({
-    schema: 'miakapp.staging-browser-attestation-recovery-result/5',
+    schema: 'miakapp.staging-browser-attestation-recovery-result/6',
     operation: recovery.value.operation,
     project_id: PROJECT_ID,
     repository_commit: recovery.value.repository_commit,

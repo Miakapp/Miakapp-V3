@@ -12,8 +12,8 @@ import { googleJsonRequest } from './inventory.mjs';
 
 const VERSION_NAME = new RegExp(`^sites/${HOSTING_SITE}/versions/[0-9A-Za-z_-]{8,128}$`, 'u');
 const RELEASE_NAME = new RegExp(`^sites/${HOSTING_SITE}/releases/[0-9A-Za-z_-]{8,128}$`, 'u');
-const DEPLOY_MESSAGE = 'Miakapp V4 bounded interactive browser App Check attestation v5';
-const DISABLE_MESSAGE = 'Miakapp V4 interactive browser App Check attestation v5 retired';
+const DEPLOY_MESSAGE = 'Miakapp V4 bounded interactive browser App Check attestation v6';
+const DISABLE_MESSAGE = 'Miakapp V4 interactive browser App Check attestation v6 retired';
 const MAXIMUM_STORED_ARTIFACT_BYTES = 1024 * 1024;
 
 function request(session, url, options = {}) {
@@ -23,7 +23,7 @@ function request(session, url, options = {}) {
 export function hostingLabels(repositoryCommit) {
   return Object.freeze({
     environment: 'staging',
-    operation: 'browser-app-check-attestation-v5',
+    operation: 'browser-app-check-attestation-v6',
     repository: repositoryCommit,
   });
 }

@@ -4082,10 +4082,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 53, 'manifest.revision');
+  exact(manifest.revision, 54, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_2_current_runtime_deployed_signing_overlap_active_user_relay_acceptance_succeeded_system_browser_plan_reviewed_app_check_provider_registered',
+    'private_control_plane_two_key_version_2_current_runtime_deployed_signing_overlap_active_user_relay_acceptance_succeeded_system_browser_v6_plan_reviewed_app_check_provider_registered',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');

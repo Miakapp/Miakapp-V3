@@ -13,6 +13,8 @@ const EXPECTED_RESULT_SHA256 = Object.freeze({
     '6e5ad639da6dc94075dc30d0f0f0839806e1e7ba944ececbff57ac2d2e821386',
   'miakapp.staging-browser-attestation-preflight-result/4':
     'b30f981dd11789c62bdd4f77c89a7faa1088df6dc947ce27f14331355f43dfc0',
+  'miakapp.staging-browser-attestation-preflight-result/5':
+    'b6f663ecaa8f5c2a54d40cb578e2a6f90547267b834fcd398df68a3040bdbe91',
 });
 
 function reject(message) {
@@ -54,7 +56,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     try {
       for (const path of process.argv.slice(2)) {
         const result = validatePreflightEvidence(path);
-        const retirement = result.schema.endsWith('/4')
+        const retirement = result.schema.endsWith('/4') || result.schema.endsWith('/5')
           ? 'its verified publication was disabled and deleted after the automated browser failed'
           : 'its Hosting version was deleted before any release or browser invocation';
         process.stdout.write(`Validated ${result.schema} for ${result.project_id}; ${retirement}.\n`);

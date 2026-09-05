@@ -95,14 +95,14 @@ function validateFinalHostingInventory(
   const deploys = releases.filter(({ name }) => name === deployRelease.name);
   const disables = releases.filter(({ name }) => name === disableRelease.name);
   if (inventory.site.site !== HOSTING_SITE
-    || inventory.versions.length !== 5
+    || inventory.versions.length !== 6
     || versions.length !== 1
     || versions[0].name !== versionName
     || versions[0].status !== 'DELETED'
     || versions[0].file_count !== null
     || versions[0].version_bytes !== null
     || !isDeepStrictEqual(versions[0].labels, hostingLabels(repositoryCommit))
-    || inventory.releases.length !== 4
+    || inventory.releases.length !== 6
     || releases.length !== 2
     || deploys.length !== 1
     || deploys[0].type !== 'DEPLOY'
@@ -112,7 +112,7 @@ function validateFinalHostingInventory(
     || disables[0].type !== 'SITE_DISABLE'
     || disables[0].version_name !== null
     || disables[0].message !== hostingMessages.disable) {
-    throw new Error('Firebase Hosting did not converge to the exact disabled v5 state');
+    throw new Error('Firebase Hosting did not converge to the exact disabled v6 state');
   }
   return versions[0];
 }
@@ -252,7 +252,7 @@ async function main() {
   }
   if (operationError !== undefined) {
     const failure = Object.freeze({
-      schema: 'miakapp.staging-browser-attestation-failure/5',
+      schema: 'miakapp.staging-browser-attestation-failure/6',
       operation: metadata.operation,
       state: 'failed_after_bounded_cleanup',
       project_id: PROJECT_ID,
@@ -278,6 +278,8 @@ async function main() {
       system_browser_requested: failureStage === 'system_browser_attestation',
       loopback_observation_received: browserResult !== undefined,
       loopback_observation_state: browserResult?.state ?? null,
+      loopback_failure_stage: browserResult?.failure_stage ?? null,
+      loopback_failure_code: browserResult?.failure_code ?? null,
       challenge_retained: false,
       firebase_auth_used: false,
       control_plane_invoked: false,
@@ -315,7 +317,7 @@ async function main() {
   verifyExactMain(repositoryRoot, metadata.repository_commit);
 
   const result = Object.freeze({
-    schema: 'miakapp.staging-browser-attestation-result/5',
+    schema: 'miakapp.staging-browser-attestation-result/6',
     operation: metadata.operation,
     project_id: PROJECT_ID,
     project_number: metadata.project_number,
