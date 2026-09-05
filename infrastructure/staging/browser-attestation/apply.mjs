@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isDeepStrictEqual } from 'node:util';
 
 import { readAndVerifyArtifact, validatePinnedPackageVersions } from './artifact.mjs';
 import { runBrowserAttestation, validateBrowserPreflight } from './browser.mjs';
@@ -24,6 +25,7 @@ import {
   deleteHostingVersion,
   disableHostingSite,
   finalizeHostingVersion,
+  hostingLabels,
   hostingMessages,
   populateHostingVersion,
   releaseHostingVersion,
@@ -34,6 +36,7 @@ import {
   observeAttestationBaseline,
   observeHostingInventory,
   sameBaseline,
+  validateRetiredPreflightVersion,
 } from './inventory.mjs';
 import { observeBrowserAppCheckRegistrationInventory } from '../browser-app-check/inventory.mjs';
 import {
@@ -65,14 +68,24 @@ async function disableWithBoundedRecovery(session) {
   throw lastError ?? new Error('Firebase Hosting site disable failed');
 }
 
-function validateFinalHostingInventory(inventory, versionName, deployRelease, disableRelease) {
+function validateFinalHostingInventory(
+  inventory,
+  versionName,
+  repositoryCommit,
+  deployRelease,
+  disableRelease,
+) {
+  validateRetiredPreflightVersion(inventory);
   const versions = inventory.versions.filter(({ name }) => name === versionName);
   const deploys = inventory.releases.filter(({ name }) => name === deployRelease.name);
   const disables = inventory.releases.filter(({ name }) => name === disableRelease.name);
   if (inventory.site.site !== HOSTING_SITE
-    || inventory.versions.length !== 1
+    || inventory.versions.length !== 2
     || versions.length !== 1
     || versions[0].status !== 'DELETED'
+    || versions[0].file_count !== null
+    || versions[0].version_bytes !== null
+    || !isDeepStrictEqual(versions[0].labels, hostingLabels(repositoryCommit))
     || inventory.releases.length !== 2
     || deploys.length !== 1
     || deploys[0].type !== 'DEPLOY'
@@ -82,7 +95,7 @@ function validateFinalHostingInventory(inventory, versionName, deployRelease, di
     || disables[0].type !== 'SITE_DISABLE'
     || disables[0].version_name !== null
     || disables[0].message !== hostingMessages.disable) {
-    throw new Error('Firebase Hosting did not converge to the exact disabled post-attestation state');
+    throw new Error('Firebase Hosting did not converge to the exact disabled v2 state');
   }
   return versions[0];
 }
@@ -111,8 +124,9 @@ async function main() {
     throw new Error('Browser-attestation dependency lock differs from the reviewed plan');
   }
   const artifacts = readAndVerifyArtifact(bundle, metadata);
-  const indexEntry = artifacts.find(({ path }) => path === RUNNER_PATH);
-  if (indexEntry === undefined) throw new Error('Browser-attestation index artifact is missing');
+  if (!artifacts.some(({ path }) => path === RUNNER_PATH)) {
+    throw new Error('Browser-attestation index artifact is missing');
+  }
 
   const session = await verifiedOperatorSession();
   const baseline = await observeAttestationBaseline(session);
@@ -134,6 +148,8 @@ async function main() {
   let deployRelease;
   let disableRelease;
   let browserResult;
+  let finalizedMetrics;
+  let publicArtifactEvidence;
   let publicStartedAt;
   let operationError;
   let cleanupError;
@@ -141,23 +157,16 @@ async function main() {
   try {
     versionName = await createHostingVersion(session, metadata.repository_commit);
     await populateHostingVersion(session, versionName, artifacts);
-    const finalized = await finalizeHostingVersion(
+    finalizedMetrics = await finalizeHostingVersion(
       session,
       versionName,
       metadata.repository_commit,
+      metadata.artifact,
     );
-    const acceptedStoredByteCounts = new Set([
-      String(metadata.artifact.total_content_bytes),
-      String(metadata.artifact.total_gzip_bytes),
-    ]);
-    if (finalized.fileCount !== String(metadata.artifact.file_count)
-      || !acceptedStoredByteCounts.has(finalized.versionBytes)) {
-      throw new Error('Finalized Hosting artifact size differs from the reviewed bundle');
-    }
     publicStartedAt = Date.now();
     releaseAttempted = true;
     deployRelease = await releaseHostingVersion(session, versionName);
-    await waitForRunner(indexEntry);
+    publicArtifactEvidence = await waitForRunner(artifacts);
     browserResult = await runBrowserAttestation();
   } catch (error) {
     operationError = error;
@@ -177,7 +186,8 @@ async function main() {
     throw new Error('Browser-attestation execution failed after bounded Hosting cleanup');
   }
   if (versionName === undefined || deployRelease === undefined || disableRelease === undefined
-    || browserResult === undefined || publicStartedAt === undefined) {
+    || browserResult === undefined || finalizedMetrics === undefined
+    || publicArtifactEvidence === undefined || publicStartedAt === undefined) {
     throw new Error('Browser-attestation execution is incomplete');
   }
   const publicWindowMilliseconds = Date.now() - publicStartedAt;
@@ -193,6 +203,7 @@ async function main() {
   const deletedVersion = validateFinalHostingInventory(
     hosting,
     versionName,
+    metadata.repository_commit,
     deployRelease,
     disableRelease,
   );
@@ -202,7 +213,7 @@ async function main() {
   verifyExactMain(repositoryRoot, metadata.repository_commit);
 
   const result = Object.freeze({
-    schema: 'miakapp.staging-browser-attestation-result/1',
+    schema: 'miakapp.staging-browser-attestation-result/2',
     operation: metadata.operation,
     project_id: PROJECT_ID,
     project_number: metadata.project_number,
@@ -214,6 +225,10 @@ async function main() {
       runner_path: RUNNER_PATH,
       artifact_files: metadata.artifact.file_count,
       artifact_content_bytes: metadata.artifact.total_content_bytes,
+      artifact_files_verified: publicArtifactEvidence.files_verified,
+      artifact_content_bytes_verified: publicArtifactEvidence.content_bytes_verified,
+      finalized_file_count: finalizedMetrics.file_count,
+      finalized_version_bytes: finalizedMetrics.version_bytes,
       version_name_sha256: sha256(Buffer.from(versionName, 'utf8')),
       version_status: deletedVersion.status,
       deploy_release_name_sha256: sha256(Buffer.from(deployRelease.name, 'utf8')),
