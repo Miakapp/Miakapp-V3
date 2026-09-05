@@ -15,6 +15,8 @@ const EXPECTED_RESULT_SHA256 = Object.freeze({
     'b30f981dd11789c62bdd4f77c89a7faa1088df6dc947ce27f14331355f43dfc0',
   'miakapp.staging-browser-attestation-preflight-result/5':
     'b6f663ecaa8f5c2a54d40cb578e2a6f90547267b834fcd398df68a3040bdbe91',
+  'miakapp.staging-browser-attestation-preflight-result/6':
+    'cd4a750c3f2be1985b84dacfb8f76ea117dc1651a91d197c915c0c1dc43bfed2',
 });
 
 function reject(message) {
@@ -56,9 +58,14 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     try {
       for (const path of process.argv.slice(2)) {
         const result = validatePreflightEvidence(path);
-        const retirement = result.schema.endsWith('/4') || result.schema.endsWith('/5')
-          ? 'its verified publication was disabled and deleted after the automated browser failed'
-          : 'its Hosting version was deleted before any release or browser invocation';
+        let retirement = 'its Hosting version was deleted before any release or browser invocation';
+        if (result.schema.endsWith('/4')) {
+          retirement = 'its verified publication was disabled and deleted after the automated browser failed';
+        } else if (result.schema.endsWith('/5')) {
+          retirement = 'its verified publication was disabled and deleted after a closed system-browser failure';
+        } else if (result.schema.endsWith('/6')) {
+          retirement = 'a real provider token was obtained before verified Hosting retirement';
+        }
         process.stdout.write(`Validated ${result.schema} for ${result.project_id}; ${retirement}.\n`);
       }
     } catch (error) {

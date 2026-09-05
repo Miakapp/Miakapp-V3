@@ -21,6 +21,7 @@ const REQUIRED_FILES = Object.freeze([
   'preflight-v3-result.json',
   'preflight-v4-result.json',
   'preflight-v5-result.json',
+  'preflight-v6-result.json',
   'recovery-apply.mjs',
   'recovery-apply.sh',
   'recovery-plan.mjs',
@@ -55,6 +56,8 @@ export function validateBrowserAttestationRoot(rootUrl) {
   const driver = ['apply.mjs', 'browser.mjs', 'plan.mjs']
     .map((name) => readFileSync(new URL(name, rootUrl), 'utf8'))
     .join('\n');
+  const consumedEntrypoints = ['apply.mjs', 'plan.mjs', 'recovery-apply.mjs', 'recovery-plan.mjs']
+    .map((name) => readFileSync(new URL(name, rootUrl), 'utf8'));
   const combined = `${index}\n${runner}`;
   if (!index.includes('<script type="module" src="/runner.mjs"></script>')
     || !runner.includes('__MIAKAPP_FIREBASE_CONFIG__')
@@ -85,6 +88,12 @@ export function validateBrowserAttestationRoot(rootUrl) {
     || /connect-src[^\n]*https:\/\/firebaseappcheck\.googleapis\.com/u.test(contract)
     || /process\.stdin|single-tty-json-line|operator-connected-interactive|0\.0\.0\.0|shell:\s*true/u.test(driver)) {
     throw new Error('Browser-attestation driver differs from the reviewed system-browser loopback boundary');
+  }
+  if (consumedEntrypoints.some((source) => (
+    !source.includes('export const BROWSER_ATTESTATION_OPERATION_CONSUMED = true')
+      || !source.includes('if (BROWSER_ATTESTATION_OPERATION_CONSUMED)')
+  ))) {
+    throw new Error('Browser-attestation one-shot entrypoints must remain permanently retired');
   }
 }
 

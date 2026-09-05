@@ -42,6 +42,9 @@ import {
 
 const APPLY_AUTHORIZATION = 'MIAKAPP_STAGING_BROWSER_ATTESTATION_RECOVERY_AUTHORIZATION';
 const ATTEMPT_MARKER = 'recovery-attempted.json';
+export const BROWSER_ATTESTATION_OPERATION_CONSUMED = true;
+const RETIRED_MESSAGE =
+  'The browser-attestation Hosting state is fully retired; this recovery apply path is permanently retired';
 process.umask(0o077);
 
 function persistAttemptMarker(bundle, metadata) {
@@ -189,8 +192,13 @@ async function main() {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  main().catch((error) => {
-    console.error(error instanceof Error ? error.message : 'Browser-attestation recovery failed');
+  if (BROWSER_ATTESTATION_OPERATION_CONSUMED) {
+    console.error(RETIRED_MESSAGE);
     process.exitCode = 1;
-  });
+  } else {
+    main().catch((error) => {
+      console.error(error instanceof Error ? error.message : 'Browser-attestation recovery failed');
+      process.exitCode = 1;
+    });
+  }
 }

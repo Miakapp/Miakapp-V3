@@ -383,6 +383,13 @@ internal-only ingress and scale 0..1 and made no Function request. Retiring
 version 1 remains a separately guarded operation after the complete lease
 bound.
 
+A later one-shot system-browser operation closed the standalone Web App Check
+provider prerequisite. The default macOS browser obtained one fresh
+reCAPTCHA Enterprise-backed token from the exact staging Hosting origin. Token
+bytes and claims never left the page; Hosting was disabled and deleted after an
+8,749 ms public window, and the runner now returns HTTP 404. Enforcement remains
+disabled and all execution plus recovery entrypoints are retired.
+
 The pinned local relay-authentication path now includes signing-key overlap,
 key-changing `REAUTH`, concurrent cache refresh, expiry, unknown-`kid` abuse,
 JWKS outage and bounded recovery. A separate pinned local gate now exercises the
