@@ -21,8 +21,11 @@ import {
   validateRelayImageProfile,
 } from './browser-relay-image/contract.mjs';
 import {
+  RELAY_IMAGE_V1_PROFILE_PATH,
+  RELAY_IMAGE_V1_PROFILE_SHA256,
   RELAY_IMAGE_V1_RESULT_PATH,
   RELAY_IMAGE_V1_RESULT_SHA256,
+  validateRelayImageV1Profile,
   validateRelayImageV1Result,
 } from './browser-relay-image/result.mjs';
 import { validateBrowserAppCheckEvidence } from './browser-app-check/evidence.mjs';
@@ -80,6 +83,7 @@ const ENABLED_SERVICE_APIS = [
   'cloudkms.googleapis.com',
   'cloudresourcemanager.googleapis.com',
   'cloudtrace.googleapis.com',
+  'containeranalysis.googleapis.com',
   'containerregistry.googleapis.com',
   'dataform.googleapis.com',
   'dataplex.googleapis.com',
@@ -2834,6 +2838,7 @@ function validateEvidence(value) {
     'active_apply_workflow_present',
     'recovery_workflow_retired',
     'staging_wif_providers_disabled',
+    'foundation_container_analysis_adoption',
     'activation_material',
     'workload_deployment',
     'private_probe',
@@ -2887,6 +2892,114 @@ function validateEvidence(value) {
     true,
     'evidence.staging_wif_providers_disabled',
   );
+  const containerAnalysisAdoption = record(
+    evidence.foundation_container_analysis_adoption,
+    'evidence.foundation_container_analysis_adoption',
+    [
+      'state',
+      'observed_at',
+      'terraform_root',
+      'configuration_commit',
+      'terraform_version',
+      'private_plan_sha256',
+      'resource_address',
+      'service',
+      'deletion_policy',
+      'result',
+      'state_before',
+      'state_after',
+      'container_analysis_api_enabled',
+      'container_scanning_api_enabled',
+      'convergence_plan_no_changes',
+      'new_fixed_cost_services',
+      'apply_succeeded',
+      'raw_plan_committed',
+      'raw_state_committed',
+    ],
+  );
+  const expectedContainerAnalysisAdoption = {
+    state: 'container_analysis_enabled_foundation_converged_scanning_disabled',
+    observed_at: '2026-09-05T23:33:50.000Z',
+    terraform_root: 'terraform',
+    configuration_commit: '9feaae67f6e72a32a8df2d5b8d8f777f4f7640f7',
+    terraform_version: '1.11.3',
+    private_plan_sha256: 'e0163206d78ad293f6d6c2e0067401858e27a50fcbe33984597205f81c16c297',
+    resource_address: 'google_project_service.required["containeranalysis.googleapis.com"]',
+    service: 'containeranalysis.googleapis.com',
+    deletion_policy: 'PREVENT',
+    container_analysis_api_enabled: true,
+    container_scanning_api_enabled: false,
+    convergence_plan_no_changes: true,
+    new_fixed_cost_services: 0,
+    apply_succeeded: true,
+    raw_plan_committed: false,
+    raw_state_committed: false,
+  };
+  for (const [field, expected] of Object.entries(expectedContainerAnalysisAdoption)) {
+    exact(
+      containerAnalysisAdoption[field],
+      expected,
+      `evidence.foundation_container_analysis_adoption.${field}`,
+    );
+  }
+  const containerAnalysisResult = record(
+    containerAnalysisAdoption.result,
+    'evidence.foundation_container_analysis_adoption.result',
+    ['create', 'update', 'delete'],
+  );
+  for (const [field, expected] of Object.entries({ create: 1, update: 0, delete: 0 })) {
+    exact(
+      containerAnalysisResult[field],
+      expected,
+      `evidence.foundation_container_analysis_adoption.result.${field}`,
+    );
+  }
+  const foundationStateKeys = [
+    'generation',
+    'sha256',
+    'size_bytes',
+    'serial',
+    'managed_resources',
+    'data_resources',
+    'outputs',
+    'lineage_sha256',
+  ];
+  const foundationStateExpectations = {
+    state_before: {
+      generation: '1788456706865449',
+      sha256: 'e2eca5fc0934a51a4c9a56650665285717772fd350b59e87d18b1ec2da04d8b0',
+      size_bytes: 53619,
+      serial: 6,
+      managed_resources: 33,
+      data_resources: 3,
+      outputs: 1,
+      lineage_sha256: '113390906103bdbefa4bac8b5d9549f7d867c38e8e9c4bef989977a12222c7d4',
+    },
+    state_after: {
+      generation: '1788650355101579',
+      sha256: 'd02467774f19e3bbd0a596113d843e4dac99b14558c3655cd370104d3e04c32d',
+      size_bytes: 54484,
+      serial: 7,
+      managed_resources: 34,
+      data_resources: 3,
+      outputs: 1,
+      lineage_sha256: '113390906103bdbefa4bac8b5d9549f7d867c38e8e9c4bef989977a12222c7d4',
+    },
+  };
+  for (const [name, expectations] of Object.entries(foundationStateExpectations)) {
+    const state = record(
+      containerAnalysisAdoption[name],
+      `evidence.foundation_container_analysis_adoption.${name}`,
+      foundationStateKeys,
+    );
+    for (const [field, expected] of Object.entries(expectations)) {
+      exact(
+        state[field],
+        expected,
+        `evidence.foundation_container_analysis_adoption.${name}.${field}`,
+      );
+    }
+  }
   const activation = record(evidence.activation_material, 'evidence.activation_material', [
     'state',
     'observed_at',
@@ -3558,8 +3671,10 @@ function validateEvidence(value) {
       'state',
       'profile_path',
       'profile_sha256',
-      'result_path',
-      'result_sha256',
+      'v1_profile_path',
+      'v1_profile_sha256',
+      'v1_result_path',
+      'v1_result_sha256',
       'browser_relay_plan_sha256',
       'relay_services_profile_sha256',
       'source_repository',
@@ -3567,12 +3682,17 @@ function validateEvidence(value) {
       'source_tree',
       'source_archive_sha256',
       'source_archive_bytes',
+      'source_object_generation',
+      'source_reuse_required',
+      'source_upload_authorized',
       'builder_digest',
       'machine_type',
       'requested_verify_option',
       'maximum_builds',
-      'attempted_builds',
-      'private_image_present',
+      'v1_attempted_builds',
+      'v2_attempted_builds',
+      'v2_claim_present',
+      'v1_private_image_present',
       'verified_image_present',
       'deployment_authorized',
       'container_analysis_api_enabled',
@@ -3584,11 +3704,13 @@ function validateEvidence(value) {
     ],
   );
   const expectedBrowserRelayImage = {
-    state: 'v1_consumed_verified_provenance_failed_not_deployable',
+    state: 'v1_failed_container_analysis_converged_v2_recovery_reviewed_not_built',
     profile_path: RELAY_IMAGE_PROFILE_PATH,
     profile_sha256: RELAY_IMAGE_PROFILE_SHA256,
-    result_path: RELAY_IMAGE_V1_RESULT_PATH,
-    result_sha256: RELAY_IMAGE_V1_RESULT_SHA256,
+    v1_profile_path: RELAY_IMAGE_V1_PROFILE_PATH,
+    v1_profile_sha256: RELAY_IMAGE_V1_PROFILE_SHA256,
+    v1_result_path: RELAY_IMAGE_V1_RESULT_PATH,
+    v1_result_sha256: RELAY_IMAGE_V1_RESULT_SHA256,
     browser_relay_plan_sha256: BROWSER_RELAY_PLAN_SHA256,
     relay_services_profile_sha256: RELAY_SERVICES_PROFILE_SHA256,
     source_repository: 'https://github.com/Miakapp/Miakapp-Server.git',
@@ -3596,15 +3718,20 @@ function validateEvidence(value) {
     source_tree: '0468ea08cd2d51b3e656c4adea9bb09b4a8a6ea1',
     source_archive_sha256: '93fd720736453e3555be625bbb993194f48a5388821169c939674b04088f158e',
     source_archive_bytes: 53098,
+    source_object_generation: '1788648564283151',
+    source_reuse_required: true,
+    source_upload_authorized: false,
     builder_digest: 'sha256:3d00b6c1a9b862621c30fc74d4f2abfc62bcbdee631ed3febd31e7edbdf6252c',
     machine_type: 'E2_MEDIUM',
     requested_verify_option: 'VERIFIED',
     maximum_builds: 1,
-    attempted_builds: 1,
-    private_image_present: true,
+    v1_attempted_builds: 1,
+    v2_attempted_builds: 0,
+    v2_claim_present: false,
+    v1_private_image_present: true,
     verified_image_present: false,
     deployment_authorized: false,
-    container_analysis_api_enabled: false,
+    container_analysis_api_enabled: true,
     container_scanning_api_enabled: false,
     relay_services: 0,
     public_ingress_active: false,
@@ -4321,10 +4448,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 60, 'manifest.revision');
+  exact(manifest.revision, 61, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rebased_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_prerequisite_declared_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rebased_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_reviewed_not_built_enforcement_disabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -4718,26 +4845,43 @@ export function validateCommittedEvidence(
     browserRelayImageManifest.profile_sha256,
     'evidence.browser_relay_image.profile_sha256',
   );
-  const browserRelayImageResultPath = committedEvidencePath(
+  const browserRelayImageV1ProfilePath = committedEvidencePath(
     stagingRoot,
-    browserRelayImageManifest.result_path,
-    RELAY_IMAGE_V1_RESULT_PATH,
-    'evidence.browser_relay_image.result_path',
+    browserRelayImageManifest.v1_profile_path,
+    RELAY_IMAGE_V1_PROFILE_PATH,
+    'evidence.browser_relay_image.v1_profile_path',
   );
-  const browserRelayImageResult = validatedEvidenceFile(
-    browserRelayImageResultPath,
-    validateRelayImageV1Result,
-    'evidence.browser_relay_image.result_path',
+  const browserRelayImageV1Profile = validatedEvidenceFile(
+    browserRelayImageV1ProfilePath,
+    validateRelayImageV1Profile,
+    'evidence.browser_relay_image.v1_profile_path',
   );
   exact(
-    fileSha256(browserRelayImageResultPath),
-    browserRelayImageManifest.result_sha256,
-    'evidence.browser_relay_image.result_sha256',
+    fileSha256(browserRelayImageV1ProfilePath),
+    browserRelayImageManifest.v1_profile_sha256,
+    'evidence.browser_relay_image.v1_profile_sha256',
+  );
+  const browserRelayImageV1ResultPath = committedEvidencePath(
+    stagingRoot,
+    browserRelayImageManifest.v1_result_path,
+    RELAY_IMAGE_V1_RESULT_PATH,
+    'evidence.browser_relay_image.v1_result_path',
+  );
+  const browserRelayImageV1Result = validatedEvidenceFile(
+    browserRelayImageV1ResultPath,
+    validateRelayImageV1Result,
+    'evidence.browser_relay_image.v1_result_path',
+  );
+  exact(
+    fileSha256(browserRelayImageV1ResultPath),
+    browserRelayImageManifest.v1_result_sha256,
+    'evidence.browser_relay_image.v1_result_sha256',
   );
   exactFields(browserRelayImageManifest, {
-    state: 'v1_consumed_verified_provenance_failed_not_deployable',
+    state: 'v1_failed_container_analysis_converged_v2_recovery_reviewed_not_built',
     profile_sha256: RELAY_IMAGE_PROFILE_SHA256,
-    result_sha256: RELAY_IMAGE_V1_RESULT_SHA256,
+    v1_profile_sha256: RELAY_IMAGE_V1_PROFILE_SHA256,
+    v1_result_sha256: RELAY_IMAGE_V1_RESULT_SHA256,
     browser_relay_plan_sha256:
       browserRelayImageProfile.contracts.browser_relay_plan_sha256,
     relay_services_profile_sha256:
@@ -4747,18 +4891,23 @@ export function validateCommittedEvidence(
     source_tree: browserRelayImageProfile.source.tree,
     source_archive_sha256: browserRelayImageProfile.source.archive_sha256,
     source_archive_bytes: browserRelayImageProfile.source.archive_bytes,
+    source_object_generation: browserRelayImageProfile.source.object_generation,
+    source_reuse_required: browserRelayImageProfile.recovery.source_reuse_required,
+    source_upload_authorized: browserRelayImageProfile.operation.source_upload_authorized,
     builder_digest: browserRelayImageProfile.build.builder_image.split('@')[1],
     machine_type: browserRelayImageProfile.build.machine_type,
     requested_verify_option: browserRelayImageProfile.build.requested_verify_option,
     maximum_builds: browserRelayImageProfile.build.maximum_builds,
-    attempted_builds: browserRelayImageResult.effects.cloud_builds_submitted,
-    private_image_present: browserRelayImageResult.build.image_push_observed,
-    verified_image_present: browserRelayImageResult.build.verified_provenance_created,
-    deployment_authorized: browserRelayImageResult.image.deployment_authorized,
+    v1_attempted_builds: browserRelayImageV1Result.effects.cloud_builds_submitted,
+    v2_attempted_builds: 0,
+    v2_claim_present: false,
+    v1_private_image_present: browserRelayImageV1Result.build.image_push_observed,
+    verified_image_present: browserRelayImageV1Result.build.verified_provenance_created,
+    deployment_authorized: browserRelayImageV1Result.image.deployment_authorized,
     container_analysis_api_enabled:
-      browserRelayImageResult.prerequisites.container_analysis_api_enabled,
+      browserRelayImageProfile.prerequisites.container_analysis_api_enabled,
     container_scanning_api_enabled:
-      browserRelayImageResult.prerequisites.container_scanning_api_enabled,
+      browserRelayImageProfile.prerequisites.container_scanning_api_enabled,
     relay_services: 0,
     public_ingress_active: false,
     new_fixed_cost_services: browserRelayImageProfile.cost.new_fixed_cost_services,
@@ -4773,6 +4922,53 @@ export function validateCommittedEvidence(
     browserRelayImageProfile.contracts.relay_services_profile_sha256,
     RELAY_SERVICES_PROFILE_SHA256,
     'browser-relay-image/profile.json contracts.relay_services_profile_sha256',
+  );
+  exact(
+    browserRelayImageProfile.contracts.v1_profile_sha256,
+    RELAY_IMAGE_V1_PROFILE_SHA256,
+    'browser-relay-image/profile.json contracts.v1_profile_sha256',
+  );
+  exact(
+    browserRelayImageProfile.contracts.v1_result_sha256,
+    RELAY_IMAGE_V1_RESULT_SHA256,
+    'browser-relay-image/profile.json contracts.v1_result_sha256',
+  );
+  exact(
+    browserRelayImageV1Result.profile_sha256,
+    RELAY_IMAGE_V1_PROFILE_SHA256,
+    'browser-relay-image/result-v1.json profile_sha256',
+  );
+  for (const field of ['repository', 'commit', 'tree', 'archive_sha256', 'archive_bytes']) {
+    exact(
+      browserRelayImageProfile.source[field],
+      browserRelayImageV1Profile.source[field],
+      `browser-relay-image/profile.json source.${field}`,
+    );
+  }
+  exact(
+    browserRelayImageProfile.source.object_generation,
+    browserRelayImageV1Result.source.object_generation,
+    'browser-relay-image/profile.json source.object_generation',
+  );
+  if (browserRelayImageProfile.operation.claim_object
+      === browserRelayImageV1Profile.operation.claim_object
+    || browserRelayImageProfile.build.build_tag === browserRelayImageV1Profile.build.build_tag
+    || browserRelayImageProfile.image.tag_reference
+      === browserRelayImageV1Profile.image.tag_reference) {
+    reject(
+      'browser-relay-image/profile.json',
+      'v2 claim, build tag and image tag must all differ from v1',
+    );
+  }
+  exact(
+    browserRelayImageProfile.prerequisites.foundation_state_generation,
+    manifest.evidence.foundation_container_analysis_adoption.state_after.generation,
+    'browser-relay-image/profile.json prerequisites.foundation_state_generation',
+  );
+  exact(
+    browserRelayImageProfile.prerequisites.foundation_state_sha256,
+    manifest.evidence.foundation_container_analysis_adoption.state_after.sha256,
+    'browser-relay-image/profile.json prerequisites.foundation_state_sha256',
   );
   const browserAppCheckManifest = manifest.evidence.browser_app_check_prerequisite;
   const browserAppCheckPath = committedEvidencePath(
@@ -5011,6 +5207,8 @@ export function validateCommittedEvidence(
     browserRelayPlan,
     relayServicesProfile,
     browserRelayImageProfile,
+    browserRelayImageV1Profile,
+    browserRelayImageV1Result,
     browserAppCheck,
     browserAttestation,
     signingOverlap,
@@ -5036,7 +5234,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; relay-image build v1 is consumed and not deployable after verified-provenance failure, signing-key version 1 remains current, both keys remain published, and App Check enforcement is disabled.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; relay-image build v1 is consumed and not deployable, Container Analysis is converged, v2 recovery is reviewed but not built, and App Check enforcement is disabled.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';

@@ -1,0 +1,101 @@
+{
+  "schema": "miakapp.staging-browser-relay-image-profile/1",
+  "state": "reviewed_not_built",
+  "project": {
+    "project_id": "miakapp-v4-staging",
+    "project_number": "1072737219170",
+    "region": "europe-west9",
+    "forbidden_project_ids": [
+      "demo-miakapp-v4",
+      "miakapp-3",
+      "miakapp-v4"
+    ]
+  },
+  "contracts": {
+    "browser_relay_plan_sha256": "4a5c13999d9f7f328b1b8b867bbd86d4c5e80cb980d9eb1324028ea0e5785343",
+    "relay_services_profile_sha256": "bc9b231cc9724f19a26ef5c3bbd6da6a69ec79b00cb976e77c73015d5db10db7"
+  },
+  "source": {
+    "repository": "https://github.com/Miakapp/Miakapp-Server.git",
+    "commit": "df10674e034f30eec80760f5ec94bc108cff026f",
+    "tree": "0468ea08cd2d51b3e656c4adea9bb09b4a8a6ea1",
+    "archive_sha256": "93fd720736453e3555be625bbb993194f48a5388821169c939674b04088f158e",
+    "archive_bytes": 53098,
+    "archive_files": [
+      ".dockerignore",
+      "Dockerfile",
+      "go.mod",
+      "go.sum",
+      "cmd",
+      "internal"
+    ],
+    "dockerfile_sha256": "f1555b9f041b075f818d4c262bada42c8fca01cf88e939952e35b7f9b0187a7c",
+    "dockerignore_sha256": "b8347288fb9ba33a32b69de514d0f82ee41e9d914cfbca664cc5aa1fdae83152",
+    "go_mod_sha256": "75bfa0ca43e62a586dabce8f721ab3aa5195e0fb440b61288b60a5df5a6fae05",
+    "go_sum_sha256": "f887efa614262d18e8b577769146d783b76c9f557af6cae3adc2450bb42f51a8",
+    "source_bucket": "miakapp-v4-staging-function-source-1072737219170",
+    "source_object": "relay-build-sources/93fd720736453e3555be625bbb993194f48a5388821169c939674b04088f158e.tar.gz"
+  },
+  "build": {
+    "service_account": "projects/miakapp-v4-staging/serviceAccounts/miakapp-control-build@miakapp-v4-staging.iam.gserviceaccount.com",
+    "builder_image": "gcr.io/cloud-builders/docker@sha256:3d00b6c1a9b862621c30fc74d4f2abfc62bcbdee631ed3febd31e7edbdf6252c",
+    "machine_type": "E2_MEDIUM",
+    "timeout_seconds": 900,
+    "queue_ttl_seconds": 300,
+    "logging": "CLOUD_LOGGING_ONLY",
+    "source_provenance_hash": "SHA256",
+    "requested_verify_option": "VERIFIED",
+    "maximum_builds": 1,
+    "build_tag": "miakapp-relay-image-v1",
+    "smoke_test": {
+      "maximum_attempts": 20,
+      "request_timeout_seconds": 2,
+      "read_only": true,
+      "capabilities": [],
+      "expected_response": "pong"
+    }
+  },
+  "image": {
+    "repository": "europe-west9-docker.pkg.dev/miakapp-v4-staging/miakapp-control-plane",
+    "name": "miakapp-server",
+    "tag": "source-df10674e034f30eec80760f5ec94bc108cff026f",
+    "tag_reference": "europe-west9-docker.pkg.dev/miakapp-v4-staging/miakapp-control-plane/miakapp-server:source-df10674e034f30eec80760f5ec94bc108cff026f",
+    "digest_required_for_deployment": true,
+    "expected_os": "linux",
+    "expected_architecture": "amd64",
+    "expected_user": "65532",
+    "expected_entrypoint": [
+      "/usr/local/bin/miakapp-server"
+    ],
+    "expected_exposed_ports": [
+      "3000/tcp"
+    ],
+    "maximum_compressed_bytes": 33554432,
+    "labels": {
+      "com.miakapp.staging.source-archive-sha256": "93fd720736453e3555be625bbb993194f48a5388821169c939674b04088f158e",
+      "com.miakapp.staging.source-tree": "0468ea08cd2d51b3e656c4adea9bb09b4a8a6ea1",
+      "org.opencontainers.image.revision": "df10674e034f30eec80760f5ec94bc108cff026f",
+      "org.opencontainers.image.source": "https://github.com/Miakapp/Miakapp-Server",
+      "org.opencontainers.image.title": "Miakapp Server",
+      "org.opencontainers.image.vendor": "Miakapp"
+    }
+  },
+  "operation": {
+    "claim_bucket": "miakapp-v4-staging-tfstate-1072737219170",
+    "claim_object": "operations/browser-relay-image-build-v1.json",
+    "plan_ttl_seconds": 7200,
+    "retry_authorized": false,
+    "deletion_authorized": false,
+    "public_ingress_authorized": false,
+    "relay_service_creation_authorized": false,
+    "persistent_credentials_authorized": false,
+    "container_scanning_authorized": false
+  },
+  "cost": {
+    "currency": "EUR",
+    "maximum_incremental_eur": 1,
+    "stress_test": false,
+    "minimum_instances": 0,
+    "new_fixed_cost_services": 0
+  }
+}

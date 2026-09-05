@@ -14,7 +14,6 @@ import {
   writePrivateFile,
 } from './contract.mjs';
 import { validateRelayImageRoot } from './guard.mjs';
-import { rejectRelayImageV1Replay } from './result.mjs';
 import {
   observeRelayImageInventory,
   validateRelayImageBaseline,
@@ -31,7 +30,6 @@ const PLAN_CONFIRMATION = 'MIAKAPP_STAGING_RELAY_IMAGE_PLAN_CONFIRMATION';
 process.umask(0o077);
 
 async function main() {
-  rejectRelayImageV1Replay();
   const profile = validateRelayImageProfile();
   if (process.argv.length !== 4 || process.argv[2] === undefined || process.argv[3] === undefined) {
     throw new Error(`Usage: ${PLAN_CONFIRMATION}=${profile.project.project_id} ./plan.sh <private-parent> <Miakapp-Server-root>`);
@@ -73,8 +71,8 @@ async function main() {
     `Metadata SHA-256: ${sha256(metadataBytes)}`,
     `Source archive: ${source.archive_bytes} bytes; SHA-256 ${source.archive_sha256}`,
     `Authorization: ${relayImageAuthorization(metadataBytes, repositoryCommit)}`,
-    'Planned boundary: one verified E2_MEDIUM Cloud Build, one private immutable image, no Cloud Run or IAM mutation.',
-    'The atomic claim and source object are retained; the operation cannot retry or delete them.',
+    'Planned boundary: one v2 verified E2_MEDIUM Cloud Build from the existing immutable source, one private image tag, no Cloud Run or IAM mutation.',
+    'The distinct atomic claim and existing source object are retained; the operation cannot retry, upload source, or delete them.',
     '',
   ].join('\n'));
 }

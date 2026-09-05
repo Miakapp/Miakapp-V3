@@ -1,7 +1,7 @@
 # Staging Terraform foundation
 
-Status: foundation complete; Container Analysis metadata API adoption pending;
-recovery workflow and WIF exchange retired
+Status: foundation complete and converged with Container Analysis metadata API;
+Container Scanning disabled; recovery workflow and WIF exchange retired
 
 This root describes the ordinary protected foundation for the existing,
 billing-linked `miakapp-v4-staging` project. The deployed private workload is
@@ -52,7 +52,7 @@ providers. Terraform's
 GCS backend initially created empty foundation state at serial 1. Protected run
 `33776569977` later persisted 25 managed resources. Recovery run `33784785967`
 completed the remaining eight IAM members. Current generation
-`1788456706865449` is healthy at serial 6 with all 33 managed resources; the
+`1788650355101579` is healthy at serial 7 with all 34 managed resources; the
 bootstrap guard, APIs, Firestore, TTL fields, KMS key material, five empty secret
 containers and their exact resource IAM are present.
 
@@ -166,6 +166,25 @@ generation `1788460174191027` is 61,864 bytes at serial 42 with 37 managed
 resources, two data resources and one output; its SHA-256 is
 `288d947d35f5d5a278aaff210ea878a9dab817f594b4c3161ed117bb2e30e26d`.
 The pool remains enabled and retained.
+
+## Container Analysis metadata API adoption
+
+Merged configuration commit `9feaae67f6e72a32a8df2d5b8d8f777f4f7640f7`
+added only `google_project_service.required["containeranalysis.googleapis.com"]`
+to the existing foundation. The private saved plan had SHA-256
+`e0163206d78ad293f6d6c2e0067401858e27a50fcbe33984597205f81c16c297`
+and was machine-validated as exactly `1 to add, 0 to change, 0 to destroy`,
+with deletion policy `PREVENT`.
+
+Applying that exact plan reported `1 added, 0 changed, 0 destroyed`; the
+follow-up real plan reported no changes. Foundation state advanced from serial
+6, generation `1788456706865449`, to serial 7, generation
+`1788650355101579`. The current 54,484-byte state has SHA-256
+`d02467774f19e3bbd0a596113d843e4dac99b14558c3655cd370104d3e04c32d`
+and preserves the original lineage. `containeranalysis.googleapis.com` is
+enabled for build metadata. The separately billed
+`containerscanning.googleapis.com` remains disabled, and this adoption adds no
+fixed-cost service.
 
 ## Explicit boundaries
 
