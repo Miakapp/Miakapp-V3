@@ -53,10 +53,11 @@ the private diagnostics and build a fresh, separately reviewed recovery from
 the two pinned claims and authoritative KMS inventory.
 
 The committed result contains the public JWK for version 2 and no credential.
-A later reviewed workload change will prepublish versions 1 and 2
-while version 1 remains current. Only after at least 60 seconds may another
-reviewed change activate version 2, and version 1 remains published for at
-least the complete 330-second token lease bound.
+A later reviewed workload change has prepublished versions 1 and 2 while
+version 1 remains current on revision `control-plane-00007-deb`. Only after at
+least 60 seconds from its authoritative update time may another reviewed change
+activate version 2, and version 1 must remain published for at least the
+complete 330-second token lease bound.
 
 One additional active software Cloud KMS version is currently priced at USD
 0.06/month; key administration operations are free. No free tier is assumed.

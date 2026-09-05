@@ -151,7 +151,7 @@ describe('initial staging runtime document', () => {
     }
   });
 
-  test('accepts the exact two-key prepublication target with version 1 current', () => {
+  test('accepts the exact live two-key runtime with version 1 current', () => {
     const current = parseRequestJson(readFileSync(new URL(
       '../../../infrastructure/staging/workload/runtime-config-single-key.json',
       import.meta.url,

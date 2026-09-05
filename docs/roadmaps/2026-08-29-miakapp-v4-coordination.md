@@ -453,6 +453,14 @@ source bytes, IAM, ingress, identities and scale. It converges to schema 2 with
 one selected and published key, and independent inventory makes no Function
 request. This closes the shape migration without claiming live key overlap.
 
+A sixteenth staging slice prepublishes KMS versions 1 and 2 while retaining
+version 1 as the selected signer. Exact plan SHA-256
+`0ff816d86e0b391da341703744663d4d0efb2a5478c4e17fed2c7b23ca5e2e24`
+updates only the Function and deployment guard in place and preserves source,
+IAM, ingress, identities and scale. It converges to revision
+`control-plane-00007-deb` without a Function request. Version 2 activation and
+complete 330-second version-1 retention remain separate gates.
+
 Deliverables:
 
 1. owner bootstrap and Home Key lifecycle;
@@ -627,9 +635,10 @@ current consumer.
    live probe has now validated the three negative controls, both signed token
    exchanges, authoritative relay rotation and complete two-fixture cleanup.
    Its Workflow, verifier and temporary grants are retired. The bounded
-   signing-key overlap bridge is active privately, and its single-key schema-2
-   runtime migration is complete on revision `control-plane-00006-wid`. The
-   runtime still publishes exactly one key. Live KMS signing-key and secret
+   signing-key overlap bridge is active privately, its single-key schema-2
+   migration is complete, and versions 1 and 2 are now prepublished on revision
+   `control-plane-00007-deb` with version 1 current. Live KMS activation,
+   retiring-key retention and secret
    rotation, browser App Check provider attestation, source/edge admission,
    monitoring, migration rehearsal and real staging fault evidence remain
    required before closing relay-integration and staging-only RFC 0004 Section
@@ -670,8 +679,10 @@ current consumer.
     and sanitized state/claim evidence is committed. A second software Ed25519
     signing version then converged after the first and only guarded direct REST
     request. Its two atomic claims remain durable, its one-shot entrypoints are
-    retired, and the runtime still publishes version 1 only. Next prepublish
-    both keys and activate version 2 across the required overlap window, then
+    retired. Both public keys are now prepublished on revision
+    `control-plane-00007-deb` with version 1 current, unchanged source bytes,
+    private ingress and scale 0..1. Next activate version 2 after the required
+    overlap interval and retain version 1 for the complete lease bound, then
     exercise bounded real browser SDK attestation with enforcement disabled and implement the
     temporary edge, two relays,
     three-engine runner and rollback guards. Execute the matrix once before
