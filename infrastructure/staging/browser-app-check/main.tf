@@ -88,3 +88,18 @@ resource "google_recaptcha_enterprise_key" "browser_app_check" {
 
   depends_on = [google_project_service.recaptcha_enterprise]
 }
+
+resource "google_firebase_app_check_recaptcha_enterprise_config" "browser_app_check" {
+  provider = google-beta
+
+  project   = local.project_id
+  app_id    = data.google_firebase_web_app.staging.app_id
+  site_key  = google_recaptcha_enterprise_key.browser_app_check.name
+  token_ttl = "3600s"
+
+  lifecycle {
+    prevent_destroy = true
+  }
+
+  depends_on = [google_recaptcha_enterprise_key.browser_app_check]
+}

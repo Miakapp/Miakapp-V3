@@ -1,11 +1,4 @@
 import { timingSafeEqual } from 'node:crypto';
-import {
-  chmodSync,
-  lstatSync,
-  mkdtempSync,
-  realpathSync,
-} from 'node:fs';
-import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 
 import {
@@ -15,55 +8,19 @@ import {
   PROJECT_NUMBER,
   REGION,
   TERRAFORM_VERSION,
-  assertSafeWorkloadEnvironment,
   canonicalJson,
-  childEnvironment,
   readPrivateFile,
   sha256,
-  verifiedOperatorEmail,
-  verifyExactMain,
-  writePrivateFile,
-} from '../workload/contract.mjs';
+} from './contract.mjs';
+import { KEY_PREREQUISITE_TERRAFORM_STATE } from './key-contract.mjs';
 
-export {
-  OPERATOR_USER_SHA256,
-  PLAN_TTL_MILLISECONDS,
-  PROJECT_ID,
-  PROJECT_NUMBER,
-  REGION,
-  TERRAFORM_VERSION,
-  assertSafeWorkloadEnvironment,
-  canonicalJson,
-  childEnvironment,
-  readPrivateFile,
-  sha256,
-  verifiedOperatorEmail,
-  verifyExactMain,
-  writePrivateFile,
-};
-
-export const FIREBASE_APP_ID = '1:1072737219170:web:5053ca93bf25d7373cd73b';
-export const FIREBASE_APP_NAME = `projects/${PROJECT_ID}/webApps/${FIREBASE_APP_ID}`;
-export const FIREBASE_APP_CONFIG_NAME = `projects/${PROJECT_NUMBER}/apps/${FIREBASE_APP_ID}/recaptchaEnterpriseConfig`;
-export const FIREBASE_APP_DISPLAY_NAME = 'Miakapp V4 Staging Web';
-export const HOSTING_DOMAIN = 'miakapp-v4-staging.web.app';
-export const RECAPTCHA_API = 'recaptchaenterprise.googleapis.com';
-export const RECAPTCHA_DISPLAY_NAME = 'Miakapp V4 staging browser App Check';
-export const INTENDED_TOKEN_TTL = '3600s';
-export const DEFAULT_RISK_SCORE = 0.5;
-export const INITIAL_TERRAFORM_STATE = Object.freeze({
-  schema: 'miakapp.staging-browser-app-check-state/1',
-  object: 'terraform/browser-app-check/default.tfstate',
-  generation: '1788588916588868',
-  size_bytes: 181,
-  sha256: '7f80cac767df4b54265a6e72ae6660d252ea6d247f506d1640f4ac9792dc3137',
-  terraform_version: TERRAFORM_VERSION,
-  serial: 1,
-  lineage_sha256: 'f6640c6c40b21a544f3ddc3ee8005f8a1d9d2eaa19dd79ba5fca5709394d9601',
-  managed_resources: 0,
-  data_resources: 0,
-  outputs: 0,
-});
+export const APP_CHECK_REGISTRATION_OPERATION =
+  'register-nondeletable-browser-app-check-provider';
+export const APP_CHECK_REGISTRATION_TTL = '3600s';
+export const RECAPTCHA_KEY_RESOURCE_NAME_SHA256 =
+  KEY_PREREQUISITE_TERRAFORM_STATE.recaptcha_key_name_sha256;
+export const APP_CHECK_SITE_KEY_SHA256 =
+  '8a76f0f2cc0e0b002ed66c7f7d01ac28a6d44cb74ad2d33c3a7b0f0203e58546';
 
 const SHA256 = /^[0-9a-f]{64}$/u;
 const COMMIT = /^[0-9a-f]{40}$/u;
@@ -103,50 +60,17 @@ function safeEqual(actual, expected) {
     && timingSafeEqual(actualBytes, expectedBytes);
 }
 
-export function createPrivateBrowserAppCheckBundle(
-  parentPath,
-  repositoryRoot,
-  prefix = 'miakapp-staging-browser-app-check-',
+export function browserAppCheckRegistrationAuthorization(
+  planBytes,
+  repositoryCommit,
+  baselineSha256,
 ) {
-  if (!isAbsolute(parentPath)) reject('Browser App Check bundle parent must be absolute');
-  if (![
-    'miakapp-staging-browser-app-check-',
-    'miakapp-staging-browser-app-check-recovery-',
-  ].includes(prefix)) {
-    reject('Browser App Check bundle prefix is invalid');
-  }
-  const parent = realpathSync(parentPath);
-  const repository = realpathSync(repositoryRoot);
-  const relation = relative(repository, parent);
-  const entry = lstatSync(parent);
-  if (!entry.isDirectory() || entry.isSymbolicLink()
-    || relation === '' || (!relation.startsWith(`..${sep}`) && relation !== '..')) {
-    reject('Browser App Check bundle parent must be a private directory outside the repository');
-  }
-  const directory = mkdtempSync(join(parent, prefix));
-  chmodSync(directory, 0o700);
-  return realpathSync(directory);
-}
-
-export function privateBrowserAppCheckBundle(path, repositoryRoot) {
-  const bundle = realpathSync(resolve(path));
-  const repository = realpathSync(repositoryRoot);
-  const relation = relative(repository, bundle);
-  const entry = lstatSync(bundle);
-  if (!entry.isDirectory() || entry.isSymbolicLink() || (entry.mode & 0o077) !== 0
-    || relation === '' || (!relation.startsWith(`..${sep}`) && relation !== '..')) {
-    reject('Browser App Check operation requires an exact private bundle directory');
-  }
-  return bundle;
-}
-
-export function browserAppCheckApiAuthorization(planBytes, repositoryCommit, baselineSha256) {
   if (!Buffer.isBuffer(planBytes) || planBytes.byteLength === 0
     || !COMMIT.test(repositoryCommit) || !SHA256.test(baselineSha256)) {
-    reject('Browser App Check API authorization inputs are invalid');
+    reject('Browser App Check registration authorization inputs are invalid');
   }
   return [
-    'enable-browser-app-check-prerequisite-api',
+    APP_CHECK_REGISTRATION_OPERATION,
     PROJECT_ID,
     sha256(planBytes),
     baselineSha256,
@@ -154,7 +78,7 @@ export function browserAppCheckApiAuthorization(planBytes, repositoryCommit, bas
   ].join(':');
 }
 
-export function validateBrowserAppCheckApiAuthorization(
+export function validateBrowserAppCheckRegistrationAuthorization(
   value,
   planBytes,
   repositoryCommit,
@@ -162,13 +86,13 @@ export function validateBrowserAppCheckApiAuthorization(
 ) {
   if (!safeEqual(
     value,
-    browserAppCheckApiAuthorization(planBytes, repositoryCommit, baselineSha256),
+    browserAppCheckRegistrationAuthorization(planBytes, repositoryCommit, baselineSha256),
   )) {
-    reject('Exact browser App Check prerequisite API authorization is missing or invalid');
+    reject('Exact non-deletable browser App Check registration authorization is missing or invalid');
   }
 }
 
-export function buildBrowserAppCheckApiPlanMetadata({
+export function buildBrowserAppCheckRegistrationPlanMetadata({
   repositoryCommit,
   createdAt,
   planBytes,
@@ -178,13 +102,13 @@ export function buildBrowserAppCheckApiPlanMetadata({
 }) {
   if (!COMMIT.test(repositoryCommit) || !Buffer.isBuffer(planBytes)
     || !Buffer.isBuffer(planJsonBytes) || !plainObject(summary) || !plainObject(baseline)) {
-    reject('Browser App Check API plan metadata inputs are invalid');
+    reject('Browser App Check registration plan metadata inputs are invalid');
   }
   const created = timestamp(createdAt, 'created_at');
   const baselineSha256 = sha256(Buffer.from(canonicalJson(baseline), 'utf8'));
   return Object.freeze({
-    schema: 'miakapp.staging-browser-app-check-api-plan/1',
-    operation: 'enable-recaptcha-enterprise-api-only',
+    schema: 'miakapp.staging-browser-app-check-registration-plan/1',
+    operation: APP_CHECK_REGISTRATION_OPERATION,
     project_id: PROJECT_ID,
     project_number: PROJECT_NUMBER,
     region: REGION,
@@ -198,16 +122,28 @@ export function buildBrowserAppCheckApiPlanMetadata({
     baseline_sha256: baselineSha256,
     baseline,
     summary,
+    global_attempt_claim_creation_authorized: true,
+    global_attempt_claim_deletion_authorized: false,
+    global_provider_attempt_claim_creation_authorized: true,
+    global_provider_attempt_claim_deletion_authorized: false,
+    recaptcha_api_change_authorized: false,
     recaptcha_key_creation_authorized: false,
-    app_check_registration_authorized: false,
+    recaptcha_key_update_authorized: false,
+    recaptcha_key_deletion_authorized: false,
+    app_check_registration_authorized: true,
+    app_check_registration_deletion_authorized: false,
     app_check_enforcement_authorized: false,
     debug_token_creation_authorized: false,
+    browser_request_authorized: false,
+    assessment_creation_authorized: false,
     public_ingress_authorized: false,
+    fixed_cost_service_authorized: false,
+    irreversible_app_check_registration: true,
     private_bundle_committed: false,
   });
 }
 
-export function validateBrowserAppCheckApiPlanMetadata(value, now = Date.now()) {
+export function validateBrowserAppCheckRegistrationPlanMetadata(value, now = Date.now()) {
   const metadata = exactKeys(value, [
     'schema',
     'operation',
@@ -224,15 +160,27 @@ export function validateBrowserAppCheckApiPlanMetadata(value, now = Date.now()) 
     'baseline_sha256',
     'baseline',
     'summary',
+    'global_attempt_claim_creation_authorized',
+    'global_attempt_claim_deletion_authorized',
+    'global_provider_attempt_claim_creation_authorized',
+    'global_provider_attempt_claim_deletion_authorized',
+    'recaptcha_api_change_authorized',
     'recaptcha_key_creation_authorized',
+    'recaptcha_key_update_authorized',
+    'recaptcha_key_deletion_authorized',
     'app_check_registration_authorized',
+    'app_check_registration_deletion_authorized',
     'app_check_enforcement_authorized',
     'debug_token_creation_authorized',
+    'browser_request_authorized',
+    'assessment_creation_authorized',
     'public_ingress_authorized',
+    'fixed_cost_service_authorized',
+    'irreversible_app_check_registration',
     'private_bundle_committed',
-  ], 'Browser App Check API plan metadata');
-  if (metadata.schema !== 'miakapp.staging-browser-app-check-api-plan/1'
-    || metadata.operation !== 'enable-recaptcha-enterprise-api-only'
+  ], 'Browser App Check registration plan metadata');
+  if (metadata.schema !== 'miakapp.staging-browser-app-check-registration-plan/1'
+    || metadata.operation !== APP_CHECK_REGISTRATION_OPERATION
     || metadata.project_id !== PROJECT_ID
     || metadata.project_number !== PROJECT_NUMBER
     || metadata.region !== REGION
@@ -244,33 +192,64 @@ export function validateBrowserAppCheckApiPlanMetadata(value, now = Date.now()) 
     || !SHA256.test(metadata.baseline_sha256)
     || !plainObject(metadata.baseline)
     || !plainObject(metadata.summary)
+    || metadata.global_attempt_claim_creation_authorized !== true
+    || metadata.global_attempt_claim_deletion_authorized !== false
+    || metadata.global_provider_attempt_claim_creation_authorized !== true
+    || metadata.global_provider_attempt_claim_deletion_authorized !== false
+    || metadata.recaptcha_api_change_authorized !== false
     || metadata.recaptcha_key_creation_authorized !== false
-    || metadata.app_check_registration_authorized !== false
+    || metadata.recaptcha_key_update_authorized !== false
+    || metadata.recaptcha_key_deletion_authorized !== false
+    || metadata.app_check_registration_authorized !== true
+    || metadata.app_check_registration_deletion_authorized !== false
     || metadata.app_check_enforcement_authorized !== false
     || metadata.debug_token_creation_authorized !== false
+    || metadata.browser_request_authorized !== false
+    || metadata.assessment_creation_authorized !== false
     || metadata.public_ingress_authorized !== false
+    || metadata.fixed_cost_service_authorized !== false
+    || metadata.irreversible_app_check_registration !== true
     || metadata.private_bundle_committed !== false
     || sha256(Buffer.from(canonicalJson(metadata.baseline), 'utf8')) !== metadata.baseline_sha256) {
-    reject('Browser App Check API plan metadata does not match the reviewed operation');
+    reject('Browser App Check registration plan metadata does not match the reviewed operation');
   }
   const created = timestamp(metadata.created_at, 'created_at');
   const expires = timestamp(metadata.expires_at, 'expires_at');
   if (expires - created !== PLAN_TTL_MILLISECONDS || now < created - 60_000 || now > expires) {
-    reject('Browser App Check API plan metadata is expired or not yet valid');
+    reject('Browser App Check registration plan metadata is expired or not yet valid');
   }
   return metadata;
 }
 
-export function readBrowserAppCheckApiPlanMetadata(path, now = Date.now()) {
+function parseBrowserAppCheckRegistrationPlanMetadata(path) {
   const bytes = readPrivateFile(path, 1024 * 1024);
   let value;
   try {
     value = JSON.parse(bytes.toString('utf8'));
   } catch {
-    return reject('Browser App Check API plan metadata is not valid JSON');
+    return reject('Browser App Check registration plan metadata is not valid JSON');
   }
   if (canonicalJson(value) !== bytes.toString('utf8')) {
-    reject('Browser App Check API plan metadata is not canonical JSON');
+    reject('Browser App Check registration plan metadata is not canonical JSON');
   }
-  return Object.freeze({ bytes, value: validateBrowserAppCheckApiPlanMetadata(value, now) });
+  return Object.freeze({ bytes, value });
+}
+
+export function readBrowserAppCheckRegistrationPlanMetadata(path, now = Date.now()) {
+  const { bytes, value } = parseBrowserAppCheckRegistrationPlanMetadata(path);
+  return Object.freeze({
+    bytes,
+    value: validateBrowserAppCheckRegistrationPlanMetadata(value, now),
+  });
+}
+
+export function readBrowserAppCheckRegistrationPlanMetadataForRecovery(path) {
+  const { bytes, value } = parseBrowserAppCheckRegistrationPlanMetadata(path);
+  return Object.freeze({
+    bytes,
+    value: validateBrowserAppCheckRegistrationPlanMetadata(
+      value,
+      Date.parse(value.created_at),
+    ),
+  });
 }
