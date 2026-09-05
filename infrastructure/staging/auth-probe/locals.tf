@@ -20,17 +20,20 @@ locals {
   expected_workload_source_sha256 = "6674c0353ec9c73fcfe0d3a63d17850f057a5f2a547a5855989e28f011249b1e"
   expected_workload_commit        = "022f10e2dc15f32a8a6679b38ce7f1a04582e450"
   expected_workload_image         = "europe-west9-docker.pkg.dev/miakapp-v4-staging/miakapp-control-plane/miakapp--v4--staging__europe--west9__control--plane@sha256:a650ae228afd9443e1bf0090b5b1e6e9203d08d8de5e24a894701d82a5db4503"
-  capability_expiry               = "2026-09-06T06:00:00Z"
+  capability_expiry               = "2026-09-06T12:00:00Z"
 
-  custom_role_id          = "miakapp.stagingAuthProbe"
-  custom_role_name        = "projects/${local.project_id}/roles/${local.custom_role_id}"
-  signer_role_id          = "miakapp.stagingProbeSigner"
-  signer_role_name        = "projects/${local.project_id}/roles/${local.signer_role_id}"
-  firestore_role_id       = "miakapp.stagingProbeFirestore"
-  firestore_role_name     = "projects/${local.project_id}/roles/${local.firestore_role_id}"
-  workflow_source         = file("${path.module}/workflow.yaml")
-  verifier_source         = file("${path.module}/verifier.mjs")
-  verifier_startup_source = "${local.verifier_source}\nstart();"
+  custom_role_id            = "miakapp.stagingUserRelayAuthProbe2"
+  custom_role_name          = "projects/${local.project_id}/roles/${local.custom_role_id}"
+  signer_role_id            = "miakapp.stagingUserRelaySigner2"
+  signer_role_name          = "projects/${local.project_id}/roles/${local.signer_role_id}"
+  firestore_role_id         = "miakapp.stagingUserRelayFirestore2"
+  firestore_role_name       = "projects/${local.project_id}/roles/${local.firestore_role_id}"
+  retired_custom_role_id    = "miakapp.stagingAuthProbe"
+  retired_signer_role_id    = "miakapp.stagingProbeSigner"
+  retired_firestore_role_id = "miakapp.stagingProbeFirestore"
+  workflow_source           = file("${path.module}/workflow.yaml")
+  verifier_source           = file("${path.module}/verifier.mjs")
+  verifier_startup_source   = "${local.verifier_source}\nstart();"
 
   labels = {
     environment = "staging"

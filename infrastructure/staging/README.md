@@ -104,12 +104,16 @@ The digest-pinned [`auth-probe/result.json`](auth-probe/result.json) and
 identifier, token material or raw diagnostic. Browser-provider attestation is
 not claimed by this evidence.
 
-The same independent `auth-probe` state root is now prepared for the bounded
-audience-bound user-relay acceptance run. Its reviewed arm plan may create one
-internal-only scale-to-zero verifier service, one unscheduled Workflow and four
-hard-expiring IAM bindings, while retaining three disabled custom roles and a
-keyless no-role verifier identity after retirement. It also enables and retains
-the Cloud Asset API for supplemental project-wide IAM discovery; because that
+The same independent `auth-probe` state root is now prepared for generation 2
+of the bounded audience-bound user-relay acceptance run. Generation 1 reached
+no execution because Workflows rejected its source at creation time; all of its
+temporary resources were removed and its three role IDs remain disabled and
+unassigned. The reviewed generation-2 arm plan may create three new role IDs,
+one internal-only scale-to-zero verifier service, one unscheduled Workflow and
+four hard-expiring IAM bindings. After retirement it retains both immutable role
+generations disabled plus a keyless no-role verifier identity. It also enables
+and retains the Cloud Asset API for supplemental project-wide IAM discovery;
+because that
 inventory is eventually consistent, it is not used to authorize role
 restoration. The Workflow
 uses one fixed
@@ -117,10 +121,11 @@ no-email user and one private marker-guarded `controlHomes` document, performs
 exactly seven Function requests (two metadata `GET`s and five exchange `POST`s),
 verifies two Ed25519 credentials internally, then independently cleans the
 private fixture and user and checks that the lowercase public `homes` path stayed
-absent. This graph has not yet
-been applied or invoked; [`auth-probe/README.md`](auth-probe/README.md) is the
+absent. Generation 2 has not yet been applied or invoked;
+[`auth-probe/README.md`](auth-probe/README.md) is the
 authoritative lifecycle and cost boundary. Retirement removes the service and
-Workflow, removes the temporary bindings, and disables all three roles; the Cloud Asset API, roles and verifier
+Workflow, removes the temporary bindings, and disables all three generation-2
+roles while generation 1 stays disabled; the Cloud Asset API, roles and verifier
 identity remain as inert persistent infrastructure until a separately reviewed
 teardown.
 
@@ -234,7 +239,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`workload/`](workload/) | Deterministic production package, private Gen 2 Function, dedicated build/probe identities, and one-permission FCM role | Applied and converged; current internal-only revision independently source-verified |
 | [`probe/`](probe/) | Isolated Workflows API and one fixed, unscheduled, keyless internal discovery probe | Applied and consumed; exactly two failures followed by one validated HTTP 200 discovery response |
 | [`firebase-auth/`](firebase-auth/) | Closed Firebase Authentication initialization with no end-user sign-in provider | Non-deletable resource initialized, state-adopted, reconciled, and independently validated |
-| [`auth-probe/`](auth-probe/) | Historical Auth/App Check evidence plus a guarded audience-bound user-relay Workflow and internal verifier | Historical probe retired; new bounded graph reviewed locally but not yet applied or invoked |
+| [`auth-probe/`](auth-probe/) | Historical Auth/App Check evidence plus a guarded audience-bound user-relay Workflow and internal verifier | Historical probe retained; failed generation 1 retired; generation 2 reviewed locally but not yet applied or invoked |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
 | [`TEARDOWN.md`](TEARDOWN.md) | Manual recovery and teardown rehearsal | Documentation only |
