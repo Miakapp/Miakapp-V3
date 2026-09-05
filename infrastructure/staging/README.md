@@ -2,7 +2,8 @@
 
 Status: private audience-bound user-relay acceptance succeeded and retired;
 schema-2 two-key runtime deployed privately with version 2 current and version 1 retained; live browser-relay plan rebased
-but not deployed; real system-browser App Check provider token obtained and its
+but not deployed; guarded version-1 rehearsal-entry tooling prepared but not
+applied; real system-browser App Check provider token obtained and its
 temporary Hosting route retired; browser App Check API-only prerequisite applied and
 converged; one domain-restricted score key applied and independently converged;
 exact non-deletable App Check provider registered with enforcement disabled;
@@ -586,7 +587,9 @@ keys with version 2 current and version 1 retained. The guarded `signing-overlap
 version 2 exactly once, and the separate workload prepublication converged
 without changing source, IAM, ingress or scale. The next guarded signing step is
 a reversible configuration-only rehearsal entry that selects version 1 while
-leaving both keys published. The live matrix can then activate version 2 on the
+leaving both keys published. Its one-shot plan/apply implementation now pins the
+exact private revision and unchanged source; it has not yet been applied, so
+the browser-relay precondition remains open. The live matrix can then activate version 2 on the
 same socket, wait the full 330-second retirement bound, and disable rather than
 destroy version 1; no third KMS version is required.
 The browser App Check API, its single

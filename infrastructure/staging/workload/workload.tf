@@ -69,7 +69,7 @@ resource "google_storage_bucket_object" "source" {
   content_type = "application/zip"
 
   metadata = {
-    repository-commit = var.repository_commit
+    repository-commit = local.source_repository_commit
     sha256            = var.source_archive_sha256
   }
 

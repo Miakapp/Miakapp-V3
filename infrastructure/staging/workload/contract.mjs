@@ -17,6 +17,17 @@ export const REGION = 'europe-west9';
 export const TERRAFORM_VERSION = '1.11.3';
 export const OPERATOR_USER_SHA256 = 'd1c8514ac6eb5c13205cfec40dd6cc2072f33eb4279172df17273aa7c54a181c';
 export const RUNTIME_CONFIG_SHA256 = '40e2f83fbe8e3d27b7e53c4a666f424519fc6972ef19a7598ab9e093be0c70f7';
+export const BROWSER_RELAY_ENTRY_RUNTIME_CONFIG_SHA256 =
+  'c018708786fc23a15f7701093b5148c0e415a2df8045af8e170e4308c2deae37';
+export const BROWSER_RELAY_ENTRY_BASELINE_DEPLOYMENT_COMMIT =
+  '6a9db97deb59b6c8e919d451c922ddb246eb54b2';
+export const BROWSER_RELAY_ENTRY_BASELINE_FUNCTION_REVISION = 'control-plane-00008-saz';
+export const BROWSER_RELAY_ENTRY_BASELINE_FUNCTION_UPDATED_AT =
+  '2026-09-05T12:52:52.140270744Z';
+export const BROWSER_RELAY_ENTRY_BASELINE_SOURCE_REPOSITORY_COMMIT =
+  '9f217da102b394734adba7ccef3f8f70d0317306';
+export const BROWSER_RELAY_ENTRY_BASELINE_SOURCE_SHA256 =
+  'd1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8';
 export const PLAN_TTL_MILLISECONDS = 2 * 60 * 60 * 1_000;
 
 const SHA256 = /^[0-9a-f]{64}$/u;
@@ -223,6 +234,69 @@ export function validateWorkloadUpdateAuthorization(value, planBytes, repository
   }
 }
 
+export function browserRelayRotationEntryAuthorization(planBytes, repositoryCommit) {
+  if (!Buffer.isBuffer(planBytes) || planBytes.byteLength === 0 || !COMMIT.test(repositoryCommit)) {
+    reject('Browser-relay rotation-entry authorization inputs are invalid');
+  }
+  return `enter-browser-relay-rotation-rehearsal:${PROJECT_ID}:${sha256(planBytes)}:${repositoryCommit}`;
+}
+
+export function validateBrowserRelayRotationEntryAuthorization(
+  value,
+  planBytes,
+  repositoryCommit,
+) {
+  const expected = Buffer.from(
+    browserRelayRotationEntryAuthorization(planBytes, repositoryCommit),
+    'utf8',
+  );
+  const actual = Buffer.from(typeof value === 'string' ? value : '', 'utf8');
+  if (actual.byteLength !== expected.byteLength || !timingSafeEqual(actual, expected)) {
+    reject('Exact browser-relay rotation-entry authorization is missing or invalid');
+  }
+}
+
+export function validateBrowserRelayRotationEntryBaseline(value) {
+  const baseline = exactKeys(
+    value,
+    ['name', 'serviceConfig', 'state', 'updateTime'],
+    'Browser-relay rotation-entry Function baseline',
+  );
+  const service = exactKeys(
+    baseline.serviceConfig,
+    ['environmentVariables', 'revision'],
+    'Browser-relay rotation-entry Function service baseline',
+  );
+  const environment = exactKeys(
+    service.environmentVariables,
+    [
+      'LOG_EXECUTION_ID',
+      'MIAKAPP_DEPLOYMENT_COMMIT',
+      'MIAKAPP_RUNTIME_CONFIG_JSON',
+      'MIAKAPP_SOURCE_ARCHIVE_SHA256',
+    ],
+    'Browser-relay rotation-entry Function environment baseline',
+  );
+  if (baseline.name !== `projects/${PROJECT_ID}/locations/${REGION}/functions/control-plane`
+    || baseline.state !== 'ACTIVE'
+    || baseline.updateTime !== BROWSER_RELAY_ENTRY_BASELINE_FUNCTION_UPDATED_AT
+    || service.revision !== BROWSER_RELAY_ENTRY_BASELINE_FUNCTION_REVISION
+    || environment.LOG_EXECUTION_ID !== 'true'
+    || environment.MIAKAPP_DEPLOYMENT_COMMIT !== BROWSER_RELAY_ENTRY_BASELINE_DEPLOYMENT_COMMIT
+    || environment.MIAKAPP_SOURCE_ARCHIVE_SHA256 !== BROWSER_RELAY_ENTRY_BASELINE_SOURCE_SHA256
+    || typeof environment.MIAKAPP_RUNTIME_CONFIG_JSON !== 'string'
+    || sha256(Buffer.from(environment.MIAKAPP_RUNTIME_CONFIG_JSON, 'utf8'))
+      !== RUNTIME_CONFIG_SHA256) {
+    reject('Live browser-relay rotation-entry baseline does not match the reviewed Function revision');
+  }
+  return Object.freeze({
+    function_revision: BROWSER_RELAY_ENTRY_BASELINE_FUNCTION_REVISION,
+    function_updated_at: BROWSER_RELAY_ENTRY_BASELINE_FUNCTION_UPDATED_AT,
+    current_signing_key_version: 2,
+    published_signing_key_versions: 2,
+  });
+}
+
 function buildMetadata({
   repositoryCommit,
   sourceRepositoryCommit = repositoryCommit,
@@ -281,6 +355,14 @@ export function buildWorkloadUpdatePlanMetadata(input) {
     schema: 'miakapp.staging-workload-update-plan/1',
     operation: 'replace-pinned-control-plane-source',
     runtimeConfigSha256: RUNTIME_CONFIG_SHA256,
+  });
+}
+
+export function buildBrowserRelayRotationEntryPlanMetadata(input) {
+  return buildMetadata(input, {
+    schema: 'miakapp.staging-browser-relay-rotation-entry-plan/1',
+    operation: 'select-version-1-for-browser-relay-rehearsal',
+    runtimeConfigSha256: BROWSER_RELAY_ENTRY_RUNTIME_CONFIG_SHA256,
   });
 }
 
@@ -354,6 +436,21 @@ export function validateWorkloadUpdatePlanMetadata(value, now = Date.now()) {
   });
 }
 
+export function validateBrowserRelayRotationEntryPlanMetadata(value, now = Date.now()) {
+  const metadata = validateMetadata(value, now, {
+    schema: 'miakapp.staging-browser-relay-rotation-entry-plan/1',
+    operation: 'select-version-1-for-browser-relay-rehearsal',
+    runtimeConfigSha256: BROWSER_RELAY_ENTRY_RUNTIME_CONFIG_SHA256,
+  });
+  if (metadata.repository_commit === BROWSER_RELAY_ENTRY_BASELINE_DEPLOYMENT_COMMIT
+    || metadata.source_repository_commit
+      !== BROWSER_RELAY_ENTRY_BASELINE_SOURCE_REPOSITORY_COMMIT
+    || metadata.source_archive_sha256 !== BROWSER_RELAY_ENTRY_BASELINE_SOURCE_SHA256) {
+    reject('Browser-relay rotation-entry plan does not match the exact deployed source baseline');
+  }
+  return metadata;
+}
+
 function readMetadata(path, now, validate) {
   const bytes = readPrivateFile(path, 1024 * 1024);
   let value;
@@ -374,4 +471,8 @@ export function readPlanMetadata(path, now = Date.now()) {
 
 export function readWorkloadUpdatePlanMetadata(path, now = Date.now()) {
   return readMetadata(path, now, validateWorkloadUpdatePlanMetadata);
+}
+
+export function readBrowserRelayRotationEntryPlanMetadata(path, now = Date.now()) {
+  return readMetadata(path, now, validateBrowserRelayRotationEntryPlanMetadata);
 }

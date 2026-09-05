@@ -186,6 +186,8 @@ bash -n \
   infrastructure/staging/terraform/initialize-state.sh \
   infrastructure/staging/terraform/plan.sh \
   infrastructure/staging/workload/apply.sh \
+  infrastructure/staging/workload/browser-relay-entry-apply.sh \
+  infrastructure/staging/workload/browser-relay-entry-plan.sh \
   infrastructure/staging/workload/plan.sh \
   infrastructure/staging/workload/update-apply.sh \
   infrastructure/staging/workload/update-plan.sh \
