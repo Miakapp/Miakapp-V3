@@ -23,8 +23,10 @@ export const PRIOR_CLAIM_OBJECT =
   'terraform/browser-attestation/operations/live-browser-attestation.json';
 export const SECOND_PRIOR_CLAIM_OBJECT =
   'terraform/browser-attestation/operations/live-browser-attestation-v2.json';
-export const CLAIM_OBJECT =
+export const THIRD_PRIOR_CLAIM_OBJECT =
   'terraform/browser-attestation/operations/live-browser-attestation-v3.json';
+export const CLAIM_OBJECT =
+  'terraform/browser-attestation/operations/live-browser-attestation-v4.json';
 export const PRIOR_CLAIM_GENERATION = '1788616557403719';
 export const PRIOR_CLAIM_SIZE_BYTES = 671;
 export const PRIOR_CLAIM_SHA256 =
@@ -45,6 +47,16 @@ export const PREFLIGHT_V2_METADATA_SHA256 =
   'dbabd91442b9bd42b6b8afe934dcc9a433aad51abc375847491fc9dcbffa30bb';
 export const PREFLIGHT_V2_VERSION_NAME_SHA256 =
   'd0dc444702b93d17043a794280cfc41e65d9a0b5242c83e36f2f9b8f0c402b6e';
+export const THIRD_PRIOR_CLAIM_GENERATION = '1788618402280790';
+export const THIRD_PRIOR_CLAIM_SIZE_BYTES = 674;
+export const THIRD_PRIOR_CLAIM_SHA256 =
+  'aae55149143ed237acf4ac3cb30f4850d431d258c68624d3c38d7a6d85b92133';
+export const PREFLIGHT_V3_REPOSITORY_COMMIT =
+  '4dba55108fbd5862f349311af67ba5fde42b5543';
+export const PREFLIGHT_V3_METADATA_SHA256 =
+  'c78ff6910da64cb933a866c05d70ce84c9d49cb06bb81aaffa0d755d96d0a10c';
+export const PREFLIGHT_V3_VERSION_NAME_SHA256 =
+  '57bcd7fff5f5cbe7d66bbcd78c8205b558c0f7727dd2691a7de6a7a2b8dc8f21';
 export const OPERATOR_USER_SHA256 =
   'd1c8514ac6eb5c13205cfec40dd6cc2072f33eb4279172df17273aa7c54a181c';
 export const APP_CHECK_SITE_KEY_SHA256 =
@@ -164,7 +176,7 @@ export function attestationAuthorization(metadataBytes, repositoryCommit) {
     || !COMMIT.test(repositoryCommit)) {
     reject('Browser-attestation authorization inputs are invalid');
   }
-  return `run-browser-app-check-attestation-v3:${PROJECT_ID}:${sha256(metadataBytes)}:${repositoryCommit}`;
+  return `run-browser-app-check-attestation-v4:${PROJECT_ID}:${sha256(metadataBytes)}:${repositoryCommit}`;
 }
 
 export function validateAttestationAuthorization(value, metadataBytes, repositoryCommit) {
@@ -196,11 +208,12 @@ function validateBaseline(value) {
     || baseline.hosting_release_count !== 0
     || baseline.hosting_site !== HOSTING_SITE
     || baseline.hosting_site_type !== 'DEFAULT_SITE'
-    || baseline.hosting_version_count !== 2
+    || baseline.hosting_version_count !== 3
     || baseline.operation_claim_present !== false
     || !isDeepStrictEqual(baseline.retired_preflight_version_name_sha256s, [
       PREFLIGHT_VERSION_NAME_SHA256,
       PREFLIGHT_V2_VERSION_NAME_SHA256,
+      PREFLIGHT_V3_VERSION_NAME_SHA256,
     ])
     || !isDeepStrictEqual(baseline.prior_operation_claims, [
       {
@@ -214,6 +227,12 @@ function validateBaseline(value) {
         generation: SECOND_PRIOR_CLAIM_GENERATION,
         size_bytes: SECOND_PRIOR_CLAIM_SIZE_BYTES,
         sha256: SECOND_PRIOR_CLAIM_SHA256,
+      },
+      {
+        object: THIRD_PRIOR_CLAIM_OBJECT,
+        generation: THIRD_PRIOR_CLAIM_GENERATION,
+        size_bytes: THIRD_PRIOR_CLAIM_SIZE_BYTES,
+        sha256: THIRD_PRIOR_CLAIM_SHA256,
       },
     ])) {
     reject('Browser-attestation baseline differs from the reviewed retired preflight boundary');
@@ -290,8 +309,8 @@ export function buildAttestationMetadata({
   validateBaseline(baseline);
   validateArtifact(artifact);
   return Object.freeze({
-    schema: 'miakapp.staging-browser-attestation-plan/3',
-    operation: 'attest-browser-app-check-and-disable-hosting-v3',
+    schema: 'miakapp.staging-browser-attestation-plan/4',
+    operation: 'attest-browser-app-check-and-disable-hosting-v4',
     project_id: PROJECT_ID,
     project_number: PROJECT_NUMBER,
     hosting_site: HOSTING_SITE,
@@ -378,8 +397,8 @@ export function validateAttestationMetadata(value, now = Date.now()) {
   const expires = canonicalTimestamp(metadata.expires_at, 'Browser-attestation expiry time');
   const baseline = validateBaseline(metadata.baseline);
   validateArtifact(metadata.artifact);
-  if (metadata.schema !== 'miakapp.staging-browser-attestation-plan/3'
-    || metadata.operation !== 'attest-browser-app-check-and-disable-hosting-v3'
+  if (metadata.schema !== 'miakapp.staging-browser-attestation-plan/4'
+    || metadata.operation !== 'attest-browser-app-check-and-disable-hosting-v4'
     || metadata.project_id !== PROJECT_ID
     || metadata.project_number !== PROJECT_NUMBER
     || metadata.hosting_site !== HOSTING_SITE

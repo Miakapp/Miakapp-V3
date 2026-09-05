@@ -18,6 +18,9 @@ import {
   PREFLIGHT_V2_METADATA_SHA256,
   PREFLIGHT_V2_REPOSITORY_COMMIT,
   PREFLIGHT_V2_VERSION_NAME_SHA256,
+  PREFLIGHT_V3_METADATA_SHA256,
+  PREFLIGHT_V3_REPOSITORY_COMMIT,
+  PREFLIGHT_V3_VERSION_NAME_SHA256,
   PREFLIGHT_VERSION_NAME_SHA256,
   PRIOR_CLAIM_GENERATION,
   PRIOR_CLAIM_OBJECT,
@@ -29,6 +32,10 @@ import {
   SECOND_PRIOR_CLAIM_SHA256,
   SECOND_PRIOR_CLAIM_SIZE_BYTES,
   STATE_BUCKET,
+  THIRD_PRIOR_CLAIM_GENERATION,
+  THIRD_PRIOR_CLAIM_OBJECT,
+  THIRD_PRIOR_CLAIM_SHA256,
+  THIRD_PRIOR_CLAIM_SIZE_BYTES,
   attestationAuthorization,
   buildAttestationMetadata,
   canonicalJson,
@@ -81,6 +88,8 @@ const HISTORICAL_VERSION = `sites/${HOSTING_SITE}/versions/${'h'.repeat(32)}`;
 const HISTORICAL_VERSION_SHA256 = sha256(Buffer.from(HISTORICAL_VERSION));
 const SECOND_HISTORICAL_VERSION = `sites/${HOSTING_SITE}/versions/${'i'.repeat(32)}`;
 const SECOND_HISTORICAL_VERSION_SHA256 = sha256(Buffer.from(SECOND_HISTORICAL_VERSION));
+const THIRD_HISTORICAL_VERSION = `sites/${HOSTING_SITE}/versions/${'j'.repeat(32)}`;
+const THIRD_HISTORICAL_VERSION_SHA256 = sha256(Buffer.from(THIRD_HISTORICAL_VERSION));
 
 function priorClaimReceipt() {
   return {
@@ -99,6 +108,16 @@ function secondPriorClaimReceipt() {
     generation: SECOND_PRIOR_CLAIM_GENERATION,
     size_bytes: SECOND_PRIOR_CLAIM_SIZE_BYTES,
     sha256: SECOND_PRIOR_CLAIM_SHA256,
+  };
+}
+
+function thirdPriorClaimReceipt() {
+  return {
+    bucket: STATE_BUCKET,
+    object: THIRD_PRIOR_CLAIM_OBJECT,
+    generation: THIRD_PRIOR_CLAIM_GENERATION,
+    size_bytes: THIRD_PRIOR_CLAIM_SIZE_BYTES,
+    sha256: THIRD_PRIOR_CLAIM_SHA256,
   };
 }
 
@@ -140,6 +159,24 @@ function priorClaims() {
       },
       receipt: secondPriorClaimReceipt(),
     },
+    {
+      value: {
+        schema: 'miakapp.staging-browser-attestation-claim/3',
+        operation: 'attest-browser-app-check-and-disable-hosting-v3',
+        project_id: PROJECT_ID,
+        project_number: PROJECT_NUMBER,
+        hosting_site: HOSTING_SITE,
+        repository_commit: PREFLIGHT_V3_REPOSITORY_COMMIT,
+        metadata_sha256: PREFLIGHT_V3_METADATA_SHA256,
+        baseline_sha256: '7'.repeat(64),
+        created_at: '2026-09-05T14:26:20.582Z',
+        expires_at: '2026-09-05T16:26:20.582Z',
+        maximum_attestation_attempts: 1,
+        retry_authorized: false,
+        deletion_authorized: false,
+      },
+      receipt: thirdPriorClaimReceipt(),
+    },
   ];
 }
 
@@ -171,6 +208,20 @@ function secondHistoricalVersion() {
   };
 }
 
+function thirdHistoricalVersion() {
+  return {
+    name: THIRD_HISTORICAL_VERSION,
+    status: 'DELETED',
+    labels: {
+      environment: 'staging',
+      operation: 'browser-app-check-attestation-v3',
+      repository: PREFLIGHT_V3_REPOSITORY_COMMIT,
+    },
+    file_count: null,
+    version_bytes: null,
+  };
+}
+
 function retiredVersionExpectations() {
   return [
     {
@@ -183,6 +234,11 @@ function retiredVersionExpectations() {
       operation: 'browser-app-check-attestation-v2',
       repository_commit: PREFLIGHT_V2_REPOSITORY_COMMIT,
     },
+    {
+      name_sha256: THIRD_HISTORICAL_VERSION_SHA256,
+      operation: 'browser-app-check-attestation-v3',
+      repository_commit: PREFLIGHT_V3_REPOSITORY_COMMIT,
+    },
   ];
 }
 
@@ -190,7 +246,7 @@ function baseline() {
   return {
     hosting_site: HOSTING_SITE,
     hosting_site_type: 'DEFAULT_SITE',
-    hosting_version_count: 2,
+    hosting_version_count: 3,
     hosting_release_count: 0,
     firebase_app_config_sha256: HASH,
     app_check_config_sha256: 'c'.repeat(64),
@@ -210,10 +266,17 @@ function baseline() {
         size_bytes: SECOND_PRIOR_CLAIM_SIZE_BYTES,
         sha256: SECOND_PRIOR_CLAIM_SHA256,
       },
+      {
+        object: THIRD_PRIOR_CLAIM_OBJECT,
+        generation: THIRD_PRIOR_CLAIM_GENERATION,
+        size_bytes: THIRD_PRIOR_CLAIM_SIZE_BYTES,
+        sha256: THIRD_PRIOR_CLAIM_SHA256,
+      },
     ],
     retired_preflight_version_name_sha256s: [
       PREFLIGHT_VERSION_NAME_SHA256,
       PREFLIGHT_V2_VERSION_NAME_SHA256,
+      PREFLIGHT_V3_VERSION_NAME_SHA256,
     ],
   };
 }
@@ -365,7 +428,13 @@ test('observes only the retired preflight Hosting and registered provider baseli
       });
     }
     if (url.includes(`sites/${HOSTING_SITE}/versions`)) {
-      return jsonResponse({ versions: [historicalVersion(), secondHistoricalVersion()] });
+      return jsonResponse({
+        versions: [
+          historicalVersion(),
+          secondHistoricalVersion(),
+          thirdHistoricalVersion(),
+        ],
+      });
     }
     if (url.includes(`sites/${HOSTING_SITE}/releases`)) return jsonResponse({});
     if (url.includes('/config')) {
@@ -403,6 +472,7 @@ test('observes only the retired preflight Hosting and registered provider baseli
     retired_preflight_version_name_sha256s: [
       HISTORICAL_VERSION_SHA256,
       SECOND_HISTORICAL_VERSION_SHA256,
+      THIRD_HISTORICAL_VERSION_SHA256,
     ],
   });
   assert.equal(observed.site_key, siteKey);
@@ -474,7 +544,7 @@ test('uses one atomic non-retry claim bound to the exact plan', async () => {
   const plan = metadata();
   const bytes = Buffer.from(canonicalJson(plan));
   const claim = buildOperationClaim(bytes, plan);
-  assert.equal(claim.schema, 'miakapp.staging-browser-attestation-claim/3');
+  assert.equal(claim.schema, 'miakapp.staging-browser-attestation-claim/4');
   assert.equal(claim.retry_authorized, false);
   assert.equal(claim.deletion_authorized, false);
   let body;
@@ -503,7 +573,7 @@ test('drives the exact Hosting REST lifecycle and verifies public headers', asyn
   const session = { accessToken: 'test-access-token-with-enough-length' };
   const labels = {
     environment: 'staging',
-    operation: 'browser-app-check-attestation-v3',
+    operation: 'browser-app-check-attestation-v4',
     repository: COMMIT,
   };
   const config = { headers: [{ glob: '**', headers: HOSTING_HEADERS }] };
@@ -520,6 +590,32 @@ test('drives the exact Hosting REST lifecycle and verifies public headers', asyn
     uploadUrl: `https://upload-firebasehosting.googleapis.com/upload/${VERSION}/files`,
   }));
   assert.equal(populated.file_count, 2);
+  assert.equal(populated.upload_url_present, true);
+  const reused = await populateHostingVersion(
+    session,
+    VERSION,
+    entries,
+    async () => jsonResponse({}),
+  );
+  assert.deepEqual(reused, {
+    required_uploads: 0,
+    upload_url_present: false,
+    file_count: 2,
+  });
+  await assert.rejects(() => populateHostingVersion(
+    session,
+    VERSION,
+    entries,
+    async () => jsonResponse({
+      uploadRequiredHashes: [entries[0].gzip_sha256],
+    }),
+  ));
+  await assert.rejects(() => populateHostingVersion(
+    session,
+    VERSION,
+    entries,
+    async () => jsonResponse({ uploadUrl: 'https://example.invalid/upload' }),
+  ));
   const finalized = await finalizeHostingVersion(
     session,
     VERSION,
@@ -635,11 +731,11 @@ test('reads the immutable claim contents at the exact observed generation', asyn
   assert.match(seen[1], /alt=media&generation=456/u);
 });
 
-test('binds interrupted Hosting recovery to one v3 version while retaining preflight history', () => {
+test('binds interrupted Hosting recovery to one v4 version while retaining preflight history', () => {
   const plan = metadata();
   const labels = {
     environment: 'staging',
-    operation: 'browser-app-check-attestation-v3',
+    operation: 'browser-app-check-attestation-v4',
     repository: COMMIT,
   };
   const hosting = {
@@ -647,6 +743,7 @@ test('binds interrupted Hosting recovery to one v3 version while retaining prefl
     versions: [
       historicalVersion(),
       secondHistoricalVersion(),
+      thirdHistoricalVersion(),
       {
         name: VERSION,
         status: 'FINALIZED',
@@ -694,9 +791,9 @@ test('binds interrupted Hosting recovery to one v3 version while retaining prefl
   ));
 
   const retired = structuredClone(hosting);
-  retired.versions[2].status = 'DELETED';
-  retired.versions[2].file_count = null;
-  retired.versions[2].version_bytes = null;
+  retired.versions[3].status = 'DELETED';
+  retired.versions[3].file_count = null;
+  retired.versions[3].version_bytes = null;
   retired.releases.push({
     name: `sites/${HOSTING_SITE}/releases/${'e'.repeat(32)}`,
     type: 'SITE_DISABLE',
@@ -713,7 +810,7 @@ test('binds interrupted Hosting recovery to one v3 version while retaining prefl
   assert.equal(retiredSummary.delete_version, false);
 
   const unreviewed = structuredClone(hosting);
-  unreviewed.versions[2].labels.repository = 'f'.repeat(40);
+  unreviewed.versions[3].labels.repository = 'f'.repeat(40);
   assert.throws(() => validateInterruptedHostingInventory(
     unreviewed,
     plan,
@@ -760,7 +857,7 @@ test('pins the exact sanitized result of the consumed v2 preflight', () => {
   const path = new URL('../browser-attestation/preflight-v2-result.json', import.meta.url);
   const evidence = validatePreflightEvidence(path);
   assert.equal(evidence.state, 'consumed_before_release');
-  assert.equal(evidence.failure_stage, 'hosting_version_finalization');
+  assert.equal(evidence.failure_stage, 'before_hosting_release');
   assert.equal(evidence.hosting.releases_created, 0);
   assert.equal(evidence.app_check.browser_invocations, 0);
   assert.equal(evidence.operation_claim.object, SECOND_PRIOR_CLAIM_OBJECT);
@@ -768,6 +865,22 @@ test('pins the exact sanitized result of the consumed v2 preflight', () => {
   assert.equal(evidence.operation_claim.sha256, SECOND_PRIOR_CLAIM_SHA256);
   assert.equal(evidence.hosting.version_name_sha256, PREFLIGHT_V2_VERSION_NAME_SHA256);
   const tampered = structuredClone(evidence);
-  tampered.hosting.finalization_validated_by_driver = true;
+  tampered.hosting.finalization_proven_after_cleanup = true;
+  assert.throws(() => validatePreflightEvidenceValue(tampered));
+});
+
+test('pins the exact sanitized result of the consumed v3 preflight', () => {
+  const path = new URL('../browser-attestation/preflight-v3-result.json', import.meta.url);
+  const evidence = validatePreflightEvidence(path);
+  assert.equal(evidence.state, 'consumed_before_release');
+  assert.equal(evidence.failure_stage, 'hosting_file_population');
+  assert.equal(evidence.hosting.releases_created, 0);
+  assert.equal(evidence.app_check.browser_invocations, 0);
+  assert.equal(evidence.operation_claim.object, THIRD_PRIOR_CLAIM_OBJECT);
+  assert.equal(evidence.operation_claim.generation, THIRD_PRIOR_CLAIM_GENERATION);
+  assert.equal(evidence.operation_claim.sha256, THIRD_PRIOR_CLAIM_SHA256);
+  assert.equal(evidence.hosting.version_name_sha256, PREFLIGHT_V3_VERSION_NAME_SHA256);
+  const tampered = structuredClone(evidence);
+  tampered.hosting.site_ever_released = true;
   assert.throws(() => validatePreflightEvidenceValue(tampered));
 });
