@@ -20,6 +20,11 @@ import {
   RELAY_IMAGE_PROFILE_SHA256,
   validateRelayImageProfile,
 } from './browser-relay-image/contract.mjs';
+import {
+  RELAY_IMAGE_V1_RESULT_PATH,
+  RELAY_IMAGE_V1_RESULT_SHA256,
+  validateRelayImageV1Result,
+} from './browser-relay-image/result.mjs';
 import { validateBrowserAppCheckEvidence } from './browser-app-check/evidence.mjs';
 import { validateFirebaseAuthEvidence } from './firebase-auth/evidence.mjs';
 import { validateProbeEvidence } from './probe/evidence.mjs';
@@ -3553,6 +3558,8 @@ function validateEvidence(value) {
       'state',
       'profile_path',
       'profile_sha256',
+      'result_path',
+      'result_sha256',
       'browser_relay_plan_sha256',
       'relay_services_profile_sha256',
       'source_repository',
@@ -3564,7 +3571,12 @@ function validateEvidence(value) {
       'machine_type',
       'requested_verify_option',
       'maximum_builds',
+      'attempted_builds',
       'private_image_present',
+      'verified_image_present',
+      'deployment_authorized',
+      'container_analysis_api_enabled',
+      'container_scanning_api_enabled',
       'relay_services',
       'public_ingress_active',
       'new_fixed_cost_services',
@@ -3572,9 +3584,11 @@ function validateEvidence(value) {
     ],
   );
   const expectedBrowserRelayImage = {
-    state: 'reviewed_not_built',
+    state: 'v1_consumed_verified_provenance_failed_not_deployable',
     profile_path: RELAY_IMAGE_PROFILE_PATH,
     profile_sha256: RELAY_IMAGE_PROFILE_SHA256,
+    result_path: RELAY_IMAGE_V1_RESULT_PATH,
+    result_sha256: RELAY_IMAGE_V1_RESULT_SHA256,
     browser_relay_plan_sha256: BROWSER_RELAY_PLAN_SHA256,
     relay_services_profile_sha256: RELAY_SERVICES_PROFILE_SHA256,
     source_repository: 'https://github.com/Miakapp/Miakapp-Server.git',
@@ -3586,7 +3600,12 @@ function validateEvidence(value) {
     machine_type: 'E2_MEDIUM',
     requested_verify_option: 'VERIFIED',
     maximum_builds: 1,
-    private_image_present: false,
+    attempted_builds: 1,
+    private_image_present: true,
+    verified_image_present: false,
+    deployment_authorized: false,
+    container_analysis_api_enabled: false,
+    container_scanning_api_enabled: false,
     relay_services: 0,
     public_ingress_active: false,
     new_fixed_cost_services: 0,
@@ -4302,10 +4321,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 59, 'manifest.revision');
+  exact(manifest.revision, 60, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rebased_bounded_relay_root_reviewed_private_relay_image_build_reviewed_not_executed_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rebased_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_prerequisite_declared_enforcement_disabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -4699,9 +4718,26 @@ export function validateCommittedEvidence(
     browserRelayImageManifest.profile_sha256,
     'evidence.browser_relay_image.profile_sha256',
   );
+  const browserRelayImageResultPath = committedEvidencePath(
+    stagingRoot,
+    browserRelayImageManifest.result_path,
+    RELAY_IMAGE_V1_RESULT_PATH,
+    'evidence.browser_relay_image.result_path',
+  );
+  const browserRelayImageResult = validatedEvidenceFile(
+    browserRelayImageResultPath,
+    validateRelayImageV1Result,
+    'evidence.browser_relay_image.result_path',
+  );
+  exact(
+    fileSha256(browserRelayImageResultPath),
+    browserRelayImageManifest.result_sha256,
+    'evidence.browser_relay_image.result_sha256',
+  );
   exactFields(browserRelayImageManifest, {
-    state: browserRelayImageProfile.state,
+    state: 'v1_consumed_verified_provenance_failed_not_deployable',
     profile_sha256: RELAY_IMAGE_PROFILE_SHA256,
+    result_sha256: RELAY_IMAGE_V1_RESULT_SHA256,
     browser_relay_plan_sha256:
       browserRelayImageProfile.contracts.browser_relay_plan_sha256,
     relay_services_profile_sha256:
@@ -4715,7 +4751,14 @@ export function validateCommittedEvidence(
     machine_type: browserRelayImageProfile.build.machine_type,
     requested_verify_option: browserRelayImageProfile.build.requested_verify_option,
     maximum_builds: browserRelayImageProfile.build.maximum_builds,
-    private_image_present: false,
+    attempted_builds: browserRelayImageResult.effects.cloud_builds_submitted,
+    private_image_present: browserRelayImageResult.build.image_push_observed,
+    verified_image_present: browserRelayImageResult.build.verified_provenance_created,
+    deployment_authorized: browserRelayImageResult.image.deployment_authorized,
+    container_analysis_api_enabled:
+      browserRelayImageResult.prerequisites.container_analysis_api_enabled,
+    container_scanning_api_enabled:
+      browserRelayImageResult.prerequisites.container_scanning_api_enabled,
     relay_services: 0,
     public_ingress_active: false,
     new_fixed_cost_services: browserRelayImageProfile.cost.new_fixed_cost_services,
@@ -4993,7 +5036,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; the private relay-image build is reviewed but unexecuted, signing-key version 1 remains current, both keys remain published, and App Check enforcement is disabled.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; relay-image build v1 is consumed and not deployable after verified-provenance failure, signing-key version 1 remains current, both keys remain published, and App Check enforcement is disabled.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';

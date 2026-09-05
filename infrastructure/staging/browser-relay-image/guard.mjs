@@ -13,6 +13,8 @@ export const RELAY_IMAGE_FILES = Object.freeze([
   'plan.mjs',
   'plan.sh',
   'profile.json',
+  'result-v1.json',
+  'result.mjs',
   'source.mjs',
 ]);
 

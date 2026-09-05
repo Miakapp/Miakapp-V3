@@ -118,6 +118,7 @@ test('pins the exact foundation APIs, secrets, and component-object role set', (
     'cloudbuild.googleapis.com',
     'cloudfunctions.googleapis.com',
     'cloudkms.googleapis.com',
+    'containeranalysis.googleapis.com',
     'eventarc.googleapis.com',
     'fcm.googleapis.com',
     'firebaseappcheck.googleapis.com',

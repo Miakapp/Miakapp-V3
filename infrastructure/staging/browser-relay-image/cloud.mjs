@@ -162,7 +162,8 @@ export async function submitRelayImageBuild(
 
 function operationUrl(name) {
   validateOperationName(name);
-  return `https://cloudbuild.googleapis.com/v1/${name}`;
+  const profile = validateRelayImageProfile();
+  return `https://${profile.project.region}-cloudbuild.googleapis.com/v1/${name}`;
 }
 
 function operationStatus(operation) {
@@ -235,11 +236,35 @@ function validateSourceProvenance(value, sourceReceipt) {
   }
   const entries = Object.entries(value.fileHashes);
   const expectedKey = `gs://${sourceReceipt.bucket}/${sourceReceipt.object}#${sourceReceipt.generation}`;
-  const expectedHash = Buffer.from(sourceReceipt.sha256, 'hex').toString('base64');
   if (entries.length !== 1 || entries[0][0] !== expectedKey
-    || !isDeepStrictEqual(entries[0][1], {
-      fileHash: [{ type: 'SHA256', value: expectedHash }],
-    })) {
+    || !plainObject(entries[0][1])
+    || !Array.isArray(entries[0][1].fileHash)
+    || entries[0][1].fileHash.length < 1 || entries[0][1].fileHash.length > 2
+    || entries[0][1].fileHash.some((hash) => !plainObject(hash)
+      || !isDeepStrictEqual(Object.keys(hash).sort(), ['type', 'value'])
+      || !['SHA256', 'MD5'].includes(hash.type)
+      || typeof hash.value !== 'string')) {
+    reject('Cloud Build source provenance hash differs from the reviewed archive');
+  }
+  const hashes = entries[0][1].fileHash;
+  const sha256Hashes = hashes.filter(({ type }) => type === 'SHA256');
+  const md5Hashes = hashes.filter(({ type }) => type === 'MD5');
+  if (sha256Hashes.length !== 1 || md5Hashes.length > 1) {
+    reject('Cloud Build source provenance hash differs from the reviewed archive');
+  }
+  const decodeHash = ({ value }, expectedBytes) => {
+    if (!/^[A-Za-z0-9+/_-]+={0,2}$/u.test(value)) return null;
+    const normalized = value.replaceAll('-', '+').replaceAll('_', '/').replace(/=+$/u, '');
+    const padded = `${normalized}${'='.repeat((4 - (normalized.length % 4)) % 4)}`;
+    const decoded = Buffer.from(padded, 'base64');
+    if (decoded.byteLength !== expectedBytes
+      || decoded.toString('base64').replace(/=+$/u, '') !== normalized) return null;
+    return decoded;
+  };
+  const observedSha256 = decodeHash(sha256Hashes[0], 32);
+  if (observedSha256 === null
+    || !observedSha256.equals(Buffer.from(sourceReceipt.sha256, 'hex'))
+    || (md5Hashes.length === 1 && decodeHash(md5Hashes[0], 16) === null)) {
     reject('Cloud Build source provenance hash differs from the reviewed archive');
   }
 }

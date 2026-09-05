@@ -135,6 +135,7 @@ node --check infrastructure/staging/browser-relay-image/contract.mjs
 node --check infrastructure/staging/browser-relay-image/guard.mjs
 node --check infrastructure/staging/browser-relay-image/inventory.mjs
 node --check infrastructure/staging/browser-relay-image/plan.mjs
+node --check infrastructure/staging/browser-relay-image/result.mjs
 node --check infrastructure/staging/browser-relay-image/source.mjs
 node infrastructure/staging/browser-attestation/guard.mjs \
   "${repository_root}/infrastructure/staging/browser-attestation"
