@@ -6,6 +6,7 @@ const REQUIRED_FILES = Object.freeze([
   'claim.mjs',
   'cli.mjs',
   'contract.mjs',
+  'evidence.mjs',
   'guard.mjs',
   'inventory.mjs',
   'key-apply.mjs',
@@ -13,6 +14,7 @@ const REQUIRED_FILES = Object.freeze([
   'key-plan.mjs',
   'key-plan.sh',
   'plan.json',
+  'result.json',
 ]);
 
 function exactNames(actual, expected, description) {

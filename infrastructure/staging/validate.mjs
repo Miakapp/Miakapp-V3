@@ -13,6 +13,7 @@ import {
 import { validateBrowserAppCheckEvidence } from './browser-app-check/evidence.mjs';
 import { validateFirebaseAuthEvidence } from './firebase-auth/evidence.mjs';
 import { validateProbeEvidence } from './probe/evidence.mjs';
+import { validateSigningOverlapEvidence } from './signing-overlap/evidence.mjs';
 import { validateWorkloadEvidence } from './workload/evidence.mjs';
 
 const MAX_MANIFEST_BYTES = 96 * 1024;
@@ -37,7 +38,7 @@ const SERVICE_STATES = [
   'private_fixture_lifecycle_validated_no_persistent_application_data',
   'private_schema_2_single_key_runtime_active_user_relay_acceptance_succeeded',
   'private_bucket_created_no_application_mutation',
-  'signing_key_version_enabled_public_key_validated',
+  'two_signing_key_versions_enabled_runtime_single_key_published',
   'five_initial_versions_enabled_runtime_access_validated',
   'api_enabled_one_permission_runtime_role_applied_uninvoked',
   'api_enabled_runtime_deployed_no_application_log_validation',
@@ -516,9 +517,13 @@ function validateSecurity(value) {
     'purpose',
     'algorithm',
     'automatic_rotation',
+    'enabled_versions',
+    'maximum_active_versions',
+    'runtime_published_versions',
+    'current_runtime_version',
     'key_ring_deletion_supported',
   ]);
-  exact(kms.state, 'created_initial_version_enabled', 'security.kms.state');
+  exact(kms.state, 'two_versions_enabled_runtime_version_1_only', 'security.kms.state');
   exact(kms.location, 'europe-west9', 'security.kms.location');
   exact(kms.key_ring, 'miakapp-v4-staging', 'security.kms.key_ring');
   exact(kms.key, 'access-token-signing', 'security.kms.key');
@@ -526,6 +531,14 @@ function validateSecurity(value) {
   exact(kms.purpose, 'ASYMMETRIC_SIGN', 'security.kms.purpose');
   exact(kms.algorithm, 'EC_SIGN_ED25519', 'security.kms.algorithm');
   exact(kms.automatic_rotation, false, 'security.kms.automatic_rotation');
+  exactArray(kms.enabled_versions, [1, 2], 'security.kms.enabled_versions');
+  exact(kms.maximum_active_versions, 2, 'security.kms.maximum_active_versions');
+  exactArray(
+    kms.runtime_published_versions,
+    [1],
+    'security.kms.runtime_published_versions',
+  );
+  exact(kms.current_runtime_version, 1, 'security.kms.current_runtime_version');
   exact(kms.key_ring_deletion_supported, false, 'security.kms.key_ring_deletion_supported');
 
   if (!Array.isArray(security.secrets)) reject('security.secrets', 'must be an array');
@@ -2808,6 +2821,7 @@ function validateEvidence(value) {
     'user_relay_probe',
     'browser_relay_plan',
     'browser_app_check_prerequisite',
+    'signing_key_overlap_prerequisite',
     'retired_recovery_workflow',
     'staging_rows',
     'fault_matrix',
@@ -3876,6 +3890,89 @@ function validateEvidence(value) {
     browserAppCheckProvider.token_ttl,
     'evidence.browser_app_check_prerequisite.terraform_state.app_check_token_ttl',
   );
+  const signingOverlap = record(
+    evidence.signing_key_overlap_prerequisite,
+    'evidence.signing_key_overlap_prerequisite',
+    [
+      'state',
+      'observed_at',
+      'repository_commit',
+      'result_path',
+      'result_sha256',
+      'reviewed_plan_sha256',
+      'plan_metadata_sha256',
+      'baseline_sha256',
+      'final_inventory_sha256',
+      'created_version_name',
+      'created_version',
+      'created_version_state',
+      'created_version_algorithm',
+      'created_version_protection_level',
+      'created_public_jwk_sha256',
+      'enabled_versions',
+      'runtime_published_versions',
+      'runtime_current_version',
+      'kms_version_creations',
+      'coordination_objects_created',
+      'runtime_changed',
+      'terraform_state_changed',
+      'existing_version_changed',
+      'public_ingress_changed',
+      'live_requests_performed',
+      'signatures_performed',
+      'automatic_retry_performed',
+      'entrypoints_retired',
+      'private_bundle_committed',
+      'credential_material_committed',
+    ],
+  );
+  const expectedSigningOverlap = {
+    state: 'version_2_enabled_runtime_unchanged_entrypoints_retired',
+    observed_at: '2026-09-05T11:16:51.365507792Z',
+    repository_commit: 'f4d4cec280355e3577609e1d305984a8462e585a',
+    result_path: 'signing-overlap/result.json',
+    result_sha256: 'b26ccdc1051c60a976578373ae2e36fda0821a9e93a6324de121f0bbed614fbc',
+    reviewed_plan_sha256: '0bf8ef54a508e93cab1f61c6e8f70c5f52d01e85da37d6fadd69efdb1ca636f1',
+    plan_metadata_sha256: 'efccbd0fbaf5a01f95dafa8cf6c6e71f0bdbc3f6cf19c16ba53c1c14c0424d87',
+    baseline_sha256: 'f7dfa9b3aab59ea40c9ecd23b8ffbea4db2111534dd37502430e2596d1c994da',
+    final_inventory_sha256: '4916ee41795f23a67babd52700c6ac6316d63ef49fa1ae02b3bcaf1b3e2a673d',
+    created_version_name: 'projects/miakapp-v4-staging/locations/europe-west9/keyRings/miakapp-v4-staging/cryptoKeys/access-token-signing/cryptoKeyVersions/2',
+    created_version: 2,
+    created_version_state: 'ENABLED',
+    created_version_algorithm: 'EC_SIGN_ED25519',
+    created_version_protection_level: 'SOFTWARE',
+    created_public_jwk_sha256: '865c164dcea8df825ec5ebec8def049925d94cc955284c45b5a66747ab1ff4ea',
+    runtime_current_version: 1,
+    kms_version_creations: 1,
+    coordination_objects_created: 2,
+    runtime_changed: false,
+    terraform_state_changed: false,
+    existing_version_changed: false,
+    public_ingress_changed: false,
+    live_requests_performed: 0,
+    signatures_performed: 0,
+    automatic_retry_performed: false,
+    entrypoints_retired: true,
+    private_bundle_committed: false,
+    credential_material_committed: false,
+  };
+  for (const [field, expected] of Object.entries(expectedSigningOverlap)) {
+    exact(
+      signingOverlap[field],
+      expected,
+      `evidence.signing_key_overlap_prerequisite.${field}`,
+    );
+  }
+  exactArray(
+    signingOverlap.enabled_versions,
+    [1, 2],
+    'evidence.signing_key_overlap_prerequisite.enabled_versions',
+  );
+  exactArray(
+    signingOverlap.runtime_published_versions,
+    [1],
+    'evidence.signing_key_overlap_prerequisite.runtime_published_versions',
+  );
   const retiredRecoveryWorkflow = record(
     evidence.retired_recovery_workflow,
     'evidence.retired_recovery_workflow',
@@ -3944,10 +4041,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 48, 'manifest.revision');
+  exact(manifest.revision, 49, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_schema_2_single_key_runtime_deployed_user_relay_acceptance_succeeded_live_browser_plan_reviewed_app_check_provider_registered',
+    'private_control_plane_schema_2_single_key_runtime_deployed_second_signing_version_enabled_user_relay_acceptance_succeeded_live_browser_plan_reviewed_app_check_provider_registered',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -4373,6 +4470,70 @@ export function validateCommittedEvidence(
     browserAppCheck.app_check_provider,
     'evidence.browser_app_check_prerequisite.app_check_provider',
   );
+  const signingOverlapManifest = manifest.evidence.signing_key_overlap_prerequisite;
+  const signingOverlapPath = committedEvidencePath(
+    stagingRoot,
+    signingOverlapManifest.result_path,
+    'signing-overlap/result.json',
+    'evidence.signing_key_overlap_prerequisite.result_path',
+  );
+  const signingOverlap = validatedEvidenceFile(
+    signingOverlapPath,
+    validateSigningOverlapEvidence,
+    'evidence.signing_key_overlap_prerequisite.result_path',
+  );
+  exact(
+    fileSha256(signingOverlapPath),
+    signingOverlapManifest.result_sha256,
+    'evidence.signing_key_overlap_prerequisite.result_sha256',
+  );
+  exactFields(signingOverlapManifest, {
+    observed_at: signingOverlap.created_version.generate_time,
+    repository_commit: signingOverlap.repository_commit,
+    reviewed_plan_sha256: signingOverlap.reviewed_plan_sha256,
+    plan_metadata_sha256: signingOverlap.plan_metadata_sha256,
+    baseline_sha256: signingOverlap.baseline_sha256,
+    final_inventory_sha256: signingOverlap.final_inventory_sha256,
+    created_version_name: signingOverlap.created_version.name,
+    created_version: signingOverlap.created_version.version,
+    created_version_state: signingOverlap.created_version.state,
+    created_version_algorithm: signingOverlap.created_version.algorithm,
+    created_version_protection_level: signingOverlap.created_version.protection_level,
+    created_public_jwk_sha256: createHash('sha256')
+      .update(`${JSON.stringify(signingOverlap.created_version.public_jwk, null, 2)}\n`)
+      .digest('hex'),
+    kms_version_creations: signingOverlap.kms_version_creations,
+    coordination_objects_created: signingOverlap.coordination_objects_created,
+    runtime_changed: signingOverlap.runtime_changed,
+    terraform_state_changed: signingOverlap.terraform_state_changed,
+    existing_version_changed: signingOverlap.existing_version_changed,
+    public_ingress_changed: signingOverlap.public_ingress_changed,
+    live_requests_performed: signingOverlap.live_requests_performed,
+    signatures_performed: signingOverlap.signatures_performed,
+    automatic_retry_performed: signingOverlap.automatic_retry_performed,
+    private_bundle_committed: signingOverlap.private_bundle_committed,
+    credential_material_committed: signingOverlap.credential_material_committed,
+  }, 'evidence.signing_key_overlap_prerequisite');
+  exactArray(
+    signingOverlapManifest.enabled_versions,
+    manifest.security.kms.enabled_versions,
+    'evidence.signing_key_overlap_prerequisite.enabled_versions',
+  );
+  exactArray(
+    signingOverlapManifest.runtime_published_versions,
+    manifest.security.kms.runtime_published_versions,
+    'evidence.signing_key_overlap_prerequisite.runtime_published_versions',
+  );
+  exact(
+    signingOverlapManifest.runtime_current_version,
+    manifest.security.kms.current_runtime_version,
+    'evidence.signing_key_overlap_prerequisite.runtime_current_version',
+  );
+  exact(
+    manifest.runtime.published_signing_keys,
+    signingOverlapManifest.runtime_published_versions.length,
+    'runtime.published_signing_keys',
+  );
   exact(manifest.runtime.live_request_performed, false, 'runtime.live_request_performed');
   return Object.freeze({
     workload,
@@ -4382,6 +4543,7 @@ export function validateCommittedEvidence(
     userRelayProbeRetirement: authProbeRetirement,
     browserRelayPlan,
     browserAppCheck,
+    signingOverlap,
   });
 }
 
@@ -4404,7 +4566,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; the private user-relay exchange is retired, the live browser-relay matrix is reviewed but not deployed, and one domain-restricted browser App Check score key plus its non-deletable provider registration have converged with enforcement disabled.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; signing-key version 2 is enabled with its one-shot entrypoints retired, the private runtime still publishes only version 1, and the browser App Check provider remains registered with enforcement disabled.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';
