@@ -19,6 +19,7 @@ const REQUIRED_FILES = Object.freeze([
   'preflight-result.json',
   'preflight-v2-result.json',
   'preflight-v3-result.json',
+  'preflight-v4-result.json',
   'recovery-apply.mjs',
   'recovery-apply.sh',
   'recovery-plan.mjs',
