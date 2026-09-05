@@ -63,6 +63,21 @@ const PRIVATE_MATERIAL = [
   /\bya29\.[A-Za-z0-9._-]+\b/u,
   /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/u,
 ];
+const FORBIDDEN_FIELD_NAMES = new Set([
+  'access_token',
+  'app_check_token',
+  'authorization',
+  'cookie',
+  'firebase_id_token',
+  'home_key',
+  'id_token',
+  'password',
+  'private_key',
+  'refresh_token',
+  'request_headers',
+  'response_headers',
+  'secret_value',
+]);
 
 export class StagingRelayImageError extends Error {
   constructor(message = 'Staging relay image contract is invalid') {
@@ -102,7 +117,7 @@ function rejectPrivateMaterial(value, path = 'relay image value') {
   }
   if (plainObject(value)) {
     for (const [key, entry] of Object.entries(value)) {
-      if (/token|password|private_key|secret_value/iu.test(key)) {
+      if (FORBIDDEN_FIELD_NAMES.has(key)) {
         reject(`${path}.${key} is a forbidden credential field`);
       }
       rejectPrivateMaterial(entry, `${path}.${key}`);
