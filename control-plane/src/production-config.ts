@@ -1,4 +1,5 @@
 import type { SigningPublicJwk } from './types.js';
+import { STAGING_BROWSER_RELAY_EDGE_PROFILE } from './staging-browser-relay-edge-profile.js';
 
 const EXPECTED_PROJECTS = Object.freeze({
   staging: 'miakapp-v4-staging',
@@ -143,7 +144,9 @@ function issuer(value: unknown, environment: ProductionEnvironment): string {
     || parsed.pathname !== '/'
     || text.endsWith('/')
     || parsed.hostname.endsWith('.test')
-    || text !== EXPECTED_ISSUERS[environment]) {
+    || (text !== EXPECTED_ISSUERS[environment]
+      && (environment !== 'staging'
+        || text !== STAGING_BROWSER_RELAY_EDGE_PROFILE.issuer))) {
     fail();
   }
   return text;
