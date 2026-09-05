@@ -54,8 +54,9 @@ scale-to-zero project, with the billing link removable during an authorized
 teardown, is therefore the default.
 
 The repository contains separate bootstrap, foundation, workload, discovery-probe,
-Firebase Auth and Auth-probe roots, a private versioned GCS backend, keyless
-plan/apply identities and a retained historical workflow blueprint. Terraform completed the final
+Firebase Auth and Auth-probe roots plus a guarded, not-yet-applied browser App
+Check API-only root, a private versioned GCS backend, keyless plan/apply identities
+and a retained historical workflow blueprint. Terraform completed the final
 27-create/nine-no-op plan, but
 the wrapper rejected the complete state before migration because its output
 shape assumption differed from Terraform 1.11.3. The exact 36-resource state at
@@ -103,6 +104,10 @@ state generation `1788574226264316` is 35,312 bytes at serial 27, with twelve
 managed resources, two data resources, one output and no tainted instance. Its
 SHA-256 is
 `88afa245c7943a44b23e32a452793c2825cf8e2bfb11ba55f95e299680b15cb2`.
+Browser-App-Check state generation `1788588916588868` is the canonical
+181-byte Terraform 1.11.3 empty state at serial 1; it contains no managed
+resource, data resource or output. It was created as a backend-initialization
+side effect of a non-applying plan.
 Raw state remains private; these metadata do not establish current convergence
 by themselves.
 Raw plan and state bytes were never committed.
@@ -150,13 +155,16 @@ cannot be deleted; and billing can report late usage.
 - Export only the synthetic evidence required for the staging report. Do not
   retain credentials, FIDs, App Check debug tokens or secret values.
 - Capture a before-inventory of enabled APIs, IAM bindings, service accounts,
-  Firebase app registrations and App Check providers, Functions and Cloud Run
-  revisions, Eventarc triggers, Workflows, executions and schedules, Firestore
-  databases, buckets and objects, Artifact Registry images, secrets, KMS
-  versions, budgets and billing exports.
-- Capture the bootstrap, foundation, workload, discovery-probe, Firebase Auth and
-  Auth-probe state generations, lock status, Object Versioning/soft-delete policy
-  and bucket IAM once the backend exists. Never
+  Firebase app registrations, Hosting sites, releases, channels and deployed
+  content, App Check provider configurations, enforcement records, debug tokens
+  and reCAPTCHA Enterprise keys, Functions and Cloud Run revisions, Eventarc
+  triggers, Workflows, executions and schedules, Firestore databases, buckets
+  and objects, Artifact Registry images, secrets, KMS versions, budgets and
+  billing exports.
+- Capture the bootstrap, foundation, workload, discovery-probe, Firebase Auth,
+  Auth-probe and browser-App-Check state generations that actually exist, plus
+  lock status, Object Versioning/soft-delete policy and bucket IAM once the
+  corresponding backend exists. Never
   treat an absent local state file as an empty cloud environment.
 - Close public ingress and stop test clients before removing stateful resources.
 
@@ -172,8 +180,15 @@ cannot be deleted; and billing can report late usage.
    the now-inert Workflows API remains enabled.
 2. Remove the Function and inspect Cloud Run, Eventarc and Artifact Registry for
    resources that outlive the deployment abstraction.
-3. Remove App Check providers and test registrations, then delete Firebase app
-   registrations only after all associated clients and evidence are retired.
+3. Disable App Check enforcement first, revoke and delete debug tokens, stop all
+   provider-backed clients, and delete reCAPTCHA Enterprise keys only after
+   their evidence is retired. Firebase exposes no delete operation for a
+   registered reCAPTCHA Enterprise App Check provider configuration; record it
+   as a permanent project residual instead of claiming Terraform state removal
+   deleted it. After the direct key inventory is empty, disable
+   `recaptchaenterprise.googleapis.com` or explicitly accept it as an inert
+   residual service. Inventory and retire Hosting channels, releases and
+   deployed content before deleting Firebase app registrations.
 4. Inventory the component bucket by live generations and soft-deleted objects.
    Delete only after required synthetic reconciliation evidence is captured.
 5. Disable Firestore deletion protection only in the reviewed teardown change,
@@ -190,7 +205,8 @@ cannot be deleted; and billing can report late usage.
    Remove every retained custom Auth-probe role only after its bindings are
    absent; explicitly decide whether the now-inert Cloud Asset API remains enabled.
 9. Capture the final bootstrap/foundation/workload/discovery-probe/Firebase-Auth/
-   Auth-probe state generations and independently reconcile the cloud inventory.
+   Auth-probe/browser-App-Check state generations that exist and independently
+   reconcile the cloud inventory.
    Securely retain the minimum teardown evidence; never publish a state or saved
    plan.
 10. In a separate reviewed manual step, remove every plan and state generation,
@@ -211,7 +227,10 @@ of deployment state, records all of the following:
   Workflows API disabled or explicitly accepted as an inert residual service;
 - the Cloud Asset API disabled or explicitly accepted as an inert residual
   service after its verifier-identity policy inventory is no longer needed;
-- no Firebase app registration, App Check provider or test registration;
+- no Firebase app registration, Hosting channel/release/content, App Check
+  enforcement record, debug token or reCAPTCHA key; any non-deletable App Check
+  provider configuration is explicitly recorded as a permanent residual, and
+  the reCAPTCHA Enterprise API is disabled or accepted as an inert residual;
 - no Firestore database or TTL policy intended for this environment;
 - no live component, plan or state object; every soft-deleted object and its
   remaining recovery/cost window is either expired or explicitly recorded;
