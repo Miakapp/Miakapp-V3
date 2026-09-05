@@ -16,6 +16,7 @@ const BASE64URL = /^[A-Za-z0-9_-]+$/;
 const MINIMUM_RPC_TIMEOUT_MS = 100;
 const MAXIMUM_RPC_TIMEOUT_MS = 10_000;
 const MAXIMUM_KEYRING_VERSIONS = 2;
+const MAXIMUM_SIGNING_VERSIONS = 2;
 
 export const PRODUCTION_SECRET_IDS = Object.freeze({
   homeKeyPepper: 'miakapp-home-key-pepper',
@@ -27,6 +28,9 @@ export const PRODUCTION_SECRET_IDS = Object.freeze({
 
 export type ProductionEnvironment = keyof typeof EXPECTED_PROJECTS;
 export type ProductionSecretPurpose = keyof typeof PRODUCTION_SECRET_IDS;
+export type ProductionSecuritySchema =
+  | 'miakapp.production-security/1'
+  | 'miakapp.production-security/2';
 
 export interface PinnedSecretVersionReference {
   readonly logicalVersion: string;
@@ -38,15 +42,23 @@ export interface PinnedSecretKeyringConfig {
   readonly versions: readonly PinnedSecretVersionReference[];
 }
 
+export interface PinnedSigningKeyVersionReference {
+  readonly keyVersionName: string;
+  readonly publicJwk: SigningPublicJwk;
+}
+
 export interface ProductionSecurityConfig {
-  readonly schema: 'miakapp.production-security/1';
+  readonly schema: ProductionSecuritySchema;
   readonly environment: ProductionEnvironment;
   readonly projectId: string;
   readonly region: typeof PRODUCTION_CONTROL_PLANE_REGION;
   readonly issuer: string;
   readonly signing: Readonly<{
+    readonly currentKid: string;
+    readonly versions: readonly PinnedSigningKeyVersionReference[];
     keyVersionName: string;
     publicJwk: SigningPublicJwk;
+    publicJwks: readonly SigningPublicJwk[];
     rpcTimeoutMilliseconds: number;
   }>;
   readonly secretManager: Readonly<{
@@ -151,6 +163,82 @@ function kmsVersionName(value: unknown, projectId: string): string {
   return name;
 }
 
+interface ParsedSigningConfig {
+  readonly currentKid: string;
+  readonly versions: readonly PinnedSigningKeyVersionReference[];
+  readonly keyVersionName: string;
+  readonly publicJwk: SigningPublicJwk;
+  readonly publicJwks: readonly SigningPublicJwk[];
+  readonly rpcTimeoutMilliseconds: number;
+}
+
+function legacySigningConfig(value: unknown, projectId: string): ParsedSigningConfig {
+  const signing = record(value, [
+    'key_version_name',
+    'public_jwk',
+    'rpc_timeout_ms',
+  ]);
+  const publicJwk = canonicalPublicJwk(signing.public_jwk);
+  const keyVersionName = kmsVersionName(signing.key_version_name, projectId);
+  const currentKid = publicJwk.kid;
+  const versions = Object.freeze([Object.freeze({
+    keyVersionName,
+    publicJwk,
+  })]);
+  return Object.freeze({
+    currentKid,
+    versions,
+    keyVersionName,
+    publicJwk,
+    publicJwks: Object.freeze([publicJwk]),
+    rpcTimeoutMilliseconds: boundedTimeout(signing.rpc_timeout_ms),
+  });
+}
+
+function rotatingSigningConfig(value: unknown, projectId: string): ParsedSigningConfig {
+  const signing = record(value, [
+    'current_kid',
+    'versions',
+    'rpc_timeout_ms',
+  ]);
+  const currentKid = boundedString(signing.current_kid, 128);
+  if (!Array.isArray(signing.versions)
+    || signing.versions.length === 0
+    || signing.versions.length > MAXIMUM_SIGNING_VERSIONS) {
+    fail();
+  }
+  const keyVersionNames = new Set<string>();
+  const keyIds = new Set<string>();
+  const publicKeys = new Set<string>();
+  const versions = signing.versions.map((entry) => {
+    const reference = record(entry, [
+      'key_version_name',
+      'public_jwk',
+    ]);
+    const keyVersionName = kmsVersionName(reference.key_version_name, projectId);
+    const publicJwk = canonicalPublicJwk(reference.public_jwk);
+    if (keyVersionNames.has(keyVersionName)
+      || keyIds.has(publicJwk.kid)
+      || publicKeys.has(publicJwk.x)) {
+      fail();
+    }
+    keyVersionNames.add(keyVersionName);
+    keyIds.add(publicJwk.kid);
+    publicKeys.add(publicJwk.x);
+    return Object.freeze({ keyVersionName, publicJwk });
+  });
+  const current = versions.find((version) => version.publicJwk.kid === currentKid);
+  if (current === undefined) fail();
+  return Object.freeze({
+    currentKid,
+    versions: Object.freeze(versions),
+    keyVersionName: current.keyVersionName,
+    publicJwk: current.publicJwk,
+    publicJwks: Object.freeze(versions.map((version) => version.publicJwk)),
+    rpcTimeoutMilliseconds: boundedTimeout(signing.rpc_timeout_ms),
+  });
+}
+
 function secretVersionName(value: unknown, projectId: string, secretId: string): string {
   const name = boundedString(value, 512);
   const match = /^projects\/([^/]+)\/secrets\/([^/]+)\/versions\/([1-9][0-9]*)$/.exec(name);
@@ -197,10 +285,12 @@ export function parseProductionSecurityConfig(input: unknown): ProductionSecurit
     'signing',
     'secret_manager',
   ]);
-  if (config.schema !== 'miakapp.production-security/1'
+  if ((config.schema !== 'miakapp.production-security/1'
+      && config.schema !== 'miakapp.production-security/2')
     || (config.environment !== 'staging' && config.environment !== 'production')) {
     fail();
   }
+  const schema = config.schema;
   const environment = config.environment;
   const projectId = boundedString(config.project_id, 63);
   if (projectId !== EXPECTED_PROJECTS[environment]
@@ -209,11 +299,9 @@ export function parseProductionSecurityConfig(input: unknown): ProductionSecurit
     fail();
   }
 
-  const signing = record(config.signing, [
-    'key_version_name',
-    'public_jwk',
-    'rpc_timeout_ms',
-  ]);
+  const signing = schema === 'miakapp.production-security/1'
+    ? legacySigningConfig(config.signing, projectId)
+    : rotatingSigningConfig(config.signing, projectId);
   const secretManager = record(config.secret_manager, [
     'rpc_timeout_ms',
     'keyrings',
@@ -228,16 +316,12 @@ export function parseProductionSecurityConfig(input: unknown): ProductionSecurit
   ) as unknown as Readonly<Record<ProductionSecretPurpose, PinnedSecretKeyringConfig>>;
 
   return Object.freeze({
-    schema: 'miakapp.production-security/1',
+    schema,
     environment,
     projectId,
     region: PRODUCTION_CONTROL_PLANE_REGION,
     issuer: issuer(config.issuer, environment),
-    signing: Object.freeze({
-      keyVersionName: kmsVersionName(signing.key_version_name, projectId),
-      publicJwk: canonicalPublicJwk(signing.public_jwk),
-      rpcTimeoutMilliseconds: boundedTimeout(signing.rpc_timeout_ms),
-    }),
+    signing,
     secretManager: Object.freeze({
       rpcTimeoutMilliseconds: boundedTimeout(secretManager.rpc_timeout_ms),
       keyrings: Object.freeze(parsedKeyrings),
