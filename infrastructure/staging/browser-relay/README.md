@@ -3,9 +3,10 @@
 This directory freezes the rebased reviewable plan for live browser, relay,
 signing-key and rollback acceptance. It contains no Terraform, deployer,
 invocation wrapper, credential or result. Reading or validating it authorizes no
-cloud mutation. The committed state is `rebased_reviewed_not_deployed`, all `LIVE-*`
-cases are pending and the canonical staging manifest still records private
-control-plane ingress.
+cloud mutation. The committed state is
+`rotation_entry_converged_reviewed_not_deployed`, all `LIVE-*` cases are
+pending and the canonical staging manifest still records private control-plane
+ingress.
 
 Run the credential-free validator from the repository root:
 
@@ -73,35 +74,33 @@ and [reCAPTCHA billing](https://cloud.google.com/recaptcha/docs/billing-informat
 
 ## Preconditions
 
-Revision 5 was rebased from an independent read-only observation on
-2026-09-05T18:28:41.130Z. It verified `control-plane-00008-saz`, private ingress,
+Revision 6 was rebased from an independent read-only observation on
+2026-09-05T19:04:24.200Z. It verified `control-plane-00009-kur`, private ingress,
 zero unauthenticated invokers, two enabled and published signing versions with
-version 2 current, a registered reCAPTCHA Enterprise provider, the prior real
+version 1 current for the rehearsal entry, a registered reCAPTCHA Enterprise provider, the prior real
 browser token result, zero enforcement records, zero debug tokens, zero Firebase
 Auth users, zero application fixture collections, zero relay services and an
 HTTP 404 runner route. Firestore contained only ten bounded admission/audit
 documents across its three expected technical collections; no Home or user
 collection existed.
 
-The immutable cross-repository pins, two-key runtime, readable provider and
-standalone real-browser token observation are therefore satisfied today. The
-complete authenticated browser case remains part of `LIVE-02`. Before any
-public transition, the first remaining prerequisite now has reviewed one-shot
-plan/apply tooling under `workload/`, but remains open until its exact saved
-plan is applied, independently converged and retired. The remaining work must
-provide:
+The immutable cross-repository pins, two-key runtime, readable provider,
+standalone real-browser token observation and guarded rotation entry are
+therefore satisfied today. The entry plan changed only the Function and its
+deployment guard in place, retained both published keys, source, build, IAM,
+private ingress and scale, and made no live request. Its one-shot wrappers are
+retired. The complete authenticated browser case remains part of `LIVE-02`.
+Before any public transition, the remaining work must provide:
 
-1. convergence and retirement of the guarded configuration-only rehearsal
-   entry that temporarily selects version 1 while keeping versions 1 and 2
-   published;
-2. a digest-bound and reversible control-plane ingress transition;
-3. two digest-pinned relay services using a keyless no-role identity;
-4. a three-engine runner that emits closed semantic counters only;
-5. allow-listed metric and billing observations; and
-6. a rollback plan that is rendered and checked before the live window opens.
+1. a digest-bound and reversible control-plane ingress transition;
+2. two digest-pinned relay services using a keyless no-role identity;
+3. a three-engine runner that emits closed semantic counters only;
+4. allow-listed metric and billing observations; and
+5. a rollback plan that is rendered and checked before the live window opens.
 
 The currently deployed runtime document publishes both signing keys with
-version 2 current and version 1 retained. This completes the platform support
+version 1 current and version 2 retained. This completes the rehearsal entry
+and the platform support
 for the routine 60-second prepublication and 330-second retiring-key retention
 contract. The guarded
 `signing-overlap/` package now freezes the one-shot second-version creation and
@@ -111,12 +110,12 @@ are retired. The schema-2 bridge, shape migration and two-key prepublication
 were deployed privately through revision `control-plane-00007-deb`; the later
 activation converged on revision `control-plane-00008-saz` without changing
 source, build, IAM, ingress or scale and made no live request. `SIGNING-01` is
-now satisfied. To exercise a forward version-1-to-version-2 transition on a
-live socket without creating a third KMS version, `ROTATION-ENTRY-01` requires a
-separate reversible configuration-only entry transition before acceptance.
-Version 2 stays published throughout; the matrix then activates it on the live
-socket and retires version 1 only after the complete lease bound. Schema support
-or the local two-key fixture alone is not live overlap evidence.
+now satisfied. The separate reversible configuration-only entry then converged
+to `control-plane-00009-kur`, reselecting version 1 without creating a third KMS
+version. `ROTATION-ENTRY-01` is satisfied. Version 2 stays published throughout;
+the matrix activates it on the live socket and retires version 1 only after the
+complete lease bound. Schema support or the local two-key fixture alone is not
+live overlap evidence.
 
 ## Matrix and evidence boundary
 

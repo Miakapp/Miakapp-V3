@@ -4,7 +4,6 @@ import { isDeepStrictEqual } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
 import {
-  BROWSER_RELAY_ENTRY_RUNTIME_CONFIG_SHA256,
   OPERATOR_USER_SHA256,
   PROJECT_ID,
   PROJECT_NUMBER,
@@ -51,7 +50,7 @@ const GCF_SOURCE_CONDITION = Object.freeze({
 const REPOSITORY = `projects/${PROJECT_ID}/locations/${REGION}/repositories/miakapp-control-plane`;
 const BUILD_ACCOUNT_RESOURCE = `projects/${PROJECT_ID}/serviceAccounts/${BUILD_ACCOUNT}`;
 export const PINNED_UPDATE_BASELINE = Object.freeze({
-  repositoryCommit: '6a9db97deb59b6c8e919d451c922ddb246eb54b2',
+  repositoryCommit: 'eaa7bb46ed06206fcd0c0dec100a069c54b259cf',
   sourceRepositoryCommit: '9f217da102b394734adba7ccef3f8f70d0317306',
   sourceArchiveSha256: 'd1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8',
   runtimeConfigSha256: RUNTIME_CONFIG_SHA256,
@@ -66,11 +65,6 @@ const PINNED_UPDATE_ACTIONS = Object.freeze({
   ...Object.fromEntries(Object.keys(MANAGED_RESOURCES).map((address) => [address, ['no-op']])),
   'google_cloudfunctions2_function.control_plane': ['update'],
   'google_storage_bucket_object.source': ['delete', 'create'],
-  'terraform_data.deployment_guard': ['update'],
-});
-const BROWSER_RELAY_ENTRY_ACTIONS = Object.freeze({
-  ...Object.fromEntries(Object.keys(MANAGED_RESOURCES).map((address) => [address, ['no-op']])),
-  'google_cloudfunctions2_function.control_plane': ['update'],
   'terraform_data.deployment_guard': ['update'],
 });
 
@@ -164,17 +158,11 @@ function resourceConfiguration(plan) {
 function validateVariables(plan, input, operatorUserSha256) {
   if (!plainObject(plan.variables)) reject('Terraform plan variables are missing');
   exact(Object.keys(plan.variables).sort(), [
-    'browser_relay_rotation_entry',
     'operator_user_email',
     'repository_commit',
     'source_archive_path',
     'source_archive_sha256',
   ], 'Terraform plan variable names');
-  exact(
-    plan.variables.browser_relay_rotation_entry?.value,
-    input.browserRelayRotationEntry ?? false,
-    'Browser-relay rotation-entry variable',
-  );
   exact(plan.variables.repository_commit?.value, input.repositoryCommit, 'Repository commit variable');
   exact(plan.variables.source_archive_sha256?.value, input.sourceArchiveSha256, 'Source digest variable');
   const operator = plan.variables.operator_user_email?.value;
@@ -481,70 +469,6 @@ function validatePinnedSourceUpdateChanges(plan, input, policy) {
   exact([...managedSeen].sort(), Object.keys(MANAGED_RESOURCES).sort(), 'Managed source update changes');
 }
 
-function validateBrowserRelayRotationEntryChanges(plan, input, policy) {
-  if (!Array.isArray(plan.resource_changes)) reject('Terraform resource changes are missing');
-  const managedSeen = new Set();
-  for (const change of plan.resource_changes) {
-    if (!plainObject(change) || typeof change.address !== 'string' || !plainObject(change.change)) {
-      reject('Terraform browser-relay rotation-entry plan contains an invalid resource change');
-    }
-    if (change.mode === 'data') {
-      if (DATA_RESOURCES[change.address] !== change.type
-        || ![['read'], ['no-op']].some((actions) => isDeepStrictEqual(actions, change.change.actions))) {
-        reject('Terraform browser-relay rotation-entry plan contains an unreviewed data read');
-      }
-      continue;
-    }
-    if (change.mode !== 'managed' || MANAGED_RESOURCES[change.address] !== change.type
-      || managedSeen.has(change.address)) {
-      reject('Terraform browser-relay rotation-entry plan contains an unreviewed managed resource');
-    }
-    managedSeen.add(change.address);
-    exact(
-      change.change.actions,
-      BROWSER_RELAY_ENTRY_ACTIONS[change.address],
-      `${change.address}.browser-relay rotation-entry actions`,
-    );
-    if (change.change.importing !== undefined || change.change.generated_config !== undefined) {
-      reject('Terraform browser-relay rotation-entry plan must not import or generate configuration');
-    }
-    if (isDeepStrictEqual(change.change.actions, ['no-op'])) {
-      exact(change.change.before, change.change.after, `${change.address}.rotation-entry no-op`);
-    } else if (change.address === 'google_cloudfunctions2_function.control_plane') {
-      validatePinnedActiveFunction(
-        change.change.before,
-        policy.previous,
-        policy.operatorUserSha256,
-      );
-      exact(change.change.after.state, 'ACTIVE', 'Rotation-entry Function state');
-      exact(change.change.after.environment, 'GEN_2', 'Rotation-entry Function generation');
-      exact(
-        change.change.after.build_config,
-        change.change.before.build_config,
-        'Rotation-entry Function build configuration',
-      );
-    } else if (change.address === 'terraform_data.deployment_guard') {
-      const before = change.change.before;
-      const after = change.change.after;
-      if (!plainObject(before) || !plainObject(after)) {
-        reject('Browser-relay rotation-entry deployment guard is incomplete');
-      }
-      validateGuardInput(before.input, policy.previous, 'Rotation-entry guard baseline');
-      exact(before.output, before.input, 'Rotation-entry guard baseline output');
-      exact(before.triggers_replace, null, 'Rotation-entry guard baseline replacement trigger');
-      validateGuardInput(after.input, input, 'Rotation-entry guard update');
-      exact(after.id, before.id, 'Rotation-entry guard stable identity');
-      exact(after.triggers_replace, null, 'Rotation-entry guard replacement trigger');
-    }
-    validateChangeValues(change, input, policy.operatorUserSha256);
-  }
-  exact(
-    [...managedSeen].sort(),
-    Object.keys(MANAGED_RESOURCES).sort(),
-    'Managed browser-relay rotation-entry changes',
-  );
-}
-
 function validateResourceChanges(plan, input, operatorUserSha256) {
   if (!Array.isArray(plan.resource_changes)) reject('Terraform resource changes are missing');
   const managedSeen = new Set();
@@ -720,41 +644,6 @@ export function validatePinnedSourceUpdatePlanAgainstPolicy(plan, input, policy)
   });
 }
 
-export function validatePinnedBrowserRelayRotationEntryPlanAgainstPolicy(plan, input, policy) {
-  validatePlanEnvelope(plan, input, policy);
-  if (!plainObject(policy.previous)
-    || !/^[0-9a-f]{40}$/u.test(policy.previous.repositoryCommit ?? '')
-    || !/^[0-9a-f]{40}$/u.test(sourceRepositoryCommit(policy.previous))
-    || !/^[0-9a-f]{64}$/u.test(policy.previous.sourceArchiveSha256 ?? '')
-    || !/^[0-9a-f]{64}$/u.test(runtimeConfigSha256(policy.previous))
-    || input.repositoryCommit === policy.previous.repositoryCommit
-    || input.browserRelayRotationEntry !== true
-    || sourceRepositoryCommit(input) !== sourceRepositoryCommit(policy.previous)
-    || input.sourceArchiveSha256 !== policy.previous.sourceArchiveSha256
-    || runtimeConfigSha256(input) !== BROWSER_RELAY_ENTRY_RUNTIME_CONFIG_SHA256
-    || runtimeConfigSha256(input) === runtimeConfigSha256(policy.previous)) {
-    reject('Terraform browser-relay rotation-entry baseline is invalid or unchanged');
-  }
-  validateBrowserRelayRotationEntryChanges(plan, input, policy);
-  rejectForbiddenIdentities(plan);
-  return Object.freeze({
-    create: 0,
-    update: 2,
-    delete: 0,
-    transition: 'browser-relay-rehearsal-version-2-to-version-1',
-    function: 1,
-    source_replaced: false,
-    published_signing_key_versions: 2,
-    current_signing_key_version: 1,
-    minimum_instances: 0,
-    maximum_instances: 1,
-    ingress: 'internal-only',
-    unauthenticated_invokers: 0,
-    synthetic_invokers: 1,
-    fcm_permissions: 1,
-  });
-}
-
 export function validateInitialWorkloadPlan(plan, input) {
   return validateWorkloadPlanAgainstPolicy(plan, input, {
     operatorUserSha256: OPERATOR_USER_SHA256,
@@ -773,17 +662,6 @@ export function validatePinnedSourceUpdatePlan(
   operatorUserSha256 = OPERATOR_USER_SHA256,
 ) {
   return validatePinnedSourceUpdatePlanAgainstPolicy(plan, input, {
-    operatorUserSha256,
-    previous: PINNED_UPDATE_BASELINE,
-  });
-}
-
-export function validatePinnedBrowserRelayRotationEntryPlan(
-  plan,
-  input,
-  operatorUserSha256 = OPERATOR_USER_SHA256,
-) {
-  return validatePinnedBrowserRelayRotationEntryPlanAgainstPolicy(plan, input, {
     operatorUserSha256,
     previous: PINNED_UPDATE_BASELINE,
   });
@@ -813,17 +691,12 @@ export function readAndValidatePinnedSourceUpdatePlan(path, input) {
   return validatePinnedSourceUpdatePlan(readPlan(path), input);
 }
 
-export function readAndValidatePinnedBrowserRelayRotationEntryPlan(path, input) {
-  return validatePinnedBrowserRelayRotationEntryPlan(readPlan(path), input);
-}
-
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const recovery = process.argv[2] === '--recover-failed-build';
   const update = process.argv[2] === '--update-pinned-source';
-  const rotationEntry = process.argv[2] === '--browser-relay-rotation-entry';
-  const offset = recovery || update || rotationEntry ? 1 : 0;
+  const offset = recovery || update ? 1 : 0;
   if (process.argv.length !== 5 + offset) {
-    console.error('Usage: node validate-plan.mjs [--recover-failed-build|--update-pinned-source|--browser-relay-rotation-entry] <plan.json> <repository-commit> <source-sha256>');
+    console.error('Usage: node validate-plan.mjs [--recover-failed-build|--update-pinned-source] <plan.json> <repository-commit> <source-sha256>');
     process.exitCode = 2;
   } else {
     try {
@@ -831,19 +704,12 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         ? readAndValidateFailedBuildRecoveryPlan
         : update
           ? readAndValidatePinnedSourceUpdatePlan
-          : rotationEntry
-            ? readAndValidatePinnedBrowserRelayRotationEntryPlan
-            : readAndValidateInitialWorkloadPlan;
+          : readAndValidateInitialWorkloadPlan;
       const summary = validate(process.argv[2 + offset], {
         repositoryCommit: process.argv[3 + offset],
-        sourceRepositoryCommit: rotationEntry
-          ? PINNED_UPDATE_BASELINE.sourceRepositoryCommit
-          : process.argv[3 + offset],
+        sourceRepositoryCommit: process.argv[3 + offset],
         sourceArchiveSha256: process.argv[4 + offset],
-        runtimeConfigSha256: rotationEntry
-          ? BROWSER_RELAY_ENTRY_RUNTIME_CONFIG_SHA256
-          : RUNTIME_CONFIG_SHA256,
-        browserRelayRotationEntry: rotationEntry,
+        runtimeConfigSha256: RUNTIME_CONFIG_SHA256,
       });
       process.stdout.write(`${JSON.stringify(summary)}\n`);
     } catch (error) {

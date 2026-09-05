@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { lstatSync, readFileSync } from 'node:fs';
 import { isDeepStrictEqual } from 'node:util';
 
-export const BROWSER_RELAY_PLAN_SHA256 = '51fc7b8031da8fbd6162aacfc8e39a2bf25b1c96e496851a6d6847d4588e0b23';
+export const BROWSER_RELAY_PLAN_SHA256 = '74db861387be92dbfc85fbaf338c593f5f40ea6a39333d1a7a765b0fb5bc47ba';
 export const BROWSER_RELAY_PLAN_PATH = 'browser-relay/plan.json';
 
 const MAXIMUM_PLAN_BYTES = 16 * 1024;
@@ -156,9 +156,9 @@ function validateBaseline(value) {
   exact(baseline.control_plane.unauthenticated_invokers, 0, 'baseline.control_plane.unauthenticated_invokers');
   exact(baseline.control_plane.runtime_schema, 'miakapp.production-runtime/2', 'baseline.control_plane.runtime_schema');
   exact(baseline.control_plane.security_schema, 'miakapp.production-security/2', 'baseline.control_plane.security_schema');
-  exact(baseline.control_plane.runtime_config_sha256, '40e2f83fbe8e3d27b7e53c4a666f424519fc6972ef19a7598ab9e093be0c70f7', 'baseline.control_plane.runtime_config_sha256');
+  exact(baseline.control_plane.runtime_config_sha256, 'c018708786fc23a15f7701093b5148c0e415a2df8045af8e170e4308c2deae37', 'baseline.control_plane.runtime_config_sha256');
   exact(baseline.control_plane.published_signing_keys, 2, 'baseline.control_plane.published_signing_keys');
-  exact(baseline.control_plane.current_signing_key_version, 2, 'baseline.control_plane.current_signing_key_version');
+  exact(baseline.control_plane.current_signing_key_version, 1, 'baseline.control_plane.current_signing_key_version');
   exact(baseline.control_plane.overlap_schema_supported_by_source, true, 'baseline.control_plane.overlap_schema_supported_by_source');
   exact(baseline.hosting.site_disabled, true, 'baseline.hosting.site_disabled');
   exact(baseline.hosting.all_versions_deleted, true, 'baseline.hosting.all_versions_deleted');
@@ -280,8 +280,8 @@ function validatePreconditions(value) {
     exactKeys(entry, ['id', 'state', 'requirement'], `preconditions[${index}]`);
     exact(entry, expectedPlan.preconditions[index], `preconditions[${index}]`);
   });
-  exact(value.filter(({ state }) => state === 'satisfied').map(({ id }) => id), ['PIN-01', 'SIGNING-01', 'APP-CHECK-01'], 'satisfied preconditions');
-  exact(value.filter(({ state }) => state === 'open').length, 6, 'open precondition count');
+  exact(value.filter(({ state }) => state === 'satisfied').map(({ id }) => id), ['PIN-01', 'SIGNING-01', 'APP-CHECK-01', 'ROTATION-ENTRY-01'], 'satisfied preconditions');
+  exact(value.filter(({ state }) => state === 'open').length, 5, 'open precondition count');
 }
 
 function validateMatrix(value) {
@@ -322,11 +322,11 @@ function validateSigningRotation(value) {
     'republish_removed_private_key',
   ], 'signing_rotation');
   exact(rotation, expectedPlan.signing_rotation, 'signing_rotation');
-  exact(rotation.state, 'two_key_runtime_ready_rehearsal_entry_pending', 'signing_rotation.state');
+  exact(rotation.state, 'rehearsal_entry_converged_version_1_current', 'signing_rotation.state');
   exact(rotation.token_lease_seconds, 300, 'signing_rotation.token_lease_seconds');
   exact(rotation.prepublication_seconds, 60, 'signing_rotation.prepublication_seconds');
   exact(rotation.retiring_key_retention_seconds, 330, 'signing_rotation.retiring_key_retention_seconds');
-  exact(rotation.baseline_current_version, 2, 'signing_rotation.baseline_current_version');
+  exact(rotation.baseline_current_version, 1, 'signing_rotation.baseline_current_version');
   exact(rotation.baseline_published_versions, [1, 2], 'signing_rotation.baseline_published_versions');
   exact(rotation.rehearsal_entry_current_version, 1, 'signing_rotation.rehearsal_entry_current_version');
   exact(rotation.rehearsal_entry_published_versions, [1, 2], 'signing_rotation.rehearsal_entry_published_versions');
@@ -385,8 +385,8 @@ export function validateBrowserRelayPlanValue(value) {
     'rollback',
   ], 'plan');
   exact(plan.schema, 'miakapp.staging-browser-relay-plan/1', 'plan.schema');
-  exact(plan.revision, 5, 'plan.revision');
-  exact(plan.state, 'rebased_reviewed_not_deployed', 'plan.state');
+  exact(plan.revision, 6, 'plan.revision');
+  exact(plan.state, 'rotation_entry_converged_reviewed_not_deployed', 'plan.state');
   validateTarget(plan.target);
   validatePins(plan.pins);
   validateBaseline(plan.baseline);

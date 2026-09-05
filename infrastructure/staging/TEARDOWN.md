@@ -46,13 +46,15 @@ single-key runtime document to schema 2 as historical revision
 `control-plane-00006-wid`. A later exact two-update plan prepublished signing
 versions 1 and 2, kept version 1 current, and converged to historical revision
 `control-plane-00007-deb`. A second exact two-update plan selected version 2,
-retained version 1, and converged to current revision
-`control-plane-00008-saz`. Independent inventory matched the unchanged source
+retained version 1, and converged to historical revision
+`control-plane-00008-saz`. A third exact two-update plan reselected version 1
+while retaining version 2 and converged to current revision
+`control-plane-00009-kur`. Independent inventory matched the unchanged source
 bytes and reconfirmed internal-only ingress, no unauthenticated invoker, no
 minimum instance and zero user-managed keys across the runtime/build/probe
 identities. The current schema 2 publishes both enabled keys and selects version
-2; retiring version 1 remains a separate guarded operation after the complete
-lease overlap.
+1 for the browser-relay rehearsal; version 2 remains published for the forward
+live transition.
 Deleting the whole project would permanently retire its globally unique
 ID; adding Firebase cannot otherwise be fully undone. Retaining this private
 scale-to-zero project, with the billing link removable during an authorized
@@ -96,10 +98,10 @@ WIF providers are disabled while the pool remains enabled and retained. Object
 Versioning retains recovery generations. Local `.terraform/`
 provider caches are disposable and are not cloud inventory.
 
-Current workload state generation `1788612775466023` is 49,898 bytes at serial
-22 with fifteen managed resources, three data resources, one output and no
+Current workload state generation `1788635059003671` is 49,898 bytes at serial
+24 with fifteen managed resources, three data resources, one output and no
 tainted resource. Its SHA-256 is
-`59fc885f69378118b972b76c5ae570890251215b5d232330c380d4d293ff6fd2`.
+`07c0c7ef2d3130e440282a8923c15723deca39cf2d150c742bd7da4767d59283`.
 Probe state generation `1788484287000119` is 13,596 bytes at serial 3 with
 three managed resources, one data resource, one output and nothing tainted. Its
 SHA-256 is

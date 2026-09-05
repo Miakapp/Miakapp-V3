@@ -1,13 +1,13 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 56,
-  "status": "private_control_plane_two_key_version_2_current_runtime_deployed_signing_overlap_active_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rebased_enforcement_disabled",
+  "revision": 57,
+  "status": "private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rebased_enforcement_disabled",
   "environment": "staging",
   "project": {
     "project_id": "miakapp-v4-staging",
     "project_number": "1072737219170",
     "display_name": "Miakapp V4 Staging",
-    "lifecycle": "firebase_auth_initialized_private_control_plane_signing_key_version_2_current_user_relay_acceptance_succeeded",
+    "lifecycle": "firebase_auth_initialized_private_control_plane_signing_key_version_1_rehearsal_entry_user_relay_acceptance_succeeded",
     "creation_authorized": false,
     "billing_link_authorized": false,
     "deployment_authorized": true,
@@ -145,7 +145,7 @@
     },
     {
       "id": "cloud-functions-gen2",
-      "state": "private_schema_2_two_key_version_2_current_runtime_active_user_relay_acceptance_succeeded"
+      "state": "private_schema_2_two_key_version_1_rehearsal_entry_runtime_active_user_relay_acceptance_succeeded"
     },
     {
       "id": "cloud-storage",
@@ -153,7 +153,7 @@
     },
     {
       "id": "cloud-kms",
-      "state": "two_signing_key_versions_enabled_runtime_two_keys_published_version_2_current"
+      "state": "two_signing_key_versions_enabled_runtime_two_keys_published_version_1_rehearsal_entry"
     },
     {
       "id": "secret-manager",
@@ -183,7 +183,7 @@
     "region": "europe-west9",
     "deployment_state": "ACTIVE",
     "service": "projects/miakapp-v4-staging/locations/europe-west9/services/control-plane",
-    "revision": "control-plane-00008-saz",
+    "revision": "control-plane-00009-kur",
     "uri": "https://control-plane-aczhngqraq-od.a.run.app",
     "minimum_instances": 0,
     "maximum_instances": 1,
@@ -193,11 +193,11 @@
     "allow_unauthenticated": false,
     "ingress": "ALLOW_INTERNAL_ONLY",
     "source_archive_sha256": "d1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8",
-    "runtime_config_sha256": "40e2f83fbe8e3d27b7e53c4a666f424519fc6972ef19a7598ab9e093be0c70f7",
+    "runtime_config_sha256": "c018708786fc23a15f7701093b5148c0e415a2df8045af8e170e4308c2deae37",
     "runtime_schema": "miakapp.production-runtime/2",
     "security_schema": "miakapp.production-security/2",
     "published_signing_keys": 2,
-    "current_signing_key_version": 2,
+    "current_signing_key_version": 1,
     "user_managed_keys": 0,
     "live_request_performed": false
   },
@@ -231,7 +231,7 @@
   },
   "security": {
     "kms": {
-      "state": "two_versions_enabled_runtime_both_published_version_2_current",
+      "state": "two_versions_enabled_runtime_both_published_version_1_rehearsal_entry",
       "location": "europe-west9",
       "key_ring": "miakapp-v4-staging",
       "key": "access-token-signing",
@@ -248,7 +248,7 @@
         1,
         2
       ],
-      "current_runtime_version": 2,
+      "current_runtime_version": 1,
       "key_ring_deletion_supported": false
     },
     "secrets": [
@@ -1301,10 +1301,10 @@
       }
     },
     "workload_deployment": {
-      "state": "active_internal_only_schema_2_two_key_version_2_current_source_verified",
-      "observed_at": "2026-09-05T12:53:00.364Z",
-      "inventory_repository_commit": "6a9db97deb59b6c8e919d451c922ddb246eb54b2",
-      "deployed_repository_commit": "6a9db97deb59b6c8e919d451c922ddb246eb54b2",
+      "state": "active_internal_only_schema_2_two_key_version_1_rehearsal_entry_source_verified",
+      "observed_at": "2026-09-05T19:04:24.200Z",
+      "inventory_repository_commit": "eaa7bb46ed06206fcd0c0dec100a069c54b259cf",
+      "deployed_repository_commit": "eaa7bb46ed06206fcd0c0dec100a069c54b259cf",
       "deployed_source_repository_commit": "9f217da102b394734adba7ccef3f8f70d0317306",
       "initial_plan_sha256": "b59167718fdad5edfa440f5d59f6e0eb1dff9277b20e1f829ebbb233296cdf05",
       "initial_plan_result": "failed_build_missing_conditional_source_read",
@@ -1432,17 +1432,42 @@
           "terraform_state_serial": 22,
           "terraform_state_sha256": "59fc885f69378118b972b76c5ae570890251215b5d232330c380d4d293ff6fd2",
           "live_request_performed": false
+        },
+        {
+          "purpose": "browser_relay_rotation_rehearsal_entry",
+          "repository_commit": "eaa7bb46ed06206fcd0c0dec100a069c54b259cf",
+          "source_repository_commit": "9f217da102b394734adba7ccef3f8f70d0317306",
+          "plan_sha256": "e0dec2a8b92545a0fdb89ac4f0e449bbac25f6332111dfd705921eaf6ceb5e29",
+          "plan_metadata_sha256": "a63c66c6787ea4b619fedf7237fef265389f167a7492089eedcc23e7cb8a8619",
+          "plan_json_sha256": "857d3b2cfbc779d9a67413a2367f23eb86db6ab9261d62b9a34eafea66c13254",
+          "from_runtime_config_sha256": "40e2f83fbe8e3d27b7e53c4a666f424519fc6972ef19a7598ab9e093be0c70f7",
+          "to_runtime_config_sha256": "c018708786fc23a15f7701093b5148c0e415a2df8045af8e170e4308c2deae37",
+          "source_archive_sha256": "d1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8",
+          "plan_result": {
+            "create": 0,
+            "update": 2,
+            "delete": 0,
+            "source_replaced": false,
+            "function_replaced": false
+          },
+          "function_revision": "control-plane-00009-kur",
+          "function_updated_at": "2026-09-05T19:04:13.514360614Z",
+          "copied_source_generation": "1788635007869418",
+          "terraform_state_generation": "1788635059003671",
+          "terraform_state_serial": 24,
+          "terraform_state_sha256": "07c0c7ef2d3130e440282a8923c15723deca39cf2d150c742bd7da4767d59283",
+          "live_request_performed": false
         }
       ],
       "result_path": "workload/result.json",
-      "result_sha256": "bab093e5f070039c3e8f482f83bb00927406ca9284c639ca62bc69c4ae997713",
+      "result_sha256": "5259f61aa65ceca3e45e162ea59045ee4947d9cec04e5a301261314f526b067c",
       "terraform_state": {
         "object": "terraform/workload/default.tfstate",
-        "generation": "1788612775466023",
-        "sha256": "59fc885f69378118b972b76c5ae570890251215b5d232330c380d4d293ff6fd2",
+        "generation": "1788635059003671",
+        "sha256": "07c0c7ef2d3130e440282a8923c15723deca39cf2d150c742bd7da4767d59283",
         "size_bytes": 49898,
         "terraform_version": "1.11.3",
-        "serial": 22,
+        "serial": 24,
         "lineage_sha256": "aecd871c255da2bb3d30e7a7cc7b76be229e1eccc1fce2c4e41fed5a4a4b4b3a",
         "managed_resources": 15,
         "data_resources": 3,
@@ -1451,8 +1476,8 @@
         "raw_contents_committed": false
       },
       "source_archive_sha256": "d1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8",
-      "runtime_config_sha256": "40e2f83fbe8e3d27b7e53c4a666f424519fc6972ef19a7598ab9e093be0c70f7",
-      "function_revision": "control-plane-00008-saz",
+      "runtime_config_sha256": "c018708786fc23a15f7701093b5148c0e415a2df8045af8e170e4308c2deae37",
+      "function_revision": "control-plane-00009-kur",
       "ingress": "ALLOW_INTERNAL_ONLY",
       "unauthenticated_invokers": 0,
       "minimum_instances": 0,
@@ -1593,17 +1618,17 @@
       "raw_diagnostics_committed": false
     },
     "browser_relay_plan": {
-      "state": "rebased_reviewed_not_deployed",
+      "state": "rotation_entry_converged_reviewed_not_deployed",
       "path": "browser-relay/plan.json",
-      "sha256": "51fc7b8031da8fbd6162aacfc8e39a2bf25b1c96e496851a6d6847d4588e0b23",
-      "baseline_observed_at": "2026-09-05T18:28:41.130Z",
-      "baseline_control_plane_revision": "control-plane-00008-saz",
+      "sha256": "74db861387be92dbfc85fbaf338c593f5f40ea6a39333d1a7a765b0fb5bc47ba",
+      "baseline_observed_at": "2026-09-05T19:04:24.200Z",
+      "baseline_control_plane_revision": "control-plane-00009-kur",
       "baseline_published_signing_keys": 2,
-      "baseline_current_signing_key_version": 2,
+      "baseline_current_signing_key_version": 1,
       "browser_attestation_validated": true,
       "firebase_auth_users": 0,
       "application_fixture_collections": 0,
-      "open_preconditions": 6,
+      "open_preconditions": 5,
       "cloud_mutation_authorized_by_plan": false,
       "acceptance_executed": false,
       "public_ingress_active": false,

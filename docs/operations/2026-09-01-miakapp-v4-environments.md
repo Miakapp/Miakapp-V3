@@ -377,11 +377,18 @@ deployment result is digest-pinned under
 [`../../infrastructure/staging/workload/`](../../infrastructure/staging/workload/).
 
 A later exact two-update plan changed only `current_kid` and the deployment
-guard, selected version 2 while retaining version 1, and converged to current
-revision `control-plane-00008-saz`. It preserved the source, build, IAM,
+guard, selected version 2 while retaining version 1, and converged to
+`control-plane-00008-saz` at that then-current boundary. It preserved
+the source, build, IAM,
 internal-only ingress and scale 0..1 and made no Function request. Retiring
 version 1 remains a separately guarded operation after the complete lease
 bound.
+
+A subsequent exact two-update rehearsal-entry plan reselected version 1 while
+retaining version 2 and converged to current revision
+`control-plane-00009-kur`. It preserved the same source, build, IAM,
+internal-only ingress and scale 0..1 and made no Function request. Its consumed
+one-shot tooling is retired.
 
 A later one-shot system-browser operation closed the standalone Web App Check
 provider prerequisite. The default macOS browser obtained one fresh
@@ -391,10 +398,10 @@ bytes and claims never left the page; Hosting was disabled and deleted after an
 disabled and all execution plus recovery entrypoints are retired.
 
 The browser-relay plan was then rebased by an independent read-only observation
-at `2026-09-05T18:28:41.130Z`. It reconfirmed private
-`control-plane-00008-saz`, zero unauthenticated invokers, zero relay services,
+at `2026-09-05T19:04:24.200Z`. It reconfirmed private
+`control-plane-00009-kur`, zero unauthenticated invokers, zero relay services,
 zero Firebase Auth users, zero application fixture collections, two enabled and
-published signing versions with version 2 current, the registered provider and
+published signing versions with version 1 current for the rehearsal, the registered provider and
 completed browser attestation, and a disabled Hosting runner returning HTTP
 404. The remaining Firestore documents are confined to the three expected
 bounded admission/audit collections. This observation granted no deployment or
