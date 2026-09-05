@@ -7,7 +7,9 @@ import { ProductionConfigurationError } from '../../src/production-config.js';
 import { parseRequestJson } from '../../src/json.js';
 import {
   buildInitialStagingRuntimeDocument,
+  buildStagingRuntimeSchema2MigrationDocument,
   validateInitialStagingRuntimeDocument,
+  validateStagingRuntimeSchema2MigrationDocument,
 } from '../../src/staging-runtime-document.js';
 
 const purposes = [
@@ -106,5 +108,45 @@ describe('initial staging runtime document', () => {
     });
     expect(() => validateInitialStagingRuntimeDocument(second))
       .toThrow(ProductionConfigurationError);
+  });
+
+  test('migrates the committed staging document to schema 2 without changing its effective key', () => {
+    const initial = parseRequestJson(readFileSync(new URL(
+      '../../../infrastructure/staging/activation/runtime-config.json',
+      import.meta.url,
+    )));
+    const migratedBytes = readFileSync(new URL(
+      '../../../infrastructure/staging/workload/runtime-config.json',
+      import.meta.url,
+    ));
+    const migrated = parseRequestJson(migratedBytes);
+
+    expect(buildStagingRuntimeSchema2MigrationDocument(initial)).toEqual(migrated);
+    const runtime = validateStagingRuntimeSchema2MigrationDocument(initial, migrated);
+    expect(runtime.schema).toBe('miakapp.production-runtime/2');
+    expect(runtime.security.schema).toBe('miakapp.production-security/2');
+    expect(runtime.security.signing.currentKid).toBe('staging-access-token-v1');
+    expect(runtime.security.signing.publicJwks).toHaveLength(1);
+    expect(runtime.security.signing.publicJwk.x)
+      .toBe('eINmaVIFYgARhSMf1pBb9yRstrT_6LfO5d12WFL5Dsw');
+    expect(JSON.stringify(migrated)).not.toMatch(/secret_data|private_key|"d"/);
+  });
+
+  test('rejects any unrelated change in the schema-2 migration document', () => {
+    const initial = buildInitialStagingRuntimeDocument(candidate());
+    for (const mutate of [
+      (value: Record<string, any>) => { value.allowed_origins = ['https://other.staging.miakapp.com']; },
+      (value: Record<string, any>) => { value.security.signing.current_kid = 'future'; },
+      (value: Record<string, any>) => { value.security.signing.versions[0].public_jwk.kid = 'future'; },
+      (value: Record<string, any>) => { value.security.signing.versions.push(value.security.signing.versions[0]); },
+      (value: Record<string, any>) => { value.security.secret_manager.rpc_timeout_ms = 1_501; },
+    ]) {
+      const migrated = structuredClone(
+        buildStagingRuntimeSchema2MigrationDocument(initial),
+      ) as Record<string, any>;
+      mutate(migrated);
+      expect(() => validateStagingRuntimeSchema2MigrationDocument(initial, migrated))
+        .toThrow(ProductionConfigurationError);
+    }
   });
 });

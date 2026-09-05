@@ -648,7 +648,8 @@ current consumer.
     single-key runtime compatibility while accepting a closed schema 2 with one
     selected KMS signer and at most two KMS-validated published public keys. Its
     merge and private staging deployment are complete on revision
-    `control-plane-00005-biq`; the guarded schema migration remains open,
+    `control-plane-00005-biq`; the guarded single-key schema migration now has a
+    digest-bound two-update implementation but remains unapplied,
     followed by the browser App Check provider, temporary edge, two relays,
     three-engine runner and rollback guards. Execute the matrix once before
     wiring the real client and opaque broker into the production web shell.

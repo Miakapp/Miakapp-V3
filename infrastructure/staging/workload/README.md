@@ -202,6 +202,44 @@ The current canonical non-secret [`result.json`](result.json) has SHA-256
 `dc3324d3b812e1dafc6a6678c7427ac715ea1d2a81de527750aa958c7c71a440`.
 The updater's next before-state is pinned to this deployed commit/source tuple.
 
+## Guarded single-key schema migration
+
+[`runtime-config.json`](runtime-config.json) is the exact proposed schema-2
+document. It is a pure transformation of the historical
+[`../activation/runtime-config.json`](../activation/runtime-config.json): the
+effective KMS key version, public JWK, issuer, origins, Firebase app, secret
+versions, timeouts and component bucket remain byte-for-byte equivalent after
+parsing. It contains exactly one published signing key and therefore does not
+yet claim key overlap.
+
+The dedicated wrappers refuse every delta except an in-place Function update
+and an in-place deployment-guard update. The source object, copied source,
+build configuration, IAM, ingress, identities and scale must remain unchanged.
+The source updater fails closed while this migration is pending.
+
+After merging the reviewed implementation, render a fresh private plan only
+from exact `origin/main`:
+
+```sh
+MIAKAPP_STAGING_WORKLOAD_RUNTIME_PLAN_CONFIRMATION=miakapp-v4-staging \
+  ./infrastructure/staging/workload/runtime-plan.sh /private/tmp
+```
+
+Review its closed summary and use only the exact short-lived
+`migrate-private-runtime:...` authorization printed by that plan:
+
+```sh
+MIAKAPP_STAGING_WORKLOAD_RUNTIME_APPLY_AUTHORIZATION='migrate-private-runtime:...' \
+  ./infrastructure/staging/workload/runtime-apply.sh \
+  /private/tmp/miakapp-staging-workload-XXXXXX
+```
+
+Apply performs no request. Completion requires a zero-change follow-up plan and
+independent inventory of the same source bytes, schema-2 runtime digest,
+internal-only ingress, scale 0..1 and zero public invokers. Until that sanitized
+result replaces the current deployment evidence, the schema-1 document remains
+the live truth.
+
 ## Successful private discovery
 
 After the diagnostic deployment, the single-purpose recovery path made exactly
