@@ -640,6 +640,20 @@ export function validateVerifierAnnouncedUrls(value) {
   return Object.freeze([...value]);
 }
 
+export function validateVerifierServiceEndpoints(status, announcedUrlsAnnotation) {
+  let announcedUrls;
+  try {
+    announcedUrls = JSON.parse(announcedUrlsAnnotation ?? '[]');
+  } catch {
+    return reject('Verifier announced URL set is invalid');
+  }
+  const validated = validateVerifierAnnouncedUrls(announcedUrls);
+  const generated = validated.find((url) => url !== VERIFIER_SERVICE_URI);
+  exact(status?.url, generated, 'Verifier service URI');
+  exact(status?.address, { url: generated }, 'Verifier service address');
+  return validated;
+}
+
 function observeVerifierService() {
   if (listedVerifierServices().length !== 1) reject('Auth-probe verifier service inventory is not exact');
   const value = gcloudJson([
@@ -678,15 +692,10 @@ function observeVerifierService() {
     reject('Verifier readiness conditions are not exact');
   }
   exact(value.spec?.traffic, [{ latestRevision: true, percent: 100 }], 'Verifier requested traffic');
-  exact(status.url, VERIFIER_SERVICE_URI, 'Verifier service URI');
-  exact(status.address, { url: VERIFIER_SERVICE_URI }, 'Verifier service address');
-  let announcedUrls;
-  try {
-    announcedUrls = JSON.parse(metadata.annotations?.['run.googleapis.com/urls'] ?? '[]');
-  } catch {
-    return reject('Verifier announced URL set is invalid');
-  }
-  validateVerifierAnnouncedUrls(announcedUrls);
+  validateVerifierServiceEndpoints(
+    status,
+    metadata.annotations?.['run.googleapis.com/urls'],
+  );
   if (typeof status.latestReadyRevisionName !== 'string'
     || !status.latestReadyRevisionName.startsWith(`${VERIFIER_SERVICE_NAME}-`)
     || status.latestCreatedRevisionName !== status.latestReadyRevisionName
