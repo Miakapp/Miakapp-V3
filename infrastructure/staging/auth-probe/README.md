@@ -213,9 +213,12 @@ actions in the digest-bound authorization. If all six temporary resources are
 absent both live and in state while every persistent resource and the guard are
 exact, the inventory binds an explicit finalization flag into the same digest,
 TTL, operator, and commit authorization. Apply then disables any remaining GA
-roles. If every role is already disabled but a failed apply left only the
-non-secret Terraform output stale, a separate validator accepts exactly that
-one output update while requiring every managed resource to remain a no-op.
+roles. If every role is already disabled but a failed apply left the preceding
+dormant output, or a successful targeted retirement left the current armed
+output, a separate validator accepts exactly the transition to the current
+dormant output while requiring every managed resource to remain a no-op. The
+armed form must retain the reviewed generation, source hashes, identities,
+Workflow revision shape, and generated internal verifier URI shape.
 Apply then cleans the exact fixtures, rechecks convergence, and regenerates
 retirement evidence. This closes both a partial-arm interruption before the first
 temporary create and a process interruption after Terraform retirement.

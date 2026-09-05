@@ -837,6 +837,44 @@ const CURRENT_DORMANT_OUTPUT = Object.freeze(dormantOutput({
   ],
 }));
 
+function validateGeneratedVerifierUri(value) {
+  let parsed;
+  try {
+    parsed = new URL(value);
+  } catch {
+    return reject('Terraform Auth-probe previous verifier URI is invalid');
+  }
+  const hostname = parsed.hostname;
+  const labels = hostname.split('.');
+  if (value !== `https://${hostname}`
+    || parsed.protocol !== 'https:' || parsed.username !== '' || parsed.password !== ''
+    || parsed.port !== '' || parsed.pathname !== '/' || parsed.search !== '' || parsed.hash !== ''
+    || !hostname.startsWith(`${VERIFIER_SERVICE_NAME}-`)
+    || !hostname.endsWith('.run.app') || labels.length < 3
+    || labels.slice(0, -2).some((label) => !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/u.test(label))
+    || hostname.includes('---') || value === VERIFIER_SERVICE_URI) {
+    reject('Terraform Auth-probe previous verifier URI is invalid');
+  }
+}
+
+function validateCurrentArmedOutput(value) {
+  if (!plainObject(value) || typeof value.workflow_revision !== 'string'
+    || !REVISION.test(value.workflow_revision)
+    || typeof value.verifier_service_uri !== 'string') {
+    reject('Terraform Auth-probe previous armed output is invalid');
+  }
+  validateGeneratedVerifierUri(value.verifier_service_uri);
+  exact(value, {
+    ...CURRENT_DORMANT_OUTPUT,
+    armed: true,
+    workflow_name: WORKFLOW_NAME,
+    workflow_revision: value.workflow_revision,
+    workflow_service_account: `projects/${PROJECT_ID}/serviceAccounts/${PROBE_ACCOUNT}`,
+    verifier_service_name: VERIFIER_SERVICE_NAME,
+    verifier_service_uri: value.verifier_service_uri,
+  }, 'Terraform Auth-probe previous armed output');
+}
+
 export function validateAuthProbeOutputOnlyPlanAgainstPolicy(plan) {
   if (!plainObject(plan) || plan.format_version !== '1.2'
     || plan.terraform_version !== TERRAFORM_VERSION || plan.applyable !== true
@@ -889,7 +927,9 @@ export function validateAuthProbeOutputOnlyPlanAgainstPolicy(plan) {
     'actions', 'after', 'after_sensitive', 'after_unknown', 'before', 'before_sensitive',
   ], 'Terraform Auth-probe output recovery fields');
   exact(output.actions, ['update'], 'Terraform Auth-probe output recovery actions');
-  exact(output.before, LEGACY_DORMANT_OUTPUT, 'Terraform Auth-probe previous output');
+  if (!isDeepStrictEqual(output.before, LEGACY_DORMANT_OUTPUT)) {
+    validateCurrentArmedOutput(output.before);
+  }
   exact(output.after, CURRENT_DORMANT_OUTPUT, 'Terraform Auth-probe recovered output');
   exact(output.after_unknown, false, 'Terraform Auth-probe output recovery unknown values');
   exact(output.before_sensitive, false, 'Terraform Auth-probe previous output sensitivity');
