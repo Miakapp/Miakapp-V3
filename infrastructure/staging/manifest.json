@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 40,
-  "status": "private_control_plane_user_relay_acceptance_succeeded_and_retired",
+  "revision": 41,
+  "status": "private_control_plane_user_relay_acceptance_succeeded_live_browser_plan_reviewed",
   "environment": "staging",
   "project": {
     "project_id": "miakapp-v4-staging",
@@ -1491,6 +1491,17 @@
       "execution_identifiers_committed": false,
       "token_material_committed": false,
       "raw_diagnostics_committed": false
+    },
+    "browser_relay_plan": {
+      "state": "reviewed_not_deployed",
+      "path": "browser-relay/plan.json",
+      "sha256": "9bdd11359518b15002de6570b306c589a57588d02aa9a443c3f21d56a495c811",
+      "cloud_mutation_authorized_by_plan": false,
+      "acceptance_executed": false,
+      "public_ingress_active": false,
+      "relay_services": 0,
+      "runner_present": false,
+      "completed_cases": 0
     },
     "retired_recovery_workflow": {
       "id": "349440747",

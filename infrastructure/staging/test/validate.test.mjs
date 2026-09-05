@@ -31,10 +31,10 @@ function rejects(mutator, pattern) {
 
 test('accepts the successful and retired private user-relay probe', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 40);
+  assert.equal(validated.revision, 41);
   assert.equal(
     validated.status,
-    'private_control_plane_user_relay_acceptance_succeeded_and_retired',
+    'private_control_plane_user_relay_acceptance_succeeded_live_browser_plan_reviewed',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
@@ -666,6 +666,17 @@ test('accepts the successful and retired private user-relay probe', () => {
   assert.equal(userRelayProbe.retained_disabled_custom_roles, 9);
   assert.equal(userRelayProbe.token_material_committed, false);
   assert.equal(userRelayProbe.raw_diagnostics_committed, false);
+  assert.deepEqual(validated.evidence.browser_relay_plan, {
+    state: 'reviewed_not_deployed',
+    path: 'browser-relay/plan.json',
+    sha256: '9bdd11359518b15002de6570b306c589a57588d02aa9a443c3f21d56a495c811',
+    cloud_mutation_authorized_by_plan: false,
+    acceptance_executed: false,
+    public_ingress_active: false,
+    relay_services: 0,
+    runner_present: false,
+    completed_cases: 0,
+  });
   assert.equal(
     validated.readiness.required_blockers.includes('app-check-browser-provider-attestation'),
     true,
@@ -742,6 +753,8 @@ test('cross-checks manifest claims against all committed evidence artifacts', ()
   assert.equal(evidence.userRelayProbe.execution.state, 'SUCCEEDED');
   assert.equal(evidence.userRelayProbeRetirement.workflow_present, false);
   assert.equal(evidence.userRelayProbeRetirement.verifier_service_present, false);
+  assert.equal(evidence.browserRelayPlan.state, 'reviewed_not_deployed');
+  assert.equal(evidence.browserRelayPlan.evidence.state, 'absent');
 
   const workloadDigestDrift = manifest();
   workloadDigestDrift.evidence.workload_deployment.result_sha256 = '0'.repeat(64);
@@ -789,6 +802,22 @@ test('cross-checks manifest claims against all committed evidence artifacts', ()
     () => validateCommittedEvidence(firebaseAuthDigestDrift),
     (error) => error instanceof StagingManifestError
       && /evidence\.firebase_auth_baseline\.result_sha256/.test(error.message),
+  );
+
+  const browserRelayPlanDigestDrift = manifest();
+  browserRelayPlanDigestDrift.evidence.browser_relay_plan.sha256 = '0'.repeat(64);
+  assert.throws(
+    () => validateCommittedEvidence(browserRelayPlanDigestDrift),
+    (error) => error instanceof StagingManifestError
+      && /evidence\.browser_relay_plan\.sha256/.test(error.message),
+  );
+
+  const browserRelayPlanPathDrift = manifest();
+  browserRelayPlanPathDrift.evidence.browser_relay_plan.path = '../../private-plan.json';
+  assert.throws(
+    () => validateCommittedEvidence(browserRelayPlanPathDrift),
+    (error) => error instanceof StagingManifestError
+      && /evidence\.browser_relay_plan\.path/.test(error.message),
   );
 });
 
@@ -1505,6 +1534,18 @@ test('requires every remaining blocker and staging evidence row', () => {
   rejects((candidate) => {
     candidate.evidence.staging_rows.shift();
   }, /evidence\.staging_rows/);
+  rejects((candidate) => {
+    candidate.evidence.browser_relay_plan.acceptance_executed = true;
+  }, /evidence\.browser_relay_plan\.acceptance_executed/);
+  rejects((candidate) => {
+    candidate.evidence.browser_relay_plan.public_ingress_active = true;
+  }, /evidence\.browser_relay_plan\.public_ingress_active/);
+  rejects((candidate) => {
+    candidate.evidence.browser_relay_plan.relay_services = 2;
+  }, /evidence\.browser_relay_plan\.relay_services/);
+  rejects((candidate) => {
+    candidate.evidence.browser_relay_plan.completed_cases = 1;
+  }, /evidence\.browser_relay_plan\.completed_cases/);
 });
 
 test('rejects drift from the public activation evidence and initialized versions', () => {

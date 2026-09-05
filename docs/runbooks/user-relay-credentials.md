@@ -3,7 +3,7 @@
 Date: 2026-09-04
 
 Status: local audience-bound control-plane, SDK and relay evidence complete;
-private staging exchange accepted and probe retired
+private staging exchange accepted, live browser-relay plan reviewed but not deployed
 
 ## Purpose and safety boundary
 
@@ -20,8 +20,9 @@ for enrollment and permissions.
 Use only synthetic Homes and identities until the complete staging gate passes.
 Do not record request headers, response bodies, browser traces, HAR files or
 WebSocket frames: each can retain a bearer credential. This procedure does not
-open public ingress, change Miakapp 3, create production resources or claim
-end-to-end encryption.
+change Miakapp 3, create production resources or claim end-to-end encryption.
+The completed private probe and the reviewed plan opened no ingress; the future
+live phase includes only the plan's separately guarded temporary window.
 
 ## Dependency and merge order
 
@@ -175,22 +176,34 @@ cannot authorize a safe undelete, so this exceptional case fails closed for
 manual investigation.
 
 The current staging inventory contains neither a browser runner nor two relay
-endpoints. Before the browser case below, prepare and review a separate topology,
-cost and rollback plan that provides:
+endpoints. The separate, digest-pinned
+[`browser-relay/plan.json`](../../infrastructure/staging/browser-relay/plan.json)
+now reviews the required topology, cost and rollback shape:
 
 - two canonical TLS relay endpoints running the pinned merged Miakapp-Server;
 - one bounded, unscheduled runner using the pinned browser artifact;
-- private reachability, with no public ingress or unauthenticated invoker unless
-  a separate edge-authentication design is explicitly approved;
+- a maximum twenty-minute public-network window because the browser WebSocket
+  API cannot authenticate a Cloud Run IAM handshake, with exact Origin and
+  application-layer authentication on every credential-bearing path;
 - zero minimum instances or otherwise ephemeral execution, hard scaling and
   invocation ceilings, and an estimated incremental cost below the authorized
   monthly envelope; and
 - deterministic teardown plus retained revision and semantic evidence.
 
-Any relay or runner is a non-zero infrastructure delta and MUST NOT be hidden in
-the control-plane Function update plan. Stop before the browser case if the
-required private topology cannot be demonstrated without weakening an ingress or
-identity boundary.
+The selected staging profile uses the existing Hosting `web.app` origin and
+temporary direct `run.app` endpoints. It adds no App Engine application,
+external load balancer, Cloud Armor policy, VPC connector, Cloud NAT or custom
+DNS dependency. Both relays remain scale 0..1 under a keyless identity with no
+runtime role; the local runner is unscheduled and may launch three times. One
+acceptance execution is allowed, with a EUR 1 projected stop threshold that does
+not assume a free tier.
+
+This is design evidence only. All twelve `LIVE-*` rows remain pending and the
+plan contains no deployment or invocation entrypoint. Runtime multi-key
+publication, Web App Check provider registration, the reversible edge and relay
+roots, the runner, metric checks and a preflighted rollback are explicit open
+preconditions. Any relay or runner is a non-zero infrastructure delta and MUST
+NOT be hidden in the control-plane Function update plan.
 
 ## Staging acceptance
 
@@ -210,8 +223,8 @@ successful result covers:
    changes both audience and returned URL while the prior token remains bounded
    to its old audience.
 
-Only after the separate relay/runner topology plan passes its cost, identity and
-rollback review, complete the staging browser phase:
+Only after every precondition in the reviewed relay/runner plan passes its cost,
+identity and rollback checks, complete the staging browser phase:
 
 7. exercise one initial browser session, same-relay reauthentication and
    relay-change handoff through the merged MiakAPI and Miakapp-Server revisions.
