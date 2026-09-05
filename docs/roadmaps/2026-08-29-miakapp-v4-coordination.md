@@ -460,10 +460,14 @@ updates only the Function and deployment guard in place and preserves source,
 IAM, ingress, identities and scale. It converges to revision
 `control-plane-00007-deb` without a Function request. A seventeenth staging
 slice later selected version 2 while retaining version 1 and converged to
-current revision `control-plane-00008-saz`. Its exact plan again changed only
+historical revision `control-plane-00008-saz`. Its exact plan again changed only
 the Function and deployment guard, preserved source, IAM, internal-only ingress,
-identities and scale, and made no Function request. Version-1 retirement remains
-a separate gate after the complete 330-second lease bound.
+identities and scale, and made no Function request. An eighteenth staging slice
+then converged the browser-relay rehearsal entry on current revision
+`control-plane-00009-kur`, reselecting version 1 while version 2 remained
+published. Its exact plan again changed only those two resources, preserved the
+same safety boundary and made no Function request. Version-1 retirement remains
+a separate live-matrix gate after the complete 330-second lease bound.
 
 Deliverables:
 
@@ -641,10 +645,12 @@ current consumer.
    Its Workflow, verifier and temporary grants are retired. The bounded
    signing-key overlap bridge is active privately, its single-key schema-2
    migration is complete, and versions 1 and 2 are now prepublished on revision
-   `control-plane-00007-deb` with version 1 current. Version 2 is now selected
-   on current revision `control-plane-00008-saz` while version 1 remains
-   published, with unchanged source, IAM, internal-only ingress and scale and
-   without a live request. Retiring-key removal and secret
+   `control-plane-00007-deb` with version 1 current. Version 2 was selected on
+   historical revision `control-plane-00008-saz`; the guarded browser-relay
+   rehearsal entry then reselected version 1 on current revision
+   `control-plane-00009-kur` while version 2 remained published, with unchanged
+   source, IAM, internal-only ingress and scale and without a live request.
+   Retiring-key removal and secret
    rotation, source/edge admission,
    monitoring, migration rehearsal and real staging fault evidence remain
    required before closing relay-integration and staging-only RFC 0004 Section
@@ -662,15 +668,16 @@ current consumer.
 12. **Done 2026-09-05** — replace the active V3 Vue entry point with the first
     React trusted-host shell, a closed ABI 1 semantic renderer, an explicitly
     offline interactive adapter, fail-closed tests and a dedicated web CI gate.
-13. **Design and live-baseline rebase done 2026-09-05** — freeze the separate live relay, browser,
+13. **Design, live-baseline rebase and rotation entry done 2026-09-05** — freeze the separate live relay, browser,
     signing-key and rollback acceptance matrix as a digest-pinned closed plan.
     It selects a reversible provider-endpoint topology, scale and invocation
     ceilings, twelve pending semantic cases and a deterministic cleanup state;
-    it contains no deployer and claims no live acceptance evidence. Revision 5
-    independently rebases the plan on `control-plane-00008-saz`, two published
-    signing keys with version 2 current, completed browser App Check attestation,
-    zero Firebase Auth users, zero application fixture collections and zero
-    relay services.
+    it contains no deployer and claims no live acceptance evidence. Revision 6
+    independently rebases the plan on `control-plane-00009-kur`, two published
+    signing keys with version 1 current for the rehearsal, completed browser App
+    Check attestation, zero Firebase Auth users, zero application fixture
+    collections and zero relay services. Its guarded rotation-entry prerequisite
+    is converged and the consumed one-shot tooling is retired.
 14. **In progress 2026-09-05** — the control-plane source now retains legacy
     single-key runtime compatibility while accepting a closed schema 2 with one
     selected KMS signer and at most two KMS-validated published public keys. Its
@@ -691,11 +698,11 @@ current consumer.
     request. Its two atomic claims remain durable, its one-shot entrypoints are
     retired. Both public keys are now prepublished on revision
     `control-plane-00007-deb` with version 1 current, unchanged source bytes,
-    private ingress and scale 0..1. Version 2 is now selected on current revision
-    `control-plane-00008-saz` while version 1 remains published, with the same
-    source, ingress and scale. Next implement a guarded configuration-only
-    rehearsal entry that reselects version 1 while version 2 stays published,
-    then implement the temporary edge, two relays,
+    private ingress and scale 0..1. Version 2 was selected on historical revision
+    `control-plane-00008-saz`; the guarded configuration-only rehearsal entry
+    then reselected version 1 on current revision `control-plane-00009-kur`
+    while version 2 stayed published, with the same source, ingress and scale.
+    Its one-shot tooling is retired. Next implement the temporary edge, two relays,
     three-engine runner and rollback guards. Execute the matrix once before
     retiring version 1 after the complete lease bound and wiring the real client
     and opaque broker into the production web shell. This reuses the existing

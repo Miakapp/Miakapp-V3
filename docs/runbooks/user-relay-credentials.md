@@ -162,10 +162,13 @@ changing IAM/ingress/scale or making a Function request. A later exact plan
 prepublished versions 1 and 2 with version 1 current as revision
 `control-plane-00007-deb`, again without a source, IAM, ingress or scale change
 or a Function request. A later exact plan selected version 2 while retaining
-version 1 and converged to current revision `control-plane-00008-saz`, again
+version 1 and converged to historical revision `control-plane-00008-saz`, again
 without changing source, build, IAM, internal-only ingress or scale and without
-making a Function request. Retiring version 1 remains a separate gate after the
-complete lease bound.
+making a Function request. The guarded browser-relay rehearsal entry then
+reselected version 1 on current revision `control-plane-00009-kur` while both
+keys remained published, preserving the same boundary and making no Function
+request. Retiring version 1 remains a separate gate after the complete lease
+bound.
 
 The bounded acceptance implementation, with zero persistent delta to the
 control-plane workload, IAM and topology, lives under
@@ -194,7 +197,7 @@ manual investigation.
 The current staging inventory contains neither a browser runner nor two relay
 endpoints. The separate, digest-pinned
 [`browser-relay/plan.json`](../../infrastructure/staging/browser-relay/plan.json)
-now rebases the private `control-plane-00008-saz`, two-key and completed browser
+now rebases the private `control-plane-00009-kur`, two-key/version-1-entry and completed browser
 App Check state and reviews the required topology, cost and rollback shape:
 
 - two canonical TLS relay endpoints running the pinned merged Miakapp-Server;
@@ -215,18 +218,19 @@ runtime role; the local runner is unscheduled and may launch three times. One
 acceptance execution is allowed, with a EUR 1 projected stop threshold that does
 not assume a free tier.
 
-The rotation rehearsal reuses KMS versions 1 and 2. A separate guarded
-configuration-only entry transition selects version 1 while both public keys
-remain published; the live socket then observes activation of version 2. No
+The rotation rehearsal reuses KMS versions 1 and 2. Its separate guarded
+configuration-only entry transition has selected version 1 while both public
+keys remain published; the live socket then observes activation of version 2. No
 third version is created. Version 1 remains published for the complete
 330-second post-issuance bound before it is removed and disabled, never
 destroyed.
 
 This is design evidence only. All twelve `LIVE-*` rows remain pending and the
 plan contains no deployment or invocation entrypoint. Runtime multi-key
-publication, Web App Check provider registration, the reversible edge and relay
-roots, the runner, metric checks and a preflighted rollback are explicit open
-preconditions. Any relay or runner is a non-zero infrastructure delta and MUST
+publication, Web App Check provider registration and the rotation entry are
+satisfied; the reversible edge and relay roots, runner, metric checks and a
+preflighted rollback remain explicit open preconditions. Any relay or runner is
+a non-zero infrastructure delta and MUST
 NOT be hidden in the control-plane Function update plan.
 
 ## Staging acceptance
