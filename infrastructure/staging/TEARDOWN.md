@@ -100,7 +100,8 @@ Raw plan and state bytes were never committed.
 
 The `auth-probe` root retains two retired user-relay preparation generations;
 their six role IDs are disabled and unassigned, and neither reached an
-execution. If a later generation is interrupted, retire its uniquely named
+execution. Generation 3 has separate reviewed role IDs and its source passed a
+zero-execution compile-only Workflows deployment. If that generation is interrupted, retire its uniquely named
 Workflow, internal verifier service and four conditioned probe bindings before
 broader teardown. Preserve every role generation disabled and the keyless
 verifier identity until Terraform state and independent inventory agree; none
@@ -178,7 +179,7 @@ cannot be deleted; and billing can report late usage.
    conditional state/plan bucket grants and WIF impersonation grants. Delete the
    runtime, build, probe, Auth-probe verifier, planner and deployer service
    accounts and WIF pool only after confirming no resource still depends on them.
-   Remove the three retained custom Auth-probe roles only after their bindings are
+   Remove every retained custom Auth-probe role only after its bindings are
    absent; explicitly decide whether the now-inert Cloud Asset API remains enabled.
 9. Capture the final bootstrap/foundation/workload/discovery-probe/Firebase-Auth/
    Auth-probe state generations and independently reconcile the cloud inventory.

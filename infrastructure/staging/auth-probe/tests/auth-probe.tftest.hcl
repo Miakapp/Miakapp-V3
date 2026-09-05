@@ -67,10 +67,10 @@ run "arms_only_the_bounded_private_probe" {
 
   assert {
     condition = (
-      google_project_iam_member.auth_probe[0].role == "projects/miakapp-v4-staging/roles/miakapp.stagingUserRelayAuthProbe2" &&
+      google_project_iam_member.auth_probe[0].role == "projects/miakapp-v4-staging/roles/miakapp.stagingUserRelayAuthProbe3" &&
       google_project_iam_member.auth_probe[0].member == "serviceAccount:miakapp-staging-probe@miakapp-v4-staging.iam.gserviceaccount.com" &&
-      google_project_iam_member.auth_probe_firestore[0].role == "projects/miakapp-v4-staging/roles/miakapp.stagingUserRelayFirestore2" &&
-      google_service_account_iam_member.auth_probe_self_signer[0].role == "projects/miakapp-v4-staging/roles/miakapp.stagingUserRelaySigner2" &&
+      google_project_iam_member.auth_probe_firestore[0].role == "projects/miakapp-v4-staging/roles/miakapp.stagingUserRelayFirestore3" &&
+      google_service_account_iam_member.auth_probe_self_signer[0].role == "projects/miakapp-v4-staging/roles/miakapp.stagingUserRelaySigner3" &&
       google_service_account_iam_member.auth_probe_self_signer[0].member == "serviceAccount:miakapp-staging-probe@miakapp-v4-staging.iam.gserviceaccount.com"
     )
     error_message = "Only the exact temporary probe identity bindings may be armed."
@@ -78,20 +78,23 @@ run "arms_only_the_bounded_private_probe" {
 
   assert {
     condition = (
-      toset(google_project_iam_custom_role.auth_probe_generation_2.permissions) == toset([
+      toset(google_project_iam_custom_role.auth_probe_generation_3.permissions) == toset([
         "firebase.clients.get",
         "firebaseappcheck.tokens.mint",
         "firebaseauth.users.get",
         "serviceusage.services.use",
       ]) &&
-      google_project_iam_custom_role.auth_probe_generation_2.stage == "GA" &&
-      google_project_iam_custom_role.auth_probe_firestore_generation_2.stage == "GA" &&
-      google_project_iam_custom_role.auth_probe_signer_generation_2.stage == "GA" &&
+      google_project_iam_custom_role.auth_probe_generation_3.stage == "GA" &&
+      google_project_iam_custom_role.auth_probe_firestore_generation_3.stage == "GA" &&
+      google_project_iam_custom_role.auth_probe_signer_generation_3.stage == "GA" &&
       google_project_iam_custom_role.auth_probe_generation_1.stage == "DISABLED" &&
       google_project_iam_custom_role.auth_probe_firestore_generation_1.stage == "DISABLED" &&
       google_project_iam_custom_role.auth_probe_signer_generation_1.stage == "DISABLED" &&
-      output.staging_auth_probe.schema == "miakapp.staging-auth-probe/2" &&
-      output.staging_auth_probe.role_generation == 2 &&
+      google_project_iam_custom_role.auth_probe_generation_2.stage == "DISABLED" &&
+      google_project_iam_custom_role.auth_probe_firestore_generation_2.stage == "DISABLED" &&
+      google_project_iam_custom_role.auth_probe_signer_generation_2.stage == "DISABLED" &&
+      output.staging_auth_probe.schema == "miakapp.staging-auth-probe/3" &&
+      output.staging_auth_probe.role_generation == 3 &&
       strcontains(google_workflows_workflow.auth_probe[0].source_contents, "X-Serverless-Authorization") &&
       strcontains(google_workflows_workflow.auth_probe[0].source_contents, "X-Firebase-AppCheck") &&
       !strcontains(google_workflows_workflow.auth_probe[0].source_contents, "retry:")
@@ -212,6 +215,9 @@ run "keeps_the_default_state_dormant" {
       length(google_cloud_run_v2_service.auth_probe_verifier) == 0 &&
       length(google_cloud_run_v2_service_iam_member.auth_probe_verifier_invoker) == 0 &&
       length(google_workflows_workflow.auth_probe) == 0 &&
+      google_project_iam_custom_role.auth_probe_generation_3.stage == "DISABLED" &&
+      google_project_iam_custom_role.auth_probe_firestore_generation_3.stage == "DISABLED" &&
+      google_project_iam_custom_role.auth_probe_signer_generation_3.stage == "DISABLED" &&
       google_project_iam_custom_role.auth_probe_generation_2.stage == "DISABLED" &&
       google_project_iam_custom_role.auth_probe_firestore_generation_2.stage == "DISABLED" &&
       google_project_iam_custom_role.auth_probe_signer_generation_2.stage == "DISABLED" &&
