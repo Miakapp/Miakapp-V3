@@ -49,8 +49,9 @@ The local implementation dependency chain is now immutable:
   [`f9509c4`](https://github.com/Miakapp/Miakapp-V3/commit/f9509c41ef1c0389623d31419372e6430a2313d9);
 - MiakAPI credential acquisition and serialized relay replacement:
   [`a798a74`](https://github.com/Miakapp/MiakAPI/commit/a798a746847ba3d5c16128a08b33353269e770a4);
-- Miakapp-Server audience-bound verifier and full platform fixture:
-  [`9a7e33d`](https://github.com/Miakapp/Miakapp-Server/commit/9a7e33de3a684b6cd9e82231db7c9af8bf41a0a1).
+- Miakapp-Server audience-bound verifier, bounded process admission and full
+  platform fixture:
+  [`df10674`](https://github.com/Miakapp/Miakapp-Server/commit/df10674e034f30eec80760f5ec94bc108cff026f).
 
 The reciprocal V3 workflow checks out the last two commits exactly and verifies
 that the relay pins the `cc3bcd7` Go contract pseudo-version. Changing any pin is

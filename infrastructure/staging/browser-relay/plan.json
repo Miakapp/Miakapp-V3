@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-browser-relay-plan/1",
-  "revision": 7,
-  "state": "edge_profile_source_converged_reviewed_not_deployed",
+  "revision": 8,
+  "state": "relay_process_admission_merged_root_reviewed_not_deployed",
   "target": {
     "project_id": "miakapp-v4-staging",
     "project_number": "1072737219170",
@@ -21,7 +21,8 @@
     "deployed_control_plane_commit": "ba4fc9caed566fa39fc66371192fb1821b4232ff",
     "deployed_control_plane_source_sha256": "3e94305e17ee4df07f54f13560dac0a9491de3f89fb3ddbf4ab745c62dce8c7e",
     "miakapi_commit": "a798a746847ba3d5c16128a08b33353269e770a4",
-    "miakapp_server_commit": "9a7e33de3a684b6cd9e82231db7c9af8bf41a0a1",
+    "miakapp_server_commit": "df10674e034f30eec80760f5ec94bc108cff026f",
+    "relay_services_profile_sha256": "bc9b231cc9724f19a26ef5c3bbd6da6a69ec79b00cb976e77c73015d5db10db7",
     "protocol_contract_commit": "cc3bcd70fdb4b058f990ca2607693a2043faebaf",
     "node_version": "22.22.0",
     "bun_version": "1.2.23",
@@ -141,7 +142,16 @@
         "request_timeout_seconds": 900,
         "cpu": 1,
         "memory_mib": 256,
-        "cpu_idle": true
+        "cpu_idle": true,
+        "maximum_queued_bytes_per_connection": 262144,
+        "maximum_connections": 8,
+        "maximum_connections_per_immediate_peer": 8,
+        "connection_attempts_per_minute_per_immediate_peer": 32,
+        "maximum_tracked_immediate_peers": 64,
+        "maximum_homes": 16,
+        "maximum_aggregate_queued_bytes": 4194304,
+        "trusted_client_address_source": "immediate_tcp_peer",
+        "forwarded_client_headers_trusted": false
       },
       {
         "id": "relay-b",
@@ -162,7 +172,16 @@
         "request_timeout_seconds": 900,
         "cpu": 1,
         "memory_mib": 256,
-        "cpu_idle": true
+        "cpu_idle": true,
+        "maximum_queued_bytes_per_connection": 262144,
+        "maximum_connections": 8,
+        "maximum_connections_per_immediate_peer": 8,
+        "connection_attempts_per_minute_per_immediate_peer": 32,
+        "maximum_tracked_immediate_peers": 64,
+        "maximum_homes": 16,
+        "maximum_aggregate_queued_bytes": 4194304,
+        "trusted_client_address_source": "immediate_tcp_peer",
+        "forwarded_client_headers_trusted": false
       }
     ],
     "runner": {

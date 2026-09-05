@@ -35,15 +35,16 @@ function rejects(mutator, pattern = /drifted|invalid|must|reviewed|credential/u)
   );
 }
 
-test('accepts the edge-profile-capable browser-relay design without claiming matrix evidence', () => {
+test('accepts the bounded-relay browser design without claiming matrix evidence', () => {
   const validated = validateBrowserRelayPlan(planPath);
   assert.equal(validated.schema, 'miakapp.staging-browser-relay-plan/1');
-  assert.equal(validated.revision, 7);
-  assert.equal(validated.state, 'edge_profile_source_converged_reviewed_not_deployed');
+  assert.equal(validated.revision, 8);
+  assert.equal(validated.state, 'relay_process_admission_merged_root_reviewed_not_deployed');
   assert.equal(validated.target.project_id, 'miakapp-v4-staging');
   assert.equal(validated.target.cloud_mutation_authorized_by_document, false);
   assert.equal(validated.target.public_ingress_currently_active, false);
   assert.equal(validated.target.acceptance_executed, false);
+  assert.equal(validated.pins.relay_services_profile_sha256, 'bc9b231cc9724f19a26ef5c3bbd6da6a69ec79b00cb976e77c73015d5db10db7');
   assert.equal(validated.evidence.state, 'absent');
   assert.deepEqual(validated.evidence.completed_case_ids, []);
   assert.match(BROWSER_RELAY_PLAN_SHA256, /^[0-9a-f]{64}$/u);
@@ -58,6 +59,10 @@ test('pins a reversible scale-to-zero topology and a bounded public window', () 
     && relay.maximum_instances === 1
     && relay.runtime_iam_roles.length === 0
     && relay.endpoint_before_apply === null
+    && relay.maximum_connections === 8
+    && relay.maximum_connections_per_immediate_peer === 8
+    && relay.maximum_aggregate_queued_bytes === 4194304
+    && relay.forwarded_client_headers_trusted === false
   )), true);
   assert.equal(validated.topology.runner.cloud_compute_resources, 0);
   assert.equal(validated.topology.runner.unscheduled, true);
@@ -134,6 +139,10 @@ test('rejects fixed-cost, scale, duration, volume and free-tier drift', () => {
   rejects((candidate) => { candidate.topology.relays[0].runtime_iam_roles.push('roles/viewer'); });
   rejects((candidate) => { candidate.topology.relays[0].minimum_instances = 1; });
   rejects((candidate) => { candidate.topology.relays[0].maximum_instances = 2; });
+  rejects((candidate) => { candidate.topology.relays[0].maximum_connections = 9; });
+  rejects((candidate) => { candidate.topology.relays[0].maximum_connections_per_immediate_peer = 9; });
+  rejects((candidate) => { candidate.topology.relays[0].maximum_aggregate_queued_bytes = 4194305; });
+  rejects((candidate) => { candidate.topology.relays[0].forwarded_client_headers_trusted = true; });
   rejects((candidate) => { candidate.topology.runner.cloud_compute_resources = 1; });
   rejects((candidate) => { candidate.topology.runner.maximum_invocations = 4; });
   rejects((candidate) => { candidate.budgets.maximum_public_window_seconds = 1201; });

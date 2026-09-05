@@ -42,6 +42,10 @@ implemented across several repositories.
   — digest-pinned closed plan for the live browser, two-relay, signing-key and
   rollback matrix; rebased against the current private two-key/App Check state
   but not deployed, with every live case pending.
+- [`../infrastructure/staging/browser-relay-services/`](../infrastructure/staging/browser-relay-services/)
+  — dormant four-phase Terraform model for two scale-to-zero relays, immutable
+  image selection, finite process admission and public-last IAM; it exposes no
+  operator entrypoint and has not been applied.
 - [`../infrastructure/staging/`](../infrastructure/staging/)
   — closed staging intent, digest-pinned live evidence, credential-free policy
   validator and teardown rehearsal. Cloud mutation remains behind separate

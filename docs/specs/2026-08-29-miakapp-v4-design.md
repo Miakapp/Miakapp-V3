@@ -854,7 +854,11 @@ vertical-slice exit gates.
    `control-plane-00010-vop` two-key/version-1-rehearsal-entry runtime with the
    bounded staging edge profile present in source but not selected, completed real-browser App Check
    prerequisite and zero-user/zero-fixture/zero-relay baseline; it still grants
-   no deployment or public ingress. Arbitrary self-hosted relay selection remains disabled until
+   no deployment or public ingress. The pinned relay now has finite connection,
+   attempt, tracked-peer, Home and aggregate queue budgets, and a dormant
+   four-phase Terraform root freezes two scale-to-zero services with
+   public-last IAM without exposing an operator entrypoint. Arbitrary
+   self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain
    open.
