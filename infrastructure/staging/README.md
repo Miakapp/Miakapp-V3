@@ -3,7 +3,7 @@
 Status: private audience-bound user-relay acceptance succeeded and retired;
 schema-2 single-key runtime deployed privately; live browser-relay plan reviewed
 but not deployed; browser App Check API-only prerequisite applied and
-converged
+converged; guarded domain-restricted key implementation ready but not applied
 
 This directory contains the closed description and observed state of
 `miakapp-v4-staging`. The bounded foundation recovery has completed; its active
@@ -24,9 +24,13 @@ below.
 
 The [`browser-app-check/`](browser-app-check/) root applied only the first
 reversible provider prerequisite: reCAPTCHA Enterprise API enablement. Its
-post-apply direct inventory is authoritatively readable and empty. It created no
-key, and its plan/apply entrypoints are retired. Provider registration remains
-excluded because Firebase exposes no provider-configuration delete operation.
+post-apply direct inventory is authoritatively readable and empty. The consumed
+API plan/apply entrypoints are retired. A separate guarded implementation is
+now ready to plan exactly one domain-restricted score key, but no key is claimed
+live until fresh apply evidence replaces this API-only observation. A private
+atomic GCS claim serializes that one-shot creation across every independently
+copied bundle. Provider registration remains excluded because Firebase exposes no
+provider-configuration delete operation.
 
 ## Current truth
 
@@ -264,7 +268,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`probe/`](probe/) | Isolated Workflows API and one fixed, unscheduled, keyless internal discovery probe | Applied and consumed; exactly two failures followed by one validated HTTP 200 discovery response |
 | [`firebase-auth/`](firebase-auth/) | Closed Firebase Authentication initialization with no end-user sign-in provider | Non-deletable resource initialized, state-adopted, reconciled, and independently validated |
 | [`auth-probe/`](auth-probe/) | Guarded audience-bound user-relay Workflow, internal verifier and sanitized evidence | Generation 3 succeeded once and retired; both fixtures and every temporary capability are absent; all nine one-shot roles are disabled |
-| [`browser-app-check/`](browser-app-check/) | Guarded reCAPTCHA Enterprise API-only prerequisite | Applied and converged; direct key inventory empty, entrypoints retired, and every key/registration/enforcement mutation remains pending |
+| [`browser-app-check/`](browser-app-check/) | Guarded reCAPTCHA Enterprise API and single score-key prerequisites | API applied and converged; direct key inventory empty in committed evidence; exact globally serialized key plan/apply implementation ready but not executed; registration and enforcement pending |
 | [`browser-relay/`](browser-relay/) | Closed live browser, two-relay, signing-key and rollback acceptance plan | Reviewed but not deployed; every `LIVE-*` case is pending and the package grants no cloud mutation |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
@@ -325,6 +329,9 @@ inventory made no request, and no probe Workflow or verifier is currently
 active. If armed, the user-relay verifier remains scale 0..1 and the Workflow is
 unscheduled; both are retired immediately after one bounded execution.
 Budget alerts at EUR 2, EUR 5, and EUR 10 are alarms rather than hard caps.
+The pending key apply adds one sub-kilobyte private coordination object under
+that seventh prefix before creating the key. It adds no fixed-cost service and
+cannot be repeated while the claim remains live.
 
 ## Remote-state bootstrap boundary
 
@@ -526,9 +533,10 @@ external load balancer, Cloud Armor, VPC and DNS changes are absent.
 
 No live case may start yet. The production runtime must first support an active
 plus retiring public signing key. The browser App Check API-only prerequisite
-is applied and its authoritative key inventory is empty. The next browser
-attestation step is a fresh reversible key plan from that exact state; site-key
-registration then requires a separate non-deletable exact plan.
+is applied and its authoritative key inventory is empty. Its guarded reversible
+key implementation is ready; the next browser attestation step is to render and
+apply its fresh one-create plan from that exact state, then commit sanitized
+evidence. Site-key registration requires a separate non-deletable exact plan.
 Separate guarded implementations must also exist for the temporary edge
 transition, relays, runner, metrics and rollback. The plan records these as open
 preconditions instead of promoting local fixtures to live evidence.

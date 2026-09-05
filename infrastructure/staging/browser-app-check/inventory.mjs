@@ -6,10 +6,13 @@ import {
   FIREBASE_APP_DISPLAY_NAME,
   FIREBASE_APP_ID,
   FIREBASE_APP_NAME,
+  HOSTING_DOMAIN,
   INTENDED_TOKEN_TTL,
   PROJECT_ID,
   PROJECT_NUMBER,
   RECAPTCHA_API,
+  RECAPTCHA_DISPLAY_NAME,
+  sha256,
 } from './contract.mjs';
 import {
   verifiedOperatorSession,
@@ -39,6 +42,13 @@ function exactKeys(value, keys, description) {
     reject(`${description} must contain exactly the reviewed fields`);
   }
   return value;
+}
+
+function canonicalRecaptchaKeyName(value) {
+  if (typeof value !== 'string' || !RECAPTCHA_KEY_NAME.test(value)) {
+    reject('reCAPTCHA key resource name is invalid');
+  }
+  return `projects/${PROJECT_ID}/keys/${value.split('/').at(-1)}`;
 }
 
 async function googleRequest(url, token, description) {
@@ -164,7 +174,16 @@ async function recaptchaKeys(token) {
     || !RECAPTCHA_KEY_NAME.test(key.name))) {
     reject('reCAPTCHA key inventory contains an invalid resource name');
   }
-  return keys.map(({ name }) => name).sort();
+  return keys;
+}
+
+export async function observeRecaptchaKeyRecords(session) {
+  const operator = session ?? await verifiedOperatorSession();
+  if (!plainObject(operator) || typeof operator.accessToken !== 'string') {
+    reject('reCAPTCHA key records require a verified operator session');
+  }
+  return Object.freeze((await recaptchaKeys(operator.accessToken))
+    .map((value) => Object.freeze(value)));
 }
 
 async function recaptchaAssetKeys(token) {
@@ -241,6 +260,144 @@ export function validateBrowserAppCheckInventory(value, profile) {
   return Object.freeze(value);
 }
 
+const EXPECTED_RECAPTCHA_LABELS = Object.freeze({
+  environment: 'staging',
+  'managed-by': 'terraform',
+  product: 'miakapp-v4',
+  purpose: 'browser-app-check',
+});
+
+function validTimestamp(value) {
+  return typeof value === 'string'
+    && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3}|\.\d{6}|\.\d{9})?Z$/u.test(value)
+    && Number.isFinite(Date.parse(value));
+}
+
+export function validateRecaptchaKeyRecord(value) {
+  exactKeys(value, ['name', 'displayName', 'labels', 'createTime', 'webSettings'], 'reCAPTCHA key');
+  if (!RECAPTCHA_KEY_NAME.test(value.name)
+    || value.displayName !== RECAPTCHA_DISPLAY_NAME
+    || !isDeepStrictEqual(value.labels, EXPECTED_RECAPTCHA_LABELS)
+    || !validTimestamp(value.createTime)) {
+    reject('reCAPTCHA key identity does not match the reviewed staging key');
+  }
+  const web = value.webSettings;
+  if (!plainObject(web)
+    || Object.keys(web).some((key) => ![
+      'allowAllDomains',
+      'allowedDomains',
+      'allowAmpTraffic',
+      'challengeSecurityPreference',
+      'integrationType',
+    ].includes(key))
+    || (web.allowAllDomains ?? false) !== false
+    || (web.allowAmpTraffic ?? false) !== false
+    || ![undefined, 'CHALLENGE_SECURITY_PREFERENCE_UNSPECIFIED']
+      .includes(web.challengeSecurityPreference)
+    || web.integrationType !== 'SCORE'
+    || !isDeepStrictEqual(web.allowedDomains, [HOSTING_DOMAIN])) {
+    reject('reCAPTCHA key Web settings do not match the reviewed staging boundary');
+  }
+  const name = canonicalRecaptchaKeyName(value.name);
+  return Object.freeze({
+    name,
+    name_sha256: sha256(Buffer.from(name, 'utf8')),
+    display_name: value.displayName,
+    labels: EXPECTED_RECAPTCHA_LABELS,
+    create_time: value.createTime,
+    integration_type: web.integrationType,
+    allow_all_domains: false,
+    allowed_domains: Object.freeze([...web.allowedDomains]),
+    allow_amp_traffic: false,
+    testing_options_configured: false,
+    waf_settings_configured: false,
+  });
+}
+
+export function validateNormalizedRecaptchaKey(value) {
+  exactKeys(value, [
+    'name',
+    'name_sha256',
+    'display_name',
+    'labels',
+    'create_time',
+    'integration_type',
+    'allow_all_domains',
+    'allowed_domains',
+    'allow_amp_traffic',
+    'testing_options_configured',
+    'waf_settings_configured',
+  ], 'Normalized reCAPTCHA key');
+  if (value.name !== canonicalRecaptchaKeyName(value.name)
+    || value.name_sha256 !== sha256(Buffer.from(value.name, 'utf8'))
+    || value.display_name !== RECAPTCHA_DISPLAY_NAME
+    || !isDeepStrictEqual(value.labels, EXPECTED_RECAPTCHA_LABELS)
+    || !validTimestamp(value.create_time)
+    || value.integration_type !== 'SCORE'
+    || value.allow_all_domains !== false
+    || !isDeepStrictEqual(value.allowed_domains, [HOSTING_DOMAIN])
+    || value.allow_amp_traffic !== false
+    || value.testing_options_configured !== false
+    || value.waf_settings_configured !== false) {
+    reject('Normalized reCAPTCHA key does not match the reviewed staging boundary');
+  }
+  return Object.freeze(value);
+}
+
+export function validateBrowserAppCheckKeyInventory(value) {
+  exactKeys(value, [
+    'schema',
+    'project_id',
+    'project_number',
+    'firebase_web_app',
+    'recaptcha_api_enabled',
+    'recaptcha_key_inventory',
+    'recaptcha_keys',
+    'recaptcha_asset_inventory',
+    'recaptcha_asset_keys',
+    'app_check',
+    'service_enforcement_records',
+    'debug_tokens',
+  ], 'Browser App Check key inventory');
+  if (value.schema !== 'miakapp.staging-browser-app-check-key-inventory/1'
+    || value.project_id !== PROJECT_ID
+    || value.project_number !== PROJECT_NUMBER
+    || !isDeepStrictEqual(value.firebase_web_app, {
+      app_id: FIREBASE_APP_ID,
+      name: FIREBASE_APP_NAME,
+      display_name: FIREBASE_APP_DISPLAY_NAME,
+      platform: 'WEB',
+      state: 'ACTIVE',
+    })
+    || value.recaptcha_api_enabled !== true
+    || value.recaptcha_key_inventory !== 'readable'
+    || !Array.isArray(value.recaptcha_keys)
+    || value.recaptcha_keys.length !== 1
+    || value.recaptcha_asset_inventory !== 'readable_eventually_consistent'
+    || !Array.isArray(value.recaptcha_asset_keys)
+    || ![0, 1].includes(value.recaptcha_asset_keys.length)
+    || !isDeepStrictEqual(value.app_check, {
+      name: FIREBASE_APP_CONFIG_NAME,
+      token_ttl: INTENDED_TOKEN_TTL,
+      minimum_valid_score: DEFAULT_RISK_SCORE,
+      site_key_configured: false,
+    })
+    || value.service_enforcement_records !== 0
+    || value.debug_tokens !== 0) {
+    reject('Browser App Check key inventory has drifted from the reviewed boundary');
+  }
+  const key = value.recaptcha_keys[0];
+  validateNormalizedRecaptchaKey(key);
+  if (!plainObject(key)
+    || value.recaptcha_asset_keys.some((assetName) => {
+      if (typeof assetName !== 'string' || !RECAPTCHA_ASSET_NAME.test(assetName)) return true;
+      return assetName.split('/').at(-1) !== key.name.split('/').at(-1);
+    })) {
+    reject('Cloud Asset key inventory does not corroborate the authoritative key');
+  }
+  return Object.freeze(value);
+}
+
 export async function observeBrowserAppCheckInventory(session) {
   const operator = session ?? await verifiedOperatorSession();
   if (!plainObject(operator) || typeof operator.accessToken !== 'string') {
@@ -281,7 +438,9 @@ export async function observeBrowserAppCheckInventory(session) {
     firebase_web_app: webApp,
     recaptcha_api_enabled: recaptchaApiEnabled,
     recaptcha_key_inventory: recaptchaApiEnabled ? 'readable' : 'unavailable_service_disabled',
-    recaptcha_keys: keys === null ? null : Object.freeze(keys),
+    recaptcha_keys: keys === null
+      ? null
+      : Object.freeze(keys.map(({ name }) => name).sort()),
     recaptcha_asset_inventory: 'readable_eventually_consistent',
     recaptcha_asset_keys: Object.freeze(assetKeys),
     app_check: validateUnregisteredAppCheckConfig(config),
@@ -295,5 +454,31 @@ export async function observeBrowserAppCheckInventory(session) {
       'debugTokens',
       'App Check debug-token inventory',
     ),
+  });
+}
+
+export async function observeBrowserAppCheckKeyInventory(session) {
+  const operator = session ?? await verifiedOperatorSession();
+  if (!plainObject(operator) || typeof operator.accessToken !== 'string') {
+    reject('Browser App Check key inventory requires a verified operator session');
+  }
+  const beforeKeys = (await recaptchaKeys(operator.accessToken))
+    .map(validateRecaptchaKeyRecord)
+    .sort((left, right) => left.name.localeCompare(right.name));
+  const base = await observeBrowserAppCheckInventory(operator);
+  const afterKeys = (await recaptchaKeys(operator.accessToken))
+    .map(validateRecaptchaKeyRecord)
+    .sort((left, right) => left.name.localeCompare(right.name));
+  if (!isDeepStrictEqual(beforeKeys, afterKeys)
+    || !isDeepStrictEqual(
+      base.recaptcha_keys.map(canonicalRecaptchaKeyName),
+      afterKeys.map(({ name }) => name),
+    )) {
+    reject('Authoritative reCAPTCHA key inventory changed during observation');
+  }
+  return Object.freeze({
+    ...base,
+    schema: 'miakapp.staging-browser-app-check-key-inventory/1',
+    recaptcha_keys: Object.freeze(afterKeys),
   });
 }
