@@ -4,6 +4,7 @@ import {
   HOSTING_HEADERS,
   HOSTING_ORIGIN,
   HOSTING_SITE,
+  MAXIMUM_PUBLIC_WINDOW_MILLISECONDS,
   RUNNER_URL,
   sha256,
 } from './contract.mjs';
@@ -11,8 +12,8 @@ import { googleJsonRequest } from './inventory.mjs';
 
 const VERSION_NAME = new RegExp(`^sites/${HOSTING_SITE}/versions/[0-9A-Za-z_-]{8,128}$`, 'u');
 const RELEASE_NAME = new RegExp(`^sites/${HOSTING_SITE}/releases/[0-9A-Za-z_-]{8,128}$`, 'u');
-const DEPLOY_MESSAGE = 'Miakapp V4 bounded browser App Check attestation v4';
-const DISABLE_MESSAGE = 'Miakapp V4 browser App Check attestation v4 retired';
+const DEPLOY_MESSAGE = 'Miakapp V4 bounded interactive browser App Check attestation v5';
+const DISABLE_MESSAGE = 'Miakapp V4 interactive browser App Check attestation v5 retired';
 const MAXIMUM_STORED_ARTIFACT_BYTES = 1024 * 1024;
 
 function request(session, url, options = {}) {
@@ -22,7 +23,7 @@ function request(session, url, options = {}) {
 export function hostingLabels(repositoryCommit) {
   return Object.freeze({
     environment: 'staging',
-    operation: 'browser-app-check-attestation-v4',
+    operation: 'browser-app-check-attestation-v5',
     repository: repositoryCommit,
   });
 }
@@ -239,11 +240,30 @@ function wait(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-export async function waitForRunner(artifactEntries, fetchImplementation) {
+function validatePollingDeadline(deadlineMilliseconds) {
+  const now = Date.now();
+  if (!Number.isInteger(deadlineMilliseconds)
+    || deadlineMilliseconds <= now
+    || deadlineMilliseconds - now > MAXIMUM_PUBLIC_WINDOW_MILLISECONDS) {
+    throw new Error('Firebase Hosting polling deadline is outside the reviewed bound');
+  }
+  return deadlineMilliseconds;
+}
+
+function requestTimeout(deadlineMilliseconds) {
+  return Math.max(1, Math.min(10_000, deadlineMilliseconds - Date.now()));
+}
+
+export async function waitForRunner(
+  artifactEntries,
+  fetchImplementation,
+  deadlineMilliseconds = Date.now() + 60_000,
+) {
   if (!Array.isArray(artifactEntries) || artifactEntries.length !== 2) {
     throw new Error('Public browser-attestation verification requires both reviewed files');
   }
-  for (let attempt = 0; attempt < 30; attempt += 1) {
+  const deadline = validatePollingDeadline(deadlineMilliseconds);
+  for (let attempt = 0; attempt < 30 && Date.now() < deadline; attempt += 1) {
     let responses;
     try {
       responses = await Promise.all(artifactEntries.map(async (entry, index) => {
@@ -252,7 +272,7 @@ export async function waitForRunner(artifactEntries, fetchImplementation) {
           {
             cache: 'no-store',
             redirect: 'error',
-            signal: AbortSignal.timeout(10_000),
+            signal: AbortSignal.timeout(requestTimeout(deadline)),
           },
         );
         return Object.freeze({ entry, response });
@@ -279,24 +299,30 @@ export async function waitForRunner(artifactEntries, fetchImplementation) {
         content_bytes_verified: contentBytes,
       });
     }
-    if (attempt !== 29) await wait(2_000);
+    const remaining = deadline - Date.now();
+    if (attempt !== 29 && remaining > 0) await wait(Math.min(2_000, remaining));
   }
   throw new Error('Public browser-attestation artifact did not become readable in time');
 }
 
-export async function waitForDisabledRunner(fetchImplementation) {
-  for (let attempt = 0; attempt < 30; attempt += 1) {
+export async function waitForDisabledRunner(
+  fetchImplementation,
+  deadlineMilliseconds = Date.now() + 60_000,
+) {
+  const deadline = validatePollingDeadline(deadlineMilliseconds);
+  for (let attempt = 0; attempt < 30 && Date.now() < deadline; attempt += 1) {
     try {
       const response = await (fetchImplementation ?? fetch)(`${RUNNER_URL}?retirement=${attempt}`, {
         cache: 'no-store',
         redirect: 'error',
-        signal: AbortSignal.timeout(10_000),
+        signal: AbortSignal.timeout(requestTimeout(deadline)),
       });
       if (response.status === 404) return;
     } catch {
       // A transient network error is not retirement evidence; poll again.
     }
-    if (attempt !== 29) await wait(2_000);
+    const remaining = deadline - Date.now();
+    if (attempt !== 29 && remaining > 0) await wait(Math.min(2_000, remaining));
   }
   throw new Error('Browser-attestation runner remained publicly readable after site disable');
 }

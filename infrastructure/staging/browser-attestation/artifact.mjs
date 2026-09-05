@@ -12,7 +12,6 @@ import { build } from 'vite';
 
 import {
   FIREBASE_SDK_VERSION,
-  PLAYWRIGHT_VERSION,
   RUNNER_DIRECTORY,
   RUNNER_PATH,
   canonicalJson,
@@ -176,8 +175,7 @@ export function readAndVerifyArtifact(bundle, metadata) {
 }
 
 export function validatePinnedPackageVersions(packageJson) {
-  if (packageJson?.dependencies?.firebase !== FIREBASE_SDK_VERSION
-    || packageJson?.devDependencies?.playwright !== PLAYWRIGHT_VERSION) {
-    throw new Error('Browser-attestation dependencies are not exactly pinned');
+  if (packageJson?.dependencies?.firebase !== FIREBASE_SDK_VERSION) {
+    throw new Error('Browser-attestation Firebase dependency is not exactly pinned');
   }
 }
