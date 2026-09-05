@@ -28,7 +28,7 @@ resource "terraform_data" "deployment_guard" {
     foundation        = data.terraform_remote_state.foundation.outputs.staging_foundation
     runtime_config    = local.runtime_config_sha256
     source_archive    = var.source_archive_sha256
-    source_commit     = var.repository_commit
+    source_commit     = local.source_repository_commit
   }
 
   lifecycle {
