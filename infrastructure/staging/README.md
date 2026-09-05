@@ -110,7 +110,9 @@ reached an execution: Workflows rejected generation 1's inline map expression
 and generation 2's 59-assignment initialization step during creation. All
 temporary resources were removed and all six role IDs remain disabled and
 unassigned. The corrected source splits initialization below the 50-assignment
-limit; another reviewed role generation is required before arming. Retirement
+limit and was accepted by a real compile-only Workflows deployment with zero
+executions before that Workflow was deleted. Generation 3 is prepared with new
+role IDs and a later expiry. Retirement
 retains the immutable disabled generations plus a keyless no-role verifier
 identity. The root also enables and retains the Cloud Asset API for supplemental
 project-wide IAM discovery; because that
@@ -239,7 +241,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`workload/`](workload/) | Deterministic production package, private Gen 2 Function, dedicated build/probe identities, and one-permission FCM role | Applied and converged; current internal-only revision independently source-verified |
 | [`probe/`](probe/) | Isolated Workflows API and one fixed, unscheduled, keyless internal discovery probe | Applied and consumed; exactly two failures followed by one validated HTTP 200 discovery response |
 | [`firebase-auth/`](firebase-auth/) | Closed Firebase Authentication initialization with no end-user sign-in provider | Non-deletable resource initialized, state-adopted, reconciled, and independently validated |
-| [`auth-probe/`](auth-probe/) | Historical Auth/App Check evidence plus a guarded audience-bound user-relay Workflow and internal verifier | Historical probe retained; failed generations 1 and 2 retired without execution; corrected source awaiting a fresh role generation |
+| [`auth-probe/`](auth-probe/) | Historical Auth/App Check evidence plus a guarded audience-bound user-relay Workflow and internal verifier | Historical probe retained; failed generations 1 and 2 retired without execution; generation 3 compiler-validated and prepared for one bounded arm |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
 | [`TEARDOWN.md`](TEARDOWN.md) | Manual recovery and teardown rehearsal | Documentation only |

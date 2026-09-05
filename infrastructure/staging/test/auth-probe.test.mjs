@@ -14,6 +14,13 @@ import {
   FIRESTORE_ROLE_NAME,
   FIRESTORE_ROLE_PERMISSIONS,
   FUNCTION_URI,
+  GENERATION_2_CAPABILITY_EXPIRY,
+  GENERATION_2_CUSTOM_ROLE_ID,
+  GENERATION_2_CUSTOM_ROLE_NAME,
+  GENERATION_2_FIRESTORE_ROLE_ID,
+  GENERATION_2_FIRESTORE_ROLE_NAME,
+  GENERATION_2_SIGNER_ROLE_ID,
+  GENERATION_2_SIGNER_ROLE_NAME,
   PROJECT_ID,
   PROJECT_NUMBER,
   PROBE_ACCOUNT,
@@ -95,7 +102,7 @@ const CREATED_AT = '2026-09-05T00:00:00.000Z';
 const WORKFLOW_REVISION = '000001-abc';
 const PREVIOUS_WORKLOAD_SOURCE_SHA256 = '6674c0353ec9c73fcfe0d3a63d17850f057a5f2a547a5855989e28f011249b1e';
 const PREVIOUS_WORKLOAD_COMMIT = '022f10e2dc15f32a8a6679b38ce7f1a04582e450';
-const PREVIOUS_WORKFLOW_SOURCE_SHA256 = '32040da6ce0b5fdd3c3bdaa1cc972aab99bbdd442ff36141de2667fff128600e';
+const PREVIOUS_WORKFLOW_SOURCE_SHA256 = 'b77c484f3ffb8a81fb4bf5bebfecc420ab33604e99559518fc354a4e0dcc4d56';
 const VERIFIER_SERVICE_RESOURCE = `projects/${PROJECT_ID}/locations/${REGION}/services/${VERIFIER_SERVICE_NAME}`;
 const probeRoot = new URL('../auth-probe/', import.meta.url);
 const terraformFiles = readdirSync(probeRoot).filter((name) => name.endsWith('.tf')).sort();
@@ -223,11 +230,11 @@ function guardInput(previous = false) {
     verifier_service_uri: VERIFIER_SERVICE_URI,
     verifier_identity: VERIFIER_ACCOUNT,
     verifier_image: WORKLOAD_IMAGE,
-    capability_expiry: CAPABILITY_EXPIRY,
-    role_generation: 2,
-    custom_role_name: CUSTOM_ROLE_NAME,
-    firestore_role_name: FIRESTORE_ROLE_NAME,
-    signer_role_name: SIGNER_ROLE_NAME,
+    capability_expiry: previous ? GENERATION_2_CAPABILITY_EXPIRY : CAPABILITY_EXPIRY,
+    role_generation: previous ? 2 : 3,
+    custom_role_name: previous ? GENERATION_2_CUSTOM_ROLE_NAME : CUSTOM_ROLE_NAME,
+    firestore_role_name: previous ? GENERATION_2_FIRESTORE_ROLE_NAME : FIRESTORE_ROLE_NAME,
+    signer_role_name: previous ? GENERATION_2_SIGNER_ROLE_NAME : SIGNER_ROLE_NAME,
   };
   return value;
 }
@@ -239,8 +246,8 @@ function roleValue({ id, name, title, description, permissions }, stage = 'GA') 
 const authRole = (stage = 'GA') => roleValue({
   id: CUSTOM_ROLE_ID,
   name: CUSTOM_ROLE_NAME,
-  title: 'Miakapp staging user-relay Auth probe 2',
-  description: 'Generation 2 least-privilege role for the bounded staging user-relay probe.',
+  title: 'Miakapp staging user-relay Auth probe 3',
+  description: 'Generation 3 least-privilege role for the bounded staging user-relay probe.',
   permissions: CUSTOM_ROLE_PERMISSIONS,
 }, stage);
 const retiredAuthRole = () => roleValue({
@@ -248,6 +255,13 @@ const retiredAuthRole = () => roleValue({
   name: RETIRED_CUSTOM_ROLE_NAME,
   title: 'Miakapp staging Auth probe',
   description: 'Dormant least-privilege role for the bounded staging Auth and App Check probe.',
+  permissions: CUSTOM_ROLE_PERMISSIONS,
+}, 'DISABLED');
+const generation2AuthRole = () => roleValue({
+  id: GENERATION_2_CUSTOM_ROLE_ID,
+  name: GENERATION_2_CUSTOM_ROLE_NAME,
+  title: 'Miakapp staging user-relay Auth probe 2',
+  description: 'Generation 2 least-privilege role for the bounded staging user-relay probe.',
   permissions: CUSTOM_ROLE_PERMISSIONS,
 }, 'DISABLED');
 
@@ -259,21 +273,21 @@ function resourceValue(address, profile = 'arm') {
   const roleStage = profile === 'arm' ? 'GA' : 'DISABLED';
   switch (address) {
     case 'terraform_data.auth_probe_guard': return { input: guardInput() };
-    case 'google_project_iam_custom_role.auth_probe_generation_2': return authRole(roleStage);
-    case 'google_project_iam_custom_role.auth_probe_firestore_generation_2':
+    case 'google_project_iam_custom_role.auth_probe_generation_3': return authRole(roleStage);
+    case 'google_project_iam_custom_role.auth_probe_firestore_generation_3':
       return roleValue({
         id: FIRESTORE_ROLE_ID,
         name: FIRESTORE_ROLE_NAME,
-        title: 'Miakapp staging user-relay Firestore probe 2',
-        description: 'Generation 2 database-scoped CRUD role for bounded staging user-relay fixtures.',
+        title: 'Miakapp staging user-relay Firestore probe 3',
+        description: 'Generation 3 database-scoped CRUD role for bounded staging user-relay fixtures.',
         permissions: FIRESTORE_ROLE_PERMISSIONS,
       }, roleStage);
-    case 'google_project_iam_custom_role.auth_probe_signer_generation_2':
+    case 'google_project_iam_custom_role.auth_probe_signer_generation_3':
       return roleValue({
         id: SIGNER_ROLE_ID,
         name: SIGNER_ROLE_NAME,
-        title: 'Miakapp staging user-relay signer probe 2',
-        description: 'Generation 2 self-scoped signing role for the bounded staging user-relay probe.',
+        title: 'Miakapp staging user-relay signer probe 3',
+        description: 'Generation 3 self-scoped signing role for the bounded staging user-relay probe.',
         permissions: SIGNER_ROLE_PERMISSIONS,
       }, roleStage);
     case 'google_project_iam_custom_role.auth_probe_generation_1':
@@ -292,6 +306,24 @@ function resourceValue(address, profile = 'arm') {
         name: RETIRED_SIGNER_ROLE_NAME,
         title: 'Miakapp staging probe signer',
         description: 'Dormant self-scoped signing role for bounded staging probes.',
+        permissions: SIGNER_ROLE_PERMISSIONS,
+      }, 'DISABLED');
+    case 'google_project_iam_custom_role.auth_probe_generation_2':
+      return generation2AuthRole();
+    case 'google_project_iam_custom_role.auth_probe_firestore_generation_2':
+      return roleValue({
+        id: GENERATION_2_FIRESTORE_ROLE_ID,
+        name: GENERATION_2_FIRESTORE_ROLE_NAME,
+        title: 'Miakapp staging user-relay Firestore probe 2',
+        description: 'Generation 2 database-scoped CRUD role for bounded staging user-relay fixtures.',
+        permissions: FIRESTORE_ROLE_PERMISSIONS,
+      }, 'DISABLED');
+    case 'google_project_iam_custom_role.auth_probe_signer_generation_2':
+      return roleValue({
+        id: GENERATION_2_SIGNER_ROLE_ID,
+        name: GENERATION_2_SIGNER_ROLE_NAME,
+        title: 'Miakapp staging user-relay signer probe 2',
+        description: 'Generation 2 self-scoped signing role for the bounded staging user-relay probe.',
         permissions: SIGNER_ROLE_PERMISSIONS,
       }, 'DISABLED');
     case 'google_project_iam_member.auth_probe[0]':
@@ -406,14 +438,17 @@ const configurationResources = Object.freeze({
   'google_project_iam_custom_role.auth_probe_generation_2': ['google_project_iam_custom_role', ['google_project_service.auth_probe_asset_inventory', 'terraform_data.auth_probe_guard']],
   'google_project_iam_custom_role.auth_probe_firestore_generation_2': ['google_project_iam_custom_role', ['terraform_data.auth_probe_guard']],
   'google_project_iam_custom_role.auth_probe_signer_generation_2': ['google_project_iam_custom_role', ['terraform_data.auth_probe_guard']],
+  'google_project_iam_custom_role.auth_probe_generation_3': ['google_project_iam_custom_role', ['google_project_service.auth_probe_asset_inventory', 'terraform_data.auth_probe_guard']],
+  'google_project_iam_custom_role.auth_probe_firestore_generation_3': ['google_project_iam_custom_role', ['terraform_data.auth_probe_guard']],
+  'google_project_iam_custom_role.auth_probe_signer_generation_3': ['google_project_iam_custom_role', ['terraform_data.auth_probe_guard']],
   'google_project_iam_custom_role.auth_probe_generation_1': ['google_project_iam_custom_role', ['google_project_service.auth_probe_asset_inventory', 'terraform_data.auth_probe_guard']],
   'google_project_iam_custom_role.auth_probe_firestore_generation_1': ['google_project_iam_custom_role', ['terraform_data.auth_probe_guard']],
   'google_project_iam_custom_role.auth_probe_signer_generation_1': ['google_project_iam_custom_role', ['terraform_data.auth_probe_guard']],
-  'google_project_iam_member.auth_probe': ['google_project_iam_member', ['google_project_iam_custom_role.auth_probe_generation_2']],
-  'google_project_iam_member.auth_probe_firestore': ['google_project_iam_member', ['google_project_iam_custom_role.auth_probe_firestore_generation_2']],
+  'google_project_iam_member.auth_probe': ['google_project_iam_member', ['google_project_iam_custom_role.auth_probe_generation_3']],
+  'google_project_iam_member.auth_probe_firestore': ['google_project_iam_member', ['google_project_iam_custom_role.auth_probe_firestore_generation_3']],
   'google_project_service.auth_probe_asset_inventory': ['google_project_service', ['terraform_data.auth_probe_guard']],
   'google_service_account.auth_probe_verifier': ['google_service_account', ['google_project_service.auth_probe_asset_inventory', 'terraform_data.auth_probe_guard']],
-  'google_service_account_iam_member.auth_probe_self_signer': ['google_service_account_iam_member', ['google_project_iam_custom_role.auth_probe_signer_generation_2', 'terraform_data.auth_probe_guard']],
+  'google_service_account_iam_member.auth_probe_self_signer': ['google_service_account_iam_member', ['google_project_iam_custom_role.auth_probe_signer_generation_3', 'terraform_data.auth_probe_guard']],
   'google_workflows_workflow.auth_probe': ['google_workflows_workflow', ['google_project_iam_member.auth_probe', 'google_project_iam_member.auth_probe_firestore', 'google_service_account_iam_member.auth_probe_self_signer', 'google_cloud_run_v2_service_iam_member.auth_probe_verifier_invoker']],
   'terraform_data.auth_probe_guard': ['terraform_data', []],
 });
@@ -423,6 +458,9 @@ const changeResources = Object.freeze({
   'google_project_iam_custom_role.auth_probe_generation_2': 'google_project_iam_custom_role',
   'google_project_iam_custom_role.auth_probe_firestore_generation_2': 'google_project_iam_custom_role',
   'google_project_iam_custom_role.auth_probe_signer_generation_2': 'google_project_iam_custom_role',
+  'google_project_iam_custom_role.auth_probe_generation_3': 'google_project_iam_custom_role',
+  'google_project_iam_custom_role.auth_probe_firestore_generation_3': 'google_project_iam_custom_role',
+  'google_project_iam_custom_role.auth_probe_signer_generation_3': 'google_project_iam_custom_role',
   'google_project_iam_custom_role.auth_probe_generation_1': 'google_project_iam_custom_role',
   'google_project_iam_custom_role.auth_probe_firestore_generation_1': 'google_project_iam_custom_role',
   'google_project_iam_custom_role.auth_probe_signer_generation_1': 'google_project_iam_custom_role',
@@ -436,14 +474,17 @@ const changeResources = Object.freeze({
 });
 const temporaryAddresses = new Set(Object.keys(changeResources).filter((address) => address.endsWith('[0]')));
 const currentRoleAddresses = new Set([
-  'google_project_iam_custom_role.auth_probe_generation_2',
-  'google_project_iam_custom_role.auth_probe_firestore_generation_2',
-  'google_project_iam_custom_role.auth_probe_signer_generation_2',
+  'google_project_iam_custom_role.auth_probe_generation_3',
+  'google_project_iam_custom_role.auth_probe_firestore_generation_3',
+  'google_project_iam_custom_role.auth_probe_signer_generation_3',
 ]);
 const retiredRoleAddresses = new Set([
   'google_project_iam_custom_role.auth_probe_generation_1',
   'google_project_iam_custom_role.auth_probe_firestore_generation_1',
   'google_project_iam_custom_role.auth_probe_signer_generation_1',
+  'google_project_iam_custom_role.auth_probe_generation_2',
+  'google_project_iam_custom_role.auth_probe_firestore_generation_2',
+  'google_project_iam_custom_role.auth_probe_signer_generation_2',
 ]);
 const movedRoleAddresses = Object.freeze({
   'google_project_iam_custom_role.auth_probe_generation_1': 'google_project_iam_custom_role.auth_probe',
@@ -541,31 +582,32 @@ function syntheticPlan(profile) {
   };
 }
 
-function dormantOutput({ legacy = false } = {}) {
+function dormantOutput({ previous = false } = {}) {
   return {
-    schema: legacy ? 'miakapp.staging-auth-probe/1' : 'miakapp.staging-auth-probe/2',
+    schema: previous ? 'miakapp.staging-auth-probe/2' : 'miakapp.staging-auth-probe/3',
     project_id: PROJECT_ID,
     project_number: PROJECT_NUMBER,
     region: REGION,
     armed: false,
     asset_inventory_api: CLOUD_ASSET_SERVICE,
-    custom_role: legacy ? RETIRED_CUSTOM_ROLE_NAME : CUSTOM_ROLE_NAME,
-    signer_role: legacy ? RETIRED_SIGNER_ROLE_NAME : SIGNER_ROLE_NAME,
-    firestore_role: legacy ? RETIRED_FIRESTORE_ROLE_NAME : FIRESTORE_ROLE_NAME,
-    ...(legacy ? {} : {
-      role_generation: 2,
-      retired_custom_roles: [
-        RETIRED_CUSTOM_ROLE_NAME,
-        RETIRED_FIRESTORE_ROLE_NAME,
-        RETIRED_SIGNER_ROLE_NAME,
-      ],
-    }),
+    custom_role: previous ? GENERATION_2_CUSTOM_ROLE_NAME : CUSTOM_ROLE_NAME,
+    signer_role: previous ? GENERATION_2_SIGNER_ROLE_NAME : SIGNER_ROLE_NAME,
+    firestore_role: previous ? GENERATION_2_FIRESTORE_ROLE_NAME : FIRESTORE_ROLE_NAME,
+    role_generation: previous ? 2 : 3,
+    retired_custom_roles: [
+      RETIRED_CUSTOM_ROLE_NAME,
+      RETIRED_FIRESTORE_ROLE_NAME,
+      RETIRED_SIGNER_ROLE_NAME,
+      ...(previous ? [] : [
+        GENERATION_2_CUSTOM_ROLE_NAME,
+        GENERATION_2_FIRESTORE_ROLE_NAME,
+        GENERATION_2_SIGNER_ROLE_NAME,
+      ]),
+    ],
     workflow_name: null,
     workflow_revision: null,
     workflow_service_account: null,
-    workflow_source_sha256: legacy
-      ? '3ddd522a3ef819d3665fe96502d568d2827bf8d0bc8917911e5d50e07a08c755'
-      : WORKFLOW_SOURCE_SHA256,
+    workflow_source_sha256: previous ? PREVIOUS_WORKFLOW_SOURCE_SHA256 : WORKFLOW_SOURCE_SHA256,
     verifier_service_name: null,
     verifier_service_uri: null,
     verifier_service_account: VERIFIER_ACCOUNT,
@@ -575,7 +617,7 @@ function dormantOutput({ legacy = false } = {}) {
     function_name: 'control-plane',
     function_uri: FUNCTION_URI,
     destination_path: '/v1/user-relay-tokens:exchange',
-    capability_expiry: legacy ? RETIRED_CAPABILITY_EXPIRY : CAPABILITY_EXPIRY,
+    capability_expiry: previous ? GENERATION_2_CAPABILITY_EXPIRY : CAPABILITY_EXPIRY,
     scheduled: false,
     retry: false,
   };
@@ -590,7 +632,7 @@ function syntheticOutputRecoveryPlan() {
   plan.output_changes = {
     staging_auth_probe: {
       actions: ['update'],
-      before: dormantOutput({ legacy: true }),
+      before: dormantOutput({ previous: true }),
       after: dormantOutput(),
       after_unknown: false,
       before_sensitive: false,
@@ -644,12 +686,15 @@ function authProbeState(addresses, taintedAddresses = [], { previousGuard = fals
         triggers_replace: null,
       });
     }
-    if (address === 'google_project_iam_custom_role.auth_probe_generation_2') Object.assign(attributes, { name: CUSTOM_ROLE_NAME, project: PROJECT_ID });
-    if (address === 'google_project_iam_custom_role.auth_probe_firestore_generation_2') Object.assign(attributes, { name: FIRESTORE_ROLE_NAME, project: PROJECT_ID });
-    if (address === 'google_project_iam_custom_role.auth_probe_signer_generation_2') Object.assign(attributes, { name: SIGNER_ROLE_NAME, project: PROJECT_ID });
+    if (address === 'google_project_iam_custom_role.auth_probe_generation_3') Object.assign(attributes, { name: CUSTOM_ROLE_NAME, project: PROJECT_ID });
+    if (address === 'google_project_iam_custom_role.auth_probe_firestore_generation_3') Object.assign(attributes, { name: FIRESTORE_ROLE_NAME, project: PROJECT_ID });
+    if (address === 'google_project_iam_custom_role.auth_probe_signer_generation_3') Object.assign(attributes, { name: SIGNER_ROLE_NAME, project: PROJECT_ID });
     if (address === 'google_project_iam_custom_role.auth_probe_generation_1') Object.assign(attributes, { name: RETIRED_CUSTOM_ROLE_NAME, project: PROJECT_ID });
     if (address === 'google_project_iam_custom_role.auth_probe_firestore_generation_1') Object.assign(attributes, { name: RETIRED_FIRESTORE_ROLE_NAME, project: PROJECT_ID });
     if (address === 'google_project_iam_custom_role.auth_probe_signer_generation_1') Object.assign(attributes, { name: RETIRED_SIGNER_ROLE_NAME, project: PROJECT_ID });
+    if (address === 'google_project_iam_custom_role.auth_probe_generation_2') Object.assign(attributes, { name: GENERATION_2_CUSTOM_ROLE_NAME, project: PROJECT_ID });
+    if (address === 'google_project_iam_custom_role.auth_probe_firestore_generation_2') Object.assign(attributes, { name: GENERATION_2_FIRESTORE_ROLE_NAME, project: PROJECT_ID });
+    if (address === 'google_project_iam_custom_role.auth_probe_signer_generation_2') Object.assign(attributes, { name: GENERATION_2_SIGNER_ROLE_NAME, project: PROJECT_ID });
     if (address === 'google_project_iam_member.auth_probe[0]') Object.assign(attributes, { project: PROJECT_ID, role: CUSTOM_ROLE_NAME, member: `serviceAccount:${PROBE_ACCOUNT}` });
     if (address === 'google_project_iam_member.auth_probe_firestore[0]') Object.assign(attributes, { project: PROJECT_ID, role: FIRESTORE_ROLE_NAME, member: `serviceAccount:${PROBE_ACCOUNT}` });
     if (address === 'google_project_service.auth_probe_asset_inventory') Object.assign(attributes, { project: PROJECT_ID, service: CLOUD_ASSET_SERVICE });
@@ -720,9 +765,30 @@ function recoveryLiveInventory() {
         etag: 'BwZasbV9yQ4=',
         permissions: [...SIGNER_ROLE_PERMISSIONS],
       },
+      retired_2_firebase: {
+        name: GENERATION_2_CUSTOM_ROLE_NAME,
+        stage: 'DISABLED',
+        deleted: false,
+        etag: 'BwZasWNah-E=',
+        permissions: [...CUSTOM_ROLE_PERMISSIONS],
+      },
+      retired_2_firestore: {
+        name: GENERATION_2_FIRESTORE_ROLE_NAME,
+        stage: 'DISABLED',
+        deleted: false,
+        etag: 'BwZasWNah-I=',
+        permissions: [...FIRESTORE_ROLE_PERMISSIONS],
+      },
+      retired_2_signer: {
+        name: GENERATION_2_SIGNER_ROLE_NAME,
+        stage: 'DISABLED',
+        deleted: false,
+        etag: 'BwZasWNah-M=',
+        permissions: [...SIGNER_ROLE_PERMISSIONS],
+      },
     },
     custom_role_bindings: {
-      'google_project_iam_custom_role.auth_probe_generation_2': {
+      'google_project_iam_custom_role.auth_probe_generation_3': {
         role_name: CUSTOM_ROLE_NAME,
         direct_binding_present: true,
         indexed_binding_present: true,
@@ -730,7 +796,7 @@ function recoveryLiveInventory() {
         asset_type: 'cloudresourcemanager.googleapis.com/Project',
         authoritative: false,
       },
-      'google_project_iam_custom_role.auth_probe_firestore_generation_2': {
+      'google_project_iam_custom_role.auth_probe_firestore_generation_3': {
         role_name: FIRESTORE_ROLE_NAME,
         direct_binding_present: true,
         indexed_binding_present: true,
@@ -738,7 +804,7 @@ function recoveryLiveInventory() {
         asset_type: 'cloudresourcemanager.googleapis.com/Project',
         authoritative: false,
       },
-      'google_project_iam_custom_role.auth_probe_signer_generation_2': {
+      'google_project_iam_custom_role.auth_probe_signer_generation_3': {
         role_name: SIGNER_ROLE_NAME,
         direct_binding_present: true,
         indexed_binding_present: true,
@@ -770,6 +836,30 @@ function recoveryLiveInventory() {
         asset_type: null,
         authoritative: false,
       },
+      'google_project_iam_custom_role.auth_probe_generation_2': {
+        role_name: GENERATION_2_CUSTOM_ROLE_NAME,
+        direct_binding_present: false,
+        indexed_binding_present: false,
+        resource: null,
+        asset_type: null,
+        authoritative: false,
+      },
+      'google_project_iam_custom_role.auth_probe_firestore_generation_2': {
+        role_name: GENERATION_2_FIRESTORE_ROLE_NAME,
+        direct_binding_present: false,
+        indexed_binding_present: false,
+        resource: null,
+        asset_type: null,
+        authoritative: false,
+      },
+      'google_project_iam_custom_role.auth_probe_signer_generation_2': {
+        role_name: GENERATION_2_SIGNER_ROLE_NAME,
+        direct_binding_present: false,
+        indexed_binding_present: false,
+        resource: null,
+        asset_type: null,
+        authoritative: false,
+      },
     },
     verifier_identity: {
       email: VERIFIER_ACCOUNT,
@@ -780,12 +870,15 @@ function recoveryLiveInventory() {
       resource_policy_inventory: true,
     },
     persistent_resources: {
-      'google_project_iam_custom_role.auth_probe_generation_2': true,
-      'google_project_iam_custom_role.auth_probe_firestore_generation_2': true,
-      'google_project_iam_custom_role.auth_probe_signer_generation_2': true,
+      'google_project_iam_custom_role.auth_probe_generation_3': true,
+      'google_project_iam_custom_role.auth_probe_firestore_generation_3': true,
+      'google_project_iam_custom_role.auth_probe_signer_generation_3': true,
       'google_project_iam_custom_role.auth_probe_generation_1': true,
       'google_project_iam_custom_role.auth_probe_firestore_generation_1': true,
       'google_project_iam_custom_role.auth_probe_signer_generation_1': true,
+      'google_project_iam_custom_role.auth_probe_generation_2': true,
+      'google_project_iam_custom_role.auth_probe_firestore_generation_2': true,
+      'google_project_iam_custom_role.auth_probe_signer_generation_2': true,
       'google_project_service.auth_probe_asset_inventory': true,
       'google_service_account.auth_probe_verifier': true,
     },
@@ -795,6 +888,9 @@ function recoveryLiveInventory() {
     retired_project_role_binding: false,
     retired_firestore_role_binding: false,
     retired_self_signer_binding: false,
+    retired_2_project_role_binding: false,
+    retired_2_firestore_role_binding: false,
+    retired_2_self_signer_binding: false,
     verifier_invoker_binding: true,
     verifier_service: { name: VERIFIER_SERVICE_NAME, revision: `${VERIFIER_SERVICE_NAME}-00001-abc`, source_sha256: VERIFIER_SOURCE_SHA256 },
     workflow: { name: `projects/${PROJECT_ID}/locations/${REGION}/workflows/${WORKFLOW_NAME}`, revision: WORKFLOW_REVISION, source_sha256: WORKFLOW_SOURCE_SHA256, executions: 0 },
@@ -836,13 +932,13 @@ test('contains only the reviewed dormant and temporary user-relay probe graph', 
   assert.match(terraformSource, /execution_history_level\s+= "EXECUTION_HISTORY_BASIC"/);
   assert.match(terraformSource, /prevent_destroy = true/);
   assert.equal((terraformSource.match(/stage = var\.armed \? "GA" : "DISABLED"/g) ?? []).length, 3);
-  assert.equal((terraformSource.match(/resource\s+"/g) ?? []).length, 15);
+  assert.equal((terraformSource.match(/resource\s+"/g) ?? []).length, 18);
   assert.equal((terraformSource.match(/moved\s+\{/g) ?? []).length, 3);
-  assert.equal((terraformSource.match(/stage = "DISABLED"/g) ?? []).length, 3);
+  assert.equal((terraformSource.match(/stage = "DISABLED"/g) ?? []).length, 6);
   assert.doesNotMatch(terraformSource, /google_(cloudfunctions|compute|scheduler|service_account_key)/);
   assert.doesNotMatch(terraformSource, /allUsers|allAuthenticatedUsers|roles\/owner|roles\/editor|\bmiakapp-3\b/);
   assert.match(retirementDrivers, /-target=google_cloud_run_v2_service\.auth_probe_verifier/);
-  assert.match(retirementDrivers, /-target=google_project_iam_custom_role\.auth_probe_signer_generation_2/);
+  assert.match(retirementDrivers, /-target=google_project_iam_custom_role\.auth_probe_signer_generation_3/);
   assert.match(retirementDrivers, /-target=google_project_iam_member\.auth_probe_firestore/);
   assert.match(retirementRecoveryDrivers, /run', 'services', 'delete'/);
   assert.match(retirementRecoveryDrivers, /remove-iam-policy-binding/);
@@ -852,10 +948,13 @@ test('contains only the reviewed dormant and temporary user-relay probe graph', 
     'data.terraform_remote_state.workload',
     'google_project_iam_custom_role.auth_probe_firestore_generation_1',
     'google_project_iam_custom_role.auth_probe_firestore_generation_2',
+    'google_project_iam_custom_role.auth_probe_firestore_generation_3',
     'google_project_iam_custom_role.auth_probe_generation_1',
     'google_project_iam_custom_role.auth_probe_generation_2',
+    'google_project_iam_custom_role.auth_probe_generation_3',
     'google_project_iam_custom_role.auth_probe_signer_generation_1',
     'google_project_iam_custom_role.auth_probe_signer_generation_2',
+    'google_project_iam_custom_role.auth_probe_signer_generation_3',
     'google_project_service.auth_probe_asset_inventory',
     'google_service_account.auth_probe_verifier',
     'terraform_data.auth_probe_guard',
@@ -1059,7 +1158,7 @@ test('inventories exact role bindings but refuses automatic soft-deleted role re
   const live = structuredClone(recoveryLiveInventory());
   live.custom_roles.firebase.deleted = true;
   live.custom_roles.firebase.etag = etag;
-  live.persistent_resources['google_project_iam_custom_role.auth_probe_generation_2'] = false;
+  live.persistent_resources['google_project_iam_custom_role.auth_probe_generation_3'] = false;
   const addresses = [
     'data.terraform_remote_state.firebase_auth',
     'data.terraform_remote_state.workload',
@@ -1238,7 +1337,7 @@ test('authorizes exact no-temporary retirement finalization and evidence recover
 
   const softDeleted = finalizationLiveInventory();
   softDeleted.custom_roles.firebase.deleted = true;
-  softDeleted.persistent_resources['google_project_iam_custom_role.auth_probe_generation_2'] = false;
+  softDeleted.persistent_resources['google_project_iam_custom_role.auth_probe_generation_3'] = false;
   assert.throws(() => buildAuthProbeRetirementRecoveryInventory(
     state,
     softDeleted,
@@ -1263,10 +1362,13 @@ test('binds orphan retirement recovery to all six temporary resources', () => {
   assert.deepEqual(inventory.persistent_state_actions.map(({ address, action }) => ({ address, action })), [
     { address: 'google_project_iam_custom_role.auth_probe_firestore_generation_1', action: 'import' },
     { address: 'google_project_iam_custom_role.auth_probe_firestore_generation_2', action: 'import' },
+    { address: 'google_project_iam_custom_role.auth_probe_firestore_generation_3', action: 'import' },
     { address: 'google_project_iam_custom_role.auth_probe_generation_1', action: 'import' },
     { address: 'google_project_iam_custom_role.auth_probe_generation_2', action: 'import' },
+    { address: 'google_project_iam_custom_role.auth_probe_generation_3', action: 'import' },
     { address: 'google_project_iam_custom_role.auth_probe_signer_generation_1', action: 'import' },
     { address: 'google_project_iam_custom_role.auth_probe_signer_generation_2', action: 'import' },
+    { address: 'google_project_iam_custom_role.auth_probe_signer_generation_3', action: 'import' },
     { address: 'google_project_service.auth_probe_asset_inventory', action: 'import' },
     { address: 'google_service_account.auth_probe_verifier', action: 'import' },
   ]);
@@ -1354,12 +1456,15 @@ test('recovers every live persistent probe resource from missing or tainted stat
     const partialLive = structuredClone(recoveryLiveInventory());
     partialLive.persistent_resources[address] = false;
     const customRoleKey = {
-      'google_project_iam_custom_role.auth_probe_generation_2': 'firebase',
-      'google_project_iam_custom_role.auth_probe_firestore_generation_2': 'firestore',
-      'google_project_iam_custom_role.auth_probe_signer_generation_2': 'signer',
+      'google_project_iam_custom_role.auth_probe_generation_3': 'firebase',
+      'google_project_iam_custom_role.auth_probe_firestore_generation_3': 'firestore',
+      'google_project_iam_custom_role.auth_probe_signer_generation_3': 'signer',
       'google_project_iam_custom_role.auth_probe_generation_1': 'retired_firebase',
       'google_project_iam_custom_role.auth_probe_firestore_generation_1': 'retired_firestore',
       'google_project_iam_custom_role.auth_probe_signer_generation_1': 'retired_signer',
+      'google_project_iam_custom_role.auth_probe_generation_2': 'retired_2_firebase',
+      'google_project_iam_custom_role.auth_probe_firestore_generation_2': 'retired_2_firestore',
+      'google_project_iam_custom_role.auth_probe_signer_generation_2': 'retired_2_signer',
     }[address];
     if (customRoleKey !== undefined) partialLive.custom_roles[customRoleKey] = null;
     if (address === 'google_project_service.auth_probe_asset_inventory') {
@@ -1517,7 +1622,7 @@ test('reconciles only the exact stale dormant output without cloud mutations', (
 
   const infrastructureMutation = structuredClone(plan);
   const authRoleChange = infrastructureMutation.resource_changes.find(({ address }) => (
-    address === 'google_project_iam_custom_role.auth_probe_generation_2'
+    address === 'google_project_iam_custom_role.auth_probe_generation_3'
   ));
   authRoleChange.change.actions = ['update'];
   assert.throws(
@@ -1628,7 +1733,7 @@ test('validates the exact arm and retirement plans and rejects privilege drift',
   foreignGuard.change.before.output.workflow_source_sha256 = '0'.repeat(64);
   assert.throws(() => validateAuthProbePlanAgainstPolicy(foreignTransition, 'arm'), /before\.input/u);
   const broaderRole = structuredClone(syntheticPlan('arm'));
-  broaderRole.resource_changes.find(({ address }) => address === 'google_project_iam_custom_role.auth_probe_signer_generation_2').change.after.permissions.push('iam.serviceAccountKeys.create');
+  broaderRole.resource_changes.find(({ address }) => address === 'google_project_iam_custom_role.auth_probe_signer_generation_3').change.after.permissions.push('iam.serviceAccountKeys.create');
   assert.throws(() => validateAuthProbePlanAgainstPolicy(broaderRole, 'arm'), /permissions/u);
   const publicPlan = structuredClone(syntheticPlan('arm'));
   publicPlan.resource_changes.find(({ address }) => address === 'google_cloud_run_v2_service_iam_member.auth_probe_verifier_invoker[0]').change.after.member = 'allUsers';
@@ -1702,7 +1807,7 @@ test('validates the exact arm and retirement plans and rejects privilege drift',
       create: 0,
       update: 3,
       delete: 0,
-      permanent_custom_roles: 6,
+      permanent_custom_roles: 9,
       permanent_project_services: 1,
       permanent_keyless_identities: 1,
       temporary_iam_bindings: 4,
@@ -1719,8 +1824,8 @@ test('validates the exact arm and retirement plans and rejects privilege drift',
   );
   const oneRoleDisable = structuredClone(roleOnlyRetirement);
   for (const address of [
-    'google_project_iam_custom_role.auth_probe_firestore_generation_2',
-    'google_project_iam_custom_role.auth_probe_signer_generation_2',
+    'google_project_iam_custom_role.auth_probe_firestore_generation_3',
+    'google_project_iam_custom_role.auth_probe_signer_generation_3',
   ]) {
     const disabled = resourceValue(address, 'retire');
     oneRoleDisable.resource_changes.find((change) => change.address === address).change = {
@@ -1729,23 +1834,23 @@ test('validates the exact arm and retirement plans and rejects privilege drift',
   }
   assert.equal(validateAuthProbePlanAgainstPolicy(oneRoleDisable, 'retire').update, 1);
   const noOpRetirement = structuredClone(oneRoleDisable);
-  const disabledAuth = resourceValue('google_project_iam_custom_role.auth_probe_generation_2', 'retire');
+  const disabledAuth = resourceValue('google_project_iam_custom_role.auth_probe_generation_3', 'retire');
   noOpRetirement.resource_changes.find(({ address }) => (
-    address === 'google_project_iam_custom_role.auth_probe_generation_2'
+    address === 'google_project_iam_custom_role.auth_probe_generation_3'
   )).change = { actions: ['no-op'], before: disabledAuth, after: disabledAuth };
   assert.throws(
     () => validateAuthProbePlanAgainstPolicy(noOpRetirement, 'retire'),
     /delta is outside/u,
   );
   const partlyDisabled = syntheticPlan('retire');
-  const disabledSigner = resourceValue('google_project_iam_custom_role.auth_probe_signer_generation_2', 'retire');
+  const disabledSigner = resourceValue('google_project_iam_custom_role.auth_probe_signer_generation_3', 'retire');
   partlyDisabled.resource_changes.find(({ address }) => (
-    address === 'google_project_iam_custom_role.auth_probe_signer_generation_2'
+    address === 'google_project_iam_custom_role.auth_probe_signer_generation_3'
   )).change = { actions: ['no-op'], before: disabledSigner, after: disabledSigner };
   assert.equal(validateAuthProbePlanAgainstPolicy(partlyDisabled, 'retire').update, 2);
   const omittedRole = structuredClone(partialRetirement);
   omittedRole.resource_changes = omittedRole.resource_changes.filter(({ address }) => (
-    address !== 'google_project_iam_custom_role.auth_probe_signer_generation_2'
+    address !== 'google_project_iam_custom_role.auth_probe_signer_generation_3'
   ));
   assert.throws(() => validateAuthProbePlanAgainstPolicy(omittedRole, 'retire'), /omits/u);
   const incompleteArm = syntheticPlan('arm');

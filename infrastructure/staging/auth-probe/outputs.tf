@@ -1,20 +1,23 @@
 output "staging_auth_probe" {
   description = "Non-secret identifiers for the temporary audience-bound user-relay probe."
   value = {
-    schema              = "miakapp.staging-auth-probe/2"
+    schema              = "miakapp.staging-auth-probe/3"
     project_id          = local.project_id
     project_number      = local.project_number
     region              = local.region
     armed               = var.armed
     asset_inventory_api = google_project_service.auth_probe_asset_inventory.service
-    custom_role         = google_project_iam_custom_role.auth_probe_generation_2.name
-    signer_role         = google_project_iam_custom_role.auth_probe_signer_generation_2.name
-    firestore_role      = google_project_iam_custom_role.auth_probe_firestore_generation_2.name
-    role_generation     = 2
+    custom_role         = google_project_iam_custom_role.auth_probe_generation_3.name
+    signer_role         = google_project_iam_custom_role.auth_probe_signer_generation_3.name
+    firestore_role      = google_project_iam_custom_role.auth_probe_firestore_generation_3.name
+    role_generation     = 3
     retired_custom_roles = [
       google_project_iam_custom_role.auth_probe_generation_1.name,
       google_project_iam_custom_role.auth_probe_firestore_generation_1.name,
       google_project_iam_custom_role.auth_probe_signer_generation_1.name,
+      google_project_iam_custom_role.auth_probe_generation_2.name,
+      google_project_iam_custom_role.auth_probe_firestore_generation_2.name,
+      google_project_iam_custom_role.auth_probe_signer_generation_2.name,
     ]
     workflow_name            = var.armed ? google_workflows_workflow.auth_probe[0].name : null
     workflow_revision        = var.armed ? google_workflows_workflow.auth_probe[0].revision_id : null
