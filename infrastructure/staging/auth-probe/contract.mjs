@@ -60,9 +60,10 @@ export const WORKLOAD_SOURCE_SHA256 = '6674c0353ec9c73fcfe0d3a63d17850f057a5f2a5
 export const WORKLOAD_COMMIT = '022f10e2dc15f32a8a6679b38ce7f1a04582e450';
 export const WORKLOAD_FUNCTION_REVISION = 'control-plane-00004-yis';
 export const WORKLOAD_IMAGE = 'europe-west9-docker.pkg.dev/miakapp-v4-staging/miakapp-control-plane/miakapp--v4--staging__europe--west9__control--plane@sha256:a650ae228afd9443e1bf0090b5b1e6e9203d08d8de5e24a894701d82a5db4503';
-export const CAPABILITY_EXPIRY = '2026-09-06T12:00:00Z';
+export const CAPABILITY_EXPIRY = '2026-09-06T18:00:00Z';
+export const GENERATION_2_CAPABILITY_EXPIRY = '2026-09-06T12:00:00Z';
 export const RETIRED_CAPABILITY_EXPIRY = '2026-09-06T06:00:00Z';
-export const CUSTOM_ROLE_ID = 'miakapp.stagingUserRelayAuthProbe2';
+export const CUSTOM_ROLE_ID = 'miakapp.stagingUserRelayAuthProbe3';
 export const CUSTOM_ROLE_NAME = `projects/${PROJECT_ID}/roles/${CUSTOM_ROLE_ID}`;
 export const CUSTOM_ROLE_PERMISSIONS = Object.freeze([
   'firebase.clients.get',
@@ -70,13 +71,13 @@ export const CUSTOM_ROLE_PERMISSIONS = Object.freeze([
   'firebaseauth.users.get',
   'serviceusage.services.use',
 ]);
-export const SIGNER_ROLE_ID = 'miakapp.stagingUserRelaySigner2';
+export const SIGNER_ROLE_ID = 'miakapp.stagingUserRelaySigner3';
 export const SIGNER_ROLE_NAME = `projects/${PROJECT_ID}/roles/${SIGNER_ROLE_ID}`;
 export const SIGNER_ROLE_PERMISSIONS = Object.freeze([
   'iam.serviceAccounts.getOpenIdToken',
   'iam.serviceAccounts.signJwt',
 ]);
-export const FIRESTORE_ROLE_ID = 'miakapp.stagingUserRelayFirestore2';
+export const FIRESTORE_ROLE_ID = 'miakapp.stagingUserRelayFirestore3';
 export const FIRESTORE_ROLE_NAME = `projects/${PROJECT_ID}/roles/${FIRESTORE_ROLE_ID}`;
 export const FIRESTORE_ROLE_PERMISSIONS = Object.freeze([
   'datastore.entities.create',
@@ -90,6 +91,12 @@ export const RETIRED_SIGNER_ROLE_ID = 'miakapp.stagingProbeSigner';
 export const RETIRED_SIGNER_ROLE_NAME = `projects/${PROJECT_ID}/roles/${RETIRED_SIGNER_ROLE_ID}`;
 export const RETIRED_FIRESTORE_ROLE_ID = 'miakapp.stagingProbeFirestore';
 export const RETIRED_FIRESTORE_ROLE_NAME = `projects/${PROJECT_ID}/roles/${RETIRED_FIRESTORE_ROLE_ID}`;
+export const GENERATION_2_CUSTOM_ROLE_ID = 'miakapp.stagingUserRelayAuthProbe2';
+export const GENERATION_2_CUSTOM_ROLE_NAME = `projects/${PROJECT_ID}/roles/${GENERATION_2_CUSTOM_ROLE_ID}`;
+export const GENERATION_2_SIGNER_ROLE_ID = 'miakapp.stagingUserRelaySigner2';
+export const GENERATION_2_SIGNER_ROLE_NAME = `projects/${PROJECT_ID}/roles/${GENERATION_2_SIGNER_ROLE_ID}`;
+export const GENERATION_2_FIRESTORE_ROLE_ID = 'miakapp.stagingUserRelayFirestore2';
+export const GENERATION_2_FIRESTORE_ROLE_NAME = `projects/${PROJECT_ID}/roles/${GENERATION_2_FIRESTORE_ROLE_ID}`;
 export const WORKFLOW_SOURCE = readFileSync(new URL('workflow.yaml', import.meta.url), 'utf8');
 export const WORKFLOW_SOURCE_SHA256 = sha256(Buffer.from(WORKFLOW_SOURCE));
 export const VERIFIER_SOURCE = readFileSync(new URL('verifier.mjs', import.meta.url), 'utf8');
@@ -346,12 +353,15 @@ export function validateAuthProbeRetirementRecoveryMetadata(value, now = Date.no
     'data.terraform_remote_state.workload',
     'google_cloud_run_v2_service.auth_probe_verifier[0]',
     'google_cloud_run_v2_service_iam_member.auth_probe_verifier_invoker[0]',
-    'google_project_iam_custom_role.auth_probe_generation_2',
-    'google_project_iam_custom_role.auth_probe_firestore_generation_2',
-    'google_project_iam_custom_role.auth_probe_signer_generation_2',
+    'google_project_iam_custom_role.auth_probe_generation_3',
+    'google_project_iam_custom_role.auth_probe_firestore_generation_3',
+    'google_project_iam_custom_role.auth_probe_signer_generation_3',
     'google_project_iam_custom_role.auth_probe_generation_1',
     'google_project_iam_custom_role.auth_probe_firestore_generation_1',
     'google_project_iam_custom_role.auth_probe_signer_generation_1',
+    'google_project_iam_custom_role.auth_probe_generation_2',
+    'google_project_iam_custom_role.auth_probe_firestore_generation_2',
+    'google_project_iam_custom_role.auth_probe_signer_generation_2',
     'google_project_iam_member.auth_probe[0]',
     'google_project_iam_member.auth_probe_firestore[0]',
     'google_project_service.auth_probe_asset_inventory',
@@ -371,23 +381,29 @@ export function validateAuthProbeRetirementRecoveryMetadata(value, now = Date.no
   const finalizationStateAddresses = [
     'data.terraform_remote_state.firebase_auth',
     'data.terraform_remote_state.workload',
-    'google_project_iam_custom_role.auth_probe_generation_2',
-    'google_project_iam_custom_role.auth_probe_firestore_generation_2',
-    'google_project_iam_custom_role.auth_probe_signer_generation_2',
+    'google_project_iam_custom_role.auth_probe_generation_3',
+    'google_project_iam_custom_role.auth_probe_firestore_generation_3',
+    'google_project_iam_custom_role.auth_probe_signer_generation_3',
     'google_project_iam_custom_role.auth_probe_generation_1',
     'google_project_iam_custom_role.auth_probe_firestore_generation_1',
     'google_project_iam_custom_role.auth_probe_signer_generation_1',
+    'google_project_iam_custom_role.auth_probe_generation_2',
+    'google_project_iam_custom_role.auth_probe_firestore_generation_2',
+    'google_project_iam_custom_role.auth_probe_signer_generation_2',
     'google_project_service.auth_probe_asset_inventory',
     'google_service_account.auth_probe_verifier',
     'terraform_data.auth_probe_guard',
   ].sort();
   const persistentImportIds = Object.freeze({
-    'google_project_iam_custom_role.auth_probe_generation_2': CUSTOM_ROLE_NAME,
-    'google_project_iam_custom_role.auth_probe_firestore_generation_2': FIRESTORE_ROLE_NAME,
-    'google_project_iam_custom_role.auth_probe_signer_generation_2': SIGNER_ROLE_NAME,
+    'google_project_iam_custom_role.auth_probe_generation_3': CUSTOM_ROLE_NAME,
+    'google_project_iam_custom_role.auth_probe_firestore_generation_3': FIRESTORE_ROLE_NAME,
+    'google_project_iam_custom_role.auth_probe_signer_generation_3': SIGNER_ROLE_NAME,
     'google_project_iam_custom_role.auth_probe_generation_1': RETIRED_CUSTOM_ROLE_NAME,
     'google_project_iam_custom_role.auth_probe_firestore_generation_1': RETIRED_FIRESTORE_ROLE_NAME,
     'google_project_iam_custom_role.auth_probe_signer_generation_1': RETIRED_SIGNER_ROLE_NAME,
+    'google_project_iam_custom_role.auth_probe_generation_2': GENERATION_2_CUSTOM_ROLE_NAME,
+    'google_project_iam_custom_role.auth_probe_firestore_generation_2': GENERATION_2_FIRESTORE_ROLE_NAME,
+    'google_project_iam_custom_role.auth_probe_signer_generation_2': GENERATION_2_SIGNER_ROLE_NAME,
     'google_project_service.auth_probe_asset_inventory': `${PROJECT_ID}/${CLOUD_ASSET_SERVICE}`,
     'google_service_account.auth_probe_verifier': `projects/${PROJECT_ID}/serviceAccounts/${VERIFIER_ACCOUNT}`,
   });

@@ -157,10 +157,13 @@ It uses an unscheduled Workflow for internal transport and a separate
 internal-only scale-to-zero verifier to validate both Ed25519 credentials
 without publishing token material. Four temporary least-privilege IAM bindings
 have a hard expiry, and the fixed private Home plus no-email Firebase user are
-deleted and independently checked. The reviewed implementation has not yet
-been applied or invoked; its exact saved plan and retirement remain mandatory.
-It intentionally retains the enabled Cloud Asset API, three disabled custom
-roles and one keyless no-role verifier identity after retirement.
+deleted and independently checked. Two attempted generations were applied and
+retired without invocation after compile failures; the corrected source then
+passed a zero-execution compile-only deployment. Generation 3 is prepared but
+has not yet been armed or invoked; its exact saved plan and retirement remain
+mandatory. It intentionally retains the enabled Cloud Asset API, nine disabled
+custom roles across three one-shot generations and one keyless no-role verifier
+identity after a successful generation-3 retirement.
 The verifier has one exact service-level binding for the probe identity, but is
 not described as Workflow-only: staging project inheritance also authorizes the
 Owner, two default Editor service accounts, and the Cloud Functions and Cloud

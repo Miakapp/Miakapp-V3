@@ -11,8 +11,10 @@ preceding Firebase Auth/App Check probe against historical revision
 without an execution after Workflows rejected their source at creation time:
 generation 1 used an invalid inline map expression, and generation 2 exceeded
 the 50-assignment per-step limit. Their six role IDs remain disabled and
-unassigned. The source now splits initialization into two bounded steps, but
-another reviewed role generation is required before it may be armed. The
+unassigned. The source now splits initialization into two bounded steps and was
+accepted by the real Google Workflows compiler in a compile-only deployment
+that had zero executions and was immediately deleted. A reviewed generation-3
+role set and later expiry are now prepared for the next arm. The
 historical evidence remains valid until a successful generation runs, retires,
 and replaces it with a digest-pinned sanitized result.
 
@@ -26,10 +28,10 @@ Terraform output cannot conceal live authentication drift.
 
 The configured persistent graph contains:
 
-- three retained generation-1 custom roles plus three generation-2
-  least-privilege roles for Firebase token operations, self-scoped JWT/OIDC
-  signing, and default-database fixture CRUD; both generations are fixed at
-  `DISABLED`;
+- six retained custom roles across generations 1 and 2, fixed at `DISABLED`,
+  plus three generation-3 least-privilege roles for Firebase token operations,
+  self-scoped JWT/OIDC signing, and default-database fixture CRUD; generation 3
+  is also dormant and disabled unless the one-shot root is explicitly armed;
 - the Cloud Asset API used as supplemental project-wide discovery for verifier
   grants and custom-role bindings, without treating its eventually consistent
   results as an undelete authorization;
@@ -56,8 +58,8 @@ permissions, requires exactly that closed inherited set, and rejects every extra
 service-level binding. Internal-only ingress, IAM enforcement and the absence of
 public principals remain mandatory.
 
-Every generation-2 temporary IAM binding independently expires at
-`2026-09-06T12:00:00Z`. Retirement is still mandatory immediately after the
+Every generation-3 temporary IAM binding independently expires at
+`2026-09-06T18:00:00Z`. Retirement is still mandatory immediately after the
 single execution; expiry is a backstop, not the cleanup mechanism. No resource
 has public ingress or a public principal. No service-account key, secret,
 scheduler, minimum instance, VPC, NAT, load balancer, or recurring compute is
@@ -148,7 +150,7 @@ MIAKAPP_STAGING_AUTH_PROBE_APPLY_AUTHORIZATION='arm-user-relay-probe:...' \
 ```
 
 Apply must converge and independently inventory the exact Workflow, verifier,
-three enabled generation-2 roles, three disabled generation-1 roles, keyless
+three enabled generation-3 roles, six disabled roles across generations 1 and 2, keyless
 identity, four conditioned bindings, zero executions, zero
 public principals, the five explicitly acknowledged project-level verifier
 invokers, no direct verifier grant plus a zero-result supplemental project-wide
@@ -162,8 +164,8 @@ MIAKAPP_STAGING_AUTH_PROBE_INVOKE_AUTHORIZATION='invoke-user-relay-probe:...' \
 
 Retirement is a separately rendered, targeted capability-closing plan. It
 accepts the exact subset of six temporary resources still represented in state,
-and ensures all three generation-2 custom roles are disabled (zero to three
-transitions) while generation 1 remains disabled.
+and ensures all three generation-3 custom roles are disabled (zero to three
+transitions) while generations 1 and 2 remain disabled.
 With a stable inventory, this normal path contains at least one temporary
 delete; an exact zero-temporary graph is routed to separately authorized
 finalization. The plan validator still permits a zero-delete fallback only with
@@ -181,7 +183,7 @@ MIAKAPP_STAGING_AUTH_PROBE_RETIRE_AUTHORIZATION='retire-user-relay-probe:...' \
 ```
 
 Each role generation is intentionally one-shot. The arm preflight rejects a
-previously disabled generation-2 role and verifies that generation 1 remains
+previously disabled generation-3 role and verifies that generations 1 and 2 remain
 disabled and unassigned. Another acceptance run requires new reviewed role IDs
 and a new capability expiry instead of reactivating retained bindings.
 
@@ -227,6 +229,6 @@ Recovery never broadens a role or invokes the product route.
 
 Successful retirement removes the Workflow, verifier service, every temporary
 binding, and any exact synthetic fixture. It retains only the Cloud Asset API,
-six disabled custom roles across two immutable generations, the keyless no-role
+nine disabled custom roles across three immutable generations, the keyless no-role
 verifier identity, and the guard. Private plans, state, credentials, raw
 diagnostics, and unsanitized execution data must never be committed.
