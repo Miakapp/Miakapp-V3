@@ -654,6 +654,16 @@ export function validateVerifierServiceEndpoints(status, announcedUrlsAnnotation
   return validated;
 }
 
+export function validateVerifierRevisionStatus(status, templateName) {
+  if (typeof status?.latestReadyRevisionName !== 'string'
+    || !status.latestReadyRevisionName.startsWith(`${VERIFIER_SERVICE_NAME}-`)
+    || status.latestCreatedRevisionName !== status.latestReadyRevisionName
+    || ![undefined, null, status.latestReadyRevisionName].includes(templateName)) {
+    reject('Verifier ready revision is invalid');
+  }
+  return status.latestReadyRevisionName;
+}
+
 function observeVerifierService() {
   if (listedVerifierServices().length !== 1) reject('Auth-probe verifier service inventory is not exact');
   const value = gcloudJson([
@@ -696,24 +706,19 @@ function observeVerifierService() {
     status,
     metadata.annotations?.['run.googleapis.com/urls'],
   );
-  if (typeof status.latestReadyRevisionName !== 'string'
-    || !status.latestReadyRevisionName.startsWith(`${VERIFIER_SERVICE_NAME}-`)
-    || status.latestCreatedRevisionName !== status.latestReadyRevisionName
-    || template.metadata?.name !== status.latestReadyRevisionName) {
-    reject('Verifier ready revision is invalid');
-  }
+  const revisionName = validateVerifierRevisionStatus(status, template.metadata?.name);
   exact(status.traffic, [{
     latestRevision: true,
     percent: 100,
-    revisionName: status.latestReadyRevisionName,
+    revisionName,
   }], 'Verifier effective traffic');
   validateVerifierRuntime(spec, template.metadata?.annotations, 'Verifier service template');
   const revision = gcloudJson([
-    'run', 'revisions', 'describe', status.latestReadyRevisionName,
+    'run', 'revisions', 'describe', revisionName,
     `--region=${REGION}`,
     `--project=${PROJECT_ID}`,
   ], { description: 'auth-probe-verifier-revision-inventory' });
-  if (!plainObject(revision) || revision.metadata?.name !== status.latestReadyRevisionName) {
+  if (!plainObject(revision) || revision.metadata?.name !== revisionName) {
     reject('Verifier serving revision inventory is invalid');
   }
   validateVerifierRuntime(
@@ -724,7 +729,7 @@ function observeVerifierService() {
   return Object.freeze({
     name: VERIFIER_SERVICE_NAME,
     uri: VERIFIER_SERVICE_URI,
-    revision: status.latestReadyRevisionName,
+    revision: revisionName,
     ingress: 'internal-only',
     image: WORKLOAD_IMAGE,
     identity: VERIFIER_ACCOUNT,
