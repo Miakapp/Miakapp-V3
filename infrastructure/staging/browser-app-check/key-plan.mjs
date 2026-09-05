@@ -43,6 +43,7 @@ import { readAndValidateBrowserAppCheckKeyPlan } from './validate-key-plan.mjs';
 
 const PLAN_CONFIRMATION = 'MIAKAPP_STAGING_BROWSER_APP_CHECK_KEY_PLAN_CONFIRMATION';
 const EXACT_TARGET = `${PROJECT_ID}:${HOSTING_DOMAIN}`;
+export const KEY_PREREQUISITE_CONSUMED = true;
 process.umask(0o077);
 
 async function observeBaseline(session) {
@@ -163,8 +164,15 @@ async function main() {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  main().catch((error) => {
-    console.error(error instanceof Error ? error.message : 'Browser App Check key planning failed');
+  if (KEY_PREREQUISITE_CONSUMED) {
+    console.error(
+      'The browser App Check score-key prerequisite has already converged; this planner is permanently retired.',
+    );
     process.exitCode = 1;
-  });
+  } else {
+    main().catch((error) => {
+      console.error(error instanceof Error ? error.message : 'Browser App Check key planning failed');
+      process.exitCode = 1;
+    });
+  }
 }
