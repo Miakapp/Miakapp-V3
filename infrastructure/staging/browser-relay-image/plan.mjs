@@ -14,6 +14,7 @@ import {
   writePrivateFile,
 } from './contract.mjs';
 import { validateRelayImageRoot } from './guard.mjs';
+import { rejectRelayImageV1Replay } from './result.mjs';
 import {
   observeRelayImageInventory,
   validateRelayImageBaseline,
@@ -30,6 +31,7 @@ const PLAN_CONFIRMATION = 'MIAKAPP_STAGING_RELAY_IMAGE_PLAN_CONFIRMATION';
 process.umask(0o077);
 
 async function main() {
+  rejectRelayImageV1Replay();
   const profile = validateRelayImageProfile();
   if (process.argv.length !== 4 || process.argv[2] === undefined || process.argv[3] === undefined) {
     throw new Error(`Usage: ${PLAN_CONFIRMATION}=${profile.project.project_id} ./plan.sh <private-parent> <Miakapp-Server-root>`);
