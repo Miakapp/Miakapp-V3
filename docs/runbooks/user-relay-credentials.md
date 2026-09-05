@@ -165,10 +165,16 @@ or a Function request. A later exact plan selected version 2 while retaining
 version 1 and converged to historical revision `control-plane-00008-saz`, again
 without changing source, build, IAM, internal-only ingress or scale and without
 making a Function request. The guarded browser-relay rehearsal entry then
-reselected version 1 on current revision `control-plane-00009-kur` while both
+reselected version 1 on historical revision `control-plane-00009-kur` while both
 keys remained published, preserving the same boundary and making no Function
 request. Retiring version 1 remains a separate gate after the complete lease
 bound.
+
+The later source-only deployment produced current private revision
+`control-plane-00010-vop`. It adds a staging-only edge profile whose exact
+direct `run.app` issuer and Hosting `web.app` origin must be selected together;
+the canonical pair remains active, ingress remains internal-only and no live
+request was made.
 
 The bounded acceptance implementation, with zero persistent delta to the
 control-plane workload, IAM and topology, lives under
@@ -197,7 +203,7 @@ manual investigation.
 The current staging inventory contains neither a browser runner nor two relay
 endpoints. The separate, digest-pinned
 [`browser-relay/plan.json`](../../infrastructure/staging/browser-relay/plan.json)
-now rebases the private `control-plane-00009-kur`, two-key/version-1-entry and completed browser
+now rebases the private `control-plane-00010-vop`, two-key/version-1-entry and completed browser
 App Check state and reviews the required topology, cost and rollback shape:
 
 - two canonical TLS relay endpoints running the pinned merged Miakapp-Server;
