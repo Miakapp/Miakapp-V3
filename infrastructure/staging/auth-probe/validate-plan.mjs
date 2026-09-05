@@ -40,6 +40,7 @@ const TERRAFORM_PROVIDER = 'terraform.io/builtin/terraform';
 const MAXIMUM_PLAN_BYTES = 16 * 1024 * 1024;
 const REVISION = /^[0-9a-z][0-9a-z-]{0,62}$/u;
 const TERRAFORM_DATA_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
+const VERIFIER_SERVICE_RESOURCE = `projects/${PROJECT_ID}/locations/${REGION}/services/${VERIFIER_SERVICE_NAME}`;
 const PREVIOUS_WORKLOAD_SOURCE_SHA256 = '86f4818dfcb4021e5578638d6fb1e9b7da31ea245528cbdc8573dabecdfca358';
 const PREVIOUS_WORKLOAD_COMMIT = '60322c69c92b8ccf5f3d1bc87ba264a00e5dca05';
 const PREVIOUS_WORKFLOW_SOURCE_SHA256 = '525b97d18a2848c1d852b9d117cb20cf464bbc1d7baa85b2d44d457487cd922c';
@@ -434,7 +435,9 @@ function validateSignerBinding(value, address) {
 function validateVerifierInvoker(value, address) {
   exact(value.project, PROJECT_ID, `${address}.project`);
   exact(value.location, REGION, `${address}.location`);
-  exact(value.name, VERIFIER_SERVICE_NAME, `${address}.name`);
+  if (![VERIFIER_SERVICE_NAME, VERIFIER_SERVICE_RESOURCE].includes(value.name)) {
+    reject(`${address}.name does not match the reviewed value`);
+  }
   exact(value.role, 'roles/run.servicesInvoker', `${address}.role`);
   exact(value.member, `serviceAccount:${PROBE_ACCOUNT}`, `${address}.member`);
   exact(value.condition, expiryCondition(

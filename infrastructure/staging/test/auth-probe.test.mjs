@@ -86,6 +86,7 @@ const WORKFLOW_REVISION = '000001-abc';
 const PREVIOUS_WORKLOAD_SOURCE_SHA256 = '86f4818dfcb4021e5578638d6fb1e9b7da31ea245528cbdc8573dabecdfca358';
 const PREVIOUS_WORKLOAD_COMMIT = '60322c69c92b8ccf5f3d1bc87ba264a00e5dca05';
 const PREVIOUS_WORKFLOW_SOURCE_SHA256 = '525b97d18a2848c1d852b9d117cb20cf464bbc1d7baa85b2d44d457487cd922c';
+const VERIFIER_SERVICE_RESOURCE = `projects/${PROJECT_ID}/locations/${REGION}/services/${VERIFIER_SERVICE_NAME}`;
 const PREVIOUS_CUSTOM_ROLE_PERMISSIONS = [
   'firebase.clients.get',
   'firebaseappcheck.tokens.mint',
@@ -957,6 +958,21 @@ test('routes every non-current state-only guard through retirement recovery', ()
   assert.match(retirementDrivers, /requiresAuthProbeRetirementRecovery\(recovery\)/u);
 });
 
+test('accepts only the exact canonical Cloud Run IAM target in imported state', () => {
+  const state = JSON.parse(authProbeState([
+    'google_cloud_run_v2_service_iam_member.auth_probe_verifier_invoker[0]',
+  ]).toString('utf8'));
+  const invoker = state.resources[0].instances[0].attributes;
+  invoker.name = VERIFIER_SERVICE_RESOURCE;
+  assert.doesNotThrow(() => inspectAuthProbeState(Buffer.from(JSON.stringify(state))));
+
+  invoker.name = `projects/${PROJECT_ID}/locations/${REGION}/services/unreviewed`;
+  assert.throws(
+    () => inspectAuthProbeState(Buffer.from(JSON.stringify(state))),
+    /name does not match/u,
+  );
+});
+
 test('authorizes exact no-temporary retirement finalization and evidence recovery', () => {
   const state = inspectAuthProbeState(authProbeState(AUTH_PROBE_RETIRED_STATE_ADDRESSES));
   for (const stages of [
@@ -1376,6 +1392,21 @@ test('validates the exact arm and retirement plans and rejects privilege drift',
   assert.equal(retired.delete, 6);
   assert.equal(retired.update, 3);
   assert.equal(retired.workflow_revision, WORKFLOW_REVISION);
+  const canonicalInvokerRetirement = syntheticPlan('retire');
+  canonicalInvokerRetirement.resource_changes.find(({ address }) => (
+    address === 'google_cloud_run_v2_service_iam_member.auth_probe_verifier_invoker[0]'
+  )).change.before.name = VERIFIER_SERVICE_RESOURCE;
+  assert.doesNotThrow(() => validateAuthProbePlanAgainstPolicy(
+    canonicalInvokerRetirement,
+    'retire',
+  ));
+  canonicalInvokerRetirement.resource_changes.find(({ address }) => (
+    address === 'google_cloud_run_v2_service_iam_member.auth_probe_verifier_invoker[0]'
+  )).change.before.name = `projects/${PROJECT_ID}/locations/${REGION}/services/unreviewed`;
+  assert.throws(
+    () => validateAuthProbePlanAgainstPolicy(canonicalInvokerRetirement, 'retire'),
+    /name does not match/u,
+  );
   const finalized = validateAuthProbePlanAgainstPolicy(syntheticPlan('retire-finalize'), 'retire-finalize');
   assert.equal(finalized.delete, 0);
   assert.equal(finalized.update, 3);
