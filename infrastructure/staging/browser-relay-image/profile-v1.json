@@ -1,6 +1,6 @@
 {
-  "schema": "miakapp.staging-browser-relay-image-profile/2",
-  "state": "recovery_reviewed_not_built",
+  "schema": "miakapp.staging-browser-relay-image-profile/1",
+  "state": "reviewed_not_built",
   "project": {
     "project_id": "miakapp-v4-staging",
     "project_number": "1072737219170",
@@ -13,9 +13,7 @@
   },
   "contracts": {
     "browser_relay_plan_sha256": "4a5c13999d9f7f328b1b8b867bbd86d4c5e80cb980d9eb1324028ea0e5785343",
-    "relay_services_profile_sha256": "bc9b231cc9724f19a26ef5c3bbd6da6a69ec79b00cb976e77c73015d5db10db7",
-    "v1_profile_sha256": "2afcfc7b5f0b9fb524a59bd81cd5dcd98f73bf58c2619640b6a42bbbd0958981",
-    "v1_result_sha256": "c24b5cc5fe3a48a6a35365e6c404734aaf657832af8ce16c7a67c1c8e94ec1a9"
+    "relay_services_profile_sha256": "bc9b231cc9724f19a26ef5c3bbd6da6a69ec79b00cb976e77c73015d5db10db7"
   },
   "source": {
     "repository": "https://github.com/Miakapp/Miakapp-Server.git",
@@ -36,8 +34,7 @@
     "go_mod_sha256": "75bfa0ca43e62a586dabce8f721ab3aa5195e0fb440b61288b60a5df5a6fae05",
     "go_sum_sha256": "f887efa614262d18e8b577769146d783b76c9f557af6cae3adc2450bb42f51a8",
     "source_bucket": "miakapp-v4-staging-function-source-1072737219170",
-    "source_object": "relay-build-sources/93fd720736453e3555be625bbb993194f48a5388821169c939674b04088f158e.tar.gz",
-    "object_generation": "1788648564283151"
+    "source_object": "relay-build-sources/93fd720736453e3555be625bbb993194f48a5388821169c939674b04088f158e.tar.gz"
   },
   "build": {
     "service_account": "projects/miakapp-v4-staging/serviceAccounts/miakapp-control-build@miakapp-v4-staging.iam.gserviceaccount.com",
@@ -49,7 +46,7 @@
     "source_provenance_hash": "SHA256",
     "requested_verify_option": "VERIFIED",
     "maximum_builds": 1,
-    "build_tag": "miakapp-relay-image-v2",
+    "build_tag": "miakapp-relay-image-v1",
     "smoke_test": {
       "maximum_attempts": 20,
       "request_timeout_seconds": 2,
@@ -61,8 +58,8 @@
   "image": {
     "repository": "europe-west9-docker.pkg.dev/miakapp-v4-staging/miakapp-control-plane",
     "name": "miakapp-server",
-    "tag": "source-df10674e034f30eec80760f5ec94bc108cff026f-verified-v2",
-    "tag_reference": "europe-west9-docker.pkg.dev/miakapp-v4-staging/miakapp-control-plane/miakapp-server:source-df10674e034f30eec80760f5ec94bc108cff026f-verified-v2",
+    "tag": "source-df10674e034f30eec80760f5ec94bc108cff026f",
+    "tag_reference": "europe-west9-docker.pkg.dev/miakapp-v4-staging/miakapp-control-plane/miakapp-server:source-df10674e034f30eec80760f5ec94bc108cff026f",
     "digest_required_for_deployment": true,
     "expected_os": "linux",
     "expected_architecture": "amd64",
@@ -85,37 +82,14 @@
   },
   "operation": {
     "claim_bucket": "miakapp-v4-staging-tfstate-1072737219170",
-    "claim_object": "operations/browser-relay-image-build-v2.json",
+    "claim_object": "operations/browser-relay-image-build-v1.json",
     "plan_ttl_seconds": 7200,
-    "source_upload_authorized": false,
     "retry_authorized": false,
     "deletion_authorized": false,
     "public_ingress_authorized": false,
     "relay_service_creation_authorized": false,
     "persistent_credentials_authorized": false,
     "container_scanning_authorized": false
-  },
-  "prerequisites": {
-    "container_analysis_api": "containeranalysis.googleapis.com",
-    "container_analysis_api_enabled": true,
-    "container_scanning_api": "containerscanning.googleapis.com",
-    "container_scanning_api_enabled": false,
-    "foundation_state_generation": "1788650355101579",
-    "foundation_state_sha256": "d02467774f19e3bbd0a596113d843e4dac99b14558c3655cd370104d3e04c32d",
-    "foundation_state_serial": 7,
-    "foundation_managed_resources": 34
-  },
-  "recovery": {
-    "v1_claim_object": "operations/browser-relay-image-build-v1.json",
-    "v1_claim_generation": "1788648548612853",
-    "v1_claim_sha256": "323ef6f667d38c44b47ae1e674db6ed770f287a43238b99442360930106514cf",
-    "v1_build_id": "171b3a0b-8c4e-4d3c-888f-aaba6504b3f3",
-    "v1_build_status": "FAILURE",
-    "v1_image_digest": "sha256:fb506072777eb8c59b117c36e8333f2ec7389ecc36ba14e937ba5b0519f1a535",
-    "source_reuse_required": true,
-    "new_claim_required": true,
-    "new_build_tag_required": true,
-    "new_image_tag_required": true
   },
   "cost": {
     "currency": "EUR",

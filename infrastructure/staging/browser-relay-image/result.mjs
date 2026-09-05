@@ -4,17 +4,19 @@ import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 
 import {
-  RELAY_IMAGE_PROFILE_SHA256,
   canonicalJson,
   sha256,
-  validateRelayImageProfile,
 } from './contract.mjs';
 
+export const RELAY_IMAGE_V1_PROFILE_PATH = 'browser-relay-image/profile-v1.json';
+export const RELAY_IMAGE_V1_PROFILE_SHA256 =
+  '2afcfc7b5f0b9fb524a59bd81cd5dcd98f73bf58c2619640b6a42bbbd0958981';
 export const RELAY_IMAGE_V1_RESULT_PATH = 'browser-relay-image/result-v1.json';
 export const RELAY_IMAGE_V1_RESULT_SHA256 =
   'c24b5cc5fe3a48a6a35365e6c404734aaf657832af8ce16c7a67c1c8e94ec1a9';
 
 const root = dirname(fileURLToPath(import.meta.url));
+const profilePath = join(root, 'profile-v1.json');
 const resultPath = join(root, 'result-v1.json');
 const SHA256 = /^[0-9a-f]{64}$/u;
 const SHA256_DIGEST = /^sha256:[0-9a-f]{64}$/u;
@@ -43,8 +45,35 @@ function exactKeys(value, keys, description) {
   return value;
 }
 
+export function validateRelayImageV1Profile(path = profilePath) {
+  const entry = lstatSync(path);
+  if (!entry.isFile() || entry.isSymbolicLink() || entry.size === 0
+    || entry.size > MAXIMUM_RESULT_BYTES) {
+    reject('Relay image v1 profile must be a bounded regular file');
+  }
+  const bytes = readFileSync(path);
+  if (sha256(bytes) !== RELAY_IMAGE_V1_PROFILE_SHA256) {
+    reject('Relay image v1 profile digest has drifted');
+  }
+  let profile;
+  try {
+    profile = JSON.parse(bytes.toString('utf8'));
+  } catch {
+    return reject('Relay image v1 profile is not valid JSON');
+  }
+  if (canonicalJson(profile) !== bytes.toString('utf8')
+    || profile.schema !== 'miakapp.staging-browser-relay-image-profile/1'
+    || profile.state !== 'reviewed_not_built'
+    || profile.project?.project_id !== 'miakapp-v4-staging'
+    || profile.operation?.claim_object !== 'operations/browser-relay-image-build-v1.json'
+    || profile.build?.build_tag !== 'miakapp-relay-image-v1') {
+    reject('Relay image v1 profile does not match the consumed build boundary');
+  }
+  return Object.freeze(profile);
+}
+
 export function validateRelayImageV1Result(path = resultPath) {
-  validateRelayImageProfile();
+  validateRelayImageV1Profile();
   const entry = lstatSync(path);
   if (!entry.isFile() || entry.isSymbolicLink() || entry.size === 0
     || entry.size > MAXIMUM_RESULT_BYTES) {
@@ -115,7 +144,7 @@ export function validateRelayImageV1Result(path = resultPath) {
     || result.region !== 'europe-west9'
     || !TIMESTAMP.test(result.observed_at ?? '')
     || result.repository_commit !== '24448bc085504d44d710120fd8162c2dc2cb30b8'
-    || result.profile_sha256 !== RELAY_IMAGE_PROFILE_SHA256
+    || result.profile_sha256 !== RELAY_IMAGE_V1_PROFILE_SHA256
     || !SHA256.test(result.metadata_sha256 ?? '')
     || source.repository !== 'https://github.com/Miakapp/Miakapp-Server.git'
     || source.commit !== 'df10674e034f30eec80760f5ec94bc108cff026f'

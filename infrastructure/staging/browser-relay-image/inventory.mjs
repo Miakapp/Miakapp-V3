@@ -14,6 +14,11 @@ const MAXIMUM_RESPONSE_BYTES = 8 * 1024 * 1024;
 const MAXIMUM_OBJECT_BYTES = 1024 * 1024;
 const GENERATION = /^[1-9][0-9]*$/u;
 const BUILD_ID = /^[0-9a-f-]{16,64}$/u;
+const SHA256_DIGEST = /^sha256:[0-9a-f]{64}$/u;
+const MANIFEST_TYPES = Object.freeze([
+  'application/vnd.docker.distribution.manifest.v2+json',
+  'application/vnd.oci.image.manifest.v1+json',
+]);
 
 function reject(message) {
   throw new Error(message);
@@ -203,14 +208,60 @@ async function observeRelayPackage(session, fetchImplementation) {
   return Object.freeze({ state: 'present', name });
 }
 
-async function observeMatchingBuilds(session, fetchImplementation) {
+async function observeRelayImageTag(session, fetchImplementation) {
+  const profile = validateRelayImageProfile();
+  const imagePath = `${profile.project.project_id}/miakapp-control-plane/${profile.image.name}`;
+  const url = `https://${profile.project.region}-docker.pkg.dev/v2/${imagePath}`
+    + `/manifests/${profile.image.tag}`;
+  const response = await googleRelayImageRequest(url, session.accessToken, {
+    accept: MANIFEST_TYPES.join(', '),
+    acceptedStatuses: [200, 404],
+    description: 'Relay image v2 tag inventory',
+    fetchImplementation,
+    maximumResponseBytes: MAXIMUM_OBJECT_BYTES,
+  });
+  if (response.status === 404) {
+    return Object.freeze({ state: 'absent', tag_reference: profile.image.tag_reference });
+  }
+  const digest = response.headers?.get?.('docker-content-digest')?.split(';')[0].trim();
+  const contentType = response.headers?.get?.('content-type')?.split(';')[0].trim();
+  if (!SHA256_DIGEST.test(digest ?? '') || !MANIFEST_TYPES.includes(contentType ?? '')
+    || sha256(response.bytes) !== digest.slice('sha256:'.length)) {
+    reject('Relay image v2 tag inventory is malformed');
+  }
+  return Object.freeze({
+    state: 'present',
+    tag_reference: profile.image.tag_reference,
+    digest,
+  });
+}
+
+async function observeServiceState(session, service, fetchImplementation) {
+  const profile = validateRelayImageProfile();
+  const name = `projects/${profile.project.project_number}/services/${service}`;
+  const { value } = await jsonRequest(
+    `https://serviceusage.googleapis.com/v1/${name}`,
+    session,
+    {
+      description: `Relay image prerequisite ${service}`,
+      fetchImplementation,
+    },
+  );
+  if (!plainObject(value) || value.name !== name || value.config?.name !== service
+    || !['ENABLED', 'DISABLED'].includes(value.state)) {
+    reject(`Relay image prerequisite ${service} inventory is malformed`);
+  }
+  return Object.freeze({ service, state: value.state });
+}
+
+async function observeMatchingBuilds(session, buildTag, fetchImplementation) {
   const profile = validateRelayImageProfile();
   const url = new URL(
     `https://cloudbuild.googleapis.com/v1/projects/${profile.project.project_id}`
       + `/locations/${profile.project.region}/builds`,
   );
   url.searchParams.set('pageSize', '100');
-  url.searchParams.set('filter', `tags=${profile.build.build_tag}`);
+  url.searchParams.set('filter', `tags=${buildTag}`);
   const { value } = await jsonRequest(url, session, {
     description: 'Relay image Cloud Build inventory',
     fetchImplementation,
@@ -222,7 +273,7 @@ async function observeMatchingBuilds(session, fetchImplementation) {
   const builds = (value.builds ?? []).map((build) => {
     if (!plainObject(build) || !BUILD_ID.test(build.id ?? '')
       || build.projectId !== profile.project.project_id
-      || !Array.isArray(build.tags) || !build.tags.includes(profile.build.build_tag)
+      || !Array.isArray(build.tags) || !build.tags.includes(buildTag)
       || typeof build.status !== 'string') {
       reject('Relay image Cloud Build inventory contains a malformed build');
     }
@@ -239,6 +290,8 @@ export async function observeRelayImageInventory(session, options = {}) {
   );
   const fetchImplementation = options.fetchImplementation ?? globalThis.fetch;
   const workloadObserver = options.observeWorkload ?? observeDeployedWorkload;
+  const objectObserver = options.observeObject ?? observeRelayImageObject;
+  if (typeof objectObserver !== 'function') reject('Relay image object observer is invalid');
   const workload = workloadObserver({
     repositoryRoot,
     repositoryCommit: relayProfile.pins.deployed_control_plane_commit,
@@ -246,62 +299,124 @@ export async function observeRelayImageInventory(session, options = {}) {
     observedAt: '1970-01-01T00:00:00.000Z',
     ...(options.spawn === undefined ? {} : { spawn: options.spawn }),
   });
-  const [cloudRunServices, relayPackage, sourceObject, operationClaim, matchingBuilds] =
+  const [
+    cloudRunServices,
+    relayPackage,
+    imageTag,
+    sourceObject,
+    priorOperationClaim,
+    operationClaim,
+    priorMatchingBuilds,
+    matchingBuilds,
+    containerAnalysisApi,
+    containerScanningApi,
+  ] =
     await Promise.all([
       observeCloudRunServices(session, fetchImplementation),
       observeRelayPackage(session, fetchImplementation),
-      observeRelayImageObject(
+      observeRelayImageTag(session, fetchImplementation),
+      objectObserver(
         session,
         profile.source.source_bucket,
         profile.source.source_object,
         fetchImplementation,
       ),
-      observeRelayImageObject(
+      objectObserver(
+        session,
+        profile.operation.claim_bucket,
+        profile.recovery.v1_claim_object,
+        fetchImplementation,
+      ),
+      objectObserver(
         session,
         profile.operation.claim_bucket,
         profile.operation.claim_object,
         fetchImplementation,
       ),
-      observeMatchingBuilds(session, fetchImplementation),
+      observeMatchingBuilds(session, 'miakapp-relay-image-v1', fetchImplementation),
+      observeMatchingBuilds(session, profile.build.build_tag, fetchImplementation),
+      observeServiceState(
+        session,
+        profile.prerequisites.container_analysis_api,
+        fetchImplementation,
+      ),
+      observeServiceState(
+        session,
+        profile.prerequisites.container_scanning_api,
+        fetchImplementation,
+      ),
     ]);
   return Object.freeze({
-    schema: 'miakapp.staging-browser-relay-image-inventory/1',
+    schema: 'miakapp.staging-browser-relay-image-inventory/2',
     project_id: profile.project.project_id,
     project_number: profile.project.project_number,
     region: profile.project.region,
     deployed_workload: workload,
     cloud_run_services: cloudRunServices,
     relay_package: relayPackage,
+    image_tag: imageTag,
     source_object: sourceObject,
+    prior_operation_claim: priorOperationClaim,
     operation_claim: operationClaim,
+    prior_matching_builds: priorMatchingBuilds,
     matching_builds: matchingBuilds,
+    container_analysis_api: containerAnalysisApi,
+    container_scanning_api: containerScanningApi,
   });
 }
 
 export function validateRelayImageBaseline(value) {
   const profile = validateRelayImageProfile();
   if (!plainObject(value)
-    || value.schema !== 'miakapp.staging-browser-relay-image-inventory/1'
+    || value.schema !== 'miakapp.staging-browser-relay-image-inventory/2'
     || value.project_id !== profile.project.project_id
     || value.project_number !== profile.project.project_number
     || value.region !== profile.project.region
     || !plainObject(value.deployed_workload)
     || !isDeepStrictEqual(value.cloud_run_services, ['control-plane'])
     || !isDeepStrictEqual(value.relay_package, {
-      state: 'absent',
+      state: 'present',
       name: `projects/${profile.project.project_id}/locations/${profile.project.region}`
         + `/repositories/miakapp-control-plane/packages/${profile.image.name}`,
     })
-    || !isDeepStrictEqual(value.source_object, absentObject(
-      profile.source.source_bucket,
-      profile.source.source_object,
-    ))
+    || !isDeepStrictEqual(value.image_tag, {
+      state: 'absent',
+      tag_reference: profile.image.tag_reference,
+    })
+    || !isDeepStrictEqual(value.source_object, {
+      state: 'present',
+      bucket: profile.source.source_bucket,
+      object: profile.source.source_object,
+      generation: profile.source.object_generation,
+      size_bytes: profile.source.archive_bytes,
+      sha256: profile.source.archive_sha256,
+    })
+    || !isDeepStrictEqual(value.prior_operation_claim, {
+      state: 'present',
+      bucket: profile.operation.claim_bucket,
+      object: profile.recovery.v1_claim_object,
+      generation: profile.recovery.v1_claim_generation,
+      size_bytes: 1030,
+      sha256: profile.recovery.v1_claim_sha256,
+    })
     || !isDeepStrictEqual(value.operation_claim, absentObject(
       profile.operation.claim_bucket,
       profile.operation.claim_object,
     ))
+    || !isDeepStrictEqual(value.prior_matching_builds, [{
+      id: profile.recovery.v1_build_id,
+      status: profile.recovery.v1_build_status,
+    }])
+    || !isDeepStrictEqual(value.container_analysis_api, {
+      service: profile.prerequisites.container_analysis_api,
+      state: 'ENABLED',
+    })
+    || !isDeepStrictEqual(value.container_scanning_api, {
+      service: profile.prerequisites.container_scanning_api,
+      state: 'DISABLED',
+    })
     || !isDeepStrictEqual(value.matching_builds, [])) {
-    reject('Relay image baseline differs from the reviewed private empty state');
+    reject('Relay image baseline differs from the reviewed v2 recovery state');
   }
   return Object.freeze(value);
 }
@@ -310,6 +425,23 @@ export function sameRelayImageBaseline(left, right) {
   validateRelayImageBaseline(left);
   validateRelayImageBaseline(right);
   return isDeepStrictEqual(left, right);
+}
+
+export function relayImageSourceReceipt(value) {
+  const profile = validateRelayImageProfile();
+  const baseline = validateRelayImageBaseline(value);
+  return Object.freeze({
+    schema: 'miakapp.staging-browser-relay-image-source-receipt/2',
+    bucket: baseline.source_object.bucket,
+    object: baseline.source_object.object,
+    generation: baseline.source_object.generation,
+    size_bytes: baseline.source_object.size_bytes,
+    sha256: baseline.source_object.sha256,
+    source_reused: true,
+    upload_authorized: false,
+    deletion_authorized: false,
+    object_generation: profile.source.object_generation,
+  });
 }
 
 function validateExpectedObject(actual, expected, description) {
@@ -333,10 +465,6 @@ export function normalizePreparedRelayImageInventory(inventory, expected = {}) {
   }
   if (expected.source !== undefined) {
     validateExpectedObject(inventory.source_object, expected.source, 'Relay image source object');
-    normalized.source_object = absentObject(
-      profile.source.source_bucket,
-      profile.source.source_object,
-    );
   }
   return Object.freeze(normalized);
 }
@@ -354,7 +482,12 @@ export function validateFinalRelayImageInventory(inventory, baseline, expected) 
     || !isDeepStrictEqual(inventory.matching_builds, [{
       id: expected.build.build_id,
       status: 'SUCCESS',
-    }])) {
+    }])
+    || !isDeepStrictEqual(inventory.image_tag, {
+      state: 'present',
+      tag_reference: profile.image.tag_reference,
+      digest: expected.build.image_digest,
+    })) {
     reject('Final relay image package or build inventory differs from the unique operation');
   }
   const normalized = structuredClone(normalizePreparedRelayImageInventory(inventory, {
@@ -362,6 +495,7 @@ export function validateFinalRelayImageInventory(inventory, baseline, expected) 
     source: expected.source,
   }));
   normalized.relay_package = structuredClone(baseline.relay_package);
+  normalized.image_tag = structuredClone(baseline.image_tag);
   normalized.matching_builds = [];
   if (!sameRelayImageBaseline(normalized, baseline)) {
     reject('Unrelated staging state changed during the relay image build');

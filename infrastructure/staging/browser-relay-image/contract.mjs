@@ -34,7 +34,7 @@ import {
 } from '../browser-relay-services/contract.mjs';
 
 export const RELAY_IMAGE_PROFILE_SHA256 =
-  '2afcfc7b5f0b9fb524a59bd81cd5dcd98f73bf58c2619640b6a42bbbd0958981';
+  '6ab86de257a4e85d51a47d528240b3862a79120d1383bab6a9092011abd3f76b';
 export const RELAY_IMAGE_PROFILE_PATH = 'browser-relay-image/profile.json';
 export const RELAY_IMAGE_PLAN_TTL_MILLISECONDS = 2 * 60 * 60 * 1_000;
 
@@ -164,30 +164,61 @@ export function validateRelayImageProfile(path = profilePath) {
   }
   rejectPrivateMaterial(profile);
   if (!isDeepStrictEqual(profile, expectedProfile)
-    || profile.schema !== 'miakapp.staging-browser-relay-image-profile/1'
-    || profile.state !== 'reviewed_not_built'
+    || profile.schema !== 'miakapp.staging-browser-relay-image-profile/2'
+    || profile.state !== 'recovery_reviewed_not_built'
     || profile.project?.project_id !== 'miakapp-v4-staging'
     || profile.project?.project_number !== '1072737219170'
     || profile.project?.region !== 'europe-west9'
     || profile.contracts?.browser_relay_plan_sha256 !== BROWSER_RELAY_PLAN_SHA256
     || profile.contracts?.relay_services_profile_sha256 !== RELAY_SERVICES_PROFILE_SHA256
+    || profile.contracts?.v1_profile_sha256
+      !== '2afcfc7b5f0b9fb524a59bd81cd5dcd98f73bf58c2619640b6a42bbbd0958981'
+    || profile.contracts?.v1_result_sha256
+      !== 'c24b5cc5fe3a48a6a35365e6c404734aaf657832af8ce16c7a67c1c8e94ec1a9'
     || !COMMIT.test(profile.source?.commit ?? '')
     || !TREE.test(profile.source?.tree ?? '')
     || !SHA256.test(profile.source?.archive_sha256 ?? '')
     || profile.source?.archive_bytes !== 53098
+    || profile.source?.object_generation !== '1788648564283151'
     || !profile.build?.builder_image?.endsWith(
       '@sha256:3d00b6c1a9b862621c30fc74d4f2abfc62bcbdee631ed3febd31e7edbdf6252c',
     )
     || profile.build?.maximum_builds !== 1
     || profile.build?.requested_verify_option !== 'VERIFIED'
+    || profile.build?.build_tag !== 'miakapp-relay-image-v2'
+    || profile.image?.tag
+      !== 'source-df10674e034f30eec80760f5ec94bc108cff026f-verified-v2'
+    || profile.operation?.claim_object !== 'operations/browser-relay-image-build-v2.json'
     || profile.image?.digest_required_for_deployment !== true
     || profile.image?.maximum_compressed_bytes !== 32 * 1024 * 1024
     || profile.operation?.retry_authorized !== false
+    || profile.operation?.source_upload_authorized !== false
     || profile.operation?.deletion_authorized !== false
     || profile.operation?.public_ingress_authorized !== false
     || profile.operation?.relay_service_creation_authorized !== false
     || profile.operation?.persistent_credentials_authorized !== false
     || profile.operation?.container_scanning_authorized !== false
+    || profile.prerequisites?.container_analysis_api !== 'containeranalysis.googleapis.com'
+    || profile.prerequisites?.container_analysis_api_enabled !== true
+    || profile.prerequisites?.container_scanning_api !== 'containerscanning.googleapis.com'
+    || profile.prerequisites?.container_scanning_api_enabled !== false
+    || profile.prerequisites?.foundation_state_generation !== '1788650355101579'
+    || profile.prerequisites?.foundation_state_sha256
+      !== 'd02467774f19e3bbd0a596113d843e4dac99b14558c3655cd370104d3e04c32d'
+    || profile.prerequisites?.foundation_state_serial !== 7
+    || profile.prerequisites?.foundation_managed_resources !== 34
+    || profile.recovery?.v1_claim_object !== 'operations/browser-relay-image-build-v1.json'
+    || profile.recovery?.v1_claim_generation !== '1788648548612853'
+    || profile.recovery?.v1_claim_sha256
+      !== '323ef6f667d38c44b47ae1e674db6ed770f287a43238b99442360930106514cf'
+    || profile.recovery?.v1_build_id !== '171b3a0b-8c4e-4d3c-888f-aaba6504b3f3'
+    || profile.recovery?.v1_build_status !== 'FAILURE'
+    || profile.recovery?.v1_image_digest
+      !== 'sha256:fb506072777eb8c59b117c36e8333f2ec7389ecc36ba14e937ba5b0519f1a535'
+    || profile.recovery?.source_reuse_required !== true
+    || profile.recovery?.new_claim_required !== true
+    || profile.recovery?.new_build_tag_required !== true
+    || profile.recovery?.new_image_tag_required !== true
     || profile.cost?.maximum_incremental_eur !== 1
     || profile.cost?.stress_test !== false
     || profile.cost?.new_fixed_cost_services !== 0) {
@@ -373,10 +404,10 @@ export function buildRelayImageMetadata({
     reject('Relay image metadata inputs are invalid');
   }
   const created = canonicalTimestamp(createdAt, 'created_at');
-  const request = buildCloudBuildRequest('1');
+  const request = buildCloudBuildRequest(profile.source.object_generation);
   return Object.freeze({
-    schema: 'miakapp.staging-browser-relay-image-plan/1',
-    operation: 'build-private-browser-relay-image',
+    schema: 'miakapp.staging-browser-relay-image-plan/2',
+    operation: 'recover-private-browser-relay-image-verification',
     project_id: profile.project.project_id,
     project_number: profile.project.project_number,
     region: profile.project.region,
@@ -389,6 +420,12 @@ export function buildRelayImageMetadata({
     relay_source_tree: profile.source.tree,
     source_archive_sha256: profile.source.archive_sha256,
     source_archive_bytes: profile.source.archive_bytes,
+    source_object_generation: profile.source.object_generation,
+    v1_result_sha256: profile.contracts.v1_result_sha256,
+    foundation_state_generation: profile.prerequisites.foundation_state_generation,
+    container_analysis_api_enabled: true,
+    container_scanning_api_enabled: false,
+    source_upload_authorized: false,
     build_request_commitment_sha256: cloudBuildRequestCommitment(request),
     baseline_sha256: sha256(Buffer.from(canonicalJson(baseline), 'utf8')),
     baseline,
@@ -419,6 +456,12 @@ export function validateRelayImageMetadata(value, now = Date.now()) {
     'relay_source_tree',
     'source_archive_sha256',
     'source_archive_bytes',
+    'source_object_generation',
+    'v1_result_sha256',
+    'foundation_state_generation',
+    'container_analysis_api_enabled',
+    'container_scanning_api_enabled',
+    'source_upload_authorized',
     'build_request_commitment_sha256',
     'baseline_sha256',
     'baseline',
@@ -431,8 +474,8 @@ export function validateRelayImageMetadata(value, now = Date.now()) {
     'credential_material_committed',
   ], 'Relay image metadata');
   rejectPrivateMaterial(metadata, 'Relay image metadata');
-  if (metadata.schema !== 'miakapp.staging-browser-relay-image-plan/1'
-    || metadata.operation !== 'build-private-browser-relay-image'
+  if (metadata.schema !== 'miakapp.staging-browser-relay-image-plan/2'
+    || metadata.operation !== 'recover-private-browser-relay-image-verification'
     || metadata.project_id !== profile.project.project_id
     || metadata.project_number !== profile.project.project_number
     || metadata.region !== profile.project.region
@@ -443,8 +486,15 @@ export function validateRelayImageMetadata(value, now = Date.now()) {
     || metadata.relay_source_tree !== profile.source.tree
     || metadata.source_archive_sha256 !== profile.source.archive_sha256
     || metadata.source_archive_bytes !== profile.source.archive_bytes
+    || metadata.source_object_generation !== profile.source.object_generation
+    || metadata.v1_result_sha256 !== profile.contracts.v1_result_sha256
+    || metadata.foundation_state_generation
+      !== profile.prerequisites.foundation_state_generation
+    || metadata.container_analysis_api_enabled !== true
+    || metadata.container_scanning_api_enabled !== false
+    || metadata.source_upload_authorized !== false
     || metadata.build_request_commitment_sha256
-      !== cloudBuildRequestCommitment(buildCloudBuildRequest('1'))
+      !== cloudBuildRequestCommitment(buildCloudBuildRequest(profile.source.object_generation))
     || !SHA256.test(metadata.baseline_sha256)
     || !plainObject(metadata.baseline)
     || metadata.baseline_sha256
@@ -496,7 +546,7 @@ export function relayImageAuthorization(metadataBytes, repositoryCommit) {
     || !COMMIT.test(repositoryCommit)) {
     reject('Relay image authorization inputs are invalid');
   }
-  return `build-private-relay-image:${expectedProfile.project.project_id}:${sha256(metadataBytes)}:${repositoryCommit}`;
+  return `recover-private-relay-image:${expectedProfile.project.project_id}:${sha256(metadataBytes)}:${repositoryCommit}`;
 }
 
 export function validateRelayImageAuthorization(value, metadataBytes, repositoryCommit) {

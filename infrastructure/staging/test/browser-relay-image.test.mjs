@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
 import {
   chmodSync,
   copyFileSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -43,12 +43,15 @@ import {
   validateRelayImageRoot,
 } from '../browser-relay-image/guard.mjs';
 import {
+  RELAY_IMAGE_V1_PROFILE_SHA256,
   RELAY_IMAGE_V1_RESULT_SHA256,
+  validateRelayImageV1Profile,
   validateRelayImageV1Result,
 } from '../browser-relay-image/result.mjs';
 import {
   normalizePreparedRelayImageInventory,
   observeRelayImageInventory,
+  relayImageSourceReceipt,
   sameRelayImageBaseline,
   validateFinalRelayImageInventory,
   validateRelayImageBaseline,
@@ -59,15 +62,18 @@ const rootUrl = new URL('../browser-relay-image/', import.meta.url);
 const profile = validateRelayImageProfile(fileURLToPath(new URL('profile.json', rootUrl)));
 const session = Object.freeze({ accessToken: 'x'.repeat(40), email: 'operator@example.invalid' });
 const repositoryCommit = 'a'.repeat(40);
-const sourceGeneration = '123456789';
+const sourceGeneration = profile.source.object_generation;
 const sourceReceipt = Object.freeze({
-  schema: 'miakapp.staging-browser-relay-image-source-receipt/1',
+  schema: 'miakapp.staging-browser-relay-image-source-receipt/2',
   bucket: profile.source.source_bucket,
   object: profile.source.source_object,
   generation: sourceGeneration,
   size_bytes: profile.source.archive_bytes,
   sha256: profile.source.archive_sha256,
+  source_reused: true,
+  upload_authorized: false,
   deletion_authorized: false,
+  object_generation: sourceGeneration,
 });
 
 function temporaryDirectory(callback) {
@@ -92,7 +98,7 @@ function objectAbsence(bucket, object) {
 
 function baselineFixture() {
   return {
-    schema: 'miakapp.staging-browser-relay-image-inventory/1',
+    schema: 'miakapp.staging-browser-relay-image-inventory/2',
     project_id: profile.project.project_id,
     project_number: profile.project.project_number,
     region: profile.project.region,
@@ -102,13 +108,44 @@ function baselineFixture() {
     },
     cloud_run_services: ['control-plane'],
     relay_package: {
-      state: 'absent',
+      state: 'present',
       name: `projects/${profile.project.project_id}/locations/${profile.project.region}`
         + `/repositories/miakapp-control-plane/packages/${profile.image.name}`,
     },
-    source_object: objectAbsence(profile.source.source_bucket, profile.source.source_object),
+    image_tag: {
+      state: 'absent',
+      tag_reference: profile.image.tag_reference,
+    },
+    source_object: {
+      state: 'present',
+      bucket: profile.source.source_bucket,
+      object: profile.source.source_object,
+      generation: sourceGeneration,
+      size_bytes: profile.source.archive_bytes,
+      sha256: profile.source.archive_sha256,
+    },
+    prior_operation_claim: {
+      state: 'present',
+      bucket: profile.operation.claim_bucket,
+      object: profile.recovery.v1_claim_object,
+      generation: profile.recovery.v1_claim_generation,
+      size_bytes: 1030,
+      sha256: profile.recovery.v1_claim_sha256,
+    },
     operation_claim: objectAbsence(profile.operation.claim_bucket, profile.operation.claim_object),
+    prior_matching_builds: [{
+      id: profile.recovery.v1_build_id,
+      status: 'FAILURE',
+    }],
     matching_builds: [],
+    container_analysis_api: {
+      service: profile.prerequisites.container_analysis_api,
+      state: 'ENABLED',
+    },
+    container_scanning_api: {
+      service: profile.prerequisites.container_scanning_api,
+      state: 'DISABLED',
+    },
   };
 }
 
@@ -116,8 +153,8 @@ function metadataFixture(now = Date.now()) {
   const createdAt = new Date(now - 30_000).toISOString();
   const baseline = baselineFixture();
   return {
-    schema: 'miakapp.staging-browser-relay-image-plan/1',
-    operation: 'build-private-browser-relay-image',
+    schema: 'miakapp.staging-browser-relay-image-plan/2',
+    operation: 'recover-private-browser-relay-image-verification',
     project_id: profile.project.project_id,
     project_number: profile.project.project_number,
     region: profile.project.region,
@@ -130,7 +167,15 @@ function metadataFixture(now = Date.now()) {
     relay_source_tree: profile.source.tree,
     source_archive_sha256: profile.source.archive_sha256,
     source_archive_bytes: profile.source.archive_bytes,
-    build_request_commitment_sha256: cloudBuildRequestCommitment(buildCloudBuildRequest('1')),
+    source_object_generation: profile.source.object_generation,
+    v1_result_sha256: profile.contracts.v1_result_sha256,
+    foundation_state_generation: profile.prerequisites.foundation_state_generation,
+    container_analysis_api_enabled: true,
+    container_scanning_api_enabled: false,
+    source_upload_authorized: false,
+    build_request_commitment_sha256: cloudBuildRequestCommitment(
+      buildCloudBuildRequest(profile.source.object_generation),
+    ),
     baseline_sha256: sha256(Buffer.from(canonicalJson(baseline), 'utf8')),
     baseline,
     maximum_builds: 1,
@@ -191,7 +236,7 @@ function buildFixture() {
 
 function buildReceiptFixture(imageDigest = `sha256:${'b'.repeat(64)}`) {
   return {
-    schema: 'miakapp.staging-browser-relay-image-build-receipt/1',
+    schema: 'miakapp.staging-browser-relay-image-build-receipt/2',
     build_id: '12345678-1234-1234-1234-123456789abc',
     status: 'SUCCESS',
     source_generation: sourceGeneration,
@@ -208,10 +253,14 @@ function buildReceiptFixture(imageDigest = `sha256:${'b'.repeat(64)}`) {
 test('pins the exact source, verified build request and bounded smoke test', () => {
   assert.equal(
     RELAY_IMAGE_PROFILE_SHA256,
-    '2afcfc7b5f0b9fb524a59bd81cd5dcd98f73bf58c2619640b6a42bbbd0958981',
+    '6ab86de257a4e85d51a47d528240b3862a79120d1383bab6a9092011abd3f76b',
   );
   assert.equal(profile.source.commit, 'df10674e034f30eec80760f5ec94bc108cff026f');
   assert.equal(profile.source.archive_bytes, 53098);
+  assert.equal(profile.source.object_generation, '1788648564283151');
+  assert.equal(profile.operation.source_upload_authorized, false);
+  assert.equal(profile.prerequisites.container_analysis_api_enabled, true);
+  assert.equal(profile.prerequisites.container_scanning_api_enabled, false);
   const request = buildCloudBuildRequest(sourceGeneration);
   assert.equal(request.steps.length, 2);
   assert.equal(request.steps[0].name, profile.build.builder_image);
@@ -300,7 +349,8 @@ test('builds and creates one exact generation-zero operation claim', async () =>
   assert.equal(receipt.retry_authorized, false);
 });
 
-test('observes and validates only the empty private relay-image baseline', async () => {
+test('observes and validates only the exact v2 recovery baseline', async () => {
+  const expected = baselineFixture();
   const fetchImplementation = async (url) => {
     const parsed = new URL(url);
     if (parsed.hostname === 'run.googleapis.com') {
@@ -308,23 +358,84 @@ test('observes and validates only the empty private relay-image baseline', async
         name: `projects/${profile.project.project_id}/locations/${profile.project.region}/services/control-plane`,
       }] });
     }
-    if (parsed.hostname === 'artifactregistry.googleapis.com') return jsonResponse({ error: {} }, 404);
-    if (parsed.hostname === 'storage.googleapis.com') return jsonResponse({ error: {} }, 404);
-    if (parsed.hostname === 'cloudbuild.googleapis.com') return jsonResponse({});
+    if (parsed.hostname === 'artifactregistry.googleapis.com') {
+      return jsonResponse({ name: expected.relay_package.name });
+    }
+    if (parsed.hostname === `${profile.project.region}-docker.pkg.dev`) {
+      return jsonResponse({ errors: [{ code: 'MANIFEST_UNKNOWN' }] }, 404);
+    }
+    if (parsed.hostname === 'cloudbuild.googleapis.com') {
+      return parsed.searchParams.get('filter') === 'tags=miakapp-relay-image-v1'
+        ? jsonResponse({ builds: [{
+          id: profile.recovery.v1_build_id,
+          projectId: profile.project.project_id,
+          tags: ['miakapp-relay-image-v1'],
+          status: 'FAILURE',
+        }] })
+        : jsonResponse({});
+    }
+    if (parsed.hostname === 'serviceusage.googleapis.com') {
+      const service = parsed.pathname.split('/').at(-1);
+      return jsonResponse({
+        name: `projects/${profile.project.project_number}/services/${service}`,
+        config: { name: service },
+        state: service === profile.prerequisites.container_analysis_api
+          ? 'ENABLED'
+          : 'DISABLED',
+      });
+    }
     throw new Error(`Unexpected inventory URL ${url}`);
   };
   const inventory = await observeRelayImageInventory(session, {
     fetchImplementation,
-    observeWorkload: () => baselineFixture().deployed_workload,
+    observeWorkload: () => expected.deployed_workload,
+    observeObject: async (_session, _bucket, object) => {
+      if (object === profile.source.source_object) return expected.source_object;
+      if (object === profile.recovery.v1_claim_object) return expected.prior_operation_claim;
+      if (object === profile.operation.claim_object) return expected.operation_claim;
+      throw new Error(`Unexpected object ${object}`);
+    },
   });
   validateRelayImageBaseline(inventory);
-  assert.deepEqual(inventory, baselineFixture());
+  assert.deepEqual(inventory, expected);
   const drift = structuredClone(inventory);
   drift.cloud_run_services.push('miakapp-staging-relay-a');
-  assert.throws(() => validateRelayImageBaseline(drift), /empty state/u);
+  assert.throws(() => validateRelayImageBaseline(drift), /recovery state/u);
+  for (const mutate of [
+    (candidate) => { candidate.container_analysis_api.state = 'DISABLED'; },
+    (candidate) => { candidate.container_scanning_api.state = 'ENABLED'; },
+    (candidate) => { candidate.source_object.generation = '1'; },
+    (candidate) => {
+      candidate.image_tag = {
+        state: 'present',
+        tag_reference: profile.image.tag_reference,
+        digest: `sha256:${'d'.repeat(64)}`,
+      };
+    },
+    (candidate) => {
+      candidate.operation_claim = {
+        state: 'present',
+        bucket: profile.operation.claim_bucket,
+        object: profile.operation.claim_object,
+        generation: '1',
+        size_bytes: 1,
+        sha256: 'a'.repeat(64),
+      };
+    },
+    (candidate) => {
+      candidate.matching_builds = [{
+        id: '12345678-1234-1234-1234-123456789abc',
+        status: 'SUCCESS',
+      }];
+    },
+  ]) {
+    const candidate = structuredClone(inventory);
+    mutate(candidate);
+    assert.throws(() => validateRelayImageBaseline(candidate), /recovery state/u);
+  }
 });
 
-test('normalizes only exact claimed and uploaded objects and validates final uniqueness', () => {
+test('reuses the exact source and normalizes only the distinct v2 claim', () => {
   const baseline = baselineFixture();
   const claim = {
     bucket: profile.operation.claim_bucket,
@@ -335,9 +446,7 @@ test('normalizes only exact claimed and uploaded objects and validates final uni
   };
   const prepared = structuredClone(baseline);
   prepared.operation_claim = { state: 'present', ...claim };
-  prepared.source_object = { state: 'present', ...sourceReceipt };
-  delete prepared.source_object.schema;
-  delete prepared.source_object.deletion_authorized;
+  assert.deepEqual(relayImageSourceReceipt(baseline), sourceReceipt);
   assert.ok(sameRelayImageBaseline(
     normalizePreparedRelayImageInventory(prepared, { claim, source: sourceReceipt }),
     baseline,
@@ -348,12 +457,27 @@ test('normalizes only exact claimed and uploaded objects and validates final uni
     state: 'present',
     name: baseline.relay_package.name,
   };
+  finalInventory.image_tag = {
+    state: 'present',
+    tag_reference: profile.image.tag_reference,
+    digest: receipt.image_digest,
+  };
   finalInventory.matching_builds = [{ id: receipt.build_id, status: 'SUCCESS' }];
   validateFinalRelayImageInventory(finalInventory, baseline, {
     claim,
     source: sourceReceipt,
     build: receipt,
   });
+  const tagDrift = structuredClone(finalInventory);
+  tagDrift.image_tag.digest = `sha256:${'d'.repeat(64)}`;
+  assert.throws(
+    () => validateFinalRelayImageInventory(tagDrift, baseline, {
+      claim,
+      source: sourceReceipt,
+      build: receipt,
+    }),
+    /unique operation/u,
+  );
   finalInventory.matching_builds.push({ id: '87654321-1234-1234-1234-123456789abc', status: 'SUCCESS' });
   assert.throws(
     () => validateFinalRelayImageInventory(finalInventory, baseline, {
@@ -366,7 +490,7 @@ test('normalizes only exact claimed and uploaded objects and validates final uni
 });
 
 test('submits exactly the committed request and accepts one completed operation', async () => {
-  const expectedCommitment = cloudBuildRequestCommitment(buildCloudBuildRequest('1'));
+  const expectedCommitment = cloudBuildRequestCommitment(buildCloudBuildRequest(sourceGeneration));
   const operationName = `operations/build/${profile.project.project_id}/${profile.project.region}/test-operation`;
   let submissions = 0;
   const submitted = await submitRelayImageBuild(
@@ -409,6 +533,15 @@ test('submits exactly the committed request and accepts one completed operation'
     }),
     /commitment/u,
   );
+  await assert.rejects(
+    () => submitRelayImageBuild(
+      session,
+      { ...sourceReceipt, upload_authorized: true },
+      expectedCommitment,
+      async () => { throw new Error('must not submit'); },
+    ),
+    /source receipt is invalid/u,
+  );
 });
 
 test('requires exact source provenance, builder digests and successful smoke step', () => {
@@ -437,8 +570,13 @@ test('requires exact source provenance, builder digests and successful smoke ste
   );
 });
 
-test('pins the consumed v1 result and retires both mutation entrypoints', () => {
+test('pins the consumed v1 result separately from the v2 recovery', () => {
+  const v1Profile = validateRelayImageV1Profile();
   const result = validateRelayImageV1Result();
+  assert.equal(
+    RELAY_IMAGE_V1_PROFILE_SHA256,
+    '2afcfc7b5f0b9fb524a59bd81cd5dcd98f73bf58c2619640b6a42bbbd0958981',
+  );
   assert.equal(
     RELAY_IMAGE_V1_RESULT_SHA256,
     'c24b5cc5fe3a48a6a35365e6c404734aaf657832af8ce16c7a67c1c8e94ec1a9',
@@ -449,16 +587,12 @@ test('pins the consumed v1 result and retires both mutation entrypoints', () => 
   assert.equal(result.build.verified_provenance_created, false);
   assert.equal(result.image.deployment_authorized, false);
   assert.equal(result.prerequisites.container_analysis_api_enabled, false);
-  for (const script of ['plan.mjs', 'apply.mjs']) {
-    const execution = spawnSync(process.execPath, [fileURLToPath(new URL(script, rootUrl))], {
-      cwd: fileURLToPath(new URL('../../../', import.meta.url)),
-      encoding: 'utf8',
-      env: { HOME: process.env.HOME, PATH: process.env.PATH },
-    });
-    assert.equal(execution.status, 1);
-    assert.match(execution.stderr, /v1 is consumed and failed provenance verification/u);
-    assert.equal(execution.stdout, '');
-  }
+  assert.equal(profile.contracts.v1_profile_sha256, RELAY_IMAGE_V1_PROFILE_SHA256);
+  assert.equal(profile.contracts.v1_result_sha256, RELAY_IMAGE_V1_RESULT_SHA256);
+  assert.equal(result.profile_sha256, RELAY_IMAGE_V1_PROFILE_SHA256);
+  assert.notEqual(profile.operation.claim_object, v1Profile.operation.claim_object);
+  assert.notEqual(profile.build.build_tag, v1Profile.build.build_tag);
+  assert.notEqual(profile.image.tag_reference, v1Profile.image.tag_reference);
 });
 
 test('validates the published manifest, config, immutable digest and size', async () => {
@@ -514,7 +648,10 @@ test('validates the published manifest, config, immutable digest and size', asyn
     publication,
     observedAt: new Date().toISOString(),
   });
-  assert.equal(result.state, 'private_image_built_verified_not_deployed');
+  assert.equal(result.state, 'private_image_recovered_verified_not_deployed');
+  assert.equal(result.recovery.source_reused, true);
+  assert.equal(result.recovery.source_upload_performed, false);
+  assert.equal(result.effects.container_analysis_enabled, true);
   assert.equal(result.effects.cloud_run_services_created, 0);
 });
 
@@ -530,6 +667,21 @@ test('accepts only the exact relay-image source inventory and executable modes',
     assert.throws(
       () => validateRelayImageRoot(pathToFileURL(`${directory}/`)),
       /reviewed file inventory/u,
+    );
+  });
+  temporaryDirectory((directory) => {
+    for (const name of RELAY_IMAGE_FILES) {
+      copyFileSync(new URL(name, rootUrl), join(directory, name));
+      chmodSync(join(directory, name), name.endsWith('.sh') ? 0o700 : 0o600);
+    }
+    const applyPath = join(directory, 'apply.mjs');
+    writeFileSync(
+      applyPath,
+      `${readFileSync(applyPath, 'utf8')}\n// https://storage.googleapis.com/upload/storage/v1/b/forbidden\n`,
+    );
+    assert.throws(
+      () => validateRelayImageRoot(pathToFileURL(`${directory}/`)),
+      /one-shot private boundary/u,
     );
   });
   temporaryDirectory((directory) => {
