@@ -113,6 +113,20 @@ node --check infrastructure/staging/browser-relay/guard.mjs
 node --check infrastructure/staging/browser-relay/validate.mjs
 node infrastructure/staging/browser-relay/validate.mjs \
   infrastructure/staging/browser-relay/plan.json
+node infrastructure/staging/browser-attestation/guard.mjs \
+  "${repository_root}/infrastructure/staging/browser-attestation"
+node --check infrastructure/staging/browser-attestation/apply.mjs
+node --check infrastructure/staging/browser-attestation/artifact.mjs
+node --check infrastructure/staging/browser-attestation/browser.mjs
+node --check infrastructure/staging/browser-attestation/claim.mjs
+node --check infrastructure/staging/browser-attestation/contract.mjs
+node --check infrastructure/staging/browser-attestation/guard.mjs
+node --check infrastructure/staging/browser-attestation/hosting.mjs
+node --check infrastructure/staging/browser-attestation/inventory.mjs
+node --check infrastructure/staging/browser-attestation/plan.mjs
+node --check infrastructure/staging/browser-attestation/recovery-apply.mjs
+node --check infrastructure/staging/browser-attestation/recovery-plan.mjs
+node --check infrastructure/staging/browser-attestation/recovery.mjs
 node infrastructure/staging/signing-overlap/guard.mjs \
   "${repository_root}/infrastructure/staging/signing-overlap"
 node --check infrastructure/staging/signing-overlap/claim.mjs
@@ -191,6 +205,10 @@ bash -n \
   infrastructure/staging/browser-app-check/registration-plan.sh \
   infrastructure/staging/browser-app-check/registration-recovery-apply.sh \
   infrastructure/staging/browser-app-check/registration-recovery-plan.sh \
+  infrastructure/staging/browser-attestation/apply.sh \
+  infrastructure/staging/browser-attestation/plan.sh \
+  infrastructure/staging/browser-attestation/recovery-apply.sh \
+  infrastructure/staging/browser-attestation/recovery-plan.sh \
   infrastructure/staging/signing-overlap/key-apply.sh \
   infrastructure/staging/signing-overlap/key-plan.sh
 node --test \
@@ -199,6 +217,7 @@ node --test \
   infrastructure/staging/test/browser-app-check-api.test.mjs \
   infrastructure/staging/test/browser-app-check-key.test.mjs \
   infrastructure/staging/test/browser-app-check-registration.test.mjs \
+  infrastructure/staging/test/browser-attestation.test.mjs \
   infrastructure/staging/test/browser-relay.test.mjs \
   infrastructure/staging/test/bootstrap.test.mjs \
   infrastructure/staging/test/firebase-auth.test.mjs \
