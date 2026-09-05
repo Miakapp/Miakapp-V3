@@ -98,12 +98,13 @@ historical dormant role and retired-probe evidence boundary. Raw state remains
 private; these metadata do not establish current convergence by themselves.
 Raw plan and state bytes were never committed.
 
-The `auth-probe` root also contains a reviewed but not-yet-armed user-relay
-acceptance graph. If a run is interrupted, retire its uniquely named Workflow,
-internal verifier service and four conditioned probe bindings before broader
-teardown. Preserve its three disabled custom roles and keyless verifier
-identity until Terraform state and independent inventory agree; neither creates
-idle compute by itself.
+The `auth-probe` root also contains a reviewed generation-2 user-relay
+acceptance graph. Generation 1 is retired with its three role IDs disabled and
+unassigned. If a generation-2 run is interrupted, retire its uniquely named
+Workflow, internal verifier service and four conditioned probe bindings before
+broader teardown. Preserve both three-role generations disabled and the keyless
+verifier identity until Terraform state and independent inventory agree; none
+creates idle compute by itself.
 
 The guarded Auth-probe recovery enables a missing Cloud Asset API as a separate
 prerequisite and requires a new authorization afterward. It never automatically
