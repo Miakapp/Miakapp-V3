@@ -4,7 +4,7 @@ Status: private audience-bound user-relay acceptance succeeded and retired;
 schema-2 single-key runtime deployed privately; live browser-relay plan reviewed
 but not deployed; browser App Check API-only prerequisite applied and
 converged; one domain-restricted score key applied and independently converged;
-guarded non-deletable App Check registration ready but not applied
+exact non-deletable App Check provider registered with enforcement disabled
 
 This directory contains the closed description and observed state of
 `miakapp-v4-staging`. The bounded foundation recovery has completed; its active
@@ -23,21 +23,17 @@ pending cases and seven open implementation preconditions. It contains no
 deployer or result and does not change the private cloud baseline described
 below.
 
-The [`browser-app-check/`](browser-app-check/) root applied the two reversible
-provider prerequisites: reCAPTCHA Enterprise API enablement and exactly one
-domain-restricted score key. Direct and eventual Cloud Asset inventories now
-both corroborate the key, while App Check registration and enforcement remain
-absent. The API-only and key plan/apply entrypoints are retired. A private
-atomic GCS claim permanently serializes the consumed one-shot creation across
-every independently copied bundle. A separate one-shot registration gate is now
-implemented with two atomic claims: one consumes the reviewed operation and a
-second marks the global provider-attempt boundary immediately before Terraform.
-Fresh-child recovery permits only the demonstrably pre-PATCH boundary or exact
-registered-provider state repair; a present second claim with an absent provider
-fails closed even when the source bundle was independently copied.
-The provider remains absent until that exact saved plan is applied. Firebase
-exposes no provider-configuration delete operation, so browser traffic and
-enforcement remain excluded.
+The [`browser-app-check/`](browser-app-check/) root applied the reCAPTCHA
+Enterprise API, exactly one domain-restricted score key and the exact
+non-deletable provider registration. Direct and eventual Cloud Asset inventories
+corroborate the key; direct App Check inventory corroborates the provider with a
+one-hour TTL and default 0.5 minimum score. Enforcement, debug tokens and browser
+traffic remain absent. Three atomic GCS claims permanently serialize the key,
+registration operation and provider-attempt boundary across independently
+copied bundles. The provider converged on the first exact saved-plan apply, so
+recovery was not used. API, key, registration and unused recovery entrypoints
+all fail before cloud access. Firebase exposes no provider-configuration delete
+operation, so the registration is an intentional project-lifetime residual.
 
 ## Current truth
 
@@ -275,7 +271,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`probe/`](probe/) | Isolated Workflows API and one fixed, unscheduled, keyless internal discovery probe | Applied and consumed; exactly two failures followed by one validated HTTP 200 discovery response |
 | [`firebase-auth/`](firebase-auth/) | Closed Firebase Authentication initialization with no end-user sign-in provider | Non-deletable resource initialized, state-adopted, reconciled, and independently validated |
 | [`auth-probe/`](auth-probe/) | Guarded audience-bound user-relay Workflow, internal verifier and sanitized evidence | Generation 3 succeeded once and retired; both fixtures and every temporary capability are absent; all nine one-shot roles are disabled |
-| [`browser-app-check/`](browser-app-check/) | Guarded reCAPTCHA Enterprise API, score key and App Check provider prerequisites | API and one globally serialized domain-restricted score key applied and converged; key entrypoints retired; separately serialized non-deletable provider gate ready but not applied; traffic and enforcement pending |
+| [`browser-app-check/`](browser-app-check/) | Guarded reCAPTCHA Enterprise API, score key and App Check provider prerequisites | API, one globally serialized domain-restricted score key and exact non-deletable provider applied and converged; all consumed/recovery entrypoints retired; traffic and enforcement pending |
 | [`browser-relay/`](browser-relay/) | Closed live browser, two-relay, signing-key and rollback acceptance plan | Reviewed but not deployed; every `LIVE-*` case is pending and the package grants no cloud mutation |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
@@ -325,9 +321,10 @@ bucket currently stores the 61,864-byte bootstrap state, the 53,619-byte
 complete foundation state, the 49,563-byte workload state, the 13,596-byte probe
 state, the 11,010-byte Firebase Auth state, the 35,312-byte Auth-probe state, and
 recovery generations across the six earlier Terraform prefixes. The seventh
-prefix, `terraform/browser-app-check`, now stores its 14,139-byte serial-4
-state at generation `1788596623837355`; it contains the state guard, reCAPTCHA
-API service and one score key plus two data resources and one output. The live Firestore database is the project's
+prefix, `terraform/browser-app-check`, now stores its 15,925-byte serial-5
+state at generation `1788603682439071`; it contains the state guard, reCAPTCHA
+API service, one score key and its exact provider registration plus two data
+resources and one output. The live Firestore database is the project's
 free-tier database; the five secret containers now each have one enabled
 version. Secret Manager versions, the software KMS key version, Storage and
 Artifact Registry bytes, build operations, and retained object versions remain
@@ -336,9 +333,10 @@ inventory made no request, and no probe Workflow or verifier is currently
 active. If armed, the user-relay verifier remains scale 0..1 and the Workflow is
 unscheduled; both are retired immediately after one bounded execution.
 Budget alerts at EUR 2, EUR 5, and EUR 10 are alarms rather than hard caps.
-The consumed key apply added one 665-byte private coordination object under
-that seventh prefix before creating the key. It adds no fixed-cost service and
-cannot be repeated while the claim remains live.
+The consumed key and registration applies added three tiny private coordination
+objects under that seventh prefix before their irreversible boundaries. They add
+no fixed-cost service and prevent copied private bundles from repeating either
+mutation while the claims remain live.
 
 ## Remote-state bootstrap boundary
 
@@ -539,11 +537,12 @@ inside the separately authorized EUR 5 monthly boundary. App Engine, an
 external load balancer, Cloud Armor, VPC and DNS changes are absent.
 
 No live case may start yet. The production runtime must first support an active
-plus retiring public signing key. The browser App Check API and its single
-domain-restricted score key are applied, independently converged and retired as
-one-shot entrypoints. The next browser attestation step is the implemented
-site-key registration gate: one non-deletable exact saved plan with no browser
-traffic or enforcement.
+plus retiring public signing key. The browser App Check API, its single
+domain-restricted score key and the exact non-deletable provider registration
+are applied, independently converged and retired as one-shot entrypoints. The
+next browser attestation step is a bounded real browser SDK/token observation
+with enforcement still disabled; it must not reuse the consumed registration
+drivers.
 Separate guarded implementations must also exist for the temporary edge
 transition, relays, runner, metrics and rollback. The plan records these as open
 preconditions instead of promoting local fixtures to live evidence.
