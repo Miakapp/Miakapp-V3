@@ -458,8 +458,12 @@ version 1 as the selected signer. Exact plan SHA-256
 `0ff816d86e0b391da341703744663d4d0efb2a5478c4e17fed2c7b23ca5e2e24`
 updates only the Function and deployment guard in place and preserves source,
 IAM, ingress, identities and scale. It converges to revision
-`control-plane-00007-deb` without a Function request. Version 2 activation and
-complete 330-second version-1 retention remain separate gates.
+`control-plane-00007-deb` without a Function request. A seventeenth staging
+slice later selected version 2 while retaining version 1 and converged to
+current revision `control-plane-00008-saz`. Its exact plan again changed only
+the Function and deployment guard, preserved source, IAM, internal-only ingress,
+identities and scale, and made no Function request. Version-1 retirement remains
+a separate gate after the complete 330-second lease bound.
 
 Deliverables:
 
@@ -637,8 +641,10 @@ current consumer.
    Its Workflow, verifier and temporary grants are retired. The bounded
    signing-key overlap bridge is active privately, its single-key schema-2
    migration is complete, and versions 1 and 2 are now prepublished on revision
-   `control-plane-00007-deb` with version 1 current. Live KMS activation,
-   retiring-key retention and secret
+   `control-plane-00007-deb` with version 1 current. Version 2 is now selected
+   on current revision `control-plane-00008-saz` while version 1 remains
+   published, with unchanged source, IAM, internal-only ingress and scale and
+   without a live request. Retiring-key removal and secret
    rotation, browser App Check provider attestation, source/edge admission,
    monitoring, migration rehearsal and real staging fault evidence remain
    required before closing relay-integration and staging-only RFC 0004 Section
@@ -681,8 +687,10 @@ current consumer.
     request. Its two atomic claims remain durable, its one-shot entrypoints are
     retired. Both public keys are now prepublished on revision
     `control-plane-00007-deb` with version 1 current, unchanged source bytes,
-    private ingress and scale 0..1. Next activate version 2 after the required
-    overlap interval and retain version 1 for the complete lease bound, then
+    private ingress and scale 0..1. Version 2 is now selected on current revision
+    `control-plane-00008-saz` while version 1 remains published, with the same
+    source, ingress and scale. Next retire version 1 through a separate guarded
+    operation after the complete lease bound, then
     exercise bounded real browser SDK attestation with enforcement disabled and implement the
     temporary edge, two relays,
     three-engine runner and rollback guards. Execute the matrix once before
