@@ -15,6 +15,11 @@ import {
   RELAY_SERVICES_PROFILE_SHA256,
   validateRelayServicesProfile,
 } from './browser-relay-services/contract.mjs';
+import {
+  RELAY_IMAGE_PROFILE_PATH,
+  RELAY_IMAGE_PROFILE_SHA256,
+  validateRelayImageProfile,
+} from './browser-relay-image/contract.mjs';
 import { validateBrowserAppCheckEvidence } from './browser-app-check/evidence.mjs';
 import { validateFirebaseAuthEvidence } from './firebase-auth/evidence.mjs';
 import { validateProbeEvidence } from './probe/evidence.mjs';
@@ -2830,6 +2835,7 @@ function validateEvidence(value) {
     'firebase_auth_baseline',
     'user_relay_probe',
     'browser_relay_plan',
+    'browser_relay_image',
     'browser_app_check_prerequisite',
     'browser_app_check_attestation',
     'signing_key_overlap_prerequisite',
@@ -3540,6 +3546,55 @@ function validateEvidence(value) {
   for (const [field, expected] of Object.entries(expectedBrowserRelayPlan)) {
     exact(browserRelayPlan[field], expected, `evidence.browser_relay_plan.${field}`);
   }
+  const browserRelayImage = record(
+    evidence.browser_relay_image,
+    'evidence.browser_relay_image',
+    [
+      'state',
+      'profile_path',
+      'profile_sha256',
+      'browser_relay_plan_sha256',
+      'relay_services_profile_sha256',
+      'source_repository',
+      'source_commit',
+      'source_tree',
+      'source_archive_sha256',
+      'source_archive_bytes',
+      'builder_digest',
+      'machine_type',
+      'requested_verify_option',
+      'maximum_builds',
+      'private_image_present',
+      'relay_services',
+      'public_ingress_active',
+      'new_fixed_cost_services',
+      'maximum_incremental_eur',
+    ],
+  );
+  const expectedBrowserRelayImage = {
+    state: 'reviewed_not_built',
+    profile_path: RELAY_IMAGE_PROFILE_PATH,
+    profile_sha256: RELAY_IMAGE_PROFILE_SHA256,
+    browser_relay_plan_sha256: BROWSER_RELAY_PLAN_SHA256,
+    relay_services_profile_sha256: RELAY_SERVICES_PROFILE_SHA256,
+    source_repository: 'https://github.com/Miakapp/Miakapp-Server.git',
+    source_commit: 'df10674e034f30eec80760f5ec94bc108cff026f',
+    source_tree: '0468ea08cd2d51b3e656c4adea9bb09b4a8a6ea1',
+    source_archive_sha256: '93fd720736453e3555be625bbb993194f48a5388821169c939674b04088f158e',
+    source_archive_bytes: 53098,
+    builder_digest: 'sha256:3d00b6c1a9b862621c30fc74d4f2abfc62bcbdee631ed3febd31e7edbdf6252c',
+    machine_type: 'E2_MEDIUM',
+    requested_verify_option: 'VERIFIED',
+    maximum_builds: 1,
+    private_image_present: false,
+    relay_services: 0,
+    public_ingress_active: false,
+    new_fixed_cost_services: 0,
+    maximum_incremental_eur: 1,
+  };
+  for (const [field, expected] of Object.entries(expectedBrowserRelayImage)) {
+    exact(browserRelayImage[field], expected, `evidence.browser_relay_image.${field}`);
+  }
   const browserAppCheck = record(
     evidence.browser_app_check_prerequisite,
     'evidence.browser_app_check_prerequisite',
@@ -4247,10 +4302,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 58, 'manifest.revision');
+  exact(manifest.revision, 59, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rebased_bounded_relay_root_reviewed_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rebased_bounded_relay_root_reviewed_private_relay_image_build_reviewed_not_executed_enforcement_disabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -4627,6 +4682,55 @@ export function validateCommittedEvidence(
     relayServicesProfile.pins.miakapp_server_commit,
     'browser-relay/plan.json pins.miakapp_server_commit',
   );
+  const browserRelayImageManifest = manifest.evidence.browser_relay_image;
+  const browserRelayImageProfilePath = committedEvidencePath(
+    stagingRoot,
+    browserRelayImageManifest.profile_path,
+    RELAY_IMAGE_PROFILE_PATH,
+    'evidence.browser_relay_image.profile_path',
+  );
+  const browserRelayImageProfile = validatedEvidenceFile(
+    browserRelayImageProfilePath,
+    validateRelayImageProfile,
+    'evidence.browser_relay_image.profile_path',
+  );
+  exact(
+    fileSha256(browserRelayImageProfilePath),
+    browserRelayImageManifest.profile_sha256,
+    'evidence.browser_relay_image.profile_sha256',
+  );
+  exactFields(browserRelayImageManifest, {
+    state: browserRelayImageProfile.state,
+    profile_sha256: RELAY_IMAGE_PROFILE_SHA256,
+    browser_relay_plan_sha256:
+      browserRelayImageProfile.contracts.browser_relay_plan_sha256,
+    relay_services_profile_sha256:
+      browserRelayImageProfile.contracts.relay_services_profile_sha256,
+    source_repository: browserRelayImageProfile.source.repository,
+    source_commit: browserRelayImageProfile.source.commit,
+    source_tree: browserRelayImageProfile.source.tree,
+    source_archive_sha256: browserRelayImageProfile.source.archive_sha256,
+    source_archive_bytes: browserRelayImageProfile.source.archive_bytes,
+    builder_digest: browserRelayImageProfile.build.builder_image.split('@')[1],
+    machine_type: browserRelayImageProfile.build.machine_type,
+    requested_verify_option: browserRelayImageProfile.build.requested_verify_option,
+    maximum_builds: browserRelayImageProfile.build.maximum_builds,
+    private_image_present: false,
+    relay_services: 0,
+    public_ingress_active: false,
+    new_fixed_cost_services: browserRelayImageProfile.cost.new_fixed_cost_services,
+    maximum_incremental_eur: browserRelayImageProfile.cost.maximum_incremental_eur,
+  }, 'evidence.browser_relay_image');
+  exact(
+    browserRelayImageProfile.contracts.browser_relay_plan_sha256,
+    BROWSER_RELAY_PLAN_SHA256,
+    'browser-relay-image/profile.json contracts.browser_relay_plan_sha256',
+  );
+  exact(
+    browserRelayImageProfile.contracts.relay_services_profile_sha256,
+    RELAY_SERVICES_PROFILE_SHA256,
+    'browser-relay-image/profile.json contracts.relay_services_profile_sha256',
+  );
   const browserAppCheckManifest = manifest.evidence.browser_app_check_prerequisite;
   const browserAppCheckPath = committedEvidencePath(
     stagingRoot,
@@ -4863,6 +4967,7 @@ export function validateCommittedEvidence(
     userRelayProbeRetirement: authProbeRetirement,
     browserRelayPlan,
     relayServicesProfile,
+    browserRelayImageProfile,
     browserAppCheck,
     browserAttestation,
     signingOverlap,
@@ -4888,7 +4993,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; signing-key version 1 is current for the browser-relay rehearsal, both keys remain published, and App Check enforcement is still disabled.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; the private relay-image build is reviewed but unexecuted, signing-key version 1 remains current, both keys remain published, and App Check enforcement is disabled.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';
