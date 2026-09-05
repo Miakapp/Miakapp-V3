@@ -126,6 +126,16 @@ node --check infrastructure/staging/browser-relay-services/contract.mjs
 node --check infrastructure/staging/browser-relay-services/guard.mjs
 node infrastructure/staging/browser-relay-services/contract.mjs \
   infrastructure/staging/browser-relay-services/profile.json
+node infrastructure/staging/browser-relay-image/guard.mjs \
+  "${repository_root}/infrastructure/staging/browser-relay-image"
+node --check infrastructure/staging/browser-relay-image/apply.mjs
+node --check infrastructure/staging/browser-relay-image/claim.mjs
+node --check infrastructure/staging/browser-relay-image/cloud.mjs
+node --check infrastructure/staging/browser-relay-image/contract.mjs
+node --check infrastructure/staging/browser-relay-image/guard.mjs
+node --check infrastructure/staging/browser-relay-image/inventory.mjs
+node --check infrastructure/staging/browser-relay-image/plan.mjs
+node --check infrastructure/staging/browser-relay-image/source.mjs
 node infrastructure/staging/browser-attestation/guard.mjs \
   "${repository_root}/infrastructure/staging/browser-attestation"
 node --check infrastructure/staging/browser-attestation/apply.mjs
@@ -230,6 +240,8 @@ bash -n \
   infrastructure/staging/browser-attestation/plan.sh \
   infrastructure/staging/browser-attestation/recovery-apply.sh \
   infrastructure/staging/browser-attestation/recovery-plan.sh \
+  infrastructure/staging/browser-relay-image/apply.sh \
+  infrastructure/staging/browser-relay-image/plan.sh \
   infrastructure/staging/signing-overlap/key-apply.sh \
   infrastructure/staging/signing-overlap/key-plan.sh
 node --test \
@@ -240,6 +252,7 @@ node --test \
   infrastructure/staging/test/browser-app-check-registration.test.mjs \
   infrastructure/staging/test/browser-attestation.test.mjs \
   infrastructure/staging/test/browser-relay-edge.test.mjs \
+  infrastructure/staging/test/browser-relay-image.test.mjs \
   infrastructure/staging/test/browser-relay-services.test.mjs \
   infrastructure/staging/test/browser-relay.test.mjs \
   infrastructure/staging/test/bootstrap.test.mjs \

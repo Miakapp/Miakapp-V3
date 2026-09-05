@@ -857,8 +857,11 @@ vertical-slice exit gates.
    no deployment or public ingress. The pinned relay now has finite connection,
    attempt, tracked-peer, Home and aggregate queue budgets, and a dormant
    four-phase Terraform root freezes two scale-to-zero services with
-   public-last IAM without exposing an operator entrypoint. Arbitrary
-   self-hosted relay selection remains disabled until
+   public-last IAM without exposing an operator entrypoint. A separate guarded
+   one-shot now pins the exact relay source, verified Cloud Build provenance and
+   hardened private image smoke test; it remains unexecuted and creates no
+   service or ingress until its merged operation yields an immutable digest.
+   Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain
    open.

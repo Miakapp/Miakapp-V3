@@ -31,10 +31,10 @@ function rejects(mutator, pattern) {
 
 test('accepts the successful and retired private user-relay probe', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 58);
+  assert.equal(validated.revision, 59);
   assert.equal(
     validated.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rebased_bounded_relay_root_reviewed_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rebased_bounded_relay_root_reviewed_private_relay_image_build_reviewed_not_executed_enforcement_disabled',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
@@ -776,6 +776,27 @@ test('accepts the successful and retired private user-relay probe', () => {
     runner_present: false,
     completed_cases: 0,
   });
+  assert.deepEqual(validated.evidence.browser_relay_image, {
+    state: 'reviewed_not_built',
+    profile_path: 'browser-relay-image/profile.json',
+    profile_sha256: '2afcfc7b5f0b9fb524a59bd81cd5dcd98f73bf58c2619640b6a42bbbd0958981',
+    browser_relay_plan_sha256: '4a5c13999d9f7f328b1b8b867bbd86d4c5e80cb980d9eb1324028ea0e5785343',
+    relay_services_profile_sha256: 'bc9b231cc9724f19a26ef5c3bbd6da6a69ec79b00cb976e77c73015d5db10db7',
+    source_repository: 'https://github.com/Miakapp/Miakapp-Server.git',
+    source_commit: 'df10674e034f30eec80760f5ec94bc108cff026f',
+    source_tree: '0468ea08cd2d51b3e656c4adea9bb09b4a8a6ea1',
+    source_archive_sha256: '93fd720736453e3555be625bbb993194f48a5388821169c939674b04088f158e',
+    source_archive_bytes: 53098,
+    builder_digest: 'sha256:3d00b6c1a9b862621c30fc74d4f2abfc62bcbdee631ed3febd31e7edbdf6252c',
+    machine_type: 'E2_MEDIUM',
+    requested_verify_option: 'VERIFIED',
+    maximum_builds: 1,
+    private_image_present: false,
+    relay_services: 0,
+    public_ingress_active: false,
+    new_fixed_cost_services: 0,
+    maximum_incremental_eur: 1,
+  });
   assert.deepEqual(validated.evidence.browser_app_check_prerequisite, {
     state: 'nondeletable_app_check_provider_registered_enforcement_disabled',
     observed_at: '2026-09-05T10:21:22.000Z',
@@ -1081,6 +1102,22 @@ test('cross-checks manifest claims against all committed evidence artifacts', ()
     () => validateCommittedEvidence(browserRelayPlanPathDrift),
     (error) => error instanceof StagingManifestError
       && /evidence\.browser_relay_plan\.path/.test(error.message),
+  );
+
+  const browserRelayImageDigestDrift = manifest();
+  browserRelayImageDigestDrift.evidence.browser_relay_image.profile_sha256 = '0'.repeat(64);
+  assert.throws(
+    () => validateCommittedEvidence(browserRelayImageDigestDrift),
+    (error) => error instanceof StagingManifestError
+      && /evidence\.browser_relay_image\.profile_sha256/.test(error.message),
+  );
+
+  const browserRelayImagePathDrift = manifest();
+  browserRelayImagePathDrift.evidence.browser_relay_image.profile_path = '../../private.json';
+  assert.throws(
+    () => validateCommittedEvidence(browserRelayImagePathDrift),
+    (error) => error instanceof StagingManifestError
+      && /evidence\.browser_relay_image\.profile_path/.test(error.message),
   );
 });
 
