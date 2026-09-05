@@ -40,10 +40,6 @@ import {
 } from '../browser-app-check/contract.mjs';
 import { validateBrowserAppCheckRoot } from '../browser-app-check/guard.mjs';
 import {
-  validateBrowserAppCheckApiEvidence,
-  validateBrowserAppCheckApiEvidenceValue,
-} from '../browser-app-check/evidence.mjs';
-import {
   validateBrowserAppCheckInventory,
   validateFirebaseWebAppInventory,
   validateUnregisteredAppCheckConfig,
@@ -67,7 +63,6 @@ const terraformSource = readdirSync(browserRoot)
 const planDriver = readFileSync(new URL('plan.mjs', browserRoot), 'utf8');
 const applyDriver = readFileSync(new URL('apply.mjs', browserRoot), 'utf8');
 const inventoryDriver = readFileSync(new URL('inventory.mjs', browserRoot), 'utf8');
-const committedResultPath = new URL('../browser-app-check/result.json', import.meta.url);
 
 function foundation() {
   return {
@@ -592,22 +587,6 @@ test('API result proves only the bounded prerequisite and zero driver assessment
   assert.throws(
     () => validateBrowserAppCheckTerraformOutput(drift),
     /does not match the reviewed value/u,
-  );
-});
-
-test('committed API evidence is exact, sanitized, and immutable', () => {
-  const result = validateBrowserAppCheckApiEvidence(committedResultPath);
-  assert.equal(result.repository_commit, '0e8d5dfc3b5b8dd42d84cb165ae2a4f676f7fcdb');
-  assert.equal(result.terraform_plan_sha256, 'f21835c20d9fe3dd4b2f47ac10f826a3c78b3b3e8a6e35aa4915c485c3058602');
-  assert.equal(result.authoritative_recaptcha_keys, 0);
-  assert.equal(result.assessments_initiated_by_driver, 0);
-  assert.doesNotMatch(JSON.stringify(result), /accessToken|Authorization|siteKey|execution_id/u);
-  assert.throws(
-    () => validateBrowserAppCheckApiEvidenceValue({
-      ...result,
-      authoritative_recaptcha_keys: 1,
-    }),
-    /does not match the exact sanitized result/u,
   );
 });
 

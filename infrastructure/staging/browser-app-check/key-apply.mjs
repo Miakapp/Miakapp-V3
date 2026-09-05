@@ -69,6 +69,7 @@ const APPLY_AUTHORIZATION = 'MIAKAPP_STAGING_BROWSER_APP_CHECK_KEY_APPLY_AUTHORI
 const ATTEMPT_MARKER = 'key-mutation-attempted.json';
 const ATTEMPT_CLAIM_RECEIPT = 'global-key-attempt-claim.json';
 const FALLBACK_STATE = 'errored.tfstate';
+export const KEY_PREREQUISITE_CONSUMED = true;
 process.umask(0o077);
 
 function reject(message) {
@@ -453,8 +454,15 @@ async function main() {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  main().catch((error) => {
-    console.error(error instanceof Error ? error.message : 'Browser App Check key apply failed');
+  if (KEY_PREREQUISITE_CONSUMED) {
+    console.error(
+      'The browser App Check score-key prerequisite has already converged; this apply path is permanently retired.',
+    );
     process.exitCode = 1;
-  });
+  } else {
+    main().catch((error) => {
+      console.error(error instanceof Error ? error.message : 'Browser App Check key apply failed');
+      process.exitCode = 1;
+    });
+  }
 }
