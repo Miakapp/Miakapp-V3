@@ -1,8 +1,9 @@
 # Private staging control-plane workload
 
 Status: two-key schema-2 runtime deployed, converged and source-verified with
-version 1 current; the one-time prepublication entry points are retired; the
-historical audience-bound revision was accepted by one retired bounded probe
+version 1 current; an exact guarded activation target selects version 2 while
+retaining version 1; the historical audience-bound revision was accepted by
+one retired bounded probe
 
 This is the third, workload-only Terraform state for `miakapp-v4-staging`. It
 reads but never owns the reconciled bootstrap and foundation states. Its GCS
@@ -232,9 +233,10 @@ The one-time schema migration wrappers are retired.
 
 ## Completed signing-key prepublication
 
-[`runtime-config.json`](runtime-config.json) is the exact deployed two-key
-document. It preserves `staging-access-token-v1` as `current_kid` and appends
-only the public JWK for enabled KMS version 2. Its SHA-256 is
+[`runtime-config-version-1-current.json`](runtime-config-version-1-current.json)
+preserves the exact deployed two-key document. It keeps
+`staging-access-token-v1` as `current_kid` and appends only the public JWK for
+enabled KMS version 2. Its SHA-256 is
 `c018708786fc23a15f7701093b5148c0e415a2df8045af8e170e4308c2deae37`.
 
 Merge commit `2bdd1a9e224234318d2ffd77c61b609331ccd044` produced an exact
@@ -261,10 +263,14 @@ managed and three data resources, one output, nothing tainted, and SHA-256
 The current canonical non-secret [`result.json`](result.json) has SHA-256
 `27253e9715fb901f78ce3dfd5ffd7ff0981b9dee818bde507b9170d35ffed185`.
 
-The one-time prepublication wrappers are retired. The regular source updater is
-restored against this exact deployed runtime. Any later switch to version 2
-must use a separately reviewed saved plan and prove that the required overlap
-interval elapsed from the authoritative Function update time above.
+The one-time prepublication wrappers are retired. The exact activation target
+in [`runtime-config.json`](runtime-config.json) changes only `current_kid` to
+`staging-access-token-v2`, retains both public versions and has SHA-256
+`40e2f83fbe8e3d27b7e53c4a666f424519fc6972ef19a7598ab9e093be0c70f7`.
+Its one-time plan and apply entry points require the exact live revision above,
+the unchanged deterministic source archive, a fresh digest-bound saved plan and
+an elapsed prepublication interval. The regular source updater remains blocked
+until this guarded activation converges.
 
 ## Successful private discovery
 
