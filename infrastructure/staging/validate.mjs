@@ -34,7 +34,7 @@ const SERVICE_STATES = [
   'initialized_closed_custom_token_lifecycle_validated',
   'admin_custom_provider_validated_browser_attestation_pending',
   'private_fixture_lifecycle_validated_no_persistent_application_data',
-  'private_deployment_active_user_relay_acceptance_succeeded',
+  'private_signing_overlap_bridge_active_user_relay_acceptance_succeeded',
   'private_bucket_created_no_application_mutation',
   'signing_key_version_enabled_public_key_validated',
   'five_initial_versions_enabled_runtime_access_validated',
@@ -422,7 +422,7 @@ function validateRuntime(value) {
     'projects/miakapp-v4-staging/locations/europe-west9/services/control-plane',
     'runtime.service',
   );
-  exact(runtime.revision, 'control-plane-00004-yis', 'runtime.revision');
+  exact(runtime.revision, 'control-plane-00005-biq', 'runtime.revision');
   exact(runtime.uri, 'https://control-plane-aczhngqraq-od.a.run.app', 'runtime.uri');
   exact(runtime.minimum_instances, 0, 'runtime.minimum_instances');
   exact(runtime.maximum_instances, 1, 'runtime.maximum_instances');
@@ -437,7 +437,7 @@ function validateRuntime(value) {
   exact(runtime.ingress, 'ALLOW_INTERNAL_ONLY', 'runtime.ingress');
   exact(
     runtime.source_archive_sha256,
-    '6674c0353ec9c73fcfe0d3a63d17850f057a5f2a547a5855989e28f011249b1e',
+    'd1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8',
     'runtime.source_archive_sha256',
   );
   exact(
@@ -2915,9 +2915,9 @@ function validateEvidence(value) {
   ]);
   const expectedWorkload = {
     state: 'active_internal_only_source_verified',
-    observed_at: '2026-09-04T21:23:53.111Z',
-    inventory_repository_commit: '022f10e2dc15f32a8a6679b38ce7f1a04582e450',
-    deployed_repository_commit: '022f10e2dc15f32a8a6679b38ce7f1a04582e450',
+    observed_at: '2026-09-05T04:07:54.932Z',
+    inventory_repository_commit: '9f217da102b394734adba7ccef3f8f70d0317306',
+    deployed_repository_commit: '9f217da102b394734adba7ccef3f8f70d0317306',
     initial_plan_sha256: 'b59167718fdad5edfa440f5d59f6e0eb1dff9277b20e1f829ebbb233296cdf05',
     initial_plan_result: 'failed_build_missing_conditional_source_read',
     recovery_configuration_commit: '488da23cd7eb4c08baa9296724b87b7df34a1122',
@@ -2925,10 +2925,10 @@ function validateEvidence(value) {
     output_reconciliation_plan_sha256: 'a31bda9269b138b270d58a6bb992ab7902d1fc73074c0f8f2543bdf0c8f09623',
     output_reconciliation_resource_changes: 0,
     result_path: 'workload/result.json',
-    result_sha256: 'cfdb18b9dd6604cd92977cbd447dd0684f4b731ca84d2f7aa3f772cbd3bc3056',
-    source_archive_sha256: '6674c0353ec9c73fcfe0d3a63d17850f057a5f2a547a5855989e28f011249b1e',
+    result_sha256: 'dc3324d3b812e1dafc6a6678c7427ac715ea1d2a81de527750aa958c7c71a440',
+    source_archive_sha256: 'd1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8',
     runtime_config_sha256: 'b794181400bf5ace6aaa9ffc4be00e4c4f6a59519284baa7f73bca3c042c4ff8',
-    function_revision: 'control-plane-00004-yis',
+    function_revision: 'control-plane-00005-biq',
     ingress: 'ALLOW_INTERNAL_ONLY',
     unauthenticated_invokers: 0,
     minimum_instances: 0,
@@ -2965,8 +2965,8 @@ function validateEvidence(value) {
     false,
     'evidence.workload_deployment.recovery_plan_result.function_replaced',
   );
-  if (!Array.isArray(workload.source_updates) || workload.source_updates.length !== 3) {
-    reject('evidence.workload_deployment.source_updates', 'must contain exactly 3 entries');
+  if (!Array.isArray(workload.source_updates) || workload.source_updates.length !== 4) {
+    reject('evidence.workload_deployment.source_updates', 'must contain exactly 4 entries');
   }
   const expectedSourceUpdates = [
     {
@@ -2998,6 +2998,16 @@ function validateEvidence(value) {
       terraform_state_generation: '1788557027934706',
       terraform_state_serial: 14,
       terraform_state_sha256: '4f2977ce6e8c736cbdf31d58ba1da81f4291ace4c9d5d0d7d21a727c063cfc6e',
+    },
+    {
+      purpose: 'bounded_signing_key_overlap_runtime_bridge',
+      repository_commit: '9f217da102b394734adba7ccef3f8f70d0317306',
+      plan_sha256: 'ee98468a4ed92196109ac6f646030dca582068c6e2f2b5c1889e347322b1e3a6',
+      source_archive_sha256: 'd1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8',
+      function_revision: 'control-plane-00005-biq',
+      terraform_state_generation: '1788581270106628',
+      terraform_state_serial: 16,
+      terraform_state_sha256: 'd765cceffc696905f045a34805f9c6f1a6c45e9ba3f2224754a90a157c89b428',
     },
   ];
   workload.source_updates.forEach((value, index) => {
@@ -3035,11 +3045,11 @@ function validateEvidence(value) {
   );
   const expectedWorkloadState = {
     object: 'terraform/workload/default.tfstate',
-    generation: '1788557027934706',
-    sha256: '4f2977ce6e8c736cbdf31d58ba1da81f4291ace4c9d5d0d7d21a727c063cfc6e',
-    size_bytes: 49283,
+    generation: '1788581270106628',
+    sha256: 'd765cceffc696905f045a34805f9c6f1a6c45e9ba3f2224754a90a157c89b428',
+    size_bytes: 49242,
     terraform_version: '1.11.3',
-    serial: 14,
+    serial: 16,
     lineage_sha256: 'aecd871c255da2bb3d30e7a7cc7b76be229e1eccc1fce2c4e41fed5a4a4b4b3a',
     managed_resources: 15,
     data_resources: 3,
@@ -3407,10 +3417,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 41, 'manifest.revision');
+  exact(manifest.revision, 42, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_user_relay_acceptance_succeeded_live_browser_plan_reviewed',
+    'private_control_plane_signing_overlap_bridge_deployed_user_relay_acceptance_succeeded_live_browser_plan_reviewed',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');

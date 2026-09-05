@@ -423,7 +423,7 @@ App Check probes remain historical evidence for revision
 `control-plane-00003-hum`.
 
 A thirteenth staging slice executes and retires the bounded live user-relay
-probe against exact current revision `control-plane-00004-yis`. Its single
+probe against exact then-current revision `control-plane-00004-yis`. Its single
 Workflow execution observes `401 invalid_firebase_token`,
 `401 invalid_app_check_token` and `404 home_not_found`, then receives two
 distinct five-minute Ed25519 credentials while rotating the authoritative
@@ -434,6 +434,16 @@ stays absent, and retirement removes the Workflow, verifier and four temporary
 bindings. All nine one-shot roles are disabled and unassigned; no recurring
 compute remains. Digest-pinned public evidence contains no token, execution ID
 or raw diagnostic.
+
+A fourteenth staging slice deploys the bounded signing-key overlap bridge as
+source-only revision `control-plane-00005-biq`. The exact saved plan again
+changes only the deterministic source object, Function and deployment guard,
+then converges to zero changes. Independent inventory verifies the copied
+source, internal-only ingress, scale 0..1, zero public invokers and zero
+user-managed keys without making a request. The deployed source preserves the
+live schema-1, single-key runtime and accepts a closed schema 2 with one selected
+KMS signer and at most two KMS-validated published keys. Runtime-document
+migration and live overlap evidence remain separate gates.
 
 Deliverables:
 
@@ -605,10 +615,13 @@ current consumer.
    local gate now adds an Auth-emulator user, signed synthetic App Check source,
    exact control-plane exchange, local relay verification and a no-overlap
    authoritative handoff across two real relays. The merged exchange source is
-   active on private staging revision `control-plane-00004-yis`; one bounded
+   accepted on private staging revision `control-plane-00004-yis`; one bounded
    live probe has now validated the three negative controls, both signed token
    exchanges, authoritative relay rotation and complete two-fixture cleanup.
-   Its Workflow, verifier and temporary grants are retired. Live KMS signing-key and secret
+   Its Workflow, verifier and temporary grants are retired. The bounded
+   signing-key overlap bridge is now active privately on revision
+   `control-plane-00005-biq` while the runtime document deliberately remains on
+   schema 1 with one published key. Live KMS signing-key and secret
    rotation, browser App Check provider attestation, source/edge admission,
    monitoring, migration rehearsal and real staging fault evidence remain
    required before closing relay-integration and staging-only RFC 0004 Section
@@ -634,7 +647,8 @@ current consumer.
 14. **In progress 2026-09-05** — the control-plane source now retains legacy
     single-key runtime compatibility while accepting a closed schema 2 with one
     selected KMS signer and at most two KMS-validated published public keys. Its
-    merge, private staging deployment and guarded schema migration remain open,
+    merge and private staging deployment are complete on revision
+    `control-plane-00005-biq`; the guarded schema migration remains open,
     followed by the browser App Check provider, temporary edge, two relays,
     three-engine runner and rollback guards. Execute the matrix once before
     wiring the real client and opaque broker into the production web shell.

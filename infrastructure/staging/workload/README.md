@@ -1,6 +1,7 @@
 # Private staging control-plane workload
 
-Status: audience-bound source applied, converged, source-verified and accepted by one retired bounded probe
+Status: bounded signing-key overlap bridge applied, converged and source-verified;
+the preceding audience-bound revision was accepted by one retired bounded probe
 
 This is the third, workload-only Terraform state for `miakapp-v4-staging`. It
 reads but never owns the reconciled bootstrap and foundation states. Its GCS
@@ -163,15 +164,43 @@ source bytes without making a Function request. Workload state generation
 data resources, one output, nothing tainted, and SHA-256
 `4f2977ce6e8c736cbdf31d58ba1da81f4291ace4c9d5d0d7d21a727c063cfc6e`.
 
-The current canonical non-secret [`result.json`](result.json) has SHA-256
+The canonical non-secret [`result.json`](result.json) at that deployment
+boundary had SHA-256
 `cfdb18b9dd6604cd92977cbd447dd0684f4b731ca84d2f7aa3f772cbd3bc3056`.
-The updater's next before-state is pinned to the deployed commit/source tuple.
 That deployment artifact correctly records no request during source inventory.
 The separate bounded user-relay probe later made five requests to this exact
 revision, validated three negative controls and two signed relay exchanges, and
 retired. Its current digest-pinned evidence lives under
 [`../auth-probe/`](../auth-probe/). The older discovery artifact below remains
 evidence for revision `control-plane-00003-hum`, not a claim about this revision.
+
+## Bounded signing-key overlap runtime bridge
+
+Merge commit `9f217da102b394734adba7ccef3f8f70d0317306` produced deterministic
+source SHA-256
+`d1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8`.
+Its exact saved plan had SHA-256
+`ee98468a4ed92196109ac6f646030dca582068c6e2f2b5c1889e347322b1e3a6`
+and again contained only one source-object replacement plus in-place Function
+and deployment-guard updates. IAM, ingress, identities, runtime configuration
+and scale did not change.
+
+The plan applied once and converged to active revision
+`control-plane-00005-biq`. Independent inventory verified internal-only
+ingress, scale 0..1, zero public invokers, zero user-managed keys and copied
+source generation `1788581208774706` without making a Function request. The
+deployed source preserves schema-1 and single-key behavior while accepting a
+closed schema 2 that selects exactly one KMS signer and publishes at most two
+KMS-validated public keys. The live runtime document intentionally remains on
+schema 1 with one key; migrating it is a separate guarded operation.
+
+Current workload state generation `1788581270106628` is 49,242 bytes at serial
+16 with fifteen managed and three data resources, one output, nothing tainted,
+and SHA-256
+`d765cceffc696905f045a34805f9c6f1a6c45e9ba3f2224754a90a157c89b428`.
+The current canonical non-secret [`result.json`](result.json) has SHA-256
+`dc3324d3b812e1dafc6a6678c7427ac715ea1d2a81de527750aa958c7c71a440`.
+The updater's next before-state is pinned to this deployed commit/source tuple.
 
 ## Successful private discovery
 
