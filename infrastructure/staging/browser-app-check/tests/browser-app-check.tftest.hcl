@@ -2,7 +2,7 @@ mock_provider "google" {}
 
 mock_provider "google-beta" {}
 
-run "enables_only_the_recaptcha_enterprise_api_prerequisite" {
+run "creates_only_the_domain_restricted_score_key_prerequisite" {
   command = plan
 
   override_data {
@@ -51,15 +51,25 @@ run "enables_only_the_recaptcha_enterprise_api_prerequisite" {
 
   assert {
     condition = (
-      output.staging_browser_app_check_api.recaptcha_api_enabled == true &&
-      output.staging_browser_app_check_api.recaptcha_keys_created == 0 &&
-      output.staging_browser_app_check_api.app_check_registered == false &&
-      output.staging_browser_app_check_api.app_check_enforcement == false &&
-      output.staging_browser_app_check_api.debug_tokens == 0 &&
-      output.staging_browser_app_check_api.public_endpoints_created == 0 &&
-      output.staging_browser_app_check_api.fixed_cost_services == 0
+      google_recaptcha_enterprise_key.browser_app_check.project == "miakapp-v4-staging" &&
+      google_recaptcha_enterprise_key.browser_app_check.display_name == "Miakapp V4 staging browser App Check" &&
+      google_recaptcha_enterprise_key.browser_app_check.deletion_policy == "DELETE" &&
+      length(google_recaptcha_enterprise_key.browser_app_check.web_settings) == 1 &&
+      google_recaptcha_enterprise_key.browser_app_check.web_settings[0].integration_type == "SCORE" &&
+      google_recaptcha_enterprise_key.browser_app_check.web_settings[0].allow_all_domains == false &&
+      google_recaptcha_enterprise_key.browser_app_check.web_settings[0].allow_amp_traffic == false &&
+      google_recaptcha_enterprise_key.browser_app_check.web_settings[0].allowed_domains == tolist(["miakapp-v4-staging.web.app"]) &&
+      length(google_recaptcha_enterprise_key.browser_app_check.testing_options) == 0 &&
+      length(google_recaptcha_enterprise_key.browser_app_check.waf_settings) == 0 &&
+      output.staging_browser_app_check_key.recaptcha_api_enabled == true &&
+      output.staging_browser_app_check_key.recaptcha_key_created == true &&
+      output.staging_browser_app_check_key.app_check_registered == false &&
+      output.staging_browser_app_check_key.app_check_enforcement == false &&
+      output.staging_browser_app_check_key.debug_tokens == 0 &&
+      output.staging_browser_app_check_key.public_endpoints_created == 0 &&
+      output.staging_browser_app_check_key.fixed_cost_services == 0
     )
-    error_message = "The prerequisite must not create a key, register App Check, enable enforcement, or expose a service."
+    error_message = "The key phase must create only the exact domain-restricted score key without registering or enforcing App Check."
   }
 }
 

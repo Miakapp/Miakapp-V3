@@ -657,7 +657,12 @@ current consumer.
     selected KMS signer and at most two KMS-validated published public keys. Its
     merge, private source deployment and guarded single-key schema migration are
     complete on revision `control-plane-00006-wid`, with unchanged effective
-    key and source bytes. Next implement the browser App Check provider,
+    key and source bytes. The reCAPTCHA Enterprise API prerequisite is live and
+    its guarded one-key implementation is ready for an exact saved plan and
+    apply, with an atomic private GCS claim preventing concurrent independent
+    bundles from repeating creation; App Check registration remains a separate
+    non-deletable gate. Next
+    complete that key evidence, then implement the browser App Check provider,
     temporary edge, two relays,
     three-engine runner and rollback guards. Execute the matrix once before
     wiring the real client and opaque broker into the production web shell.

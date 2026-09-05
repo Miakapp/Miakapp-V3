@@ -6,11 +6,17 @@ const REQUIRED_FILES = Object.freeze([
   'README.md',
   'apply.mjs',
   'apply.sh',
+  'attempt-claim.mjs',
   'cli.mjs',
   'contract.mjs',
   'evidence.mjs',
   'guard.mjs',
   'inventory.mjs',
+  'key-apply.mjs',
+  'key-apply.sh',
+  'key-contract.mjs',
+  'key-plan.mjs',
+  'key-plan.sh',
   'locals.tf',
   'main.tf',
   'outputs.tf',
@@ -21,6 +27,7 @@ const REQUIRED_FILES = Object.freeze([
   'state.mjs',
   'terraform-cli.tfrc',
   'validate-plan.mjs',
+  'validate-key-plan.mjs',
   'versions.tf',
 ]);
 const ALLOWED_DIRECTORIES = Object.freeze(['.terraform', 'tests']);
@@ -58,7 +65,7 @@ export function validateBrowserAppCheckRoot(rootUrl) {
     throw new Error('Browser App Check tests must contain regular files only');
   }
   exact(tests.map(({ name }) => name), TEST_FILES, 'Browser App Check tests');
-  for (const executable of ['apply.sh', 'plan.sh']) {
+  for (const executable of ['apply.sh', 'key-apply.sh', 'key-plan.sh', 'plan.sh']) {
     if ((lstatSync(new URL(executable, rootUrl)).mode & 0o111) === 0) {
       throw new Error(`${executable} must be executable`);
     }
