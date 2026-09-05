@@ -6,6 +6,13 @@ import {
   FIREBASE_APP_ID,
   HOSTING_ORIGIN,
   HOSTING_SITE,
+  PREFLIGHT_METADATA_SHA256,
+  PREFLIGHT_REPOSITORY_COMMIT,
+  PREFLIGHT_VERSION_NAME_SHA256,
+  PRIOR_CLAIM_GENERATION,
+  PRIOR_CLAIM_OBJECT,
+  PRIOR_CLAIM_SHA256,
+  PRIOR_CLAIM_SIZE_BYTES,
   PROJECT_ID,
   PROJECT_NUMBER,
   STATE_BUCKET,
@@ -20,6 +27,7 @@ import {
 const MAXIMUM_RESPONSE_BYTES = 8 * 1024 * 1024;
 const VERSION_NAME = new RegExp(`^sites/${HOSTING_SITE}/versions/[0-9A-Za-z_-]{8,128}$`, 'u');
 const RELEASE_NAME = new RegExp(`^sites/${HOSTING_SITE}/releases/[0-9A-Za-z_-]{8,128}$`, 'u');
+const SHA256 = /^[0-9a-f]{64}$/u;
 
 function reject(message) {
   throw new Error(message);
@@ -187,8 +195,44 @@ export async function observeHostingInventory(session, fetchImplementation) {
   });
 }
 
-async function operationClaimPresent(session, fetchImplementation) {
-  const encoded = encodeURIComponent(CLAIM_OBJECT);
+export function validateRetiredPreflightVersion(inventory, options = {}) {
+  const expectedNameSha256 = options.expectedVersionNameSha256
+    ?? PREFLIGHT_VERSION_NAME_SHA256;
+  const expectedRepositoryCommit = options.expectedRepositoryCommit
+    ?? PREFLIGHT_REPOSITORY_COMMIT;
+  if (!plainObject(inventory) || !Array.isArray(inventory.versions)
+    || !SHA256.test(expectedNameSha256)
+    || !/^[0-9a-f]{40}$/u.test(expectedRepositoryCommit)) {
+    reject('Retired browser-attestation preflight inventory is invalid');
+  }
+  const matches = inventory.versions.filter(({ name }) => (
+    sha256(Buffer.from(name, 'utf8')) === expectedNameSha256
+  ));
+  const [version] = matches;
+  if (matches.length !== 1
+    || version.status !== 'DELETED'
+    || version.file_count !== null
+    || version.version_bytes !== null
+    || !isDeepStrictEqual(version.labels, {
+      environment: 'staging',
+      operation: 'browser-app-check-attestation',
+      repository: expectedRepositoryCommit,
+    })) {
+    reject('Retired browser-attestation preflight version has drifted');
+  }
+  return version;
+}
+
+function validateClaimObject(objectName) {
+  if (![CLAIM_OBJECT, PRIOR_CLAIM_OBJECT].includes(objectName)) {
+    reject('Browser-attestation claim inventory object is outside the reviewed boundary');
+  }
+  return objectName;
+}
+
+async function operationClaimPresent(session, objectName, fetchImplementation) {
+  validateClaimObject(objectName);
+  const encoded = encodeURIComponent(objectName);
   const response = await googleJsonRequest(
     `https://storage.googleapis.com/storage/v1/b/${STATE_BUCKET}/o/${encoded}`,
     session.accessToken,
@@ -201,18 +245,19 @@ async function operationClaimPresent(session, fetchImplementation) {
   if (response.status === 404) return false;
   if (!plainObject(response.value)
     || response.value.bucket !== STATE_BUCKET
-    || response.value.name !== CLAIM_OBJECT
+    || response.value.name !== objectName
     || !/^[1-9][0-9]*$/u.test(response.value.generation ?? '')) {
     reject('Browser-attestation operation claim inventory is malformed');
   }
   return true;
 }
 
-export async function observeOperationClaim(session, fetchImplementation) {
+async function observeClaim(session, objectName, fetchImplementation) {
   if (!plainObject(session) || typeof session.accessToken !== 'string') {
     reject('Browser-attestation claim inventory requires a verified operator session');
   }
-  const encoded = encodeURIComponent(CLAIM_OBJECT);
+  validateClaimObject(objectName);
+  const encoded = encodeURIComponent(objectName);
   const metadataResponse = await googleJsonRequest(
     `https://storage.googleapis.com/storage/v1/b/${STATE_BUCKET}/o/${encoded}`,
     session.accessToken,
@@ -224,7 +269,7 @@ export async function observeOperationClaim(session, fetchImplementation) {
   const metadata = metadataResponse.value;
   if (!plainObject(metadata)
     || metadata.bucket !== STATE_BUCKET
-    || metadata.name !== CLAIM_OBJECT
+    || metadata.name !== objectName
     || !/^[1-9][0-9]*$/u.test(metadata.generation ?? '')
     || !/^[1-9][0-9]*$/u.test(metadata.size ?? '')
     || Number(metadata.size) > 64 * 1024) {
@@ -249,7 +294,7 @@ export async function observeOperationClaim(session, fetchImplementation) {
     value: Object.freeze(contentResponse.value),
     receipt: Object.freeze({
       bucket: STATE_BUCKET,
-      object: CLAIM_OBJECT,
+      object: objectName,
       generation: metadata.generation,
       size_bytes: bytes.byteLength,
       sha256: sha256(bytes),
@@ -257,12 +302,64 @@ export async function observeOperationClaim(session, fetchImplementation) {
   });
 }
 
+export function observeOperationClaim(session, fetchImplementation) {
+  return observeClaim(session, CLAIM_OBJECT, fetchImplementation);
+}
+
+export function observePriorOperationClaim(session, fetchImplementation) {
+  return observeClaim(session, PRIOR_CLAIM_OBJECT, fetchImplementation);
+}
+
+function validatePriorOperationClaim(claim, expectedReceipt) {
+  const value = claim?.value;
+  if (!plainObject(value)
+    || !isDeepStrictEqual(claim.receipt, expectedReceipt)
+    || !isDeepStrictEqual(Object.keys(value).sort(), [
+      'baseline_sha256',
+      'created_at',
+      'deletion_authorized',
+      'expires_at',
+      'hosting_site',
+      'maximum_attestation_attempts',
+      'metadata_sha256',
+      'operation',
+      'project_id',
+      'project_number',
+      'repository_commit',
+      'retry_authorized',
+      'schema',
+    ].sort())
+    || value.schema !== 'miakapp.staging-browser-attestation-claim/1'
+    || value.operation !== 'attest-browser-app-check-and-disable-hosting'
+    || value.project_id !== PROJECT_ID
+    || value.project_number !== PROJECT_NUMBER
+    || value.hosting_site !== HOSTING_SITE
+    || value.repository_commit !== PREFLIGHT_REPOSITORY_COMMIT
+    || value.metadata_sha256 !== PREFLIGHT_METADATA_SHA256
+    || !SHA256.test(value.baseline_sha256 ?? '')
+    || typeof value.created_at !== 'string'
+    || typeof value.expires_at !== 'string'
+    || value.maximum_attestation_attempts !== 1
+    || value.retry_authorized !== false
+    || value.deletion_authorized !== false) {
+    reject('Prior browser-attestation operation claim has drifted');
+  }
+  return claim;
+}
+
 export async function observeAttestationBaseline(session, options = {}) {
   if (!plainObject(session) || typeof session.accessToken !== 'string') {
     reject('Browser-attestation inventory requires a verified operator session');
   }
   const fetchImplementation = options.fetchImplementation;
-  const [appCheck, keys, hosting, webConfigResponse, claimPresent] = await Promise.all([
+  const expectedPriorClaimReceipt = options.expectedPriorClaimReceipt ?? Object.freeze({
+    bucket: STATE_BUCKET,
+    object: PRIOR_CLAIM_OBJECT,
+    generation: PRIOR_CLAIM_GENERATION,
+    size_bytes: PRIOR_CLAIM_SIZE_BYTES,
+    sha256: PRIOR_CLAIM_SHA256,
+  });
+  const [appCheck, keys, hosting, webConfigResponse, priorClaim, claimPresent] = await Promise.all([
     (options.observeRegistration ?? observeBrowserAppCheckRegistrationInventory)(session),
     (options.observeKeys ?? observeRecaptchaKeyRecords)(session),
     observeHostingInventory(session, fetchImplementation),
@@ -274,7 +371,8 @@ export async function observeAttestationBaseline(session, options = {}) {
         fetchImplementation,
       },
     ),
-    operationClaimPresent(session, fetchImplementation),
+    (options.observePriorClaim ?? observePriorOperationClaim)(session, fetchImplementation),
+    operationClaimPresent(session, CLAIM_OBJECT, fetchImplementation),
   ]);
   const firebaseConfig = validateWebConfig(webConfigResponse.value);
   if (!Array.isArray(keys) || keys.length !== 1 || !plainObject(keys[0])
@@ -290,6 +388,11 @@ export async function observeAttestationBaseline(session, options = {}) {
     || appCheck.debug_tokens !== 0) {
     reject('Browser-attestation App Check provider differs from the registered boundary');
   }
+  validatePriorOperationClaim(priorClaim, expectedPriorClaimReceipt);
+  const retiredVersion = validateRetiredPreflightVersion(hosting, {
+    expectedVersionNameSha256: options.expectedPreflightVersionNameSha256,
+    expectedRepositoryCommit: options.expectedPreflightRepositoryCommit,
+  });
   const baseline = Object.freeze({
     hosting_site: hosting.site.site,
     hosting_site_type: hosting.site.type,
@@ -300,13 +403,20 @@ export async function observeAttestationBaseline(session, options = {}) {
     app_check_enforcement_records: appCheck.service_enforcement_records,
     debug_tokens: appCheck.debug_tokens,
     operation_claim_present: claimPresent,
+    prior_operation_claim: Object.freeze({
+      object: priorClaim.receipt.object,
+      generation: priorClaim.receipt.generation,
+      size_bytes: priorClaim.receipt.size_bytes,
+      sha256: priorClaim.receipt.sha256,
+    }),
+    retired_preflight_version_name_sha256: sha256(Buffer.from(retiredVersion.name, 'utf8')),
   });
   const expectedClaimPresent = options.operationClaimPresent ?? false;
   if (typeof expectedClaimPresent !== 'boolean'
-    || baseline.hosting_version_count !== 0
+    || baseline.hosting_version_count !== 1
     || baseline.hosting_release_count !== 0
     || baseline.operation_claim_present !== expectedClaimPresent) {
-    reject('Browser-attestation requires the exact empty Hosting and operation-claim boundary');
+    reject('Browser-attestation requires the exact retired preflight boundary');
   }
   return Object.freeze({
     baseline,
