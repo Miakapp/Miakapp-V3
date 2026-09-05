@@ -1,6 +1,6 @@
 # Staging browser App Check attestation
 
-Status: three preflights safely consumed; reviewed v4 operation not yet planned or executed
+Status: four one-shot operations safely retired; interactive browser attestation pending
 
 This package closes only the real Web App Check attestation prerequisite for
 `miakapp-v4-staging`. It does not expose or invoke the control plane, create a
@@ -14,12 +14,24 @@ exposed that Firebase's stored-byte metric is not a local artifact checksum.
 The second stopped before release without finer stage evidence. The third
 proved that `populateFiles` omits empty protobuf fields when both content hashes
 already exist, while the driver had required an explicit empty array and upload
-URL. The committed preflight result files record only hashes, timestamps and
-stable counts; `preflight-evidence.mjs` pins their exact canonical SHA-256
-values. All immutable claims and deleted versions are retained as historical
+URL.
+
+The fourth operation crossed the complete Hosting boundary: both reviewed
+files and their security headers were verified from the public origin before a
+headed Playwright Chromium attempted App Check. That automated browser did not
+obtain a valid attestation. Cleanup then created the expected `SITE_DISABLE`
+release, deleted the version and proved the runner returned HTTP 404. No App
+Check token was retained. This result invalidates the operator-local Playwright
+approach; it must not be retried. A successor must use a real interactive
+browser session while retaining the same bounded publication and cleanup
+controls.
+
+The committed preflight result files record only hashes, timestamps and stable
+counts; `preflight-evidence.mjs` pins their exact canonical SHA-256 values. All
+immutable claims, deleted versions and Hosting release history are retained as
 evidence and cannot be reused.
 
-The v4 planner requires all three exact historical claims and deleted versions, the
+The consumed v4 planner required all three exact historical claims and deleted versions, the
 exact registered reCAPTCHA Enterprise provider, zero enforcement records, zero
 debug tokens, one active Firebase Web app, zero Hosting releases and no v4
 claim. It builds two private, digest-pinned files from Firebase JavaScript SDK
@@ -27,7 +39,7 @@ claim. It builds two private, digest-pinned files from Firebase JavaScript SDK
 Firebase configuration and reCAPTCHA site key are injected only into that
 private build; neither value is committed.
 
-The apply path is intentionally one-shot:
+The consumed apply path was intentionally one-shot:
 
 1. validate the exact short-lived plan, clean `origin/main` commit, dependency
    lock, operator and live baseline;
@@ -50,10 +62,10 @@ uses `no-store`, a restrictive CSP, no external application subresources, no
 Firebase Auth and no telemetry capture. Playwright tracing, HAR, video,
 screenshots and persistent contexts are disabled.
 
-## Guarded commands
+## Retired commands
 
-From the exact merged `origin/main` commit, create a private plan outside the
-repository:
+The following v4 commands document the consumed operation only. Its immutable
+claim exists and `retry_authorized` is false; do not run them again.
 
 ```sh
 MIAKAPP_STAGING_BROWSER_ATTESTATION_PLAN_CONFIRMATION=miakapp-v4-staging \
