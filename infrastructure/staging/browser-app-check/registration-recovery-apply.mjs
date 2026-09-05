@@ -82,6 +82,7 @@ const APPLY_AUTHORIZATION = 'MIAKAPP_STAGING_BROWSER_APP_CHECK_REGISTRATION_RECO
 const RECOVERY_MARKER = 'registration-state-recovery-attempted.json';
 const PROVIDER_ATTEMPT_CLAIM_RECEIPT = 'global-provider-attempt-claim.json';
 const FALLBACK_STATE = 'errored.tfstate';
+export const APP_CHECK_REGISTRATION_RECOVERY_RETIRED = true;
 process.umask(0o077);
 
 function reject(message) {
@@ -619,8 +620,15 @@ async function main() {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  main().catch((error) => {
-    console.error(error instanceof Error ? error.message : 'Browser App Check registration recovery failed');
+  if (APP_CHECK_REGISTRATION_RECOVERY_RETIRED) {
+    console.error(
+      'The browser App Check provider registration converged without recovery; this recovery apply path is permanently retired.',
+    );
     process.exitCode = 1;
-  });
+  } else {
+    main().catch((error) => {
+      console.error(error instanceof Error ? error.message : 'Browser App Check registration recovery failed');
+      process.exitCode = 1;
+    });
+  }
 }

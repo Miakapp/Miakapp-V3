@@ -61,6 +61,7 @@ const PLAN_CONFIRMATION = 'MIAKAPP_STAGING_BROWSER_APP_CHECK_REGISTRATION_RECOVE
 const EXACT_TARGET = `${PROJECT_ID}:${FIREBASE_APP_ID}:claim-bound-recovery`;
 const ATTEMPT_MARKER = 'registration-mutation-attempted.json';
 const ATTEMPT_CLAIM_RECEIPT = 'global-registration-attempt-claim.json';
+export const APP_CHECK_REGISTRATION_RECOVERY_RETIRED = true;
 process.umask(0o077);
 
 async function main() {
@@ -206,8 +207,15 @@ async function main() {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  main().catch((error) => {
-    console.error(error instanceof Error ? error.message : 'Browser App Check registration recovery planning failed');
+  if (APP_CHECK_REGISTRATION_RECOVERY_RETIRED) {
+    console.error(
+      'The browser App Check provider registration converged without recovery; this recovery planner is permanently retired.',
+    );
     process.exitCode = 1;
-  });
+  } else {
+    main().catch((error) => {
+      console.error(error instanceof Error ? error.message : 'Browser App Check registration recovery planning failed');
+      process.exitCode = 1;
+    });
+  }
 }

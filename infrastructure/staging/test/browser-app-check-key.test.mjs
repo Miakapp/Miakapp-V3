@@ -862,17 +862,24 @@ test('result omits the site key while binding Terraform state to direct inventor
   assert.equal(validateBrowserAppCheckKeyTerraformOutput(browserAppCheckKeyOutput()).recaptcha_testing, false);
 });
 
-test('committed key evidence is exact, cross-linked, sanitized, and immutable', () => {
+test('committed browser App Check evidence is exact, cross-linked, sanitized, and immutable', () => {
   const result = validateBrowserAppCheckEvidence(committedResultPath);
-  assert.equal(result.repository_commit, 'ec541acce307d32f2816097065f7bff1e3f0f7d0');
-  assert.equal(result.terraform_plan_sha256, 'dd45c80ed38dbe5e681713442ddaa02e1dc78d2a3ce6f9365b7bbc04f96e248b');
+  assert.equal(result.repository_commit, '67c6947231c2b4a515e74a3b7a27ea972f1dcd15');
+  assert.equal(result.terraform_plan_sha256, '9af7eaf470ce1a65f3737823135604a31ea6cbbd2575bd1afcc17d00033dfee7');
   assert.equal(result.authoritative_recaptcha_keys, 1);
   assert.equal(result.cloud_asset_recaptcha_keys, 1);
-  assert.equal(result.app_check_registered, false);
-  assert.equal(result.global_attempt_claim.retry_authorized, false);
+  assert.equal(result.app_check_provider.registered, true);
+  assert.equal(result.app_check_enforcement_records, 0);
+  assert.equal(result.global_key_attempt_claim.retry_authorized, false);
+  assert.equal(result.global_registration_attempt_claim.retry_authorized, false);
+  assert.equal(result.global_provider_attempt_claim.retry_authorized, false);
   assert.equal(
     result.terraform_state.recaptcha_key_name_sha256,
     result.recaptcha_key.name_sha256,
+  );
+  assert.equal(
+    result.terraform_state.app_check_config_name,
+    result.app_check_provider.name,
   );
   assert.doesNotMatch(
     JSON.stringify(result),
