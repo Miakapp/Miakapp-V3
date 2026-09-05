@@ -90,7 +90,8 @@ edge-profile source support are therefore present today. The new source accepts
 only the exact staging direct `run.app` issuer and exact Hosting `web.app` origin
 as an atomic pair; mixed or foreign provider domains fail closed. The deployed
 runtime remains on the canonical issuer/origin pair, so this source deployment
-did not open an edge or authorize a live request. The entry plan changed only the Function and its
+did not open an edge or authorize a live request. The entry plan changed only
+the Function and its
 deployment guard in place, retained both published keys, source, build, IAM,
 private ingress and scale, and made no live request. Its one-shot wrappers are
 retired. The complete authenticated browser case remains part of `LIVE-02`.
@@ -101,6 +102,13 @@ Before any public transition, the remaining work must provide:
 3. a three-engine runner that emits closed semantic counters only;
 4. allow-listed metric and billing observations; and
 5. a rollback plan that is rendered and checked before the live window opens.
+
+The adjacent [`browser-relay-edge/`](../browser-relay-edge/) package now
+implements and tests the dormant transition state machine. It selects the edge
+runtime while private, opens ingress before adding the public IAM member, and
+rolls back IAM before ingress and runtime. It has no CLI or authorization path.
+`EDGE-01` therefore remains open until a later digest-bound orchestrator adds
+the single-use claim and requires all other live preconditions.
 
 The currently deployed runtime document publishes both signing keys with
 version 1 current and version 2 retained. This completes the rehearsal entry
