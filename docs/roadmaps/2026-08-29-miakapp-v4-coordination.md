@@ -263,7 +263,8 @@ broader staging acceptance remain open, so this workstream is not complete.
 
 Deliverables:
 
-1. trusted React semantic-tree renderer plus the RFC 0002 opaque Worker broker;
+1. **host and broker foundations complete; lifecycle integration open** — trusted
+   React semantic-tree renderer plus the RFC 0002 opaque Worker broker;
 2. minimal versioned component bridge and React authoring adapter;
 3. immutable upload followed by atomic pointer publication;
 4. content verification, rollback, loading/error states, and cache behavior;
@@ -271,6 +272,17 @@ Deliverables:
    accepted, applied, failed, stale, and outcome-unknown states;
 6. malicious-bundle tests proving the absence of Firebase tokens, host storage,
    service-worker registration, arbitrary host DOM access, and undeclared APIs.
+
+Implementation status (2026-09-05): the active web entry point is now a React 19
+trusted-host shell. Its renderer revalidates every tree through the shared ABI 1
+contract and maps only the twelve closed semantic node types to host-owned React
+controls. Tests prove structured interaction handoff, capability-gated media and
+fail-closed rejection of arbitrary properties before render. A local preview
+adapter makes the product shell inspectable without Firebase, relay or home
+credentials, and the legacy V3 Vue/Auth/service-worker application is no longer
+part of the build. The opaque broker remains proven in its separate three-engine
+hostile harness; wiring its lifecycle, immutable Firebase artifact delivery and
+the real `miakapi/browser` adapter into this shell remains open.
 
 Exit gate: a deliberately hostile bundle is contained by browser-enforced
 boundaries, not by instructions or conventions.
@@ -611,9 +623,12 @@ current consumer.
 11. **Done 2026-09-05** — execute the bounded private user-relay exchange probe
     against the deployed merged control plane, verify both audience-bound
     credentials and retire every temporary capability and synthetic fixture.
-12. **Next** — design and run the separate live relay, browser, signing and
-    rollback acceptance matrix before wiring the client into the production web
-    shell.
+12. **Done 2026-09-05** — replace the active V3 Vue entry point with the first
+    React trusted-host shell, a closed ABI 1 semantic renderer, an explicitly
+    offline interactive adapter, fail-closed tests and a dedicated web CI gate.
+13. **Next** — design and run the separate live relay, browser, signing and
+    rollback acceptance matrix before wiring the real client and opaque broker
+    into the production web shell.
 
 ## 9. Evidence that would change this plan
 
@@ -633,8 +648,9 @@ control-plane contract is **high** after cross-language conformance, the
 cross-browser hostile subset and the bounded contract corpora. Confidence in the
 trusted browser client's narrow snapshot/patch/call/reauthentication path is
 **high within its synthetic Chromium boundary**. Confidence in complete runtime
-conformance, the real Node-RED adapter, production push delivery, the React
-adapter and production Firebase artifact delivery remains **medium** until their
+conformance, the real Node-RED adapter, production push delivery, the complete
+React host/broker integration and production Firebase artifact delivery remains
+**medium** until their
 vertical slices exercise the accepted contracts end to end. Confidence in the
 now-executed owner/Home-Key/access-token, audience-bound browser relay, synthetic
 push and component-publication paths is **high within their documented local

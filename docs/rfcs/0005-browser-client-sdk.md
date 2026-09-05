@@ -1,10 +1,10 @@
 # RFC 0005 — Trusted browser relay client 1.0
 
-- Status: accepted; local audience-bound implementation evidence complete,
-  staging and host integration pending
+- Status: accepted; local audience-bound and bounded control-plane staging
+  evidence complete, live relay and host integration pending
 - Product release: Miakapp 4
 - Public SDK: `miakapi/browser` in `miakapi@4`
-- Last updated: 2026-09-04
+- Last updated: 2026-09-05
 
 ## 1. Scope
 
@@ -14,7 +14,7 @@ authentication-provider boundary, lifecycle, home availability, authoritative
 state view, named calls, reconnect and reauthentication behavior, failures,
 resource limits and cleanup.
 
-The client is framework-neutral. The future React shell owns Firebase Auth, App
+The client is framework-neutral. The React shell owns Firebase Auth, App
 Check, home selection and presentation; the control plane owns relay routing,
 and the client owns one `{user, home}` session whose selected relay may change
 between credentials. Home-authored component code remains behind the
@@ -23,7 +23,7 @@ or an authentication credential.
 
 This RFC does not define:
 
-- the React application shell or Firebase login user experience;
+- the React application shell's product UX or Firebase login user experience;
 - the component-host adapter from browser state and calls to RFC 0002;
 - event publication or subscription in the first browser profile;
 - browser-side call handlers or streamed outgoing call progress;

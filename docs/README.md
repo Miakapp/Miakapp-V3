@@ -24,7 +24,8 @@ implemented across several repositories.
 - [`rfcs/0005-browser-client-sdk.md`](rfcs/0005-browser-client-sdk.md) — accepted
   trusted-host browser lifecycle, immutable state, calls, reauthentication and
   cleanup contract; its audience-bound SDK/relay path now has pinned local
-  two-relay evidence while staging and host integration remain gated.
+  two-relay evidence and a bounded control-plane staging probe while live relay
+  and host integration remain gated.
 - [`roadmaps/2026-08-29-miakapp-v4-coordination.md`](roadmaps/2026-08-29-miakapp-v4-coordination.md)
   — cross-repository sequence, ownership, acceptance gates, and deferred work.
 - [`operations/2026-09-01-miakapp-v4-environments.md`](operations/2026-09-01-miakapp-v4-environments.md)
