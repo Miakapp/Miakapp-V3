@@ -52,6 +52,7 @@ import {
 
 const PLAN_CONFIRMATION = 'MIAKAPP_STAGING_BROWSER_APP_CHECK_REGISTRATION_PLAN_CONFIRMATION';
 const EXACT_TARGET = `${PROJECT_ID}:${FIREBASE_APP_ID}:nondeletable`;
+export const APP_CHECK_REGISTRATION_CONSUMED = true;
 process.umask(0o077);
 
 export async function observeBrowserAppCheckRegistrationBaseline(session) {
@@ -185,8 +186,15 @@ async function main() {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  main().catch((error) => {
-    console.error(error instanceof Error ? error.message : 'Browser App Check registration planning failed');
+  if (APP_CHECK_REGISTRATION_CONSUMED) {
+    console.error(
+      'The browser App Check provider registration has already converged; this planner is permanently retired.',
+    );
     process.exitCode = 1;
-  });
+  } else {
+    main().catch((error) => {
+      console.error(error instanceof Error ? error.message : 'Browser App Check registration planning failed');
+      process.exitCode = 1;
+    });
+  }
 }

@@ -1,13 +1,13 @@
 # Staging browser App Check prerequisite
 
-Status: domain-restricted score-key prerequisite applied and converged;
-authoritative and Cloud Asset inventories contain exactly one key; both key
-entrypoints permanently retired; guarded non-deletable App Check registration
-implementation ready but not applied
+Status: domain-restricted score key and its exact non-deletable App Check
+provider registration applied and converged; authoritative and Cloud Asset
+inventories contain exactly one key; enforcement and browser traffic absent;
+all consumed mutation and recovery entrypoints permanently retired
 
-This isolated Terraform root applied the two reversible prerequisites for
-browser App Check in `miakapp-v4-staging` as separate guarded operations. The
-first, API-only saved plan created only:
+This isolated Terraform root applied the reCAPTCHA API, score-key and provider
+prerequisites for browser App Check in `miakapp-v4-staging` as separate guarded
+operations. The first, API-only saved plan created only:
 
 - one state-only guard bound to the reviewed foundation and the single live
   Firebase Web app; and
@@ -44,8 +44,9 @@ was generation `1788591686695870`, 11,057 bytes, Terraform serial 3 and SHA-256
 It contained exactly two managed resources, two data resources, one output and
 no tainted instance. Its lineage is unchanged from the 181-byte empty state
 created as a backend-initialization side effect of the earlier non-applying
-plan. The current serial-4 state and current [sanitized result](result.json) are
-documented under the applied key operation below.
+plan. The historical serial-4 key state is documented under the applied key
+operation below. The current serial-5 provider state is pinned by the current
+[sanitized result](result.json).
 
 ## Why this was deliberately two phases
 
@@ -131,21 +132,22 @@ It has three managed resources, two data resources, one output and no tainted
 instance. Direct and eventual Cloud Asset inventories now both corroborate one
 key; the raw key name and public site-key identifier remain absent from Git.
 
-## Non-deletable App Check boundary
+## Applied non-deletable App Check registration
 
 This root now declares exactly one
 `google_firebase_app_check_recaptcha_enterprise_config`, bound to the existing
-score key and the one reviewed Firebase Web app. It is intentionally not live
-yet. Firebase exposes GET and PATCH operations for this provider configuration
-but no delete operation. The Google provider implements Terraform creation as a
-PATCH and deletion only by forgetting the Terraform state ID; it cannot
-unregister the provider. `prevent_destroy=true` protects the declared resource,
-and every saved-plan validator rejects update, delete, replacement or omission.
-No teardown driver exists for it.
+score key and the one reviewed Firebase Web app. Registration converged on
+2026-09-05 while enforcement remained disabled. Firebase exposes GET and PATCH
+operations for this provider configuration but no delete operation. The Google
+provider implements Terraform creation as a PATCH and deletion only by
+forgetting the Terraform state ID; it cannot unregister the provider.
+`prevent_destroy=true` protects the declared resource, and every saved-plan
+validator rejects update, delete, replacement or omission. No teardown driver
+exists for it.
 
-The active [registration planner](registration-plan.mjs) accepts only one
+The consumed [registration planner](registration-plan.mjs) accepted only one
 Terraform create action for this provider, with the existing API, key and guard
-as exact no-ops. It pins:
+as exact no-ops. It pinned:
 
 - Firebase app `1:1072737219170:web:5053ca93bf25d7373cd73b`;
 - the hash of the exact existing site-key identifier, without committing its
@@ -156,21 +158,21 @@ as exact no-ops. It pins:
 - zero enforcement records, debug tokens, browser requests, assessments, IAM
   changes, public endpoints and fixed-cost services.
 
-`registration-plan.sh` requires the explicit target
+`registration-plan.sh` required the explicit target
 `miakapp-v4-staging:1:1072737219170:web:5053ca93bf25d7373cd73b:nondeletable`
-and writes its two-hour plan only to a private mode-0700 directory outside the
-repository. Planning is sandwiched between two identical direct-cloud and state
-observations. `registration-apply.sh` derives its authorization from the exact
-plan, baseline and merge commit. Immediately before apply it repeats that whole
-baseline with a fresh operator token, writes and fsyncs a non-retryable local
-bundle marker, then atomically creates and reads back the distinct private GCS
+and wrote its two-hour plan only to a private mode-0700 directory outside the
+repository. Planning was sandwiched between two identical direct-cloud and state
+observations. `registration-apply.sh` derived its authorization from the exact
+plan, baseline and merge commit. Immediately before apply it repeated that whole
+baseline with a fresh operator token, wrote and fsynced a non-retryable local
+bundle marker, then atomically created and read back the distinct private GCS
 object
 `terraform/browser-app-check/operations/app-check-registration-attempt.json`
-using `ifGenerationMatch=0`. One more exact inventory and state read must still
-find the provider-attempt object absent. The driver then constructs the complete
-Terraform invocation, atomically creates and reads back
+using `ifGenerationMatch=0`. One more exact inventory and state read still found
+the provider-attempt object absent. The driver then constructed the complete
+Terraform invocation, atomically created and read back
 `terraform/browser-app-check/operations/app-check-provider-attempt.json`, and
-invokes Terraform with no intervening local write or fallible validation. This
+invoked Terraform with no intervening local write or fallible validation. This
 second permanent claim is the global irreversible boundary: even independently
 copied bundles cannot both issue the provider PATCH. A crash after the first
 claim but before the second remains recoverable; once the second exists, an
@@ -181,28 +183,46 @@ resource-name hashes, TTL, score, exact prerequisite state generation, plan,
 baseline, commit and operator. The first also binds the saved-plan expiry; the
 second binds the exact first-claim generation and digest. They contain no
 credential or raw site key, are never automatically deleted, and prohibit
-retry. A final observation must match the exact registered provider, unchanged
+retry. The final observation matched the exact registered provider, unchanged
 key, `3600s` TTL, `0.5` score, zero enforcement/debug records, healthy
-four-resource Terraform state and both live claims.
+four-resource Terraform state and both live registration claims.
 
-An ambiguous PATCH outcome must never replay the original plan. The separate
+An ambiguous PATCH outcome could never replay the original plan. The separate
 [recovery inventory](registration-recovery-plan.mjs) and
 [claim-bound recovery](registration-recovery-apply.mjs) require the consumed
 registration claim plus exact live provider, prerequisite-claim, provider-claim
-and state snapshots. If and only if the provider remains unregistered, the state
-is still the pinned serial-4 prerequisite, and the global provider-attempt claim
-is absent, recovery may atomically acquire that second claim and immediately
-perform the first invocation of the original saved plan. Once the second claim
-exists, an unregistered provider fails closed as an ambiguous attempt.
+and state snapshots. If and only if the provider had remained unregistered, the
+state had still been the pinned serial-4 prerequisite, and the global
+provider-attempt claim had been absent, recovery could atomically acquire that
+second claim and immediately perform the first invocation of the original saved
+plan. Once the second claim exists, an unregistered provider fails closed as an
+ambiguous attempt.
 
-When the live provider is independently exact and registered, recovery permits
-only import of an absent address, state-only removal and reimport of the exact
-tainted partial address, or output reconciliation. The reconciliation saved
-plan must contain a provider no-op and zero cloud mutations. Every recovery
-plan creates a fresh private child bundle under the immutable source bundle;
-each child is one-shot, so a later observation can create another child without
-overwriting or deleting earlier metadata, markers or diagnostics. A missing or
-foreign provider/state combination fails closed.
+For an independently exact registered provider, the unused recovery path would
+have permitted only import of an absent address, state-only removal and reimport
+of the exact tainted partial address, or output reconciliation. A reconciliation
+saved plan had to contain a provider no-op and zero cloud mutations. Each attempt
+would create a fresh one-shot private child bundle without overwriting or deleting
+earlier metadata, markers or diagnostics. A missing or foreign provider/state
+combination failed closed. The provider converged on the first apply, so no
+recovery action ran. Both registration entrypoints and both unused recovery
+entrypoints now fail before environment, bundle, tool or cloud access. Future
+drift handling requires a newly reviewed gate.
+
+Execution commit `67c6947231c2b4a515e74a3b7a27ea972f1dcd15`
+rendered exact plan SHA-256
+`9af7eaf470ce1a65f3737823135604a31ea6cbbd2575bd1afcc17d00033dfee7`
+from baseline SHA-256
+`4545f379199b8b41d6dbabd24fb073f63ae6863cbbf88cdc4c65bd6658e445ef`.
+Apply reported success without recovery. The registration claim is generation
+`1788603676767807`; the provider-attempt claim is generation
+`1788603679291215`. Current state generation `1788603682439071` is serial 5,
+15,925 bytes and SHA-256
+`e05629171f5efd2bfe68657a5fd1567de0b5e0769948ef751ff0a3aba26f41dc`.
+It contains four managed resources, two data resources, one output and no
+tainted instance. The committed result contains only sanitized, cross-linked
+receipts; raw site-key, provider response, plan, state and operator credentials
+remain outside Git.
 
 Provider registration alone does not enable enforcement and the drivers never
 initialize a browser SDK. The site key is a browser-visible identifier, while
@@ -224,7 +244,8 @@ References:
 
 ## Next gate
 
-Render, independently review and apply the guarded provider registration from
-this exact one-key state, commit only sanitized cross-linked evidence and retire
-the consumed registration entrypoints. Browser SDK traffic, token acceptance
-and enforcement remain later gates and must not be bundled into registration.
+Exercise real browser SDK attestation against this exact provider without
+enabling enforcement, then validate token exchange, refresh and negative
+controls through the separately reviewed browser-relay acceptance gate. Public
+ingress, assessments and enforcement remain distinct bounded mutations and must
+not be inferred from provider registration alone.

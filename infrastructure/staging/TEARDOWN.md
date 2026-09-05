@@ -54,10 +54,10 @@ scale-to-zero project, with the billing link removable during an authorized
 teardown, is therefore the default.
 
 The repository contains separate bootstrap, foundation, workload, discovery-probe,
-Firebase Auth and Auth-probe roots plus an applied browser App Check API and
-single-key root, a private versioned GCS backend, keyless plan/apply identities
-and a retained historical workflow blueprint. Terraform completed the final
-27-create/nine-no-op plan, but
+Firebase Auth and Auth-probe roots plus an applied browser App Check API,
+single-key and provider root, a private versioned GCS backend, keyless plan/apply
+identities and a retained historical workflow blueprint. Terraform completed
+the final 27-create/nine-no-op plan, but
 the wrapper rejected the complete state before migration because its output
 shape assumption differed from Terraform 1.11.3. The exact 36-resource state at
 serial 39 is preserved outside the repository with fingerprint
@@ -104,14 +104,17 @@ state generation `1788574226264316` is 35,312 bytes at serial 27, with twelve
 managed resources, two data resources, one output and no tainted instance. Its
 SHA-256 is
 `88afa245c7943a44b23e32a452793c2825cf8e2bfb11ba55f95e299680b15cb2`.
-Browser-App-Check state generation `1788596623837355` is 14,139 bytes at
-serial 4, with three managed resources, two data resources, one output and no
+Browser-App-Check state generation `1788603682439071` is 15,925 bytes at
+serial 5, with four managed resources, two data resources, one output and no
 tainted instance. Its SHA-256 is
-`954c7c6ea4187ee59764cca2d4fb0cf359cc8a580dc1f12d96cad46ae2741f9f`.
+`e05629171f5efd2bfe68657a5fd1567de0b5e0769948ef751ff0a3aba26f41dc`.
 It records the state guard, enabled reCAPTCHA Enterprise API and exactly one
-domain-restricted score key. Direct and eventual Cloud Asset post-apply
-inventories both found that same key. The private 665-byte atomic attempt claim
-remains live at generation `1788596614949831` until reviewed key retirement.
+domain-restricted score key plus its registered non-deletable App Check provider.
+Direct and eventual Cloud Asset post-apply inventories both found that same key;
+direct App Check inventory found the exact provider with enforcement absent.
+The key, registration and provider-attempt coordination claims remain live at
+generations `1788596614949831`, `1788603676767807` and `1788603679291215`
+until reviewed retirement.
 Raw state remains private; these metadata do not establish current convergence
 by themselves.
 Raw plan and state bytes were never committed.
