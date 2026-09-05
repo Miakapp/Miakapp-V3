@@ -376,6 +376,13 @@ guard in place, preserved the source, and made no request. The current sanitized
 deployment result is digest-pinned under
 [`../../infrastructure/staging/workload/`](../../infrastructure/staging/workload/).
 
+A later exact two-update plan changed only `current_kid` and the deployment
+guard, selected version 2 while retaining version 1, and converged to current
+revision `control-plane-00008-saz`. It preserved the source, build, IAM,
+internal-only ingress and scale 0..1 and made no Function request. Retiring
+version 1 remains a separately guarded operation after the complete lease
+bound.
+
 The pinned local relay-authentication path now includes signing-key overlap,
 key-changing `REAUTH`, concurrent cache refresh, expiry, unknown-`kid` abuse,
 JWKS outage and bounded recovery. A separate pinned local gate now exercises the

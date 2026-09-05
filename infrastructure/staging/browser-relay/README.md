@@ -81,17 +81,18 @@ implementation must still provide:
 6. a rollback plan that is rendered and checked before the live window opens.
 
 The currently deployed runtime document publishes both signing keys with
-version 1 current. This completes the publication half of the routine 60-second
-prepublication and 330-second retiring-key retention contract. The guarded
+version 2 current and version 1 retained. This completes the publication and
+activation halves of the routine 60-second prepublication and 330-second
+retiring-key retention contract. The guarded
 `signing-overlap/` package now freezes the one-shot second-version creation and
 subsequent 60/330-second rollout. Version 2 converged after one direct KMS
 request, both coordination claims remain durable and its one-shot entrypoints
 are retired. The schema-2 bridge, shape migration and two-key prepublication
-are now deployed privately in revision `control-plane-00007-deb`; the latest
-update changed no source, IAM, ingress or scale and made no live request.
-`SIGNING-01` remains open until a separate guard proves the overlap interval,
-switches the signer and retains the prior public key for the complete lease
-bound. Schema support
+were deployed privately through revision `control-plane-00007-deb`; the later
+activation converged on revision `control-plane-00008-saz` without changing
+source, build, IAM, ingress or scale and made no live request. `SIGNING-01`
+remains open only for the separately guarded retirement of version 1 after the
+complete lease bound. Schema support
 or the local two-key fixture is not live overlap evidence.
 
 ## Matrix and evidence boundary

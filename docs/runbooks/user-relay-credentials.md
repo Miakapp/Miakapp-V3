@@ -161,8 +161,11 @@ to schema 2 on revision `control-plane-00006-wid`, without replacing source,
 changing IAM/ingress/scale or making a Function request. A later exact plan
 prepublished versions 1 and 2 with version 1 current as revision
 `control-plane-00007-deb`, again without a source, IAM, ingress or scale change
-or a Function request. Activation of version 2 and retention of version 1 for
-the complete lease bound remain separate gates.
+or a Function request. A later exact plan selected version 2 while retaining
+version 1 and converged to current revision `control-plane-00008-saz`, again
+without changing source, build, IAM, internal-only ingress or scale and without
+making a Function request. Retiring version 1 remains a separate gate after the
+complete lease bound.
 
 The bounded acceptance implementation, with zero persistent delta to the
 control-plane workload, IAM and topology, lives under
