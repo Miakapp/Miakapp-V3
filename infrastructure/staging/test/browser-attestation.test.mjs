@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
+import { EventEmitter } from 'node:events';
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { PassThrough } from 'node:stream';
 import test from 'node:test';
 
 import {
@@ -66,7 +66,8 @@ import {
 import {
   createBrowserChallenge,
   interactiveRunnerUrl,
-  readBrowserAttestation,
+  launchSystemBrowser,
+  observeSystemBrowserAttestation,
   sanitizedBrowserResult,
   validateBrowserPreflight,
 } from '../browser-attestation/browser.mjs';
@@ -452,8 +453,8 @@ function jsonResponse(value, status = 200, headers = {}) {
 test('binds the closed attestation metadata to exact artifacts and authorization', () => {
   const plan = metadata();
   assert.equal(validateAttestationMetadata(plan, NOW), plan);
-  assert.equal(plan.browser.session, 'operator-connected-interactive');
-  assert.equal(plan.browser.observation_channel, 'single-tty-json-line');
+  assert.equal(plan.browser.session, 'macos-default-system-browser');
+  assert.equal(plan.browser.observation_channel, 'ephemeral-loopback-fragment-post');
   assert.equal(plan.safety.maximum_attestation_attempts, 1);
   assert.equal(plan.safety.maximum_public_window_milliseconds, MAXIMUM_PUBLIC_WINDOW_MILLISECONDS);
   assert.equal(
@@ -621,19 +622,60 @@ test('observes only the retired preflight Hosting and registered provider baseli
   assert.equal(observed.firebase_config.apiKey.startsWith('AIza'), true);
 });
 
-test('accepts one challenge-bound interactive result and sanitizes it without the challenge', async () => {
-  const tty = new PassThrough();
-  tty.isTTY = true;
-  assert.deepEqual(validateBrowserPreflight(tty), {
-    session: 'operator-connected-interactive',
-    observation_channel: 'single-tty-json-line',
+async function submitLoopbackResult(runnerUrl, result, options = {}) {
+  const runner = new URL(runnerUrl);
+  const callback = new URL(runner.searchParams.get('callback'));
+  assert.equal(callback.hostname, '127.0.0.1');
+  assert.match(callback.pathname, /^\/__miakapp\/app-check\/[0-9a-f]{64}$/u);
+  if (options.skipBridge !== true) {
+    const bridge = await fetch(callback, { redirect: 'error' });
+    assert.equal(bridge.status, 200);
+    assert.match(await bridge.text(), /window\.location\.hash/u);
+  }
+  return fetch(callback, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Origin: callback.origin,
+    },
+    body: typeof result === 'string' ? result : JSON.stringify(result),
+    redirect: 'error',
   });
+}
+
+test('opens one default macOS browser and sanitizes one loopback result', async () => {
+  let accessed;
+  assert.deepEqual(validateBrowserPreflight({
+    platform: 'darwin',
+    accessImplementation(path, mode) {
+      accessed = { path, mode };
+    },
+  }), {
+    session: 'macos-default-system-browser',
+    observation_channel: 'ephemeral-loopback-fragment-post',
+  });
+  assert.equal(accessed.path, '/usr/bin/open');
+  assert.equal(Number.isInteger(accessed.mode), true);
+
   const challenge = createBrowserChallenge(() => Buffer.alloc(32, 0xab));
   assert.equal(challenge, 'ab'.repeat(32));
-  assert.equal(
-    interactiveRunnerUrl(challenge),
-    `${HOSTING_ORIGIN}${RUNNER_PATH}?challenge=${challenge}`,
-  );
+  const callback = `http://127.0.0.1:54321/__miakapp/app-check/${'c'.repeat(64)}`;
+  const runnerUrl = interactiveRunnerUrl(challenge, callback);
+  const runner = new URL(runnerUrl);
+  assert.equal(`${runner.origin}${runner.pathname}`, `${HOSTING_ORIGIN}${RUNNER_PATH}`);
+  assert.equal(runner.searchParams.get('challenge'), challenge);
+  assert.equal(runner.searchParams.get('callback'), callback);
+
+  let launch;
+  launchSystemBrowser(runnerUrl, (command, args, options) => {
+    launch = { command, args, options };
+    return { error: undefined, signal: null, status: 0 };
+  });
+  assert.equal(launch.command, '/usr/bin/open');
+  assert.deepEqual(launch.args, [runnerUrl]);
+  assert.equal(launch.options.shell, false);
+  assert.equal(launch.options.stdio, 'ignore');
+
   const observed = {
     schema: 'miakapp.browser-app-check-attestation/2',
     state: 'passed',
@@ -643,97 +685,171 @@ test('accepts one challenge-bound interactive result and sanitizes it without th
     token_ttl_seconds: 3599,
     duration_milliseconds: 812,
   };
-  const resultPromise = readBrowserAttestation(
-    tty,
+  let invocations = 0;
+  const result = await observeSystemBrowserAttestation(
     challenge,
-    NOW + 1000,
-    { now: NOW },
+    Date.now() + 2000,
+    {
+      randomBytesImplementation: () => Buffer.alloc(32, 0xcd),
+      async launchImplementation(value) {
+        invocations += 1;
+        const response = await submitLoopbackResult(value, observed);
+        assert.equal(response.status, 204);
+      },
+    },
   );
-  tty.end(`${JSON.stringify(observed)}\n`);
-  const result = await resultPromise;
+  assert.equal(invocations, 1);
   assert.deepEqual(result, observed);
   const sanitized = sanitizedBrowserResult(result);
   assert.equal(sanitized.challenge_sha256, sha256(Buffer.from(challenge)));
+  assert.equal(sanitized.session, 'macos-default-system-browser');
+  assert.equal(sanitized.observation_channel, 'ephemeral-loopback-fragment-post');
   assert.equal('challenge' in sanitized, false);
   assert.equal('token' in sanitized, false);
   assert.equal(sanitized.raw_token_returned, false);
 });
 
-test('accepts a closed failure for immediate cleanup and rejects raw token fields', async () => {
+test('accepts a closed failure for cleanup and rejects raw token fields', async () => {
   const challenge = 'a'.repeat(64);
-  const failedTty = new PassThrough();
-  const failedPromise = readBrowserAttestation(
-    failedTty,
-    challenge,
-    NOW + 1000,
-    { now: NOW },
-  );
-  failedTty.end(`${JSON.stringify({
+  const failure = {
     schema: 'miakapp.browser-app-check-attestation/2',
     state: 'failed',
     challenge,
     attestation_attempts: 1,
     failure: 'provider-or-token-shape-rejected',
-  })}\n`);
-  assert.equal((await failedPromise).state, 'failed');
-
-  const hostileTty = new PassThrough();
-  const hostilePromise = readBrowserAttestation(
-    hostileTty,
+  };
+  const failed = await observeSystemBrowserAttestation(
     challenge,
-    NOW + 1000,
-    { now: NOW },
+    Date.now() + 2000,
+    {
+      async launchImplementation(value) {
+        await submitLoopbackResult(value, failure);
+      },
+    },
   );
-  hostileTty.end(`${JSON.stringify({
-    schema: 'miakapp.browser-app-check-attestation/2',
-    state: 'passed',
+  assert.equal(failed.state, 'failed');
+
+  await assert.rejects(observeSystemBrowserAttestation(
     challenge,
-    attestation_attempts: 1,
-    token_format: 'jwt-three-segments',
-    token_ttl_seconds: 3599,
-    duration_milliseconds: 812,
-    token: 'must-not-return',
-  })}\n`);
-  await assert.rejects(hostilePromise);
-  assert.throws(() => validateBrowserPreflight(new PassThrough()));
+    Date.now() + 2000,
+    {
+      async launchImplementation(value) {
+        await submitLoopbackResult(value, {
+          schema: 'miakapp.browser-app-check-attestation/2',
+          state: 'passed',
+          challenge,
+          attestation_attempts: 1,
+          token_format: 'jwt-three-segments',
+          token_ttl_seconds: 3599,
+          duration_milliseconds: 812,
+          token: 'must-not-return',
+        });
+      },
+    },
+  ));
+  assert.throws(() => validateBrowserPreflight({ platform: 'linux' }));
+  assert.throws(() => validateBrowserPreflight({
+    platform: 'darwin',
+    accessImplementation() {
+      throw new Error('missing');
+    },
+  }));
 });
 
-test('bounds the interactive channel by one line, one deadline and an abort signal', async () => {
+test('rejects callback drift and bounds loopback by bridge, size, deadline and abort', async () => {
   const challenge = 'b'.repeat(64);
-  const duplicateTty = new PassThrough();
-  const duplicatePromise = readBrowserAttestation(
-    duplicateTty,
+  assert.throws(() => interactiveRunnerUrl(
     challenge,
-    NOW + 1000,
-    { now: NOW },
-  );
-  const valid = JSON.stringify({
+    `http://localhost:54321/__miakapp/app-check/${'c'.repeat(64)}`,
+  ));
+  assert.throws(() => interactiveRunnerUrl(
+    challenge,
+    `http://127.0.0.1:54321/__miakapp/app-check/${'c'.repeat(64)}?extra=true`,
+  ));
+
+  const valid = {
     schema: 'miakapp.browser-app-check-attestation/2',
     state: 'failed',
     challenge,
     attestation_attempts: 1,
     failure: 'provider-or-token-shape-rejected',
-  });
-  duplicateTty.end(`${valid}\n${valid}\n`);
-  await assert.rejects(duplicatePromise);
-
-  const interruptedTty = new PassThrough();
-  const controller = new AbortController();
-  const interruptedPromise = readBrowserAttestation(
-    interruptedTty,
+  };
+  const bridged = await observeSystemBrowserAttestation(
     challenge,
-    NOW + 1000,
-    { now: NOW, signal: controller.signal },
+    Date.now() + 2000,
+    {
+      async launchImplementation(value) {
+        const early = await submitLoopbackResult(value, valid, { skipBridge: true });
+        assert.equal(early.status, 405);
+        const accepted = await submitLoopbackResult(value, valid);
+        assert.equal(accepted.status, 204);
+      },
+    },
   );
-  controller.abort();
-  await assert.rejects(interruptedPromise);
+  assert.equal(bridged.state, 'failed');
 
-  assert.throws(() => readBrowserAttestation(
-    new PassThrough(),
+  await assert.rejects(observeSystemBrowserAttestation(
+    challenge,
+    Date.now() + 2000,
+    {
+      async launchImplementation(value) {
+        await submitLoopbackResult(value, 'x'.repeat((8 * 1024) + 1));
+      },
+    },
+  ));
+
+  const controller = new AbortController();
+  const interrupted = observeSystemBrowserAttestation(
+    challenge,
+    Date.now() + 2000,
+    {
+      signal: controller.signal,
+      launchImplementation() {
+        controller.abort();
+      },
+    },
+  );
+  await assert.rejects(interrupted, /interrupted/u);
+
+  await assert.rejects(observeSystemBrowserAttestation(
     challenge,
     NOW + INTERACTIVE_OBSERVATION_DEADLINE_MILLISECONDS + 1,
     { now: NOW },
   ));
+  await assert.rejects(observeSystemBrowserAttestation(
+    challenge,
+    Date.now() + 25,
+    { launchImplementation() {} },
+  ), /deadline/u);
+  class NeverListeningServer extends EventEmitter {
+    listening = false;
+
+    address() {
+      return null;
+    }
+
+    close(callback) {
+      callback?.();
+    }
+
+    closeAllConnections() {}
+
+    listen() {}
+  }
+  await assert.rejects(observeSystemBrowserAttestation(
+    challenge,
+    Date.now() + 25,
+    { createServerImplementation: () => new NeverListeningServer() },
+  ), /deadline/u);
+  await assert.rejects(observeSystemBrowserAttestation(
+    challenge,
+    Date.now() + 2000,
+    {
+      launchImplementation() {
+        throw new Error('unreviewed raw launch error');
+      },
+    },
+  ), /System browser launch failed/u);
 });
 
 test('uses one atomic non-retry claim bound to the exact plan', async () => {

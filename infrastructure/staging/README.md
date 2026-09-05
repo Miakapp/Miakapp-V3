@@ -578,9 +578,11 @@ The browser App Check API, its single
 domain-restricted score key and the exact non-deletable provider registration
 are applied, independently converged and retired as one-shot entrypoints.
 Version 2 activation is complete; removing version 1 remains a separate guarded
-gate after its complete 330-second retention. The next browser attestation step is a bounded real browser SDK/token observation
-with enforcement still disabled; it must not reuse the consumed registration
-drivers.
+gate after its complete 330-second retention. The next browser attestation step
+is a bounded real system-browser SDK/token-shape observation with enforcement
+still disabled. It uses one ephemeral `127.0.0.1` callback because Conductor's
+Browser tab is a localhost preview, and it must not reuse the consumed
+registration drivers or retired Playwright path.
 Separate guarded implementations must also exist for the temporary edge
 transition, relays, runner, metrics and rollback. The plan records these as open
 preconditions instead of promoting local fixtures to live evidence.
