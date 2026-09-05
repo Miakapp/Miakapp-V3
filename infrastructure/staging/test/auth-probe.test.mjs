@@ -1357,6 +1357,20 @@ test('validates the exact arm and retirement plans and rejects privilege drift',
   const publicIngress = structuredClone(syntheticPlan('arm'));
   publicIngress.resource_changes.find(({ address }) => address === 'google_cloud_run_v2_service.auth_probe_verifier[0]').change.after.ingress = 'INGRESS_TRAFFIC_ALL';
   assert.throws(() => validateAuthProbePlanAgainstPolicy(publicIngress, 'arm'), /ingress/u);
+  const importedCloudAsset = structuredClone(syntheticPlan('arm'));
+  const importedCloudAssetChange = importedCloudAsset.resource_changes.find(({ address }) => (
+    address === 'google_project_service.auth_probe_asset_inventory'
+  ));
+  for (const value of [importedCloudAssetChange.change.before, importedCloudAssetChange.change.after]) {
+    value.disable_dependent_services = null;
+    value.disable_on_destroy = null;
+  }
+  assert.doesNotThrow(() => validateAuthProbePlanAgainstPolicy(importedCloudAsset, 'arm'));
+  importedCloudAssetChange.change.after.disable_on_destroy = true;
+  assert.throws(
+    () => validateAuthProbePlanAgainstPolicy(importedCloudAsset, 'arm'),
+    /disable_on_destroy/u,
+  );
 
   const retired = validateAuthProbePlanAgainstPolicy(syntheticPlan('retire'), 'retire');
   assert.equal(retired.delete, 6);
