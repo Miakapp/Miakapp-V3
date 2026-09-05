@@ -3470,6 +3470,14 @@ function validateEvidence(value) {
       'state',
       'path',
       'sha256',
+      'baseline_observed_at',
+      'baseline_control_plane_revision',
+      'baseline_published_signing_keys',
+      'baseline_current_signing_key_version',
+      'browser_attestation_validated',
+      'firebase_auth_users',
+      'application_fixture_collections',
+      'open_preconditions',
       'cloud_mutation_authorized_by_plan',
       'acceptance_executed',
       'public_ingress_active',
@@ -3479,9 +3487,17 @@ function validateEvidence(value) {
     ],
   );
   const expectedBrowserRelayPlan = {
-    state: 'reviewed_not_deployed',
+    state: 'rebased_reviewed_not_deployed',
     path: BROWSER_RELAY_PLAN_PATH,
     sha256: BROWSER_RELAY_PLAN_SHA256,
+    baseline_observed_at: '2026-09-05T18:28:41.130Z',
+    baseline_control_plane_revision: 'control-plane-00008-saz',
+    baseline_published_signing_keys: 2,
+    baseline_current_signing_key_version: 2,
+    browser_attestation_validated: true,
+    firebase_auth_users: 0,
+    application_fixture_collections: 0,
+    open_preconditions: 6,
     cloud_mutation_authorized_by_plan: false,
     acceptance_executed: false,
     public_ingress_active: false,
@@ -4199,10 +4215,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 55, 'manifest.revision');
+  exact(manifest.revision, 56, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_2_current_runtime_deployed_signing_overlap_active_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_enforcement_disabled',
+    'private_control_plane_two_key_version_2_current_runtime_deployed_signing_overlap_active_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rebased_enforcement_disabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -4534,6 +4550,19 @@ export function validateCommittedEvidence(
   );
   exactFields(browserRelayPlanManifest, {
     state: browserRelayPlan.state,
+    baseline_observed_at: browserRelayPlan.baseline.observed_at,
+    baseline_control_plane_revision: browserRelayPlan.baseline.control_plane.revision,
+    baseline_published_signing_keys:
+      browserRelayPlan.baseline.control_plane.published_signing_keys,
+    baseline_current_signing_key_version:
+      browserRelayPlan.baseline.control_plane.current_signing_key_version,
+    browser_attestation_validated:
+      browserRelayPlan.baseline.app_check.browser_attestation_validated,
+    firebase_auth_users: browserRelayPlan.baseline.application_data.firebase_auth_users,
+    application_fixture_collections:
+      browserRelayPlan.baseline.application_data.application_fixture_collections,
+    open_preconditions:
+      browserRelayPlan.preconditions.filter(({ state }) => state === 'open').length,
     cloud_mutation_authorized_by_plan:
       browserRelayPlan.target.cloud_mutation_authorized_by_document,
     acceptance_executed: browserRelayPlan.target.acceptance_executed,

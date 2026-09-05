@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-browser-relay-plan/1",
-  "revision": 4,
-  "state": "reviewed_not_deployed",
+  "revision": 5,
+  "state": "rebased_reviewed_not_deployed",
   "target": {
     "project_id": "miakapp-v4-staging",
     "project_number": "1072737219170",
@@ -17,8 +17,8 @@
     "acceptance_executed": false
   },
   "pins": {
-    "miakapp_v3_commit": "8f098afb40f82aa4511f3a911a4357cb7e51da8e",
-    "deployed_control_plane_commit": "e42cdd70f812580a6070f0e850daa04dbe0cee42",
+    "miakapp_v3_commit": "b8daf28a655acad15d0b9fe148d850c65a0d26dd",
+    "deployed_control_plane_commit": "6a9db97deb59b6c8e919d451c922ddb246eb54b2",
     "deployed_control_plane_source_sha256": "d1844bbd007ae452d789011e8183038b9c1648b39c93b5122382c5f12a62ede8",
     "miakapi_commit": "a798a746847ba3d5c16128a08b33353269e770a4",
     "miakapp_server_commit": "9a7e33de3a684b6cd9e82231db7c9af8bf41a0a1",
@@ -30,16 +30,18 @@
     "terraform_version": "1.11.3"
   },
   "baseline": {
-    "observed_at": "2026-09-05T10:21:22.000Z",
+    "observed_at": "2026-09-05T18:28:41.130Z",
     "control_plane": {
       "service": "control-plane",
-      "revision": "control-plane-00006-wid",
+      "revision": "control-plane-00008-saz",
       "uri": "https://control-plane-aczhngqraq-od.a.run.app",
       "issuer": "https://control.staging.miakapp.com",
       "allowed_origin": "https://app.staging.miakapp.com",
       "runtime_schema": "miakapp.production-runtime/2",
       "security_schema": "miakapp.production-security/2",
-      "published_signing_keys": 1,
+      "runtime_config_sha256": "40e2f83fbe8e3d27b7e53c4a666f424519fc6972ef19a7598ab9e093be0c70f7",
+      "published_signing_keys": 2,
+      "current_signing_key_version": 2,
       "overlap_schema_supported_by_source": true,
       "ingress": "ALLOW_INTERNAL_ONLY",
       "unauthenticated_invokers": 0,
@@ -49,18 +51,44 @@
     "hosting": {
       "site": "miakapp-v4-staging",
       "default_origin": "https://miakapp-v4-staging.web.app",
-      "custom_domain_dns_records_present": false
+      "custom_domain_dns_records_present": false,
+      "site_disabled": true,
+      "versions": 6,
+      "releases": 6,
+      "all_versions_deleted": true,
+      "browser_relay_route_status": 404
     },
     "app_check": {
       "firebase_app_id": "1:1072737219170:web:5053ca93bf25d7373cd73b",
       "browser_provider_inventory": "readable_registered_recaptcha_enterprise",
+      "configured_token_ttl": "3600s",
       "service_enforcement_records": 0,
-      "browser_attestation_validated": false
+      "debug_tokens": 0,
+      "browser_attestation_result_sha256": "cd4a750c3f2be1985b84dacfb8f76ea117dc1651a91d197c915c0c1dc43bfed2",
+      "browser_attestation_validated": true
+    },
+    "signing_keys": {
+      "enabled_versions": [
+        1,
+        2
+      ],
+      "algorithm": "EC_SIGN_ED25519",
+      "protection_level": "SOFTWARE"
+    },
+    "application_data": {
+      "firebase_auth_users": 0,
+      "application_fixture_collections": 0,
+      "technical_firestore_documents": {
+        "controlAdmissionBuckets": 4,
+        "controlAdmissionState": 1,
+        "controlAudit": 5
+      }
     },
     "cloud_run_services": [
       "control-plane"
     ],
     "relay_services": 0,
+    "relay_service_account_present": false,
     "browser_runner_present": false,
     "app_engine_application_present": false
   },
@@ -198,13 +226,18 @@
     },
     {
       "id": "SIGNING-01",
-      "state": "open",
-      "requirement": "production_runtime_accepts_one_active_and_one_retiring_public_signing_key"
+      "state": "satisfied",
+      "requirement": "two_key_runtime_publishes_versions_1_and_2_with_version_2_current"
     },
     {
       "id": "APP-CHECK-01",
       "state": "satisfied",
-      "requirement": "browser_provider_inventory_is_readable_and_recaptcha_enterprise_is_registered"
+      "requirement": "browser_provider_inventory_and_real_system_browser_token_are_validated"
+    },
+    {
+      "id": "ROTATION-ENTRY-01",
+      "state": "open",
+      "requirement": "guarded_config_only_rehearsal_entry_selects_version_1_without_unpublishing_version_2"
     },
     {
       "id": "EDGE-01",
@@ -283,9 +316,9 @@
       "state": "pending",
       "maximum_runs": 1,
       "assertions": [
-        "new_jwk_prepublished_for_sixty_seconds",
+        "version_2_jwk_prepublished_for_at_least_sixty_seconds",
         "same_relay_scheduled_reauthentication",
-        "new_kid_accepted_on_existing_socket",
+        "version_2_kid_accepted_on_existing_socket",
         "one_browser_websocket"
       ]
     },
@@ -348,10 +381,10 @@
       "state": "pending",
       "maximum_runs": 1,
       "assertions": [
-        "prior_jwk_retained_for_three_hundred_thirty_seconds",
-        "prior_jwk_removed_after_lease_bound",
-        "prior_kms_version_disabled_not_destroyed",
-        "new_sessions_continue_on_active_key"
+        "version_1_jwk_retained_for_three_hundred_thirty_seconds",
+        "version_1_jwk_removed_after_lease_bound",
+        "kms_version_1_disabled_not_destroyed",
+        "new_sessions_continue_on_version_2"
       ]
     },
     {
@@ -368,13 +401,30 @@
     }
   ],
   "signing_rotation": {
-    "state": "blocked_by_single_published_key_runtime_config",
+    "state": "two_key_runtime_ready_rehearsal_entry_pending",
     "token_lease_seconds": 300,
     "prepublication_seconds": 60,
     "retiring_key_retention_seconds": 330,
-    "published_keys_before": 1,
+    "baseline_current_version": 2,
+    "baseline_published_versions": [
+      1,
+      2
+    ],
+    "rehearsal_entry_current_version": 1,
+    "rehearsal_entry_published_versions": [
+      1,
+      2
+    ],
+    "acceptance_target_current_version": 2,
+    "acceptance_target_published_versions": [
+      1,
+      2
+    ],
+    "published_keys_before": 2,
     "published_keys_during_overlap": 2,
     "published_keys_after_retirement": 1,
+    "new_kms_version_required": false,
+    "version_recreation_allowed": false,
     "prior_key_after_retirement": "disabled_not_destroyed",
     "ordinary_rollback": "select_still_published_non_compromised_key",
     "republish_removed_private_key": false

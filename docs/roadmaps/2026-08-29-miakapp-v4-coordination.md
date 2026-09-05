@@ -662,11 +662,15 @@ current consumer.
 12. **Done 2026-09-05** — replace the active V3 Vue entry point with the first
     React trusted-host shell, a closed ABI 1 semantic renderer, an explicitly
     offline interactive adapter, fail-closed tests and a dedicated web CI gate.
-13. **Design done 2026-09-05** — freeze the separate live relay, browser,
+13. **Design and live-baseline rebase done 2026-09-05** — freeze the separate live relay, browser,
     signing-key and rollback acceptance matrix as a digest-pinned closed plan.
     It selects a reversible provider-endpoint topology, scale and invocation
     ceilings, twelve pending semantic cases and a deterministic cleanup state;
-    it contains no deployer and claims no live evidence.
+    it contains no deployer and claims no live acceptance evidence. Revision 5
+    independently rebases the plan on `control-plane-00008-saz`, two published
+    signing keys with version 2 current, completed browser App Check attestation,
+    zero Firebase Auth users, zero application fixture collections and zero
+    relay services.
 14. **In progress 2026-09-05** — the control-plane source now retains legacy
     single-key runtime compatibility while accepting a closed schema 2 with one
     selected KMS signer and at most two KMS-validated published public keys. Its
@@ -689,11 +693,13 @@ current consumer.
     `control-plane-00007-deb` with version 1 current, unchanged source bytes,
     private ingress and scale 0..1. Version 2 is now selected on current revision
     `control-plane-00008-saz` while version 1 remains published, with the same
-    source, ingress and scale. Next retire version 1 through a separate guarded
-    operation after the complete lease bound, then implement the temporary
-    edge, two relays,
+    source, ingress and scale. Next implement a guarded configuration-only
+    rehearsal entry that reselects version 1 while version 2 stays published,
+    then implement the temporary edge, two relays,
     three-engine runner and rollback guards. Execute the matrix once before
-    wiring the real client and opaque broker into the production web shell.
+    retiring version 1 after the complete lease bound and wiring the real client
+    and opaque broker into the production web shell. This reuses the existing
+    keys and does not create a third KMS version.
 15. **Done 2026-09-05** — obtain one fresh reCAPTCHA Enterprise-backed App
     Check token through the exact staging Hosting origin in the default macOS
     browser. The challenge-bound loopback result proved the provider call
