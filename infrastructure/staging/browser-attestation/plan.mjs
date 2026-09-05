@@ -12,7 +12,6 @@ import {
   writePrivateFile,
 } from './contract.mjs';
 import { buildAttestationArtifact, validatePinnedPackageVersions } from './artifact.mjs';
-import { validateBrowserPreflight } from './browser.mjs';
 import { validateBrowserAttestationRoot } from './guard.mjs';
 import { observeAttestationBaseline } from './inventory.mjs';
 import {
@@ -39,7 +38,6 @@ async function main() {
   }
   validateBrowserAttestationRoot(new URL('./', import.meta.url));
   validateStagingManifest();
-  validateBrowserPreflight();
   const repositoryCommit = verifyExactMain(repositoryRoot);
   const packageJson = JSON.parse(readFileSync(join(repositoryRoot, 'package.json'), 'utf8'));
   validatePinnedPackageVersions(packageJson);
@@ -74,7 +72,8 @@ async function main() {
     `Metadata SHA-256: ${sha256(metadataBytes)}`,
     `Artifact files: ${metadata.artifact.file_count}; compressed bytes: ${metadata.artifact.total_gzip_bytes}`,
     `Authorization: ${attestationAuthorization(metadataBytes, repositoryCommit)}`,
-    'Planned boundary: one headed Chromium attestation, at most five public minutes, then SITE_DISABLE and version deletion.',
+    'Planned boundary: one connected interactive-browser attestation, at most five public minutes, then SITE_DISABLE and version deletion.',
+    'Apply requires an interactive TTY and accepts one challenge-bound semantic JSON line before its absolute two-minute observation deadline.',
     'Firebase Auth, control-plane ingress, App Check enforcement and debug providers remain unchanged.',
     '',
   ].join('\n'));

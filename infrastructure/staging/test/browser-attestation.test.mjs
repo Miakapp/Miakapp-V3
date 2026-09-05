@@ -2,14 +2,20 @@ import assert from 'node:assert/strict';
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { PassThrough } from 'node:stream';
 import test from 'node:test';
 
 import {
   CLAIM_OBJECT,
   FIREBASE_APP_ID,
+  FOURTH_PRIOR_CLAIM_GENERATION,
+  FOURTH_PRIOR_CLAIM_OBJECT,
+  FOURTH_PRIOR_CLAIM_SHA256,
+  FOURTH_PRIOR_CLAIM_SIZE_BYTES,
   HOSTING_HEADERS,
   HOSTING_ORIGIN,
   HOSTING_SITE,
+  INTERACTIVE_OBSERVATION_DEADLINE_MILLISECONDS,
   MAXIMUM_PUBLIC_WINDOW_MILLISECONDS,
   PROJECT_ID,
   PROJECT_NUMBER,
@@ -21,6 +27,15 @@ import {
   PREFLIGHT_V3_METADATA_SHA256,
   PREFLIGHT_V3_REPOSITORY_COMMIT,
   PREFLIGHT_V3_VERSION_NAME_SHA256,
+  PREFLIGHT_V4_DEPLOY_MESSAGE,
+  PREFLIGHT_V4_DEPLOY_RELEASE_NAME_SHA256,
+  PREFLIGHT_V4_DEPLOY_RELEASE_TIME,
+  PREFLIGHT_V4_DISABLE_MESSAGE,
+  PREFLIGHT_V4_DISABLE_RELEASE_NAME_SHA256,
+  PREFLIGHT_V4_DISABLE_RELEASE_TIME,
+  PREFLIGHT_V4_METADATA_SHA256,
+  PREFLIGHT_V4_REPOSITORY_COMMIT,
+  PREFLIGHT_V4_VERSION_NAME_SHA256,
   PREFLIGHT_VERSION_NAME_SHA256,
   PRIOR_CLAIM_GENERATION,
   PRIOR_CLAIM_OBJECT,
@@ -48,7 +63,13 @@ import {
   readAndVerifyArtifact,
   validatePinnedPackageVersions,
 } from '../browser-attestation/artifact.mjs';
-import { runBrowserAttestation } from '../browser-attestation/browser.mjs';
+import {
+  createBrowserChallenge,
+  interactiveRunnerUrl,
+  readBrowserAttestation,
+  sanitizedBrowserResult,
+  validateBrowserPreflight,
+} from '../browser-attestation/browser.mjs';
 import { buildOperationClaim, createOperationClaim } from '../browser-attestation/claim.mjs';
 import { validateBrowserAttestationRoot } from '../browser-attestation/guard.mjs';
 import {
@@ -90,6 +111,12 @@ const SECOND_HISTORICAL_VERSION = `sites/${HOSTING_SITE}/versions/${'i'.repeat(3
 const SECOND_HISTORICAL_VERSION_SHA256 = sha256(Buffer.from(SECOND_HISTORICAL_VERSION));
 const THIRD_HISTORICAL_VERSION = `sites/${HOSTING_SITE}/versions/${'j'.repeat(32)}`;
 const THIRD_HISTORICAL_VERSION_SHA256 = sha256(Buffer.from(THIRD_HISTORICAL_VERSION));
+const FOURTH_HISTORICAL_VERSION = `sites/${HOSTING_SITE}/versions/${'k'.repeat(32)}`;
+const FOURTH_HISTORICAL_VERSION_SHA256 = sha256(Buffer.from(FOURTH_HISTORICAL_VERSION));
+const HISTORICAL_DEPLOY_RELEASE = `sites/${HOSTING_SITE}/releases/${'l'.repeat(32)}`;
+const HISTORICAL_DEPLOY_RELEASE_SHA256 = sha256(Buffer.from(HISTORICAL_DEPLOY_RELEASE));
+const HISTORICAL_DISABLE_RELEASE = `sites/${HOSTING_SITE}/releases/${'m'.repeat(32)}`;
+const HISTORICAL_DISABLE_RELEASE_SHA256 = sha256(Buffer.from(HISTORICAL_DISABLE_RELEASE));
 
 function priorClaimReceipt() {
   return {
@@ -118,6 +145,16 @@ function thirdPriorClaimReceipt() {
     generation: THIRD_PRIOR_CLAIM_GENERATION,
     size_bytes: THIRD_PRIOR_CLAIM_SIZE_BYTES,
     sha256: THIRD_PRIOR_CLAIM_SHA256,
+  };
+}
+
+function fourthPriorClaimReceipt() {
+  return {
+    bucket: STATE_BUCKET,
+    object: FOURTH_PRIOR_CLAIM_OBJECT,
+    generation: FOURTH_PRIOR_CLAIM_GENERATION,
+    size_bytes: FOURTH_PRIOR_CLAIM_SIZE_BYTES,
+    sha256: FOURTH_PRIOR_CLAIM_SHA256,
   };
 }
 
@@ -177,6 +214,24 @@ function priorClaims() {
       },
       receipt: thirdPriorClaimReceipt(),
     },
+    {
+      value: {
+        schema: 'miakapp.staging-browser-attestation-claim/4',
+        operation: 'attest-browser-app-check-and-disable-hosting-v4',
+        project_id: PROJECT_ID,
+        project_number: PROJECT_NUMBER,
+        hosting_site: HOSTING_SITE,
+        repository_commit: PREFLIGHT_V4_REPOSITORY_COMMIT,
+        metadata_sha256: PREFLIGHT_V4_METADATA_SHA256,
+        baseline_sha256: '6'.repeat(64),
+        created_at: '2026-09-05T14:35:05.929Z',
+        expires_at: '2026-09-05T16:35:05.929Z',
+        maximum_attestation_attempts: 1,
+        retry_authorized: false,
+        deletion_authorized: false,
+      },
+      receipt: fourthPriorClaimReceipt(),
+    },
   ];
 }
 
@@ -222,6 +277,39 @@ function thirdHistoricalVersion() {
   };
 }
 
+function fourthHistoricalVersion() {
+  return {
+    name: FOURTH_HISTORICAL_VERSION,
+    status: 'DELETED',
+    labels: {
+      environment: 'staging',
+      operation: 'browser-app-check-attestation-v4',
+      repository: PREFLIGHT_V4_REPOSITORY_COMMIT,
+    },
+    file_count: null,
+    version_bytes: null,
+  };
+}
+
+function historicalReleases() {
+  return [
+    {
+      name: HISTORICAL_DEPLOY_RELEASE,
+      type: 'DEPLOY',
+      version_name: FOURTH_HISTORICAL_VERSION,
+      message: PREFLIGHT_V4_DEPLOY_MESSAGE,
+      release_time: PREFLIGHT_V4_DEPLOY_RELEASE_TIME,
+    },
+    {
+      name: HISTORICAL_DISABLE_RELEASE,
+      type: 'SITE_DISABLE',
+      version_name: null,
+      message: PREFLIGHT_V4_DISABLE_MESSAGE,
+      release_time: PREFLIGHT_V4_DISABLE_RELEASE_TIME,
+    },
+  ];
+}
+
 function retiredVersionExpectations() {
   return [
     {
@@ -239,6 +327,30 @@ function retiredVersionExpectations() {
       operation: 'browser-app-check-attestation-v3',
       repository_commit: PREFLIGHT_V3_REPOSITORY_COMMIT,
     },
+    {
+      name_sha256: FOURTH_HISTORICAL_VERSION_SHA256,
+      operation: 'browser-app-check-attestation-v4',
+      repository_commit: PREFLIGHT_V4_REPOSITORY_COMMIT,
+    },
+  ];
+}
+
+function retiredReleaseExpectations() {
+  return [
+    {
+      name_sha256: HISTORICAL_DEPLOY_RELEASE_SHA256,
+      type: 'DEPLOY',
+      version_name_sha256: FOURTH_HISTORICAL_VERSION_SHA256,
+      message: PREFLIGHT_V4_DEPLOY_MESSAGE,
+      release_time: PREFLIGHT_V4_DEPLOY_RELEASE_TIME,
+    },
+    {
+      name_sha256: HISTORICAL_DISABLE_RELEASE_SHA256,
+      type: 'SITE_DISABLE',
+      version_name_sha256: null,
+      message: PREFLIGHT_V4_DISABLE_MESSAGE,
+      release_time: PREFLIGHT_V4_DISABLE_RELEASE_TIME,
+    },
   ];
 }
 
@@ -246,8 +358,8 @@ function baseline() {
   return {
     hosting_site: HOSTING_SITE,
     hosting_site_type: 'DEFAULT_SITE',
-    hosting_version_count: 3,
-    hosting_release_count: 0,
+    hosting_version_count: 4,
+    hosting_release_count: 2,
     firebase_app_config_sha256: HASH,
     app_check_config_sha256: 'c'.repeat(64),
     app_check_enforcement_records: 0,
@@ -272,11 +384,22 @@ function baseline() {
         size_bytes: THIRD_PRIOR_CLAIM_SIZE_BYTES,
         sha256: THIRD_PRIOR_CLAIM_SHA256,
       },
+      {
+        object: FOURTH_PRIOR_CLAIM_OBJECT,
+        generation: FOURTH_PRIOR_CLAIM_GENERATION,
+        size_bytes: FOURTH_PRIOR_CLAIM_SIZE_BYTES,
+        sha256: FOURTH_PRIOR_CLAIM_SHA256,
+      },
     ],
     retired_preflight_version_name_sha256s: [
       PREFLIGHT_VERSION_NAME_SHA256,
       PREFLIGHT_V2_VERSION_NAME_SHA256,
       PREFLIGHT_V3_VERSION_NAME_SHA256,
+      PREFLIGHT_V4_VERSION_NAME_SHA256,
+    ],
+    retired_release_name_sha256s: [
+      PREFLIGHT_V4_DEPLOY_RELEASE_NAME_SHA256,
+      PREFLIGHT_V4_DISABLE_RELEASE_NAME_SHA256,
     ],
   };
 }
@@ -329,10 +452,14 @@ function jsonResponse(value, status = 200, headers = {}) {
 test('binds the closed attestation metadata to exact artifacts and authorization', () => {
   const plan = metadata();
   assert.equal(validateAttestationMetadata(plan, NOW), plan);
-  assert.equal(plan.browser.engine, 'chromium');
-  assert.equal(plan.browser.headless, false);
+  assert.equal(plan.browser.session, 'operator-connected-interactive');
+  assert.equal(plan.browser.observation_channel, 'single-tty-json-line');
   assert.equal(plan.safety.maximum_attestation_attempts, 1);
   assert.equal(plan.safety.maximum_public_window_milliseconds, MAXIMUM_PUBLIC_WINDOW_MILLISECONDS);
+  assert.equal(
+    plan.safety.interactive_observation_deadline_milliseconds,
+    INTERACTIVE_OBSERVATION_DEADLINE_MILLISECONDS,
+  );
   const bytes = Buffer.from(canonicalJson(plan));
   const authorization = attestationAuthorization(bytes, COMMIT);
   assert.doesNotThrow(() => validateAttestationAuthorization(authorization, bytes, COMMIT));
@@ -344,7 +471,7 @@ test('binds the closed attestation metadata to exact artifacts and authorization
   ));
 });
 
-test('rejects expiry, alternate targets, extra files, enforcement and persistent browser state', () => {
+test('rejects expiry, alternate targets, extra files, enforcement and browser-channel drift', () => {
   const mutateAndReject = (mutate, at = NOW) => {
     const candidate = structuredClone(metadata());
     mutate(candidate);
@@ -359,7 +486,7 @@ test('rejects expiry, alternate targets, extra files, enforcement and persistent
     value.baseline.retired_preflight_version_name_sha256s[0] = '0'.repeat(64);
   });
   mutateAndReject((value) => { value.artifact.file_count = 3; });
-  mutateAndReject((value) => { value.browser.persistent_context = true; });
+  mutateAndReject((value) => { value.browser.session = 'operator-local-playwright'; });
   mutateAndReject((value) => { value.safety.app_check_enforcement_enabled = true; });
   mutateAndReject((value) => { value.safety.debug_provider_used = true; });
   mutateAndReject((value) => { value.safety.token_returned_to_driver = true; });
@@ -405,14 +532,12 @@ test('builds two deterministic private files without committing Firebase public 
   );
 });
 
-test('pins the exact Firebase and Playwright package versions', () => {
+test('pins the exact Firebase package version without requiring Playwright', () => {
   assert.doesNotThrow(() => validatePinnedPackageVersions({
     dependencies: { firebase: '12.18.0' },
-    devDependencies: { playwright: '1.62.1' },
   }));
   assert.throws(() => validatePinnedPackageVersions({
     dependencies: { firebase: '^12.18.0' },
-    devDependencies: { playwright: '1.62.1' },
   }));
 });
 
@@ -433,10 +558,21 @@ test('observes only the retired preflight Hosting and registered provider baseli
           historicalVersion(),
           secondHistoricalVersion(),
           thirdHistoricalVersion(),
+          fourthHistoricalVersion(),
         ],
       });
     }
-    if (url.includes(`sites/${HOSTING_SITE}/releases`)) return jsonResponse({});
+    if (url.includes(`sites/${HOSTING_SITE}/releases`)) {
+      return jsonResponse({
+        releases: historicalReleases().map((release) => ({
+          name: release.name,
+          type: release.type,
+          version: release.version_name === null ? null : { name: release.version_name },
+          message: release.message,
+          releaseTime: release.release_time,
+        })),
+      });
+    }
     if (url.includes('/config')) {
       return jsonResponse({
         apiKey: `AIza${'x'.repeat(35)}`,
@@ -455,6 +591,7 @@ test('observes only the retired preflight Hosting and registered provider baseli
     {
       expectedSiteKeySha256: siteKeySha256,
       expectedRetiredVersions: retiredVersionExpectations(),
+      expectedRetiredReleases: retiredReleaseExpectations(),
       fetchImplementation,
       observePriorClaims: async () => priorClaims(),
       observeKeys: async () => [{ name: `projects/${PROJECT_ID}/keys/${siteKey}` }],
@@ -473,78 +610,137 @@ test('observes only the retired preflight Hosting and registered provider baseli
       HISTORICAL_VERSION_SHA256,
       SECOND_HISTORICAL_VERSION_SHA256,
       THIRD_HISTORICAL_VERSION_SHA256,
+      FOURTH_HISTORICAL_VERSION_SHA256,
+    ],
+    retired_release_name_sha256s: [
+      HISTORICAL_DEPLOY_RELEASE_SHA256,
+      HISTORICAL_DISABLE_RELEASE_SHA256,
     ],
   });
   assert.equal(observed.site_key, siteKey);
   assert.equal(observed.firebase_config.apiKey.startsWith('AIza'), true);
 });
 
-test('runs one headed browser and returns only closed semantic attestation evidence', async () => {
-  let contextClosed = 0;
-  let browserClosed = 0;
-  const page = {
-    goto: async (url) => assert.equal(url, `${HOSTING_ORIGIN}${RUNNER_PATH}`),
-    evaluate: async () => ({
-      schema: 'miakapp.browser-app-check-attestation/1',
-      state: 'passed',
-      engine: 'chromium',
-      mode: 'headed',
-      attestation_attempts: 1,
-      token_format: 'jwt-three-segments',
-      token_ttl_seconds: 3599,
-      duration_milliseconds: 812,
-    }),
-    close: async () => {},
+test('accepts one challenge-bound interactive result and sanitizes it without the challenge', async () => {
+  const tty = new PassThrough();
+  tty.isTTY = true;
+  assert.deepEqual(validateBrowserPreflight(tty), {
+    session: 'operator-connected-interactive',
+    observation_channel: 'single-tty-json-line',
+  });
+  const challenge = createBrowserChallenge(() => Buffer.alloc(32, 0xab));
+  assert.equal(challenge, 'ab'.repeat(32));
+  assert.equal(
+    interactiveRunnerUrl(challenge),
+    `${HOSTING_ORIGIN}${RUNNER_PATH}?challenge=${challenge}`,
+  );
+  const observed = {
+    schema: 'miakapp.browser-app-check-attestation/2',
+    state: 'passed',
+    challenge,
+    attestation_attempts: 1,
+    token_format: 'jwt-three-segments',
+    token_ttl_seconds: 3599,
+    duration_milliseconds: 812,
   };
-  const context = {
-    newPage: async () => page,
-    close: async () => { contextClosed += 1; },
-  };
-  const browser = {
-    newContext: async () => context,
-    close: async () => { browserClosed += 1; },
-  };
-  const result = await runBrowserAttestation({ launch: async () => browser });
-  assert.equal(result.browser_context, 'ephemeral-closed');
-  assert.equal(contextClosed, 1);
-  assert.equal(browserClosed, 1);
-  assert.deepEqual(Object.keys(result).sort(), [
-    'attestation_attempts',
-    'browser_context',
-    'duration_milliseconds',
-    'engine',
-    'mode',
-    'schema',
-    'state',
-    'token_format',
-    'token_ttl_seconds',
-  ]);
+  const resultPromise = readBrowserAttestation(
+    tty,
+    challenge,
+    NOW + 1000,
+    { now: NOW },
+  );
+  tty.end(`${JSON.stringify(observed)}\n`);
+  const result = await resultPromise;
+  assert.deepEqual(result, observed);
+  const sanitized = sanitizedBrowserResult(result);
+  assert.equal(sanitized.challenge_sha256, sha256(Buffer.from(challenge)));
+  assert.equal('challenge' in sanitized, false);
+  assert.equal('token' in sanitized, false);
+  assert.equal(sanitized.raw_token_returned, false);
 });
 
-test('closes browser state and rejects raw or failed page results', async () => {
-  let contextClosed = 0;
-  let browserClosed = 0;
-  const browser = {
-    newContext: async () => ({
-      newPage: async () => ({
-        goto: async () => {},
-        evaluate: async () => ({ state: 'failed', token: 'must-not-return' }),
-        close: async () => {},
-      }),
-      close: async () => { contextClosed += 1; },
-    }),
-    close: async () => { browserClosed += 1; },
-  };
-  await assert.rejects(() => runBrowserAttestation({ launch: async () => browser }));
-  assert.equal(contextClosed, 1);
-  assert.equal(browserClosed, 1);
+test('accepts a closed failure for immediate cleanup and rejects raw token fields', async () => {
+  const challenge = 'a'.repeat(64);
+  const failedTty = new PassThrough();
+  const failedPromise = readBrowserAttestation(
+    failedTty,
+    challenge,
+    NOW + 1000,
+    { now: NOW },
+  );
+  failedTty.end(`${JSON.stringify({
+    schema: 'miakapp.browser-app-check-attestation/2',
+    state: 'failed',
+    challenge,
+    attestation_attempts: 1,
+    failure: 'provider-or-token-shape-rejected',
+  })}\n`);
+  assert.equal((await failedPromise).state, 'failed');
+
+  const hostileTty = new PassThrough();
+  const hostilePromise = readBrowserAttestation(
+    hostileTty,
+    challenge,
+    NOW + 1000,
+    { now: NOW },
+  );
+  hostileTty.end(`${JSON.stringify({
+    schema: 'miakapp.browser-app-check-attestation/2',
+    state: 'passed',
+    challenge,
+    attestation_attempts: 1,
+    token_format: 'jwt-three-segments',
+    token_ttl_seconds: 3599,
+    duration_milliseconds: 812,
+    token: 'must-not-return',
+  })}\n`);
+  await assert.rejects(hostilePromise);
+  assert.throws(() => validateBrowserPreflight(new PassThrough()));
+});
+
+test('bounds the interactive channel by one line, one deadline and an abort signal', async () => {
+  const challenge = 'b'.repeat(64);
+  const duplicateTty = new PassThrough();
+  const duplicatePromise = readBrowserAttestation(
+    duplicateTty,
+    challenge,
+    NOW + 1000,
+    { now: NOW },
+  );
+  const valid = JSON.stringify({
+    schema: 'miakapp.browser-app-check-attestation/2',
+    state: 'failed',
+    challenge,
+    attestation_attempts: 1,
+    failure: 'provider-or-token-shape-rejected',
+  });
+  duplicateTty.end(`${valid}\n${valid}\n`);
+  await assert.rejects(duplicatePromise);
+
+  const interruptedTty = new PassThrough();
+  const controller = new AbortController();
+  const interruptedPromise = readBrowserAttestation(
+    interruptedTty,
+    challenge,
+    NOW + 1000,
+    { now: NOW, signal: controller.signal },
+  );
+  controller.abort();
+  await assert.rejects(interruptedPromise);
+
+  assert.throws(() => readBrowserAttestation(
+    new PassThrough(),
+    challenge,
+    NOW + INTERACTIVE_OBSERVATION_DEADLINE_MILLISECONDS + 1,
+    { now: NOW },
+  ));
 });
 
 test('uses one atomic non-retry claim bound to the exact plan', async () => {
   const plan = metadata();
   const bytes = Buffer.from(canonicalJson(plan));
   const claim = buildOperationClaim(bytes, plan);
-  assert.equal(claim.schema, 'miakapp.staging-browser-attestation-claim/4');
+  assert.equal(claim.schema, 'miakapp.staging-browser-attestation-claim/5');
   assert.equal(claim.retry_authorized, false);
   assert.equal(claim.deletion_authorized, false);
   let body;
@@ -573,7 +769,7 @@ test('drives the exact Hosting REST lifecycle and verifies public headers', asyn
   const session = { accessToken: 'test-access-token-with-enough-length' };
   const labels = {
     environment: 'staging',
-    operation: 'browser-app-check-attestation-v4',
+    operation: 'browser-app-check-attestation-v5',
     repository: COMMIT,
   };
   const config = { headers: [{ glob: '**', headers: HOSTING_HEADERS }] };
@@ -731,11 +927,11 @@ test('reads the immutable claim contents at the exact observed generation', asyn
   assert.match(seen[1], /alt=media&generation=456/u);
 });
 
-test('binds interrupted Hosting recovery to one v4 version while retaining preflight history', () => {
+test('binds interrupted Hosting recovery to one v5 version while retaining all history', () => {
   const plan = metadata();
   const labels = {
     environment: 'staging',
-    operation: 'browser-app-check-attestation-v4',
+    operation: 'browser-app-check-attestation-v5',
     repository: COMMIT,
   };
   const hosting = {
@@ -744,6 +940,7 @@ test('binds interrupted Hosting recovery to one v4 version while retaining prefl
       historicalVersion(),
       secondHistoricalVersion(),
       thirdHistoricalVersion(),
+      fourthHistoricalVersion(),
       {
         name: VERSION,
         status: 'FINALIZED',
@@ -752,18 +949,22 @@ test('binds interrupted Hosting recovery to one v4 version while retaining prefl
         version_bytes: '5000',
       },
     ],
-    releases: [{
-      name: RELEASE,
-      type: 'DEPLOY',
-      version_name: VERSION,
-      message: hostingMessages.deploy,
-      release_time: '2026-09-05T14:01:00Z',
-    }],
+    releases: [
+      ...historicalReleases(),
+      {
+        name: RELEASE,
+        type: 'DEPLOY',
+        version_name: VERSION,
+        message: hostingMessages.deploy,
+        release_time: '2026-09-05T15:01:00Z',
+      },
+    ],
   };
   const sourceBytes = Buffer.from(canonicalJson(plan));
   const claimBytes = Buffer.from(canonicalJson(buildOperationClaim(sourceBytes, plan)));
   const inventoryValidationOptions = {
     expectedRetiredVersions: retiredVersionExpectations(),
+    expectedRetiredReleases: retiredReleaseExpectations(),
   };
   const recovery = buildRecoveryMetadata({
     repositoryCommit: COMMIT,
@@ -791,15 +992,15 @@ test('binds interrupted Hosting recovery to one v4 version while retaining prefl
   ));
 
   const retired = structuredClone(hosting);
-  retired.versions[3].status = 'DELETED';
-  retired.versions[3].file_count = null;
-  retired.versions[3].version_bytes = null;
+  retired.versions[4].status = 'DELETED';
+  retired.versions[4].file_count = null;
+  retired.versions[4].version_bytes = null;
   retired.releases.push({
     name: `sites/${HOSTING_SITE}/releases/${'e'.repeat(32)}`,
     type: 'SITE_DISABLE',
     version_name: null,
     message: hostingMessages.disable,
-    release_time: '2026-09-05T14:02:00Z',
+    release_time: '2026-09-05T15:02:00Z',
   });
   const retiredSummary = validateInterruptedHostingInventory(
     retired,
@@ -810,7 +1011,7 @@ test('binds interrupted Hosting recovery to one v4 version while retaining prefl
   assert.equal(retiredSummary.delete_version, false);
 
   const unreviewed = structuredClone(hosting);
-  unreviewed.versions[3].labels.repository = 'f'.repeat(40);
+  unreviewed.versions[4].labels.repository = 'f'.repeat(40);
   assert.throws(() => validateInterruptedHostingInventory(
     unreviewed,
     plan,
@@ -824,7 +1025,7 @@ test('binds interrupted Hosting recovery to one v4 version while retaining prefl
     inventoryValidationOptions,
   ));
   const redeployed = structuredClone(retired);
-  redeployed.releases[0].release_time = '2026-09-05T14:03:00Z';
+  redeployed.releases[2].release_time = '2026-09-05T15:03:00Z';
   assert.throws(() => validateInterruptedHostingInventory(
     redeployed,
     plan,
