@@ -463,10 +463,13 @@ slice later selected version 2 while retaining version 1 and converged to
 historical revision `control-plane-00008-saz`. Its exact plan again changed only
 the Function and deployment guard, preserved source, IAM, internal-only ingress,
 identities and scale, and made no Function request. An eighteenth staging slice
-then converged the browser-relay rehearsal entry on current revision
+then converged the browser-relay rehearsal entry on historical revision
 `control-plane-00009-kur`, reselecting version 1 while version 2 remained
 published. Its exact plan again changed only those two resources, preserved the
-same safety boundary and made no Function request. Version-1 retirement remains
+same safety boundary and made no Function request. A nineteenth source-only
+slice deployed the bounded staging edge profile to current private revision
+`control-plane-00010-vop` while leaving the canonical profile, IAM, ingress and
+scale active and making no Function request. Version-1 retirement remains
 a separate live-matrix gate after the complete 330-second lease bound.
 
 Deliverables:
@@ -647,9 +650,11 @@ current consumer.
    migration is complete, and versions 1 and 2 are now prepublished on revision
    `control-plane-00007-deb` with version 1 current. Version 2 was selected on
    historical revision `control-plane-00008-saz`; the guarded browser-relay
-   rehearsal entry then reselected version 1 on current revision
+   rehearsal entry then reselected version 1 on historical revision
    `control-plane-00009-kur` while version 2 remained published, with unchanged
-   source, IAM, internal-only ingress and scale and without a live request.
+   source, IAM, internal-only ingress and scale and without a live request. The
+   bounded edge-profile source is now deployed privately as
+   `control-plane-00010-vop`, but the canonical profile remains active.
    Retiring-key removal and secret
    rotation, source/edge admission,
    monitoring, migration rehearsal and real staging fault evidence remain
@@ -672,12 +677,13 @@ current consumer.
     signing-key and rollback acceptance matrix as a digest-pinned closed plan.
     It selects a reversible provider-endpoint topology, scale and invocation
     ceilings, twelve pending semantic cases and a deterministic cleanup state;
-    it contains no deployer and claims no live acceptance evidence. Revision 6
-    independently rebases the plan on `control-plane-00009-kur`, two published
+   it contains no deployer and claims no live acceptance evidence. Revision 7
+   independently rebases the plan on `control-plane-00010-vop`, two published
     signing keys with version 1 current for the rehearsal, completed browser App
     Check attestation, zero Firebase Auth users, zero application fixture
-    collections and zero relay services. Its guarded rotation-entry prerequisite
-    is converged and the consumed one-shot tooling is retired.
+   collections and zero relay services. Its guarded rotation-entry prerequisite
+   is converged, the bounded staging edge profile is present in source but not
+   selected, and the consumed one-shot tooling is retired.
 14. **In progress 2026-09-05** — the control-plane source now retains legacy
     single-key runtime compatibility while accepting a closed schema 2 with one
     selected KMS signer and at most two KMS-validated published public keys. Its
@@ -700,9 +706,12 @@ current consumer.
     `control-plane-00007-deb` with version 1 current, unchanged source bytes,
     private ingress and scale 0..1. Version 2 was selected on historical revision
     `control-plane-00008-saz`; the guarded configuration-only rehearsal entry
-    then reselected version 1 on current revision `control-plane-00009-kur`
+    then reselected version 1 on historical revision `control-plane-00009-kur`
     while version 2 stayed published, with the same source, ingress and scale.
-    Its one-shot tooling is retired. Next implement the temporary edge, two relays,
+    Its one-shot tooling is retired. The bounded staging edge-profile source is
+    now current on private revision `control-plane-00010-vop`; it rejects mixed
+    issuer/origin pairs, and the canonical profile remains active. Next implement
+    the temporary edge transition, two relays,
     three-engine runner and rollback guards. Execute the matrix once before
     retiring version 1 after the complete lease bound and wiring the real client
     and opaque broker into the production web shell. This reuses the existing

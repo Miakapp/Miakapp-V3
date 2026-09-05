@@ -166,14 +166,30 @@ The subsequent guarded rehearsal-entry plan had SHA-256
 `e0dec2a8b92545a0fdb89ac4f0e449bbac25f6332111dfd705921eaf6ceb5e29`
 and reselected version 1 while retaining both published keys. It again changed
 only the Function and deployment guard, preserved source, build, IAM, private
-ingress and scale, and made no Function request. It converged to current
+ingress and scale, and made no Function request. It converged to historical
 revision `control-plane-00009-kur` at
-`2026-09-05T19:04:13.514360614Z`. Current workload state generation
+`2026-09-05T19:04:13.514360614Z`. Workload state generation at that boundary
 `1788635059003671` is 49,898 bytes at serial 24 with the same inventory and no
 taint; its SHA-256 is
 `07c0c7ef2d3130e440282a8923c15723deca39cf2d150c742bd7da4767d59283`.
-The current canonical [`workload/result.json`](workload/result.json) has SHA-256
+The canonical result at that boundary had SHA-256
 `5259f61aa65ceca3e45e162ea59045ee4947d9cec04e5a301261314f526b067c`.
+
+The next exact source-only plan had SHA-256
+`346dd483045090c31e6bf7da715bfb2d71a3c4672a85aa16aa92992058a71393`.
+It deployed merge commit `ba4fc9caed566fa39fc66371192fb1821b4232ff`
+and deterministic source SHA-256
+`3e94305e17ee4df07f54f13560dac0a9491de3f89fb3ddbf4ab745c62dce8c7e`
+to current private revision `control-plane-00010-vop`. The source adds one
+bounded staging browser-relay edge profile, accepting only the exact direct
+`run.app` issuer and Hosting `web.app` origin as an atomic pair. The active
+runtime remains canonical, and independent inventory reconfirmed private
+ingress, zero public invokers, scale 0..1 and no live request. Current workload
+state generation `1788637742341649` is 49,898 bytes at serial 26 with the same
+inventory and no taint; its SHA-256 is
+`e948862e0638bca565bba5a46841162fa4757c6e477f63d859c8aa47a6b8aab7`.
+The current canonical [`workload/result.json`](workload/result.json) has SHA-256
+`7aa7f4ec4b5d5bcd2b272f472361975c84dbc974dfdf24f154290d20c95b7266`.
 The discovery evidence below remains pinned to historical revision
 `control-plane-00003-hum`.
 
@@ -589,10 +605,12 @@ open blockers.
 
 The digest-pinned [`browser-relay/plan.json`](browser-relay/plan.json) is now
 rebased from an independent read-only observation of the private
-`control-plane-00009-kur` state. It verified zero Firebase Auth users, zero
+`control-plane-00010-vop` state. It verified zero Firebase Auth users, zero
 application fixture collections, zero relays, a disabled Hosting route, two
 published signing keys with version 1 current, and the completed browser App
-Check attestation. It selects the bounded shape for the next work: the existing Hosting `web.app`
+Check attestation. It also verifies that the bounded staging edge profile is
+present in source while the active runtime remains canonical. It selects the
+bounded shape for the next work: the existing Hosting `web.app`
 origin, temporary direct provider endpoints, two scale-0..1 no-role relays, a
 local unscheduled three-engine runner, one execution and a maximum twenty-minute
 public window. It assumes no free tier and stops at a EUR 1 projected increment,
