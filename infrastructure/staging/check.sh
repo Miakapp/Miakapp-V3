@@ -136,6 +136,12 @@ node --check infrastructure/staging/browser-relay-page/page.mjs
 node --check infrastructure/staging/browser-relay-page/runtime.mjs
 node --check infrastructure/staging/test/browser-relay-page-browser.mjs
 node -e "import('./infrastructure/staging/browser-relay-page/contract.mjs').then(({ validateBrowserRelayPageProfile }) => validateBrowserRelayPageProfile())"
+node infrastructure/staging/browser-relay-fixture/guard.mjs \
+  "${repository_root}/infrastructure/staging/browser-relay-fixture"
+node --check infrastructure/staging/browser-relay-fixture/contract.mjs
+node --check infrastructure/staging/browser-relay-fixture/fixture.mjs
+node --check infrastructure/staging/browser-relay-fixture/guard.mjs
+node -e "import('./infrastructure/staging/browser-relay-fixture/contract.mjs').then(({ validateBrowserRelayFixtureProfile }) => validateBrowserRelayFixtureProfile())"
 node infrastructure/staging/browser-relay-monitoring/guard.mjs \
   "${repository_root}/infrastructure/staging/browser-relay-monitoring"
 node --check infrastructure/staging/browser-relay-monitoring/cloud.mjs
@@ -324,6 +330,7 @@ node --test \
   infrastructure/staging/test/browser-app-check-registration.test.mjs \
   infrastructure/staging/test/browser-attestation.test.mjs \
   infrastructure/staging/test/browser-relay-edge.test.mjs \
+  infrastructure/staging/test/browser-relay-fixture.test.mjs \
   infrastructure/staging/test/browser-relay-image.test.mjs \
   infrastructure/staging/test/browser-relay-monitoring.test.mjs \
   infrastructure/staging/test/browser-relay-operation.test.mjs \

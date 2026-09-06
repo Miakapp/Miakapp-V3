@@ -48,6 +48,13 @@ import {
   validateBrowserRelayPageProfile,
 } from './browser-relay-page/contract.mjs';
 import {
+  FIXTURE_IMPLEMENTATION_BASE_COMMIT,
+  FIXTURE_PROFILE_PATH,
+  FIXTURE_PROFILE_SHA256,
+  FIXTURE_SOURCE_SHA256,
+  validateBrowserRelayFixtureProfile,
+} from './browser-relay-fixture/contract.mjs';
+import {
   ROLLBACK_IMPLEMENTATION_COMMIT,
   ROLLBACK_PREFLIGHT_RESULT_PATH,
   ROLLBACK_PREFLIGHT_RESULT_SHA256,
@@ -2964,6 +2971,7 @@ function validateEvidence(value) {
     'browser_relay_plan',
     'browser_relay_runner',
     'browser_relay_page',
+    'browser_relay_fixture',
     'browser_relay_monitoring',
     'browser_relay_rollback',
     'browser_relay_orchestrator',
@@ -5174,10 +5182,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 81, 'manifest.revision');
+  exact(manifest.revision, 82, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_artifact_ci_implemented_not_wired_not_published_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_artifact_ci_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -5885,6 +5893,69 @@ export function validateCommittedEvidence(
     credentials_committed: false,
     raw_diagnostics_committed: false,
   }, 'evidence.browser_relay_page');
+  const browserRelayFixtureManifest = manifest.evidence.browser_relay_fixture;
+  const browserRelayFixtureProfilePath = committedEvidencePath(
+    stagingRoot,
+    browserRelayFixtureManifest.profile_path,
+    FIXTURE_PROFILE_PATH,
+    'evidence.browser_relay_fixture.profile_path',
+  );
+  const browserRelayFixtureProfile = validatedEvidenceFile(
+    browserRelayFixtureProfilePath,
+    validateBrowserRelayFixtureProfile,
+    'evidence.browser_relay_fixture.profile_path',
+  );
+  exact(
+    fileSha256(browserRelayFixtureProfilePath),
+    FIXTURE_PROFILE_SHA256,
+    'evidence.browser_relay_fixture.profile_sha256',
+  );
+  exact(
+    fileSha256(resolve(stagingRoot, 'browser-relay-fixture/fixture.mjs')),
+    FIXTURE_SOURCE_SHA256,
+    'evidence.browser_relay_fixture.fixture_source_sha256',
+  );
+  exactFields(browserRelayFixtureManifest, {
+    state: browserRelayFixtureProfile.state,
+    profile_sha256: FIXTURE_PROFILE_SHA256,
+    implementation_base_commit: FIXTURE_IMPLEMENTATION_BASE_COMMIT,
+    browser_relay_plan_sha256:
+      browserRelayFixtureProfile.pins.browser_relay_plan_sha256,
+    browser_relay_page_profile_sha256:
+      browserRelayFixtureProfile.pins.browser_relay_page_profile_sha256,
+    miakapi_commit: browserRelayFixtureProfile.pins.miakapi_commit,
+    fixture_source_sha256: FIXTURE_SOURCE_SHA256,
+    fixed_homes: 1,
+    coordinator_sessions: browserRelayFixtureProfile.fixture.coordinator_sessions,
+    maximum_browser_custom_tokens:
+      browserRelayFixtureProfile.fixture.maximum_browser_custom_tokens,
+    maximum_function_calls: browserRelayFixtureProfile.fixture.maximum_function_calls,
+    preexisting_fixture_must_be_absent:
+      browserRelayFixtureProfile.lifecycle.preexisting_fixture_must_be_absent,
+    cleanup_authority_requires_observed_initial_absence:
+      browserRelayFixtureProfile.lifecycle.cleanup_authority_requires_observed_initial_absence,
+    coordinator_stop_precedes_data_cleanup:
+      browserRelayFixtureProfile.lifecycle.coordinator_stop_precedes_data_cleanup,
+    final_absence_must_be_observed:
+      browserRelayFixtureProfile.lifecycle.final_absence_must_be_observed,
+    cloud_compute_resources: browserRelayFixtureProfile.target.cloud_compute_resources,
+    cloud_mutation_authorized:
+      browserRelayFixtureProfile.authority.cloud_mutation_authorized,
+    public_ingress_authorized:
+      browserRelayFixtureProfile.authority.public_ingress_authorized,
+    live_execution_authorized:
+      browserRelayFixtureProfile.authority.live_execution_authorized,
+    live_fixture_creations:
+      browserRelayFixtureProfile.evidence.live_fixture_creations,
+    live_custom_tokens_issued:
+      browserRelayFixtureProfile.evidence.live_custom_tokens_issued,
+    live_coordinator_sessions:
+      browserRelayFixtureProfile.evidence.live_coordinator_sessions,
+    live_cleanup_executions:
+      browserRelayFixtureProfile.evidence.live_cleanup_executions,
+    credentials_committed: false,
+    raw_cloud_responses_committed: false,
+  }, 'evidence.browser_relay_fixture');
   const browserRelayMonitoringManifest = manifest.evidence.browser_relay_monitoring;
   const monitoringProfilePath = committedEvidencePath(
     stagingRoot,
