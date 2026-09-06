@@ -731,10 +731,13 @@ current consumer.
     scale-to-zero profile and matching process admission limits. Its immutable
     image digest and private-ready state have converged through three retained
     claims, with no public invoker, and all one-shot entrypoints are retired.
-    A separate dormant monitoring contract now fixes the only permitted metric,
-    budget and closed-counter observations without running the live preflight.
-    Next bind both state machines, that contract and the merged three-engine
-    runner to a distinct atomic operation and complete rollback guards. Execute
+    A separate closed monitoring contract fixes the only permitted metric,
+    budget and closed-counter observations. One read-only preflight from its
+    merged implementation observed the exact private boundary and existing
+    budget without mutation or acceptance execution; current plan revision 11
+    pins its closed result and marks monitoring satisfied. Next bind both state
+    machines and the merged three-engine runner to a distinct atomic operation
+    and complete rollback guards. Execute
     the matrix once before
     retiring version 1 after the complete lease bound and wiring the real client
     and opaque broker into the production web shell. This reuses the existing

@@ -35,8 +35,13 @@ profile. It returns either `within_reviewed_bounds` or
 `stop_and_rollback_required` with stable reason identifiers. It never accepts or
 returns tokens, identities, request contents, home traffic or browser artifacts.
 
-This initial increment implements the contract but does not satisfy
-`MONITORING-01`: the profile says that live evidence is absent. A later,
-separately reviewed commit must run the read-only preflight from the merged
-implementation, commit only its closed result, and rebase the browser-relay plan
-before an orchestrator can consider the prerequisite satisfied.
+The immutable profile deliberately continues to describe the implementation
+increment itself and therefore records no live evidence. After that increment
+merged, the exact implementation commit ran one read-only preflight at the
+private boundary. The sanitized
+[`preflight-result-v1.json`](preflight-result-v1.json) records six successful
+allow-listed queries, zero returned series headers, the reviewed EUR 10 budget
+shape, zero cloud mutations, zero public-ingress changes and zero acceptance
+executions. Browser-relay plan revision 11 pins both profile and result digests,
+so `MONITORING-01` is satisfied without rewriting the historical profile or
+claiming that the acceptance matrix ran.
