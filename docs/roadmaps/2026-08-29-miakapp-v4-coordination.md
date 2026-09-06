@@ -736,8 +736,11 @@ current consumer.
     merged implementation observed the exact private boundary and existing
     budget without mutation or acceptance execution; current plan revision 11
     pins its closed result and marks monitoring satisfied. Next bind both state
-    machines and the merged three-engine runner to a distinct atomic operation
-    and complete rollback guards. Execute
+    machines and the merged three-engine runner to a distinct atomic operation.
+    A dormant rollback package now pins all six reverse steps, the exact private
+    target and ten read-only observations, including a strict Terraform
+    no-change plan. It still requires one fresh post-merge preflight before the
+    rollback gate can close. Execute
     the matrix once before
     retiring version 1 after the complete lease bound and wiring the real client
     and opaque broker into the production web shell. This reuses the existing

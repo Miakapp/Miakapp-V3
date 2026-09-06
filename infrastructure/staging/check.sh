@@ -133,6 +133,12 @@ node --check infrastructure/staging/browser-relay-monitoring/contract.mjs
 node --check infrastructure/staging/browser-relay-monitoring/guard.mjs
 node -e "import('./infrastructure/staging/browser-relay-monitoring/contract.mjs').then(({ validateBrowserRelayMonitoringProfile }) => validateBrowserRelayMonitoringProfile())"
 node -e "import('./infrastructure/staging/browser-relay-monitoring/contract.mjs').then(({ validateMonitoringPreflightResult }) => validateMonitoringPreflightResult())"
+node infrastructure/staging/browser-relay-rollback/guard.mjs \
+  "${repository_root}/infrastructure/staging/browser-relay-rollback"
+node --check infrastructure/staging/browser-relay-rollback/cloud.mjs
+node --check infrastructure/staging/browser-relay-rollback/contract.mjs
+node --check infrastructure/staging/browser-relay-rollback/guard.mjs
+node -e "import('./infrastructure/staging/browser-relay-rollback/contract.mjs').then(({ validateBrowserRelayRollbackProfile }) => validateBrowserRelayRollbackProfile())"
 node infrastructure/staging/browser-relay-services/guard.mjs \
   "${repository_root}/infrastructure/staging/browser-relay-services"
 node --check infrastructure/staging/browser-relay-services/apply.mjs
@@ -293,6 +299,7 @@ node --test \
   infrastructure/staging/test/browser-relay-edge.test.mjs \
   infrastructure/staging/test/browser-relay-image.test.mjs \
   infrastructure/staging/test/browser-relay-monitoring.test.mjs \
+  infrastructure/staging/test/browser-relay-rollback.test.mjs \
   infrastructure/staging/test/browser-relay-runner.test.mjs \
   infrastructure/staging/test/browser-relay-services.test.mjs \
   infrastructure/staging/test/browser-relay.test.mjs \

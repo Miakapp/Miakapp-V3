@@ -27,7 +27,7 @@ additional live requests, destroy, or production changes.
 
 The separate [`browser-relay/`](browser-relay/) package now freezes the rebased
 closed live topology, cost, signing-key and rollback matrix. It records twelve
-pending cases and four open implementation preconditions. The App Check
+pending cases and two open implementation preconditions. The App Check
 provider, standalone real-browser attestation, two-key runtime, guarded
 rotation-entry and private-ready relay prerequisites are satisfied, while the
 complete authenticated `LIVE-02` relay case remains pending.
@@ -380,6 +380,8 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`browser-relay/`](browser-relay/) | Closed live browser, two-relay, signing-key and rollback acceptance plan | Rebases the current private `00010`/two-key/version-1-entry/App Check/two-relay baseline; not deployed, every `LIVE-*` case pending, and no cloud mutation granted |
 | [`browser-relay-edge/`](browser-relay-edge/) | Dormant reversible control-plane edge state machine | Pins the atomic staging issuer/origin profile and public-last/private-first transition ordering; exposes no CLI and grants no cloud mutation |
 | [`browser-relay-runner/`](browser-relay-runner/) | Dormant operator-local three-engine runner | Real offline CI smoke launches Chromium, Firefox and WebKit sequentially; private input stays in memory, output is closed, and no live run or cloud mutation is authorized |
+| [`browser-relay-monitoring/`](browser-relay-monitoring/) | Closed allow-listed monitoring preflight and evaluator | One post-merge read-only observation verified all six metric surfaces, the existing EUR 10 budget and the private edge/relay boundary; no mutation or acceptance execution occurred |
+| [`browser-relay-rollback/`](browser-relay-rollback/) | Dormant closed-target rollback preflight | Pins the six-step rollback, exact private target and ten required read-only observations; no live preflight, mutation, public ingress or acceptance execution is claimed yet |
 | [`browser-relay-services/`](browser-relay-services/) | Guarded two-relay Cloud Run Terraform state machine | Two private-ready 512-MiB scale-0..1 services use their exact assigned WSS audiences and a keyless role-free identity; all three claims remain durable and every one-shot entrypoint is retired |
 | [`browser-relay-image/`](browser-relay-image/) | Guarded one-shot private relay image build | Distinct v2 recovery succeeded once with exact source provenance and hardened smoke validation; immutable image is deployed only to the two IAM-private relays; all build entrypoints retired |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
@@ -686,6 +688,13 @@ The dormant [`browser-relay-edge/`](browser-relay-edge/) library now covers the
 edge transition state machine and its emergency ingress closure, but exposes no
 operator entrypoint. Its atomic claim and exact live orchestration remain part
 of the open `EDGE-01`/`ROLLBACK-01` gates.
+The dormant [`browser-relay-rollback/`](browser-relay-rollback/) library now
+pins that edge machine, the exact private-ready baseline and all six ordered
+rollback steps. Its read-only observer can verify ten closed-target conditions,
+including an independently rendered zero-change relay Terraform plan. The
+profile deliberately records no live preflight, so `ROLLBACK-01` remains open
+until one fresh observation is produced from the merged implementation and
+consumed by a later plan revision.
 The separate relay-image operation is fully reviewed, permanently consumed and
 bound by immutable digest into both private relay services. Their exact Cloud
 Run URLs and WSS audiences have been independently observed after the

@@ -46,6 +46,12 @@ implemented across several repositories.
   — dormant operator-local Chromium, Firefox and WebKit driver with ephemeral
   contexts, in-memory private input and a strictly closed counter-only result;
   its real three-engine offline CI smoke is implementation evidence only.
+- [`../infrastructure/staging/browser-relay-monitoring/`](../infrastructure/staging/browser-relay-monitoring/)
+  — allow-listed read-only monitoring contract whose post-merge preflight pins
+  six metric surfaces, the existing EUR 10 budget and the private boundary.
+- [`../infrastructure/staging/browser-relay-rollback/`](../infrastructure/staging/browser-relay-rollback/)
+  — dormant six-step rollback and closed-target preflight contract; implemented
+  and locally verified, but intentionally without live evidence until merge.
 - [`../infrastructure/staging/browser-relay-services/`](../infrastructure/staging/browser-relay-services/)
   — applied four-phase Terraform model holding two private-ready, scale-to-zero
   relays with immutable image selection, finite process admission and public-last
@@ -107,7 +113,10 @@ shape and every runtime stop counter. One closed preflight from the merged
 implementation observed those surfaces at the exact private boundary without a
 cloud mutation, public-ingress change or acceptance execution. Plan revision 11
 pins its result and closes `MONITORING-01`; only edge orchestration and rollback
-preflight remain open. The staging manifest retains the byte-exact earlier
+preflight remain open. A new dormant rollback package pins the complete six-step
+reverse transition, ten closed-target observations and a strict Terraform
+no-change shape. It grants no execution authority and does not yet claim a live
+preflight, so `ROLLBACK-01` stays open. The staging manifest retains the byte-exact earlier
 zero-relay plan used by the image build, revision 9 used by the runner and
 revision 10 used by monitoring, pins the serial-4 private-ready result and
 rebases the current acceptance plan on matching fresh live inventories. The state transition,
