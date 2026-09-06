@@ -55,7 +55,12 @@ implemented across several repositories.
   — dormant single-fixture lifecycle controller with absence-gated creation and
   deletion, an exact synthetic MiakAPI coordinator, one fresh in-memory custom
   token per browser, guarded relay rotation and verified coordinator-first
-  cleanup; its cloud adapter and live execution remain separate.
+  cleanup; live execution remains separate.
+- [`../infrastructure/staging/browser-relay-fixture-cloud/`](../infrastructure/staging/browser-relay-fixture-cloud/)
+  — dormant injected Google/Firebase adapter for that controller, with bounded
+  IAM custom-token signing, exact control-plane writes, preconditioned atomic
+  Firestore cleanup and administrative deletion of only the fixed synthetic
+  UID; it has no CLI, ambient credentials or live authority.
 - [`../infrastructure/staging/browser-relay-monitoring/`](../infrastructure/staging/browser-relay-monitoring/)
   — allow-listed read-only monitoring contract whose post-merge preflight pins
   six metric surfaces, the existing EUR 10 budget and the private boundary.

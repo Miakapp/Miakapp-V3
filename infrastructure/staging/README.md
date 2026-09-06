@@ -381,7 +381,8 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`browser-relay-edge/`](browser-relay-edge/) | Dormant reversible control-plane edge state machine | Pins the atomic staging issuer/origin profile and public-last/private-first transition ordering; exposes no CLI and grants no cloud mutation |
 | [`browser-relay-runner/`](browser-relay-runner/) | Dormant operator-local three-engine runner | Real offline CI smoke launches Chromium, Firefox and WebKit sequentially; private input stays in memory, output is closed, and no live run or cloud mutation is authorized |
 | [`browser-relay-page/`](browser-relay-page/) | Dormant Firebase/MiakAPI browser host and deterministic artifact | Builds a two-file no-store artifact from a digest-pinned vendored MiakAPI module and loads it in three engines in CI; its phased page API is intentionally not runner-compatible and grants no publication or live authority |
-| [`browser-relay-fixture/`](browser-relay-fixture/) | Dormant single synthetic-Home lifecycle controller | Proves initial absence before creation, configures the fixed MiakAPI coordinator, emits one in-memory custom token per browser, supports one relay rotation and requires coordinator-first cleanup plus verified final absence; no cloud adapter or live authority is present |
+| [`browser-relay-fixture/`](browser-relay-fixture/) | Dormant single synthetic-Home lifecycle controller | Proves initial absence before creation, configures the fixed MiakAPI coordinator, emits one in-memory custom token per browser, supports one relay rotation and requires coordinator-first cleanup plus verified final absence; the controller itself has no transport or live authority |
+| [`browser-relay-fixture-cloud/`](browser-relay-fixture-cloud/) | Dormant injected Google/Firebase fixture adapter | Implements bounded keyless JWT signing, fixed control-plane mutations, complete inventory and preconditioned atomic cleanup for the controller; no CLI, ambient credentials, IAM change or live authority is present |
 | [`browser-relay-monitoring/`](browser-relay-monitoring/) | Closed allow-listed monitoring preflight and evaluator | One post-merge read-only observation verified all six metric surfaces, the existing EUR 10 budget and the private edge/relay boundary; no mutation or acceptance execution occurred |
 | [`browser-relay-rollback/`](browser-relay-rollback/) | Closed-target rollback preflight | Post-merge observation verified all ten private-target facts and a four-resource Terraform no-change plan; its sanitized result records zero mutation, public-ingress change and acceptance execution |
 | [`browser-relay-orchestrator/`](browser-relay-orchestrator/) | Dormant single-use edge orchestrator | Post-merge read-only preflight proved the claim absent and the rollback target private and converged; no claim, mutation, public edge or live acceptance has run |
@@ -751,6 +752,20 @@ reviewed Chromium/Firefox/WebKit order. Cleanup stops the coordinator before
 data removal and must observe every fixed domain absent. The package has no
 cloud transport, ambient credential lookup, CLI, retry loop or live authority;
 no staging mutation was made.
+The adjacent
+[`browser-relay-fixture-cloud/`](browser-relay-fixture-cloud/) package now
+implements that exact injected boundary against the reviewed staging Google,
+Firebase and control-plane APIs. Construction remains inert and requires an
+explicit ephemeral OAuth session, HTTP transport, clock and the two pinned
+MiakAPI factories. It permits four keyless IAM JWT signatures, one identity,
+one Home, one Home Key and one relay rotation only after observing the entire
+fixed namespace absent. Cleanup requires zero coordinator sessions, validates
+the complete ownership and key registries, atomically deletes their five
+possible Firestore documents with `updateTime` preconditions, deletes the fixed
+Firebase UID last and independently observes final absence. Unknown mutation
+outcomes are observed without retry. The adapter has no command, ambient
+credential discovery, binding mutation, publication path or live authority;
+all its current evidence is offline and staging remains unchanged.
 The adjacent [`browser-relay-operation/`](browser-relay-operation/) package now
 closes the remaining ordering gap without executing it. The claimed edge owns
 the control-plane transition. Inside that single window the operation creates
