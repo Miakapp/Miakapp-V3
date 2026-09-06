@@ -4,9 +4,10 @@ This directory freezes the rebased reviewable plan for live browser, relay,
 signing-key and rollback acceptance. It contains no Terraform, deployer,
 invocation wrapper, credential or result. Reading or validating it authorizes no
 cloud mutation. The committed state is
-`private_relays_ready_plan_rebased_not_deployed`, all `LIVE-*` cases are
-pending and the canonical staging manifest records private control-plane
-ingress plus two IAM-private, scale-to-zero relays with no public invoker.
+`runner_implemented_private_relays_ready_plan_rebased_not_deployed`, all
+`LIVE-*` cases are pending and the canonical staging manifest records private
+control-plane ingress plus two IAM-private, scale-to-zero relays with no public
+invoker.
 
 Run the credential-free validator from the repository root:
 
@@ -74,7 +75,8 @@ and [reCAPTCHA billing](https://cloud.google.com/recaptcha/docs/billing-informat
 
 ## Preconditions
 
-Revision 9 records the independent read-only observation completed at
+Revision 10 preserves the independent read-only observation completed for
+revision 9 at
 2026-09-06T04:08:50.844Z. It verified `control-plane-00010-vop`, private ingress,
 zero unauthenticated invokers, two enabled and published signing versions with
 version 1 current for the rehearsal entry, a registered reCAPTCHA Enterprise
@@ -104,15 +106,14 @@ retired. The complete authenticated browser case remains part of `LIVE-02`.
 Before any public transition, the remaining work must provide:
 
 1. a digest-bound and reversible control-plane ingress transition;
-2. a three-engine runner that emits closed semantic counters only;
-3. allow-listed metric and billing observations; and
-4. a rollback plan that is rendered and checked before the live window opens.
+2. allow-listed metric and billing observations; and
+3. a rollback plan that is rendered and checked before the live window opens.
 
 The adjacent [`browser-relay-runner/`](../browser-relay-runner/) package now
-implements the second item as a dormant, profile-pinned library. Its dedicated
-offline CI smoke launches all three real Playwright engines, but revision 9
-correctly keeps `RUNNER-01` open until a later plan rebase consumes the merged
-implementation. That smoke is not live staging evidence.
+implements the runner precondition as a dormant, profile-pinned library. Its dedicated
+offline CI smoke launches all three real Playwright engines. Revision 10 pins
+its merged profile and marks `RUNNER-01` satisfied. That implementation proof
+is not live staging evidence, and no runner invocation is claimed.
 
 The adjacent [`browser-relay-edge/`](../browser-relay-edge/) package now
 implements and tests the dormant transition state machine. It selects the edge
@@ -134,8 +135,10 @@ bind the already private-ready services to the bounded public window and restore
 this exact private-ready phase afterward.
 
 The byte-exact [`plan-v8.json`](plan-v8.json) preserves the historical plan
-consumed by the relay-image build. Revision 9 can evolve without rewriting that
-immutable dependency.
+consumed by the relay-image build. The byte-exact
+[`plan-v9.json`](plan-v9.json) separately preserves the plan consumed by the
+runner package. Revision 10 can evolve without rewriting either immutable
+dependency.
 
 The currently deployed runtime document publishes both signing keys with
 version 1 current and version 2 retained. This completes the rehearsal entry

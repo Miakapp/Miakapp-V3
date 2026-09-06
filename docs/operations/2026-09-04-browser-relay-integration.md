@@ -28,10 +28,19 @@ relay, or staging acceptance. The complete audience-bound local gate is in the
 
 ## Immutable inputs
 
-The reciprocal CI gate checks out these exact public merge commits:
+The reciprocal CI gate uses these exact public merge commits:
 
 - MiakAPI: `a798a746847ba3d5c16128a08b33353269e770a4`;
-- Miakapp-Server: `df10674e034f30eec80760f5ec94bc108cff026f`.
+- Miakapp-Server production relay source:
+  `df10674e034f30eec80760f5ec94bc108cff026f`; and
+- Miakapp-Server test harness:
+  `140e6517add101a243f92760334c7e6c3a0398e1`.
+
+The harness commit is a test-only descendant whose sole diff from `df10674` is
+`test/integration/platform-auth.mjs`. It ignores a Chromium `requestfailed`
+event only when the same Request already produced an HTTP response, and adds
+exact ordered POST/200 assertions. It changes no relay production file or
+deployed image input.
 
 Use detached worktrees at those revisions for release evidence. A developer may
 run the same commands against clean local checkouts while iterating, but must

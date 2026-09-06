@@ -7,10 +7,13 @@ import {
   RELAY_SERVICES_PROFILE_SHA256,
   RELAY_SERVICES_V5_PROFILE_SHA256,
 } from '../browser-relay-services/contract.mjs';
+import { BROWSER_RELAY_RUNNER_PROFILE_SHA256 } from '../browser-relay-runner/contract.mjs';
 
 export const BROWSER_RELAY_V8_PLAN_SHA256 = '4a5c13999d9f7f328b1b8b867bbd86d4c5e80cb980d9eb1324028ea0e5785343';
 export const BROWSER_RELAY_V8_PLAN_PATH = 'browser-relay/plan-v8.json';
-export const BROWSER_RELAY_PLAN_SHA256 = 'bdf2cea284b1031a2a78e3ab029a733cad5e68efde8e9e01c5230e01fe8333dc';
+export const BROWSER_RELAY_V9_PLAN_SHA256 = 'bdf2cea284b1031a2a78e3ab029a733cad5e68efde8e9e01c5230e01fe8333dc';
+export const BROWSER_RELAY_V9_PLAN_PATH = 'browser-relay/plan-v9.json';
+export const BROWSER_RELAY_PLAN_SHA256 = '614493a6ffd1c8c45044585368ae21eefa82afb65f031d2fd4e9028b215098da';
 export const BROWSER_RELAY_PLAN_PATH = 'browser-relay/plan.json';
 
 const MAXIMUM_PLAN_BYTES = 20 * 1024;
@@ -127,6 +130,7 @@ function validatePins(value) {
     'relay_services_converged_profile_sha256',
     'relay_services_private_ready_result_sha256',
     'relay_services_live_inventory_sha256',
+    'browser_relay_runner_profile_sha256',
     'protocol_contract_commit',
     'node_version',
     'bun_version',
@@ -151,6 +155,7 @@ function validatePins(value) {
     'relay_services_converged_profile_sha256',
     'relay_services_private_ready_result_sha256',
     'relay_services_live_inventory_sha256',
+    'browser_relay_runner_profile_sha256',
   ]) {
     if (!SHA256.test(pins[field])) reject(`pins.${field} must be a SHA-256 digest`);
   }
@@ -173,6 +178,11 @@ function validatePins(value) {
     pins.relay_services_live_inventory_sha256,
     '421338fec676c1fccd0e6747d3e8837d4151b147c95b343172639800779b64d1',
     'pins.relay_services_live_inventory_sha256',
+  );
+  exact(
+    pins.browser_relay_runner_profile_sha256,
+    BROWSER_RELAY_RUNNER_PROFILE_SHA256,
+    'pins.browser_relay_runner_profile_sha256',
   );
   exact(pins, expectedPlan.pins, 'pins');
 }
@@ -357,8 +367,9 @@ function validatePreconditions(value) {
   });
   exact(value.filter(({ state }) => state === 'satisfied').map(({ id }) => id), [
     'PIN-01', 'SIGNING-01', 'APP-CHECK-01', 'ROTATION-ENTRY-01', 'RELAY-01',
+    'RUNNER-01',
   ], 'satisfied preconditions');
-  exact(value.filter(({ state }) => state === 'open').length, 4, 'open precondition count');
+  exact(value.filter(({ state }) => state === 'open').length, 3, 'open precondition count');
 }
 
 function validateMatrix(value) {
@@ -465,8 +476,12 @@ export function validateBrowserRelayPlanValue(value) {
     'rollback',
   ], 'plan');
   exact(plan.schema, 'miakapp.staging-browser-relay-plan/1', 'plan.schema');
-  exact(plan.revision, 9, 'plan.revision');
-  exact(plan.state, 'private_relays_ready_plan_rebased_not_deployed', 'plan.state');
+  exact(plan.revision, 10, 'plan.revision');
+  exact(
+    plan.state,
+    'runner_implemented_private_relays_ready_plan_rebased_not_deployed',
+    'plan.state',
+  );
   validateTarget(plan.target);
   validatePins(plan.pins);
   validateBaseline(plan.baseline);
@@ -501,6 +516,49 @@ export function validateBrowserRelayPlan(path) {
     reject('plan is not in exact canonical JSON form');
   }
   return validateBrowserRelayPlanValue(plan);
+}
+
+export function validateBrowserRelayV9Plan(
+  path = new URL('plan-v9.json', import.meta.url),
+) {
+  const entry = lstatSync(path);
+  if (!entry.isFile() || entry.isSymbolicLink()
+    || entry.size === 0 || entry.size > MAXIMUM_PLAN_BYTES) {
+    reject('historical revision-9 plan must be a bounded regular file');
+  }
+  const bytes = readFileSync(path);
+  if (createHash('sha256').update(bytes).digest('hex') !== BROWSER_RELAY_V9_PLAN_SHA256) {
+    reject('historical revision-9 plan digest has drifted');
+  }
+  let plan;
+  try {
+    plan = JSON.parse(bytes.toString('utf8'));
+  } catch {
+    return reject('historical revision-9 plan is not valid JSON');
+  }
+  if (`${JSON.stringify(plan, null, 2)}\n` !== bytes.toString('utf8')) {
+    reject('historical revision-9 plan is not in exact canonical JSON form');
+  }
+  rejectPrivateMaterial(plan);
+  const runnerPrecondition = plan.preconditions?.find(({ id }) => id === 'RUNNER-01');
+  if (plan.schema !== 'miakapp.staging-browser-relay-plan/1'
+    || plan.revision !== 9
+    || plan.state !== 'private_relays_ready_plan_rebased_not_deployed'
+    || plan.target?.project_id !== 'miakapp-v4-staging'
+    || plan.target?.cloud_mutation_authorized_by_document !== false
+    || plan.target?.public_ingress_currently_active !== false
+    || plan.target?.acceptance_executed !== false
+    || plan.pins?.miakapp_v3_commit
+      !== '790aff87a1af8730a06b8f1c3b089b6f6e13c7cf'
+    || Object.hasOwn(plan.pins ?? {}, 'browser_relay_runner_profile_sha256')
+    || runnerPrecondition?.state !== 'open'
+    || plan.preconditions?.filter(({ state }) => state === 'open').length !== 4
+    || !plan.matrix?.every(({ state }) => state === 'pending')
+    || plan.evidence?.state !== 'absent'
+    || plan.evidence?.completed_case_ids?.length !== 0) {
+    reject('historical revision-9 plan boundary has drifted');
+  }
+  return Object.freeze(plan);
 }
 
 export function validateBrowserRelayV8Plan(

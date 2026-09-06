@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 69,
-  "status": "private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled",
+  "revision": 70,
+  "status": "private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled",
   "environment": "staging",
   "project": {
     "project_id": "miakapp-v4-staging",
@@ -1674,9 +1674,9 @@
       "raw_diagnostics_committed": false
     },
     "browser_relay_plan": {
-      "state": "private_relays_ready_plan_rebased_not_deployed",
+      "state": "runner_implemented_private_relays_ready_plan_rebased_not_deployed",
       "path": "browser-relay/plan.json",
-      "sha256": "bdf2cea284b1031a2a78e3ab029a733cad5e68efde8e9e01c5230e01fe8333dc",
+      "sha256": "614493a6ffd1c8c45044585368ae21eefa82afb65f031d2fd4e9028b215098da",
       "baseline_observed_at": "2026-09-06T04:08:50.844Z",
       "baseline_control_plane_revision": "control-plane-00010-vop",
       "baseline_published_signing_keys": 2,
@@ -1684,7 +1684,7 @@
       "browser_attestation_validated": true,
       "firebase_auth_users": 0,
       "application_fixture_collections": 0,
-      "open_preconditions": 4,
+      "open_preconditions": 3,
       "cloud_mutation_authorized_by_plan": false,
       "acceptance_executed": false,
       "public_ingress_active": false,

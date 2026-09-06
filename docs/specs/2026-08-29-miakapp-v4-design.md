@@ -868,7 +868,9 @@ vertical-slice exit gates.
    offline CI smoke launches Chromium, Firefox and WebKit sequentially. Its
    ephemeral contexts accept private input only in memory and return a closed
    aggregate with no browser diagnostics or credential material; no live matrix
-   case is claimed by that smoke.
+   case is claimed by that smoke. Current plan revision 10 pins the merged
+   runner profile, preserves its revision-9 input byte for byte and closes only
+   the runner implementation precondition.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain
