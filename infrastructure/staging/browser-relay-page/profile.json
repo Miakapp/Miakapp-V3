@@ -1,0 +1,102 @@
+{
+  "schema": "miakapp.staging-browser-relay-page-profile/1",
+  "revision": 1,
+  "state": "closed_page_host_and_artifact_implemented_not_wired_not_published_not_executed",
+  "target": {
+    "project_id": "miakapp-v4-staging",
+    "origin": "https://miakapp-v4-staging.web.app",
+    "path": "/__acceptance/browser-relay/",
+    "control_plane_exchange_endpoint": "https://control-plane-aczhngqraq-od.a.run.app/v1/user-relay-tokens:exchange",
+    "home_id": "miakapp-v4-staging-browser-relay-v1",
+    "relay_urls": [
+      "wss://miakapp-staging-relay-a-aczhngqraq-od.a.run.app/ws",
+      "wss://miakapp-staging-relay-b-aczhngqraq-od.a.run.app/ws"
+    ],
+    "data_policy": "synthetic_only",
+    "cloud_compute_resources": 0,
+    "unscheduled": true
+  },
+  "pins": {
+    "implementation_base_commit": "a065f05775890d503fc9756c6fd4e4247ebea3da",
+    "browser_relay_plan_sha256": "dbf0e73a20875353f28466b4fe1edcb8e8d1fc6604d979002b36a7610c36aa9a",
+    "browser_relay_runner_profile_sha256": "72b688ccd577f7b40b21d9f874bbca555324eaec1fbf2acbc87dee35cf83a536",
+    "miakapi_commit": "a798a746847ba3d5c16128a08b33353269e770a4",
+    "miakapi_source_archive_sha256": "499ba3b4205538691341aaa8cea76f9d232308aed01522cc5f35aebcf9cc9c5a",
+    "miakapi_package_sha256": "008b74b9793cbf167cbe918a12eec304bcafc6570ee55479b9349553ff238e94",
+    "miakapi_bundle_sha256": "b9651758d3cf531dc739afac8d25196b34ded87cee402f68e66646a70bc30623",
+    "miakapi_browser_entry_sha256": "f21565e94b4e726346352826a3afa7f3c5976c7cb60dc7bac76c1e63805f2013",
+    "miakapi_bun_lock_sha256": "0ba5e8d70a2e43ed61928fdf38ac1961a78d48112c9209c92c60354042ac7595",
+    "firebase_sdk_version": "12.18.0",
+    "vite_version": "8.2.2",
+    "bun_version": "1.2.23",
+    "boundary_source_sha256": "0908e830f11aab1cd95555a8f3d621d7aac5997bde4bfbe0359cb614bcdaf773",
+    "runtime_source_sha256": "53599457ab5ab40fae85ac879df8785d1317fd072e6d7e24df23fc50ade41b4c",
+    "page_source_sha256": "2d638c5caa58705147576b66581135440e60a4d39f58d9449234defde44aa5c7",
+    "artifact_source_sha256": "d66e0578924f8380d075935b7f46cb79de5683f18d82c600b852e2f9686f704a",
+    "index_sha256": "ad1d70ebadcc356744127ca36b5a1de47634f2a2cdc9da5d631ef2d3c95a732f"
+  },
+  "page": {
+    "private_input_schema": "miakapp.staging-browser-relay-page-input/1",
+    "safe_observation_schema": "miakapp.staging-browser-relay-page-observation/1",
+    "browser_order": [
+      "chromium",
+      "firefox",
+      "webkit"
+    ],
+    "runner_compatible": false,
+    "api": [
+      "initialize",
+      "start",
+      "observe",
+      "observeState",
+      "call",
+      "suspend",
+      "resume",
+      "stop"
+    ],
+    "firebase_auth_persistence": "memory_only",
+    "app_check_provider": "recaptcha_enterprise",
+    "app_check_auto_refresh": false,
+    "app_check_persistence": "memory_only_indexeddb_blocked",
+    "source_credentials_on_websocket": false,
+    "raw_websocket_frames_retained": false,
+    "raw_browser_errors_retained": false,
+    "browser_console_collected": false,
+    "network_payloads_collected": false
+  },
+  "timing": {
+    "maximum_runner_milliseconds": 600000,
+    "maximum_chromium_milliseconds": 480000,
+    "maximum_firefox_milliseconds": 60000,
+    "maximum_webkit_milliseconds": 60000,
+    "maximum_callback_milliseconds": 900000,
+    "maximum_public_window_milliseconds": 1200000,
+    "callback_cleanup_reserve_milliseconds": 300000,
+    "edge_rollback_reserve_milliseconds": 300000
+  },
+  "artifact": {
+    "build_tool": "vite",
+    "maximum_files": 2,
+    "html_files": 1,
+    "javascript_files": 1,
+    "source_maps": false,
+    "content_addressed_gzip": true,
+    "cache_control": "no-store, max-age=0",
+    "frame_ancestors": "none",
+    "credentials_embedded": false,
+    "hosting_publisher_present": false
+  },
+  "authority": {
+    "cloud_mutation_authorized": false,
+    "hosting_publication_authorized": false,
+    "public_ingress_authorized": false,
+    "live_execution_authorized": false
+  },
+  "evidence": {
+    "state": "absent",
+    "live_artifact_builds": 0,
+    "hosting_publications": 0,
+    "live_execution_count": 0,
+    "cloud_mutations": 0
+  }
+}
