@@ -27,7 +27,7 @@ additional live requests, destroy, or production changes.
 
 The separate [`browser-relay/`](browser-relay/) package now freezes the rebased
 closed live topology, cost, signing-key and rollback matrix. It records twelve
-pending cases and two open implementation preconditions. The App Check
+pending cases and one open implementation precondition. The App Check
 provider, standalone real-browser attestation, two-key runtime, guarded
 rotation-entry and private-ready relay prerequisites are satisfied, while the
 complete authenticated `LIVE-02` relay case remains pending.
@@ -381,7 +381,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`browser-relay-edge/`](browser-relay-edge/) | Dormant reversible control-plane edge state machine | Pins the atomic staging issuer/origin profile and public-last/private-first transition ordering; exposes no CLI and grants no cloud mutation |
 | [`browser-relay-runner/`](browser-relay-runner/) | Dormant operator-local three-engine runner | Real offline CI smoke launches Chromium, Firefox and WebKit sequentially; private input stays in memory, output is closed, and no live run or cloud mutation is authorized |
 | [`browser-relay-monitoring/`](browser-relay-monitoring/) | Closed allow-listed monitoring preflight and evaluator | One post-merge read-only observation verified all six metric surfaces, the existing EUR 10 budget and the private edge/relay boundary; no mutation or acceptance execution occurred |
-| [`browser-relay-rollback/`](browser-relay-rollback/) | Dormant closed-target rollback preflight | Pins the six-step rollback, exact private target and ten required read-only observations; no live preflight, mutation, public ingress or acceptance execution is claimed yet |
+| [`browser-relay-rollback/`](browser-relay-rollback/) | Closed-target rollback preflight | Post-merge observation verified all ten private-target facts and a four-resource Terraform no-change plan; its sanitized result records zero mutation, public-ingress change and acceptance execution |
 | [`browser-relay-services/`](browser-relay-services/) | Guarded two-relay Cloud Run Terraform state machine | Two private-ready 512-MiB scale-0..1 services use their exact assigned WSS audiences and a keyless role-free identity; all three claims remain durable and every one-shot entrypoint is retired |
 | [`browser-relay-image/`](browser-relay-image/) | Guarded one-shot private relay image build | Distinct v2 recovery succeeded once with exact source provenance and hardened smoke validation; immutable image is deployed only to the two IAM-private relays; all build entrypoints retired |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
@@ -680,21 +680,21 @@ used one ephemeral `127.0.0.1` callback because Conductor's Browser tab is a
 localhost preview; that operation and all recovery paths are now permanently
 retired. The full browser-relay matrix must acquire fresh credentials and cannot
 reuse the consumed token or callback.
-Separate guarded implementations must still exist for the temporary edge
-transition and rollback. Plan revision 11 consumes the merged runner profile
-and closed monitoring result. It records `RUNNER-01` and `MONITORING-01` as
-satisfied without promoting the runner's offline smoke to live evidence.
+Plan revision 12 consumes the merged runner profile and both closed monitoring
+and rollback results. It records `RUNNER-01`, `MONITORING-01` and `ROLLBACK-01`
+as satisfied without promoting the runner's offline smoke to live evidence.
 The dormant [`browser-relay-edge/`](browser-relay-edge/) library now covers the
 edge transition state machine and its emergency ingress closure, but exposes no
-operator entrypoint. Its atomic claim and exact live orchestration remain part
-of the open `EDGE-01`/`ROLLBACK-01` gates.
+operator entrypoint. Its atomic claim and exact live orchestration remain the
+open `EDGE-01` gate.
 The dormant [`browser-relay-rollback/`](browser-relay-rollback/) library now
 pins that edge machine, the exact private-ready baseline and all six ordered
 rollback steps. Its read-only observer can verify ten closed-target conditions,
 including an independently rendered zero-change relay Terraform plan. The
-profile deliberately records no live preflight, so `ROLLBACK-01` remains open
-until one fresh observation is produced from the merged implementation and
-consumed by a later plan revision.
+post-merge preflight observed all ten conditions and the four-resource
+Terraform no-change plan from exact commit
+`0fd0d05ee31f84d42cf69cc6f5cead9cbcad79be`. Its sanitized result records no
+mutation or live acceptance, and revision 12 pins it to close `ROLLBACK-01`.
 The separate relay-image operation is fully reviewed, permanently consumed and
 bound by immutable digest into both private relay services. Their exact Cloud
 Run URLs and WSS audiences have been independently observed after the
@@ -704,7 +704,7 @@ invocation, browser traffic and the edge transition remain separate later
 gates.
 The dormant [`browser-relay-runner/`](browser-relay-runner/) package pins plan
 revision 9, Playwright 1.62.1 and the merged MiakAPI browser client. Current
-plan revision 11 pins the merged runner profile. The package has no
+plan revision 12 pins the merged runner profile. The package has no
 CLI, publisher, credential loader or cloud adapter. Its dedicated CI gate
 intercepts the exact staging URL locally and proves three real ephemeral browser
 engines produce only the reviewed closed aggregate. It records zero live runs

@@ -8,6 +8,7 @@ const ALLOWED_FILES = Object.freeze([
   'plan-v8.json',
   'plan-v9.json',
   'plan-v10.json',
+  'plan-v11.json',
   'plan.json',
   'validate.mjs',
 ]);

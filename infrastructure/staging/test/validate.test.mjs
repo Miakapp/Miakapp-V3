@@ -31,10 +31,10 @@ function rejects(mutator, pattern) {
 
 test('accepts the successful and retired private user-relay probe', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 72);
+  assert.equal(validated.revision, 73);
   assert.equal(
     validated.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_closed_preflight_implemented_not_observed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rollback_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
@@ -810,9 +810,10 @@ test('accepts the successful and retired private user-relay probe', () => {
     raw_state_committed: false,
   });
   assert.deepEqual(validated.evidence.browser_relay_plan, {
-    state: 'monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed',
+    state:
+      'rollback_preflighted_monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed',
     path: 'browser-relay/plan.json',
-    sha256: '607fd1cf84c56c5becf870b6ca38b3721ab7cc5ec750f7374363f5ae2cc63fe6',
+    sha256: 'b279f69cb91e8b20a96b3b45986cdc7f627f354eb541c881714bfcf0c38f2a20',
     baseline_observed_at: '2026-09-06T04:08:50.844Z',
     baseline_control_plane_revision: 'control-plane-00010-vop',
     baseline_published_signing_keys: 2,
@@ -820,7 +821,7 @@ test('accepts the successful and retired private user-relay probe', () => {
     browser_attestation_validated: true,
     firebase_auth_users: 0,
     application_fixture_collections: 0,
-    open_preconditions: 2,
+    open_preconditions: 1,
     cloud_mutation_authorized_by_plan: false,
     acceptance_executed: false,
     public_ingress_active: false,
@@ -884,27 +885,39 @@ test('accepts the successful and retired private user-relay probe', () => {
     raw_cloud_responses_committed: false,
   });
   assert.deepEqual(validated.evidence.browser_relay_rollback, {
-    state: 'closed_rollback_preflight_implemented_not_observed',
+    state: 'rollback_target_preflighted_private_and_converged',
     profile_path: 'browser-relay-rollback/profile.json',
     profile_sha256:
       'b3517720cb3874f040601d6dfcc7b0ecaf385c16d6b4299c102e2001f8bf18e7',
-    implementation_base_commit: '79d2f8a45d626b25488a312bc8a4b5999a9515ee',
+    preflight_result_path: 'browser-relay-rollback/preflight-result-v1.json',
+    preflight_result_sha256:
+      'e8ceb2164be946d4edebfe2f08d8a3b230dcf9d2a05d9410738e751775950cd3',
+    implementation_commit: '0fd0d05ee31f84d42cf69cc6f5cead9cbcad79be',
     browser_relay_plan_sha256:
       '607fd1cf84c56c5becf870b6ca38b3721ab7cc5ec750f7374363f5ae2cc63fe6',
-    monitoring_preflight_result_sha256:
-      '618e074b9e4e9b6a532b2ecbfc87614ff5b382f9632397c4e86d111272425f64',
-    ordered_steps: 6,
-    emergency_actions: 5,
-    recoverable_edge_states: 5,
-    required_observations: 10,
-    read_only_http_methods: ['GET', 'HEAD', 'POST_READ_ONLY'],
-    read_only_post_operations: 2,
-    live_preflight_count: 0,
-    zero_change_terraform_plan_observed: false,
-    cloud_compute_resources: 0,
-    cloud_mutation_authorized: false,
-    public_ingress_authorized: false,
-    acceptance_execution_authorized: false,
+    observed_at: '2026-09-06T07:06:13.282Z',
+    control_plane_state: 'canonical_private',
+    control_plane_revision: 'control-plane-00010-vop',
+    control_plane_ingress: 'ALLOW_INTERNAL_ONLY',
+    control_plane_public_invokers: 0,
+    relay_phase: 'private_ready',
+    relay_services: 2,
+    relay_public_invokers: 0,
+    relay_service_account_user_managed_keys: 0,
+    relay_inventory_sha256:
+      '421338fec676c1fccd0e6747d3e8837d4151b147c95b343172639800779b64d1',
+    runner_route_present: false,
+    runner_route_status: 404,
+    firebase_auth_users: 0,
+    application_fixture_collections: 0,
+    temporary_iam_bindings: 0,
+    minimum_instances: 0,
+    terraform_convergence: 'no_changes',
+    terraform_managed_resource_noops: 4,
+    rollback_steps: 6,
+    cloud_mutations: 0,
+    public_ingress_changes: 0,
+    acceptance_executions: 0,
     credentials_committed: false,
     raw_cloud_responses_committed: false,
     terraform_plan_committed: false,
@@ -1256,7 +1269,7 @@ test('cross-checks manifest claims against all committed evidence artifacts', ()
   assert.equal(evidence.userRelayProbeRetirement.verifier_service_present, false);
   assert.equal(
     evidence.browserRelayPlan.state,
-    'monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed',
+    'rollback_preflighted_monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed',
   );
   assert.equal(evidence.browserRelayPlan.evidence.state, 'absent');
   assert.equal(
@@ -1269,6 +1282,11 @@ test('cross-checks manifest claims against all committed evidence artifacts', ()
     'closed_rollback_preflight_implemented_not_observed',
   );
   assert.equal(evidence.browserRelayRollbackProfile.rollback.ordered_steps.length, 6);
+  assert.equal(
+    evidence.browserRelayRollbackResult.state,
+    'rollback_target_preflighted_private_and_converged',
+  );
+  assert.equal(evidence.browserRelayRollbackResult.terraform_convergence, 'no_changes');
   assert.equal(
     evidence.relayServicesProfile.state,
     'private_ready_succeeded_verified_public_window_not_authorized',
@@ -2236,14 +2254,14 @@ test('requires every remaining blocker and staging evidence row', () => {
     candidate.evidence.browser_relay_monitoring.credentials_committed = true;
   }, /evidence\.browser_relay_monitoring\.credentials_committed/);
   rejects((candidate) => {
-    candidate.evidence.browser_relay_rollback.ordered_steps = 5;
-  }, /evidence\.browser_relay_rollback\.ordered_steps/);
+    candidate.evidence.browser_relay_rollback.terraform_managed_resource_noops = 3;
+  }, /evidence\.browser_relay_rollback\.terraform_managed_resource_noops/);
   rejects((candidate) => {
-    candidate.evidence.browser_relay_rollback.live_preflight_count = 1;
-  }, /evidence\.browser_relay_rollback\.live_preflight_count/);
+    candidate.evidence.browser_relay_rollback.cloud_mutations = 1;
+  }, /evidence\.browser_relay_rollback\.cloud_mutations/);
   rejects((candidate) => {
-    candidate.evidence.browser_relay_rollback.cloud_mutation_authorized = true;
-  }, /evidence\.browser_relay_rollback\.cloud_mutation_authorized/);
+    candidate.evidence.browser_relay_rollback.credentials_committed = true;
+  }, /evidence\.browser_relay_rollback\.credentials_committed/);
   rejects((candidate) => {
     candidate.evidence.browser_app_check_prerequisite.recaptcha_api_enabled = false;
   }, /evidence\.browser_app_check_prerequisite\.recaptcha_api_enabled/);
