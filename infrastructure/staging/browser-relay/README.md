@@ -103,9 +103,10 @@ the Function and its
 deployment guard in place, retained both published keys, source, build, IAM,
 private ingress and scale, and made no live request. Its one-shot wrappers are
 retired. The complete authenticated browser case remains part of `LIVE-02`.
-Before any public transition, the remaining work must provide one digest-bound,
-single-use orchestrator that atomically composes the already reviewed edge,
-runner, monitoring and rollback boundaries.
+Before any public transition, the new digest-bound single-use orchestrator must
+pass its post-merge read-only preflight and be pinned by the plan. That package
+atomically composes the already reviewed edge, runner, monitoring and rollback
+boundaries but does not itself grant live authority.
 
 The adjacent [`browser-relay-runner/`](../browser-relay-runner/) package now
 implements the runner precondition as a dormant, profile-pinned library. Its dedicated
@@ -117,8 +118,15 @@ The adjacent [`browser-relay-edge/`](../browser-relay-edge/) package now
 implements and tests the dormant transition state machine. It selects the edge
 runtime while private, opens ingress before adding the public IAM member, and
 rolls back IAM before ingress and runtime. It has no CLI or authorization path.
-`EDGE-01` therefore remains open until a later digest-bound orchestrator adds
-the single-use claim and requires all other live preconditions.
+The adjacent
+[`browser-relay-orchestrator/`](../browser-relay-orchestrator/) package now
+adds the digest-bound composition and retained generation-zero claim. It checks
+separate exact authorization before observing or acquiring that claim,
+reobserves an unchanged canonical-private baseline after acquisition, allows
+one bounded edge window and requires a canonical-private postflight after
+success or failure. It remains a dormant in-process library and grants no live
+authority. `EDGE-01` stays open until its post-merge read-only preflight proves
+the claim absent and the complete rollback target unchanged.
 
 The adjacent
 [`browser-relay-monitoring/`](../browser-relay-monitoring/) package now freezes

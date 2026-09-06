@@ -50,8 +50,12 @@ implemented across several repositories.
   — allow-listed read-only monitoring contract whose post-merge preflight pins
   six metric surfaces, the existing EUR 10 budget and the private boundary.
 - [`../infrastructure/staging/browser-relay-rollback/`](../infrastructure/staging/browser-relay-rollback/)
-  — dormant six-step rollback and closed-target preflight contract; implemented
-  and locally verified, but intentionally without live evidence until merge.
+  — dormant six-step rollback and closed-target preflight contract whose
+  post-merge read-only evidence verifies the private converged target.
+- [`../infrastructure/staging/browser-relay-orchestrator/`](../infrastructure/staging/browser-relay-orchestrator/)
+  — dormant single-use composition boundary with a retained generation-zero
+  claim, post-claim baseline check, bounded edge window and mandatory private
+  postflight; not preflighted or executed live.
 - [`../infrastructure/staging/browser-relay-services/`](../infrastructure/staging/browser-relay-services/)
   — applied four-phase Terraform model holding two private-ready, scale-to-zero
   relays with immutable image selection, finite process admission and public-last
@@ -116,8 +120,13 @@ pins its result and closes `MONITORING-01`. The separate rollback package pins
 the complete six-step reverse transition, ten closed-target observations and a
 strict Terraform no-change shape. Its post-merge preflight observed the exact
 private target without mutation or acceptance execution. Plan revision 12 pins
-that sanitized result and closes `ROLLBACK-01`; only edge orchestration remains
-open. The staging manifest retains the byte-exact earlier zero-relay plan used
+that sanitized result and closes `ROLLBACK-01`. A new dormant orchestrator now
+implements the remaining edge composition boundary: separate exact
+authorization precedes a globally serialized claim, the private baseline is
+checked on both sides of claim acquisition, and one bounded edge window must
+finish with a canonical-private postflight. Its profile authorizes nothing and
+no live preflight or claim has occurred, so `EDGE-01` remains open. The staging
+manifest retains the byte-exact earlier zero-relay plan used
 by the image build, revision 9 used by the runner, revision 10 used by
 monitoring and revision 11 used by rollback, pins the serial-4 private-ready
 result and rebases the current acceptance plan on matching fresh live

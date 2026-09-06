@@ -382,6 +382,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`browser-relay-runner/`](browser-relay-runner/) | Dormant operator-local three-engine runner | Real offline CI smoke launches Chromium, Firefox and WebKit sequentially; private input stays in memory, output is closed, and no live run or cloud mutation is authorized |
 | [`browser-relay-monitoring/`](browser-relay-monitoring/) | Closed allow-listed monitoring preflight and evaluator | One post-merge read-only observation verified all six metric surfaces, the existing EUR 10 budget and the private edge/relay boundary; no mutation or acceptance execution occurred |
 | [`browser-relay-rollback/`](browser-relay-rollback/) | Closed-target rollback preflight | Post-merge observation verified all ten private-target facts and a four-resource Terraform no-change plan; its sanitized result records zero mutation, public-ingress change and acceptance execution |
+| [`browser-relay-orchestrator/`](browser-relay-orchestrator/) | Dormant single-use edge orchestrator | Exact generation-zero retained claim, post-claim baseline check, one bounded edge window and mandatory private postflight are implemented; no preflight, claim, mutation or live acceptance has run |
 | [`browser-relay-services/`](browser-relay-services/) | Guarded two-relay Cloud Run Terraform state machine | Two private-ready 512-MiB scale-0..1 services use their exact assigned WSS audiences and a keyless role-free identity; all three claims remain durable and every one-shot entrypoint is retired |
 | [`browser-relay-image/`](browser-relay-image/) | Guarded one-shot private relay image build | Distinct v2 recovery succeeded once with exact source provenance and hardened smoke validation; immutable image is deployed only to the two IAM-private relays; all build entrypoints retired |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
@@ -684,9 +685,12 @@ Plan revision 12 consumes the merged runner profile and both closed monitoring
 and rollback results. It records `RUNNER-01`, `MONITORING-01` and `ROLLBACK-01`
 as satisfied without promoting the runner's offline smoke to live evidence.
 The dormant [`browser-relay-edge/`](browser-relay-edge/) library now covers the
-edge transition state machine and its emergency ingress closure, but exposes no
-operator entrypoint. Its atomic claim and exact live orchestration remain the
-open `EDGE-01` gate.
+edge transition state machine and its emergency ingress closure. The adjacent
+[`browser-relay-orchestrator/`](browser-relay-orchestrator/) library now binds
+it to one retained generation-zero claim, the exact closed prerequisites, one
+callback and a mandatory canonical-private postflight. Neither package exposes
+an operator entrypoint or grants live authority. `EDGE-01` remains open until a
+fresh post-merge read-only preflight is pinned.
 The dormant [`browser-relay-rollback/`](browser-relay-rollback/) library now
 pins that edge machine, the exact private-ready baseline and all six ordered
 rollback steps. Its read-only observer can verify ten closed-target conditions,
