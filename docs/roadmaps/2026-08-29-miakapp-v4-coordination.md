@@ -798,8 +798,19 @@ current consumer.
     browser-page receipt producer: 18 exact Chromium facts cover renewal,
     handoff, reconnect, persisted lifecycle, teardown and identity replacement,
     while Firefox and WebKit each require three. It admits no assertion
-    booleans and retains no raw fact. The immutable original fixture still has
-    three private page inputs, but a separate closed scenario fixture now
+    booleans and retains no raw fact. The remaining independent-source receipt
+    producers are now implemented as a separate closed package: 43 exact facts
+    produce 15 App Check, Hosting, control-plane, relay, coordinator, KMS and
+    Firestore receipts across the three browsers. Combined offline with the
+    page receipts, they close all 18 aggregator inputs and 40 runner assertions
+    without accepting assertion maps or retaining raw source material. They
+    have no live source adapters or execution authority. Live wiring must first
+    add a single non-replayable operation capability and common monotonic epoch
+    across every source, and replace the current whole-engine sequential runner
+    with case-level interleaving so LIVE-10 remains before LIVE-11. It must also
+    split or compact the nearly full bounded
+    staging manifest before adding another evidence block. The immutable original
+    fixture still has three private page inputs, but a separate closed scenario fixture now
     supplies the fourth from a second genuine synthetic Firebase identity,
     extends the unique coordinator's state access to both identities and
     requires both cleanup domains to reach absence. The separate dormant
@@ -816,7 +827,8 @@ current consumer.
     cannot prove native persisted BFCache restoration; that result cannot stand
     in for an engine result. No live wiring or execution is present. Close the
     complete Chromium page scenario and BFCache-capable automation gap, then
-    implement the independent cloud observers before executing the matrix once.
+    implement the independent live source adapters and aggregator wiring before
+    executing the matrix once.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform
     no-change plan. Its fresh post-merge preflight is complete and the rollback
