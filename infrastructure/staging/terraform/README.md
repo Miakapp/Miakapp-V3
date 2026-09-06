@@ -186,6 +186,16 @@ enabled for build metadata. The separately billed
 `containerscanning.googleapis.com` remains disabled, and this adoption adds no
 fixed-cost service.
 
+The separate relay-image v2 recovery then reused source object generation
+`1788648564283151` without an upload. Regional Cloud Build
+`70e25c75-3c30-497a-982a-f7bebe71c4ee` completed with verified SHA-256 source
+provenance and published private digest
+`sha256:23a19a26e8a24f6434ab8bc557dfa3fa799e0262e3400170e3bf064101a890b1`.
+Its hardened `/ping` smoke step succeeded. The build changed no foundation
+state, Cloud Run service, IAM binding or public ingress; Container Scanning
+remained disabled. The atomic recovery claim is retained and its plan/apply
+entrypoints are permanently retired.
+
 ## Explicit boundaries
 
 Terraform source is inherently apply-capable. Repository guards and supported

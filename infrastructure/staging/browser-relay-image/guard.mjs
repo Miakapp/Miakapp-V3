@@ -15,6 +15,7 @@ export const RELAY_IMAGE_FILES = Object.freeze([
   'profile-v1.json',
   'profile.json',
   'result-v1.json',
+  'result-v2.json',
   'result.mjs',
   'source.mjs',
 ]);
@@ -47,6 +48,9 @@ export function validateRelayImageRoot(rootUrl) {
     .join('\n');
   const claim = readFileSync(new URL('claim.mjs', rootUrl), 'utf8');
   const contract = readFileSync(new URL('contract.mjs', rootUrl), 'utf8');
+  const result = readFileSync(new URL('result.mjs', rootUrl), 'utf8');
+  const consumedEntrypoints = ['apply.mjs', 'plan.mjs']
+    .map((name) => readFileSync(new URL(name, rootUrl), 'utf8'));
   const storageUploadEndpoints = combined.match(/upload\/storage\/v1/gu) ?? [];
   if (/gcloud[\s\S]{0,80}(?:builds submit|run deploy)|allUsers|allAuthenticatedUsers/u.test(combined)
     || /['"]miakapp-(?:3|v4)['"]/u.test(combined)
@@ -55,7 +59,12 @@ export function validateRelayImageRoot(rootUrl) {
     || !contract.includes('requestedVerifyOption: profile.build.requested_verify_option')
     || !contract.includes('images: Object.freeze([profile.image.tag_reference])')
     || !combined.includes('validateFinalRelayImageInventory')
-    || !combined.includes('relayImageSourceReceipt')) {
+    || !combined.includes('relayImageSourceReceipt')
+    || !result.includes('validateRelayImageV2Result')
+    || consumedEntrypoints.some((source) => (
+      !source.includes('export const RELAY_IMAGE_OPERATION_CONSUMED = true')
+        || !source.includes('if (RELAY_IMAGE_OPERATION_CONSUMED)')
+    ))) {
     throw new Error('Relay image source differs from the reviewed one-shot private boundary');
   }
 }
