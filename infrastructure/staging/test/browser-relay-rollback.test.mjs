@@ -160,7 +160,16 @@ test('pins the dormant rollback contract to plan revision 11 and exact dependenc
 });
 
 test('accepts only the exact zero-change private-ready Terraform plan', () => {
-  assert.deepEqual(summarizeRelayTerraformNoChangePlan(terraformPlan()), {
+  const plan = terraformPlan();
+  plan.configuration = {
+    root_module: {
+      resources: [{
+        address: 'google_cloud_run_v2_service_iam_member.public_invoker',
+        expressions: { member: { constant_value: 'allUsers' } },
+      }],
+    },
+  };
+  assert.deepEqual(summarizeRelayTerraformNoChangePlan(plan), {
     state: 'no_changes',
     terraform_version: '1.11.3',
     managed_resource_noops: 4,
