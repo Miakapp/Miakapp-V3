@@ -889,7 +889,13 @@ vertical-slice exit gates.
    and the complete private rollback target converged with no mutation. Current
    plan revision 13 preserves revision 12 byte for byte, pins the sanitized
    preflight result and closes the edge prerequisite without claiming any live
-   matrix execution.
+   matrix execution. A subsequent dormant operation envelope composes this
+   primitive with the application-level surface: synthetic fixture creation,
+   verified temporary Hosting, monitoring, a public-last two-relay transition,
+   one closed three-browser matrix and ordered cleanup. Runner removal, session
+   stop and relay privatization happen inside the edge callback; fixture and
+   temporary-binding deletion happen only after the control plane is private
+   again. It exposes no CLI or live adapter and grants no execution authority.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain

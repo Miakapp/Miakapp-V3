@@ -149,6 +149,12 @@ node --check infrastructure/staging/browser-relay-orchestrator/orchestrator.mjs
 node --check infrastructure/staging/browser-relay-orchestrator/preflight.mjs
 node -e "import('./infrastructure/staging/browser-relay-orchestrator/contract.mjs').then(({ validateBrowserRelayOrchestratorProfile }) => validateBrowserRelayOrchestratorProfile())"
 node -e "import('./infrastructure/staging/browser-relay-orchestrator/contract.mjs').then(({ validateOrchestratorPreflightResult }) => validateOrchestratorPreflightResult())"
+node infrastructure/staging/browser-relay-operation/guard.mjs \
+  "${repository_root}/infrastructure/staging/browser-relay-operation"
+node --check infrastructure/staging/browser-relay-operation/contract.mjs
+node --check infrastructure/staging/browser-relay-operation/guard.mjs
+node --check infrastructure/staging/browser-relay-operation/operation.mjs
+node -e "import('./infrastructure/staging/browser-relay-operation/contract.mjs').then(({ validateBrowserRelayOperationProfile }) => validateBrowserRelayOperationProfile())"
 node infrastructure/staging/browser-relay-services/guard.mjs \
   "${repository_root}/infrastructure/staging/browser-relay-services"
 node --check infrastructure/staging/browser-relay-services/apply.mjs
@@ -309,6 +315,7 @@ node --test \
   infrastructure/staging/test/browser-relay-edge.test.mjs \
   infrastructure/staging/test/browser-relay-image.test.mjs \
   infrastructure/staging/test/browser-relay-monitoring.test.mjs \
+  infrastructure/staging/test/browser-relay-operation.test.mjs \
   infrastructure/staging/test/browser-relay-rollback.test.mjs \
   infrastructure/staging/test/browser-relay-runner.test.mjs \
   infrastructure/staging/test/browser-relay-services.test.mjs \
