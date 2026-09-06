@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-browser-relay-plan/1",
-  "revision": 14,
-  "state": "operation_preflighted_edge_orchestrator_preflighted_rollback_preflighted_monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed",
+  "revision": 13,
+  "state": "edge_orchestrator_preflighted_rollback_preflighted_monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed",
   "target": {
     "project_id": "miakapp-v4-staging",
     "project_number": "1072737219170",
@@ -17,7 +17,7 @@
     "acceptance_executed": false
   },
   "pins": {
-    "miakapp_v3_commit": "ae21e4922d3f70fffe9218cd975f180faca486f0",
+    "miakapp_v3_commit": "6995856fc5cfd64a06176c83e9d24bc93558e05b",
     "deployed_control_plane_commit": "ba4fc9caed566fa39fc66371192fb1821b4232ff",
     "deployed_control_plane_source_sha256": "3e94305e17ee4df07f54f13560dac0a9491de3f89fb3ddbf4ab745c62dce8c7e",
     "miakapi_commit": "a798a746847ba3d5c16128a08b33353269e770a4",
@@ -33,8 +33,6 @@
     "browser_relay_rollback_preflight_result_sha256": "e8ceb2164be946d4edebfe2f08d8a3b230dcf9d2a05d9410738e751775950cd3",
     "browser_relay_orchestrator_profile_sha256": "76b4e6bc718e44d71ee4b5f19376e3ec7df28d304384c2736294f1874349a6da",
     "browser_relay_orchestrator_preflight_result_sha256": "5ccbbab4edcc92820dbcf09ac592fdc7c57ebc277bd5c1f8a64a5fb9422f6e9e",
-    "browser_relay_operation_profile_sha256": "d1ff776c48c0aade724fc31a8d44c7e68fe5c81919eab7030998962017801a73",
-    "browser_relay_operation_preflight_result_sha256": "e3e7e6fab86b1cd777be94b9a9d2c215698d1ab842c92bfd54b6f4ff7d15e436",
     "protocol_contract_commit": "cc3bcd70fdb4b058f990ca2607693a2043faebaf",
     "node_version": "22.22.0",
     "bun_version": "1.2.23",
@@ -43,7 +41,7 @@
     "terraform_version": "1.11.3"
   },
   "baseline": {
-    "observed_at": "2026-09-06T09:15:20.386Z",
+    "observed_at": "2026-09-06T04:08:50.844Z",
     "control_plane": {
       "service": "control-plane",
       "revision": "control-plane-00010-vop",

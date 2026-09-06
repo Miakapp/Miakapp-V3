@@ -751,9 +751,12 @@ current consumer.
     relays last, validates one closed matrix result, removes the runner and
     sessions before restoring private relays, then deletes fixtures only after
     the control plane is canonical-private. It has no cloud adapter or live
-    authority. Its closed read-only preflight is now implemented but not run;
-    next merge and execute that independent observation from the exact commit,
-    then add its exact page and fixture adapters before executing the matrix once.
+    authority. Its closed read-only preflight ran once from exact merged commit
+    `ae21e4922d3f70fffe9218cd975f180faca486f0` and proved the claim absent plus
+    the complete private, empty and Terraform-converged baseline with zero
+    mutation or acceptance. Plan revision 14 preserves revision 13 byte for
+    byte and pins that result. Next add its exact page and fixture adapters
+    before executing the matrix once.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform
     no-change plan. Its fresh post-merge preflight is complete and the rollback

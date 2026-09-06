@@ -480,10 +480,12 @@ public window, then fixture/binding cleanup after canonical-private edge
 rollback. The result boundary contains only bounded semantic aggregates. It
 has no CLI, cloud adapter, credentials, publication path or execution authority,
 so staging remains unchanged and the retained operation claim remains absent.
-Its next source-only increment adds a closed read-only preflight around the
-existing orchestrator observer. The preflight accepts no writer, creates no
-claim and must prove the same private, empty and Terraform-converged baseline
-from the exact merged commit before any page or fixture adapter is reviewed.
+Its closed read-only preflight then ran once from exact merged commit
+`ae21e4922d3f70fffe9218cd975f180faca486f0`. It accepted no writer, created no
+claim and proved the private, empty and Terraform-converged baseline. The
+sanitized result records zero mutation, public-ingress change and acceptance
+execution. Plan revision 14 preserves revision 13 byte for byte and pins this
+result before any page or fixture adapter is reviewed.
 
 The guarded relay-image increment bound the exact merged Miakapp-Server tree to a deterministic
 53,098-byte archive, one digest-pinned Cloud Build Docker builder, verified
