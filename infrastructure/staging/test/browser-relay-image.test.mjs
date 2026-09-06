@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import {
   chmodSync,
   copyFileSync,
@@ -45,8 +46,11 @@ import {
 import {
   RELAY_IMAGE_V1_PROFILE_SHA256,
   RELAY_IMAGE_V1_RESULT_SHA256,
+  RELAY_IMAGE_V2_RESULT_SHA256,
+  rejectRelayImageV2Replay,
   validateRelayImageV1Profile,
   validateRelayImageV1Result,
+  validateRelayImageV2Result,
 } from '../browser-relay-image/result.mjs';
 import {
   normalizePreparedRelayImageInventory,
@@ -570,9 +574,10 @@ test('requires exact source provenance, builder digests and successful smoke ste
   );
 });
 
-test('pins the consumed v1 result separately from the v2 recovery', () => {
+test('pins both consumed relay-image attempts and the verified v2 result', () => {
   const v1Profile = validateRelayImageV1Profile();
-  const result = validateRelayImageV1Result();
+  const v1Result = validateRelayImageV1Result();
+  const v2Result = validateRelayImageV2Result();
   assert.equal(
     RELAY_IMAGE_V1_PROFILE_SHA256,
     '2afcfc7b5f0b9fb524a59bd81cd5dcd98f73bf58c2619640b6a42bbbd0958981',
@@ -581,18 +586,51 @@ test('pins the consumed v1 result separately from the v2 recovery', () => {
     RELAY_IMAGE_V1_RESULT_SHA256,
     'c24b5cc5fe3a48a6a35365e6c404734aaf657832af8ce16c7a67c1c8e94ec1a9',
   );
-  assert.equal(result.build.status, 'FAILURE');
-  assert.equal(result.build.build_step_status, 'SUCCESS');
-  assert.equal(result.build.smoke_step_status, 'SUCCESS');
-  assert.equal(result.build.verified_provenance_created, false);
-  assert.equal(result.image.deployment_authorized, false);
-  assert.equal(result.prerequisites.container_analysis_api_enabled, false);
+  assert.equal(
+    RELAY_IMAGE_V2_RESULT_SHA256,
+    'dcf1ea4d63e9c7e13970d77c40dcc0ebc43215ffc6ffc3293ce28b78868e1649',
+  );
+  assert.equal(v1Result.build.status, 'FAILURE');
+  assert.equal(v1Result.build.build_step_status, 'SUCCESS');
+  assert.equal(v1Result.build.smoke_step_status, 'SUCCESS');
+  assert.equal(v1Result.build.verified_provenance_created, false);
+  assert.equal(v1Result.image.deployment_authorized, false);
+  assert.equal(v1Result.prerequisites.container_analysis_api_enabled, false);
   assert.equal(profile.contracts.v1_profile_sha256, RELAY_IMAGE_V1_PROFILE_SHA256);
   assert.equal(profile.contracts.v1_result_sha256, RELAY_IMAGE_V1_RESULT_SHA256);
-  assert.equal(result.profile_sha256, RELAY_IMAGE_V1_PROFILE_SHA256);
+  assert.equal(v1Result.profile_sha256, RELAY_IMAGE_V1_PROFILE_SHA256);
+  assert.equal(v2Result.profile_sha256, RELAY_IMAGE_PROFILE_SHA256);
+  assert.equal(v2Result.build.status, 'SUCCESS');
+  assert.equal(v2Result.source.object_generation, profile.source.object_generation);
+  assert.equal(v2Result.recovery.source_reused, true);
+  assert.equal(v2Result.recovery.source_upload_performed, false);
+  assert.equal(v2Result.image.digest, v2Result.image.digest_reference.split('@')[1]);
+  assert.equal(v2Result.effects.cloud_run_services_created, 0);
+  assert.equal(v2Result.effects.public_ingress_created, false);
   assert.notEqual(profile.operation.claim_object, v1Profile.operation.claim_object);
   assert.notEqual(profile.build.build_tag, v1Profile.build.build_tag);
   assert.notEqual(profile.image.tag_reference, v1Profile.image.tag_reference);
+  assert.throws(() => rejectRelayImageV2Replay(), /permanently retired/u);
+
+  temporaryDirectory((directory) => {
+    const path = join(directory, 'result-v2.json');
+    const drifted = structuredClone(v2Result);
+    drifted.effects.cloud_run_services_created = 1;
+    writeFileSync(path, canonicalJson(drifted));
+    assert.throws(() => validateRelayImageV2Result(path), /digest has drifted/u);
+  });
+});
+
+test('permanently retires both v2 mutation entrypoints', () => {
+  for (const name of ['plan.sh', 'apply.sh']) {
+    const execution = spawnSync(fileURLToPath(new URL(name, rootUrl)), [], {
+      encoding: 'utf8',
+      env: { PATH: process.env.PATH },
+    });
+    assert.equal(execution.status, 1);
+    assert.match(execution.stderr, /permanently retired/u);
+    assert.equal(execution.stdout, '');
+  }
 });
 
 test('validates the published manifest, config, immutable digest and size', async () => {
@@ -678,6 +716,24 @@ test('accepts only the exact relay-image source inventory and executable modes',
     writeFileSync(
       applyPath,
       `${readFileSync(applyPath, 'utf8')}\n// https://storage.googleapis.com/upload/storage/v1/b/forbidden\n`,
+    );
+    assert.throws(
+      () => validateRelayImageRoot(pathToFileURL(`${directory}/`)),
+      /one-shot private boundary/u,
+    );
+  });
+  temporaryDirectory((directory) => {
+    for (const name of RELAY_IMAGE_FILES) {
+      copyFileSync(new URL(name, rootUrl), join(directory, name));
+      chmodSync(join(directory, name), name.endsWith('.sh') ? 0o700 : 0o600);
+    }
+    const planPath = join(directory, 'plan.mjs');
+    writeFileSync(
+      planPath,
+      readFileSync(planPath, 'utf8').replace(
+        'export const RELAY_IMAGE_OPERATION_CONSUMED = true',
+        'export const RELAY_IMAGE_OPERATION_CONSUMED = false',
+      ),
     );
     assert.throws(
       () => validateRelayImageRoot(pathToFileURL(`${directory}/`)),

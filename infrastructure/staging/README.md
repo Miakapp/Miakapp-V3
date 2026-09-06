@@ -3,7 +3,8 @@
 Status: private audience-bound user-relay acceptance succeeded and retired;
 schema-2 two-key runtime deployed privately with version 1 current for the
 browser-relay rehearsal and version 2 retained; live browser-relay plan rebased
-but not deployed; exact private relay-image build reviewed but not executed;
+but not deployed; exact private relay-image v2 build verified, retained privately
+and not deployed, with its one-shot entrypoints retired;
 guarded rehearsal entry converged and its one-shot tooling
 retired; real system-browser App Check provider token obtained and its
 temporary Hosting route retired; browser App Check API-only prerequisite applied and
@@ -38,16 +39,19 @@ without opening IAM early, require a digest-only image and model public IAM as
 the final dependency. It has no execution entrypoint, saved plan, image digest
 or cloud evidence and has never been applied.
 
-The guarded [`browser-relay-image/`](browser-relay-image/) package closes the
+The guarded [`browser-relay-image/`](browser-relay-image/) package closed the
 next pre-deployment boundary without creating a service. It pins the exact
 merged Miakapp-Server Git tree and 53,098-byte archive, both digest-pinned base
 images, the Cloud Build Docker builder, the existing private source bucket and
 Artifact Registry repository, and one `E2_MEDIUM` build with verified SHA-256
 source provenance. Its build-then-smoke sequence publishes only after `/ping`
-returns `pong` from a read-only, non-root, capability-free container. Planning
-is read-only; applying is serialized by a generation-zero GCS claim and cannot
-retry, delete, create IAM, create Cloud Run, or expose ingress. The reviewed
-operation has not yet run and no relay image is present.
+returns `pong` from a read-only, non-root, capability-free container. The first
+build exposed the missing Container Analysis prerequisite and is not
+deployable. After that API converged, the distinct v2 recovery reused the exact
+source generation and succeeded once. Its immutable digest is committed as
+sanitized evidence, but remains private and undeployed. Both one-shot
+entrypoints are permanently retired; no relay service, IAM binding or public
+ingress was created.
 
 The [`signing-overlap/`](signing-overlap/) package records the converged next
 prerequisite: one non-retried Cloud KMS version creation behind two atomic GCS
@@ -367,7 +371,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`browser-relay/`](browser-relay/) | Closed live browser, two-relay, signing-key and rollback acceptance plan | Rebases the current private `00010`/two-key/version-1-entry/App Check baseline; not deployed, every `LIVE-*` case pending, and no cloud mutation granted |
 | [`browser-relay-edge/`](browser-relay-edge/) | Dormant reversible control-plane edge state machine | Pins the atomic staging issuer/origin profile and public-last/private-first transition ordering; exposes no CLI and grants no cloud mutation |
 | [`browser-relay-services/`](browser-relay-services/) | Dormant two-relay Cloud Run Terraform state machine | Pins scale 0..1, digest-only images, exact audiences, no-role runtime identity, finite process admission and public-last IAM; exposes no operator entrypoint and has not been applied |
-| [`browser-relay-image/`](browser-relay-image/) | Guarded one-shot private relay image build | Pins exact source and builders, verified provenance and a hardened local smoke step; reviewed but not executed, with no image, service, IAM or public-ingress effect yet |
+| [`browser-relay-image/`](browser-relay-image/) | Guarded one-shot private relay image build | Distinct v2 recovery succeeded once with exact source provenance and hardened smoke validation; immutable image retained privately and undeployed; all entrypoints retired |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
 | [`TEARDOWN.md`](TEARDOWN.md) | Manual recovery and teardown rehearsal | Documentation only |

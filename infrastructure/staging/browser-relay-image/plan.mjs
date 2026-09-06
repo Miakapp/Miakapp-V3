@@ -27,6 +27,9 @@ import {
 import { verifyExactMain } from '../workload/contract.mjs';
 
 const PLAN_CONFIRMATION = 'MIAKAPP_STAGING_RELAY_IMAGE_PLAN_CONFIRMATION';
+export const RELAY_IMAGE_OPERATION_CONSUMED = true;
+const RETIRED_MESSAGE =
+  'The verified relay image recovery succeeded; this one-shot planner is permanently retired';
 process.umask(0o077);
 
 async function main() {
@@ -78,8 +81,13 @@ async function main() {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  main().catch((error) => {
-    console.error(error instanceof Error ? error.message : 'Relay image planning failed');
+  if (RELAY_IMAGE_OPERATION_CONSUMED) {
+    console.error(RETIRED_MESSAGE);
     process.exitCode = 1;
-  });
+  } else {
+    main().catch((error) => {
+      console.error(error instanceof Error ? error.message : 'Relay image planning failed');
+      process.exitCode = 1;
+    });
+  }
 }
