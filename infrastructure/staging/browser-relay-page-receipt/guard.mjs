@@ -36,6 +36,9 @@ export function validateBrowserRelayPageReceiptRoot(rootUrl) {
   const source = readFileSync(new URL('producer.mjs', rootUrl), 'utf8');
   if (!source.includes('validateBrowserRelayPageFact')
     || !source.includes('validateSourceReceipt')
+    || !source.includes('lifecycle_observation')
+    || !source.includes('call_outcomes')
+    || !source.includes('sign_outs')
     || !source.includes("discard('failed')")
     || !source.includes('pagehide')
     || !source.includes('pageshow')

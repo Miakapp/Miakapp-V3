@@ -808,10 +808,14 @@ current consumer.
     identity verification and independently observed cleanup without mutation
     retries. Its profile records the implementation while original fixture
     capacity limits remain explicit; current dependency pins and timing
-    capacity follow page revision 3. No live wiring or execution is present.
-    The Chromium timing and local lifecycle/outcome APIs are implemented, but
-    the complete page scenario and Playwright receipt bridge are not wired.
-    Close those remaining compatibility gaps, then
+    capacity follow page revision 3. A separate dormant Playwright bridge now
+    owns lazy page and private-input acquisition, validates the reviewed target
+    again immediately before each page action and closes exact page receipts
+    in real offline Firefox and WebKit engines. Chromium returns a distinct
+    blocked result before acquiring either dependency because pinned Playwright
+    cannot prove native persisted BFCache restoration; that result cannot stand
+    in for an engine result. No live wiring or execution is present. Close the
+    complete Chromium page scenario and BFCache-capable automation gap, then
     implement the independent cloud observers before executing the matrix once.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform

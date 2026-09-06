@@ -941,8 +941,16 @@ vertical-slice exit gates.
    relay, coordinator, KMS and Firestore owners. It accepts exactly 18 ordered
    single-use source receipts across the three browsers, retains none and
    grants no live authority. Its first source-specific producer now derives the
-   browser-owned receipt from ordered cumulative page/state/call facts and
-   native persisted lifecycle events instead of accepting assertion booleans.
+   browser-owned receipt from ordered cumulative page, lifecycle, state and call
+   facts instead of accepting assertion booleans. Revision 2 uses typed host
+   call outcomes, verifies terminal sign-out/disposal and cross-checks native
+   lifecycle projections without requiring a deliberately fenced asynchronous
+   SDK status callback. A separate dormant Playwright bridge owns lazy page and
+   private-input acquisition. It closes real browser-page receipts for Firefox
+   and WebKit, while Chromium returns
+   `pinned_playwright_bfcache_unsupported` before either dependency is called.
+   The blocked result is not an engine result and cannot stand in for native
+   persisted lifecycle evidence.
    A separate closed scenario fixture now supplies the required fourth page
    input from a second exact synthetic Firebase identity, extends the one
    coordinator's state access to both identities and requires both cleanup
@@ -952,8 +960,9 @@ vertical-slice exit gates.
    ephemeral-session and HTTP boundary. Its profile closes only the
    second-identity cloud implementation gap. Original fixture capacity limits
    remain explicit, current page timing capacity is satisfied, and nothing is
-   live wired or executed. The complete page scenario, independent cloud
-   observers and Playwright bridge remain open before the one allowed execution.
+   live wired or executed. The complete Chromium page scenario, a BFCache-capable
+   automation path, independent cloud observers and aggregator wiring remain
+   open before the one allowed execution.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain

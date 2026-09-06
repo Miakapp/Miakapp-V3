@@ -1,0 +1,59 @@
+name: Browser relay Playwright bridge
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/browser-relay-playwright-bridge.yml'
+      - 'package.json'
+      - 'bun.lock'
+      - 'infrastructure/staging/browser-relay-runner/**'
+      - 'infrastructure/staging/browser-relay-page/**'
+      - 'infrastructure/staging/browser-relay-aggregator/**'
+      - 'infrastructure/staging/browser-relay-playwright-bridge/**'
+      - 'infrastructure/staging/browser-relay-page-receipt/**'
+      - 'infrastructure/staging/test/browser-relay-playwright-bridge*.mjs'
+      - 'infrastructure/staging/test/browser-relay-page-receipt.test.mjs'
+      - 'infrastructure/staging/test/helpers/browser-relay-page-harness.mjs'
+      - 'infrastructure/staging/test/helpers/browser-relay-playwright-bridge-*.mjs'
+  pull_request:
+    paths:
+      - '.github/workflows/browser-relay-playwright-bridge.yml'
+      - 'package.json'
+      - 'bun.lock'
+      - 'infrastructure/staging/browser-relay-runner/**'
+      - 'infrastructure/staging/browser-relay-page/**'
+      - 'infrastructure/staging/browser-relay-aggregator/**'
+      - 'infrastructure/staging/browser-relay-playwright-bridge/**'
+      - 'infrastructure/staging/browser-relay-page-receipt/**'
+      - 'infrastructure/staging/test/browser-relay-playwright-bridge*.mjs'
+      - 'infrastructure/staging/test/browser-relay-page-receipt.test.mjs'
+      - 'infrastructure/staging/test/helpers/browser-relay-page-harness.mjs'
+      - 'infrastructure/staging/test/helpers/browser-relay-playwright-bridge-*.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Browser relay Playwright bridge / validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22.22.0
+          package-manager-cache: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: 1.2.23
+      - name: Install locked dependencies
+        run: bun install --frozen-lockfile
+      - name: Install secondary browser engines
+        run: ./node_modules/.bin/playwright install --with-deps firefox webkit
+      - name: Validate bridge and receipt contracts
+        run: node --test infrastructure/staging/test/browser-relay-playwright-bridge.test.mjs infrastructure/staging/test/browser-relay-page-receipt.test.mjs
+      - name: Exercise the bridge in pinned browsers
+        run: node infrastructure/staging/test/browser-relay-playwright-bridge-browser.mjs

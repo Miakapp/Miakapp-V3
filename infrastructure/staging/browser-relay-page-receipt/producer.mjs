@@ -35,6 +35,17 @@ const CUMULATIVE_ARRAY_FIELDS = Object.freeze([
   'client_statuses',
   'failure_classes',
 ]);
+const LIFECYCLE_CUMULATIVE_INTEGER_FIELDS = Object.freeze([
+  'suspensions',
+  'resumptions',
+  'sign_outs',
+  'disposals',
+]);
+const LIFECYCLE_CUMULATIVE_ARRAY_FIELDS = Object.freeze([
+  'events',
+  'state_transitions',
+  'call_outcomes',
+]);
 
 function reject(message) {
   throw new StagingBrowserRelayPageReceiptError(message);
@@ -53,6 +64,11 @@ function prefix(previous, current) {
     && previous.every((entry, index) => entry === current[index]);
 }
 
+function deepPrefix(previous, current) {
+  return previous.length <= current.length
+    && previous.every((entry, index) => isDeepStrictEqual(entry, current[index]));
+}
+
 function requireCumulativeObservation(previous, current) {
   if (previous === undefined) return;
   for (const field of CUMULATIVE_INTEGER_FIELDS) {
@@ -63,6 +79,20 @@ function requireCumulativeObservation(previous, current) {
   for (const field of CUMULATIVE_ARRAY_FIELDS) {
     if (!prefix(previous[field], current[field])) {
       reject(`page_fact.observation.${field} is not a cumulative prefix`);
+    }
+  }
+}
+
+function requireCumulativeLifecycle(previous, current) {
+  if (previous === undefined) return;
+  for (const field of LIFECYCLE_CUMULATIVE_INTEGER_FIELDS) {
+    if (current[field] < previous[field]) {
+      reject(`page_fact.lifecycle_observation.${field} moved backwards within one page instance`);
+    }
+  }
+  for (const field of LIFECYCLE_CUMULATIVE_ARRAY_FIELDS) {
+    if (!deepPrefix(previous[field], current[field])) {
+      reject(`page_fact.lifecycle_observation.${field} is not a cumulative prefix`);
     }
   }
 }
@@ -85,7 +115,45 @@ function requireOptionalEvidence(fact, { state = false, call = false, lifecycle 
   } else {
     if (fact.lifecycle_event === null) reject('page_fact.lifecycle_event is missing');
     exact(fact.lifecycle_event.type, lifecycle, 'page_fact.lifecycle_event.type');
+    const hostEvent = fact.lifecycle_observation.events.at(-1);
+    exact(hostEvent, {
+      event: fact.lifecycle_event.type,
+      persisted: fact.lifecycle_event.persisted,
+    }, 'page_fact lifecycle event host projection');
   }
+}
+
+function requireLifecycleCleanup(fact, expected) {
+  exact({
+    suspensions: fact.lifecycle_observation.suspensions,
+    resumptions: fact.lifecycle_observation.resumptions,
+    sign_outs: fact.lifecycle_observation.sign_outs,
+    disposals: fact.lifecycle_observation.disposals,
+  }, expected, 'page_fact lifecycle cleanup counters');
+}
+
+function requireNoTerminalCleanup(fact) {
+  exact({
+    sign_outs: fact.lifecycle_observation.sign_outs,
+    disposals: fact.lifecycle_observation.disposals,
+  }, {
+    sign_outs: 0,
+    disposals: 0,
+  }, 'page_fact premature lifecycle cleanup counters');
+}
+
+function requireFreshLifecycle(fact) {
+  exact(fact.lifecycle_observation, {
+    schema: 'miakapp.staging-browser-relay-page-lifecycle-observation/1',
+    browser: fact.browser,
+    events: [],
+    suspensions: 0,
+    resumptions: 0,
+    sign_outs: 0,
+    disposals: 0,
+    state_transitions: [],
+    call_outcomes: [],
+  }, 'initialized page lifecycle observation');
 }
 
 function requireObservationState(observation, state) {
@@ -181,19 +249,23 @@ function requireAppliedCall(fact) {
   }, 'page_fact.call_observation');
 }
 
-function hasOutcome(observation, outcome) {
-  return observation.failure_classes.some((entry) => entry.endsWith(`:${outcome}`));
+function hasOutcome(lifecycleObservation, outcome) {
+  return lifecycleObservation.call_outcomes.includes(outcome);
 }
 
 function validateChromiumPhase(fact, retained) {
   const observation = fact.observation;
   if (fact.sequence <= 15) requirePageIdentity(fact, 1, 1, 1);
   else requirePageIdentity(fact, 2, 2, 2);
+  if (fact.phase !== 'signed_out_stopped' && fact.phase !== 'replacement_stopped') {
+    requireNoTerminalCleanup(fact);
+  }
 
   switch (fact.phase) {
     case 'initial_initialized':
       requireOptionalEvidence(fact, {});
       requireInitialized(observation);
+      requireFreshLifecycle(fact);
       break;
     case 'initial_ready':
       requireOptionalEvidence(fact, {});
@@ -300,8 +372,8 @@ function validateChromiumPhase(fact, retained) {
     case 'failed_and_uncertain_calls':
       requireOptionalEvidence(fact, { state: true });
       requireObservationState(observation, 'ready');
-      if (!hasOutcome(observation, 'failed')
-        || !hasOutcome(observation, 'outcome_unknown')
+      if (!hasOutcome(fact.lifecycle_observation, 'failed')
+        || !hasOutcome(fact.lifecycle_observation, 'outcome_unknown')
         || fact.state_observation?.state !== 'pending'
         || fact.state_observation.stale !== true) {
         reject('Stable failed and uncertain outcomes were not both observed');
@@ -329,7 +401,12 @@ function validateChromiumPhase(fact, retained) {
       exact(observation.active_websockets, 0, 'suspended active WebSocket count');
       exact(observation.maximum_active_websockets, 1,
         'suspended maximum active WebSocket count');
-      requireLastStatus(observation, 'stopped');
+      requireLifecycleCleanup(fact, {
+        suspensions: 1,
+        resumptions: 0,
+        sign_outs: 0,
+        disposals: 0,
+      });
       retained.pagehideElapsed = fact.elapsed_milliseconds;
       break;
     case 'pageshow_restored':
@@ -341,6 +418,12 @@ function validateChromiumPhase(fact, retained) {
         relayIds: ['relay-a', 'relay-b'],
       });
       requireMatchedState(fact, retained.recoveredRevision);
+      requireLifecycleCleanup(fact, {
+        suspensions: 1,
+        resumptions: 1,
+        sign_outs: 0,
+        disposals: 0,
+      });
       if (fact.elapsed_milliseconds - retained.pagehideElapsed
         > MAXIMUM_LIFECYCLE_PAUSE_MILLISECONDS) {
         reject('Page lifecycle restore exceeded its reviewed bound');
@@ -352,12 +435,18 @@ function validateChromiumPhase(fact, retained) {
       exact(observation.client_instances, 2, 'stopped client instance count');
       exact(observation.websocket_connections, 4, 'stopped WebSocket connection count');
       exact(observation.active_websockets, 0, 'stopped active WebSocket count');
-      requireLastStatus(observation, 'stopped');
+      requireLifecycleCleanup(fact, {
+        suspensions: 1,
+        resumptions: 1,
+        sign_outs: 1,
+        disposals: 1,
+      });
       retained.firstIdentityStoppedElapsed = fact.elapsed_milliseconds;
       break;
     case 'replacement_initialized':
       requireOptionalEvidence(fact, {});
       requireInitialized(observation);
+      requireFreshLifecycle(fact);
       if (fact.elapsed_milliseconds < retained.firstIdentityStoppedElapsed) {
         reject('Replacement identity started before prior identity teardown');
       }
@@ -380,7 +469,12 @@ function validateChromiumPhase(fact, retained) {
       exact(observation.maximum_active_websockets, 1,
         'replacement maximum active WebSocket count');
       exact(observation.relay_ids, ['relay-b'], 'replacement relay IDs');
-      requireLastStatus(observation, 'stopped');
+      requireLifecycleCleanup(fact, {
+        suspensions: 0,
+        resumptions: 0,
+        sign_outs: 1,
+        disposals: 1,
+      });
       break;
     default:
       reject('Chromium page-fact phase is not implemented');
@@ -390,10 +484,12 @@ function validateChromiumPhase(fact, retained) {
 function validateSecondaryPhase(fact) {
   requirePageIdentity(fact, 1, 1, 1);
   const observation = fact.observation;
+  if (fact.phase !== 'signed_out_stopped') requireNoTerminalCleanup(fact);
   switch (fact.phase) {
     case 'initial_initialized':
       requireOptionalEvidence(fact, {});
       requireInitialized(observation);
+      requireFreshLifecycle(fact);
       break;
     case 'initial_ready':
       requireOptionalEvidence(fact, {});
@@ -413,7 +509,12 @@ function validateSecondaryPhase(fact) {
       exact(observation.maximum_active_websockets, 1,
         'secondary maximum active WebSocket count');
       exact(observation.relay_ids, ['relay-b'], 'secondary relay IDs');
-      requireLastStatus(observation, 'stopped');
+      requireLifecycleCleanup(fact, {
+        suspensions: 0,
+        resumptions: 0,
+        sign_outs: 1,
+        disposals: 1,
+      });
       break;
     default:
       reject('Secondary page-fact phase is not implemented');
@@ -431,6 +532,7 @@ export function createBrowserRelayPageReceiptProducer(browser) {
   let lastElapsed = 0;
   let maximumActiveWebsockets = 0;
   let lastObservationByPage = new Map();
+  let lastLifecycleByPage = new Map();
   let retained = {};
 
   function discard(nextState) {
@@ -440,6 +542,8 @@ export function createBrowserRelayPageReceiptProducer(browser) {
     maximumActiveWebsockets = 0;
     lastObservationByPage.clear();
     lastObservationByPage = new Map();
+    lastLifecycleByPage.clear();
+    lastLifecycleByPage = new Map();
     retained = {};
   }
 
@@ -464,9 +568,12 @@ export function createBrowserRelayPageReceiptProducer(browser) {
         }
         const previous = lastObservationByPage.get(fact.page_instance);
         requireCumulativeObservation(previous, fact.observation);
+        const previousLifecycle = lastLifecycleByPage.get(fact.page_instance);
+        requireCumulativeLifecycle(previousLifecycle, fact.lifecycle_observation);
         if (browser === 'chromium') validateChromiumPhase(fact, retained);
         else validateSecondaryPhase(fact);
         lastObservationByPage.set(fact.page_instance, fact.observation);
+        lastLifecycleByPage.set(fact.page_instance, fact.lifecycle_observation);
         lastElapsed = fact.elapsed_milliseconds;
         maximumActiveWebsockets = Math.max(
           maximumActiveWebsockets,

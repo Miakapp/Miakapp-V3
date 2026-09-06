@@ -78,6 +78,21 @@ function lifecycle(type) {
   };
 }
 
+function lifecycleObservation(browser, overrides = {}) {
+  return {
+    schema: 'miakapp.staging-browser-relay-page-lifecycle-observation/1',
+    browser,
+    events: [],
+    suspensions: 0,
+    resumptions: 0,
+    sign_outs: 0,
+    disposals: 0,
+    state_transitions: [],
+    call_outcomes: [],
+    ...overrides,
+  };
+}
+
 function fact(browser, sequence, elapsed, pageObservation, extras = {}) {
   const pageInstance = browser === 'chromium' && sequence >= 16 ? 2 : 1;
   return {
@@ -90,6 +105,7 @@ function fact(browser, sequence, elapsed, pageObservation, extras = {}) {
     identity_generation: pageInstance,
     elapsed_milliseconds: elapsed,
     observation: pageObservation,
+    lifecycle_observation: lifecycleObservation(browser),
     state_observation: null,
     call_observation: null,
     lifecycle_event: null,
@@ -98,6 +114,81 @@ function fact(browser, sequence, elapsed, pageObservation, extras = {}) {
 }
 
 function chromiumFacts() {
+  const initializedLifecycle = lifecycleObservation('chromium');
+  const readyLifecycle = lifecycleObservation('chromium', {
+    state_transitions: [{ revision: 1, stale: false }],
+  });
+  const patchedLifecycle = lifecycleObservation('chromium', {
+    state_transitions: [
+      { revision: 1, stale: false },
+      { revision: 2, stale: false },
+    ],
+  });
+  const initialCallLifecycle = lifecycleObservation('chromium', {
+    state_transitions: patchedLifecycle.state_transitions,
+    call_outcomes: ['applied'],
+  });
+  const handoffLifecycle = lifecycleObservation('chromium', {
+    state_transitions: [
+      ...patchedLifecycle.state_transitions,
+      { revision: 2, stale: true },
+    ],
+    call_outcomes: initialCallLifecycle.call_outcomes,
+  });
+  const readyBLifecycle = lifecycleObservation('chromium', {
+    state_transitions: [
+      ...handoffLifecycle.state_transitions,
+      { revision: 3, stale: false },
+    ],
+    call_outcomes: initialCallLifecycle.call_outcomes,
+  });
+  const relayBCallLifecycle = lifecycleObservation('chromium', {
+    state_transitions: readyBLifecycle.state_transitions,
+    call_outcomes: ['applied', 'applied'],
+  });
+  const uncertainLifecycle = lifecycleObservation('chromium', {
+    state_transitions: [
+      ...readyBLifecycle.state_transitions,
+      { revision: 4, stale: true },
+    ],
+    call_outcomes: ['applied', 'applied', 'failed', 'outcome_unknown'],
+  });
+  const recoveredLifecycle = lifecycleObservation('chromium', {
+    state_transitions: [
+      ...uncertainLifecycle.state_transitions,
+      { revision: 4, stale: false },
+    ],
+    call_outcomes: uncertainLifecycle.call_outcomes,
+  });
+  const suspendedLifecycle = lifecycleObservation('chromium', {
+    events: [{ event: 'pagehide', persisted: true }],
+    suspensions: 1,
+    state_transitions: recoveredLifecycle.state_transitions,
+    call_outcomes: recoveredLifecycle.call_outcomes,
+  });
+  const restoredLifecycle = lifecycleObservation('chromium', {
+    events: [
+      ...suspendedLifecycle.events,
+      { event: 'pageshow', persisted: true },
+    ],
+    suspensions: 1,
+    resumptions: 1,
+    state_transitions: recoveredLifecycle.state_transitions,
+    call_outcomes: recoveredLifecycle.call_outcomes,
+  });
+  const stoppedLifecycle = lifecycleObservation('chromium', {
+    ...restoredLifecycle,
+    sign_outs: 1,
+    disposals: 1,
+  });
+  const replacementReadyLifecycle = lifecycleObservation('chromium', {
+    state_transitions: [{ revision: 1, stale: false }],
+  });
+  const replacementStoppedLifecycle = lifecycleObservation('chromium', {
+    ...replacementReadyLifecycle,
+    sign_outs: 1,
+    disposals: 1,
+  });
   const readyA = observation('chromium', {
     state: 'ready',
     firebase_token_requests: 1,
@@ -138,7 +229,7 @@ function chromiumFacts() {
     ...readyB,
     active_websockets: 0,
     client_statuses: [...readyB.client_statuses, 'reconnecting'],
-    failure_classes: ['internal:failed', 'unavailable:outcome_unknown'],
+    failure_classes: ['internal:accepted', 'unavailable:outcome_unknown'],
     duration_milliseconds: 543_000,
   };
   const recovered = {
@@ -155,7 +246,7 @@ function chromiumFacts() {
     ...recovered,
     state: 'suspended',
     active_websockets: 0,
-    client_statuses: [...recovered.client_statuses, 'stopping', 'stopped'],
+    client_statuses: [...recovered.client_statuses, 'stopping'],
     duration_milliseconds: 545_000,
   };
   const restored = {
@@ -180,7 +271,7 @@ function chromiumFacts() {
     ...restored,
     state: 'stopped',
     active_websockets: 0,
-    client_statuses: [...restored.client_statuses, 'stopping', 'stopped'],
+    client_statuses: [...restored.client_statuses, 'stopping'],
     duration_milliseconds: 547_000,
   };
   const replacementReady = observation('chromium', {
@@ -199,35 +290,83 @@ function chromiumFacts() {
     ...replacementReady,
     state: 'stopped',
     active_websockets: 0,
-    client_statuses: [...replacementReady.client_statuses, 'stopping', 'stopped'],
+    client_statuses: [...replacementReady.client_statuses, 'stopping'],
     duration_milliseconds: 2_000,
   };
   return [
-    fact('chromium', 1, 0, observation('chromium')),
-    fact('chromium', 2, 1_000, readyA),
-    fact('chromium', 3, 1_100, readyA, { state_observation: matched(1) }),
-    fact('chromium', 4, 1_200, readyA, { state_observation: matched(2) }),
-    fact('chromium', 5, 1_300, readyA, { call_observation: applied() }),
-    fact('chromium', 6, 271_000, reauthenticated),
-    fact('chromium', 7, 541_000, handoff, { state_observation: stale(3) }),
-    fact('chromium', 8, 542_000, readyB),
-    fact('chromium', 9, 542_100, readyB, { state_observation: matched(3) }),
-    fact('chromium', 10, 542_200, readyB, { call_observation: applied() }),
-    fact('chromium', 11, 543_000, uncertain, { state_observation: stale(4) }),
-    fact('chromium', 12, 544_000, recovered, { state_observation: matched(4) }),
-    fact('chromium', 13, 545_000, suspended, { lifecycle_event: lifecycle('pagehide') }),
+    fact('chromium', 1, 0, observation('chromium'), {
+      lifecycle_observation: initializedLifecycle,
+    }),
+    fact('chromium', 2, 1_000, readyA, { lifecycle_observation: readyLifecycle }),
+    fact('chromium', 3, 1_100, readyA, {
+      lifecycle_observation: readyLifecycle,
+      state_observation: matched(1),
+    }),
+    fact('chromium', 4, 1_200, readyA, {
+      lifecycle_observation: patchedLifecycle,
+      state_observation: matched(2),
+    }),
+    fact('chromium', 5, 1_300, readyA, {
+      lifecycle_observation: initialCallLifecycle,
+      call_observation: applied(),
+    }),
+    fact('chromium', 6, 271_000, reauthenticated, {
+      lifecycle_observation: initialCallLifecycle,
+    }),
+    fact('chromium', 7, 541_000, handoff, {
+      lifecycle_observation: handoffLifecycle,
+      state_observation: stale(3),
+    }),
+    fact('chromium', 8, 542_000, readyB, { lifecycle_observation: readyBLifecycle }),
+    fact('chromium', 9, 542_100, readyB, {
+      lifecycle_observation: readyBLifecycle,
+      state_observation: matched(3),
+    }),
+    fact('chromium', 10, 542_200, readyB, {
+      lifecycle_observation: relayBCallLifecycle,
+      call_observation: applied(),
+    }),
+    fact('chromium', 11, 543_000, uncertain, {
+      lifecycle_observation: uncertainLifecycle,
+      state_observation: stale(4),
+    }),
+    fact('chromium', 12, 544_000, recovered, {
+      lifecycle_observation: recoveredLifecycle,
+      state_observation: matched(4),
+    }),
+    fact('chromium', 13, 545_000, suspended, {
+      lifecycle_observation: suspendedLifecycle,
+      lifecycle_event: lifecycle('pagehide'),
+    }),
     fact('chromium', 14, 546_000, restored, {
+      lifecycle_observation: restoredLifecycle,
       state_observation: matched(4),
       lifecycle_event: lifecycle('pageshow'),
     }),
-    fact('chromium', 15, 547_000, stopped),
-    fact('chromium', 16, 548_000, observation('chromium')),
-    fact('chromium', 17, 549_000, replacementReady),
-    fact('chromium', 18, 550_000, replacementStopped),
+    fact('chromium', 15, 547_000, stopped, {
+      lifecycle_observation: stoppedLifecycle,
+    }),
+    fact('chromium', 16, 548_000, observation('chromium'), {
+      lifecycle_observation: lifecycleObservation('chromium'),
+    }),
+    fact('chromium', 17, 549_000, replacementReady, {
+      lifecycle_observation: replacementReadyLifecycle,
+    }),
+    fact('chromium', 18, 550_000, replacementStopped, {
+      lifecycle_observation: replacementStoppedLifecycle,
+    }),
   ];
 }
 
 function secondaryFacts(browser) {
+  const readyLifecycle = lifecycleObservation(browser, {
+    state_transitions: [{ revision: 1, stale: false }],
+  });
+  const stoppedLifecycle = lifecycleObservation(browser, {
+    ...readyLifecycle,
+    sign_outs: 1,
+    disposals: 1,
+  });
   const ready = observation(browser, {
     state: 'ready',
     firebase_token_requests: 1,
@@ -244,13 +383,13 @@ function secondaryFacts(browser) {
     ...ready,
     state: 'stopped',
     active_websockets: 0,
-    client_statuses: [...ready.client_statuses, 'stopping', 'stopped'],
+    client_statuses: [...ready.client_statuses, 'stopping'],
     duration_milliseconds: 2_000,
   };
   return [
     fact(browser, 1, 0, observation(browser)),
-    fact(browser, 2, 1_000, ready),
-    fact(browser, 3, 2_000, stopped),
+    fact(browser, 2, 1_000, ready, { lifecycle_observation: readyLifecycle }),
+    fact(browser, 3, 2_000, stopped, { lifecycle_observation: stoppedLifecycle }),
   ];
 }
 
@@ -258,11 +397,11 @@ test('pins a closed browser-page producer without live authority', () => {
   const profile = validateBrowserRelayPageReceiptProfile();
   assert.equal(
     profile.state,
-    'closed_browser_page_receipt_producer_implemented_not_wired_not_executed',
+    'closed_browser_page_receipt_producer_bridge_bound_not_aggregated_not_executed',
   );
   assert.equal(profile.producer.chromium_facts, 18);
   assert.equal(profile.compatibility.fixture_capacity_satisfied, false);
-  assert.equal(profile.compatibility.playwright_bridge_present, false);
+  assert.equal(profile.compatibility.playwright_bridge_present, true);
   assert.equal(profile.authority.live_execution_authorized, false);
   assert.match(PAGE_RECEIPT_PROFILE_SHA256, /^[0-9a-f]{64}$/u);
 });
@@ -369,6 +508,85 @@ test('rejects overlap, private material and incomplete closure', () => {
   const incomplete = createBrowserRelayPageReceiptProducer('webkit');
   incomplete.record(secondaryFacts('webkit')[0]);
   assert.throws(() => incomplete.close(), /before every reviewed fact/u);
+});
+
+test('rejects lifecycle regression, guessed outcomes and incomplete terminal cleanup', () => {
+  const regressed = chromiumFacts();
+  regressed[8] = {
+    ...regressed[8],
+    lifecycle_observation: {
+      ...regressed[8].lifecycle_observation,
+      state_transitions: [{ revision: 3, stale: false }],
+    },
+  };
+  assert.throws(
+    () => produceBrowserRelayPageReceipt('chromium', regressed),
+    /relay_b_state and failed closed/u,
+  );
+
+  const guessed = chromiumFacts();
+  guessed[10] = {
+    ...guessed[10],
+    observation: {
+      ...guessed[10].observation,
+      failure_classes: ['internal:failed', 'unavailable:outcome_unknown'],
+    },
+    lifecycle_observation: {
+      ...guessed[10].lifecycle_observation,
+      call_outcomes: ['applied', 'applied'],
+    },
+  };
+  assert.throws(
+    () => produceBrowserRelayPageReceipt('chromium', guessed),
+    /failed_and_uncertain_calls and failed closed/u,
+  );
+
+  const incompleteCleanup = secondaryFacts('firefox');
+  incompleteCleanup[2] = {
+    ...incompleteCleanup[2],
+    lifecycle_observation: {
+      ...incompleteCleanup[2].lifecycle_observation,
+      disposals: 0,
+    },
+  };
+  assert.throws(
+    () => produceBrowserRelayPageReceipt('firefox', incompleteCleanup),
+    /signed_out_stopped and failed closed/u,
+  );
+
+  const prematureCleanup = secondaryFacts('webkit');
+  prematureCleanup[1] = {
+    ...prematureCleanup[1],
+    lifecycle_observation: {
+      ...prematureCleanup[1].lifecycle_observation,
+      sign_outs: 1,
+      disposals: 1,
+    },
+  };
+  prematureCleanup[2] = {
+    ...prematureCleanup[2],
+    lifecycle_observation: {
+      ...prematureCleanup[2].lifecycle_observation,
+      sign_outs: 1,
+      disposals: 1,
+    },
+  };
+  assert.throws(
+    () => produceBrowserRelayPageReceipt('webkit', prematureCleanup),
+    /initial_ready and failed closed/u,
+  );
+
+  const reusedLifecycle = chromiumFacts();
+  reusedLifecycle[15] = {
+    ...reusedLifecycle[15],
+    lifecycle_observation: lifecycleObservation('chromium', {
+      state_transitions: [{ revision: 1, stale: false }],
+    }),
+  };
+  assert.throws(
+    () => produceBrowserRelayPageReceipt('chromium', reusedLifecycle),
+    /replacement_initialized and failed closed/u,
+  );
 });
 
 test('supports explicit abort without permitting reuse', () => {
