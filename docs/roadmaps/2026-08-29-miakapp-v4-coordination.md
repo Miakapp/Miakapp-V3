@@ -744,7 +744,7 @@ current consumer.
     claim, rechecks the private baseline after claiming and requires a private
     postflight. It has no live authority or entrypoint. Its read-only post-merge
     preflight proved the global claim absent and the full private rollback target
-    converged, with no mutation or acceptance execution. Current plan revision
+    converged, with no mutation or acceptance execution. Plan revision
     13 archives the exact revision-12 input, pins that sanitized result and
     closes the edge prerequisite. The exact single-use live-operation envelope
     is now implemented as a dormant in-process composition: it opens the two
@@ -758,10 +758,11 @@ current consumer.
     byte and pins that result. The exact page-host foundation now uses
     memory-only Firebase Auth, real App Check and a digest-pinned MiakAPI bundle;
     its deterministic artifact is loaded without network access in Chromium,
-    Firefox and WebKit by a dedicated CI gate. It remains deliberately not
-    runner-compatible and has no publisher or live authority. Next add the
-    independent fixture/operator adapter and closed aggregation before
-    executing the matrix once.
+    Firefox and WebKit by a dedicated CI gate. Plan revision 15 preserves
+    revision 14 byte-for-byte and pins that merged page profile and proof. It
+    remains deliberately not runner-compatible and has no publisher or live
+    authority. Next add the independent fixture/operator adapter and closed
+    aggregation before executing the matrix once.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform
     no-change plan. Its fresh post-merge preflight is complete and the rollback

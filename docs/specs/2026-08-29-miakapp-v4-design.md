@@ -900,16 +900,17 @@ vertical-slice exit gates.
    `ae21e4922d3f70fffe9218cd975f180faca486f0` and one fresh read-only
    orchestrator observation. The resulting closed private and unclaimed
    baseline records zero mutation, public-ingress change and acceptance
-   execution; current plan revision 14 preserves revision 13 byte for byte and
+   execution; plan revision 14 preserves revision 13 byte for byte and
    pins this result.
    A separate dormant page host now implements memory-only Firebase Auth, real
    reCAPTCHA Enterprise App Check, the exact MiakAPI v4 browser module and a
    deterministic no-store two-file artifact. An offline CI gate loads that
    artifact in Chromium, Firefox and WebKit while blocking every unexpected
    request. It returns phased browser facts, not the complete matrix result,
-   and grants no Hosting publication or live authority. The fixture/operator
-   adapter and independent closed aggregator remain required before the one
-   allowed execution.
+   and grants no Hosting publication or live authority. Current plan revision
+   15 preserves revision 14 byte-for-byte and pins the merged page profile and
+   CI proof. The fixture/operator adapter and independent closed aggregator
+   remain required before the one allowed execution.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain

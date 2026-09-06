@@ -9,6 +9,7 @@ import { validatePreflightEvidence } from './browser-attestation/preflight-evide
 import {
   BROWSER_RELAY_PLAN_PATH,
   BROWSER_RELAY_PLAN_SHA256,
+  BROWSER_RELAY_PAGE_CI_MERGE_COMMIT,
   BROWSER_RELAY_V8_PLAN_PATH,
   BROWSER_RELAY_V8_PLAN_SHA256,
   BROWSER_RELAY_V9_PLAN_PATH,
@@ -21,11 +22,14 @@ import {
   BROWSER_RELAY_V12_PLAN_SHA256,
   BROWSER_RELAY_V13_PLAN_PATH,
   BROWSER_RELAY_V13_PLAN_SHA256,
+  BROWSER_RELAY_V14_PLAN_PATH,
+  BROWSER_RELAY_V14_PLAN_SHA256,
   validateBrowserRelayPlan,
   validateBrowserRelayV10Plan,
   validateBrowserRelayV11Plan,
   validateBrowserRelayV12Plan,
   validateBrowserRelayV13Plan,
+  validateBrowserRelayV14Plan,
   validateBrowserRelayV8Plan,
   validateBrowserRelayV9Plan,
 } from './browser-relay/contract.mjs';
@@ -3745,6 +3749,7 @@ function validateEvidence(value) {
       'state',
       'path',
       'sha256',
+      'page_profile_sha256',
       'baseline_observed_at',
       'baseline_control_plane_revision',
       'baseline_published_signing_keys',
@@ -3763,9 +3768,10 @@ function validateEvidence(value) {
   );
   const expectedBrowserRelayPlan = {
     state:
-      'operation_preflighted_edge_orchestrator_preflighted_rollback_preflighted_monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed',
+      'page_three_engine_ci_pinned_operation_preflighted_edge_orchestrator_preflighted_rollback_preflighted_monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed',
     path: BROWSER_RELAY_PLAN_PATH,
     sha256: BROWSER_RELAY_PLAN_SHA256,
+    page_profile_sha256: BROWSER_RELAY_PAGE_PROFILE_SHA256,
     baseline_observed_at: '2026-09-06T09:15:20.386Z',
     baseline_control_plane_revision: 'control-plane-00010-vop',
     baseline_published_signing_keys: 2,
@@ -5168,10 +5174,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 80, 'manifest.revision');
+  exact(manifest.revision, 81, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_artifact_ci_implemented_not_wired_not_published_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_artifact_ci_implemented_not_wired_not_published_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -5567,8 +5573,20 @@ export function validateCommittedEvidence(
     BROWSER_RELAY_V13_PLAN_SHA256,
     'browser-relay/plan-v13.json',
   );
+  const browserRelayV14PlanPath = resolve(stagingRoot, BROWSER_RELAY_V14_PLAN_PATH);
+  const browserRelayV14Plan = validatedEvidenceFile(
+    browserRelayV14PlanPath,
+    validateBrowserRelayV14Plan,
+    'browser-relay/plan-v14.json',
+  );
+  exact(
+    fileSha256(browserRelayV14PlanPath),
+    BROWSER_RELAY_V14_PLAN_SHA256,
+    'browser-relay/plan-v14.json',
+  );
   exactFields(browserRelayPlanManifest, {
     state: browserRelayPlan.state,
+    page_profile_sha256: browserRelayPlan.pins.browser_relay_page_profile_sha256,
     baseline_observed_at: browserRelayPlan.baseline.observed_at,
     baseline_control_plane_revision: browserRelayPlan.baseline.control_plane.revision,
     baseline_published_signing_keys:
@@ -5756,8 +5774,8 @@ export function validateCommittedEvidence(
   );
   exact(
     browserRelayPageProfile.pins.browser_relay_plan_sha256,
-    BROWSER_RELAY_PLAN_SHA256,
-    'evidence.browser_relay_page current plan pin',
+    BROWSER_RELAY_V14_PLAN_SHA256,
+    'evidence.browser_relay_page historical plan pin',
   );
   exact(
     browserRelayPageProfile.pins.browser_relay_runner_profile_sha256,
@@ -6329,6 +6347,21 @@ export function validateCommittedEvidence(
     'evidence.browser_relay_operation result historical plan pin',
   );
   exact(
+    browserRelayV14Plan.pins.miakapp_v3_commit,
+    OPERATION_IMPLEMENTATION_COMMIT,
+    'evidence.browser_relay_plan historical operation implementation pin',
+  );
+  exact(
+    browserRelayV14Plan.pins.browser_relay_operation_profile_sha256,
+    browserRelayOperationManifest.profile_sha256,
+    'evidence.browser_relay_plan historical operation profile pin',
+  );
+  exact(
+    browserRelayV14Plan.pins.browser_relay_operation_preflight_result_sha256,
+    browserRelayOperationManifest.preflight_result_sha256,
+    'evidence.browser_relay_plan historical operation preflight result pin',
+  );
+  exact(
     browserRelayPlan.pins.browser_relay_operation_profile_sha256,
     browserRelayOperationManifest.profile_sha256,
     'evidence.browser_relay_plan operation profile pin',
@@ -6340,8 +6373,13 @@ export function validateCommittedEvidence(
   );
   exact(
     browserRelayPlan.pins.miakapp_v3_commit,
-    OPERATION_IMPLEMENTATION_COMMIT,
-    'evidence.browser_relay_plan operation implementation pin',
+    BROWSER_RELAY_PAGE_CI_MERGE_COMMIT,
+    'evidence.browser_relay_plan page CI merge pin',
+  );
+  exact(
+    browserRelayPlan.pins.browser_relay_page_profile_sha256,
+    BROWSER_RELAY_PAGE_PROFILE_SHA256,
+    'evidence.browser_relay_plan page profile pin',
   );
   exactFields(browserRelayOperationManifest, {
     state: browserRelayOperationResult.state,
@@ -7282,6 +7320,7 @@ export function validateCommittedEvidence(
     browserRelayV11Plan,
     browserRelayV12Plan,
     browserRelayV13Plan,
+    browserRelayV14Plan,
     browserRelayRunnerProfile,
     browserRelayPageProfile,
     browserRelayRollbackProfile,
