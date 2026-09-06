@@ -18,11 +18,14 @@ import {
 } from '../browser-relay-rollback/cloud.mjs';
 import {
   RELAY_PRIVATE_READY_INVENTORY_SHA256,
+  ROLLBACK_IMPLEMENTATION_COMMIT,
+  ROLLBACK_PREFLIGHT_RESULT_SHA256,
   ROLLBACK_PROFILE_SHA256,
   buildRollbackPreflightResult,
   summarizeRelayTerraformNoChangePlan,
   validateBrowserRelayRollbackProfile,
   validateRollbackCloudObservation,
+  validateRollbackPreflightResult,
 } from '../browser-relay-rollback/contract.mjs';
 import {
   validateBrowserRelayRollbackRoot,
@@ -159,6 +162,22 @@ test('pins the dormant rollback contract to plan revision 11 and exact dependenc
   assert.equal(profile.evidence.live_preflight_count, 0);
 });
 
+test('pins the exact sanitized successful rollback preflight', () => {
+  const result = validateRollbackPreflightResult();
+  assert.equal(result.state, 'rollback_target_preflighted_private_and_converged');
+  assert.equal(result.implementation_commit, ROLLBACK_IMPLEMENTATION_COMMIT);
+  assert.equal(result.control_plane_state, 'canonical_private');
+  assert.equal(result.control_plane_public_invokers, 0);
+  assert.equal(result.relay_phase, 'private_ready');
+  assert.equal(result.relay_public_invokers, 0);
+  assert.equal(result.firebase_auth_users, 0);
+  assert.equal(result.application_fixture_collections, 0);
+  assert.equal(result.terraform_convergence, 'no_changes');
+  assert.equal(result.cloud_mutations, 0);
+  assert.equal(result.acceptance_executions, 0);
+  assert.match(ROLLBACK_PREFLIGHT_RESULT_SHA256, /^[0-9a-f]{64}$/u);
+});
+
 test('accepts only the exact zero-change private-ready Terraform plan', () => {
   const plan = terraformPlan();
   plan.configuration = {
@@ -286,7 +305,10 @@ test('rejects temporary or public project IAM while retaining no policy details'
 });
 
 test('guards the exact dormant package and rejects extras, executables and symlinks', () => {
-  const names = ['README.md', 'cloud.mjs', 'contract.mjs', 'guard.mjs', 'profile.json'];
+  const names = [
+    'README.md', 'cloud.mjs', 'contract.mjs', 'guard.mjs',
+    'preflight-result-v1.json', 'profile.json',
+  ];
   validateBrowserRelayRollbackRoot(new URL('../browser-relay-rollback/', import.meta.url));
 
   const extraRoot = mkdtempSync(join(tmpdir(), 'miakapp-browser-relay-rollback-extra-'));

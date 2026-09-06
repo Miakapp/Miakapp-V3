@@ -4,8 +4,8 @@ import { URL } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 
 import {
-  BROWSER_RELAY_PLAN_SHA256,
-  validateBrowserRelayPlan,
+  BROWSER_RELAY_V11_PLAN_SHA256,
+  validateBrowserRelayV11Plan,
 } from '../browser-relay/contract.mjs';
 import {
   MONITORING_PREFLIGHT_RESULT_SHA256,
@@ -34,6 +34,12 @@ export const RUNNER_URL = `${HOSTING_ORIGIN}${RUNNER_PATH}`;
 export const ROLLBACK_PROFILE_PATH = 'browser-relay-rollback/profile.json';
 export const ROLLBACK_PROFILE_SHA256 =
   'b3517720cb3874f040601d6dfcc7b0ecaf385c16d6b4299c102e2001f8bf18e7';
+export const ROLLBACK_IMPLEMENTATION_COMMIT =
+  '0fd0d05ee31f84d42cf69cc6f5cead9cbcad79be';
+export const ROLLBACK_PREFLIGHT_RESULT_PATH =
+  'browser-relay-rollback/preflight-result-v1.json';
+export const ROLLBACK_PREFLIGHT_RESULT_SHA256 =
+  'e8ceb2164be946d4edebfe2f08d8a3b230dcf9d2a05d9410738e751775950cd3';
 export const ROLLBACK_PREFLIGHT_RESULT_SCHEMA =
   'miakapp.staging-browser-relay-rollback-preflight-result/1';
 export const RELAY_PRIVATE_READY_INVENTORY_SHA256 =
@@ -98,7 +104,9 @@ const TECHNICAL_COLLECTIONS = Object.freeze([
   'controlAudit',
 ]);
 const profilePath = new URL('profile.json', import.meta.url);
+const resultPath = new URL('preflight-result-v1.json', import.meta.url);
 const expectedProfile = JSON.parse(readFileSync(profilePath, 'utf8'));
+const expectedResult = JSON.parse(readFileSync(resultPath, 'utf8'));
 
 export class StagingBrowserRelayRollbackError extends Error {
   constructor(message = 'Staging browser-relay rollback contract is invalid') {
@@ -235,7 +243,7 @@ export function validateBrowserRelayRollbackProfile(path = profilePath) {
       reject(`profile.pins.${key} is not a SHA-256 digest`);
     }
   }
-  exact(profile.pins.browser_relay_plan_sha256, BROWSER_RELAY_PLAN_SHA256,
+  exact(profile.pins.browser_relay_plan_sha256, BROWSER_RELAY_V11_PLAN_SHA256,
     'profile.pins.browser_relay_plan_sha256');
   exact(profile.pins.monitoring_preflight_result_sha256, MONITORING_PREFLIGHT_RESULT_SHA256,
     'profile.pins.monitoring_preflight_result_sha256');
@@ -251,8 +259,8 @@ export function validateBrowserRelayRollbackProfile(path = profilePath) {
     'profile.pins.relay_services_private_ready_result_sha256');
   validateEdgeDependencies(profile);
 
-  const plan = validateBrowserRelayPlan(
-    new URL('../browser-relay/plan.json', import.meta.url),
+  const plan = validateBrowserRelayV11Plan(
+    new URL('../browser-relay/plan-v11.json', import.meta.url),
   );
   validateMonitoringPreflightResult();
   validateBrowserRelayRunnerProfile();
@@ -470,4 +478,88 @@ export function buildRollbackPreflightResult(value) {
     raw_cloud_responses_retained: observation.effects.raw_cloud_responses_retained,
     terraform_plan_retained: observation.terraform.raw_plan_retained,
   });
+}
+
+export function validateRollbackPreflightResult(path = resultPath) {
+  const entry = lstatSync(path);
+  if (!entry.isFile() || entry.isSymbolicLink() || entry.size < 1
+    || entry.size > MAXIMUM_PROFILE_BYTES) {
+    reject('Rollback preflight result must be a bounded regular file');
+  }
+  const bytes = readFileSync(path);
+  if (sha256(bytes) !== ROLLBACK_PREFLIGHT_RESULT_SHA256) {
+    reject('Rollback preflight result digest has drifted');
+  }
+  let result;
+  try {
+    result = JSON.parse(bytes.toString('utf8'));
+  } catch {
+    return reject('Rollback preflight result must be valid JSON');
+  }
+  if (canonicalJson(result) !== bytes.toString('utf8')) {
+    reject('Rollback preflight result is not canonical JSON');
+  }
+  rejectRollbackPrivateMaterial(result, 'preflight_result');
+  exactKeys(result, [
+    'schema', 'state', 'project_id', 'project_number', 'region', 'observed_at',
+    'implementation_commit', 'profile_sha256', 'browser_relay_plan_sha256',
+    'control_plane_state', 'control_plane_revision', 'control_plane_ingress',
+    'control_plane_public_invokers', 'relay_phase', 'relay_services',
+    'relay_public_invokers', 'relay_service_account_user_managed_keys',
+    'relay_inventory_sha256', 'runner_route_present', 'runner_route_status',
+    'firebase_auth_users', 'application_fixture_collections',
+    'temporary_iam_bindings', 'minimum_instances', 'terraform_convergence',
+    'terraform_managed_resource_noops', 'rollback_steps', 'cloud_mutations',
+    'public_ingress_changes', 'acceptance_executions',
+    'credential_material_retained', 'raw_cloud_responses_retained',
+    'terraform_plan_retained',
+  ], 'preflight_result');
+  canonicalTimestamp(result.observed_at, 'preflight_result.observed_at');
+  exact(result, expectedResult, 'preflight_result');
+  exact(result.schema, ROLLBACK_PREFLIGHT_RESULT_SCHEMA, 'preflight_result.schema');
+  exact(result.state, 'rollback_target_preflighted_private_and_converged',
+    'preflight_result.state');
+  exact(result.project_id, PROJECT_ID, 'preflight_result.project_id');
+  exact(result.project_number, PROJECT_NUMBER, 'preflight_result.project_number');
+  exact(result.region, REGION, 'preflight_result.region');
+  exact(result.implementation_commit, ROLLBACK_IMPLEMENTATION_COMMIT,
+    'preflight_result.implementation_commit');
+  exact(result.profile_sha256, ROLLBACK_PROFILE_SHA256,
+    'preflight_result.profile_sha256');
+  exact(result.browser_relay_plan_sha256, BROWSER_RELAY_V11_PLAN_SHA256,
+    'preflight_result.browser_relay_plan_sha256');
+  exact(result.control_plane_state, 'canonical_private',
+    'preflight_result.control_plane_state');
+  exact(result.control_plane_revision, 'control-plane-00010-vop',
+    'preflight_result.control_plane_revision');
+  exact(result.control_plane_ingress, 'ALLOW_INTERNAL_ONLY',
+    'preflight_result.control_plane_ingress');
+  exact(result.control_plane_public_invokers, 0,
+    'preflight_result.control_plane_public_invokers');
+  exact(result.relay_phase, 'private_ready', 'preflight_result.relay_phase');
+  exact(result.relay_services, 2, 'preflight_result.relay_services');
+  exact(result.relay_public_invokers, 0, 'preflight_result.relay_public_invokers');
+  exact(result.relay_service_account_user_managed_keys, 0,
+    'preflight_result.relay_service_account_user_managed_keys');
+  exact(result.relay_inventory_sha256, RELAY_PRIVATE_READY_INVENTORY_SHA256,
+    'preflight_result.relay_inventory_sha256');
+  exact(result.runner_route_present, false, 'preflight_result.runner_route_present');
+  exact(result.runner_route_status, 404, 'preflight_result.runner_route_status');
+  for (const field of [
+    'firebase_auth_users', 'application_fixture_collections',
+    'temporary_iam_bindings', 'minimum_instances', 'cloud_mutations',
+    'public_ingress_changes', 'acceptance_executions',
+  ]) exact(result[field], 0, `preflight_result.${field}`);
+  exact(result.terraform_convergence, 'no_changes',
+    'preflight_result.terraform_convergence');
+  exact(result.terraform_managed_resource_noops, 4,
+    'preflight_result.terraform_managed_resource_noops');
+  exact(result.rollback_steps, ROLLBACK_STEPS.length, 'preflight_result.rollback_steps');
+  for (const field of [
+    'credential_material_retained', 'raw_cloud_responses_retained',
+    'terraform_plan_retained',
+  ]) exact(result[field], false, `preflight_result.${field}`);
+  validateBrowserRelayRollbackProfile();
+  validateBrowserRelayV11Plan();
+  return Object.freeze(result);
 }
