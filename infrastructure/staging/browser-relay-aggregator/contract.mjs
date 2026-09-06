@@ -35,7 +35,7 @@ import {
 
 export const AGGREGATOR_PROFILE_PATH = 'browser-relay-aggregator/profile.json';
 export const AGGREGATOR_PROFILE_SHA256 =
-  '768325b3d549056c7c9ddbfa1b15a812f243cf023c37d68f8c8ffe405fb52b1e';
+  '2f62a0f62997e1b7fb60fb1bbd8a0d6d1ee2418f81751f2fdb0e11bb75e32c43';
 export const AGGREGATOR_IMPLEMENTATION_BASE_COMMIT =
   '2a3939b2c59b3ec78be93f8daaa98e89eaadafec';
 export const AGGREGATOR_SOURCE_SHA256 =

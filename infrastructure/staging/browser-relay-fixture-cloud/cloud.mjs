@@ -418,7 +418,8 @@ function validateLookupResponse(value) {
     && value.kind !== 'identitytoolkit#GetAccountInfoResponse') {
     reject('Firebase user lookup kind is invalid');
   }
-  if (value.users === undefined) return null;
+  if (value.users === undefined
+    || (Array.isArray(value.users) && value.users.length === 0)) return null;
   if (!Array.isArray(value.users) || value.users.length !== 1
     || !plainObject(value.users[0])
     || value.users[0].localId !== SYNTHETIC_UID) {
@@ -791,7 +792,9 @@ export function createGoogleBrowserRelayFixtureDependencies(sessionValue, implem
   let signedJwtAttempts = 0;
   let nextBrowserSequence = 1;
   let identityAttempted = false;
+  let identityExchangeDispatched = false;
   let identityCreated = false;
+  let identityReportedPreexisting = false;
   let homeAttempted = false;
   let homeCreated = false;
   let homeKeyAttempted = false;
@@ -908,6 +911,7 @@ export function createGoogleBrowserRelayFixtureDependencies(sessionValue, implem
         webApiKey(),
         signFirebaseCustomToken(0),
       ]);
+      identityExchangeDispatched = true;
       const { value } = await publicIdentityRequest(
         implementations.fetch,
         apiKey,
@@ -915,10 +919,13 @@ export function createGoogleBrowserRelayFixtureDependencies(sessionValue, implem
         { token: customToken, returnSecureToken: true },
         'Firebase custom-token exchange',
       );
+      if (plainObject(value) && value.isNewUser === false) {
+        identityReportedPreexisting = true;
+      }
       allowedKeys(value, [
         'expiresIn', 'idToken', 'isNewUser', 'kind', 'localId', 'refreshToken',
       ], 'firebase_custom_token_exchange');
-      if (value.localId !== SYNTHETIC_UID
+      if ((value.localId !== undefined && value.localId !== SYNTHETIC_UID)
         || value.isNewUser !== true
         || value.expiresIn !== '3600'
         || (value.kind !== undefined
@@ -929,6 +936,18 @@ export function createGoogleBrowserRelayFixtureDependencies(sessionValue, implem
         reject('Firebase custom-token exchange did not create the fixed synthetic identity');
       }
       const idToken = validJwt(value.idToken, 'firebase_custom_token_exchange.idToken');
+      const lookup = await publicIdentityRequest(
+        implementations.fetch,
+        apiKey,
+        '/v1/accounts:lookup',
+        { idToken },
+        'Firebase identity token lookup',
+      );
+      const user = validateLookupResponse(lookup.value);
+      if (user === null) {
+        reject('Firebase identity token lookup did not authenticate the fixed synthetic identity');
+      }
+      validateCleanupUser(user);
       identityCreated = true;
       return Object.freeze({ uid: SYNTHETIC_UID, id_token: idToken });
     },
@@ -1132,6 +1151,12 @@ export function createGoogleBrowserRelayFixtureDependencies(sessionValue, implem
         reject('Fixture data cleanup requires the coordinator to stop first');
       }
       let inventory = await inspectCleanupInventory(input.home_key_id);
+      if (!identityExchangeDispatched && !inventory.absent) {
+        reject('Cleanup refused fixture data without a dispatched creation exchange');
+      }
+      if (identityReportedPreexisting && !inventory.absent) {
+        reject('Cleanup refused a Firebase identity reported as preexisting');
+      }
       if (inventory.documents.length > 0) {
         if (firestoreCleanupAttempted) {
           reject('Firestore fixture cleanup may not be retried in the same adapter');

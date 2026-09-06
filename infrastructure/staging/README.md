@@ -386,7 +386,8 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`browser-relay-fixture-miakapi/`](browser-relay-fixture-miakapi/) | Dormant pinned MiakAPI Node factory binding | Reproducibly vendors the exact coordinator commit, injects the Home Key exchange transport and permits one provider and coordinator construction without starting a session; no CLI or live authority is present |
 | [`browser-relay-aggregator/`](browser-relay-aggregator/) | Dormant independent-source engine-result aggregator | Assigns all 40 assertions and eight counters to exact source owners, accepts 18 single-use closed receipts in canonical order and emits only the existing runner schema; it is not wired or executed and grants no live authority |
 | [`browser-relay-page-receipt/`](browser-relay-page-receipt/) | Dormant browser-owned source receipt producer | Reduces 18 exact Chromium page facts or three secondary-browser facts into the aggregator's existing receipt schema; native lifecycle and identity-generation evidence fail closed, while the page-timing and Playwright wiring gaps remain explicit |
-| [`browser-relay-scenario-fixture/`](browser-relay-scenario-fixture/) | Dormant four-input scenario fixture controller | Composes the immutable fixture with a second exact synthetic Firebase identity, grants both identities state access through one coordinator and requires coordinator-first verified cleanup across both ownership domains; the replacement cloud adapter and Playwright bridge remain absent |
+| [`browser-relay-scenario-fixture/`](browser-relay-scenario-fixture/) | Dormant four-input scenario fixture controller | Composes the immutable fixture with a second exact synthetic Firebase identity, grants both identities state access through one coordinator and requires coordinator-first verified cleanup across both ownership domains; its historical compatibility profile remains unchanged and the Playwright bridge remains absent |
+| [`browser-relay-scenario-fixture-cloud/`](browser-relay-scenario-fixture-cloud/) | Dormant injected replacement-identity Google/Firebase adapter | Supplies only the exact second synthetic UID through bounded keyless signing, token-bound identity verification and independently observed cleanup; closes the cloud implementation gap without wiring the scenario or granting live, IAM, Hosting or public-ingress authority |
 | [`browser-relay-monitoring/`](browser-relay-monitoring/) | Closed allow-listed monitoring preflight and evaluator | One post-merge read-only observation verified all six metric surfaces, the existing EUR 10 budget and the private edge/relay boundary; no mutation or acceptance execution occurred |
 | [`browser-relay-rollback/`](browser-relay-rollback/) | Closed-target rollback preflight | Post-merge observation verified all ten private-target facts and a four-resource Terraform no-change plan; its sanitized result records zero mutation, public-ingress change and acceptance execution |
 | [`browser-relay-orchestrator/`](browser-relay-orchestrator/) | Dormant single-use edge orchestrator | Post-merge read-only preflight proved the claim absent and the rollback target private and converged; no claim, mutation, public edge or live acceptance has run |
@@ -807,9 +808,18 @@ complete. The adjacent
 immutable three-input fixture with a second exact synthetic Firebase identity.
 It provides the fourth Chromium input, extends the one coordinator's state
 access to both identities, forbids calls from the replacement identity and
-requires coordinator-first cleanup of both ownership domains. Its replacement
-Google/Firebase transport is deliberately still absent, so none of this grants
-live authority.
+requires coordinator-first cleanup of both ownership domains. Its original
+compatibility profile remains a historical snapshot. The separate
+[`browser-relay-scenario-fixture-cloud/`](browser-relay-scenario-fixture-cloud/)
+now implements the replacement Google/Firebase transport behind an explicitly
+injected ephemeral session and HTTP implementation. It bounds the lifecycle to
+two distinct keyless signatures, binds the exchanged token to the exact
+replacement identity through one account lookup, and requires independently
+observed absence after cleanup without retrying uncertain mutations. This
+closes only the second-identity cloud implementation gap: the 600-second page
+scenario, Playwright bridge, independent cloud observers and live wiring remain
+open. All mutation, IAM, Hosting, public-ingress and execution authority remains
+closed.
 The adjacent [`browser-relay-operation/`](browser-relay-operation/) package now
 closes the remaining ordering gap without executing it. The claimed edge owns
 the control-plane transition. Inside that single window the operation creates

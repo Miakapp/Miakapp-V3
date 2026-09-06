@@ -26,7 +26,7 @@ import {
 
 export const PAGE_RECEIPT_PROFILE_PATH = 'browser-relay-page-receipt/profile.json';
 export const PAGE_RECEIPT_PROFILE_SHA256 =
-  'a3da42e63f0c5e470da483e9def3d0b9ed7f5ce983777424794118f1873a13a0';
+  'c3678c6c0021c78c906ae76004e3c2be72496a839471ecef483d7a55c67b3469';
 export const PAGE_RECEIPT_IMPLEMENTATION_BASE_COMMIT =
   '361cabb9a88d5cb3efebd40f3f803cf7023c02e3';
 export const PAGE_RECEIPT_SOURCE_SHA256 =

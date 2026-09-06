@@ -25,10 +25,15 @@ requires both identities plus the original Home ownership cluster to be absent.
 Unknown replacement-identity creation outcomes therefore enter cleanup instead
 of being retried.
 
-This package deliberately does **not** implement the replacement Google/Firebase
-transport yet. That adapter, the 600-second page scenario, Playwright bridge,
-independent cloud observers, Hosting publication and live execution remain
-closed. The profile grants no cloud mutation, public ingress or live authority.
+The replacement Google/Firebase transport is now implemented separately in
+[`browser-relay-scenario-fixture-cloud`](../browser-relay-scenario-fixture-cloud/).
+It requires an explicitly injected ephemeral session and HTTP implementation,
+and it remains disconnected from the live operation. This controller's original
+compatibility profile stays unchanged as a historical snapshot; the new
+adapter's profile records that the second-identity cloud implementation is
+present. The 600-second page scenario, Playwright bridge and independent cloud
+observers remain open. Neither package grants cloud mutation, Hosting
+publication, public ingress or live execution authority.
 
 Validate it with:
 
