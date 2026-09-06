@@ -27,10 +27,10 @@ additional live requests, destroy, or production changes.
 
 The separate [`browser-relay/`](browser-relay/) package now freezes the rebased
 closed live topology, cost, signing-key and rollback matrix. It records twelve
-pending cases and five open implementation preconditions. The App Check
-provider, standalone real-browser attestation, two-key runtime and guarded
-rotation-entry prerequisites are satisfied, while the complete authenticated
-`LIVE-02` relay case remains pending.
+pending cases and four open implementation preconditions. The App Check
+provider, standalone real-browser attestation, two-key runtime, guarded
+rotation-entry and private-ready relay prerequisites are satisfied, while the
+complete authenticated `LIVE-02` relay case remains pending.
 It contains no deployer or result and does not change the private cloud baseline
 described below.
 
@@ -377,7 +377,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`browser-app-check/`](browser-app-check/) | Guarded reCAPTCHA Enterprise API, score key and App Check provider prerequisites | API, one globally serialized domain-restricted score key and exact non-deletable provider applied and converged; all consumed/recovery entrypoints retired; enforcement remains disabled |
 | [`browser-attestation/`](browser-attestation/) | One-shot real system-browser App Check provider observation | Fresh provider token obtained through the default macOS browser; all six claims retained, temporary Hosting disabled/deleted, route verified 404, and every execution/recovery entrypoint retired |
 | [`signing-overlap/`](signing-overlap/) | Monotone second KMS version creation and 60/330-second overlap rollout contract | Version 2 enabled after one direct request; two atomic claims retained and one-shot entrypoints retired; runtime, Terraform, IAM, ingress and requests unchanged |
-| [`browser-relay/`](browser-relay/) | Closed live browser, two-relay, signing-key and rollback acceptance plan | Rebases the current private `00010`/two-key/version-1-entry/App Check baseline; not deployed, every `LIVE-*` case pending, and no cloud mutation granted |
+| [`browser-relay/`](browser-relay/) | Closed live browser, two-relay, signing-key and rollback acceptance plan | Rebases the current private `00010`/two-key/version-1-entry/App Check/two-relay baseline; not deployed, every `LIVE-*` case pending, and no cloud mutation granted |
 | [`browser-relay-edge/`](browser-relay-edge/) | Dormant reversible control-plane edge state machine | Pins the atomic staging issuer/origin profile and public-last/private-first transition ordering; exposes no CLI and grants no cloud mutation |
 | [`browser-relay-services/`](browser-relay-services/) | Guarded two-relay Cloud Run Terraform state machine | Two private-ready 512-MiB scale-0..1 services use their exact assigned WSS audiences and a keyless role-free identity; all three claims remain durable and every one-shot entrypoint is retired |
 | [`browser-relay-image/`](browser-relay-image/) | Guarded one-shot private relay image build | Distinct v2 recovery succeeded once with exact source provenance and hardened smoke validation; immutable image is deployed only to the two IAM-private relays; all build entrypoints retired |
@@ -643,18 +643,22 @@ rotation, migration rehearsal, and every broader `STAGE-*` observation remain
 open blockers.
 
 The digest-pinned [`browser-relay/plan.json`](browser-relay/plan.json) is now
-rebased from an independent read-only observation of the private
-`control-plane-00010-vop` state. It verified zero Firebase Auth users, zero
-application fixture collections, zero relays, a disabled Hosting route, two
-published signing keys with version 1 current, and the completed browser App
-Check attestation. It also verifies that the bounded staging edge profile is
-present in source while the active runtime remains canonical. It selects the
-bounded shape for the next work: the existing Hosting `web.app`
-origin, temporary direct provider endpoints, two scale-0..1 no-role relays, a
-local unscheduled three-engine runner, one execution and a maximum twenty-minute
-public window. It assumes no free tier and stops at a EUR 1 projected increment,
-inside the separately authorized EUR 5 monthly boundary. App Engine, an
-external load balancer, Cloud Armor, VPC and DNS changes are absent.
+rebased from an independent read-only observation completed at
+`2026-09-06T04:08:50.844Z`. It verified private
+`control-plane-00010-vop`, zero Firebase Auth users, zero application fixture
+collections, a disabled Hosting route, two published signing keys with version
+1 current, the completed browser App Check attestation and two private-ready
+generation-2 relays. Their exact WSS audiences, verified image digest, 512-MiB
+memory, role-free keyless identity, scale 0..1 and zero public IAM bindings match
+the immutable private-ready result hash. The bounded staging edge profile is
+present in source while the active runtime remains canonical. The plan selects
+the remaining shape: the existing Hosting `web.app` origin, temporary direct
+provider endpoints, a local unscheduled three-engine runner, one execution and
+a maximum twenty-minute public window. It assumes no free tier and stops at a
+EUR 1 projected increment, inside the separately authorized EUR 5 monthly
+boundary. App Engine, an external load balancer, Cloud Armor, VPC and DNS
+changes are absent. Revision 8 is retained byte-for-byte for the historical
+relay-image build dependency.
 
 No live case may start yet. The production runtime now publishes both signing
 keys with version 1 current and version 2 retained. The guarded

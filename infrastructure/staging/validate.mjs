@@ -9,7 +9,10 @@ import { validatePreflightEvidence } from './browser-attestation/preflight-evide
 import {
   BROWSER_RELAY_PLAN_PATH,
   BROWSER_RELAY_PLAN_SHA256,
+  BROWSER_RELAY_V8_PLAN_PATH,
+  BROWSER_RELAY_V8_PLAN_SHA256,
   validateBrowserRelayPlan,
+  validateBrowserRelayV8Plan,
 } from './browser-relay/contract.mjs';
 import {
   RELAY_SERVICES_PROFILE_PATH,
@@ -3683,21 +3686,21 @@ function validateEvidence(value) {
     ],
   );
   const expectedBrowserRelayPlan = {
-    state: 'relay_process_admission_merged_root_reviewed_not_deployed',
+    state: 'private_relays_ready_plan_rebased_not_deployed',
     path: BROWSER_RELAY_PLAN_PATH,
     sha256: BROWSER_RELAY_PLAN_SHA256,
-    baseline_observed_at: '2026-09-05T19:49:07.829Z',
+    baseline_observed_at: '2026-09-06T04:08:50.844Z',
     baseline_control_plane_revision: 'control-plane-00010-vop',
     baseline_published_signing_keys: 2,
     baseline_current_signing_key_version: 1,
     browser_attestation_validated: true,
     firebase_auth_users: 0,
     application_fixture_collections: 0,
-    open_preconditions: 5,
+    open_preconditions: 4,
     cloud_mutation_authorized_by_plan: false,
     acceptance_executed: false,
     public_ingress_active: false,
-    relay_services: 0,
+    relay_services: 2,
     runner_present: false,
     completed_cases: 0,
   };
@@ -3815,7 +3818,7 @@ function validateEvidence(value) {
     v2_result_path: RELAY_IMAGE_V2_RESULT_PATH,
     v2_result_sha256: RELAY_IMAGE_V2_RESULT_SHA256,
     v2_result_observed_at: '2026-09-06T00:00:34.396Z',
-    browser_relay_plan_sha256: BROWSER_RELAY_PLAN_SHA256,
+    browser_relay_plan_sha256: BROWSER_RELAY_V8_PLAN_SHA256,
     relay_services_profile_path: RELAY_SERVICES_PROFILE_PATH,
     relay_services_profile_sha256: RELAY_SERVICES_PROFILE_SHA256,
     relay_services_v1_profile_path: RELAY_SERVICES_V1_PROFILE_PATH,
@@ -4620,10 +4623,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 67, 'manifest.revision');
+  exact(manifest.revision, 68, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rebased_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_private_relays_ready_rebased_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -4953,6 +4956,17 @@ export function validateCommittedEvidence(
     browserRelayPlanManifest.sha256,
     'evidence.browser_relay_plan.sha256',
   );
+  const browserRelayV8PlanPath = resolve(stagingRoot, BROWSER_RELAY_V8_PLAN_PATH);
+  validatedEvidenceFile(
+    browserRelayV8PlanPath,
+    validateBrowserRelayV8Plan,
+    'browser-relay/plan-v8.json',
+  );
+  exact(
+    fileSha256(browserRelayV8PlanPath),
+    BROWSER_RELAY_V8_PLAN_SHA256,
+    'browser-relay/plan-v8.json',
+  );
   exactFields(browserRelayPlanManifest, {
     state: browserRelayPlan.state,
     baseline_observed_at: browserRelayPlan.baseline.observed_at,
@@ -5123,8 +5137,23 @@ export function validateCommittedEvidence(
   );
   exact(
     browserRelayPlan.pins.relay_services_profile_sha256,
-    RELAY_SERVICES_V1_PROFILE_SHA256,
+    RELAY_SERVICES_PROFILE_SHA256,
     'browser-relay/plan.json pins.relay_services_profile_sha256',
+  );
+  exact(
+    browserRelayPlan.pins.relay_services_converged_profile_sha256,
+    RELAY_SERVICES_V5_PROFILE_SHA256,
+    'browser-relay/plan.json pins.relay_services_converged_profile_sha256',
+  );
+  exact(
+    browserRelayPlan.pins.relay_services_private_ready_result_sha256,
+    RELAY_SERVICES_PRIVATE_READY_RESULT_SHA256,
+    'browser-relay/plan.json pins.relay_services_private_ready_result_sha256',
+  );
+  exact(
+    browserRelayPlan.pins.relay_services_live_inventory_sha256,
+    relayServicesPrivateReadyResult.final_inventory_sha256,
+    'browser-relay/plan.json pins.relay_services_live_inventory_sha256',
   );
   exact(
     browserRelayPlan.pins.miakapp_server_commit,
@@ -5300,7 +5329,7 @@ export function validateCommittedEvidence(
   }, 'evidence.browser_relay_image');
   exact(
     browserRelayImageProfile.contracts.browser_relay_plan_sha256,
-    BROWSER_RELAY_PLAN_SHA256,
+    BROWSER_RELAY_V8_PLAN_SHA256,
     'browser-relay-image/profile.json contracts.browser_relay_plan_sha256',
   );
   exact(
