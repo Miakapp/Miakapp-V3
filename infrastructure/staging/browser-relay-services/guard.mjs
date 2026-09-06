@@ -1,4 +1,4 @@
-import { lstatSync, readdirSync } from 'node:fs';
+import { lstatSync, readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 export const ALLOWED_RELAY_SERVICE_FILES = Object.freeze([
@@ -6,6 +6,7 @@ export const ALLOWED_RELAY_SERVICE_FILES = Object.freeze([
   'README.md',
   'apply.mjs',
   'apply.sh',
+  'bootstrap-failure-v1.json',
   'claim.mjs',
   'cli.mjs',
   'contract.mjs',
@@ -19,8 +20,14 @@ export const ALLOWED_RELAY_SERVICE_FILES = Object.freeze([
   'plan.sh',
   'profile-v1.json',
   'profile-v2.json',
+  'profile-v3.json',
   'profile.json',
   'providers.tf',
+  'recovery-apply.mjs',
+  'recovery-apply.sh',
+  'recovery-claim.mjs',
+  'recovery-plan.mjs',
+  'recovery-plan.sh',
   'terraform-cli.tfrc',
   'validate-plan.mjs',
   'variables.tf',
@@ -37,7 +44,9 @@ function exactNames(actual, expected, path) {
   }
 }
 
-const EXECUTABLE_FILES = new Set(['apply.sh', 'plan.sh']);
+const EXECUTABLE_FILES = new Set([
+  'apply.sh', 'plan.sh', 'recovery-apply.sh', 'recovery-plan.sh',
+]);
 
 function validateRegularFile(url, description, executable = false) {
   const entry = lstatSync(url);
@@ -87,6 +96,23 @@ export function validateRelayServicesRoot(rootUrl) {
     ALLOWED_RELAY_SERVICE_TEST_FILES,
     'Relay-services test files',
   );
+
+  const consumedEntrypoints = ['apply.mjs', 'plan.mjs']
+    .map((name) => readFileSync(new URL(name, rootUrl), 'utf8'));
+  const recoveryClaim = readFileSync(new URL('recovery-claim.mjs', rootUrl), 'utf8');
+  const recoveryApply = readFileSync(new URL('recovery-apply.mjs', rootUrl), 'utf8');
+  const recoveryPlan = readFileSync(new URL('recovery-plan.mjs', rootUrl), 'utf8');
+  if (consumedEntrypoints.some((source) => (
+    !source.includes('export const RELAY_SERVICES_BOOTSTRAP_OPERATION_CONSUMED = true')
+      || !source.includes('if (RELAY_SERVICES_BOOTSTRAP_OPERATION_CONSUMED)')
+  ))
+    || !recoveryClaim.includes("url.searchParams.set('ifGenerationMatch', '0')")
+    || !recoveryApply.includes('validateRelayServicesRecoveredInventory')
+    || !recoveryPlan.includes('readAndValidateRecoveryRelayServicesPlan')
+    || /gcloud[\s\S]{0,80}(?:run deploy|storage rm)|allUsers|allAuthenticatedUsers/u
+      .test(`${recoveryClaim}\n${recoveryApply}\n${recoveryPlan}`)) {
+    throw new Error('Relay-services recovery source differs from the reviewed one-shot boundary');
+  }
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

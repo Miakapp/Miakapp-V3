@@ -58,9 +58,11 @@ run "private_bootstrap_is_bounded_and_not_public" {
       service.template[0].max_instance_request_concurrency == 8 &&
       service.template[0].timeout == "900s" &&
       service.template[0].containers[0].image == "europe-west9-docker.pkg.dev/miakapp-v4-staging/miakapp-control-plane/miakapp-server@sha256:23a19a26e8a24f6434ab8bc557dfa3fa799e0262e3400170e3bf064101a890b1" &&
+      service.template[0].containers[0].resources[0].limits.cpu == "1" &&
+      service.template[0].containers[0].resources[0].limits.memory == "512Mi" &&
       service.deletion_protection == false
     ])
-    error_message = "Every relay must retain the reviewed scale, concurrency, timeout and deletion profile."
+    error_message = "Every relay must retain the reviewed scale, concurrency, timeout, compute and deletion profile."
   }
 
   assert {

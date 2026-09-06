@@ -37,9 +37,13 @@ import {
 import { readAndValidateInitialRelayServicesPlan } from './validate-plan.mjs';
 
 const PLAN_CONFIRMATION = 'MIAKAPP_STAGING_RELAY_SERVICES_BOOTSTRAP_PLAN_CONFIRMATION';
+export const RELAY_SERVICES_BOOTSTRAP_OPERATION_CONSUMED = true;
 process.umask(0o077);
 
 async function main() {
+  if (RELAY_SERVICES_BOOTSTRAP_OPERATION_CONSUMED) {
+    throw new Error('The private relay bootstrap plan is consumed after its failed single attempt; use the separately reviewed memory recovery');
+  }
   if (process.argv.length !== 3 || process.argv[2] === undefined) {
     throw new Error(`Usage: ${PLAN_CONFIRMATION}=${PROJECT_ID} ./plan.sh <private-parent>`);
   }

@@ -5,9 +5,11 @@ import {
   PROJECT_ID,
   REGION,
   RELAY_SERVICES_PROFILE_SHA256,
+  RELAY_SERVICES_V3_PROFILE_SHA256,
   TERRAFORM_VERSION,
   bootstrapRelayVariables,
   validateRelayServicesProfile,
+  validateRelayServicesV3Profile,
 } from './contract.mjs';
 
 const GOOGLE_PROVIDER = 'registry.terraform.io/hashicorp/google';
@@ -255,16 +257,20 @@ function validateServiceAccount(change, profile) {
   exact(after.create_ignore_already_exists, null, `${address}.create_ignore_already_exists`);
 }
 
-function validateGuard(change, profile) {
-  const after = change.change.after;
-  if (!plainObject(after)) reject('Terraform relay deployment guard is missing');
-  exact(after.input, {
+function guardInput(profile, profileSha256) {
+  return {
     deployment_phase: 'private_bootstrap',
-    profile_sha256: RELAY_SERVICES_PROFILE_SHA256,
+    profile_sha256: profileSha256,
     relay_audiences: bootstrapRelayVariables(profile).relay_audiences,
     relay_image: profile.image.digest_reference,
     relay_source_commit: profile.pins.miakapp_server_commit,
-  }, 'Terraform relay deployment guard');
+  };
+}
+
+function validateGuard(change, profile, profileSha256) {
+  const after = change.change.after;
+  if (!plainObject(after)) reject('Terraform relay deployment guard is missing');
+  exact(after.input, guardInput(profile, profileSha256), 'Terraform relay deployment guard');
   exact(after.triggers_replace, null, 'Terraform relay deployment guard replacement');
 }
 
@@ -291,7 +297,11 @@ function validateResourceChanges(plan, profile) {
     validateRelay(byAddress.get(`google_cloud_run_v2_service.relay[${JSON.stringify(service.id)}]`), service, profile);
   }
   validateServiceAccount(byAddress.get('google_service_account.relay["runtime"]'), profile);
-  validateGuard(byAddress.get('terraform_data.deployment_guard["active"]'), profile);
+  validateGuard(
+    byAddress.get('terraform_data.deployment_guard["active"]'),
+    profile,
+    RELAY_SERVICES_V3_PROFILE_SHA256,
+  );
 }
 
 function validatePlannedValues(plan) {
@@ -344,7 +354,7 @@ function validateChecks(plan) {
 }
 
 export function validateInitialRelayServicesPlan(plan) {
-  const profile = validateRelayServicesProfile();
+  const profile = validateRelayServicesV3Profile();
   if (!plainObject(plan) || plan.format_version !== '1.2'
     || plan.terraform_version !== TERRAFORM_VERSION
     || plan.applyable !== true || plan.complete !== true || plan.errored !== false
@@ -373,6 +383,138 @@ export function validateInitialRelayServicesPlan(plan) {
     live_requests: 0,
     resource_addresses: Object.freeze(Object.keys(PLANNED_RESOURCES).sort()),
   });
+}
+
+function validateRecoveryResourceChanges(plan, profile) {
+  if (!Array.isArray(plan.resource_changes)) {
+    reject('Terraform relay-services recovery changes are missing');
+  }
+  const expectedActions = {
+    'google_cloud_run_v2_service.relay["relay-a"]': ['create'],
+    'google_cloud_run_v2_service.relay["relay-b"]': ['create'],
+    'google_service_account.relay["runtime"]': ['no-op'],
+    'terraform_data.deployment_guard["active"]': ['update'],
+  };
+  const byAddress = new Map();
+  for (const change of plan.resource_changes) {
+    if (!plainObject(change) || typeof change.address !== 'string'
+      || byAddress.has(change.address) || expectedActions[change.address] === undefined) {
+      reject('Terraform relay-services recovery contains an unreviewed resource change');
+    }
+    byAddress.set(change.address, change);
+    exact(change.mode, 'managed', `${change.address}.mode`);
+    exact(change.type, PLANNED_RESOURCES[change.address], `${change.address}.type`);
+    exact(
+      change.provider_name,
+      change.type === 'terraform_data' ? TERRAFORM_PROVIDER : GOOGLE_PROVIDER,
+      `${change.address}.provider`,
+    );
+    exact(change.change?.actions, expectedActions[change.address], `${change.address}.actions`);
+    if (change.change?.importing !== undefined) {
+      reject('Terraform relay-services recovery contains an import');
+    }
+  }
+  exact([...byAddress.keys()].sort(), Object.keys(expectedActions).sort(), 'Terraform recovery resources');
+  for (const service of profile.services) {
+    const change = byAddress.get(
+      `google_cloud_run_v2_service.relay[${JSON.stringify(service.id)}]`,
+    );
+    exact(change.change.before, null, `${change.address}.before`);
+    validateRelay(change, service, profile);
+  }
+
+  const serviceAccount = byAddress.get('google_service_account.relay["runtime"]');
+  if (!plainObject(serviceAccount.change.before)
+    || !isDeepStrictEqual(serviceAccount.change.before, serviceAccount.change.after)) {
+    reject('Existing relay service account must remain an exact no-op');
+  }
+  validateServiceAccount(serviceAccount, profile);
+
+  const guard = byAddress.get('terraform_data.deployment_guard["active"]');
+  if (!plainObject(guard.change.before) || !plainObject(guard.change.after)
+    || typeof guard.change.before.id !== 'string' || guard.change.before.id.length < 16
+    || guard.change.before.id !== guard.change.after.id) {
+    reject('Existing relay deployment guard identity is invalid');
+  }
+  const previousProfile = validateRelayServicesV3Profile();
+  const previousInput = guardInput(previousProfile, RELAY_SERVICES_V3_PROFILE_SHA256);
+  exact(guard.change.before.input, previousInput, 'Previous relay deployment guard input');
+  exact(guard.change.before.output, previousInput, 'Previous relay deployment guard output');
+  exact(guard.change.before.triggers_replace, null, 'Previous relay deployment guard replacement');
+  validateGuard(guard, profile, RELAY_SERVICES_PROFILE_SHA256);
+}
+
+function validateRecoveryPriorState(plan) {
+  const root = plan.prior_state?.values?.root_module;
+  if (!plainObject(root) || root.child_modules !== undefined || !Array.isArray(root.resources)) {
+    reject('Terraform recovery prior state must contain one flat reviewed root module');
+  }
+  const expected = {
+    'data.terraform_remote_state.workload[0]': ['data', 'terraform_remote_state', TERRAFORM_PROVIDER],
+    'google_service_account.relay["runtime"]': ['managed', 'google_service_account', GOOGLE_PROVIDER],
+    'terraform_data.deployment_guard["active"]': ['managed', 'terraform_data', TERRAFORM_PROVIDER],
+  };
+  const resources = new Map();
+  for (const resource of root.resources) {
+    if (!plainObject(resource) || typeof resource.address !== 'string'
+      || resources.has(resource.address) || expected[resource.address] === undefined) {
+      reject('Terraform recovery prior state contains an unreviewed resource');
+    }
+    resources.set(resource.address, resource);
+    const [mode, type, provider] = expected[resource.address];
+    exact(resource.mode, mode, `${resource.address}.prior mode`);
+    exact(resource.type, type, `${resource.address}.prior type`);
+    exact(resource.provider_name, provider, `${resource.address}.prior provider`);
+  }
+  exact([...resources.keys()].sort(), Object.keys(expected).sort(), 'Terraform recovery prior resources');
+}
+
+export function validateRecoveryRelayServicesPlan(plan) {
+  const profile = validateRelayServicesProfile();
+  if (!plainObject(plan) || plan.format_version !== '1.2'
+    || plan.terraform_version !== TERRAFORM_VERSION
+    || plan.applyable !== true || plan.complete !== true || plan.errored !== false
+    || plan.resource_drift !== undefined) {
+    reject('Terraform relay-services recovery plan format or version is invalid');
+  }
+  rejectForbiddenValues(plan.variables);
+  rejectForbiddenValues(plan.resource_changes);
+  rejectForbiddenValues(plan.planned_values);
+  exact(plan.variables, Object.fromEntries(Object.entries(bootstrapRelayVariables(profile))
+    .map(([name, value]) => [name, { value }])), 'Terraform relay-services recovery variables');
+  validateConfiguration(plan);
+  validateRecoveryResourceChanges(plan, profile);
+  validatePlannedValues(plan);
+  validateRecoveryPriorState(plan);
+  validateChecks(plan);
+  return Object.freeze({
+    create: 2,
+    update: 1,
+    no_op: 1,
+    delete: 0,
+    replace: 0,
+    import: 0,
+    relay_services: 2,
+    service_accounts_created: 0,
+    service_accounts_unchanged: 1,
+    public_iam_members: 0,
+    live_requests: 0,
+    resource_addresses: Object.freeze(Object.keys(PLANNED_RESOURCES).sort()),
+  });
+}
+
+export function readAndValidateRecoveryRelayServicesPlan(path) {
+  const bytes = readFileSync(path);
+  if (bytes.byteLength === 0 || bytes.byteLength > MAXIMUM_PLAN_BYTES) {
+    reject('Terraform relay-services recovery plan JSON size is invalid');
+  }
+  let plan;
+  try {
+    plan = JSON.parse(bytes.toString('utf8'));
+  } catch {
+    return reject('Terraform relay-services recovery plan JSON is invalid');
+  }
+  return validateRecoveryRelayServicesPlan(plan);
 }
 
 export function readAndValidateInitialRelayServicesPlan(path) {
