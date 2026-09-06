@@ -926,8 +926,12 @@ vertical-slice exit gates.
    counters to non-overlapping browser, App Check, Hosting, control-plane,
    relay, coordinator, KMS and Firestore owners. It accepts exactly 18 ordered
    single-use source receipts across the three browsers, retains none and
-   grants no live authority. Source-specific observer and Playwright adapters
-   remain required before the one allowed execution.
+   grants no live authority. Its first source-specific producer now derives the
+   browser-owned receipt from ordered cumulative page/state/call facts and
+   native persisted lifecycle events instead of accepting assertion booleans.
+   It explicitly leaves the four-input fixture capacity, 600-second Chromium
+   budget, complete page scenario, independent cloud observers and Playwright
+   bridge open before the one allowed execution.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain

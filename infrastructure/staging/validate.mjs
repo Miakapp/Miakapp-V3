@@ -83,6 +83,15 @@ import {
   validateBrowserRelayAggregatorProfile,
 } from './browser-relay-aggregator/contract.mjs';
 import {
+  PAGE_FACT_ORDER_BY_BROWSER,
+  PAGE_RECEIPT_IMPLEMENTATION_BASE_COMMIT,
+  PAGE_RECEIPT_PROFILE_PATH,
+  PAGE_RECEIPT_PROFILE_SHA256,
+  PAGE_RECEIPT_SOURCE_SHA256,
+  REQUIRED_MATRIX_PRIVATE_INPUTS,
+  validateBrowserRelayPageReceiptProfile,
+} from './browser-relay-page-receipt/contract.mjs';
+import {
   ROLLBACK_IMPLEMENTATION_COMMIT,
   ROLLBACK_PREFLIGHT_RESULT_PATH,
   ROLLBACK_PREFLIGHT_RESULT_SHA256,
@@ -3003,6 +3012,7 @@ function validateEvidence(value) {
     'browser_relay_fixture_cloud',
     'browser_relay_fixture_miakapi',
     'browser_relay_aggregator',
+    'browser_relay_page_receipt',
     'browser_relay_monitoring',
     'browser_relay_rollback',
     'browser_relay_orchestrator',
@@ -5213,10 +5223,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 85, 'manifest.revision');
+  exact(manifest.revision, 86, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_artifact_ci_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_artifact_ci_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_page_receipt_closed_producer_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -6224,6 +6234,105 @@ export function validateCommittedEvidence(
     raw_receipts_committed:
       browserRelayAggregatorProfile.evidence.raw_receipts_committed,
   }, 'evidence.browser_relay_aggregator');
+  const browserRelayPageReceiptManifest = manifest.evidence.browser_relay_page_receipt;
+  const browserRelayPageReceiptProfilePath = committedEvidencePath(
+    stagingRoot,
+    browserRelayPageReceiptManifest.profile_path,
+    PAGE_RECEIPT_PROFILE_PATH,
+    'evidence.browser_relay_page_receipt.profile_path',
+  );
+  const browserRelayPageReceiptProfile = validatedEvidenceFile(
+    browserRelayPageReceiptProfilePath,
+    validateBrowserRelayPageReceiptProfile,
+    'evidence.browser_relay_page_receipt.profile_path',
+  );
+  exact(
+    fileSha256(browserRelayPageReceiptProfilePath),
+    PAGE_RECEIPT_PROFILE_SHA256,
+    'evidence.browser_relay_page_receipt.profile_sha256',
+  );
+  exact(
+    fileSha256(resolve(stagingRoot, 'browser-relay-page-receipt/producer.mjs')),
+    PAGE_RECEIPT_SOURCE_SHA256,
+    'evidence.browser_relay_page_receipt.producer_source_sha256',
+  );
+  const pageReceiptAssertionCount = [
+    'chromium_assertions',
+    'firefox_assertions',
+    'webkit_assertions',
+  ].reduce(
+    (total, field) => total + browserRelayPageReceiptProfile.output[field].length,
+    0,
+  );
+  exactFields(browserRelayPageReceiptManifest, {
+    state: browserRelayPageReceiptProfile.state,
+    profile_sha256: PAGE_RECEIPT_PROFILE_SHA256,
+    implementation_base_commit: PAGE_RECEIPT_IMPLEMENTATION_BASE_COMMIT,
+    browser_relay_plan_sha256:
+      browserRelayPageReceiptProfile.pins.browser_relay_plan_sha256,
+    browser_relay_page_profile_sha256:
+      browserRelayPageReceiptProfile.pins.browser_relay_page_profile_sha256,
+    browser_relay_aggregator_profile_sha256:
+      browserRelayPageReceiptProfile.pins.browser_relay_aggregator_profile_sha256,
+    producer_source_sha256: PAGE_RECEIPT_SOURCE_SHA256,
+    page_fact_schema: browserRelayPageReceiptProfile.producer.page_fact_schema,
+    source_receipt_schema: browserRelayPageReceiptProfile.producer.source_receipt_schema,
+    chromium_facts: PAGE_FACT_ORDER_BY_BROWSER.chromium.length,
+    secondary_browser_facts: PAGE_FACT_ORDER_BY_BROWSER.firefox.length,
+    page_instances: Object.values(
+      browserRelayPageReceiptProfile.producer.page_instances_by_browser,
+    ).reduce((total, count) => total + count, 0),
+    required_matrix_private_inputs: REQUIRED_MATRIX_PRIVATE_INPUTS,
+    current_fixture_private_inputs:
+      browserRelayPageReceiptProfile.compatibility.current_fixture_private_inputs,
+    fixture_capacity_satisfied:
+      browserRelayPageReceiptProfile.compatibility.fixture_capacity_satisfied,
+    current_page_chromium_milliseconds:
+      browserRelayPageReceiptProfile.compatibility.current_page_chromium_milliseconds,
+    required_page_chromium_milliseconds:
+      browserRelayPageReceiptProfile.compatibility.required_page_chromium_milliseconds,
+    page_timing_capacity_satisfied:
+      browserRelayPageReceiptProfile.compatibility.page_timing_capacity_satisfied,
+    page_host_api_scenario_complete:
+      browserRelayPageReceiptProfile.compatibility.page_host_api_scenario_complete,
+    playwright_bridge_present:
+      browserRelayPageReceiptProfile.compatibility.playwright_bridge_present,
+    aggregator_wired: browserRelayPageReceiptProfile.compatibility.aggregator_wired,
+    assertions_owned: pageReceiptAssertionCount,
+    single_use: browserRelayPageReceiptProfile.producer.single_use,
+    fact_order_exact: browserRelayPageReceiptProfile.producer.fact_order_exact,
+    fact_retries: browserRelayPageReceiptProfile.producer.fact_retries,
+    raw_facts_retained: browserRelayPageReceiptProfile.producer.raw_facts_retained,
+    native_pagehide_pageshow_persisted_required:
+      browserRelayPageReceiptProfile.producer.native_pagehide_pageshow_persisted_required,
+    identity_generation_change_required:
+      browserRelayPageReceiptProfile.producer.identity_generation_change_required,
+    maximum_active_websockets:
+      browserRelayPageReceiptProfile.producer.maximum_active_websockets,
+    source_credentials_on_websocket:
+      browserRelayPageReceiptProfile.producer.source_credentials_on_websocket,
+    browser_credential_persistence_events:
+      browserRelayPageReceiptProfile.producer.browser_credential_persistence_events,
+    cloud_compute_resources:
+      browserRelayPageReceiptProfile.target.cloud_compute_resources,
+    cloud_mutation_authorized:
+      browserRelayPageReceiptProfile.authority.cloud_mutation_authorized,
+    hosting_publication_authorized:
+      browserRelayPageReceiptProfile.authority.hosting_publication_authorized,
+    public_ingress_authorized:
+      browserRelayPageReceiptProfile.authority.public_ingress_authorized,
+    live_execution_authorized:
+      browserRelayPageReceiptProfile.authority.live_execution_authorized,
+    live_page_facts: browserRelayPageReceiptProfile.evidence.live_page_facts,
+    live_receipts: browserRelayPageReceiptProfile.evidence.live_receipts,
+    cloud_mutations: browserRelayPageReceiptProfile.evidence.cloud_mutations,
+    live_execution_count:
+      browserRelayPageReceiptProfile.evidence.live_execution_count,
+    credentials_committed:
+      browserRelayPageReceiptProfile.evidence.credentials_committed,
+    raw_facts_committed:
+      browserRelayPageReceiptProfile.evidence.raw_facts_committed,
+  }, 'evidence.browser_relay_page_receipt');
   const browserRelayMonitoringManifest = manifest.evidence.browser_relay_monitoring;
   const monitoringProfilePath = committedEvidencePath(
     stagingRoot,
@@ -7663,6 +7772,7 @@ export function validateCommittedEvidence(
     browserRelayRunnerProfile,
     browserRelayPageProfile,
     browserRelayAggregatorProfile,
+    browserRelayPageReceiptProfile,
     browserRelayRollbackProfile,
     browserRelayRollbackResult,
     browserRelayOrchestratorProfile,
@@ -7707,7 +7817,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; the dormant page, fixture and independent-source aggregator are digest-pinned without live authority, the single-use operation remains privately preflighted and unexecuted, both exact-audience relays remain private-ready, unauthenticated invocation remains absent, and App Check enforcement is disabled.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; the dormant page, fixture, independent-source aggregator and browser-page receipt producer are digest-pinned without live authority, the single-use operation remains privately preflighted and unexecuted, both exact-audience relays remain private-ready, unauthenticated invocation remains absent, and App Check enforcement is disabled.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';
