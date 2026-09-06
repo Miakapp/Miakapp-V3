@@ -1,0 +1,228 @@
+{
+  "schema": "miakapp.staging-browser-relay-monitoring-profile/1",
+  "revision": 1,
+  "state": "closed_monitoring_contract_implemented_not_observed",
+  "target": {
+    "project_id": "miakapp-v4-staging",
+    "project_number": "1072737219170",
+    "region": "europe-west9",
+    "cloud_compute_resources": 0,
+    "unscheduled": true,
+    "cloud_mutation_authorized_by_profile": false,
+    "public_ingress_authorized_by_profile": false,
+    "acceptance_execution_authorized_by_profile": false
+  },
+  "pins": {
+    "implementation_base_commit": "bbeab5c4bbb7557722be0fbb2c45df100a16dd9c",
+    "browser_relay_plan_sha256": "614493a6ffd1c8c45044585368ae21eefa82afb65f031d2fd4e9028b215098da",
+    "approved_billing_account_sha256": "4557923f1be719b78ee844b14bfa4654be3eb3fa785a2cb5a2624c3f85d12270"
+  },
+  "observation": {
+    "query_interval_seconds": 300,
+    "query_view": "HEADERS",
+    "maximum_series_headers_per_query": 100,
+    "metric_descriptors": [
+      {
+        "type": "run.googleapis.com/request_count",
+        "metric_kind": "DELTA",
+        "value_type": "INT64",
+        "unit": "1",
+        "resource_types": [
+          "cloud_run_revision"
+        ],
+        "labels": [
+          "response_code",
+          "response_code_class",
+          "route"
+        ]
+      },
+      {
+        "type": "run.googleapis.com/container/instance_count",
+        "metric_kind": "GAUGE",
+        "value_type": "INT64",
+        "unit": "1",
+        "resource_types": [
+          "cloud_run_revision",
+          "cloud_run_worker_pool"
+        ],
+        "labels": [
+          "state"
+        ]
+      },
+      {
+        "type": "run.googleapis.com/container/billable_instance_time",
+        "metric_kind": "DELTA",
+        "value_type": "DOUBLE",
+        "unit": "s",
+        "resource_types": [
+          "cloud_run_job",
+          "cloud_run_revision",
+          "cloud_run_worker_pool"
+        ],
+        "labels": []
+      },
+      {
+        "type": "cloudkms.googleapis.com/peak_qps",
+        "metric_kind": "GAUGE",
+        "value_type": "INT64",
+        "unit": "1",
+        "resource_types": [
+          "cloudkms.googleapis.com/Project"
+        ],
+        "labels": [
+          "crypto_op"
+        ]
+      },
+      {
+        "type": "firestore.googleapis.com/document/write_count",
+        "metric_kind": "DELTA",
+        "value_type": "INT64",
+        "unit": "1",
+        "resource_types": [
+          "firestore_instance"
+        ],
+        "labels": [
+          "module",
+          "version",
+          "op"
+        ]
+      },
+      {
+        "type": "recaptchaenterprise.googleapis.com/assessment_count",
+        "metric_kind": "DELTA",
+        "value_type": "INT64",
+        "unit": "1",
+        "resource_types": [
+          "recaptchaenterprise.googleapis.com/Key"
+        ],
+        "labels": [
+          "token_status"
+        ]
+      }
+    ],
+    "queries": [
+      {
+        "id": "cloud_run_requests",
+        "metric_type": "run.googleapis.com/request_count",
+        "resource_type": "cloud_run_revision",
+        "service_names": [
+          "control-plane",
+          "miakapp-staging-relay-a",
+          "miakapp-staging-relay-b"
+        ]
+      },
+      {
+        "id": "cloud_run_instances",
+        "metric_type": "run.googleapis.com/container/instance_count",
+        "resource_type": "cloud_run_revision",
+        "service_names": [
+          "control-plane",
+          "miakapp-staging-relay-a",
+          "miakapp-staging-relay-b"
+        ]
+      },
+      {
+        "id": "cloud_run_billable_time",
+        "metric_type": "run.googleapis.com/container/billable_instance_time",
+        "resource_type": "cloud_run_revision",
+        "service_names": [
+          "control-plane",
+          "miakapp-staging-relay-a",
+          "miakapp-staging-relay-b"
+        ]
+      },
+      {
+        "id": "kms_peak_qps",
+        "metric_type": "cloudkms.googleapis.com/peak_qps",
+        "resource_type": "cloudkms.googleapis.com/Project",
+        "service_names": []
+      },
+      {
+        "id": "firestore_writes",
+        "metric_type": "firestore.googleapis.com/document/write_count",
+        "resource_type": "firestore_instance",
+        "service_names": []
+      },
+      {
+        "id": "recaptcha_assessments",
+        "metric_type": "recaptchaenterprise.googleapis.com/assessment_count",
+        "resource_type": "recaptchaenterprise.googleapis.com/Key",
+        "service_names": []
+      }
+    ],
+    "billing_budget": {
+      "display_name": "Miakapp V4 staging monthly",
+      "currency": "EUR",
+      "amount_units": 10,
+      "calendar_period": "MONTH",
+      "credit_types_treatment": "INCLUDE_ALL_CREDITS",
+      "thresholds": [
+        0.2,
+        0.5,
+        1
+      ],
+      "spend_basis": "CURRENT_SPEND",
+      "project_level_recipients": true
+    },
+    "raw_metric_points_retained": false,
+    "raw_time_series_retained": false,
+    "raw_budget_resource_name_retained": false,
+    "raw_api_errors_retained": false
+  },
+  "enforcement": {
+    "maximum_public_window_seconds": 1200,
+    "maximum_acceptance_executions": 1,
+    "maximum_cloud_builds": 4,
+    "maximum_browser_invocations": 3,
+    "maximum_recaptcha_assessments": 16,
+    "maximum_control_plane_exchanges": 16,
+    "maximum_kms_signatures": 16,
+    "maximum_firestore_writes": 64,
+    "required_relay_services": 2,
+    "maximum_instances_per_service": 1,
+    "maximum_total_relay_instance_seconds": 2400,
+    "maximum_control_plane_public_instance_seconds": 1200,
+    "maximum_projected_incremental_milli_eur": 1000,
+    "required_zero_counters": [
+      "credential_or_private_traffic_diagnostics",
+      "firebase_or_app_check_tokens_on_websocket",
+      "identity_or_audience_binding_failures",
+      "rollback_precondition_failures",
+      "unexpected_project_mutations",
+      "persistent_iam_mutations"
+    ]
+  },
+  "output": {
+    "preflight_result_schema": "miakapp.staging-browser-relay-monitoring-preflight-result/1",
+    "sample_result_schema": "miakapp.staging-browser-relay-monitoring-sample-result/1",
+    "allowed_observations": [
+      "bounded_counts",
+      "durations",
+      "revision_ids",
+      "stable_outcome_classes"
+    ],
+    "forbidden_observations": [
+      "browser_storage",
+      "email",
+      "execution_identifier",
+      "firebase_uid",
+      "har",
+      "home_traffic",
+      "raw_request_or_response",
+      "token",
+      "trace_context",
+      "video",
+      "websocket_frame"
+    ]
+  },
+  "evidence": {
+    "state": "absent",
+    "live_preflight_count": 0,
+    "result_path": null,
+    "cloud_mutations": 0,
+    "public_ingress_changes": 0,
+    "acceptance_executions": 0,
+    "credentials_committed": false,
+    "raw_cloud_responses_committed": false
+  }
+}

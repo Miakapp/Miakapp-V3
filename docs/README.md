@@ -101,13 +101,16 @@ public IAM member. The complete disconnect matrix, authenticated browser-relay
 flow, public ingress and broader staging acceptance remain open. A separately
 pinned runner implementation now launches all three planned engines in an
 offline CI smoke while collecting no browser diagnostics or credentials. The
-current plan pins that merged implementation and leaves only edge, monitoring
-and rollback preconditions open. The staging manifest retains the byte-exact
-earlier zero-relay plan used by the image build and revision 9 used by the runner,
-pins the serial-4 private-ready result and rebases the current acceptance plan on
-a matching fresh live inventory. The state transition, intended cost, exposure
-and rollback boundary remain reviewable without pretending that a public edge
-or live browser matrix already exists.
+current plan pins that merged implementation. A new dormant monitoring contract
+strictly allow-lists six read-only metric surfaces, the existing staging budget
+shape and every runtime stop counter; its local implementation does not claim a
+live preflight or close `MONITORING-01`. The plan therefore still leaves edge,
+monitoring and rollback preconditions open. The staging manifest retains the
+byte-exact earlier zero-relay plan used by the image build and revision 9 used
+by the runner, pins the serial-4 private-ready result and rebases the current
+acceptance plan on a matching fresh live inventory. The state transition,
+intended cost, exposure and rollback boundary remain reviewable without
+pretending that a public edge or live browser matrix already exists.
 
 Repository-specific implementation plans must link back to these documents and
 must not redefine a shared contract locally.
