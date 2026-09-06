@@ -528,8 +528,16 @@ eight canonical receipts; Firefox and WebKit require five each. Invalid,
 missing, duplicated or out-of-order evidence permanently fails the single-use
 instance, while successful closure emits only the existing engine result
 schema. The package has no CLI, cloud client, credentials, Hosting publisher,
-mutation authority or live evidence. Source observers and the operator-side
-Playwright bridge remain separate work before the matrix can run.
+mutation authority or live evidence. The first following source-only producer
+now reduces the browser-owned portion from exact cumulative page facts. It
+requires 18 facts in Chromium and three in each secondary browser, validates
+the two scheduled renewal intervals, serialized handoff, native persisted page
+lifecycle, prior-identity teardown and a fresh identity generation, then emits
+only the aggregator receipt. It records rather than conceals the current
+fixture shortfall (four page inputs required, three available) and the absent
+480-to-600-second Chromium budget increase plus page-scenario/Playwright wiring.
+Independent cloud observers and those explicit compatibility fixes remain
+required before the matrix can run.
 
 The guarded relay-image increment bound the exact merged Miakapp-Server tree to a deterministic
 53,098-byte archive, one digest-pinned Cloud Build Docker builder, verified

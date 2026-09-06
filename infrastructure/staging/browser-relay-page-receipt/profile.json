@@ -1,0 +1,165 @@
+{
+  "schema": "miakapp.staging-browser-relay-page-receipt-profile/1",
+  "revision": 1,
+  "state": "closed_browser_page_receipt_producer_implemented_not_wired_not_executed",
+  "target": {
+    "project_id": "miakapp-v4-staging",
+    "project_number": "1072737219170",
+    "region": "europe-west9",
+    "data_policy": "synthetic_only",
+    "cloud_compute_resources": 0,
+    "unscheduled": true
+  },
+  "pins": {
+    "implementation_base_commit": "361cabb9a88d5cb3efebd40f3f803cf7023c02e3",
+    "browser_relay_plan_sha256": "6c7661d9be861e4f8d13ccd5d2fd0f3eaa34ea2b4d7af2e9b41d1867d6c37211",
+    "browser_relay_page_profile_sha256": "2e9e809d8bb9b88a4e96b51a258d948e6f0d1467c38adaca8c6582e132113e1e",
+    "browser_relay_aggregator_profile_sha256": "768325b3d549056c7c9ddbfa1b15a812f243cf023c37d68f8c8ffe405fb52b1e",
+    "producer_source_sha256": "12f209051e7e0871226d964fe2e07e6f40b94cf2305a4bcb0e457a17c5151a6c"
+  },
+  "producer": {
+    "page_fact_schema": "miakapp.staging-browser-relay-page-fact/1",
+    "source_receipt_schema": "miakapp.staging-browser-relay-source-receipt/1",
+    "source": "browser_page",
+    "browser_order": [
+      "chromium",
+      "firefox",
+      "webkit"
+    ],
+    "fact_order_by_browser": {
+      "chromium": [
+        "initial_initialized",
+        "initial_ready",
+        "authoritative_state",
+        "patched_state",
+        "initial_call",
+        "same_relay_reauthenticated",
+        "relay_handoff_stale",
+        "relay_b_ready",
+        "relay_b_state",
+        "relay_b_call",
+        "failed_and_uncertain_calls",
+        "relay_b_recovered",
+        "pagehide_suspended",
+        "pageshow_restored",
+        "signed_out_stopped",
+        "replacement_initialized",
+        "replacement_ready",
+        "replacement_stopped"
+      ],
+      "firefox": [
+        "initial_initialized",
+        "initial_ready",
+        "signed_out_stopped"
+      ],
+      "webkit": [
+        "initial_initialized",
+        "initial_ready",
+        "signed_out_stopped"
+      ]
+    },
+    "chromium_facts": 18,
+    "secondary_browser_facts": 3,
+    "page_instances_by_browser": {
+      "chromium": 2,
+      "firefox": 1,
+      "webkit": 1
+    },
+    "required_matrix_private_inputs": 4,
+    "single_use": true,
+    "fact_order_exact": true,
+    "fact_retries": 0,
+    "raw_facts_retained": false,
+    "arbitrary_errors_propagated": false,
+    "minimum_renewal_interval_milliseconds": 240000,
+    "maximum_renewal_interval_milliseconds": 330000,
+    "maximum_lifecycle_pause_milliseconds": 30000,
+    "native_pagehide_pageshow_persisted_required": true,
+    "identity_generation_change_required": true,
+    "prior_identity_stopped_before_replacement": true,
+    "maximum_active_websockets": 1,
+    "source_credentials_on_websocket": 0,
+    "browser_credential_persistence_events": 0
+  },
+  "compatibility": {
+    "current_fixture_private_inputs": 3,
+    "required_matrix_private_inputs": 4,
+    "fixture_capacity_satisfied": false,
+    "current_page_chromium_milliseconds": 480000,
+    "required_page_chromium_milliseconds": 600000,
+    "page_timing_capacity_satisfied": false,
+    "page_host_api_scenario_complete": false,
+    "playwright_bridge_present": false,
+    "aggregator_wired": false
+  },
+  "output": {
+    "chromium_assertions": [
+      "chromium_initial_exchange_and_hello",
+      "authoritative_snapshot_and_patch",
+      "one_call_completes",
+      "source_credentials_confined_to_https",
+      "same_relay_scheduled_reauthentication",
+      "one_browser_websocket",
+      "old_socket_closes_before_new_socket_opens",
+      "state_and_call_recover_on_relay_b",
+      "maximum_one_active_browser_socket",
+      "visibility_pause_resume_is_bounded",
+      "bfcache_restore_revalidates_identity",
+      "sign_out_stops_and_discards_immediately",
+      "identity_tuple_change_requires_new_session",
+      "uncertain_effect_is_outcome_unknown"
+    ],
+    "firefox_assertions": [
+      "firefox_initial_session_and_teardown",
+      "no_browser_specific_credential_persistence"
+    ],
+    "webkit_assertions": [
+      "webkit_initial_session_and_teardown",
+      "no_browser_specific_credential_persistence"
+    ],
+    "chromium_stable_outcome_classes": [
+      "accepted",
+      "applied",
+      "failed",
+      "outcome_unknown",
+      "stale"
+    ],
+    "secondary_stable_outcome_classes": [],
+    "public_key_ids": [],
+    "revision_ids": [],
+    "allowed_observations": [
+      "bounded_counts",
+      "durations",
+      "stable_outcome_classes"
+    ],
+    "forbidden_observations": [
+      "browser_storage",
+      "email",
+      "execution_identifier",
+      "firebase_uid",
+      "har",
+      "home_traffic",
+      "raw_request_or_response",
+      "token",
+      "trace_context",
+      "video",
+      "websocket_frame"
+    ]
+  },
+  "authority": {
+    "cloud_mutation_authorized": false,
+    "hosting_publication_authorized": false,
+    "iam_binding_mutation_authorized": false,
+    "public_ingress_authorized": false,
+    "live_execution_authorized": false
+  },
+  "evidence": {
+    "state": "absent",
+    "live_page_facts": 0,
+    "live_receipts": 0,
+    "cloud_mutations": 0,
+    "live_execution_count": 0,
+    "credentials_committed": false,
+    "raw_facts_committed": false
+  }
+}

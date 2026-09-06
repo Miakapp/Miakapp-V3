@@ -69,6 +69,10 @@ implemented across several repositories.
   — dormant single-use evidence aggregator assigning every runner assertion,
   counter and public identifier to one exact browser or independent cloud
   source; invalid, missing, duplicated or out-of-order receipts fail closed.
+- [`../infrastructure/staging/browser-relay-page-receipt/`](../infrastructure/staging/browser-relay-page-receipt/)
+  — dormant browser-owned receipt producer that reduces exact cumulative page,
+  state, call and native lifecycle facts without accepting assertion booleans;
+  fixture capacity and the Playwright bridge remain explicitly open.
 - [`../infrastructure/staging/browser-relay-monitoring/`](../infrastructure/staging/browser-relay-monitoring/)
   — allow-listed read-only monitoring contract whose post-merge preflight pins
   six metric surfaces, the existing EUR 10 budget and the private boundary.
@@ -174,8 +178,14 @@ pretending that a public edge or live browser matrix already exists.
 The separate page-host foundation now builds locally and returns only bounded
 browser observations. The separate closed aggregator now assigns all browser
 and cloud assertions, counters and public identifiers to non-overlapping source
-owners. Neither package grants Hosting publication or live authority; the next
-adapters must drive the page and independently derive each source receipt
+owners. The first source producer now derives the complete `browser_page`
+receipt from 18 ordered Chromium facts and three facts in each secondary
+browser, including scheduled renewal intervals, serialized handoff, persisted
+page lifecycle and a fresh identity generation. It retains no raw fact and
+explicitly records that the current three-input fixture is one input short and
+that the page's 480-second Chromium budget must become 600 seconds.
+None of these packages grants Hosting publication or live authority; the next
+fixture/page increment and Playwright bridge must close that compatibility gap
 before the runner can execute.
 
 Repository-specific implementation plans must link back to these documents and
