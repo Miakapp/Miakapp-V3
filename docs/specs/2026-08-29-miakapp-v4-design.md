@@ -868,9 +868,14 @@ vertical-slice exit gates.
    offline CI smoke launches Chromium, Firefox and WebKit sequentially. Its
    ephemeral contexts accept private input only in memory and return a closed
    aggregate with no browser diagnostics or credential material; no live matrix
-   case is claimed by that smoke. Current plan revision 10 pins the merged
-   runner profile, preserves its revision-9 input byte for byte and closes only
-   the runner implementation precondition.
+   case is claimed by that smoke. Plan revision 10 pinned the merged runner
+   profile, preserved its revision-9 input byte for byte and closed only the
+   runner implementation precondition. The subsequent closed monitoring
+   preflight observed six allow-listed metric queries, the reviewed EUR 10
+   budget and the exact private edge/relay boundary with zero mutation or
+   acceptance execution. Current plan revision 11 preserves revision 10 byte
+   for byte, pins that result and closes the monitoring precondition. Edge
+   orchestration and rollback preflight remain open.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain

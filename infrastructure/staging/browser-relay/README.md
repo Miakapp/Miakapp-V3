@@ -4,7 +4,7 @@ This directory freezes the rebased reviewable plan for live browser, relay,
 signing-key and rollback acceptance. It contains no Terraform, deployer,
 invocation wrapper, credential or result. Reading or validating it authorizes no
 cloud mutation. The committed state is
-`runner_implemented_private_relays_ready_plan_rebased_not_deployed`, all
+`monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed`, all
 `LIVE-*` cases are pending and the canonical staging manifest records private
 control-plane ingress plus two IAM-private, scale-to-zero relays with no public
 invoker.
@@ -75,7 +75,7 @@ and [reCAPTCHA billing](https://cloud.google.com/recaptcha/docs/billing-informat
 
 ## Preconditions
 
-Revision 10 preserves the independent read-only observation completed for
+Revision 11 preserves the independent read-only observation completed for
 revision 9 at
 2026-09-06T04:08:50.844Z. It verified `control-plane-00010-vop`, private ingress,
 zero unauthenticated invokers, two enabled and published signing versions with
@@ -106,8 +106,7 @@ retired. The complete authenticated browser case remains part of `LIVE-02`.
 Before any public transition, the remaining work must provide:
 
 1. a digest-bound and reversible control-plane ingress transition;
-2. allow-listed metric and billing observations; and
-3. a rollback plan that is rendered and checked before the live window opens.
+2. a rollback plan that is rendered and checked before the live window opens.
 
 The adjacent [`browser-relay-runner/`](../browser-relay-runner/) package now
 implements the runner precondition as a dormant, profile-pinned library. Its dedicated
@@ -128,10 +127,11 @@ the six allowed metric descriptors and header-only queries, the existing EUR 10
 staging budget with EUR 2/5/10 alert thresholds, and every runtime stop ceiling.
 Its read-only cloud adapter validates the exact private edge and relay boundary
 before returning a closed observation; its sample evaluator returns only stable
-continue-or-rollback outcomes. It has no CLI, scheduler or resource writer, and
-its profile records zero live preflights. `MONITORING-01` remains open until a
-fresh observation from the merged implementation is digest-pinned by a later
-plan revision.
+continue-or-rollback outcomes. It has no CLI, scheduler or resource writer. A
+fresh observation from merged implementation `aa99fbabd5bdb336ee6eb2c913183e4f9dd501d2`
+confirmed the private boundary, all six allow-listed queries and the reviewed
+budget with zero mutation or acceptance execution. Revision 11 pins the closed
+result digest and marks `MONITORING-01` satisfied.
 
 The adjacent
 [`browser-relay-services/`](../browser-relay-services/) Terraform root now
@@ -148,8 +148,9 @@ this exact private-ready phase afterward.
 The byte-exact [`plan-v8.json`](plan-v8.json) preserves the historical plan
 consumed by the relay-image build. The byte-exact
 [`plan-v9.json`](plan-v9.json) separately preserves the plan consumed by the
-runner package. Revision 10 can evolve without rewriting either immutable
-dependency.
+runner package. The byte-exact [`plan-v10.json`](plan-v10.json) preserves the
+plan consumed by the monitoring preflight. Revision 11 can evolve without
+rewriting any immutable dependency.
 
 The currently deployed runtime document publishes both signing keys with
 version 1 current and version 2 retained. This completes the rehearsal entry
