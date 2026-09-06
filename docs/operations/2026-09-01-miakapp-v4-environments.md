@@ -406,15 +406,19 @@ bytes and claims never left the page; Hosting was disabled and deleted after an
 8,749 ms public window, and the runner now returns HTTP 404. Enforcement remains
 disabled and all execution plus recovery entrypoints are retired.
 
-The browser-relay plan was then rebased by an independent read-only observation
-at `2026-09-05T19:49:07.829Z`. It reconfirmed private
-`control-plane-00010-vop`, zero unauthenticated invokers, zero relay services,
-zero Firebase Auth users, zero application fixture collections, two enabled and
-published signing versions with version 1 current for the rehearsal, the registered provider and
-completed browser attestation, and a disabled Hosting runner returning HTTP
-404. The remaining Firestore documents are confined to the three expected
-bounded admission/audit collections. This observation granted no deployment or
-public-ingress authority.
+The current browser-relay plan was rebased again by an independent read-only
+observation completed at `2026-09-06T04:08:50.844Z`. It reconfirmed private
+`control-plane-00010-vop`, zero unauthenticated invokers, zero Firebase Auth
+users, zero application fixture collections, two enabled signing versions with
+version 1 current for the rehearsal, the registered provider and completed
+browser attestation, and a disabled Hosting runner returning HTTP 404. It also
+verified two generation-2 private-ready relays with exact WSS audiences, the
+verified image digest, 512 MiB, scale 0..1, no project role, no user-managed key
+and no public IAM binding. The fresh relay inventory hash exactly matches the
+sanitized serial-4 result. The remaining Firestore documents are confined to
+the three expected bounded admission/audit collections. This observation
+granted no deployment or public-ingress authority. The earlier revision-8 plan
+remains byte-exact because the historical relay-image operation pins its digest.
 
 The guarded relay-image increment bound the exact merged Miakapp-Server tree to a deterministic
 53,098-byte archive, one digest-pinned Cloud Build Docker builder, verified

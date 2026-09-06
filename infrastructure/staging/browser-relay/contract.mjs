@@ -2,9 +2,15 @@ import { createHash } from 'node:crypto';
 import { lstatSync, readFileSync } from 'node:fs';
 import { isDeepStrictEqual } from 'node:util';
 
-import { RELAY_SERVICES_V1_PROFILE_SHA256 } from '../browser-relay-services/contract.mjs';
+import {
+  RELAY_SERVICES_PRIVATE_READY_RESULT_SHA256,
+  RELAY_SERVICES_PROFILE_SHA256,
+  RELAY_SERVICES_V5_PROFILE_SHA256,
+} from '../browser-relay-services/contract.mjs';
 
-export const BROWSER_RELAY_PLAN_SHA256 = '4a5c13999d9f7f328b1b8b867bbd86d4c5e80cb980d9eb1324028ea0e5785343';
+export const BROWSER_RELAY_V8_PLAN_SHA256 = '4a5c13999d9f7f328b1b8b867bbd86d4c5e80cb980d9eb1324028ea0e5785343';
+export const BROWSER_RELAY_V8_PLAN_PATH = 'browser-relay/plan-v8.json';
+export const BROWSER_RELAY_PLAN_SHA256 = 'bdf2cea284b1031a2a78e3ab029a733cad5e68efde8e9e01c5230e01fe8333dc';
 export const BROWSER_RELAY_PLAN_PATH = 'browser-relay/plan.json';
 
 const MAXIMUM_PLAN_BYTES = 20 * 1024;
@@ -118,6 +124,9 @@ function validatePins(value) {
     'miakapi_commit',
     'miakapp_server_commit',
     'relay_services_profile_sha256',
+    'relay_services_converged_profile_sha256',
+    'relay_services_private_ready_result_sha256',
+    'relay_services_live_inventory_sha256',
     'protocol_contract_commit',
     'node_version',
     'bun_version',
@@ -137,13 +146,33 @@ function validatePins(value) {
   if (!SHA256.test(pins.deployed_control_plane_source_sha256)) {
     reject('pins.deployed_control_plane_source_sha256 must be a SHA-256 digest');
   }
-  if (!SHA256.test(pins.relay_services_profile_sha256)) {
-    reject('pins.relay_services_profile_sha256 must be a SHA-256 digest');
+  for (const field of [
+    'relay_services_profile_sha256',
+    'relay_services_converged_profile_sha256',
+    'relay_services_private_ready_result_sha256',
+    'relay_services_live_inventory_sha256',
+  ]) {
+    if (!SHA256.test(pins[field])) reject(`pins.${field} must be a SHA-256 digest`);
   }
   exact(
     pins.relay_services_profile_sha256,
-    RELAY_SERVICES_V1_PROFILE_SHA256,
+    RELAY_SERVICES_PROFILE_SHA256,
     'pins.relay_services_profile_sha256',
+  );
+  exact(
+    pins.relay_services_converged_profile_sha256,
+    RELAY_SERVICES_V5_PROFILE_SHA256,
+    'pins.relay_services_converged_profile_sha256',
+  );
+  exact(
+    pins.relay_services_private_ready_result_sha256,
+    RELAY_SERVICES_PRIVATE_READY_RESULT_SHA256,
+    'pins.relay_services_private_ready_result_sha256',
+  );
+  exact(
+    pins.relay_services_live_inventory_sha256,
+    '421338fec676c1fccd0e6747d3e8837d4151b147c95b343172639800779b64d1',
+    'pins.relay_services_live_inventory_sha256',
   );
   exact(pins, expectedPlan.pins, 'pins');
 }
@@ -182,8 +211,11 @@ function validateBaseline(value) {
   exact(baseline.signing_keys.enabled_versions, [1, 2], 'baseline.signing_keys.enabled_versions');
   exact(baseline.application_data.firebase_auth_users, 0, 'baseline.application_data.firebase_auth_users');
   exact(baseline.application_data.application_fixture_collections, 0, 'baseline.application_data.application_fixture_collections');
-  exact(baseline.relay_services, 0, 'baseline.relay_services');
-  exact(baseline.relay_service_account_present, false, 'baseline.relay_service_account_present');
+  exact(baseline.cloud_run_services, [
+    'control-plane', 'miakapp-staging-relay-a', 'miakapp-staging-relay-b',
+  ], 'baseline.cloud_run_services');
+  exact(baseline.relay_services, 2, 'baseline.relay_services');
+  exact(baseline.relay_service_account_present, true, 'baseline.relay_service_account_present');
   exact(baseline.browser_runner_present, false, 'baseline.browser_runner_present');
   exact(baseline.app_engine_application_present, false, 'baseline.app_engine_application_present');
 }
@@ -192,12 +224,14 @@ function validateRelay(value, expected, path) {
   const relay = exactKeys(value, [
     'id',
     'service_name',
-    'endpoint_before_apply',
+    'private_ready_audience',
+    'private_ready_generation',
     'endpoint_source',
     'websocket_path',
     'health_path',
     'ingress',
-    'unauthenticated_invoker',
+    'public_invoker_before_window',
+    'unauthenticated_invoker_during_window',
     'application_authentication',
     'allowed_origin',
     'service_account',
@@ -220,11 +254,20 @@ function validateRelay(value, expected, path) {
     'forwarded_client_headers_trusted',
   ], path);
   exact(relay, expected, path);
-  exact(relay.endpoint_before_apply, null, `${path}.endpoint_before_apply`);
+  if (!/^wss:\/\/miakapp-staging-relay-[ab]-[a-z0-9]{10}-od\.a\.run\.app\/ws$/u
+    .test(relay.private_ready_audience)) {
+    reject(`${path}.private_ready_audience is not an assigned staging relay audience`);
+  }
+  exact(relay.private_ready_generation, 2, `${path}.private_ready_generation`);
   exact(relay.runtime_iam_roles, [], `${path}.runtime_iam_roles`);
   exact(relay.minimum_instances, 0, `${path}.minimum_instances`);
   exact(relay.maximum_instances, 1, `${path}.maximum_instances`);
-  exact(relay.unauthenticated_invoker, true, `${path}.unauthenticated_invoker`);
+  exact(relay.public_invoker_before_window, false, `${path}.public_invoker_before_window`);
+  exact(
+    relay.unauthenticated_invoker_during_window,
+    true,
+    `${path}.unauthenticated_invoker_during_window`,
+  );
   exact(relay.application_authentication, 'audience_bound_relay_user_hello', `${path}.application_authentication`);
   exact(relay.maximum_queued_bytes_per_connection, 262144, `${path}.maximum_queued_bytes_per_connection`);
   exact(relay.maximum_connections, 8, `${path}.maximum_connections`);
@@ -235,6 +278,7 @@ function validateRelay(value, expected, path) {
   exact(relay.maximum_aggregate_queued_bytes, 4194304, `${path}.maximum_aggregate_queued_bytes`);
   exact(relay.trusted_client_address_source, 'immediate_tcp_peer', `${path}.trusted_client_address_source`);
   exact(relay.forwarded_client_headers_trusted, false, `${path}.forwarded_client_headers_trusted`);
+  exact(relay.memory_mib, 512, `${path}.memory_mib`);
 }
 
 function validateTopology(value) {
@@ -311,8 +355,10 @@ function validatePreconditions(value) {
     exactKeys(entry, ['id', 'state', 'requirement'], `preconditions[${index}]`);
     exact(entry, expectedPlan.preconditions[index], `preconditions[${index}]`);
   });
-  exact(value.filter(({ state }) => state === 'satisfied').map(({ id }) => id), ['PIN-01', 'SIGNING-01', 'APP-CHECK-01', 'ROTATION-ENTRY-01'], 'satisfied preconditions');
-  exact(value.filter(({ state }) => state === 'open').length, 5, 'open precondition count');
+  exact(value.filter(({ state }) => state === 'satisfied').map(({ id }) => id), [
+    'PIN-01', 'SIGNING-01', 'APP-CHECK-01', 'ROTATION-ENTRY-01', 'RELAY-01',
+  ], 'satisfied preconditions');
+  exact(value.filter(({ state }) => state === 'open').length, 4, 'open precondition count');
 }
 
 function validateMatrix(value) {
@@ -394,7 +440,10 @@ function validateRollback(value) {
   exact(rollback.state, 'designed_not_executed', 'rollback.state');
   exact(rollback.required_final_state.control_plane_ingress, 'ALLOW_INTERNAL_ONLY', 'rollback.required_final_state.control_plane_ingress');
   exact(rollback.required_final_state.control_plane_unauthenticated_invokers, 0, 'rollback.required_final_state.control_plane_unauthenticated_invokers');
-  exact(rollback.required_final_state.relay_services, 0, 'rollback.required_final_state.relay_services');
+  exact(rollback.required_final_state.relay_services, 2, 'rollback.required_final_state.relay_services');
+  exact(rollback.required_final_state.relay_phase, 'private_ready', 'rollback.required_final_state.relay_phase');
+  exact(rollback.required_final_state.relay_public_invokers, 0, 'rollback.required_final_state.relay_public_invokers');
+  exact(rollback.required_final_state.relay_service_account_user_managed_keys, 0, 'rollback.required_final_state.relay_service_account_user_managed_keys');
   exact(rollback.required_final_state.miakapp_3_touched, false, 'rollback.required_final_state.miakapp_3_touched');
 }
 
@@ -416,8 +465,8 @@ export function validateBrowserRelayPlanValue(value) {
     'rollback',
   ], 'plan');
   exact(plan.schema, 'miakapp.staging-browser-relay-plan/1', 'plan.schema');
-  exact(plan.revision, 8, 'plan.revision');
-  exact(plan.state, 'relay_process_admission_merged_root_reviewed_not_deployed', 'plan.state');
+  exact(plan.revision, 9, 'plan.revision');
+  exact(plan.state, 'private_relays_ready_plan_rebased_not_deployed', 'plan.state');
   validateTarget(plan.target);
   validatePins(plan.pins);
   validateBaseline(plan.baseline);
@@ -452,4 +501,40 @@ export function validateBrowserRelayPlan(path) {
     reject('plan is not in exact canonical JSON form');
   }
   return validateBrowserRelayPlanValue(plan);
+}
+
+export function validateBrowserRelayV8Plan(
+  path = new URL('plan-v8.json', import.meta.url),
+) {
+  const entry = lstatSync(path);
+  if (!entry.isFile() || entry.isSymbolicLink()
+    || entry.size === 0 || entry.size > MAXIMUM_PLAN_BYTES) {
+    reject('historical revision-8 plan must be a bounded regular file');
+  }
+  const bytes = readFileSync(path);
+  if (createHash('sha256').update(bytes).digest('hex') !== BROWSER_RELAY_V8_PLAN_SHA256) {
+    reject('historical revision-8 plan digest has drifted');
+  }
+  let plan;
+  try {
+    plan = JSON.parse(bytes.toString('utf8'));
+  } catch {
+    return reject('historical revision-8 plan is not valid JSON');
+  }
+  if (`${JSON.stringify(plan, null, 2)}\n` !== bytes.toString('utf8')) {
+    reject('historical revision-8 plan is not in exact canonical JSON form');
+  }
+  rejectPrivateMaterial(plan);
+  if (plan.schema !== 'miakapp.staging-browser-relay-plan/1'
+    || plan.revision !== 8
+    || plan.state !== 'relay_process_admission_merged_root_reviewed_not_deployed'
+    || plan.target?.project_id !== 'miakapp-v4-staging'
+    || plan.target?.cloud_mutation_authorized_by_document !== false
+    || plan.target?.public_ingress_currently_active !== false
+    || plan.target?.acceptance_executed !== false
+    || plan.pins?.relay_services_profile_sha256
+      !== 'bc9b231cc9724f19a26ef5c3bbd6da6a69ec79b00cb976e77c73015d5db10db7') {
+    reject('historical revision-8 plan boundary has drifted');
+  }
+  return Object.freeze(plan);
 }

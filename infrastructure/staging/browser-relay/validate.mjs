@@ -11,7 +11,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       const plan = validateBrowserRelayPlan(process.argv[2]);
       console.log([
         `Validated ${plan.schema} for ${plan.target.project_id}.`,
-        'The bounded edge-profile source is converged privately and the relay service root is reviewed but dormant; the live matrix remains undeployed, grants no cloud mutation and contains no acceptance evidence.',
+        'The bounded edge-profile source is converged privately and two exact-audience relays are private-ready; the live matrix remains undeployed, grants no cloud mutation and contains no acceptance evidence.',
       ].join(' '));
     } catch (error) {
       console.error(error instanceof Error ? error.message : 'Staging browser-relay plan is invalid');
