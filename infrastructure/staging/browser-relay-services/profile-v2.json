@@ -1,6 +1,6 @@
 {
-  "schema": "miakapp.staging-relay-services-profile/3",
-  "state": "private_bootstrap_entrypoint_prepared_not_executed",
+  "schema": "miakapp.staging-relay-services-profile/2",
+  "state": "verified_image_bound_no_operator_entrypoint",
   "terraform_source_sha256": "8a9e1b5c37e1c25befccfd2b2eac838639a74901785c88e83521a2f897b9f746",
   "project_id": "miakapp-v4-staging",
   "project_number": "1072737219170",
@@ -12,8 +12,6 @@
   "contracts": {
     "historical_profile_path": "browser-relay-services/profile-v1.json",
     "historical_profile_sha256": "bc9b231cc9724f19a26ef5c3bbd6da6a69ec79b00cb976e77c73015d5db10db7",
-    "previous_profile_path": "browser-relay-services/profile-v2.json",
-    "previous_profile_sha256": "26535e8c8b56d5a0a0875049a1e76aade4e1246b0808470ab4483bc01a2f48cb",
     "relay_image_result_path": "browser-relay-image/result-v2.json",
     "relay_image_result_sha256": "dcf1ea4d63e9c7e13970d77c40dcc0ebc43215ffc6ffc3293ce28b78868e1649"
   },
@@ -104,28 +102,6 @@
     "private_ready",
     "public_window"
   ],
-  "operation": {
-    "phase": "private_bootstrap",
-    "claim_bucket": "miakapp-v4-staging-tfstate-1072737219170",
-    "claim_object": "terraform/browser-relay-services/operations/private-bootstrap-v1.json",
-    "state_object": "terraform/browser-relay-services/default.tfstate",
-    "initial_state_generation": "1788655780811691",
-    "initial_state_size_bytes": 181,
-    "initial_state_sha256": "50686c3190e540e14c4546b8b9abc977ee9546af66899e1654a2b8d573024140",
-    "initial_state_serial": 1,
-    "initial_state_lineage_sha256": "3d99b2335a31d39b341036981987054211455d6ee4acd229cc0459cd0995807f",
-    "plan_ttl_seconds": 7200,
-    "maximum_terraform_creates": 4,
-    "maximum_relay_services": 2,
-    "maximum_public_iam_members": 0,
-    "maximum_live_requests": 0,
-    "maximum_monthly_increment_eur": 1,
-    "retry_authorized": false,
-    "destroy_authorized": false,
-    "public_invocation_authorized": false,
-    "hosting_release_authorized": false,
-    "persistent_credentials_authorized": false
-  },
   "effects": {
     "persistent_credentials": false,
     "secret_mounts": false,

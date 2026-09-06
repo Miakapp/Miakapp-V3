@@ -4,16 +4,25 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 export const ALLOWED_RELAY_SERVICE_FILES = Object.freeze([
   '.terraform.lock.hcl',
   'README.md',
+  'apply.mjs',
+  'apply.sh',
+  'claim.mjs',
+  'cli.mjs',
   'contract.mjs',
   'foundation.tf',
   'guard.mjs',
+  'inventory.mjs',
   'locals.tf',
   'main.tf',
   'outputs.tf',
+  'plan.mjs',
+  'plan.sh',
   'profile-v1.json',
+  'profile-v2.json',
   'profile.json',
   'providers.tf',
   'terraform-cli.tfrc',
+  'validate-plan.mjs',
   'variables.tf',
   'versions.tf',
 ]);
@@ -28,13 +37,15 @@ function exactNames(actual, expected, path) {
   }
 }
 
-function validateRegularNonExecutableFile(url, description) {
+const EXECUTABLE_FILES = new Set(['apply.sh', 'plan.sh']);
+
+function validateRegularFile(url, description, executable = false) {
   const entry = lstatSync(url);
   if (!entry.isFile() || entry.isSymbolicLink()) {
     throw new Error(`${description} must be a regular file`);
   }
-  if ((entry.mode & 0o111) !== 0) {
-    throw new Error(`${description} must not be executable`);
+  if (executable ? (entry.mode & 0o111) === 0 : (entry.mode & 0o111) !== 0) {
+    throw new Error(`${description} has unexpected executable permissions`);
   }
 }
 
@@ -49,7 +60,11 @@ export function validateRelayServicesRoot(rootUrl) {
     }
     if (entry.isFile()) {
       files.push(entry.name);
-      validateRegularNonExecutableFile(url, `Relay-services entry ${entry.name}`);
+      validateRegularFile(
+        url,
+        `Relay-services entry ${entry.name}`,
+        EXECUTABLE_FILES.has(entry.name),
+      );
     } else if (entry.isDirectory()) {
       directories.push(entry.name);
     } else {
@@ -65,7 +80,7 @@ export function validateRelayServicesRoot(rootUrl) {
   const testUrl = new URL('tests/', rootUrl);
   const tests = readdirSync(testUrl, { withFileTypes: true });
   for (const entry of tests) {
-    validateRegularNonExecutableFile(new URL(entry.name, testUrl), `Relay-services test ${entry.name}`);
+    validateRegularFile(new URL(entry.name, testUrl), `Relay-services test ${entry.name}`);
   }
   exactNames(
     tests.map(({ name }) => name),

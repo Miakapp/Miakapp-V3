@@ -122,8 +122,14 @@ node --check infrastructure/staging/browser-relay-edge/runtime.mjs
 node --check infrastructure/staging/browser-relay-edge/window.mjs
 node infrastructure/staging/browser-relay-services/guard.mjs \
   "${repository_root}/infrastructure/staging/browser-relay-services"
+node --check infrastructure/staging/browser-relay-services/apply.mjs
+node --check infrastructure/staging/browser-relay-services/claim.mjs
+node --check infrastructure/staging/browser-relay-services/cli.mjs
 node --check infrastructure/staging/browser-relay-services/contract.mjs
 node --check infrastructure/staging/browser-relay-services/guard.mjs
+node --check infrastructure/staging/browser-relay-services/inventory.mjs
+node --check infrastructure/staging/browser-relay-services/plan.mjs
+node --check infrastructure/staging/browser-relay-services/validate-plan.mjs
 node infrastructure/staging/browser-relay-services/contract.mjs \
   infrastructure/staging/browser-relay-services/profile.json
 node infrastructure/staging/browser-relay-image/guard.mjs \
