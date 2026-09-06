@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { lstatSync, readFileSync } from 'node:fs';
 import { isDeepStrictEqual } from 'node:util';
 
-import { RELAY_SERVICES_PROFILE_SHA256 } from '../browser-relay-services/contract.mjs';
+import { RELAY_SERVICES_V1_PROFILE_SHA256 } from '../browser-relay-services/contract.mjs';
 
 export const BROWSER_RELAY_PLAN_SHA256 = '4a5c13999d9f7f328b1b8b867bbd86d4c5e80cb980d9eb1324028ea0e5785343';
 export const BROWSER_RELAY_PLAN_PATH = 'browser-relay/plan.json';
@@ -142,7 +142,7 @@ function validatePins(value) {
   }
   exact(
     pins.relay_services_profile_sha256,
-    RELAY_SERVICES_PROFILE_SHA256,
+    RELAY_SERVICES_V1_PROFILE_SHA256,
     'pins.relay_services_profile_sha256',
   );
   exact(pins, expectedPlan.pins, 'pins');

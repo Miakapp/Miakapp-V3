@@ -1,16 +1,21 @@
-# Dormant staging browser-relay services root
+# Digest-bound staging browser-relay services root
 
 This directory defines the two ephemeral Cloud Run relay services required by
-the live browser acceptance matrix. It is deliberately dormant: it has no plan,
-apply, destroy, cloud inventory or authorization entrypoint. Importing or
+the live browser acceptance matrix. It remains deliberately non-operational: it
+has no plan, apply, destroy, cloud inventory or authorization entrypoint. Importing or
 validating its JavaScript modules makes no network request, and the committed
 Terraform has never been applied.
 
-The root pins the merged Miakapp-Server source, requires an Artifact Registry
-image by immutable `sha256` digest and gives both revisions one keyless service
-account with no project role, secret, database access or VPC connector. Each
-service scales from zero to one 1-vCPU/256-MiB instance, accepts at most eight
-concurrent requests and has a 900-second request timeout for WebSockets.
+The root now binds the merged Miakapp-Server source to the exact verified
+Artifact Registry digest
+`sha256:23a19a26e8a24f6434ab8bc557dfa3fa799e0262e3400170e3bf064101a890b1`.
+The image is no longer an operator-controlled Terraform variable. The v1
+profile without an image is retained as historical evidence, while the current
+profile is tied to the byte-exact sanitized build result. Both revisions share
+one keyless service account with no project role, secret, database access or VPC
+connector. Each service scales from zero to one 1-vCPU/256-MiB instance,
+accepts at most eight concurrent requests and has a 900-second request timeout
+for WebSockets.
 
 ## Lifecycle
 
@@ -30,8 +35,8 @@ The IAM resources depend on the services, so forward creation is public-last
 and Terraform teardown is IAM-first. A future digest-bound orchestrator must
 still prove the transition plan, inventory the assigned URLs, render rollback,
 bind a single-use claim and coordinate the control-plane edge before any phase
-is applied. This source alone does not satisfy `RELAY-01` and does not authorize
-public ingress.
+is applied. This source closes the image prerequisite but does not by itself
+satisfy `RELAY-01` or authorize public ingress.
 
 ## Admission and privacy boundary
 

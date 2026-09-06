@@ -4,7 +4,12 @@ import { dirname, join } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
-export const RELAY_SERVICES_PROFILE_SHA256 = 'bc9b231cc9724f19a26ef5c3bbd6da6a69ec79b00cb976e77c73015d5db10db7';
+export const RELAY_SERVICES_V1_PROFILE_PATH = 'browser-relay-services/profile-v1.json';
+export const RELAY_SERVICES_V1_PROFILE_SHA256 =
+  'bc9b231cc9724f19a26ef5c3bbd6da6a69ec79b00cb976e77c73015d5db10db7';
+export const RELAY_SERVICES_PROFILE_PATH = 'browser-relay-services/profile.json';
+export const RELAY_SERVICES_PROFILE_SHA256 =
+  '26535e8c8b56d5a0a0875049a1e76aade4e1246b0808470ab4483bc01a2f48cb';
 const MAXIMUM_PROFILE_BYTES = 16 * 1024;
 const PRIVATE_MATERIAL = Object.freeze([
   /-----BEGIN [A-Z ]*PRIVATE KEY-----/u,
@@ -36,17 +41,27 @@ export const RELAY_SERVICES_TERRAFORM_SOURCE_FILES = Object.freeze([
   'variables.tf',
   'versions.tf',
 ]);
+const root = dirname(fileURLToPath(import.meta.url));
+const profilePath = join(root, 'profile.json');
+const v1ProfilePath = join(root, 'profile-v1.json');
 
 const EXPECTED_PROFILE = Object.freeze({
-  schema: 'miakapp.staging-relay-services-profile/1',
-  state: 'dormant_no_operator_entrypoint',
-  terraform_source_sha256: '0674bea2b9ba1985910484c71cafd55356996ab3991f6794339219a7fa237037',
+  schema: 'miakapp.staging-relay-services-profile/2',
+  state: 'verified_image_bound_no_operator_entrypoint',
+  terraform_source_sha256: '8a9e1b5c37e1c25befccfd2b2eac838639a74901785c88e83521a2f897b9f746',
   project_id: 'miakapp-v4-staging',
   project_number: '1072737219170',
   region: 'europe-west9',
   state_backend: {
     bucket: 'miakapp-v4-staging-tfstate-1072737219170',
     prefix: 'terraform/browser-relay-services',
+  },
+  contracts: {
+    historical_profile_path: RELAY_SERVICES_V1_PROFILE_PATH,
+    historical_profile_sha256: RELAY_SERVICES_V1_PROFILE_SHA256,
+    relay_image_result_path: 'browser-relay-image/result-v2.json',
+    relay_image_result_sha256:
+      'dcf1ea4d63e9c7e13970d77c40dcc0ebc43215ffc6ffc3293ce28b78868e1649',
   },
   pins: {
     miakapp_server_commit: 'df10674e034f30eec80760f5ec94bc108cff026f',
@@ -56,6 +71,15 @@ const EXPECTED_PROFILE = Object.freeze({
   },
   image: {
     repository: 'europe-west9-docker.pkg.dev/miakapp-v4-staging/miakapp-control-plane/miakapp-server',
+    digest: 'sha256:23a19a26e8a24f6434ab8bc557dfa3fa799e0262e3400170e3bf064101a890b1',
+    digest_reference:
+      'europe-west9-docker.pkg.dev/miakapp-v4-staging/miakapp-control-plane/miakapp-server@sha256:23a19a26e8a24f6434ab8bc557dfa3fa799e0262e3400170e3bf064101a890b1',
+    config_digest:
+      'sha256:344314bad3b6f6f1f280737b3d010cdcafb2ead6cf868c8b97e2c367401001a9',
+    source_archive_sha256:
+      '93fd720736453e3555be625bbb993194f48a5388821169c939674b04088f158e',
+    source_object_generation: '1788648564283151',
+    build_id: '70e25c75-3c30-497a-982a-f7bebe71c4ee',
     digest_required: true,
     mutable_tags_allowed: false,
     provenance_required: true,
@@ -178,7 +202,36 @@ export function relayServicesTerraformSourceSha256(rootPath) {
   return createHash('sha256').update(JSON.stringify(sourceDigests)).digest('hex');
 }
 
-export function validateRelayServicesProfile(path) {
+export function validateRelayServicesV1Profile(path = v1ProfilePath) {
+  const entry = lstatSync(path);
+  if (!entry.isFile() || entry.isSymbolicLink() || entry.size === 0
+    || entry.size > MAXIMUM_PROFILE_BYTES) {
+    reject('Historical profile must be a bounded regular file');
+  }
+  const bytes = readFileSync(path);
+  if (createHash('sha256').update(bytes).digest('hex') !== RELAY_SERVICES_V1_PROFILE_SHA256) {
+    reject('Historical profile digest has drifted');
+  }
+  let profile;
+  try {
+    profile = JSON.parse(bytes.toString('utf8'));
+  } catch {
+    reject('Historical profile must be valid JSON');
+  }
+  rejectPrivateMaterial(profile, 'historical_profile');
+  if (profile.schema !== 'miakapp.staging-relay-services-profile/1'
+    || profile.state !== 'dormant_no_operator_entrypoint'
+    || profile.terraform_source_sha256
+      !== '0674bea2b9ba1985910484c71cafd55356996ab3991f6794339219a7fa237037'
+    || profile.image?.digest !== undefined
+    || profile.image?.repository
+      !== 'europe-west9-docker.pkg.dev/miakapp-v4-staging/miakapp-control-plane/miakapp-server') {
+    reject('Historical profile does not match the reviewed pre-image boundary');
+  }
+  return Object.freeze(profile);
+}
+
+export function validateRelayServicesProfile(path = profilePath) {
   const entry = lstatSync(path);
   if (!entry.isFile() || entry.isSymbolicLink() || entry.size === 0
     || entry.size > MAXIMUM_PROFILE_BYTES) {
@@ -210,7 +263,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   } else {
     try {
       const profile = validateRelayServicesProfile(profilePath);
-      console.log(`Validated ${profile.schema} for ${profile.project_id}; no cloud operation is exposed.`);
+      console.log(`Validated ${profile.schema} for ${profile.project_id}; the verified image is digest-bound and no cloud operation is exposed.`);
     } catch (error) {
       console.error(error instanceof Error ? error.message : 'Staging relay-services profile is invalid');
       process.exitCode = 1;

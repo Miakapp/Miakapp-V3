@@ -10,6 +10,7 @@ export const ALLOWED_RELAY_SERVICE_FILES = Object.freeze([
   'locals.tf',
   'main.tf',
   'outputs.tf',
+  'profile-v1.json',
   'profile.json',
   'providers.tf',
   'terraform-cli.tfrc',
