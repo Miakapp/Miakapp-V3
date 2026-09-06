@@ -776,8 +776,12 @@ current consumer.
     authority and has made no live request. The pinned MiakAPI Node factory
     binding is now also present: its reproducible single-file bundle exposes
     exactly one provider and coordinator construction, forces the Home Key
-    exchange through the injected transport and starts no session. Next add the
-    independent closed aggregation before executing the matrix once.
+    exchange through the injected transport and starts no session. The
+    independent closed aggregator is now present as well: every assertion,
+    counter and public identifier has one exact source owner and 18 ordered
+    single-use receipts reduce to the existing engine schema without retaining
+    raw evidence. Next implement those source observers and the Playwright
+    bridge before executing the matrix once.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform
     no-change plan. Its fresh post-merge preflight is complete and the rollback

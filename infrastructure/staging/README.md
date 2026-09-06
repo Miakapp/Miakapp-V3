@@ -27,10 +27,10 @@ additional live requests, destroy, or production changes.
 
 The separate [`browser-relay/`](browser-relay/) package now freezes the rebased
 closed live topology, cost, signing-key and rollback matrix. It records twelve
-pending cases and one open implementation precondition. The App Check
+pending cases and confirms all nine implementation preconditions are satisfied. The App Check
 provider, standalone real-browser attestation, two-key runtime, guarded
 rotation-entry and private-ready relay prerequisites are satisfied, while the
-complete authenticated `LIVE-02` relay case remains pending.
+complete authenticated `LIVE-01` through `LIVE-12` matrix remains pending.
 It contains no deployer or result and does not change the private cloud baseline
 described below.
 
@@ -384,6 +384,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`browser-relay-fixture/`](browser-relay-fixture/) | Dormant single synthetic-Home lifecycle controller | Proves initial absence before creation, configures the fixed MiakAPI coordinator, emits one in-memory custom token per browser, supports one relay rotation and requires coordinator-first cleanup plus verified final absence; the controller itself has no transport or live authority |
 | [`browser-relay-fixture-cloud/`](browser-relay-fixture-cloud/) | Dormant injected Google/Firebase fixture adapter | Implements bounded keyless JWT signing, fixed control-plane mutations, complete inventory and preconditioned atomic cleanup for the controller; no CLI, ambient credentials, IAM change or live authority is present |
 | [`browser-relay-fixture-miakapi/`](browser-relay-fixture-miakapi/) | Dormant pinned MiakAPI Node factory binding | Reproducibly vendors the exact coordinator commit, injects the Home Key exchange transport and permits one provider and coordinator construction without starting a session; no CLI or live authority is present |
+| [`browser-relay-aggregator/`](browser-relay-aggregator/) | Dormant independent-source engine-result aggregator | Assigns all 40 assertions and eight counters to exact source owners, accepts 18 single-use closed receipts in canonical order and emits only the existing runner schema; it is not wired or executed and grants no live authority |
 | [`browser-relay-monitoring/`](browser-relay-monitoring/) | Closed allow-listed monitoring preflight and evaluator | One post-merge read-only observation verified all six metric surfaces, the existing EUR 10 budget and the private edge/relay boundary; no mutation or acceptance execution occurred |
 | [`browser-relay-rollback/`](browser-relay-rollback/) | Closed-target rollback preflight | Post-merge observation verified all ten private-target facts and a four-resource Terraform no-change plan; its sanitized result records zero mutation, public-ingress change and acceptance execution |
 | [`browser-relay-orchestrator/`](browser-relay-orchestrator/) | Dormant single-use edge orchestrator | Post-merge read-only preflight proved the claim absent and the rollback target private and converged; no claim, mutation, public edge or live acceptance has run |
@@ -778,6 +779,16 @@ HTTP function into MiakAPI so the library's global fetch fallback is
 unreachable. Constructing either factory makes no HTTP or WebSocket request and
 does not start a coordinator. No credential, cloud mutation or live evidence
 was added.
+The adjacent [`browser-relay-aggregator/`](browser-relay-aggregator/) package
+now closes the independent evidence-reduction boundary. Chromium must supply
+eight source-specific receipts; Firefox and WebKit supply five each. All 40
+runner assertions have one non-overlapping owner, and each counter or public
+identifier is accepted only from its named browser, App Check, Hosting,
+control-plane, relay, coordinator, KMS or Firestore source. The single-use
+state machine rejects missing, repeated or out-of-order receipts, permanently
+fails after invalid evidence and emits only the already reviewed engine result
+schema. It has no observer adapters, credentials, CLI, cloud mutation or live
+authority, so its current evidence remains entirely offline.
 The adjacent [`browser-relay-operation/`](browser-relay-operation/) package now
 closes the remaining ordering gap without executing it. The claimed edge owns
 the control-plane transition. Inside that single window the operation creates
