@@ -11,23 +11,25 @@ import {
   PROJECT_ID,
   PROJECT_NUMBER,
   REGION,
+  RELAY_SERVICES_BOOTSTRAP_FAILURE_SHA256,
   assertSafeWorkloadEnvironment,
   canonicalJson,
   privateRelayServicesBundle,
   readPrivateFile,
-  readRelayServicesBootstrapPlanMetadata,
+  readRelayServicesRecoveryPlanMetadata,
   sha256,
   validateBootstrapRelayVariables,
-  validateRelayServicesBootstrapAuthorization,
   validateRelayServicesProfile,
+  validateRelayServicesRecoveryAuthorization,
   verifyExactMain,
   writePrivateFile,
 } from './contract.mjs';
 import {
-  createRelayBootstrapClaim,
-  observePinnedRelayBootstrapClaim,
-  validateRelayBootstrapClaimReceipt,
-} from './claim.mjs';
+  createRelayRecoveryClaim,
+  observePinnedOriginalRelayBootstrapClaim,
+  observePinnedRelayRecoveryClaim,
+  validateRelayRecoveryClaimReceipt,
+} from './recovery-claim.mjs';
 import {
   createTerraformData,
   parseJson,
@@ -43,14 +45,14 @@ import { validateRelayServicesRoot } from './guard.mjs';
 import {
   observeRelayServicesInventory,
   relayServicesInventorySha256,
-  validateRelayServicesBootstrapBaseline,
-  validateRelayServicesPrivateBootstrapInventory,
+  validateRelayServicesRecoveredInventory,
+  validateRelayServicesRecoveryBaseline,
 } from './inventory.mjs';
-import { readAndValidateInitialRelayServicesPlan } from './validate-plan.mjs';
+import { validateRelayServicesTerraformOutput } from './apply.mjs';
+import { readAndValidateRecoveryRelayServicesPlan } from './validate-plan.mjs';
 
-const APPLY_AUTHORIZATION = 'MIAKAPP_STAGING_RELAY_SERVICES_BOOTSTRAP_APPLY_AUTHORIZATION';
-const ATTEMPT_MARKER = 'mutation-attempted.json';
-export const RELAY_SERVICES_BOOTSTRAP_OPERATION_CONSUMED = true;
+const APPLY_AUTHORIZATION = 'MIAKAPP_STAGING_RELAY_SERVICES_RECOVERY_APPLY_AUTHORIZATION';
+const ATTEMPT_MARKER = 'recovery-mutation-attempted.json';
 process.umask(0o077);
 
 function reject(message) {
@@ -72,11 +74,11 @@ function writeDiagnostics(path, result) {
 function readVariables(path, metadata) {
   const bytes = readPrivateFile(path, 64 * 1024);
   if (sha256(bytes) !== metadata.terraform_variables_sha256) {
-    reject('Private relay-services variables digest has drifted');
+    reject('Private relay recovery variables digest has drifted');
   }
-  const value = parseJson(bytes, 'Private relay-services variables', 64 * 1024);
+  const value = parseJson(bytes, 'Private relay recovery variables', 64 * 1024);
   if (canonicalJson(value) !== bytes.toString('utf8')) {
-    reject('Private relay-services variables are not canonical JSON');
+    reject('Private relay recovery variables are not canonical JSON');
   }
   return Object.freeze({ bytes, value: validateBootstrapRelayVariables(value) });
 }
@@ -84,7 +86,7 @@ function readVariables(path, metadata) {
 function expectedPostClaimBaseline(baseline, receipt) {
   return {
     ...baseline,
-    operation_claim: {
+    recovery_claim: {
       schema: 'miakapp.staging-browser-relay-services-claim-observation/1',
       bucket: receipt.bucket,
       object: receipt.object,
@@ -97,73 +99,32 @@ function expectedPostClaimBaseline(baseline, receipt) {
 
 function writeMutationAttemptMarker(bundle, metadata) {
   writePrivateFile(join(bundle, ATTEMPT_MARKER), Buffer.from(canonicalJson({
-    schema: 'miakapp.staging-browser-relay-services-bootstrap-attempt/1',
-    operation: 'deploy-private-browser-relay-bootstrap',
+    schema: 'miakapp.staging-browser-relay-services-memory-recovery-attempt/1',
+    operation: 'recover-private-browser-relay-bootstrap-memory',
     project_id: PROJECT_ID,
     repository_commit: metadata.repository_commit,
     terraform_plan_sha256: metadata.terraform_plan_sha256,
     baseline_sha256: metadata.baseline_sha256,
+    bootstrap_failure_sha256: RELAY_SERVICES_BOOTSTRAP_FAILURE_SHA256,
     attempted_at: new Date().toISOString(),
     retry_authorized: false,
   }), 'utf8'), 0o400);
 }
 
-export function validateRelayServicesTerraformOutput(value) {
-  const profile = validateRelayServicesProfile();
-  if (value === null || Array.isArray(value) || typeof value !== 'object'
-    || value.schema !== 'miakapp.staging-browser-relay-services/1'
-    || value.deployment_phase !== 'private_bootstrap'
-    || value.project_id !== PROJECT_ID
-    || value.project_number !== PROJECT_NUMBER
-    || value.region !== REGION
-    || value.relay_source_commit !== profile.pins.miakapp_server_commit
-    || value.relay_image !== profile.image.digest_reference
-    || value.runtime_identity !== profile.runtime_identity.email
-    || !isDeepStrictEqual(value.runtime_project_roles, [])
-    || value.services === null || Array.isArray(value.services)
-    || typeof value.services !== 'object'
-    || !isDeepStrictEqual(Object.keys(value.services).sort(), ['relay-a', 'relay-b'])) {
-    reject('Relay-services Terraform output does not match the reviewed private bootstrap');
-  }
-  for (const service of profile.services) {
-    const observed = value.services[service.id];
-    const uriPattern = new RegExp(
-      service.audience_pattern.replace('^wss:', '^https:').replace('/ws$', '$'),
-      'u',
-    );
-    if (observed === null || Array.isArray(observed) || typeof observed !== 'object'
-      || observed.name !== service.name
-      || typeof observed.uri !== 'string' || !uriPattern.test(observed.uri)
-      || observed.audience !== service.bootstrap_audience
-      || observed.public_invoker !== false
-      || observed.minimum_instances !== 0
-      || observed.maximum_instances !== 1
-      || observed.concurrency !== profile.cloud_run.concurrency
-      || observed.timeout_seconds !== profile.cloud_run.request_timeout_seconds
-      || observed.deletion_protection !== false) {
-      reject(`${service.id} Terraform output does not match the reviewed private bootstrap`);
-    }
-  }
-  return Object.freeze(value);
-}
-
-export function buildRelayServicesBootstrapResult({
+export function buildRelayServicesRecoveryResult({
   metadata,
   claimReceipt,
   output,
   inventory,
 }) {
   const profile = validateRelayServicesProfile();
-  const checkedClaim = validateRelayBootstrapClaimReceipt(
+  const checkedClaim = validateRelayRecoveryClaimReceipt(
     claimReceipt,
     Buffer.from(canonicalJson(metadata), 'utf8'),
     metadata,
   );
   const checkedOutput = validateRelayServicesTerraformOutput(output);
-  const checkedInventory = validateRelayServicesPrivateBootstrapInventory(
-    inventory,
-    checkedClaim,
-  );
+  const checkedInventory = validateRelayServicesRecoveredInventory(inventory, checkedClaim);
   for (const service of profile.services) {
     const relay = checkedInventory.relays.find(({ id }) => id === service.id);
     if (relay.uri !== checkedOutput.services[service.id].uri) {
@@ -171,16 +132,20 @@ export function buildRelayServicesBootstrapResult({
     }
   }
   return Object.freeze({
-    schema: 'miakapp.staging-browser-relay-services-bootstrap-result/1',
-    operation: 'deploy-private-browser-relay-bootstrap',
+    schema: 'miakapp.staging-browser-relay-services-memory-recovery-result/1',
+    operation: 'recover-private-browser-relay-bootstrap-memory',
     project_id: PROJECT_ID,
     project_number: PROJECT_NUMBER,
     region: REGION,
     repository_commit: metadata.repository_commit,
+    profile_sha256: metadata.profile_sha256,
+    bootstrap_failure_sha256: RELAY_SERVICES_BOOTSTRAP_FAILURE_SHA256,
+    original_claim_generation: metadata.original_claim_generation,
+    original_claim_sha256: metadata.original_claim_sha256,
     terraform_plan_sha256: metadata.terraform_plan_sha256,
     baseline_sha256: metadata.baseline_sha256,
-    claim_generation: checkedClaim.generation,
-    claim_sha256: checkedClaim.sha256,
+    recovery_claim_generation: checkedClaim.generation,
+    recovery_claim_sha256: checkedClaim.sha256,
     final_inventory_sha256: relayServicesInventorySha256(checkedInventory),
     terraform_state_generation: checkedInventory.terraform_state.generation,
     terraform_state_sha256: checkedInventory.terraform_state.sha256,
@@ -195,6 +160,7 @@ export function buildRelayServicesBootstrapResult({
         name: service.name,
         uri: relay.uri,
         bootstrap_audience: service.bootstrap_audience,
+        memory: profile.cloud_run.memory,
         public_invoker: false,
         minimum_instances: 0,
         maximum_instances: 1,
@@ -213,7 +179,7 @@ async function captureUncertainInventory(bundle) {
   try {
     const session = await verifiedOperatorSession();
     const inventory = await observeRelayServicesInventory(session);
-    const path = join(bundle, 'uncertain-inventory.json');
+    const path = join(bundle, 'recovery-uncertain-inventory.json');
     if (!existsSync(path)) {
       writePrivateFile(path, Buffer.from(canonicalJson(inventory), 'utf8'), 0o400);
     }
@@ -223,11 +189,8 @@ async function captureUncertainInventory(bundle) {
 }
 
 async function main() {
-  if (RELAY_SERVICES_BOOTSTRAP_OPERATION_CONSUMED) {
-    throw new Error('The private relay bootstrap apply is consumed after its failed single attempt; use the separately reviewed memory recovery');
-  }
   if (process.argv.length !== 3 || process.argv[2] === undefined) {
-    throw new Error(`Usage: ${APPLY_AUTHORIZATION}=... ./apply.sh <private-bundle>`);
+    throw new Error(`Usage: ${APPLY_AUTHORIZATION}=... ./recovery-apply.sh <private-bundle>`);
   }
   assertSafeWorkloadEnvironment(process.env, APPLY_AUTHORIZATION);
   validateRelayServicesRoot(new URL('./', import.meta.url));
@@ -235,35 +198,35 @@ async function main() {
   validateStagingManifest();
   const bundle = privateRelayServicesBundle(process.argv[2], repositoryRoot);
   if (existsSync(join(bundle, ATTEMPT_MARKER))) {
-    reject('This relay-services bundle already attempted a mutation and must never be retried');
+    reject('This relay recovery bundle already attempted a mutation and must never be retried');
   }
 
   const metadataPath = join(bundle, 'metadata.json');
   const { bytes: metadataBytes, value: metadata } =
-    readRelayServicesBootstrapPlanMetadata(metadataPath);
+    readRelayServicesRecoveryPlanMetadata(metadataPath);
   verifyExactMain(repositoryRoot, metadata.repository_commit);
-  const planPath = join(bundle, 'relay-services-bootstrap.tfplan');
-  const planJsonPath = join(bundle, 'relay-services-bootstrap.tfplan.json');
+  const planPath = join(bundle, 'relay-services-memory-recovery.tfplan');
+  const planJsonPath = join(bundle, 'relay-services-memory-recovery.tfplan.json');
   const variablesPath = join(bundle, 'relay-services.auto.tfvars.json');
   const planBytes = readPrivateFile(planPath);
   const planJsonBytes = readPrivateFile(planJsonPath, 32 * 1024 * 1024);
   if (sha256(planBytes) !== metadata.terraform_plan_sha256
     || sha256(planJsonBytes) !== metadata.terraform_plan_json_sha256) {
-    reject('Private relay-services bundle digest verification failed');
+    reject('Private relay recovery bundle digest verification failed');
   }
-  const { value: variables } = readVariables(variablesPath, metadata);
-  validateRelayServicesBootstrapAuthorization(
+  readVariables(variablesPath, metadata);
+  validateRelayServicesRecoveryAuthorization(
     process.env[APPLY_AUTHORIZATION],
     planBytes,
     metadata.repository_commit,
     metadata.baseline_sha256,
   );
-  const summary = readAndValidateInitialRelayServicesPlan(planJsonPath);
+  const summary = readAndValidateRecoveryRelayServicesPlan(planJsonPath);
   if (!isDeepStrictEqual(summary, metadata.summary)) {
-    reject('Relay-services metadata summary no longer matches the reviewed plan');
+    reject('Relay recovery metadata summary no longer matches the reviewed plan');
   }
 
-  const terraformData = createTerraformData(bundle, 'bootstrap-apply');
+  const terraformData = createTerraformData(bundle, 'memory-recovery-apply');
   let mutationAttempted = false;
   try {
     const inspectionSession = await verifiedOperatorSession();
@@ -272,26 +235,27 @@ async function main() {
       cwd: relayServicesRoot,
       env: inspectionEnvironment,
       diagnosticDirectory: bundle,
-      description: 'apply-init',
+      description: 'recovery-apply-init',
     });
     const shown = run('terraform', ['show', '-json', planPath], {
       cwd: relayServicesRoot,
       env: inspectionEnvironment,
       diagnosticDirectory: bundle,
-      description: 'apply-show',
+      description: 'recovery-apply-show',
     });
     if (sha256(Buffer.from(shown.stdout)) !== metadata.terraform_plan_json_sha256) {
-      reject('Terraform relay-services plan no longer renders to the reviewed JSON');
+      reject('Terraform relay recovery plan no longer renders to the reviewed JSON');
     }
 
     const mutationSession = await verifiedOperatorSession();
-    const liveBaseline = validateRelayServicesBootstrapBaseline(
+    const liveBaseline = validateRelayServicesRecoveryBaseline(
       await observeRelayServicesInventory(mutationSession),
     );
+    await observePinnedOriginalRelayBootstrapClaim(mutationSession);
     const { bytes: freshMetadataBytes, value: freshMetadata } =
-      readRelayServicesBootstrapPlanMetadata(metadataPath);
+      readRelayServicesRecoveryPlanMetadata(metadataPath);
     verifyExactMain(repositoryRoot, freshMetadata.repository_commit);
-    validateRelayServicesBootstrapAuthorization(
+    validateRelayServicesRecoveryAuthorization(
       process.env[APPLY_AUTHORIZATION],
       planBytes,
       freshMetadata.repository_commit,
@@ -301,38 +265,38 @@ async function main() {
       || !freshMetadataBytes.equals(metadataBytes)
       || !isDeepStrictEqual(liveBaseline, freshMetadata.baseline)
       || relayServicesInventorySha256(liveBaseline) !== freshMetadata.baseline_sha256) {
-      reject('Live relay-services prerequisites changed after the saved plan was rendered');
+      reject('Live relay recovery prerequisites changed after the saved plan was rendered');
     }
 
     writeMutationAttemptMarker(bundle, freshMetadata);
     mutationAttempted = true;
-    const claimReceipt = await createRelayBootstrapClaim(
+    const claimReceipt = await createRelayRecoveryClaim(
       mutationSession,
       freshMetadataBytes,
       freshMetadata,
     );
     writePrivateFile(
-      join(bundle, 'claim-receipt.json'),
+      join(bundle, 'recovery-claim-receipt.json'),
       Buffer.from(canonicalJson(claimReceipt), 'utf8'),
       0o400,
     );
     const postClaim = await observeRelayServicesInventory(mutationSession);
     if (!isDeepStrictEqual(postClaim, expectedPostClaimBaseline(liveBaseline, claimReceipt))) {
-      reject('Staging resources changed unexpectedly while the global bootstrap claim was acquired');
+      reject('Staging resources changed unexpectedly while the global recovery claim was acquired');
     }
 
     const mutationEnvironment = terraformEnvironment(terraformData, mutationSession.accessToken);
     const applied = run('terraform', [
-      'apply', '-input=false', '-auto-approve', '-no-color', planPath,
+      'apply', '-input=false', '-lock-timeout=5m', '-auto-approve', '-no-color', planPath,
     ], {
       cwd: relayServicesRoot,
       env: mutationEnvironment,
       allowedStatuses: [0, 1],
       diagnosticDirectory: bundle,
-      description: 'terraform-apply',
+      description: 'terraform-recovery-apply',
     });
     const applyFailed = applied.status !== 0;
-    if (applyFailed) writeDiagnostics(join(bundle, 'apply-failure.log'), applied);
+    if (applyFailed) writeDiagnostics(join(bundle, 'recovery-apply-failure.log'), applied);
 
     const convergence = run('terraform', [
       'plan',
@@ -346,23 +310,24 @@ async function main() {
       env: mutationEnvironment,
       allowedStatuses: [0, 1, 2],
       diagnosticDirectory: bundle,
-      description: 'terraform-convergence',
+      description: 'terraform-recovery-convergence',
     });
     if (convergence.status !== 0) {
-      writeDiagnostics(join(bundle, 'convergence-failure.log'), convergence);
+      writeDiagnostics(join(bundle, 'recovery-convergence-failure.log'), convergence);
       reject(applyFailed
-        ? 'Relay-services apply failed and live state is incomplete or uncertain'
-        : 'Relay-services apply completed but the follow-up plan is not empty');
+        ? 'Relay-services recovery apply failed and live state is incomplete or uncertain'
+        : 'Relay-services recovery apply completed but the follow-up plan is not empty');
     }
 
     const evidenceSession = await verifiedOperatorSession();
-    await observePinnedRelayBootstrapClaim(
+    await observePinnedOriginalRelayBootstrapClaim(evidenceSession);
+    await observePinnedRelayRecoveryClaim(
       evidenceSession,
       claimReceipt,
       metadataBytes,
       metadata,
     );
-    const inventory = validateRelayServicesPrivateBootstrapInventory(
+    const inventory = validateRelayServicesRecoveredInventory(
       await observeRelayServicesInventory(evidenceSession),
       claimReceipt,
     );
@@ -373,36 +338,36 @@ async function main() {
       cwd: relayServicesRoot,
       env: evidenceEnvironment,
       diagnosticDirectory: bundle,
-      description: 'terraform-output',
+      description: 'terraform-recovery-output',
     });
     const output = parseJson(renderedOutput.stdout, 'Relay-services Terraform output');
-    const result = buildRelayServicesBootstrapResult({
+    const result = buildRelayServicesRecoveryResult({
       metadata,
       claimReceipt,
       output,
       inventory,
     });
-    const resultPath = join(bundle, 'result.json');
+    const resultPath = join(bundle, 'recovery-result.json');
     writePrivateFile(resultPath, Buffer.from(canonicalJson(result), 'utf8'), 0o400);
     chmodSync(planPath, 0o400);
     verifyExactMain(repositoryRoot, metadata.repository_commit);
     process.stdout.write([
       applyFailed
-        ? 'The provider returned an error after the exact private relay bootstrap converged.'
-        : 'The exact private relay bootstrap plan was applied and converged.',
+        ? 'The provider returned an error after the exact relay recovery converged.'
+        : 'The exact private relay memory recovery plan was applied and converged.',
       `Private result: ${resultPath}`,
-      'Relays: 2 private Cloud Run services, scale 0..1; public IAM members: 0.',
+      'Relays: 2 private Cloud Run services, 512 MiB, scale 0..1; public IAM members: 0.',
       'Runtime identity: keyless with zero project roles; live requests by driver: 0; Hosting releases: 0.',
-      'The global claim makes this bootstrap operation permanently non-retryable.',
+      'Both global claims remain durable and the recovery is permanently non-retryable.',
       '',
     ].join('\n'));
   } catch (error) {
     if (mutationAttempted) {
       await captureUncertainInventory(bundle);
       throw new Error([
-        error instanceof Error ? error.message : 'Private relay bootstrap failed.',
+        error instanceof Error ? error.message : 'Private relay recovery failed.',
         'The private bundle and post-attempt inventory were preserved when available.',
-        'Do not retry this saved plan or delete the global claim; reconcile from fresh evidence.',
+        'Do not retry either saved plan or delete either global claim; reconcile from fresh evidence.',
       ].join(' '));
     }
     throw error;
@@ -413,7 +378,7 @@ async function main() {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   main().catch((error) => {
-    console.error(error instanceof Error ? error.message : 'Private relay-services apply failed');
+    console.error(error instanceof Error ? error.message : 'Private relay recovery apply failed');
     process.exitCode = 1;
   });
 }

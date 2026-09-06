@@ -51,9 +51,16 @@ export const RELAY_SERVICES_V1_PROFILE_SHA256 =
 export const RELAY_SERVICES_V2_PROFILE_PATH = 'browser-relay-services/profile-v2.json';
 export const RELAY_SERVICES_V2_PROFILE_SHA256 =
   '26535e8c8b56d5a0a0875049a1e76aade4e1246b0808470ab4483bc01a2f48cb';
+export const RELAY_SERVICES_V3_PROFILE_PATH = 'browser-relay-services/profile-v3.json';
+export const RELAY_SERVICES_V3_PROFILE_SHA256 =
+  'a5bc737620e57aed5c7e828b4d558e3b246ba13edb40944a40febba6c14a9316';
+export const RELAY_SERVICES_BOOTSTRAP_FAILURE_PATH =
+  'browser-relay-services/bootstrap-failure-v1.json';
+export const RELAY_SERVICES_BOOTSTRAP_FAILURE_SHA256 =
+  'd98eb890376d5ec0b87ad91ffc88ca93eb206794d9c0d799b4fa7f0817f9a540';
 export const RELAY_SERVICES_PROFILE_PATH = 'browser-relay-services/profile.json';
 export const RELAY_SERVICES_PROFILE_SHA256 =
-  'a5bc737620e57aed5c7e828b4d558e3b246ba13edb40944a40febba6c14a9316';
+  '0f8b966a7bf412156a83b0ddc76996abc6b49c28d81cda0f3e4d2b1c16912733';
 export const PROJECT_ID = 'miakapp-v4-staging';
 export const PROJECT_NUMBER = '1072737219170';
 export const REGION = 'europe-west9';
@@ -61,6 +68,8 @@ export const STATE_BUCKET = 'miakapp-v4-staging-tfstate-1072737219170';
 export const STATE_OBJECT = 'terraform/browser-relay-services/default.tfstate';
 export const BOOTSTRAP_CLAIM_OBJECT =
   'terraform/browser-relay-services/operations/private-bootstrap-v1.json';
+export const RECOVERY_CLAIM_OBJECT =
+  'terraform/browser-relay-services/operations/private-bootstrap-memory-recovery-v1.json';
 const MAXIMUM_PROFILE_BYTES = 16 * 1024;
 const MAXIMUM_METADATA_BYTES = 1024 * 1024;
 const SHA256 = /^[0-9a-f]{64}$/u;
@@ -100,8 +109,10 @@ const root = dirname(fileURLToPath(import.meta.url));
 const profilePath = join(root, 'profile.json');
 const v1ProfilePath = join(root, 'profile-v1.json');
 const v2ProfilePath = join(root, 'profile-v2.json');
+const v3ProfilePath = join(root, 'profile-v3.json');
+const bootstrapFailurePath = join(root, 'bootstrap-failure-v1.json');
 
-const EXPECTED_PROFILE = Object.freeze({
+const EXPECTED_V3_PROFILE = Object.freeze({
   schema: 'miakapp.staging-relay-services-profile/3',
   state: 'private_bootstrap_entrypoint_prepared_not_executed',
   terraform_source_sha256: '8a9e1b5c37e1c25befccfd2b2eac838639a74901785c88e83521a2f897b9f746',
@@ -239,6 +250,60 @@ const EXPECTED_PROFILE = Object.freeze({
   },
 });
 
+const EXPECTED_PROFILE = Object.freeze({
+  ...EXPECTED_V3_PROFILE,
+  schema: 'miakapp.staging-relay-services-profile/4',
+  state: 'private_bootstrap_memory_recovery_entrypoint_prepared_not_executed',
+  contracts: {
+    historical_profile_path: RELAY_SERVICES_V1_PROFILE_PATH,
+    historical_profile_sha256: RELAY_SERVICES_V1_PROFILE_SHA256,
+    digest_bound_profile_path: RELAY_SERVICES_V2_PROFILE_PATH,
+    digest_bound_profile_sha256: RELAY_SERVICES_V2_PROFILE_SHA256,
+    previous_profile_path: RELAY_SERVICES_V3_PROFILE_PATH,
+    previous_profile_sha256: RELAY_SERVICES_V3_PROFILE_SHA256,
+    bootstrap_failure_path: RELAY_SERVICES_BOOTSTRAP_FAILURE_PATH,
+    bootstrap_failure_sha256: RELAY_SERVICES_BOOTSTRAP_FAILURE_SHA256,
+    relay_image_result_path: EXPECTED_V3_PROFILE.contracts.relay_image_result_path,
+    relay_image_result_sha256: EXPECTED_V3_PROFILE.contracts.relay_image_result_sha256,
+  },
+  cloud_run: {
+    ...EXPECTED_V3_PROFILE.cloud_run,
+    memory: '512Mi',
+  },
+  operation: {
+    phase: 'private_bootstrap',
+    kind: 'recover_partial_bootstrap_memory',
+    claim_bucket: STATE_BUCKET,
+    claim_object: RECOVERY_CLAIM_OBJECT,
+    original_claim_object: BOOTSTRAP_CLAIM_OBJECT,
+    original_claim_generation: '1788658024634812',
+    original_claim_size_bytes: 999,
+    original_claim_sha256:
+      '92b94cce96d70d9d55482ae4612f2192cd4686d8d5ee160270cbeb2d74773ac4',
+    state_object: STATE_OBJECT,
+    initial_state_generation: '1788658040492801',
+    initial_state_size_bytes: 9527,
+    initial_state_sha256:
+      'c703ae655eb8b6292ae73ffa76d0746809190e312311fa5171e7bf5977fc27fc',
+    initial_state_serial: 2,
+    initial_state_lineage_sha256:
+      '3d99b2335a31d39b341036981987054211455d6ee4acd229cc0459cd0995807f',
+    plan_ttl_seconds: 7200,
+    maximum_terraform_creates: 2,
+    maximum_terraform_updates: 1,
+    maximum_terraform_deletes: 0,
+    maximum_relay_services: 2,
+    maximum_public_iam_members: 0,
+    maximum_live_requests: 0,
+    maximum_monthly_increment_eur: 1,
+    retry_authorized: false,
+    destroy_authorized: false,
+    public_invocation_authorized: false,
+    hosting_release_authorized: false,
+    persistent_credentials_authorized: false,
+  },
+});
+
 export class StagingRelayServicesProfileError extends Error {
   constructor(message = 'Staging relay-services profile is invalid') {
     super(message);
@@ -368,11 +433,151 @@ export function validateRelayServicesV2Profile(path = v2ProfilePath) {
     || profile.state !== 'verified_image_bound_no_operator_entrypoint'
     || profile.terraform_source_sha256
       !== '8a9e1b5c37e1c25befccfd2b2eac838639a74901785c88e83521a2f897b9f746'
-    || profile.image?.digest_reference !== EXPECTED_PROFILE.image.digest_reference
+    || profile.image?.digest_reference !== EXPECTED_V3_PROFILE.image.digest_reference
     || profile.operation !== undefined) {
     reject('Previous profile does not match the reviewed digest-bound boundary');
   }
   return Object.freeze(profile);
+}
+
+export function validateRelayServicesV3Profile(path = v3ProfilePath) {
+  const entry = lstatSync(path);
+  if (!entry.isFile() || entry.isSymbolicLink() || entry.size === 0
+    || entry.size > MAXIMUM_PROFILE_BYTES) {
+    reject('Consumed bootstrap profile must be a bounded regular file');
+  }
+  const bytes = readFileSync(path);
+  if (sha256(bytes) !== RELAY_SERVICES_V3_PROFILE_SHA256) {
+    reject('Consumed bootstrap profile digest has drifted');
+  }
+  let profile;
+  try {
+    profile = JSON.parse(bytes.toString('utf8'));
+  } catch {
+    return reject('Consumed bootstrap profile must be valid JSON');
+  }
+  if (canonicalJson(profile) !== bytes.toString('utf8')) {
+    reject('Consumed bootstrap profile is not canonical JSON');
+  }
+  rejectPrivateMaterial(profile, 'consumed_bootstrap_profile');
+  if (!isDeepStrictEqual(profile, EXPECTED_V3_PROFILE)) {
+    reject('Consumed bootstrap profile does not match the reviewed v3 boundary');
+  }
+  return Object.freeze(profile);
+}
+
+export function validateRelayServicesBootstrapFailure(path = bootstrapFailurePath) {
+  const entry = lstatSync(path);
+  if (!entry.isFile() || entry.isSymbolicLink() || entry.size === 0
+    || entry.size > MAXIMUM_PROFILE_BYTES) {
+    reject('Bootstrap failure evidence must be a bounded regular file');
+  }
+  const bytes = readFileSync(path);
+  if (sha256(bytes) !== RELAY_SERVICES_BOOTSTRAP_FAILURE_SHA256) {
+    reject('Bootstrap failure evidence digest has drifted');
+  }
+  let result;
+  try {
+    result = JSON.parse(bytes.toString('utf8'));
+  } catch {
+    return reject('Bootstrap failure evidence must be valid JSON');
+  }
+  if (canonicalJson(result) !== bytes.toString('utf8')) {
+    reject('Bootstrap failure evidence is not canonical JSON');
+  }
+  rejectPrivateMaterial(result, 'bootstrap_failure');
+  exactKeys(result, [
+    'schema', 'state', 'project_id', 'project_number', 'region', 'observed_at',
+    'repository_commit', 'profile_sha256', 'metadata_sha256', 'terraform_plan_sha256',
+    'baseline_sha256', 'claim', 'failure', 'terraform_state', 'effects', 'recovery',
+  ], 'Bootstrap failure evidence');
+  exactKeys(result.claim, [
+    'object', 'generation', 'size_bytes', 'sha256', 'attempted_at', 'retry_authorized',
+    'deletion_authorized', 'raw_contents_committed',
+  ], 'Bootstrap failure claim');
+  exactKeys(result.failure, [
+    'category', 'api_status', 'field', 'requested_memory', 'minimum_memory',
+    'execution_environment',
+  ], 'Bootstrap failure cause');
+  exactKeys(result.terraform_state, [
+    'object', 'generation', 'size_bytes', 'sha256', 'terraform_version', 'serial',
+    'lineage_sha256', 'resource_addresses', 'output_names',
+  ], 'Bootstrap failure Terraform state');
+  exactKeys(result.effects, [
+    'terraform_guard_created', 'runtime_identity_created',
+    'runtime_identity_user_managed_keys', 'runtime_identity_project_roles',
+    'relay_services_created', 'public_iam_members_created', 'live_requests_by_driver',
+    'hosting_releases', 'persistent_credentials_created', 'stress_test_executed',
+  ], 'Bootstrap failure effects');
+  exactKeys(result.recovery, [
+    'original_plan_replay_authorized', 'original_claim_deletion_authorized',
+    'separate_recovery_required',
+  ], 'Bootstrap failure recovery boundary');
+  if (result.schema !== 'miakapp.staging-browser-relay-services-bootstrap-attempt-result/1'
+    || result.state !== 'failed_gen2_memory_requirement_partial_state_reconciled'
+    || result.project_id !== PROJECT_ID || result.project_number !== PROJECT_NUMBER
+    || result.region !== REGION || canonicalTimestamp(result.observed_at, 'observed_at') < 0
+    || result.repository_commit !== 'c213d18760d371839a37bf4680ff85c9534ad43b'
+    || result.profile_sha256 !== RELAY_SERVICES_V3_PROFILE_SHA256
+    || result.metadata_sha256
+      !== 'be2b2f7fe6c5a8717e020136047139b6bf86a0e5f7367ec398576df30ebdd28c'
+    || result.terraform_plan_sha256
+      !== 'da2c30b3e9fa7eef8c32ca8bcb44b8e2d9116bc4167449d059bd61ff6900221e'
+    || result.baseline_sha256
+      !== 'fdbce7203496d20768a4c4668262b3fdea262af22ed48ad02d36eed9f04c2413'
+    || !isDeepStrictEqual(result.claim, {
+      object: BOOTSTRAP_CLAIM_OBJECT,
+      generation: '1788658024634812',
+      size_bytes: 999,
+      sha256: '92b94cce96d70d9d55482ae4612f2192cd4686d8d5ee160270cbeb2d74773ac4',
+      attempted_at: '2026-09-06T01:27:04.584Z',
+      retry_authorized: false,
+      deletion_authorized: false,
+      raw_contents_committed: false,
+    })
+    || !isDeepStrictEqual(result.failure, {
+      category: 'cloud_run_gen2_memory_below_minimum',
+      api_status: 400,
+      field: 'template.containers.resources.limits.memory',
+      requested_memory: '256Mi',
+      minimum_memory: '512Mi',
+      execution_environment: 'EXECUTION_ENVIRONMENT_GEN2',
+    })
+    || !isDeepStrictEqual(result.terraform_state, {
+      object: STATE_OBJECT,
+      generation: '1788658040492801',
+      size_bytes: 9527,
+      sha256: 'c703ae655eb8b6292ae73ffa76d0746809190e312311fa5171e7bf5977fc27fc',
+      terraform_version: TERRAFORM_VERSION,
+      serial: 2,
+      lineage_sha256: '3d99b2335a31d39b341036981987054211455d6ee4acd229cc0459cd0995807f',
+      resource_addresses: [
+        'data.terraform_remote_state.workload[0]',
+        'google_service_account.relay["runtime"]',
+        'terraform_data.deployment_guard["active"]',
+      ],
+      output_names: [],
+    })
+    || !isDeepStrictEqual(result.effects, {
+      terraform_guard_created: true,
+      runtime_identity_created: true,
+      runtime_identity_user_managed_keys: 0,
+      runtime_identity_project_roles: 0,
+      relay_services_created: 0,
+      public_iam_members_created: 0,
+      live_requests_by_driver: 0,
+      hosting_releases: 0,
+      persistent_credentials_created: 0,
+      stress_test_executed: false,
+    })
+    || !isDeepStrictEqual(result.recovery, {
+      original_plan_replay_authorized: false,
+      original_claim_deletion_authorized: false,
+      separate_recovery_required: true,
+    })) {
+    reject('Bootstrap failure evidence does not match the reconciled attempt');
+  }
+  return Object.freeze(result);
 }
 
 export function validateRelayServicesProfile(path = profilePath) {
@@ -394,6 +599,8 @@ export function validateRelayServicesProfile(path = profilePath) {
   if (canonicalJson(profile) !== bytes.toString('utf8')) reject('Profile is not canonical JSON');
   rejectPrivateMaterial(profile);
   if (!isDeepStrictEqual(profile, EXPECTED_PROFILE)) reject('Profile does not match the reviewed relay-services boundary');
+  validateRelayServicesV3Profile();
+  validateRelayServicesBootstrapFailure();
   if (relayServicesTerraformSourceSha256(dirname(path)) !== profile.terraform_source_sha256) {
     reject('Operational Terraform source digest has drifted');
   }
@@ -433,6 +640,21 @@ export function createPrivateRelayServicesBundle(parentPath, repositoryRoot) {
     reject('Relay-services bundle parent must be a real directory outside the repository');
   }
   const directory = mkdtempSync(join(parent, 'miakapp-staging-relay-bootstrap-'));
+  chmodSync(directory, 0o700);
+  return realpathSync(directory);
+}
+
+export function createPrivateRelayServicesRecoveryBundle(parentPath, repositoryRoot) {
+  if (!isAbsolute(parentPath)) reject('Relay-services recovery bundle parent must be absolute');
+  const parent = realpathSync(parentPath);
+  const repository = realpathSync(repositoryRoot);
+  const relation = relative(repository, parent);
+  const entry = lstatSync(parent);
+  if (!entry.isDirectory() || entry.isSymbolicLink()
+    || relation === '' || (!relation.startsWith(`..${sep}`) && relation !== '..')) {
+    reject('Relay-services recovery bundle parent must be a real directory outside the repository');
+  }
+  const directory = mkdtempSync(join(parent, 'miakapp-staging-relay-recovery-'));
   chmodSync(directory, 0o700);
   return realpathSync(directory);
 }
@@ -490,7 +712,7 @@ export function buildRelayServicesBootstrapPlanMetadata({
   baseline,
   summary,
 }) {
-  const profile = validateRelayServicesProfile();
+  const profile = validateRelayServicesV3Profile();
   if (!COMMIT.test(repositoryCommit)
     || !Buffer.isBuffer(planBytes) || planBytes.byteLength === 0
     || !Buffer.isBuffer(planJsonBytes) || planJsonBytes.byteLength === 0
@@ -510,7 +732,7 @@ export function buildRelayServicesBootstrapPlanMetadata({
     created_at: createdAt,
     expires_at: new Date(created + PLAN_TTL_MILLISECONDS).toISOString(),
     operator_user_sha256: OPERATOR_USER_SHA256,
-    profile_sha256: RELAY_SERVICES_PROFILE_SHA256,
+    profile_sha256: RELAY_SERVICES_V3_PROFILE_SHA256,
     terraform_source_sha256: profile.terraform_source_sha256,
     terraform_version: TERRAFORM_VERSION,
     terraform_plan_sha256: sha256(planBytes),
@@ -531,7 +753,7 @@ export function buildRelayServicesBootstrapPlanMetadata({
 }
 
 export function validateRelayServicesBootstrapPlanMetadata(value, now = Date.now()) {
-  const profile = validateRelayServicesProfile();
+  const profile = validateRelayServicesV3Profile();
   const metadata = exactKeys(value, [
     'schema',
     'operation',
@@ -567,7 +789,7 @@ export function validateRelayServicesBootstrapPlanMetadata(value, now = Date.now
     || metadata.region !== REGION
     || !COMMIT.test(metadata.repository_commit)
     || metadata.operator_user_sha256 !== OPERATOR_USER_SHA256
-    || metadata.profile_sha256 !== RELAY_SERVICES_PROFILE_SHA256
+    || metadata.profile_sha256 !== RELAY_SERVICES_V3_PROFILE_SHA256
     || metadata.terraform_source_sha256 !== profile.terraform_source_sha256
     || metadata.terraform_version !== TERRAFORM_VERSION
     || !SHA256.test(metadata.terraform_plan_sha256)
@@ -613,6 +835,164 @@ export function readRelayServicesBootstrapPlanMetadata(path, now = Date.now()) {
   return Object.freeze({ bytes, value: validateRelayServicesBootstrapPlanMetadata(value, now) });
 }
 
+export function relayServicesRecoveryAuthorization(
+  planBytes,
+  repositoryCommit,
+  baselineSha256,
+) {
+  if (!Buffer.isBuffer(planBytes) || planBytes.byteLength === 0
+    || !COMMIT.test(repositoryCommit) || !SHA256.test(baselineSha256)) {
+    reject('Relay-services recovery authorization inputs are invalid');
+  }
+  return [
+    'apply-private-relay-memory-recovery',
+    PROJECT_ID,
+    sha256(planBytes),
+    baselineSha256,
+    repositoryCommit,
+  ].join(':');
+}
+
+export function validateRelayServicesRecoveryAuthorization(
+  value,
+  planBytes,
+  repositoryCommit,
+  baselineSha256,
+) {
+  if (!safeEqual(
+    value,
+    relayServicesRecoveryAuthorization(planBytes, repositoryCommit, baselineSha256),
+  )) {
+    reject('Exact relay-services recovery authorization is missing or invalid');
+  }
+}
+
+export function buildRelayServicesRecoveryPlanMetadata({
+  repositoryCommit,
+  createdAt,
+  planBytes,
+  planJsonBytes,
+  variablesBytes,
+  baseline,
+  summary,
+}) {
+  const profile = validateRelayServicesProfile();
+  const failure = validateRelayServicesBootstrapFailure();
+  if (!COMMIT.test(repositoryCommit)
+    || !Buffer.isBuffer(planBytes) || planBytes.byteLength === 0
+    || !Buffer.isBuffer(planJsonBytes) || planJsonBytes.byteLength === 0
+    || !Buffer.isBuffer(variablesBytes) || variablesBytes.byteLength === 0
+    || !plainObject(baseline) || !plainObject(summary)) {
+    reject('Relay-services recovery plan metadata inputs are invalid');
+  }
+  const created = canonicalTimestamp(createdAt, 'created_at');
+  const baselineSha256 = sha256(Buffer.from(canonicalJson(baseline), 'utf8'));
+  return Object.freeze({
+    schema: 'miakapp.staging-browser-relay-services-memory-recovery-plan/1',
+    operation: 'recover-private-browser-relay-bootstrap-memory',
+    project_id: PROJECT_ID,
+    project_number: PROJECT_NUMBER,
+    region: REGION,
+    repository_commit: repositoryCommit,
+    created_at: createdAt,
+    expires_at: new Date(created + PLAN_TTL_MILLISECONDS).toISOString(),
+    operator_user_sha256: OPERATOR_USER_SHA256,
+    profile_sha256: RELAY_SERVICES_PROFILE_SHA256,
+    bootstrap_failure_sha256: RELAY_SERVICES_BOOTSTRAP_FAILURE_SHA256,
+    original_claim_generation: failure.claim.generation,
+    original_claim_sha256: failure.claim.sha256,
+    terraform_source_sha256: profile.terraform_source_sha256,
+    terraform_version: TERRAFORM_VERSION,
+    terraform_plan_sha256: sha256(planBytes),
+    terraform_plan_json_sha256: sha256(planJsonBytes),
+    terraform_variables_sha256: sha256(variablesBytes),
+    baseline_sha256: baselineSha256,
+    baseline,
+    summary,
+    maximum_monthly_increment_eur: profile.operation.maximum_monthly_increment_eur,
+    maximum_terraform_creates: profile.operation.maximum_terraform_creates,
+    maximum_terraform_updates: profile.operation.maximum_terraform_updates,
+    maximum_terraform_deletes: profile.operation.maximum_terraform_deletes,
+    public_invocation_authorized: false,
+    hosting_release_authorized: false,
+    live_requests_authorized: false,
+    persistent_credentials_authorized: false,
+    destroy_authorized: false,
+    retry_authorized: false,
+    private_bundle_committed: false,
+  });
+}
+
+export function validateRelayServicesRecoveryPlanMetadata(value, now = Date.now()) {
+  const profile = validateRelayServicesProfile();
+  const failure = validateRelayServicesBootstrapFailure();
+  const metadata = exactKeys(value, [
+    'schema', 'operation', 'project_id', 'project_number', 'region', 'repository_commit',
+    'created_at', 'expires_at', 'operator_user_sha256', 'profile_sha256',
+    'bootstrap_failure_sha256', 'original_claim_generation', 'original_claim_sha256',
+    'terraform_source_sha256', 'terraform_version', 'terraform_plan_sha256',
+    'terraform_plan_json_sha256', 'terraform_variables_sha256', 'baseline_sha256',
+    'baseline', 'summary', 'maximum_monthly_increment_eur', 'maximum_terraform_creates',
+    'maximum_terraform_updates', 'maximum_terraform_deletes',
+    'public_invocation_authorized', 'hosting_release_authorized',
+    'live_requests_authorized', 'persistent_credentials_authorized',
+    'destroy_authorized', 'retry_authorized', 'private_bundle_committed',
+  ], 'Relay-services recovery plan metadata');
+  if (metadata.schema !== 'miakapp.staging-browser-relay-services-memory-recovery-plan/1'
+    || metadata.operation !== 'recover-private-browser-relay-bootstrap-memory'
+    || metadata.project_id !== PROJECT_ID || metadata.project_number !== PROJECT_NUMBER
+    || metadata.region !== REGION || !COMMIT.test(metadata.repository_commit)
+    || metadata.operator_user_sha256 !== OPERATOR_USER_SHA256
+    || metadata.profile_sha256 !== RELAY_SERVICES_PROFILE_SHA256
+    || metadata.bootstrap_failure_sha256 !== RELAY_SERVICES_BOOTSTRAP_FAILURE_SHA256
+    || metadata.original_claim_generation !== failure.claim.generation
+    || metadata.original_claim_sha256 !== failure.claim.sha256
+    || metadata.terraform_source_sha256 !== profile.terraform_source_sha256
+    || metadata.terraform_version !== TERRAFORM_VERSION
+    || !SHA256.test(metadata.terraform_plan_sha256)
+    || !SHA256.test(metadata.terraform_plan_json_sha256)
+    || !SHA256.test(metadata.terraform_variables_sha256)
+    || !SHA256.test(metadata.baseline_sha256)
+    || !plainObject(metadata.baseline) || !plainObject(metadata.summary)
+    || metadata.maximum_monthly_increment_eur
+      !== profile.operation.maximum_monthly_increment_eur
+    || metadata.maximum_terraform_creates !== profile.operation.maximum_terraform_creates
+    || metadata.maximum_terraform_updates !== profile.operation.maximum_terraform_updates
+    || metadata.maximum_terraform_deletes !== profile.operation.maximum_terraform_deletes
+    || metadata.public_invocation_authorized !== false
+    || metadata.hosting_release_authorized !== false
+    || metadata.live_requests_authorized !== false
+    || metadata.persistent_credentials_authorized !== false
+    || metadata.destroy_authorized !== false || metadata.retry_authorized !== false
+    || metadata.private_bundle_committed !== false
+    || sha256(Buffer.from(canonicalJson(metadata.baseline), 'utf8'))
+      !== metadata.baseline_sha256) {
+    reject('Relay-services recovery plan metadata does not match the reviewed operation');
+  }
+  const created = canonicalTimestamp(metadata.created_at, 'created_at');
+  const expires = canonicalTimestamp(metadata.expires_at, 'expires_at');
+  if (expires - created !== PLAN_TTL_MILLISECONDS
+    || profile.operation.plan_ttl_seconds * 1_000 !== PLAN_TTL_MILLISECONDS
+    || now < created - 60_000 || now > expires) {
+    reject('Relay-services recovery plan metadata is expired or not yet valid');
+  }
+  return Object.freeze(metadata);
+}
+
+export function readRelayServicesRecoveryPlanMetadata(path, now = Date.now()) {
+  const bytes = readPrivateFile(path, MAXIMUM_METADATA_BYTES);
+  let value;
+  try {
+    value = JSON.parse(bytes.toString('utf8'));
+  } catch {
+    return reject('Relay-services recovery plan metadata is not valid JSON');
+  }
+  if (canonicalJson(value) !== bytes.toString('utf8')) {
+    reject('Relay-services recovery plan metadata is not canonical JSON');
+  }
+  return Object.freeze({ bytes, value: validateRelayServicesRecoveryPlanMetadata(value, now) });
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const profilePath = process.argv[2];
   if (process.argv.length !== 3 || profilePath === undefined) {
@@ -621,7 +1001,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   } else {
     try {
       const profile = validateRelayServicesProfile(profilePath);
-      console.log(`Validated ${profile.schema} for ${profile.project_id}; the private bootstrap entrypoint is prepared but has not executed.`);
+      console.log(`Validated ${profile.schema} for ${profile.project_id}; the private bootstrap memory recovery is prepared but has not executed.`);
     } catch (error) {
       console.error(error instanceof Error ? error.message : 'Staging relay-services profile is invalid');
       process.exitCode = 1;
