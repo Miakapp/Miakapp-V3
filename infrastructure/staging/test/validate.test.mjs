@@ -31,16 +31,16 @@ function rejects(mutator, pattern) {
 
 test('accepts the successful and retired private user-relay probe', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 66);
+  assert.equal(validated.revision, 67);
   assert.equal(
     validated.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rebased_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_created_provider_default_drift_reconciliation_required_private_ready_entrypoint_prepared_not_executed_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rebased_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
   assert.equal(
     validated.project.lifecycle,
-    'firebase_auth_initialized_private_control_plane_signing_key_version_1_rehearsal_entry_user_relay_acceptance_succeeded',
+    'firebase_auth_initialized_private_control_plane_signing_key_version_1_rehearsal_entry_user_relay_acceptance_succeeded_private_relays_ready',
   );
   assert.equal(validated.bootstrap.billing_enabled, true);
   assert.equal(validated.bootstrap.firebase_apps, 1);
@@ -126,7 +126,7 @@ test('accepts the successful and retired private user-relay probe', () => {
   assert.deepEqual(validated.security.iam.unresolved_permissions, []);
   assert.equal(
     validated.terraform.state,
-    'seven_roots_converged_relay_services_private_ready_pending',
+    'seven_roots_converged_relay_services_private_ready_succeeded_verified',
   );
   assert.equal(
     validated.terraform.supported_workflow,
@@ -830,7 +830,7 @@ test('accepts the successful and retired private user-relay probe', () => {
   });
   assert.deepEqual(validated.evidence.browser_relay_image, {
     state:
-      'v1_failed_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_created_provider_default_drift_reconciliation_required_private_ready_entrypoint_prepared_not_executed',
+      'v1_failed_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized',
     profile_path: 'browser-relay-image/profile.json',
     profile_sha256: '6ab86de257a4e85d51a47d528240b3862a79120d1383bab6a9092011abd3f76b',
     v1_profile_path: 'browser-relay-image/profile-v1.json',
@@ -842,7 +842,7 @@ test('accepts the successful and retired private user-relay probe', () => {
     v2_result_observed_at: '2026-09-06T00:00:34.396Z',
     browser_relay_plan_sha256: '4a5c13999d9f7f328b1b8b867bbd86d4c5e80cb980d9eb1324028ea0e5785343',
     relay_services_profile_path: 'browser-relay-services/profile.json',
-    relay_services_profile_sha256: '41392c96d68bf749c59757bc76d34a69e6eb407efa50b14f61b937c4f5a9b576',
+    relay_services_profile_sha256: 'd47449d0b175b47ac0fdde5e0eb80c8b5d0eb43e4ac9a8af091c51f9aa4c390a',
     relay_services_v1_profile_path: 'browser-relay-services/profile-v1.json',
     relay_services_v1_profile_sha256: 'bc9b231cc9724f19a26ef5c3bbd6da6a69ec79b00cb976e77c73015d5db10db7',
     relay_services_v2_profile_path: 'browser-relay-services/profile-v2.json',
@@ -851,12 +851,18 @@ test('accepts the successful and retired private user-relay probe', () => {
     relay_services_v3_profile_sha256: 'a5bc737620e57aed5c7e828b4d558e3b246ba13edb40944a40febba6c14a9316',
     relay_services_v4_profile_path: 'browser-relay-services/profile-v4.json',
     relay_services_v4_profile_sha256: '0f8b966a7bf412156a83b0ddc76996abc6b49c28d81cda0f3e4d2b1c16912733',
+    relay_services_v5_profile_path: 'browser-relay-services/profile-v5.json',
+    relay_services_v5_profile_sha256: '41392c96d68bf749c59757bc76d34a69e6eb407efa50b14f61b937c4f5a9b576',
     relay_services_bootstrap_failure_path: 'browser-relay-services/bootstrap-failure-v1.json',
     relay_services_bootstrap_failure_sha256: 'd98eb890376d5ec0b87ad91ffc88ca93eb206794d9c0d799b4fa7f0817f9a540',
     relay_services_memory_recovery_failure_path:
       'browser-relay-services/memory-recovery-failure-v1.json',
     relay_services_memory_recovery_failure_sha256:
       '5c41533a7b6a684e38abd9e8dd7d94d0f4e21cdd3bd9edf076821cca191932f7',
+    relay_services_private_ready_result_path:
+      'browser-relay-services/private-ready-result-v1.json',
+    relay_services_private_ready_result_sha256:
+      '27ee42c11af83f4e0133a6002540096b74d18ceb78a281e4fbd7c38b53cea4be',
     relay_services_bootstrap_attempted: true,
     relay_services_bootstrap_failure_category: 'cloud_run_gen2_memory_below_minimum',
     relay_services_memory_recovery_attempted: true,
@@ -868,6 +874,10 @@ test('accepts the successful and retired private user-relay probe', () => {
     relay_services_memory_recovery_claim_generation: '1788661237671763',
     relay_services_memory_recovery_claim_sha256:
       '9f8d46aea073062fce6334dcb8c5b3f128d880624878908e4c9b09db06ed61b1',
+    relay_services_private_ready_attempted: true,
+    relay_services_private_ready_claim_generation: '1788664144376292',
+    relay_services_private_ready_claim_sha256:
+      'db90861c9ad7fbbbb66a19d75f2fd67c37ad55e86f309529e4a77cec0feb5ef5',
     relay_services_partial_state_generation: '1788658040492801',
     relay_services_partial_state_sha256:
       'c703ae655eb8b6292ae73ffa76d0746809190e312311fa5171e7bf5977fc27fc',
@@ -876,11 +886,16 @@ test('accepts the successful and retired private user-relay probe', () => {
     relay_services_recovered_state_sha256:
       'a91d739f31a01854183b98a8fdc36c58365d166d8c721471ca12b27251596e76',
     relay_services_recovered_state_serial: 3,
+    relay_services_private_ready_state_generation: '1788664157688934',
+    relay_services_private_ready_state_sha256:
+      '401101ec2a802fb61171fd4446f7be718c5fa912b64b18d3c738ba4c36919ac0',
+    relay_services_private_ready_state_serial: 4,
     relay_services_original_entrypoints_retired: true,
     relay_services_recovery_entrypoints_retired: true,
-    relay_services_private_ready_entrypoint_present: true,
+    relay_services_private_ready_entrypoints_retired: true,
+    relay_services_private_ready_entrypoint_present: false,
     relay_services_image_bound: true,
-    relay_services_operator_entrypoint_present: true,
+    relay_services_operator_entrypoint_present: false,
     source_repository: 'https://github.com/Miakapp/Miakapp-Server.git',
     source_commit: 'df10674e034f30eec80760f5ec94bc108cff026f',
     source_tree: '0468ea08cd2d51b3e656c4adea9bb09b4a8a6ea1',
@@ -910,13 +925,13 @@ test('accepts the successful and retired private user-relay probe', () => {
     verified_image_config_digest:
       'sha256:344314bad3b6f6f1f280737b3d010cdcafb2ead6cf868c8b97e2c367401001a9',
     verified_image_compressed_bytes: 4024536,
-    deployment_authorized: false,
+    deployment_authorized_by_image_operation: false,
     entrypoints_retired: true,
     container_analysis_api_enabled: true,
     container_scanning_api_enabled: false,
     relay_services: 2,
     relay_services_cloud_run_ready: 2,
-    relay_services_private_ready: 0,
+    relay_services_private_ready: 2,
     relay_services_network_ingress: 'INGRESS_TRAFFIC_ALL',
     relay_services_public_iam_members: 0,
     unauthenticated_public_invocation_active: false,
@@ -1162,7 +1177,7 @@ test('cross-checks manifest claims against all committed evidence artifacts', ()
   assert.equal(evidence.browserRelayPlan.evidence.state, 'absent');
   assert.equal(
     evidence.relayServicesProfile.state,
-    'private_ready_transition_entrypoint_prepared_not_executed',
+    'private_ready_succeeded_verified_public_window_not_authorized',
   );
   assert.equal(evidence.relayServicesV1Profile.state, 'dormant_no_operator_entrypoint');
   assert.equal(evidence.relayServicesV2Profile.state, 'verified_image_bound_no_operator_entrypoint');
@@ -1174,6 +1189,11 @@ test('cross-checks manifest claims against all committed evidence artifacts', ()
     evidence.relayServicesV4Profile.state,
     'private_bootstrap_memory_recovery_entrypoint_prepared_not_executed',
   );
+  assert.equal(
+    evidence.relayServicesV5Profile.state,
+    'private_ready_transition_entrypoint_prepared_not_executed',
+  );
+  assert.equal(evidence.relayServicesPrivateReadyResult.public_iam_members, 0);
   assert.equal(
     evidence.relayServicesBootstrapFailure.failure.category,
     'cloud_run_gen2_memory_below_minimum',

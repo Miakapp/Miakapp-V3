@@ -24,7 +24,9 @@ import {
   RELAY_SERVICES_V2_PROFILE_SHA256,
   RELAY_SERVICES_V3_PROFILE_SHA256,
   RELAY_SERVICES_V4_PROFILE_SHA256,
+  RELAY_SERVICES_V5_PROFILE_SHA256,
   RELAY_SERVICES_MEMORY_RECOVERY_FAILURE_SHA256,
+  RELAY_SERVICES_PRIVATE_READY_RESULT_SHA256,
   StagingRelayServicesProfileError,
   bootstrapRelayVariables,
   buildRelayServicesBootstrapPlanMetadata,
@@ -40,6 +42,7 @@ import {
   validateRelayServicesBootstrapFailure,
   validateRelayServicesBootstrapPlanMetadata,
   validateRelayServicesMemoryRecoveryFailure,
+  validateRelayServicesPrivateReadyResult,
   validateRelayServicesProfile,
   validateRelayServicesRecoveryAuthorization,
   validateRelayServicesRecoveryPlanMetadata,
@@ -49,6 +52,7 @@ import {
   validateRelayServicesV2Profile,
   validateRelayServicesV3Profile,
   validateRelayServicesV4Profile,
+  validateRelayServicesV5Profile,
 } from '../browser-relay-services/contract.mjs';
 import {
   ALLOWED_RELAY_SERVICE_FILES,
@@ -708,7 +712,7 @@ function readyServiceSnapshot(service, profile, audience) {
 
 function validPrivateReadyPlan() {
   const plan = validRecoveryPlan();
-  const profile = validateRelayServicesProfile();
+  const profile = validateRelayServicesV5Profile();
   const previous = validateRelayServicesV4Profile();
   const previousAudiences = bootstrapRelayVariables(previous).relay_audiences;
   const readyAudiences = privateReadyRelayVariables(profile).relay_audiences;
@@ -768,7 +772,7 @@ function validPrivateReadyPlan() {
   };
   guard.change.after = {
     id: guard.change.before.id,
-    input: guardInput(profile, RELAY_SERVICES_PROFILE_SHA256, 'private_ready', readyAudiences),
+    input: guardInput(profile, RELAY_SERVICES_V5_PROFILE_SHA256, 'private_ready', readyAudiences),
     triggers_replace: null,
   };
   for (const check of plan.checks) {
@@ -779,7 +783,7 @@ function validPrivateReadyPlan() {
 }
 
 function privateReadyBaseline() {
-  const profile = validateRelayServicesProfile();
+  const profile = validateRelayServicesV5Profile();
   const inventory = recoveredInventory({
     generation: profile.operation.memory_recovery_claim_generation,
     size_bytes: profile.operation.memory_recovery_claim_size_bytes,
@@ -821,7 +825,7 @@ function validPrivateReadyMetadata(now = Date.now()) {
 
 function privateReadyInventory(receipt = { generation: '323456789', size_bytes: 1_000 }) {
   const value = structuredClone(privateReadyBaseline().inventory);
-  const profile = validateRelayServicesProfile();
+  const profile = validateRelayServicesV5Profile();
   value.relays.forEach((relay) => {
     const service = profile.services.find(({ id }) => id === relay.id);
     relay.generation = '2';
@@ -835,7 +839,7 @@ function privateReadyInventory(receipt = { generation: '323456789', size_bytes: 
 }
 
 function privateReadyOutput(inventory = privateReadyInventory()) {
-  const profile = validateRelayServicesProfile();
+  const profile = validateRelayServicesV5Profile();
   return {
     schema: 'miakapp.staging-browser-relay-services/1',
     deployment_phase: 'private_ready',
@@ -863,22 +867,26 @@ function privateReadyOutput(inventory = privateReadyInventory()) {
   };
 }
 
-test('validates the private-ready relay-services profile and immutable evidence chain', () => {
+test('validates the converged private relay-services profile and immutable evidence chain', () => {
   const profile = validateRelayServicesProfile(fileURLToPath(profileUrl));
   const historical = validateRelayServicesV1Profile();
   const digestBound = validateRelayServicesV2Profile();
   const previous = validateRelayServicesV3Profile();
   const memoryRecovery = validateRelayServicesV4Profile();
+  const privateReady = validateRelayServicesV5Profile();
   const failure = validateRelayServicesBootstrapFailure();
   const recoveryFailure = validateRelayServicesMemoryRecoveryFailure();
-  assert.equal(RELAY_SERVICES_PROFILE_SHA256, '41392c96d68bf749c59757bc76d34a69e6eb407efa50b14f61b937c4f5a9b576');
+  const privateReadyResult = validateRelayServicesPrivateReadyResult();
+  assert.equal(RELAY_SERVICES_PROFILE_SHA256, 'd47449d0b175b47ac0fdde5e0eb80c8b5d0eb43e4ac9a8af091c51f9aa4c390a');
   assert.equal(RELAY_SERVICES_V1_PROFILE_SHA256, 'bc9b231cc9724f19a26ef5c3bbd6da6a69ec79b00cb976e77c73015d5db10db7');
   assert.equal(RELAY_SERVICES_V2_PROFILE_SHA256, '26535e8c8b56d5a0a0875049a1e76aade4e1246b0808470ab4483bc01a2f48cb');
   assert.equal(RELAY_SERVICES_V3_PROFILE_SHA256, 'a5bc737620e57aed5c7e828b4d558e3b246ba13edb40944a40febba6c14a9316');
   assert.equal(RELAY_SERVICES_V4_PROFILE_SHA256, '0f8b966a7bf412156a83b0ddc76996abc6b49c28d81cda0f3e4d2b1c16912733');
+  assert.equal(RELAY_SERVICES_V5_PROFILE_SHA256, '41392c96d68bf749c59757bc76d34a69e6eb407efa50b14f61b937c4f5a9b576');
   assert.equal(RELAY_SERVICES_BOOTSTRAP_FAILURE_SHA256, 'd98eb890376d5ec0b87ad91ffc88ca93eb206794d9c0d799b4fa7f0817f9a540');
   assert.equal(RELAY_SERVICES_MEMORY_RECOVERY_FAILURE_SHA256, '5c41533a7b6a684e38abd9e8dd7d94d0f4e21cdd3bd9edf076821cca191932f7');
-  assert.equal(profile.terraform_source_sha256, '1e588bb43b8dd2cd97f564dc3e5b68b462f8a0eab81a3d72fac8dd4b6647721f');
+  assert.equal(RELAY_SERVICES_PRIVATE_READY_RESULT_SHA256, '27ee42c11af83f4e0133a6002540096b74d18ceb78a281e4fbd7c38b53cea4be');
+  assert.equal(profile.terraform_source_sha256, '34f58506b984c6df2b618d4b52622fbc00756ae3a2dd501bbb69d7c7a89f9fe6');
   assert.equal(profile.pins.miakapp_server_commit, 'df10674e034f30eec80760f5ec94bc108cff026f');
   assert.deepEqual(
     profile.image.digest_reference,
@@ -888,13 +896,17 @@ test('validates the private-ready relay-services profile and immutable evidence 
   assert.equal(profile.contracts.digest_bound_profile_sha256, RELAY_SERVICES_V2_PROFILE_SHA256);
   assert.equal(profile.contracts.bootstrap_profile_sha256, RELAY_SERVICES_V3_PROFILE_SHA256);
   assert.equal(profile.contracts.memory_recovery_profile_sha256, RELAY_SERVICES_V4_PROFILE_SHA256);
+  assert.equal(profile.contracts.private_ready_profile_sha256, RELAY_SERVICES_V5_PROFILE_SHA256);
   assert.equal(profile.contracts.bootstrap_failure_sha256, RELAY_SERVICES_BOOTSTRAP_FAILURE_SHA256);
   assert.equal(historical.image.digest, undefined);
   assert.equal(digestBound.state, 'verified_image_bound_no_operator_entrypoint');
   assert.equal(previous.state, 'private_bootstrap_entrypoint_prepared_not_executed');
   assert.equal(memoryRecovery.state, 'private_bootstrap_memory_recovery_entrypoint_prepared_not_executed');
+  assert.equal(privateReady.state, 'private_ready_transition_entrypoint_prepared_not_executed');
   assert.equal(failure.failure.category, 'cloud_run_gen2_memory_below_minimum');
   assert.equal(recoveryFailure.failure.category, 'cloud_run_binary_authorization_false_not_round_tripped');
+  assert.equal(privateReadyResult.public_iam_members, 0);
+  assert.equal(privateReadyResult.relays.length, 2);
   assert.deepEqual(profile.runtime_identity.project_roles, []);
   assert.equal(profile.cloud_run.minimum_instances, 0);
   assert.equal(profile.cloud_run.maximum_instances, 1);
@@ -903,12 +915,31 @@ test('validates the private-ready relay-services profile and immutable evidence 
   assert.equal(profile.admission.forwarded_client_headers_trusted, false);
   assert.deepEqual(profile.phases, ['absent', 'private_bootstrap', 'private_ready', 'public_window']);
   assert.equal(profile.cloud_run.memory, '512Mi');
-  assert.equal(profile.operation.maximum_terraform_creates, 0);
-  assert.equal(profile.operation.maximum_terraform_updates, 3);
-  assert.equal(profile.operation.maximum_terraform_deletes, 0);
+  assert.equal(profile.operation.kind, 'hold_verified_private_relays');
+  assert.equal(profile.operation.claim_generation, '1788664144376292');
+  assert.equal(profile.operation.converged_state_serial, 4);
   assert.equal(profile.operation.maximum_public_iam_members, 0);
   assert.equal(profile.operation.maximum_live_requests, 0);
   assert.equal(profile.operation.retry_authorized, false);
+});
+
+test('rejects byte drift in the consumed private-ready profile and result', () => {
+  withTemporaryDirectory((directory) => {
+    for (const [name, validate] of [
+      ['profile-v5.json', validateRelayServicesV5Profile],
+      ['private-ready-result-v1.json', validateRelayServicesPrivateReadyResult],
+    ]) {
+      const path = join(directory, name);
+      copyFileSync(new URL(name, rootUrl), path);
+      assert.doesNotThrow(() => validate(path));
+      writeFileSync(path, Buffer.concat([readFileSync(path), Buffer.from(' ')]));
+      assert.throws(
+        () => validate(path),
+        (error) => error instanceof StagingRelayServicesProfileError
+          && /digest has drifted/u.test(error.message),
+      );
+    }
+  });
 });
 
 test('rejects any profile byte or safety-boundary drift', () => {
@@ -935,7 +966,7 @@ test('rejects any profile byte or safety-boundary drift', () => {
 test('binds the profile to every operational Terraform source byte', () => {
   assert.equal(
     relayServicesTerraformSourceSha256(fileURLToPath(rootUrl)),
-    '1e588bb43b8dd2cd97f564dc3e5b68b462f8a0eab81a3d72fac8dd4b6647721f',
+    '34f58506b984c6df2b618d4b52622fbc00756ae3a2dd501bbb69d7c7a89f9fe6',
   );
 
   withTemporaryDirectory((directory) => {
@@ -1471,7 +1502,7 @@ test('pins the exact recovered baseline and private-ready convergence', () => {
 test('binds private-ready metadata and authorization to the exact live baseline', () => {
   const now = Date.now();
   const { metadata, planBytes } = validPrivateReadyMetadata(now);
-  assert.equal(metadata.profile_sha256, RELAY_SERVICES_PROFILE_SHA256);
+  assert.equal(metadata.profile_sha256, RELAY_SERVICES_V5_PROFILE_SHA256);
   assert.equal(metadata.memory_recovery_failure_sha256, RELAY_SERVICES_MEMORY_RECOVERY_FAILURE_SHA256);
   assert.equal(metadata.maximum_terraform_creates, 0);
   assert.equal(metadata.maximum_terraform_updates, 3);
@@ -1658,6 +1689,8 @@ test('retires both consumed bootstraps and keeps private-ready claim-first and r
   assert.doesNotMatch(readyClaim, /method:\s*'DELETE'/u);
   assert.match(readyPlan, /allowedStatuses:\s*\[2\]/u);
   assert.match(readyPlan, /baselineAfterPlan/u);
+  assert.match(readyApply, /export const RELAY_SERVICES_PRIVATE_READY_OPERATION_CONSUMED = true/u);
+  assert.match(readyPlan, /export const RELAY_SERVICES_PRIVATE_READY_OPERATION_CONSUMED = true/u);
 });
 
 test('rejects consumed or hostile recovery execution before any cloud access', () => {
@@ -1708,6 +1741,6 @@ test('rejects consumed or hostile recovery execution before any cloud access', (
       },
     );
     assert.equal(result.status, 1);
-    assert.match(result.stderr, /Environment override GOOGLE_APPLICATION_CREDENTIALS is forbidden/u);
+    assert.match(result.stderr, /private-ready transition already converged/u);
   }
 });

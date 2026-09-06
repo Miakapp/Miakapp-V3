@@ -80,14 +80,16 @@ Local control-plane tests and credential-free validation add no Firebase usage.
 A live plan adds bounded API reads, a temporary lock, and a small private object.
 The staging project now has the approved billing link, alert budget, bootstrap
 resources, thirteen foundation APIs, a deletion-protected Firestore database
-with active TTL fields, one software KMS signing-key version, one Firebase Web
+with active TTL fields, two software KMS signing-key versions, one Firebase Web
 app and five Secret Manager containers with one enabled version each. One Gen 2
-Function and its backing Cloud Run service are active with internal-only
-ingress, no unauthenticated invoker and no minimum instance. The unscheduled
+Function and its backing Cloud Run service are active with internal-only ingress;
+two additional relay services accept network ingress but remain IAM-private.
+All three scale to zero and have no unauthenticated invoker. The unscheduled
 private Workflow made two controlled failing requests and one successful exact
 discovery request, all without retry or application mutation. No App Engine
-application or public ingress exists. Firebase also reserved a Hosting site
-namespace, but no application was deployed to it.
+application or unauthenticated public invocation exists. Firebase also reserved
+a Hosting site namespace; its temporary attestation runner was deleted and no
+release is currently active.
 
 For a low-volume staging project, the intended initial posture is:
 
@@ -414,16 +416,25 @@ completed browser attestation, and a disabled Hosting runner returning HTTP
 bounded admission/audit collections. This observation granted no deployment or
 public-ingress authority.
 
-The next guarded increment reviews, but has not yet executed, one private relay
-image build. It binds the exact merged Miakapp-Server tree to a deterministic
+The guarded relay-image increment bound the exact merged Miakapp-Server tree to a deterministic
 53,098-byte archive, one digest-pinned Cloud Build Docker builder, verified
 SHA-256 source provenance and a hardened `/ping` smoke test. A generation-zero
 GCS claim permits at most one build and no retry or deletion. The existing
 private source bucket and Artifact Registry repository are reused; the
 operation creates no service, IAM binding, credential, public ingress or fixed
-cost. Independent inventory found the claim, source object, matching build and
-`miakapp-server` package absent while `control-plane` remained the only Cloud
-Run service.
+cost. Independent inventory initially found the claim, source object, matching
+build and `miakapp-server` package absent while `control-plane` remained the
+only Cloud Run service. The distinct recovery build subsequently succeeded with
+verified provenance and its exact image digest is now deployed to two
+IAM-private, scale-to-zero relay services.
+
+The first relay bootstrap failed safely at the Cloud Run Gen2 512-MiB floor.
+Its separate memory recovery created both services and then stopped on a
+provider-only explicit-false Binary Authorization normalization. A third
+zero-create, zero-delete transition assigned each observed service URL as its
+exact WSS audience and converged at serial 4. All three claims remain durable,
+every entrypoint is retired, public IAM members and driver workload requests
+remain zero, and `private-ready-result-v1.json` records the sanitized result.
 
 The pinned local relay-authentication path now includes signing-key overlap,
 key-changing `REAUTH`, concurrent cache refresh, expiry, unknown-`kid` abuse,
@@ -435,7 +446,8 @@ App Check sources through the real exchange, verifies the exact user token at th
 relay, and performs a no-overlap authoritative handoff across two relays. The
 complete disconnect matrix, live KMS and Firebase behavior, staging quotas and
 alerts, managed retiring-key removal and teardown evidence remain blockers.
-Public ingress remains absent.
+Unauthenticated public invocation remains absent; the relay services' network
+ingress is reachable only through IAM until a separately guarded public window.
 
 The user-relay probe retirement driver also closes both zero-temporary crash
 windows. If all six temporaries are already absent live and in Terraform state,

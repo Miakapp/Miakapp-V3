@@ -138,6 +138,7 @@ run "private_ready_requires_the_two_assigned_service_audiences" {
     condition = (
       length(google_cloud_run_v2_service.relay) == 2 &&
       length(google_cloud_run_v2_service_iam_member.public) == 0 &&
+      terraform_data.deployment_guard["active"].input.profile_sha256 == local.profile.operation.converged_profile_sha256 &&
       { for item in google_cloud_run_v2_service.relay["relay-a"].template[0].containers[0].env : item.name => item.value }["MIAKAPP_RELAY_AUDIENCE"] == "wss://miakapp-staging-relay-a-abcdefghij-od.a.run.app/ws" &&
       { for item in google_cloud_run_v2_service.relay["relay-b"].template[0].containers[0].env : item.name => item.value }["MIAKAPP_RELAY_AUDIENCE"] == "wss://miakapp-staging-relay-b-klmnopqrst-od.a.run.app/ws"
     )

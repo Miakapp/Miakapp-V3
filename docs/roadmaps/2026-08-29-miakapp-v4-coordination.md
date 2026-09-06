@@ -258,9 +258,10 @@ real relay with one route-changing credential exchange, no source credential on
 WebSocket and never more than one active socket. This closes the audience-bound
 local credential gate. A separate bounded private staging probe now closes live
 Firebase Auth/App Check verification, KMS-backed signing, relay-audience
-rotation and cleanup on the deployed control plane. The complete disconnect
-matrix, browser-provider attestation, live relay topology, public ingress and
-broader staging acceptance remain open, so this workstream is not complete.
+rotation and cleanup on the deployed control plane. Browser-provider attestation
+is complete and two exact-audience relay services are private-ready. The complete
+disconnect matrix, public-window orchestration, monitoring, rollback and broader
+staging acceptance remain open, so this workstream is not complete.
 
 ### D. Component platform vertical slice
 
@@ -719,9 +720,10 @@ current consumer.
     ceiling and IAM-independent emergency ingress closure. A separate dormant
     Terraform root now freezes the two relay services, their private-bootstrap,
     private-ready, public-window and absent states, public-last IAM dependency,
-    scale-to-zero profile and matching process admission limits. It has no
-    operator entrypoint and has not been applied. Next bind both state machines
-    to an atomic single-use operation, immutable image digest, three-engine runner,
+    scale-to-zero profile and matching process admission limits. Its immutable
+    image digest and private-ready state have converged through three retained
+    claims, with no public invoker, and all one-shot entrypoints are retired.
+    Next bind both state machines to a distinct atomic operation, three-engine runner,
     monitoring and complete rollback guards. Execute the matrix once before
     retiring version 1 after the complete lease bound and wiring the real client
     and opaque broker into the production web shell. This reuses the existing
