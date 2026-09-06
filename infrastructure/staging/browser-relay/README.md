@@ -123,6 +123,17 @@ rolls back IAM before ingress and runtime. It has no CLI or authorization path.
 the single-use claim and requires all other live preconditions.
 
 The adjacent
+[`browser-relay-monitoring/`](../browser-relay-monitoring/) package now freezes
+the six allowed metric descriptors and header-only queries, the existing EUR 10
+staging budget with EUR 2/5/10 alert thresholds, and every runtime stop ceiling.
+Its read-only cloud adapter validates the exact private edge and relay boundary
+before returning a closed observation; its sample evaluator returns only stable
+continue-or-rollback outcomes. It has no CLI, scheduler or resource writer, and
+its profile records zero live preflights. `MONITORING-01` remains open until a
+fresh observation from the merged implementation is digest-pinned by a later
+plan revision.
+
+The adjacent
 [`browser-relay-services/`](../browser-relay-services/) Terraform root now
 freezes the two services and their `absent`, private-bootstrap, private-ready
 and public-window phases. It requires a digest-only image, uses one keyless
