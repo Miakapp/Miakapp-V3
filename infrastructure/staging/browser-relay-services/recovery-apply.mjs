@@ -19,7 +19,7 @@ import {
   readRelayServicesRecoveryPlanMetadata,
   sha256,
   validateBootstrapRelayVariables,
-  validateRelayServicesProfile,
+  validateRelayServicesV4Profile,
   validateRelayServicesRecoveryAuthorization,
   verifyExactMain,
   writePrivateFile,
@@ -53,6 +53,7 @@ import { readAndValidateRecoveryRelayServicesPlan } from './validate-plan.mjs';
 
 const APPLY_AUTHORIZATION = 'MIAKAPP_STAGING_RELAY_SERVICES_RECOVERY_APPLY_AUTHORIZATION';
 const ATTEMPT_MARKER = 'recovery-mutation-attempted.json';
+export const RELAY_SERVICES_MEMORY_RECOVERY_OPERATION_CONSUMED = true;
 process.umask(0o077);
 
 function reject(message) {
@@ -117,7 +118,7 @@ export function buildRelayServicesRecoveryResult({
   output,
   inventory,
 }) {
-  const profile = validateRelayServicesProfile();
+  const profile = validateRelayServicesV4Profile();
   const checkedClaim = validateRelayRecoveryClaimReceipt(
     claimReceipt,
     Buffer.from(canonicalJson(metadata), 'utf8'),
@@ -189,6 +190,9 @@ async function captureUncertainInventory(bundle) {
 }
 
 async function main() {
+  if (RELAY_SERVICES_MEMORY_RECOVERY_OPERATION_CONSUMED) {
+    throw new Error('The relay memory-recovery apply is consumed after its single attempt; use the private-ready transition');
+  }
   if (process.argv.length !== 3 || process.argv[2] === undefined) {
     throw new Error(`Usage: ${APPLY_AUTHORIZATION}=... ./recovery-apply.sh <private-bundle>`);
   }

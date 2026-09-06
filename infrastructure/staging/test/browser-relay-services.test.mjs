@@ -23,23 +23,32 @@ import {
   RELAY_SERVICES_V1_PROFILE_SHA256,
   RELAY_SERVICES_V2_PROFILE_SHA256,
   RELAY_SERVICES_V3_PROFILE_SHA256,
+  RELAY_SERVICES_V4_PROFILE_SHA256,
+  RELAY_SERVICES_MEMORY_RECOVERY_FAILURE_SHA256,
   StagingRelayServicesProfileError,
   bootstrapRelayVariables,
   buildRelayServicesBootstrapPlanMetadata,
   buildRelayServicesRecoveryPlanMetadata,
+  buildRelayServicesPrivateReadyPlanMetadata,
   canonicalJson,
+  privateReadyRelayVariables,
   relayServicesBootstrapAuthorization,
   relayServicesRecoveryAuthorization,
+  relayServicesPrivateReadyAuthorization,
   relayServicesTerraformSourceSha256,
   validateRelayServicesBootstrapAuthorization,
   validateRelayServicesBootstrapFailure,
   validateRelayServicesBootstrapPlanMetadata,
+  validateRelayServicesMemoryRecoveryFailure,
   validateRelayServicesProfile,
   validateRelayServicesRecoveryAuthorization,
   validateRelayServicesRecoveryPlanMetadata,
+  validateRelayServicesPrivateReadyAuthorization,
+  validateRelayServicesPrivateReadyPlanMetadata,
   validateRelayServicesV1Profile,
   validateRelayServicesV2Profile,
   validateRelayServicesV3Profile,
+  validateRelayServicesV4Profile,
 } from '../browser-relay-services/contract.mjs';
 import {
   ALLOWED_RELAY_SERVICE_FILES,
@@ -70,16 +79,33 @@ import {
   validateRelayServicesPrivateBootstrapInventory,
   validateRelayServicesRecoveredInventory,
   validateRelayServicesRecoveryBaseline,
+  validateRelayServicesPrivateReadyBaseline,
+  validateRelayServicesPrivateReadyInventory,
 } from '../browser-relay-services/inventory.mjs';
 import {
   buildRelayServicesRecoveryResult,
 } from '../browser-relay-services/recovery-apply.mjs';
+import {
+  buildRelayServicesPrivateReadyResult,
+  validateRelayServicesPrivateReadyTerraformOutput,
+} from '../browser-relay-services/ready-apply.mjs';
+import {
+  buildRelayPrivateReadyClaim,
+  createRelayPrivateReadyClaim,
+  observePinnedPrivateReadyPrerequisiteClaims,
+  observePinnedRelayPrivateReadyClaim,
+  observeRelayPrivateReadyClaimAbsent,
+  relayPrivateReadyClaimAbsence,
+  validateRelayPrivateReadyClaim,
+  validateRelayPrivateReadyClaimReceipt,
+} from '../browser-relay-services/ready-claim.mjs';
 import {
   validateRelayServicesTerraformOutput,
 } from '../browser-relay-services/apply.mjs';
 import {
   validateInitialRelayServicesPlan,
   validateRecoveryRelayServicesPlan,
+  validatePrivateReadyRelayServicesPlan,
 } from '../browser-relay-services/validate-plan.mjs';
 
 const rootUrl = new URL('../browser-relay-services/', import.meta.url);
@@ -386,7 +412,7 @@ function validPlanMetadata(now = Date.now()) {
 }
 
 function recoveryBaseline() {
-  const profile = validateRelayServicesProfile();
+  const profile = validateRelayServicesV4Profile();
   return {
     schema: 'miakapp.staging-browser-relay-services-inventory/2',
     project_id: profile.project_id,
@@ -438,7 +464,7 @@ function recoveryBaseline() {
 
 function validRecoveryPlan() {
   const plan = validPlan();
-  const profile = validateRelayServicesProfile();
+  const profile = validateRelayServicesV4Profile();
   const previous = validateRelayServicesV3Profile();
   const guardInput = (value, digest) => ({
     deployment_phase: 'private_bootstrap',
@@ -473,7 +499,7 @@ function validRecoveryPlan() {
   };
   guard.change.after = {
     id,
-    input: guardInput(profile, RELAY_SERVICES_PROFILE_SHA256),
+    input: guardInput(profile, RELAY_SERVICES_V4_PROFILE_SHA256),
     triggers_replace: null,
   };
   plan.prior_state.values.root_module.resources.push({
@@ -603,7 +629,7 @@ function privateBootstrapInventory() {
 }
 
 function recoveredInventory(receipt = { generation: '223456789', size_bytes: 900 }) {
-  const profile = validateRelayServicesProfile();
+  const profile = validateRelayServicesV4Profile();
   const value = privateBootstrapInventory();
   value.schema = 'miakapp.staging-browser-relay-services-inventory/2';
   value.relays.forEach((relay) => {
@@ -634,7 +660,7 @@ function recoveredInventory(receipt = { generation: '223456789', size_bytes: 900
 }
 
 function privateBootstrapOutput(inventory = privateBootstrapInventory()) {
-  const profile = validateRelayServicesProfile();
+  const profile = validateRelayServicesV4Profile();
   return {
     schema: 'miakapp.staging-browser-relay-services/1',
     deployment_phase: 'private_bootstrap',
@@ -662,31 +688,213 @@ function privateBootstrapOutput(inventory = privateBootstrapInventory()) {
   };
 }
 
-test('validates the immutable memory-recovery relay-services profile and evidence chain', () => {
+function readyServiceSnapshot(service, profile, audience) {
+  const value = relayAfter(service, profile);
+  value.annotations = {};
+  value.binary_authorization = [];
+  value.custom_audiences = [];
+  value.template[0].annotations = {};
+  value.template[0].containers[0].args = [];
+  value.template[0].containers[0].command = [];
+  value.template[0].containers[0].depends_on = [];
+  value.traffic[0].revision = '';
+  value.traffic[0].tag = '';
+  const audienceEntry = value.template[0].containers[0].env.find(
+    ({ name }) => name === 'MIAKAPP_RELAY_AUDIENCE',
+  );
+  audienceEntry.value = audience;
+  return value;
+}
+
+function validPrivateReadyPlan() {
+  const plan = validRecoveryPlan();
+  const profile = validateRelayServicesProfile();
+  const previous = validateRelayServicesV4Profile();
+  const previousAudiences = bootstrapRelayVariables(previous).relay_audiences;
+  const readyAudiences = privateReadyRelayVariables(profile).relay_audiences;
+  const guardInput = (value, digest, phase, audiences) => ({
+    deployment_phase: phase,
+    profile_sha256: digest,
+    relay_audiences: audiences,
+    relay_image: value.image.digest_reference,
+    relay_source_commit: value.pins.miakapp_server_commit,
+  });
+  plan.variables = Object.fromEntries(Object.entries(privateReadyRelayVariables(profile))
+    .map(([name, value]) => [name, { value }]));
+  plan.resource_drift = [];
+  for (const service of profile.services) {
+    const address = `google_cloud_run_v2_service.relay[${JSON.stringify(service.id)}]`;
+    const change = plan.resource_changes.find((candidate) => candidate.address === address);
+    change.change.actions = ['update'];
+    change.change.before = readyServiceSnapshot(
+      service,
+      profile,
+      service.bootstrap_audience,
+    );
+    change.change.after = readyServiceSnapshot(service, profile, service.ready_audience);
+    const driftBefore = structuredClone(change.change.before);
+    driftBefore.annotations = null;
+    driftBefore.custom_audiences = null;
+    driftBefore.template[0].annotations = null;
+    driftBefore.template[0].containers[0].args = null;
+    driftBefore.template[0].containers[0].command = null;
+    driftBefore.template[0].containers[0].depends_on = null;
+    plan.resource_drift.push({
+      address,
+      mode: 'managed',
+      type: 'google_cloud_run_v2_service',
+      provider_name: 'registry.terraform.io/hashicorp/google',
+      change: {
+        actions: ['update'],
+        before: driftBefore,
+        after: structuredClone(change.change.before),
+      },
+    });
+    plan.prior_state.values.root_module.resources.push({
+      address,
+      mode: 'managed',
+      type: 'google_cloud_run_v2_service',
+      provider_name: 'registry.terraform.io/hashicorp/google',
+    });
+  }
+  const guard = plan.resource_changes.find(
+    ({ address }) => address === 'terraform_data.deployment_guard["active"]',
+  );
+  guard.change.before = {
+    id: guard.change.before.id,
+    input: guardInput(previous, RELAY_SERVICES_V4_PROFILE_SHA256, 'private_bootstrap', previousAudiences),
+    output: guardInput(previous, RELAY_SERVICES_V4_PROFILE_SHA256, 'private_bootstrap', previousAudiences),
+    triggers_replace: null,
+  };
+  guard.change.after = {
+    id: guard.change.before.id,
+    input: guardInput(profile, RELAY_SERVICES_PROFILE_SHA256, 'private_ready', readyAudiences),
+    triggers_replace: null,
+  };
+  for (const check of plan.checks) {
+    check.status = 'pass';
+    for (const instance of check.instances) instance.status = 'pass';
+  }
+  return plan;
+}
+
+function privateReadyBaseline() {
+  const profile = validateRelayServicesProfile();
+  const inventory = recoveredInventory({
+    generation: profile.operation.memory_recovery_claim_generation,
+    size_bytes: profile.operation.memory_recovery_claim_size_bytes,
+  });
+  inventory.terraform_state.generation = profile.operation.initial_state_generation;
+  inventory.terraform_state.size_bytes = profile.operation.initial_state_size_bytes;
+  inventory.terraform_state.sha256 = profile.operation.initial_state_sha256;
+  inventory.terraform_state.serial = profile.operation.initial_state_serial;
+  inventory.relays.forEach((relay) => {
+    const service = profile.services.find(({ id }) => id === relay.id);
+    relay.uri = service.assigned_uri;
+    relay.generation = '1';
+  });
+  return {
+    schema: 'miakapp.staging-browser-relay-services-private-ready-baseline/1',
+    inventory,
+    private_ready_claim: relayPrivateReadyClaimAbsence(),
+  };
+}
+
+function validPrivateReadyMetadata(now = Date.now()) {
+  const baseline = validateRelayServicesPrivateReadyBaseline(privateReadyBaseline());
+  const planBytes = Buffer.from('reviewed private-ready binary plan');
+  const planJsonBytes = Buffer.from('{"reviewed_private_ready":true}\n');
+  const variablesBytes = Buffer.from(canonicalJson(privateReadyRelayVariables()));
+  const repositoryCommit = 'c'.repeat(40);
+  const summary = validatePrivateReadyRelayServicesPlan(validPrivateReadyPlan());
+  const metadata = buildRelayServicesPrivateReadyPlanMetadata({
+    repositoryCommit,
+    createdAt: new Date(now).toISOString(),
+    planBytes,
+    planJsonBytes,
+    variablesBytes,
+    baseline,
+    summary,
+  });
+  return { metadata, metadataBytes: Buffer.from(canonicalJson(metadata)), planBytes };
+}
+
+function privateReadyInventory(receipt = { generation: '323456789', size_bytes: 1_000 }) {
+  const value = structuredClone(privateReadyBaseline().inventory);
+  const profile = validateRelayServicesProfile();
+  value.relays.forEach((relay) => {
+    const service = profile.services.find(({ id }) => id === relay.id);
+    relay.generation = '2';
+    relay.container.environment.MIAKAPP_RELAY_AUDIENCE = service.ready_audience;
+  });
+  value.terraform_state.generation = '1788661250283536';
+  value.terraform_state.size_bytes = 38_000;
+  value.terraform_state.sha256 = 'd'.repeat(64);
+  value.terraform_state.serial = 4;
+  return value;
+}
+
+function privateReadyOutput(inventory = privateReadyInventory()) {
+  const profile = validateRelayServicesProfile();
+  return {
+    schema: 'miakapp.staging-browser-relay-services/1',
+    deployment_phase: 'private_ready',
+    project_id: profile.project_id,
+    project_number: profile.project_number,
+    region: profile.region,
+    relay_source_commit: profile.pins.miakapp_server_commit,
+    relay_image: profile.image.digest_reference,
+    runtime_identity: profile.runtime_identity.email,
+    runtime_project_roles: [],
+    services: Object.fromEntries(profile.services.map((service) => {
+      const relay = inventory.relays.find(({ id }) => id === service.id);
+      return [service.id, {
+        name: service.name,
+        uri: relay.uri,
+        audience: service.ready_audience,
+        public_invoker: false,
+        minimum_instances: 0,
+        maximum_instances: 1,
+        concurrency: 8,
+        timeout_seconds: 900,
+        deletion_protection: false,
+      }];
+    })),
+  };
+}
+
+test('validates the private-ready relay-services profile and immutable evidence chain', () => {
   const profile = validateRelayServicesProfile(fileURLToPath(profileUrl));
   const historical = validateRelayServicesV1Profile();
   const digestBound = validateRelayServicesV2Profile();
   const previous = validateRelayServicesV3Profile();
+  const memoryRecovery = validateRelayServicesV4Profile();
   const failure = validateRelayServicesBootstrapFailure();
-  assert.equal(RELAY_SERVICES_PROFILE_SHA256, '0f8b966a7bf412156a83b0ddc76996abc6b49c28d81cda0f3e4d2b1c16912733');
+  const recoveryFailure = validateRelayServicesMemoryRecoveryFailure();
+  assert.equal(RELAY_SERVICES_PROFILE_SHA256, '41392c96d68bf749c59757bc76d34a69e6eb407efa50b14f61b937c4f5a9b576');
   assert.equal(RELAY_SERVICES_V1_PROFILE_SHA256, 'bc9b231cc9724f19a26ef5c3bbd6da6a69ec79b00cb976e77c73015d5db10db7');
   assert.equal(RELAY_SERVICES_V2_PROFILE_SHA256, '26535e8c8b56d5a0a0875049a1e76aade4e1246b0808470ab4483bc01a2f48cb');
   assert.equal(RELAY_SERVICES_V3_PROFILE_SHA256, 'a5bc737620e57aed5c7e828b4d558e3b246ba13edb40944a40febba6c14a9316');
+  assert.equal(RELAY_SERVICES_V4_PROFILE_SHA256, '0f8b966a7bf412156a83b0ddc76996abc6b49c28d81cda0f3e4d2b1c16912733');
   assert.equal(RELAY_SERVICES_BOOTSTRAP_FAILURE_SHA256, 'd98eb890376d5ec0b87ad91ffc88ca93eb206794d9c0d799b4fa7f0817f9a540');
-  assert.equal(profile.terraform_source_sha256, '8a9e1b5c37e1c25befccfd2b2eac838639a74901785c88e83521a2f897b9f746');
+  assert.equal(RELAY_SERVICES_MEMORY_RECOVERY_FAILURE_SHA256, '5c41533a7b6a684e38abd9e8dd7d94d0f4e21cdd3bd9edf076821cca191932f7');
+  assert.equal(profile.terraform_source_sha256, '1e588bb43b8dd2cd97f564dc3e5b68b462f8a0eab81a3d72fac8dd4b6647721f');
   assert.equal(profile.pins.miakapp_server_commit, 'df10674e034f30eec80760f5ec94bc108cff026f');
-  assert.equal(
+  assert.deepEqual(
     profile.image.digest_reference,
     'europe-west9-docker.pkg.dev/miakapp-v4-staging/miakapp-control-plane/miakapp-server@sha256:23a19a26e8a24f6434ab8bc557dfa3fa799e0262e3400170e3bf064101a890b1',
   );
   assert.equal(profile.contracts.historical_profile_sha256, RELAY_SERVICES_V1_PROFILE_SHA256);
   assert.equal(profile.contracts.digest_bound_profile_sha256, RELAY_SERVICES_V2_PROFILE_SHA256);
-  assert.equal(profile.contracts.previous_profile_sha256, RELAY_SERVICES_V3_PROFILE_SHA256);
+  assert.equal(profile.contracts.bootstrap_profile_sha256, RELAY_SERVICES_V3_PROFILE_SHA256);
+  assert.equal(profile.contracts.memory_recovery_profile_sha256, RELAY_SERVICES_V4_PROFILE_SHA256);
   assert.equal(profile.contracts.bootstrap_failure_sha256, RELAY_SERVICES_BOOTSTRAP_FAILURE_SHA256);
   assert.equal(historical.image.digest, undefined);
   assert.equal(digestBound.state, 'verified_image_bound_no_operator_entrypoint');
   assert.equal(previous.state, 'private_bootstrap_entrypoint_prepared_not_executed');
+  assert.equal(memoryRecovery.state, 'private_bootstrap_memory_recovery_entrypoint_prepared_not_executed');
   assert.equal(failure.failure.category, 'cloud_run_gen2_memory_below_minimum');
+  assert.equal(recoveryFailure.failure.category, 'cloud_run_binary_authorization_false_not_round_tripped');
   assert.deepEqual(profile.runtime_identity.project_roles, []);
   assert.equal(profile.cloud_run.minimum_instances, 0);
   assert.equal(profile.cloud_run.maximum_instances, 1);
@@ -695,8 +903,8 @@ test('validates the immutable memory-recovery relay-services profile and evidenc
   assert.equal(profile.admission.forwarded_client_headers_trusted, false);
   assert.deepEqual(profile.phases, ['absent', 'private_bootstrap', 'private_ready', 'public_window']);
   assert.equal(profile.cloud_run.memory, '512Mi');
-  assert.equal(profile.operation.maximum_terraform_creates, 2);
-  assert.equal(profile.operation.maximum_terraform_updates, 1);
+  assert.equal(profile.operation.maximum_terraform_creates, 0);
+  assert.equal(profile.operation.maximum_terraform_updates, 3);
   assert.equal(profile.operation.maximum_terraform_deletes, 0);
   assert.equal(profile.operation.maximum_public_iam_members, 0);
   assert.equal(profile.operation.maximum_live_requests, 0);
@@ -727,7 +935,7 @@ test('rejects any profile byte or safety-boundary drift', () => {
 test('binds the profile to every operational Terraform source byte', () => {
   assert.equal(
     relayServicesTerraformSourceSha256(fileURLToPath(rootUrl)),
-    '8a9e1b5c37e1c25befccfd2b2eac838639a74901785c88e83521a2f897b9f746',
+    '1e588bb43b8dd2cd97f564dc3e5b68b462f8a0eab81a3d72fac8dd4b6647721f',
   );
 
   withTemporaryDirectory((directory) => {
@@ -970,7 +1178,7 @@ test('treats an existing or ambiguous global claim as permanently non-retryable'
   );
 });
 
-test('accepts only two ready private relays with a keyless role-free identity', () => {
+test('accepts only two healthy IAM-private bootstrap relays with a keyless role-free identity', () => {
   const inventory = privateBootstrapInventory();
   const receipt = { generation: '123456789', size_bytes: 700 };
   assert.equal(
@@ -1011,7 +1219,7 @@ test('binds the distinct recovery plan to the partial state, failure and authori
     baseline,
     summary,
   });
-  assert.equal(metadata.profile_sha256, RELAY_SERVICES_PROFILE_SHA256);
+  assert.equal(metadata.profile_sha256, RELAY_SERVICES_V4_PROFILE_SHA256);
   assert.equal(metadata.bootstrap_failure_sha256, RELAY_SERVICES_BOOTSTRAP_FAILURE_SHA256);
   assert.equal(metadata.original_claim_generation, '1788658024634812');
   assert.equal(metadata.maximum_terraform_creates, 2);
@@ -1182,7 +1390,7 @@ test('makes both recovery claims fail closed and non-retryable', async () => {
     ),
     /outcome is unknown/u,
   );
-  const profile = validateRelayServicesProfile();
+  const profile = validateRelayServicesV4Profile();
   const requests = [];
   await assert.rejects(
     observePinnedOriginalRelayBootstrapClaim(session, async (url) => {
@@ -1204,7 +1412,196 @@ test('makes both recovery claims fail closed and non-retryable', async () => {
   assert.equal(requests[1].searchParams.get('generation'), profile.operation.original_claim_generation);
 });
 
-test('retires bootstrap replay and keeps recovery claim-first, single-use and request-free', () => {
+test('accepts only the exact private-ready audience and guard updates', () => {
+  assert.deepEqual(validatePrivateReadyRelayServicesPlan(validPrivateReadyPlan()), {
+    create: 0,
+    update: 3,
+    no_op: 1,
+    delete: 0,
+    replace: 0,
+    import: 0,
+    relay_services_updated: 2,
+    service_accounts_unchanged: 1,
+    provider_refresh_normalizations: 2,
+    public_iam_members: 0,
+    live_requests: 0,
+    resource_addresses: [
+      'google_cloud_run_v2_service.relay["relay-a"]',
+      'google_cloud_run_v2_service.relay["relay-b"]',
+      'google_service_account.relay["runtime"]',
+      'terraform_data.deployment_guard["active"]',
+    ],
+  });
+  for (const mutate of [
+    (plan) => { plan.resource_changes[0].change.actions = ['delete', 'create']; },
+    (plan) => { plan.resource_changes[0].change.after.binary_authorization = [{ use_default: false }]; },
+    (plan) => { plan.resource_changes[0].change.after.template[0].containers[0].resources[0].limits.memory = '1Gi'; },
+    (plan) => { plan.resource_changes[0].change.after.template[0].containers[0].env[16].value = 'wss://foreign.test/ws'; },
+    (plan) => { plan.resource_drift[0].change.after.annotations.extra = 'drift'; },
+    (plan) => { plan.resource_changes.push({ address: 'google_cloud_run_v2_service_iam_member.public["relay-a"]' }); },
+  ]) {
+    const plan = validPrivateReadyPlan();
+    mutate(plan);
+    assert.throws(() => validatePrivateReadyRelayServicesPlan(plan));
+  }
+});
+
+test('pins the exact recovered baseline and private-ready convergence', () => {
+  const baseline = privateReadyBaseline();
+  assert.equal(validateRelayServicesPrivateReadyBaseline(baseline), baseline);
+  const inventory = privateReadyInventory();
+  const receipt = { generation: '323456789', size_bytes: 1_000 };
+  assert.equal(validateRelayServicesPrivateReadyInventory(inventory, receipt), inventory);
+  assert.deepEqual(
+    validateRelayServicesPrivateReadyTerraformOutput(privateReadyOutput(inventory)),
+    privateReadyOutput(inventory),
+  );
+  for (const mutate of [
+    (value) => { value.inventory.relays[0].uri = 'https://foreign.test'; },
+    (value) => { value.inventory.relay_project_roles.push('roles/viewer'); },
+    (value) => { value.inventory.terraform_state.serial = 4; },
+    (value) => { value.private_ready_claim.state = 'present'; },
+  ]) {
+    const value = structuredClone(baseline);
+    mutate(value);
+    assert.throws(() => validateRelayServicesPrivateReadyBaseline(value));
+  }
+});
+
+test('binds private-ready metadata and authorization to the exact live baseline', () => {
+  const now = Date.now();
+  const { metadata, planBytes } = validPrivateReadyMetadata(now);
+  assert.equal(metadata.profile_sha256, RELAY_SERVICES_PROFILE_SHA256);
+  assert.equal(metadata.memory_recovery_failure_sha256, RELAY_SERVICES_MEMORY_RECOVERY_FAILURE_SHA256);
+  assert.equal(metadata.maximum_terraform_creates, 0);
+  assert.equal(metadata.maximum_terraform_updates, 3);
+  assert.equal(metadata.maximum_cloud_run_service_updates, 2);
+  assert.equal(validateRelayServicesPrivateReadyPlanMetadata(metadata, now), metadata);
+  const authorization = relayServicesPrivateReadyAuthorization(
+    planBytes,
+    metadata.repository_commit,
+    metadata.baseline_sha256,
+  );
+  assert.doesNotThrow(() => validateRelayServicesPrivateReadyAuthorization(
+    authorization,
+    planBytes,
+    metadata.repository_commit,
+    metadata.baseline_sha256,
+  ));
+  assert.throws(() => validateRelayServicesPrivateReadyAuthorization(
+    `${authorization}x`,
+    planBytes,
+    metadata.repository_commit,
+    metadata.baseline_sha256,
+  ), /authorization is missing or invalid/u);
+});
+
+test('creates, pins and closes one global private-ready claim', async () => {
+  const now = Date.now();
+  const { metadata, metadataBytes } = validPrivateReadyMetadata(now);
+  const attemptedAt = new Date(now + 1_000).toISOString();
+  const expected = buildRelayPrivateReadyClaim(metadataBytes, metadata, attemptedAt);
+  assert.equal(validateRelayPrivateReadyClaim(expected, metadataBytes, metadata), expected);
+  let storedBytes;
+  const requests = [];
+  const fetchImplementation = async (url, options = {}) => {
+    const parsed = new URL(url);
+    requests.push({ url: parsed, options });
+    if (parsed.pathname.startsWith('/upload/storage/v1/')) {
+      storedBytes = Buffer.from(options.body);
+      return new Response(JSON.stringify({
+        bucket: 'miakapp-v4-staging-tfstate-1072737219170',
+        name: 'terraform/browser-relay-services/operations/private-ready-v1.json',
+        generation: '323456789',
+        size: String(storedBytes.byteLength),
+      }), { status: 200 });
+    }
+    if (parsed.searchParams.get('alt') === 'media') {
+      return new Response(storedBytes, { status: 200 });
+    }
+    return new Response(JSON.stringify({
+      bucket: 'miakapp-v4-staging-tfstate-1072737219170',
+      name: 'terraform/browser-relay-services/operations/private-ready-v1.json',
+      generation: '323456789',
+      size: String(storedBytes.byteLength),
+    }), { status: 200 });
+  };
+  const session = { accessToken: 'a'.repeat(40) };
+  const receipt = await createRelayPrivateReadyClaim(
+    session,
+    metadataBytes,
+    metadata,
+    attemptedAt,
+    fetchImplementation,
+  );
+  assert.equal(validateRelayPrivateReadyClaimReceipt(receipt, metadataBytes, metadata), receipt);
+  assert.equal(requests[0].url.searchParams.get('ifGenerationMatch'), '0');
+  await observePinnedRelayPrivateReadyClaim(
+    session,
+    receipt,
+    metadataBytes,
+    metadata,
+    fetchImplementation,
+  );
+  assert.deepEqual(
+    buildRelayServicesPrivateReadyResult({
+      metadata,
+      claimReceipt: receipt,
+      output: privateReadyOutput(),
+      inventory: privateReadyInventory(receipt),
+    }).relays.map(({ audience }) => audience),
+    Object.values(privateReadyRelayVariables().relay_audiences),
+  );
+  await assert.rejects(
+    observeRelayPrivateReadyClaimAbsent(session, async () => new Response('{}', { status: 200 })),
+    /already exists/u,
+  );
+  await assert.rejects(
+    createRelayPrivateReadyClaim(
+      session,
+      metadataBytes,
+      metadata,
+      attemptedAt,
+      async () => { throw new Error('ambiguous transport'); },
+    ),
+    /outcome is unknown/u,
+  );
+});
+
+test('pins both consumed prerequisite claims without exposing their contents', async () => {
+  const profile = validateRelayServicesProfile();
+  const contents = new Map([
+    [profile.operation.original_claim_object, Buffer.from('a'.repeat(profile.operation.original_claim_size_bytes))],
+    [profile.operation.memory_recovery_claim_object, Buffer.from('b'.repeat(profile.operation.memory_recovery_claim_size_bytes))],
+  ]);
+  profile.operation.original_claim_sha256 = createHash('sha256')
+    .update(contents.get(profile.operation.original_claim_object)).digest('hex');
+  profile.operation.memory_recovery_claim_sha256 = createHash('sha256')
+    .update(contents.get(profile.operation.memory_recovery_claim_object)).digest('hex');
+  // The immutable live digests cannot be replaced in the real profile; exercise drift rejection instead.
+  await assert.rejects(
+    observePinnedPrivateReadyPrerequisiteClaims(
+      { accessToken: 'a'.repeat(40) },
+      async (url) => {
+        const parsed = new URL(url);
+        const object = decodeURIComponent(parsed.pathname.split('/').at(-1));
+        const content = contents.get(object);
+        if (parsed.searchParams.get('alt') === 'media') return new Response(content, { status: 200 });
+        return new Response(JSON.stringify({
+          bucket: profile.state_backend.bucket,
+          name: object,
+          generation: object === profile.operation.original_claim_object
+            ? profile.operation.original_claim_generation
+            : profile.operation.memory_recovery_claim_generation,
+          size: String(content.byteLength),
+        }), { status: 200 });
+      },
+    ),
+    /content has drifted/u,
+  );
+});
+
+test('retires both consumed bootstraps and keeps private-ready claim-first and request-free', () => {
   const apply = readFileSync(new URL('../browser-relay-services/apply.mjs', import.meta.url), 'utf8');
   const plan = readFileSync(new URL('../browser-relay-services/plan.mjs', import.meta.url), 'utf8');
   const recoveryApply = readFileSync(
@@ -1217,6 +1614,18 @@ test('retires bootstrap replay and keeps recovery claim-first, single-use and re
   );
   const recoveryPlan = readFileSync(
     new URL('../browser-relay-services/recovery-plan.mjs', import.meta.url),
+    'utf8',
+  );
+  const readyApply = readFileSync(
+    new URL('../browser-relay-services/ready-apply.mjs', import.meta.url),
+    'utf8',
+  );
+  const readyClaim = readFileSync(
+    new URL('../browser-relay-services/ready-claim.mjs', import.meta.url),
+    'utf8',
+  );
+  const readyPlan = readFileSync(
+    new URL('../browser-relay-services/ready-plan.mjs', import.meta.url),
     'utf8',
   );
   assert.match(apply, /export const RELAY_SERVICES_BOOTSTRAP_OPERATION_CONSUMED = true/u);
@@ -1234,6 +1643,21 @@ test('retires bootstrap replay and keeps recovery claim-first, single-use and re
   assert.doesNotMatch(recoveryClaim, /method:\s*'DELETE'/u);
   assert.match(recoveryPlan, /allowedStatuses:\s*\[2\]/u);
   assert.match(recoveryPlan, /baselineAfterPlan/u);
+  assert.match(recoveryApply, /export const RELAY_SERVICES_MEMORY_RECOVERY_OPERATION_CONSUMED = true/u);
+  assert.match(recoveryPlan, /export const RELAY_SERVICES_MEMORY_RECOVERY_OPERATION_CONSUMED = true/u);
+  assert.ok(readyApply.indexOf('writeMutationAttemptMarker(bundle, freshMetadata)')
+    < readyApply.indexOf('createRelayPrivateReadyClaim('));
+  assert.ok(readyApply.indexOf('createRelayPrivateReadyClaim(')
+    < readyApply.indexOf("'apply', '-input=false'"));
+  assert.equal(readyApply.match(/'apply', '-input=false'/gu)?.length, 1);
+  assert.match(readyApply, /'apply', '-input=false', '-lock-timeout=5m'/u);
+  assert.doesNotMatch(readyApply, /fetch\(/u);
+  assert.match(readyApply, /must never be retried/u);
+  assert.match(readyApply, /Do not retry any saved plan/u);
+  assert.match(readyClaim, /ifGenerationMatch', '0'/u);
+  assert.doesNotMatch(readyClaim, /method:\s*'DELETE'/u);
+  assert.match(readyPlan, /allowedStatuses:\s*\[2\]/u);
+  assert.match(readyPlan, /baselineAfterPlan/u);
 });
 
 test('rejects consumed or hostile recovery execution before any cloud access', () => {
@@ -1255,9 +1679,19 @@ test('rejects consumed or hostile recovery execution before any cloud access', (
     assert.match(result.stderr, /is consumed after its failed single attempt/u);
   }
 
+  for (const name of ['recovery-plan.mjs', 'recovery-apply.mjs']) {
+    const result = spawnSync(
+      process.execPath,
+      [fileURLToPath(new URL(`../browser-relay-services/${name}`, import.meta.url))],
+      { encoding: 'utf8', env: hostileEnvironment },
+    );
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /memory-recovery .* is consumed after its single attempt/u);
+  }
+
   for (const [name, confirmation] of [
-    ['recovery-plan.mjs', 'MIAKAPP_STAGING_RELAY_SERVICES_RECOVERY_PLAN_CONFIRMATION'],
-    ['recovery-apply.mjs', 'MIAKAPP_STAGING_RELAY_SERVICES_RECOVERY_APPLY_AUTHORIZATION'],
+    ['ready-plan.mjs', 'MIAKAPP_STAGING_RELAY_SERVICES_READY_PLAN_CONFIRMATION'],
+    ['ready-apply.mjs', 'MIAKAPP_STAGING_RELAY_SERVICES_READY_APPLY_AUTHORIZATION'],
   ]) {
     const result = spawnSync(
       process.execPath,

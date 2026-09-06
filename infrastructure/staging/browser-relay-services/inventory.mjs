@@ -3,6 +3,7 @@ import { isDeepStrictEqual } from 'node:util';
 
 import {
   BOOTSTRAP_CLAIM_OBJECT,
+  PRIVATE_READY_CLAIM_OBJECT,
   PROJECT_ID,
   RECOVERY_CLAIM_OBJECT,
   REGION,
@@ -12,6 +13,7 @@ import {
   canonicalJson,
   sha256,
   validateRelayServicesProfile,
+  validateRelayServicesV4Profile,
   validateRelayServicesV3Profile,
 } from './contract.mjs';
 
@@ -488,7 +490,7 @@ export function validateRelayServicesBootstrapBaseline(value) {
   return Object.freeze(value);
 }
 
-function expectedEnvironment(profile, service) {
+function expectedEnvironment(profile, service, relayAudience = service.bootstrap_audience) {
   return {
     MIAKAPP_ALLOWED_ORIGINS: profile.application.allowed_origin,
     MIAKAPP_CONNECTION_ATTEMPTS_PER_MINUTE:
@@ -511,13 +513,18 @@ function expectedEnvironment(profile, service) {
       String(profile.admission.maximum_tracked_immediate_peers),
     MIAKAPP_PING_INTERVAL: profile.relay_runtime.ping_interval,
     MIAKAPP_PONG_TIMEOUT: profile.relay_runtime.pong_timeout,
-    MIAKAPP_RELAY_AUDIENCE: service.bootstrap_audience,
+    MIAKAPP_RELAY_AUDIENCE: relayAudience,
     MIAKAPP_SHUTDOWN_TIMEOUT: profile.relay_runtime.shutdown_timeout,
     MIAKAPP_WRITE_TIMEOUT: profile.relay_runtime.write_timeout,
   };
 }
 
-function validateDeployedRelay(relay, service, profile) {
+function validateDeployedRelay(
+  relay,
+  service,
+  profile,
+  relayAudience = service.bootstrap_audience,
+) {
   if (!plainObject(relay)
     || relay.id !== service.id
     || relay.name !== service.name
@@ -541,7 +548,10 @@ function validateDeployedRelay(relay, service, profile) {
     || relay.container?.memory !== profile.cloud_run.memory
     || relay.container?.cpu_idle !== profile.cloud_run.cpu_idle
     || relay.container?.startup_cpu_boost !== profile.cloud_run.startup_cpu_boost
-    || !isDeepStrictEqual(relay.container?.environment, expectedEnvironment(profile, service))
+    || !isDeepStrictEqual(
+      relay.container?.environment,
+      expectedEnvironment(profile, service, relayAudience),
+    )
     || !isDeepStrictEqual(relay.container?.ports, [{ name: 'http1', container_port: 3000 }])
     || !isDeepStrictEqual(relay.container?.startup_probe, {
       path: '/ping',
@@ -681,7 +691,7 @@ function recoveryClaimAbsence() {
 }
 
 export function validateRelayServicesRecoveryBaseline(value) {
-  const profile = validateRelayServicesProfile();
+  const profile = validateRelayServicesV4Profile();
   validateRecoveryInventoryEnvelope(value, 'Relay-services recovery baseline');
   exact(value.cloud_run_services, ['control-plane'], 'Recovery baseline Cloud Run services');
   exact(value.relays, [], 'Recovery baseline relay services');
@@ -717,7 +727,7 @@ export function validateRelayServicesRecoveryBaseline(value) {
 }
 
 export function validateRelayServicesRecoveredInventory(value, recoveryClaimReceipt) {
-  const profile = validateRelayServicesProfile();
+  const profile = validateRelayServicesV4Profile();
   validateRecoveryInventoryEnvelope(value, 'Recovered private relay inventory');
   if (!plainObject(recoveryClaimReceipt)
     || !/^[1-9][0-9]*$/u.test(recoveryClaimReceipt.generation ?? '')
@@ -785,4 +795,133 @@ export function validateRelayServicesRecoveredInventory(value, recoveryClaimRece
 
 export function relayServicesInventorySha256(value) {
   return sha256(Buffer.from(canonicalJson(value), 'utf8'));
+}
+
+function privateReadyClaimAbsence() {
+  return {
+    schema: 'miakapp.staging-browser-relay-services-claim-observation/1',
+    bucket: STATE_BUCKET,
+    object: PRIVATE_READY_CLAIM_OBJECT,
+    state: 'absent',
+  };
+}
+
+function expectedRecoveryClaim(profile) {
+  return {
+    schema: 'miakapp.staging-browser-relay-services-claim-observation/1',
+    bucket: STATE_BUCKET,
+    object: profile.operation.memory_recovery_claim_object,
+    state: 'present',
+    generation: profile.operation.memory_recovery_claim_generation,
+    size_bytes: profile.operation.memory_recovery_claim_size_bytes,
+  };
+}
+
+function validateCurrentPrivateRelayEnvelope(inventory, description) {
+  const profile = validateRelayServicesProfile();
+  validateRecoveryInventoryEnvelope(inventory, description);
+  exact(inventory.cloud_run_services, [
+    'control-plane', 'miakapp-staging-relay-a', 'miakapp-staging-relay-b',
+  ], `${description} Cloud Run services`);
+  if (!Array.isArray(inventory.relays) || inventory.relays.length !== 2) {
+    reject(`${description} must contain exactly two relay services`);
+  }
+  exact(inventory.relay_service_account, {
+    schema: 'miakapp.staging-browser-relay-service-account-observation/1',
+    email: profile.runtime_identity.email,
+    name: `projects/${PROJECT_ID}/serviceAccounts/${profile.runtime_identity.email}`,
+    state: 'active',
+    user_managed_keys: 0,
+  }, `${description} service account`);
+  exact(inventory.relay_project_roles, [], `${description} project roles`);
+  exact(inventory.bootstrap_claim, expectedBootstrapClaim(profile), `${description} bootstrap claim`);
+  exact(inventory.recovery_claim, expectedRecoveryClaim(profile), `${description} recovery claim`);
+  return profile;
+}
+
+export function validateRelayServicesPrivateReadyBaseline(value) {
+  if (!plainObject(value) || value.schema
+      !== 'miakapp.staging-browser-relay-services-private-ready-baseline/1'
+    || !plainObject(value.inventory) || !plainObject(value.private_ready_claim)
+    || !isDeepStrictEqual(Object.keys(value).sort(), [
+      'inventory', 'private_ready_claim', 'schema',
+    ])) {
+    reject('Relay-services private-ready baseline is malformed');
+  }
+  const profile = validateCurrentPrivateRelayEnvelope(
+    value.inventory,
+    'Relay-services private-ready baseline',
+  );
+  for (const service of profile.services) {
+    const relay = value.inventory.relays.find((candidate) => candidate.id === service.id);
+    validateDeployedRelay(relay, service, profile, service.bootstrap_audience);
+    if (relay.uri !== service.assigned_uri || relay.generation !== '1') {
+      reject(`${service.id} assigned URI or generation has drifted before private-ready`);
+    }
+  }
+  exact(value.inventory.terraform_state, {
+    schema: 'miakapp.staging-browser-relay-services-state-observation/1',
+    bucket: STATE_BUCKET,
+    object: STATE_OBJECT,
+    state: 'present',
+    generation: profile.operation.initial_state_generation,
+    size_bytes: profile.operation.initial_state_size_bytes,
+    sha256: profile.operation.initial_state_sha256,
+    terraform_version: TERRAFORM_VERSION,
+    serial: profile.operation.initial_state_serial,
+    lineage_sha256: profile.operation.initial_state_lineage_sha256,
+    resource_addresses: [
+      'data.terraform_remote_state.workload[0]',
+      'google_cloud_run_v2_service.relay["relay-a"]',
+      'google_cloud_run_v2_service.relay["relay-b"]',
+      'google_service_account.relay["runtime"]',
+      'terraform_data.deployment_guard["active"]',
+    ],
+    output_names: ['staging_browser_relays'],
+  }, 'Relay-services private-ready baseline Terraform state');
+  exact(value.private_ready_claim, privateReadyClaimAbsence(), 'Private-ready claim absence');
+  return Object.freeze(value);
+}
+
+export function validateRelayServicesPrivateReadyInventory(inventory, claimReceipt) {
+  const profile = validateCurrentPrivateRelayEnvelope(
+    inventory,
+    'Relay-services private-ready inventory',
+  );
+  if (!plainObject(claimReceipt)
+    || !/^[1-9][0-9]*$/u.test(claimReceipt.generation ?? '')
+    || !Number.isSafeInteger(claimReceipt.size_bytes) || claimReceipt.size_bytes < 1) {
+    reject('Private-ready claim receipt is malformed');
+  }
+  for (const service of profile.services) {
+    const relay = inventory.relays.find((candidate) => candidate.id === service.id);
+    validateDeployedRelay(relay, service, profile, service.ready_audience);
+    if (relay.uri !== service.assigned_uri
+      || !/^[1-9][0-9]*$/u.test(relay.generation)
+      || Number(relay.generation) <= 1) {
+      reject(`${service.id} did not advance to its assigned private-ready audience`);
+    }
+  }
+  const state = inventory.terraform_state;
+  if (!plainObject(state)
+    || state.schema !== 'miakapp.staging-browser-relay-services-state-observation/1'
+    || state.bucket !== STATE_BUCKET || state.object !== STATE_OBJECT
+    || state.state !== 'present' || !/^[1-9][0-9]*$/u.test(state.generation ?? '')
+    || state.generation === profile.operation.initial_state_generation
+    || !Number.isSafeInteger(state.size_bytes) || state.size_bytes < 1
+    || !/^[0-9a-f]{64}$/u.test(state.sha256 ?? '')
+    || state.terraform_version !== TERRAFORM_VERSION
+    || !Number.isSafeInteger(state.serial) || state.serial <= profile.operation.initial_state_serial
+    || state.lineage_sha256 !== profile.operation.initial_state_lineage_sha256) {
+    reject('Private-ready Terraform state did not advance from the reviewed recovery state');
+  }
+  exact(state.resource_addresses, [
+    'data.terraform_remote_state.workload[0]',
+    'google_cloud_run_v2_service.relay["relay-a"]',
+    'google_cloud_run_v2_service.relay["relay-b"]',
+    'google_service_account.relay["runtime"]',
+    'terraform_data.deployment_guard["active"]',
+  ], 'Private-ready Terraform state resources');
+  exact(state.output_names, ['staging_browser_relays'], 'Private-ready Terraform outputs');
+  return Object.freeze(inventory);
 }
