@@ -55,7 +55,11 @@ implemented across several repositories.
 - [`../infrastructure/staging/browser-relay-orchestrator/`](../infrastructure/staging/browser-relay-orchestrator/)
   — dormant single-use composition boundary with a retained generation-zero
   claim, post-claim baseline check, bounded edge window and mandatory private
-  postflight; not preflighted or executed live.
+  postflight; preflighted but not executed live.
+- [`../infrastructure/staging/browser-relay-operation/`](../infrastructure/staging/browser-relay-operation/)
+  — dormant full-operation envelope fixing the public-last relay transition and
+  two-level cleanup order around the edge orchestrator; no live adapter or
+  execution authority is present.
 - [`../infrastructure/staging/browser-relay-services/`](../infrastructure/staging/browser-relay-services/)
   — applied four-phase Terraform model holding two private-ready, scale-to-zero
   relays with immutable image selection, finite process admission and public-last

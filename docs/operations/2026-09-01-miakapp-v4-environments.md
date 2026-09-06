@@ -472,6 +472,15 @@ credential or cloud response and made no mutation. Plan revision 13 archives
 the exact revision-12 input, pins this sanitized result and marks `EDGE-01`
 satisfied; every `LIVE-*` row remains pending.
 
+The following source-only increment implements the full live-operation
+envelope around that edge primitive. It accepts only exact injected component
+interfaces, makes the relays public as the last action before one matrix, and
+has two unconditional cleanup levels: runner/session/relay cleanup inside the
+public window, then fixture/binding cleanup after canonical-private edge
+rollback. The result boundary contains only bounded semantic aggregates. It
+has no CLI, cloud adapter, credentials, publication path or execution authority,
+so staging remains unchanged and the retained operation claim remains absent.
+
 The guarded relay-image increment bound the exact merged Miakapp-Server tree to a deterministic
 53,098-byte archive, one digest-pinned Cloud Build Docker builder, verified
 SHA-256 source provenance and a hardened `/ping` smoke test. A generation-zero
