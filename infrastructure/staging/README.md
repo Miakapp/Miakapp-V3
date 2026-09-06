@@ -383,7 +383,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`browser-relay-monitoring/`](browser-relay-monitoring/) | Closed allow-listed monitoring preflight and evaluator | One post-merge read-only observation verified all six metric surfaces, the existing EUR 10 budget and the private edge/relay boundary; no mutation or acceptance execution occurred |
 | [`browser-relay-rollback/`](browser-relay-rollback/) | Closed-target rollback preflight | Post-merge observation verified all ten private-target facts and a four-resource Terraform no-change plan; its sanitized result records zero mutation, public-ingress change and acceptance execution |
 | [`browser-relay-orchestrator/`](browser-relay-orchestrator/) | Dormant single-use edge orchestrator | Post-merge read-only preflight proved the claim absent and the rollback target private and converged; no claim, mutation, public edge or live acceptance has run |
-| [`browser-relay-operation/`](browser-relay-operation/) | Dormant full live-operation envelope | Composes the claimed edge, public-last relay transition, one matrix and two-level cleanup; no cloud adapter, live authority or execution is present |
+| [`browser-relay-operation/`](browser-relay-operation/) | Dormant full live-operation and preflight envelope | Composes the claimed edge, public-last relay transition, one matrix and two-level cleanup; its exact read-only preflight is implemented but not run, and no cloud adapter, live authority or execution is present |
 | [`browser-relay-services/`](browser-relay-services/) | Guarded two-relay Cloud Run Terraform state machine | Two private-ready 512-MiB scale-0..1 services use their exact assigned WSS audiences and a keyless role-free identity; all three claims remain durable and every one-shot entrypoint is retired |
 | [`browser-relay-image/`](browser-relay-image/) | Guarded one-shot private relay image build | Distinct v2 recovery succeeded once with exact source provenance and hardened smoke validation; immutable image is deployed only to the two IAM-private relays; all build entrypoints retired |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
@@ -730,7 +730,9 @@ restores private relays. After the edge orchestrator has restored the canonical
 private control plane, its second cleanup removes fixtures and temporary
 bindings and requires the complete rollback target. The package has no CLI,
 cloud adapter or authorization source, records zero runs, and plan revision 13
-remains entirely pending.
+remains entirely pending. Its separate preflight source can only reduce one
+fresh read-only orchestrator observation to a closed operation baseline; it has
+not yet been run from the merged implementation.
 The dormant
 [`browser-relay-monitoring/`](browser-relay-monitoring/) package separately
 pins the six permitted header-only Cloud Monitoring queries, the existing EUR

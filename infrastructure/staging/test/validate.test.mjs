@@ -56,10 +56,10 @@ test('rejects a staging manifest above the bounded 128-KiB envelope', () => {
 
 test('accepts the successful and retired private user-relay probe', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 76);
+  assert.equal(validated.revision, 77);
   assert.equal(
     validated.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_implemented_not_executed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_implemented_not_run_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
@@ -998,10 +998,10 @@ test('accepts the successful and retired private user-relay probe', () => {
     browser_diagnostics_committed: false,
   });
   assert.deepEqual(validated.evidence.browser_relay_operation, {
-    state: 'closed_single_use_live_operation_envelope_implemented_not_executed',
+    state: 'closed_single_use_live_operation_envelope_preflight_implemented_not_run',
     profile_path: 'browser-relay-operation/profile.json',
     profile_sha256:
-      'a9f23d9995cc907059f42a7fe22adeac385930613574c34dc628d1c9b7ea1161',
+      'd1ff776c48c0aade724fc31a8d44c7e68fe5c81919eab7030998962017801a73',
     implementation_base_commit: 'b82e152334a0bb30f6dcdbbe32abe44349bd9542',
     browser_relay_plan_sha256:
       'a74a130f3946c7beaca8c2f019f36b1641f1fa47e4c8b63c24754892a18d702a',

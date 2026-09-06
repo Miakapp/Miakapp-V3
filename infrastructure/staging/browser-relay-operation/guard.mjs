@@ -6,6 +6,7 @@ const REQUIRED_FILES = Object.freeze([
   'contract.mjs',
   'guard.mjs',
   'operation.mjs',
+  'preflight.mjs',
   'profile.json',
 ]);
 
@@ -35,6 +36,13 @@ export function validateBrowserRelayOperationRoot(rootUrl) {
   if (/process\.(?:argv|env|stdin)|child_process|execSync|spawnSync|\bgcloud\b|\bterraform\b|\bfirebase\b/u
     .test(operation)) {
     reject('Browser-relay operation must remain a dormant in-process composition library');
+  }
+  const preflight = readFileSync(new URL('preflight.mjs', rootUrl), 'utf8');
+  if (/process\.(?:argv|env|stdin)|child_process|execSync|spawnSync|\bgcloud\b|\bterraform\b|\bfirebase\b/u
+    .test(preflight)
+    || /\b(?:POST|PUT|PATCH|DELETE)\b|createAtomicOrchestratorClaim|runSingleUseEdgeOrchestrator/u
+      .test(preflight)) {
+    reject('Browser-relay operation preflight must remain read-only and in-process');
   }
   const cleanupOrder = [
     'components.removeRunner',
