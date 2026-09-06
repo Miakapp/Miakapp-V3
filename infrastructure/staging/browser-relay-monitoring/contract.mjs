@@ -9,6 +9,12 @@ export const REGION = 'europe-west9';
 export const MONITORING_PROFILE_PATH = 'browser-relay-monitoring/profile.json';
 export const MONITORING_PROFILE_SHA256 =
   'df5d04aa28658a6b0b2bd59087dd60a1d837f271bb85da00823e2d2e39b2e661';
+export const MONITORING_IMPLEMENTATION_COMMIT =
+  'aa99fbabd5bdb336ee6eb2c913183e4f9dd501d2';
+export const MONITORING_PREFLIGHT_RESULT_PATH =
+  'browser-relay-monitoring/preflight-result-v1.json';
+export const MONITORING_PREFLIGHT_RESULT_SHA256 =
+  '618e074b9e4e9b6a532b2ecbfc87614ff5b382f9632397c4e86d111272425f64';
 export const BROWSER_RELAY_V10_PLAN_SHA256 =
   '614493a6ffd1c8c45044585368ae21eefa82afb65f031d2fd4e9028b215098da';
 export const APPROVED_BILLING_ACCOUNT_SHA256 =
@@ -19,6 +25,7 @@ export const SAMPLE_RESULT_SCHEMA =
   'miakapp.staging-browser-relay-monitoring-sample-result/1';
 
 const profilePath = new URL('profile.json', import.meta.url);
+const resultPath = new URL('preflight-result-v1.json', import.meta.url);
 const MAXIMUM_PROFILE_BYTES = 20 * 1024;
 const SHA256 = /^[0-9a-f]{64}$/u;
 const COMMIT = /^[0-9a-f]{40}$/u;
@@ -448,6 +455,7 @@ export function buildMonitoringPreflightResult(value) {
     project_number: PROJECT_NUMBER,
     region: REGION,
     observed_at: observation.observed_at,
+    implementation_commit: MONITORING_IMPLEMENTATION_COMMIT,
     profile_sha256: MONITORING_PROFILE_SHA256,
     browser_relay_plan_sha256: profile.pins.browser_relay_plan_sha256,
     control_plane_state: observation.private_boundary.control_plane_state,
@@ -474,6 +482,72 @@ export function buildMonitoringPreflightResult(value) {
     raw_cloud_responses_retained: false,
   };
   rejectPrivateMaterial(result, 'result');
+  return Object.freeze(result);
+}
+
+export function validateMonitoringPreflightResult(path = resultPath) {
+  const entry = lstatSync(path);
+  if (!entry.isFile() || entry.isSymbolicLink() || entry.size < 1
+    || entry.size > MAXIMUM_PROFILE_BYTES) {
+    reject('Monitoring preflight result must be a bounded regular file');
+  }
+  const bytes = readFileSync(path);
+  if (sha256(bytes) !== MONITORING_PREFLIGHT_RESULT_SHA256) {
+    reject('Monitoring preflight result digest has drifted');
+  }
+  let result;
+  try {
+    result = JSON.parse(bytes.toString('utf8'));
+  } catch {
+    return reject('Monitoring preflight result must be valid JSON');
+  }
+  if (canonicalJson(result) !== bytes.toString('utf8')) {
+    reject('Monitoring preflight result is not canonical JSON');
+  }
+  rejectPrivateMaterial(result, 'preflight_result');
+  exactKeys(result, [
+    'schema', 'state', 'project_id', 'project_number', 'region', 'observed_at',
+    'implementation_commit', 'profile_sha256', 'browser_relay_plan_sha256',
+    'control_plane_state', 'control_plane_revision',
+    'control_plane_public_invokers', 'relay_phase', 'relay_services',
+    'relay_public_invokers', 'metric_descriptors_observed',
+    'allowlisted_queries_succeeded', 'series_headers_observed', 'budget_state',
+    'budget_amount_eur', 'budget_thresholds_eur',
+    'budget_project_level_recipients', 'billing_account_sha256',
+    'budget_resource_name_sha256', 'cloud_mutations', 'public_ingress_changes',
+    'acceptance_executions', 'credential_material_retained',
+    'raw_cloud_responses_retained',
+  ], 'preflight_result');
+  timestamp(result.observed_at, 'preflight_result.observed_at');
+  if (result.schema !== PREFLIGHT_RESULT_SCHEMA
+    || result.state !== 'allowlisted_monitoring_observed_at_private_boundary'
+    || result.project_id !== PROJECT_ID || result.project_number !== PROJECT_NUMBER
+    || result.region !== REGION
+    || result.implementation_commit !== MONITORING_IMPLEMENTATION_COMMIT
+    || result.profile_sha256 !== MONITORING_PROFILE_SHA256
+    || result.browser_relay_plan_sha256 !== BROWSER_RELAY_V10_PLAN_SHA256
+    || result.control_plane_state !== 'canonical_private'
+    || !REVISION.test(result.control_plane_revision)
+    || result.control_plane_revision !== 'control-plane-00010-vop'
+    || result.control_plane_public_invokers !== 0
+    || result.relay_phase !== 'private_ready' || result.relay_services !== 2
+    || result.relay_public_invokers !== 0
+    || result.metric_descriptors_observed !== 6
+    || result.allowlisted_queries_succeeded !== 6
+    || result.series_headers_observed !== 0
+    || result.budget_state !== 'configured' || result.budget_amount_eur !== 10
+    || !isDeepStrictEqual(result.budget_thresholds_eur, [2, 5, 10])
+    || result.budget_project_level_recipients !== true
+    || result.billing_account_sha256 !== APPROVED_BILLING_ACCOUNT_SHA256
+    || !SHA256.test(result.budget_resource_name_sha256)
+    || result.budget_resource_name_sha256
+      !== '08012ab219c12dd1b8d9a04d1eb03f73f1565979a293515c5a2bc06be90bb13d'
+    || result.cloud_mutations !== 0 || result.public_ingress_changes !== 0
+    || result.acceptance_executions !== 0
+    || result.credential_material_retained !== false
+    || result.raw_cloud_responses_retained !== false) {
+    reject('Monitoring preflight result has drifted from the closed live observation');
+  }
   return Object.freeze(result);
 }
 

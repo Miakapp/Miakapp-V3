@@ -679,9 +679,9 @@ localhost preview; that operation and all recovery paths are now permanently
 retired. The full browser-relay matrix must acquire fresh credentials and cannot
 reuse the consumed token or callback.
 Separate guarded implementations must still exist for the temporary edge
-transition and rollback. Plan revision 10 now consumes the merged
-runner profile and records `RUNNER-01` as satisfied without promoting its
-offline smoke to live evidence.
+transition and rollback. Plan revision 11 consumes the merged runner profile
+and closed monitoring result. It records `RUNNER-01` and `MONITORING-01` as
+satisfied without promoting the runner's offline smoke to live evidence.
 The dormant [`browser-relay-edge/`](browser-relay-edge/) library now covers the
 edge transition state machine and its emergency ingress closure, but exposes no
 operator entrypoint. Its atomic claim and exact live orchestration remain part
@@ -695,7 +695,7 @@ invocation, browser traffic and the edge transition remain separate later
 gates.
 The dormant [`browser-relay-runner/`](browser-relay-runner/) package pins plan
 revision 9, Playwright 1.62.1 and the merged MiakAPI browser client. Current
-plan revision 10 pins the merged runner profile. The package has no
+plan revision 11 pins the merged runner profile. The package has no
 CLI, publisher, credential loader or cloud adapter. Its dedicated CI gate
 intercepts the exact staging URL locally and proves three real ephemeral browser
 engines produce only the reviewed closed aggregate. It records zero live runs
@@ -705,7 +705,9 @@ The dormant
 pins the six permitted header-only Cloud Monitoring queries, the existing EUR
 10 staging budget and every plan ceiling. Its read-only adapter first requires
 the exact canonical-private control plane and two private-ready relays, and its
-evaluator emits only stable stop-and-rollback reasons. It has no CLI, scheduler,
-resource writer or live evidence. `MONITORING-01` remains open until a fresh
-observation is made from the merged implementation and committed through the
-closed result contract.
+evaluator emits only stable stop-and-rollback reasons. It has no CLI, scheduler
+or resource writer. One read-only preflight from the merged implementation
+confirmed all six descriptors and queries, the EUR 10 budget shape and the
+exact private boundary. Its closed result records zero cloud mutations, public
+ingress changes and acceptance executions. Plan revision 11 pins that result
+and closes `MONITORING-01`.

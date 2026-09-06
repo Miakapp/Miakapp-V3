@@ -132,6 +132,7 @@ node --check infrastructure/staging/browser-relay-monitoring/cloud.mjs
 node --check infrastructure/staging/browser-relay-monitoring/contract.mjs
 node --check infrastructure/staging/browser-relay-monitoring/guard.mjs
 node -e "import('./infrastructure/staging/browser-relay-monitoring/contract.mjs').then(({ validateBrowserRelayMonitoringProfile }) => validateBrowserRelayMonitoringProfile())"
+node -e "import('./infrastructure/staging/browser-relay-monitoring/contract.mjs').then(({ validateMonitoringPreflightResult }) => validateMonitoringPreflightResult())"
 node infrastructure/staging/browser-relay-services/guard.mjs \
   "${repository_root}/infrastructure/staging/browser-relay-services"
 node --check infrastructure/staging/browser-relay-services/apply.mjs
