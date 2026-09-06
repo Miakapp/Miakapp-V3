@@ -28,11 +28,19 @@ of being retried.
 The replacement Google/Firebase transport is now implemented separately in
 [`browser-relay-scenario-fixture-cloud`](../browser-relay-scenario-fixture-cloud/).
 It requires an explicitly injected ephemeral session and HTTP implementation,
-and it remains disconnected from the live operation. This controller's original
-compatibility profile stays unchanged as a historical snapshot; the new
-adapter's profile records that the second-identity cloud implementation is
-present. The 600-second page scenario, Playwright bridge and independent cloud
-observers remain open. Neither package grants cloud mutation, Hosting
+and it remains disconnected from the live operation. The original one-identity
+adapter's limit remains explicit; the replacement adapter's profile records
+that the second-identity cloud implementation is present. Current dependency
+pins follow page revision 3, whose 600-second Chromium budget resolves timing
+capacity and whose native lifecycle and typed outcomes are locally implemented.
+The real-browser checks prove explicit terminal cleanup before sequential
+replacement using offline fakes, then non-persisted native terminal fencing.
+They do not prove native completion of asynchronous Firebase cleanup.
+Native persisted BFCache restoration remains
+blocked by pinned Playwright 1.62.1, which explicitly does not support that
+testing; simulated persisted unit events are not native proof. The complete
+page scenario, Playwright bridge and independent cloud observers
+remain open. Neither package grants cloud mutation, Hosting
 publication, public ingress or live execution authority.
 
 Validate it with:

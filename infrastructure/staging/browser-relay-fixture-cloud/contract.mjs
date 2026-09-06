@@ -21,7 +21,7 @@ import {
 
 export const FIXTURE_CLOUD_PROFILE_PATH = 'browser-relay-fixture-cloud/profile.json';
 export const FIXTURE_CLOUD_PROFILE_SHA256 =
-  '217f897541fc53b9077066ad0105826bf8130f5727ff9094903b58f7549b9deb';
+  'a7afcaef4a4c71e2ef501d389e87b96f17a92056c57614785a79e5d9b21b9196';
 export const FIXTURE_CLOUD_IMPLEMENTATION_BASE_COMMIT =
   '0ac4852d0fc8985bf9b69fc63cfe39d5cbdc6571';
 export const FIXTURE_CLOUD_SOURCE_SHA256 =

@@ -27,12 +27,14 @@ function setState(value) {
   status.textContent = `Staging browser relay acceptance: ${value}`;
 }
 
-async function createFirebaseSession(customToken, browser) {
+async function createFirebaseSession(customToken, browser, signal) {
   const app = initializeApp(firebaseConfig, `miakapp-browser-relay-${browser}`);
   let auth;
   try {
+    if (signal.aborted) throw signal.reason;
     auth = initializeAuth(app, { persistence: inMemoryPersistence });
     const credential = await signInWithCustomToken(auth, customToken);
+    if (signal.aborted) throw signal.reason;
     const user = credential.user;
     const appCheck = initializeAppCheck(app, {
       provider: new ReCaptchaEnterpriseProvider(recaptchaSiteKey),
@@ -41,7 +43,9 @@ async function createFirebaseSession(customToken, browser) {
     return Object.freeze({
       async getFirebaseIdToken(signal) {
         if (signal.aborted) throw signal.reason;
-        return user.getIdToken(false);
+        const result = await user.getIdToken(false);
+        if (signal.aborted) throw signal.reason;
+        return result;
       },
       async getAppCheckToken(signal) {
         if (signal.aborted) throw signal.reason;
@@ -53,8 +57,22 @@ async function createFirebaseSession(customToken, browser) {
       dispose: () => deleteApp(app),
     });
   } catch {
-    await deleteApp(app).catch(() => {});
-    throw new Error('Firebase session initialization failed');
+    let cleanupFailed = false;
+    if (auth !== undefined) {
+      try {
+        await signOut(auth);
+      } catch {
+        cleanupFailed = true;
+      }
+    }
+    try {
+      await deleteApp(app);
+    } catch {
+      cleanupFailed = true;
+    }
+    const failure = new Error('Firebase session initialization failed');
+    Object.defineProperty(failure, 'cleanupFailed', { value: cleanupFailed });
+    throw failure;
   }
 }
 
@@ -79,6 +97,7 @@ const api = Object.freeze({
     return result;
   },
   observe: () => host.observe(),
+  observeLifecycle: () => host.observeLifecycle(),
   observeState: (expected) => host.observeState(expected),
   call: (target) => host.call(target),
   async suspend() {

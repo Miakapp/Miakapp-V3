@@ -15,7 +15,7 @@ import {
 
 export const FIXTURE_PROFILE_PATH = 'browser-relay-fixture/profile.json';
 export const FIXTURE_PROFILE_SHA256 =
-  'cf9f75e8f385e386c695751b43258d792f8fe104aa7ec80c6e3471a21ac04047';
+  '0dad7b7478829b88a234c6f6551ad7da7616ac46f12ca37c12bef3ffcdfefe22';
 export const FIXTURE_IMPLEMENTATION_BASE_COMMIT =
   '338c241f3420b456de1a30509c7144422122da48';
 export const FIXTURE_SOURCE_SHA256 =

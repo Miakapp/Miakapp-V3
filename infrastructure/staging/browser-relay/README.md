@@ -167,17 +167,28 @@ acceptance execution. Revision 14 pins that result; it does not authorize or
 claim a live matrix run.
 
 The adjacent [`browser-relay-page/`](../browser-relay-page/) package implements
-the first exact page-side adapter against revision 14. It combines memory-only
+the exact page-side adapter. Its historical revision-2 CI profile pins plan
+revision 14; current page revision 3 pins this unchanged revision-15 plan.
+It combines memory-only
 Firebase Auth, reCAPTCHA Enterprise App Check and the digest-pinned MiakAPI v4
 browser module, and builds exactly one HTML plus one JavaScript file. Its phased
 API emits only closed browser observations and is intentionally incompatible
 with the runner's final-result API until the independent fixture/operator
-adapter exists. It reserves 300 seconds for callback cleanup and another 300
-seconds for edge rollback. A dedicated keyless CI gate loads the dormant
-artifact without network access in all three browser engines. The package
-contains no publisher or live authority. Revision 15 pins its exact profile and
-merged CI implementation, so this plan still records every `LIVE-*` case as
-pending.
+adapter exists. Current page revision 3 implements serialized native lifecycle
+handling and typed call outcomes locally, with a 600-second Chromium budget,
+180 seconds for callback cleanup and another 300 seconds for edge rollback.
+A dedicated keyless CI gate loads the dormant
+artifact without external network access in all three browser engines and
+proves explicit cleanup before sequential identity replacement using offline
+fakes. The later trusted non-persisted native pagehide proves synchronous
+terminal fencing, not completion of asynchronous Firebase cleanup. Native
+persisted BFCache restoration remains
+unproven: pinned Playwright 1.62.1 explicitly does not support that testing, and
+simulated persisted unit events do not satisfy the native requirement. The
+package
+contains no publisher or live authority. Revision 15 retains its exact
+revision-2 profile and merged CI implementation pins; `profile-v2.json` preserves
+those page bytes. This plan still records every `LIVE-*` case as pending.
 
 The adjacent
 [`browser-relay-services/`](../browser-relay-services/) Terraform root now

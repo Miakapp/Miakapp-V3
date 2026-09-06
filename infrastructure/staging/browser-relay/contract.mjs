@@ -13,7 +13,7 @@ import {
   MONITORING_PROFILE_SHA256,
 } from '../browser-relay-monitoring/contract.mjs';
 import { BROWSER_RELAY_RUNNER_PROFILE_SHA256 } from '../browser-relay-runner/contract.mjs';
-import { BROWSER_RELAY_PAGE_PROFILE_SHA256 } from '../browser-relay-page/contract.mjs';
+import { BROWSER_RELAY_PAGE_V2_PROFILE_SHA256 } from '../browser-relay-page/contract.mjs';
 
 export const BROWSER_RELAY_V8_PLAN_SHA256 = '4a5c13999d9f7f328b1b8b867bbd86d4c5e80cb980d9eb1324028ea0e5785343';
 export const BROWSER_RELAY_V8_PLAN_PATH = 'browser-relay/plan-v8.json';
@@ -222,7 +222,7 @@ function validatePins(value) {
   );
   exact(
     pins.browser_relay_page_profile_sha256,
-    BROWSER_RELAY_PAGE_PROFILE_SHA256,
+    BROWSER_RELAY_PAGE_V2_PROFILE_SHA256,
     'pins.browser_relay_page_profile_sha256',
   );
   exact(

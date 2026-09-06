@@ -48,9 +48,12 @@ implemented across several repositories.
   its real three-engine offline CI smoke is implementation evidence only.
 - [`../infrastructure/staging/browser-relay-page/`](../infrastructure/staging/browser-relay-page/)
   — dormant memory-only Firebase Auth, real App Check and digest-pinned MiakAPI
-  page host with a deterministic two-file artifact loaded in all three browser
-  engines by an offline CI gate; deliberately not wired to the runner until
-  independent fixture and cloud observations can be combined.
+  revision-3 page host with serialized native lifecycle, typed call outcomes and
+  a 600-second Chromium budget; its two-file artifact is loaded in all three
+  engines by an offline CI gate. Native non-persisted terminal fencing and
+  separately explicit cleanup before replacement are proven using offline
+  fakes, not native async Firebase cleanup; native persisted BFCache remains
+  blocked by pinned Playwright, and live runner wiring remains absent.
 - [`../infrastructure/staging/browser-relay-fixture/`](../infrastructure/staging/browser-relay-fixture/)
   — dormant single-fixture lifecycle controller with absence-gated creation and
   deletion, an exact synthetic MiakAPI coordinator, one fresh in-memory custom
@@ -72,13 +75,14 @@ implemented across several repositories.
 - [`../infrastructure/staging/browser-relay-page-receipt/`](../infrastructure/staging/browser-relay-page-receipt/)
   — dormant browser-owned receipt producer that reduces exact cumulative page,
   state, call and native lifecycle facts without accepting assertion booleans;
-  page timing and the Playwright bridge remain explicitly open.
+  page timing capacity is satisfied, but the complete scenario and Playwright
+  bridge remain explicitly open.
 - [`../infrastructure/staging/browser-relay-scenario-fixture/`](../infrastructure/staging/browser-relay-scenario-fixture/)
   — dormant composition around the immutable fixture that supplies four exact
   page inputs across two genuine synthetic Firebase identities, extends the one
   coordinator's state access, and requires coordinator-first cleanup of both
-  identity domains; its original compatibility profile remains a historical
-  snapshot and its replacement transport is supplied by the separate adapter.
+  identity domains; original fixture capacity limits remain explicit and its
+  replacement transport is supplied by the separate adapter.
 - [`../infrastructure/staging/browser-relay-scenario-fixture-cloud/`](../infrastructure/staging/browser-relay-scenario-fixture-cloud/)
   — dormant replacement-identity Google/Firebase adapter with injected transport,
   bounded keyless signing, token-bound identity verification and independently
@@ -175,8 +179,10 @@ read-only preflight: the operation claim was absent, the edge and both relays
 were private, the temporary route and application data were absent, and
 Terraform had no change. Plan revision 14 pins that closed result; every
 `LIVE-*` row remains pending. Plan revision 15 preserves revision 14
-byte-for-byte and pins the merged page profile plus its independent three-engine
-offline CI proof. The staging manifest retains the byte-exact earlier zero-relay plan used
+byte-for-byte and pins the merged revision-2 page profile plus its independent
+three-engine offline CI proof. The archived `profile-v2.json` preserves that
+claim, while current page revision 3 pins unchanged plan 15. The staging manifest
+retains the byte-exact earlier zero-relay plan used
 by the image build, revision 9 used by the runner, revision 10 used by
 monitoring, revision 11 used by rollback and revision 12 used by the
 orchestrator preflight, revision 13 used by the operation preflight and revision
@@ -185,8 +191,21 @@ pins the serial-4 private-ready result and rebases the current acceptance plan
 on matching fresh live inventories. The state transition,
 intended cost, exposure and rollback boundary remain reviewable without
 pretending that a public edge or live browser matrix already exists.
-The separate page-host foundation now builds locally and returns only bounded
-browser observations. The separate closed aggregator now assigns all browser
+The current page host now implements serialized native lifecycle and typed call
+outcomes, returning only bounded browser observations through separate unchanged
+safe-observation and new lifecycle schemas. Its Chromium budget is 600 seconds;
+the 720-second three-engine total leaves 180 seconds for callback cleanup and
+300 seconds for edge rollback within the unchanged public ceiling. The pinned
+browser smoke proves the dormant artifact and explicit terminal cleanup before
+sequential replacement using offline fakes. The later trusted non-persisted
+native pagehide proves synchronous terminal fencing and zero active sockets;
+IndexedDB is blocked while stopping or restored after stopped. It does not
+prove completion of asynchronous Firebase cleanup.
+Playwright 1.62.1 explicitly does not support BFCache testing: native persisted
+restoration remains `blocked_by_pinned_playwright`, and simulated trusted
+persisted unit events are not native BFCache proof. These checks provide no
+cloud, publication or live acceptance. The separate closed aggregator assigns
+all browser
 and cloud assertions, counters and public identifiers to non-overlapping source
 owners. The first source producer now derives the complete `browser_page`
 receipt from 18 ordered Chromium facts and three facts in each secondary
@@ -197,10 +216,10 @@ fixture now supplies the required fourth input from a second exact synthetic
 Firebase identity and grants both identities state access through the same
 coordinator. A separate dormant Google/Firebase adapter now implements that
 replacement identity's bounded cloud lifecycle, including token-bound identity
-verification and independently observed cleanup. The older compatibility
-profiles remain historical snapshots; the new adapter resolves only the
-second-identity cloud implementation gap and has not been live wired or
-executed. The page's 480-second Chromium budget must still become 600 seconds.
+verification and independently observed cleanup. The original fixture limits
+remain explicit, while current dependency pins and timing capacity follow page
+revision 3. The replacement adapter resolves only the second-identity cloud
+implementation gap and has not been live wired or executed.
 None of these packages grants Hosting publication or live authority; the page
 scenario, Playwright bridge and independent cloud observers must close their
 remaining gaps before the runner can execute.

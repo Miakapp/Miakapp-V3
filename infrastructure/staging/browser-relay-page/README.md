@@ -1,8 +1,8 @@
 # Dormant staging browser-relay page host
 
-Status: closed page host, deterministic artifact builder and three-engine
-dormant CI smoke implemented; not wired to the live runner, published, or
-executed
+Status: revision-3 closed scenario host, deterministic artifact builder and
+three-engine dormant CI smoke implemented; not wired to the live runner,
+published, or live executed
 
 This package is the browser-side foundation for the single-use relay acceptance
 operation. It composes the exact MiakAPI browser SDK with Firebase Auth and
@@ -35,7 +35,13 @@ bounded connection facts, detects source-token bytes without retaining frames,
 and zeroes its own token byte copies during teardown.
 
 The phased API supports initialization, start, closed observation, synthetic
-state matching and calls, suspension/resumption, and idempotent cleanup. It
+state matching and calls, serialized suspension/resumption and terminal cleanup.
+Native `pagehide`/`pageshow` handling accepts only trusted browser events. The
+separate `observeLifecycle` API exposes its schema, browser, bounded event and
+state-transition projections, suspension/resumption/sign-out/disposal counts,
+and typed `applied`/`failed`/`outcome_unknown` call outcomes. The existing safe
+observation schema remains unchanged; neither shape contains credentials or raw
+events. These are local host capabilities, not completed matrix assertions. It
 deliberately exposes `miakappBrowserRelayPage`, not the runner's
 `miakappBrowserRelayAcceptance.run` API. This prevents the existing runner from
 mistaking page-host observations for the complete 40-assertion matrix. A later
@@ -53,12 +59,41 @@ cloud adapter or live authority.
 The dedicated keyless GitHub workflow rebuilds those exact bytes and loads them
 with every non-artifact request blocked in Chromium, Firefox and WebKit. It
 checks the immutable dormant API, CSP-compatible module load and absence of the
-runner result API. This is offline implementation evidence only: it supplies no
-Firebase custom token, opens no relay and does not count as a live matrix run.
+runner result API. A separate allowlisted loopback harness uses the production
+runtime with offline Firebase/MiakAPI fakes. Each pinned browser explicitly
+stops the first identity, verifies sign-out/disposal, then initializes the
+replacement identity. The later trusted non-persisted native `pagehide` proves
+only synchronous terminal fencing: the page is terminal or `stopping`, client
+stop has been invoked and active sockets are zero. IndexedDB remains blocked
+while `stopping`, or is restored after `stopped`.
+Browsers need not await asynchronous pagehide work, so native completion of
+Firebase sign-out/disposal is not proven. An exact eight-field, sanitized,
+fake-only checkpoint passes through ephemeral same-origin `sessionStorage`;
+the destination immediately removes the key and verifies its absence. It
+carries no credentials or raw diagnostics and exists only in the test harness.
+The harness uses the production no-store headers and no real Firebase
+credential or relay connection. These are offline implementation checks, not
+cloud, publication or live-matrix acceptance.
 
-The execution envelope is intentionally narrower than the already-reviewed
-maximums: 600 seconds for all three engines (480 + 60 + 60), followed by a
-300-second callback cleanup reserve and a separate 300-second edge rollback
-reserve inside the 1,200-second public ceiling. This removes the prior practical
-dependence on a 60-second margin without modifying or invalidating the
-preflighted edge/orchestrator source.
+Playwright 1.62.1 explicitly does not support BFCache testing. Native persisted
+BFCache restoration therefore remains unproven with state
+`blocked_by_pinned_playwright`; the trusted persisted unit test simulates its
+events and is not native BFCache proof. The `offline_validation` profile section
+keeps that distinction separate from both implemented lifecycle capabilities
+and the absent live evidence. The complete page scenario and receipt bridge
+remain unwired.
+
+The execution envelope permits 720 seconds for all three engines
+(600 + 60 + 60), followed by a 180-second callback cleanup reserve and a
+separate 300-second edge rollback reserve inside the unchanged 900-second
+callback and 1,200-second public ceilings. Chromium can therefore accommodate
+two real renewal intervals plus scenario overhead. This changes no preflighted
+edge/orchestrator source and grants no live execution authority.
+
+Current revision 3 pins the existing revision-15 plan. The byte-exact
+`profile-v2.json` preserves the earlier page CI input, including its revision-14
+plan and original source/test digests. Plan 15 continues to pin that archived
+page-2 profile and its original merged CI implementation; it is not rewritten
+to claim proof for page 3. The guard verifies the archive's fixed digest without
+comparing historical source pins to the current runtime. Current source and
+offline smoke/helper digests are checked independently.

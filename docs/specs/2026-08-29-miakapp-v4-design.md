@@ -908,8 +908,22 @@ vertical-slice exit gates.
    artifact in Chromium, Firefox and WebKit while blocking every unexpected
    request. It returns phased browser facts, not the complete matrix result,
    and grants no Hosting publication or live authority. Current plan revision
-   15 preserves revision 14 byte-for-byte and pins the merged page profile and
-   CI proof. A separate dormant controller now closes the single synthetic-Home
+   15 preserves revision 14 byte-for-byte and pins the merged revision-2 page
+   profile and CI proof, archived unchanged as `profile-v2.json`. Current page
+   revision 3 pins plan 15 and locally implements serialized native lifecycle
+   handling, typed call outcomes and a separate bounded lifecycle observation
+   schema. Its 600-second Chromium budget plus two 60-second secondary engines
+   preserves 180 seconds for callback cleanup and 300 for edge rollback within
+   the unchanged outer ceilings. Pinned-browser checks prove the dormant
+   artifact and explicit terminal cleanup before sequential replacement using
+   offline fakes. The later trusted non-persisted native pagehide proves
+   synchronous terminal fencing, not completion of asynchronous Firebase
+   cleanup. Playwright 1.62.1 explicitly
+   does not support BFCache testing, so native persisted restoration remains
+   `blocked_by_pinned_playwright`; simulated trusted persisted unit events are
+   not native BFCache proof. None of these checks is cloud, publication or
+   live acceptance. A separate dormant controller now closes the
+   single synthetic-Home
    lifecycle: initial absence gates all mutation and cleanup authority, one
    exact MiakAPI coordinator owns the synthetic state/function surface, browser
    custom tokens are fresh and ordered, and coordinator-first cleanup must end
@@ -936,9 +950,9 @@ vertical-slice exit gates.
    adapter now implements bounded keyless signing, token-bound identity
    verification and independently observed cleanup behind an injected
    ephemeral-session and HTTP boundary. Its profile closes only the
-   second-identity cloud implementation gap; older compatibility profiles
-   remain historical snapshots and nothing is live wired or executed. The
-   600-second Chromium budget, complete page scenario, independent cloud
+   second-identity cloud implementation gap. Original fixture capacity limits
+   remain explicit, current page timing capacity is satisfied, and nothing is
+   live wired or executed. The complete page scenario, independent cloud
    observers and Playwright bridge remain open before the one allowed execution.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
