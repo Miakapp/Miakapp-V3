@@ -112,14 +112,16 @@ strictly allow-lists six read-only metric surfaces, the existing staging budget
 shape and every runtime stop counter. One closed preflight from the merged
 implementation observed those surfaces at the exact private boundary without a
 cloud mutation, public-ingress change or acceptance execution. Plan revision 11
-pins its result and closes `MONITORING-01`; only edge orchestration and rollback
-preflight remain open. A new dormant rollback package pins the complete six-step
-reverse transition, ten closed-target observations and a strict Terraform
-no-change shape. It grants no execution authority and does not yet claim a live
-preflight, so `ROLLBACK-01` stays open. The staging manifest retains the byte-exact earlier
-zero-relay plan used by the image build, revision 9 used by the runner and
-revision 10 used by monitoring, pins the serial-4 private-ready result and
-rebases the current acceptance plan on matching fresh live inventories. The state transition,
+pins its result and closes `MONITORING-01`. The separate rollback package pins
+the complete six-step reverse transition, ten closed-target observations and a
+strict Terraform no-change shape. Its post-merge preflight observed the exact
+private target without mutation or acceptance execution. Plan revision 12 pins
+that sanitized result and closes `ROLLBACK-01`; only edge orchestration remains
+open. The staging manifest retains the byte-exact earlier zero-relay plan used
+by the image build, revision 9 used by the runner, revision 10 used by
+monitoring and revision 11 used by rollback, pins the serial-4 private-ready
+result and rebases the current acceptance plan on matching fresh live
+inventories. The state transition,
 intended cost, exposure and rollback boundary remain reviewable without
 pretending that a public edge or live browser matrix already exists.
 

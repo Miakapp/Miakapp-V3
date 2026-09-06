@@ -75,7 +75,7 @@ and [reCAPTCHA billing](https://cloud.google.com/recaptcha/docs/billing-informat
 
 ## Preconditions
 
-Revision 11 preserves the independent read-only observation completed for
+Revision 12 preserves the independent read-only observation completed for
 revision 9 at
 2026-09-06T04:08:50.844Z. It verified `control-plane-00010-vop`, private ingress,
 zero unauthenticated invokers, two enabled and published signing versions with
@@ -103,10 +103,9 @@ the Function and its
 deployment guard in place, retained both published keys, source, build, IAM,
 private ingress and scale, and made no live request. Its one-shot wrappers are
 retired. The complete authenticated browser case remains part of `LIVE-02`.
-Before any public transition, the remaining work must provide:
-
-1. a digest-bound and reversible control-plane ingress transition;
-2. a rollback plan that is rendered and checked before the live window opens.
+Before any public transition, the remaining work must provide one digest-bound,
+single-use orchestrator that atomically composes the already reviewed edge,
+runner, monitoring and rollback boundaries.
 
 The adjacent [`browser-relay-runner/`](../browser-relay-runner/) package now
 implements the runner precondition as a dormant, profile-pinned library. Its dedicated
@@ -139,10 +138,11 @@ six ordered rollback steps, every edge source file, the private-ready relay
 result and the exact canonical-private final state. Its dormant observer is
 limited to `GET`, `HEAD` and two read-only Google `POST` operations and requires
 ten closed-target facts plus a four-resource Terraform no-change plan. The
-profile records zero live observations and grants no mutation, public ingress
-or acceptance authority. `ROLLBACK-01` therefore remains open until a fresh
-post-merge preflight is sanitized, digest-pinned and consumed by a later plan
-revision.
+post-merge preflight from exact commit
+`0fd0d05ee31f84d42cf69cc6f5cead9cbcad79be` observed all ten facts and the
+no-change plan. Its sanitized result records zero mutation, public-ingress
+change and acceptance execution. Revision 12 pins that result and marks
+`ROLLBACK-01` satisfied.
 
 The adjacent
 [`browser-relay-services/`](../browser-relay-services/) Terraform root now
@@ -160,8 +160,9 @@ The byte-exact [`plan-v8.json`](plan-v8.json) preserves the historical plan
 consumed by the relay-image build. The byte-exact
 [`plan-v9.json`](plan-v9.json) separately preserves the plan consumed by the
 runner package. The byte-exact [`plan-v10.json`](plan-v10.json) preserves the
-plan consumed by the monitoring preflight. Revision 11 can evolve without
-rewriting any immutable dependency.
+plan consumed by the monitoring preflight. The byte-exact
+[`plan-v11.json`](plan-v11.json) preserves the plan consumed by the rollback
+preflight. Revision 12 can evolve without rewriting any immutable dependency.
 
 The currently deployed runtime document publishes both signing keys with
 version 1 current and version 2 retained. This completes the rehearsal entry

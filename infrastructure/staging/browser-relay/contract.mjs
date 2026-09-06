@@ -20,7 +20,9 @@ export const BROWSER_RELAY_V9_PLAN_SHA256 = 'bdf2cea284b1031a2a78e3ab029a733cad5
 export const BROWSER_RELAY_V9_PLAN_PATH = 'browser-relay/plan-v9.json';
 export const BROWSER_RELAY_V10_PLAN_SHA256 = '614493a6ffd1c8c45044585368ae21eefa82afb65f031d2fd4e9028b215098da';
 export const BROWSER_RELAY_V10_PLAN_PATH = 'browser-relay/plan-v10.json';
-export const BROWSER_RELAY_PLAN_SHA256 = '607fd1cf84c56c5becf870b6ca38b3721ab7cc5ec750f7374363f5ae2cc63fe6';
+export const BROWSER_RELAY_V11_PLAN_SHA256 = '607fd1cf84c56c5becf870b6ca38b3721ab7cc5ec750f7374363f5ae2cc63fe6';
+export const BROWSER_RELAY_V11_PLAN_PATH = 'browser-relay/plan-v11.json';
+export const BROWSER_RELAY_PLAN_SHA256 = 'b279f69cb91e8b20a96b3b45986cdc7f627f354eb541c881714bfcf0c38f2a20';
 export const BROWSER_RELAY_PLAN_PATH = 'browser-relay/plan.json';
 
 const MAXIMUM_PLAN_BYTES = 20 * 1024;
@@ -140,6 +142,8 @@ function validatePins(value) {
     'browser_relay_runner_profile_sha256',
     'browser_relay_monitoring_profile_sha256',
     'browser_relay_monitoring_preflight_result_sha256',
+    'browser_relay_rollback_profile_sha256',
+    'browser_relay_rollback_preflight_result_sha256',
     'protocol_contract_commit',
     'node_version',
     'bun_version',
@@ -167,6 +171,8 @@ function validatePins(value) {
     'browser_relay_runner_profile_sha256',
     'browser_relay_monitoring_profile_sha256',
     'browser_relay_monitoring_preflight_result_sha256',
+    'browser_relay_rollback_profile_sha256',
+    'browser_relay_rollback_preflight_result_sha256',
   ]) {
     if (!SHA256.test(pins[field])) reject(`pins.${field} must be a SHA-256 digest`);
   }
@@ -207,8 +213,18 @@ function validatePins(value) {
   );
   exact(
     pins.miakapp_v3_commit,
-    MONITORING_IMPLEMENTATION_COMMIT,
+    '0fd0d05ee31f84d42cf69cc6f5cead9cbcad79be',
     'pins.miakapp_v3_commit',
+  );
+  exact(
+    pins.browser_relay_rollback_profile_sha256,
+    'b3517720cb3874f040601d6dfcc7b0ecaf385c16d6b4299c102e2001f8bf18e7',
+    'pins.browser_relay_rollback_profile_sha256',
+  );
+  exact(
+    pins.browser_relay_rollback_preflight_result_sha256,
+    'e8ceb2164be946d4edebfe2f08d8a3b230dcf9d2a05d9410738e751775950cd3',
+    'pins.browser_relay_rollback_preflight_result_sha256',
   );
   exact(pins, expectedPlan.pins, 'pins');
 }
@@ -393,9 +409,9 @@ function validatePreconditions(value) {
   });
   exact(value.filter(({ state }) => state === 'satisfied').map(({ id }) => id), [
     'PIN-01', 'SIGNING-01', 'APP-CHECK-01', 'ROTATION-ENTRY-01', 'RELAY-01',
-    'RUNNER-01', 'MONITORING-01',
+    'RUNNER-01', 'MONITORING-01', 'ROLLBACK-01',
   ], 'satisfied preconditions');
-  exact(value.filter(({ state }) => state === 'open').length, 2, 'open precondition count');
+  exact(value.filter(({ state }) => state === 'open').length, 1, 'open precondition count');
 }
 
 function validateMatrix(value) {
@@ -474,7 +490,7 @@ function validateRollback(value) {
     'required_final_state',
   ], 'rollback');
   exact(rollback, expectedPlan.rollback, 'rollback');
-  exact(rollback.state, 'designed_not_executed', 'rollback.state');
+  exact(rollback.state, 'preflighted_not_executed', 'rollback.state');
   exact(rollback.required_final_state.control_plane_ingress, 'ALLOW_INTERNAL_ONLY', 'rollback.required_final_state.control_plane_ingress');
   exact(rollback.required_final_state.control_plane_unauthenticated_invokers, 0, 'rollback.required_final_state.control_plane_unauthenticated_invokers');
   exact(rollback.required_final_state.relay_services, 2, 'rollback.required_final_state.relay_services');
@@ -502,10 +518,10 @@ export function validateBrowserRelayPlanValue(value) {
     'rollback',
   ], 'plan');
   exact(plan.schema, 'miakapp.staging-browser-relay-plan/1', 'plan.schema');
-  exact(plan.revision, 11, 'plan.revision');
+  exact(plan.revision, 12, 'plan.revision');
   exact(
     plan.state,
-    'monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed',
+    'rollback_preflighted_monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed',
     'plan.state',
   );
   validateTarget(plan.target);
@@ -542,6 +558,60 @@ export function validateBrowserRelayPlan(path) {
     reject('plan is not in exact canonical JSON form');
   }
   return validateBrowserRelayPlanValue(plan);
+}
+
+export function validateBrowserRelayV11Plan(
+  path = new URL('plan-v11.json', import.meta.url),
+) {
+  const entry = lstatSync(path);
+  if (!entry.isFile() || entry.isSymbolicLink()
+    || entry.size === 0 || entry.size > MAXIMUM_PLAN_BYTES) {
+    reject('historical revision-11 plan must be a bounded regular file');
+  }
+  const bytes = readFileSync(path);
+  if (createHash('sha256').update(bytes).digest('hex') !== BROWSER_RELAY_V11_PLAN_SHA256) {
+    reject('historical revision-11 plan digest has drifted');
+  }
+  let plan;
+  try {
+    plan = JSON.parse(bytes.toString('utf8'));
+  } catch {
+    return reject('historical revision-11 plan is not valid JSON');
+  }
+  if (`${JSON.stringify(plan, null, 2)}\n` !== bytes.toString('utf8')) {
+    reject('historical revision-11 plan is not in exact canonical JSON form');
+  }
+  rejectPrivateMaterial(plan);
+  const monitoringPrecondition = plan.preconditions?.find(
+    ({ id }) => id === 'MONITORING-01',
+  );
+  const rollbackPrecondition = plan.preconditions?.find(
+    ({ id }) => id === 'ROLLBACK-01',
+  );
+  if (plan.schema !== 'miakapp.staging-browser-relay-plan/1'
+    || plan.revision !== 11
+    || plan.state
+      !== 'monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed'
+    || plan.target?.project_id !== 'miakapp-v4-staging'
+    || plan.target?.cloud_mutation_authorized_by_document !== false
+    || plan.target?.public_ingress_currently_active !== false
+    || plan.target?.acceptance_executed !== false
+    || plan.pins?.miakapp_v3_commit !== MONITORING_IMPLEMENTATION_COMMIT
+    || plan.pins?.browser_relay_monitoring_profile_sha256 !== MONITORING_PROFILE_SHA256
+    || plan.pins?.browser_relay_monitoring_preflight_result_sha256
+      !== MONITORING_PREFLIGHT_RESULT_SHA256
+    || Object.hasOwn(plan.pins ?? {}, 'browser_relay_rollback_profile_sha256')
+    || Object.hasOwn(plan.pins ?? {}, 'browser_relay_rollback_preflight_result_sha256')
+    || monitoringPrecondition?.state !== 'satisfied'
+    || rollbackPrecondition?.state !== 'open'
+    || plan.preconditions?.filter(({ state }) => state === 'open').length !== 2
+    || plan.rollback?.state !== 'designed_not_executed'
+    || !plan.matrix?.every(({ state }) => state === 'pending')
+    || plan.evidence?.state !== 'absent'
+    || plan.evidence?.completed_case_ids?.length !== 0) {
+    reject('historical revision-11 plan boundary has drifted');
+  }
+  return Object.freeze(plan);
 }
 
 export function validateBrowserRelayV10Plan(

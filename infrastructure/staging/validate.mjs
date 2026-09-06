@@ -15,8 +15,11 @@ import {
   BROWSER_RELAY_V9_PLAN_SHA256,
   BROWSER_RELAY_V10_PLAN_PATH,
   BROWSER_RELAY_V10_PLAN_SHA256,
+  BROWSER_RELAY_V11_PLAN_PATH,
+  BROWSER_RELAY_V11_PLAN_SHA256,
   validateBrowserRelayPlan,
   validateBrowserRelayV10Plan,
+  validateBrowserRelayV11Plan,
   validateBrowserRelayV8Plan,
   validateBrowserRelayV9Plan,
 } from './browser-relay/contract.mjs';
@@ -26,9 +29,13 @@ import {
   validateBrowserRelayRunnerProfile,
 } from './browser-relay-runner/contract.mjs';
 import {
+  ROLLBACK_IMPLEMENTATION_COMMIT,
+  ROLLBACK_PREFLIGHT_RESULT_PATH,
+  ROLLBACK_PREFLIGHT_RESULT_SHA256,
   ROLLBACK_PROFILE_PATH,
   ROLLBACK_PROFILE_SHA256,
   validateBrowserRelayRollbackProfile,
+  validateRollbackPreflightResult,
 } from './browser-relay-rollback/contract.mjs';
 import {
   BROWSER_RELAY_V10_PLAN_SHA256 as MONITORING_BROWSER_RELAY_PLAN_SHA256,
@@ -3715,7 +3722,8 @@ function validateEvidence(value) {
     ],
   );
   const expectedBrowserRelayPlan = {
-    state: 'monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed',
+    state:
+      'rollback_preflighted_monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed',
     path: BROWSER_RELAY_PLAN_PATH,
     sha256: BROWSER_RELAY_PLAN_SHA256,
     baseline_observed_at: '2026-09-06T04:08:50.844Z',
@@ -3725,7 +3733,7 @@ function validateEvidence(value) {
     browser_attestation_validated: true,
     firebase_auth_users: 0,
     application_fixture_collections: 0,
-    open_preconditions: 2,
+    open_preconditions: 1,
     cloud_mutation_authorized_by_plan: false,
     acceptance_executed: false,
     public_ingress_active: false,
@@ -3873,63 +3881,78 @@ function validateEvidence(value) {
       'state',
       'profile_path',
       'profile_sha256',
-      'implementation_base_commit',
+      'preflight_result_path',
+      'preflight_result_sha256',
+      'implementation_commit',
       'browser_relay_plan_sha256',
-      'monitoring_preflight_result_sha256',
-      'ordered_steps',
-      'emergency_actions',
-      'recoverable_edge_states',
-      'required_observations',
-      'read_only_http_methods',
-      'read_only_post_operations',
-      'live_preflight_count',
-      'zero_change_terraform_plan_observed',
-      'cloud_compute_resources',
-      'cloud_mutation_authorized',
-      'public_ingress_authorized',
-      'acceptance_execution_authorized',
+      'observed_at',
+      'control_plane_state',
+      'control_plane_revision',
+      'control_plane_ingress',
+      'control_plane_public_invokers',
+      'relay_phase',
+      'relay_services',
+      'relay_public_invokers',
+      'relay_service_account_user_managed_keys',
+      'relay_inventory_sha256',
+      'runner_route_present',
+      'runner_route_status',
+      'firebase_auth_users',
+      'application_fixture_collections',
+      'temporary_iam_bindings',
+      'minimum_instances',
+      'terraform_convergence',
+      'terraform_managed_resource_noops',
+      'rollback_steps',
+      'cloud_mutations',
+      'public_ingress_changes',
+      'acceptance_executions',
       'credentials_committed',
       'raw_cloud_responses_committed',
       'terraform_plan_committed',
     ],
   );
   const expectedBrowserRelayRollback = {
-    state: 'closed_rollback_preflight_implemented_not_observed',
+    state: 'rollback_target_preflighted_private_and_converged',
     profile_path: ROLLBACK_PROFILE_PATH,
     profile_sha256: ROLLBACK_PROFILE_SHA256,
-    implementation_base_commit: '79d2f8a45d626b25488a312bc8a4b5999a9515ee',
-    browser_relay_plan_sha256: BROWSER_RELAY_PLAN_SHA256,
-    monitoring_preflight_result_sha256: MONITORING_PREFLIGHT_RESULT_SHA256,
-    ordered_steps: 6,
-    emergency_actions: 5,
-    recoverable_edge_states: 5,
-    required_observations: 10,
-    read_only_http_methods: ['GET', 'HEAD', 'POST_READ_ONLY'],
-    read_only_post_operations: 2,
-    live_preflight_count: 0,
-    zero_change_terraform_plan_observed: false,
-    cloud_compute_resources: 0,
-    cloud_mutation_authorized: false,
-    public_ingress_authorized: false,
-    acceptance_execution_authorized: false,
+    preflight_result_path: ROLLBACK_PREFLIGHT_RESULT_PATH,
+    preflight_result_sha256: ROLLBACK_PREFLIGHT_RESULT_SHA256,
+    implementation_commit: ROLLBACK_IMPLEMENTATION_COMMIT,
+    browser_relay_plan_sha256: BROWSER_RELAY_V11_PLAN_SHA256,
+    observed_at: '2026-09-06T07:06:13.282Z',
+    control_plane_state: 'canonical_private',
+    control_plane_revision: 'control-plane-00010-vop',
+    control_plane_ingress: 'ALLOW_INTERNAL_ONLY',
+    control_plane_public_invokers: 0,
+    relay_phase: 'private_ready',
+    relay_services: 2,
+    relay_public_invokers: 0,
+    relay_service_account_user_managed_keys: 0,
+    relay_inventory_sha256:
+      '421338fec676c1fccd0e6747d3e8837d4151b147c95b343172639800779b64d1',
+    runner_route_present: false,
+    runner_route_status: 404,
+    firebase_auth_users: 0,
+    application_fixture_collections: 0,
+    temporary_iam_bindings: 0,
+    minimum_instances: 0,
+    terraform_convergence: 'no_changes',
+    terraform_managed_resource_noops: 4,
+    rollback_steps: 6,
+    cloud_mutations: 0,
+    public_ingress_changes: 0,
+    acceptance_executions: 0,
     credentials_committed: false,
     raw_cloud_responses_committed: false,
     terraform_plan_committed: false,
   };
   for (const [field, expected] of Object.entries(expectedBrowserRelayRollback)) {
-    if (Array.isArray(expected)) {
-      exactArray(
-        browserRelayRollback[field],
-        expected,
-        `evidence.browser_relay_rollback.${field}`,
-      );
-    } else {
-      exact(
-        browserRelayRollback[field],
-        expected,
-        `evidence.browser_relay_rollback.${field}`,
-      );
-    }
+    exact(
+      browserRelayRollback[field],
+      expected,
+      `evidence.browser_relay_rollback.${field}`,
+    );
   }
   const browserRelayImage = record(
     evidence.browser_relay_image,
@@ -4847,10 +4870,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 72, 'manifest.revision');
+  exact(manifest.revision, 73, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_closed_preflight_implemented_not_observed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rollback_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -5213,6 +5236,17 @@ export function validateCommittedEvidence(
     BROWSER_RELAY_V10_PLAN_SHA256,
     'browser-relay/plan-v10.json',
   );
+  const browserRelayV11PlanPath = resolve(stagingRoot, BROWSER_RELAY_V11_PLAN_PATH);
+  const browserRelayV11Plan = validatedEvidenceFile(
+    browserRelayV11PlanPath,
+    validateBrowserRelayV11Plan,
+    'browser-relay/plan-v11.json',
+  );
+  exact(
+    fileSha256(browserRelayV11PlanPath),
+    BROWSER_RELAY_V11_PLAN_SHA256,
+    'browser-relay/plan-v11.json',
+  );
   exactFields(browserRelayPlanManifest, {
     state: browserRelayPlan.state,
     baseline_observed_at: browserRelayPlan.baseline.observed_at,
@@ -5442,9 +5476,9 @@ export function validateCommittedEvidence(
     'evidence.browser_relay_plan monitoring result pin',
   );
   exact(
-    browserRelayPlan.pins.miakapp_v3_commit,
+    browserRelayV11Plan.pins.miakapp_v3_commit,
     MONITORING_IMPLEMENTATION_COMMIT,
-    'evidence.browser_relay_plan monitoring implementation pin',
+    'browser-relay revision 11 monitoring implementation pin',
   );
   exact(
     browserRelayPlan.preconditions.find(({ id }) => id === 'MONITORING-01')?.state,
@@ -5529,10 +5563,26 @@ export function validateCommittedEvidence(
     browserRelayRollbackManifest.profile_sha256,
     'evidence.browser_relay_rollback.profile_sha256',
   );
+  const browserRelayRollbackResultPath = committedEvidencePath(
+    stagingRoot,
+    browserRelayRollbackManifest.preflight_result_path,
+    ROLLBACK_PREFLIGHT_RESULT_PATH,
+    'evidence.browser_relay_rollback.preflight_result_path',
+  );
+  const browserRelayRollbackResult = validatedEvidenceFile(
+    browserRelayRollbackResultPath,
+    validateRollbackPreflightResult,
+    'evidence.browser_relay_rollback.preflight_result_path',
+  );
+  exact(
+    fileSha256(browserRelayRollbackResultPath),
+    browserRelayRollbackManifest.preflight_result_sha256,
+    'evidence.browser_relay_rollback.preflight_result_sha256',
+  );
   exact(
     browserRelayRollbackProfile.pins.browser_relay_plan_sha256,
-    BROWSER_RELAY_PLAN_SHA256,
-    'evidence.browser_relay_rollback current plan pin',
+    BROWSER_RELAY_V11_PLAN_SHA256,
+    'evidence.browser_relay_rollback historical plan pin',
   );
   exact(
     browserRelayRollbackProfile.pins.monitoring_preflight_result_sha256,
@@ -5561,56 +5611,86 @@ export function validateCommittedEvidence(
   );
   exactArray(
     browserRelayRollbackProfile.rollback.ordered_steps,
-    browserRelayPlan.rollback.ordered_steps,
-    'evidence.browser_relay_rollback ordered plan steps',
+    browserRelayV11Plan.rollback.ordered_steps,
+    'evidence.browser_relay_rollback historical ordered plan steps',
   );
   exactFields(
     browserRelayRollbackProfile.required_final_state,
+    browserRelayV11Plan.rollback.required_final_state,
+    'evidence.browser_relay_rollback historical final plan state',
+  );
+  exactArray(
+    browserRelayPlan.rollback.ordered_steps,
+    browserRelayRollbackProfile.rollback.ordered_steps,
+    'evidence.browser_relay_plan retained rollback steps',
+  );
+  exactFields(
     browserRelayPlan.rollback.required_final_state,
-    'evidence.browser_relay_rollback final plan state',
+    browserRelayRollbackProfile.required_final_state,
+    'evidence.browser_relay_plan retained rollback final state',
+  );
+  exact(
+    browserRelayPlan.pins.miakapp_v3_commit,
+    ROLLBACK_IMPLEMENTATION_COMMIT,
+    'evidence.browser_relay_plan rollback implementation pin',
+  );
+  exact(
+    browserRelayPlan.pins.browser_relay_rollback_profile_sha256,
+    ROLLBACK_PROFILE_SHA256,
+    'evidence.browser_relay_plan rollback profile pin',
+  );
+  exact(
+    browserRelayPlan.pins.browser_relay_rollback_preflight_result_sha256,
+    ROLLBACK_PREFLIGHT_RESULT_SHA256,
+    'evidence.browser_relay_plan rollback result pin',
+  );
+  exact(
+    browserRelayRollbackResult.browser_relay_plan_sha256,
+    BROWSER_RELAY_V11_PLAN_SHA256,
+    'evidence.browser_relay_rollback result historical plan pin',
   );
   exact(
     browserRelayPlan.preconditions.find(({ id }) => id === 'ROLLBACK-01')?.state,
-    'open',
+    'satisfied',
     'evidence.browser_relay_plan ROLLBACK-01 precondition',
   );
   exactFields(browserRelayRollbackManifest, {
-    state: browserRelayRollbackProfile.state,
-    profile_sha256: ROLLBACK_PROFILE_SHA256,
-    implementation_base_commit:
-      browserRelayRollbackProfile.pins.implementation_base_commit,
-    browser_relay_plan_sha256:
-      browserRelayRollbackProfile.pins.browser_relay_plan_sha256,
-    monitoring_preflight_result_sha256:
-      browserRelayRollbackProfile.pins.monitoring_preflight_result_sha256,
-    ordered_steps: browserRelayRollbackProfile.rollback.ordered_steps.length,
-    emergency_actions: browserRelayRollbackProfile.rollback.emergency_actions.length,
-    recoverable_edge_states:
-      browserRelayRollbackProfile.rollback.recoverable_edge_states.length,
-    required_observations:
-      browserRelayRollbackProfile.preflight.required_observations.length,
-    read_only_post_operations: 2,
-    live_preflight_count: browserRelayRollbackProfile.evidence.live_preflight_count,
-    zero_change_terraform_plan_observed: false,
-    cloud_compute_resources:
-      browserRelayRollbackProfile.target.cloud_compute_resources,
-    cloud_mutation_authorized:
-      browserRelayRollbackProfile.target.cloud_mutation_authorized_by_profile,
-    public_ingress_authorized:
-      browserRelayRollbackProfile.target.public_ingress_authorized_by_profile,
-    acceptance_execution_authorized:
-      browserRelayRollbackProfile.target.acceptance_execution_authorized_by_profile,
-    credentials_committed: browserRelayRollbackProfile.evidence.credentials_committed,
+    state: browserRelayRollbackResult.state,
+    profile_sha256: browserRelayRollbackResult.profile_sha256,
+    preflight_result_sha256: ROLLBACK_PREFLIGHT_RESULT_SHA256,
+    implementation_commit: browserRelayRollbackResult.implementation_commit,
+    browser_relay_plan_sha256: browserRelayRollbackResult.browser_relay_plan_sha256,
+    observed_at: browserRelayRollbackResult.observed_at,
+    control_plane_state: browserRelayRollbackResult.control_plane_state,
+    control_plane_revision: browserRelayRollbackResult.control_plane_revision,
+    control_plane_ingress: browserRelayRollbackResult.control_plane_ingress,
+    control_plane_public_invokers:
+      browserRelayRollbackResult.control_plane_public_invokers,
+    relay_phase: browserRelayRollbackResult.relay_phase,
+    relay_services: browserRelayRollbackResult.relay_services,
+    relay_public_invokers: browserRelayRollbackResult.relay_public_invokers,
+    relay_service_account_user_managed_keys:
+      browserRelayRollbackResult.relay_service_account_user_managed_keys,
+    relay_inventory_sha256: browserRelayRollbackResult.relay_inventory_sha256,
+    runner_route_present: browserRelayRollbackResult.runner_route_present,
+    runner_route_status: browserRelayRollbackResult.runner_route_status,
+    firebase_auth_users: browserRelayRollbackResult.firebase_auth_users,
+    application_fixture_collections:
+      browserRelayRollbackResult.application_fixture_collections,
+    temporary_iam_bindings: browserRelayRollbackResult.temporary_iam_bindings,
+    minimum_instances: browserRelayRollbackResult.minimum_instances,
+    terraform_convergence: browserRelayRollbackResult.terraform_convergence,
+    terraform_managed_resource_noops:
+      browserRelayRollbackResult.terraform_managed_resource_noops,
+    rollback_steps: browserRelayRollbackResult.rollback_steps,
+    cloud_mutations: browserRelayRollbackResult.cloud_mutations,
+    public_ingress_changes: browserRelayRollbackResult.public_ingress_changes,
+    acceptance_executions: browserRelayRollbackResult.acceptance_executions,
+    credentials_committed: browserRelayRollbackResult.credential_material_retained,
     raw_cloud_responses_committed:
-      browserRelayRollbackProfile.evidence.raw_cloud_responses_committed,
-    terraform_plan_committed:
-      browserRelayRollbackProfile.evidence.terraform_plan_committed,
+      browserRelayRollbackResult.raw_cloud_responses_retained,
+    terraform_plan_committed: browserRelayRollbackResult.terraform_plan_retained,
   }, 'evidence.browser_relay_rollback');
-  exactArray(
-    browserRelayRollbackManifest.read_only_http_methods,
-    browserRelayRollbackProfile.preflight.allowed_http_methods,
-    'evidence.browser_relay_rollback.read_only_http_methods',
-  );
   const browserRelayImageManifest = manifest.evidence.browser_relay_image;
   const relayServicesProfilePath = committedEvidencePath(
     stagingRoot,
@@ -6452,8 +6532,10 @@ export function validateCommittedEvidence(
     userRelayProbe: authProbe,
     userRelayProbeRetirement: authProbeRetirement,
     browserRelayPlan,
+    browserRelayV11Plan,
     browserRelayRunnerProfile,
     browserRelayRollbackProfile,
+    browserRelayRollbackResult,
     relayServicesProfile,
     relayServicesV1Profile,
     relayServicesV2Profile,
