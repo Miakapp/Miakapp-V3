@@ -1,0 +1,95 @@
+{
+  "schema": "miakapp.staging-browser-relay-playwright-bridge-profile/1",
+  "revision": 1,
+  "state": "closed_secondary_receipt_bridge_implemented_chromium_bfcache_blocked_not_wired_not_executed",
+  "target": {
+    "project_id": "miakapp-v4-staging",
+    "target_url": "https://miakapp-v4-staging.web.app/__acceptance/browser-relay/",
+    "data_policy": "synthetic_only",
+    "cloud_compute_resources": 0,
+    "unscheduled": true
+  },
+  "pins": {
+    "implementation_base_commit": "509a25fc65764b9bbe4fa7c823e263feed24a8ff",
+    "browser_relay_runner_profile_sha256": "72b688ccd577f7b40b21d9f874bbca555324eaec1fbf2acbc87dee35cf83a536",
+    "browser_relay_page_profile_sha256": "c57e53dfeb25a0b5169854c535a535072151387b91ec4c07f889cac60bf83539",
+    "browser_relay_aggregator_profile_sha256": "2f78e09655d26af993d1c5885114b1740aaa32e13ced14c5d8d774a9e40a7851",
+    "playwright_version": "1.62.1",
+    "playwright_types_sha256": "6c688250f2b7061cec3a17ab8797671137b653f8c4e81a6df3190cb112a7579a",
+    "bridge_source_sha256": "384908bddf1747124583cbeeb6e0eebf28585e1c79c8e7f48ba53495dbbd38b6",
+    "browser_smoke_sha256": "95d9653138151413f283d756fe2913329220be63cb79a2b0eb7e2c7bd69050a8",
+    "offline_entry_sha256": "d879e83f0c8c5c27991cfd00b11a4e418916d7add7027902ecb14a8ce795e34c",
+    "workflow_sha256": "d9d017738add5910a7bfb34928dac358f7588c3f1f88f84863712d816fd36d0a"
+  },
+  "bridge": {
+    "result_schema": "miakapp.staging-browser-relay-playwright-bridge-result/1",
+    "page_fact_schema": "miakapp.staging-browser-relay-page-fact/2",
+    "page_private_input_schema": "miakapp.staging-browser-relay-page-input/1",
+    "page_observation_schema": "miakapp.staging-browser-relay-page-observation/1",
+    "page_lifecycle_observation_schema": "miakapp.staging-browser-relay-page-lifecycle-observation/1",
+    "source_receipt_schema": "miakapp.staging-browser-relay-source-receipt/1",
+    "private_input_provider_lazy": true,
+    "page_provider_lazy": true,
+    "receipt_producer_injected": true,
+    "page_owned_until_cleanup": true,
+    "process_diagnostics_checked": true,
+    "target_revalidated_before_each_action": true,
+    "elapsed_deadline_checked_between_phases": true,
+    "cleanup_steps_independent": true,
+    "secondary_private_inputs_per_browser": 1,
+    "maximum_secondary_milliseconds": 60000,
+    "raw_page_errors_propagated": false,
+    "raw_facts_retained": false
+  },
+  "compatibility": {
+    "playwright_bfcache_testing_supported": false,
+    "chromium_blocked_before_page_or_private_input": true,
+    "chromium_receipt_transport_complete": false,
+    "firefox_receipt_transport_complete": true,
+    "webkit_receipt_transport_complete": true,
+    "page_host_api_scenario_complete": false,
+    "independent_cloud_observers_present": false,
+    "aggregator_wired": false
+  },
+  "output": {
+    "blocked_reason": "pinned_playwright_bfcache_unsupported",
+    "blocked_result_is_engine_result": false,
+    "allowed_observations": [
+      "closed_browser_page_receipt",
+      "private_input_request_count",
+      "stable_blocked_reason"
+    ],
+    "forbidden_observations": [
+      "browser_storage",
+      "email",
+      "execution_identifier",
+      "firebase_uid",
+      "har",
+      "home_traffic",
+      "raw_page_error",
+      "token",
+      "trace_context",
+      "video",
+      "websocket_frame"
+    ]
+  },
+  "authority": {
+    "cloud_mutation_authorized": false,
+    "hosting_publication_authorized": false,
+    "public_ingress_authorized": false,
+    "live_execution_authorized": false
+  },
+  "evidence": {
+    "state": "offline_only",
+    "offline_browser_engines": 2,
+    "blocked_browser_capability_checks": 1,
+    "offline_secondary_receipts": 2,
+    "chromium_private_inputs_requested": 0,
+    "live_page_facts": 0,
+    "live_receipts": 0,
+    "cloud_mutations": 0,
+    "live_execution_count": 0,
+    "credentials_committed": false,
+    "raw_page_diagnostics_committed": false
+  }
+}

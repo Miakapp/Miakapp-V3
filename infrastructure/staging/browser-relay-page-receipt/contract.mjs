@@ -13,9 +13,15 @@ import {
 import {
   BROWSER_RELAY_PAGE_PROFILE_SHA256,
   MAXIMUM_CHROMIUM_MILLISECONDS,
+  PAGE_LIFECYCLE_OBSERVATION_SCHEMA,
   validateBrowserRelayPageProfile,
+  validatePageLifecycleObservation,
   validatePageSafeObservation,
 } from '../browser-relay-page/contract.mjs';
+import {
+  PLAYWRIGHT_BRIDGE_PROFILE_SHA256,
+  validateBrowserRelayPlaywrightBridgeProfile,
+} from '../browser-relay-playwright-bridge/contract.mjs';
 import {
   AGGREGATOR_PROFILE_SHA256,
   COUNTER_KEYS,
@@ -27,12 +33,12 @@ import {
 
 export const PAGE_RECEIPT_PROFILE_PATH = 'browser-relay-page-receipt/profile.json';
 export const PAGE_RECEIPT_PROFILE_SHA256 =
-  '37f3b7a23b28a42f2a073e85744e986ecced39e64ff045aee915378a7b4aaaa3';
+  '740d21178e963fb82a3cd923a1adf6cbf6af2b62a633f0b97058fbda4f1e906a';
 export const PAGE_RECEIPT_IMPLEMENTATION_BASE_COMMIT =
-  '361cabb9a88d5cb3efebd40f3f803cf7023c02e3';
+  '509a25fc65764b9bbe4fa7c823e263feed24a8ff';
 export const PAGE_RECEIPT_SOURCE_SHA256 =
-  '12f209051e7e0871226d964fe2e07e6f40b94cf2305a4bcb0e457a17c5151a6c';
-export const PAGE_FACT_SCHEMA = 'miakapp.staging-browser-relay-page-fact/1';
+  '94e6a74480de6f93745ffcea5ad0b7c4006c1bfcc8c717d3a3fbf963dbdb78c6';
+export const PAGE_FACT_SCHEMA = 'miakapp.staging-browser-relay-page-fact/2';
 export const PAGE_LIFECYCLE_EVENT_SCHEMA =
   'miakapp.staging-browser-relay-page-lifecycle-event/1';
 export const PAGE_STATE_OBSERVATION_SCHEMA =
@@ -265,6 +271,7 @@ export function validateBrowserRelayPageFact(
     'identity_generation',
     'elapsed_milliseconds',
     'observation',
+    'lifecycle_observation',
     'state_observation',
     'call_observation',
     'lifecycle_event',
@@ -289,6 +296,13 @@ export function validateBrowserRelayPageFact(
     return reject('page_fact.observation is not a closed page observation');
   }
   exact(observation.browser, browser, 'page_fact.observation.browser');
+  let lifecycleObservation;
+  try {
+    lifecycleObservation = validatePageLifecycleObservation(fact.lifecycle_observation);
+  } catch {
+    return reject('page_fact.lifecycle_observation is not a closed lifecycle observation');
+  }
+  exact(lifecycleObservation.browser, browser, 'page_fact.lifecycle_observation.browser');
   const stateObservation = fact.state_observation === null
     ? null
     : validatePageStateObservation(fact.state_observation);
@@ -301,6 +315,7 @@ export function validateBrowserRelayPageFact(
   return Object.freeze({
     ...fact,
     observation,
+    lifecycle_observation: lifecycleObservation,
     state_observation: stateObservation,
     call_observation: callObservation,
     lifecycle_event: lifecycleEvent,
@@ -331,12 +346,12 @@ function validateProfileValue(value) {
     'evidence',
   ], 'profile');
   exact(profile, expectedProfile, 'profile');
-  exact(profile.schema, 'miakapp.staging-browser-relay-page-receipt-profile/1',
+  exact(profile.schema, 'miakapp.staging-browser-relay-page-receipt-profile/2',
     'profile.schema');
-  exact(profile.revision, 1, 'profile.revision');
+  exact(profile.revision, 2, 'profile.revision');
   exact(
     profile.state,
-    'closed_browser_page_receipt_producer_implemented_not_wired_not_executed',
+    'closed_browser_page_receipt_producer_bridge_bound_not_aggregated_not_executed',
     'profile.state',
   );
   exact(profile.target, {
@@ -352,6 +367,8 @@ function validateProfileValue(value) {
     browser_relay_plan_sha256: BROWSER_RELAY_PLAN_SHA256,
     browser_relay_page_profile_sha256: BROWSER_RELAY_PAGE_PROFILE_SHA256,
     browser_relay_aggregator_profile_sha256: AGGREGATOR_PROFILE_SHA256,
+    browser_relay_playwright_bridge_profile_sha256:
+      PLAYWRIGHT_BRIDGE_PROFILE_SHA256,
     producer_source_sha256: PAGE_RECEIPT_SOURCE_SHA256,
   }, 'profile.pins');
   if (!COMMIT.test(profile.pins.implementation_base_commit)
@@ -362,6 +379,7 @@ function validateProfileValue(value) {
   }
   exact(profile.producer, {
     page_fact_schema: PAGE_FACT_SCHEMA,
+    page_lifecycle_observation_schema: PAGE_LIFECYCLE_OBSERVATION_SCHEMA,
     source_receipt_schema: SOURCE_RECEIPT_SCHEMA,
     source: 'browser_page',
     browser_order: BROWSER_ORDER,
@@ -377,6 +395,10 @@ function validateProfileValue(value) {
     single_use: true,
     fact_order_exact: true,
     fact_retries: 0,
+    lifecycle_observation_required: true,
+    lifecycle_observation_cumulative: true,
+    preterminal_cleanup_counters_zero: true,
+    replacement_lifecycle_fresh: true,
     raw_facts_retained: false,
     arbitrary_errors_propagated: false,
     minimum_renewal_interval_milliseconds: MINIMUM_RENEWAL_INTERVAL_MILLISECONDS,
@@ -397,7 +419,7 @@ function validateProfileValue(value) {
     required_page_chromium_milliseconds: 600_000,
     page_timing_capacity_satisfied: true,
     page_host_api_scenario_complete: false,
-    playwright_bridge_present: false,
+    playwright_bridge_present: true,
     aggregator_wired: false,
   }, 'profile.compatibility');
   exact(profile.output, {
@@ -446,6 +468,7 @@ export function validateBrowserRelayPageReceiptProfile() {
   validateBrowserRelayPlan(new URL('../browser-relay/plan.json', import.meta.url));
   validateBrowserRelayPageProfile();
   validateBrowserRelayAggregatorProfile();
+  validateBrowserRelayPlaywrightBridgeProfile();
   regularPinnedFile(
     profilePath,
     MAXIMUM_PROFILE_BYTES,
