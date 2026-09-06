@@ -380,7 +380,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`browser-relay/`](browser-relay/) | Closed live browser, two-relay, signing-key and rollback acceptance plan | Rebases the current private `00010`/two-key/version-1-entry/App Check/two-relay baseline; not deployed, every `LIVE-*` case pending, and no cloud mutation granted |
 | [`browser-relay-edge/`](browser-relay-edge/) | Dormant reversible control-plane edge state machine | Pins the atomic staging issuer/origin profile and public-last/private-first transition ordering; exposes no CLI and grants no cloud mutation |
 | [`browser-relay-runner/`](browser-relay-runner/) | Dormant operator-local three-engine runner | Real offline CI smoke launches Chromium, Firefox and WebKit sequentially; private input stays in memory, output is closed, and no live run or cloud mutation is authorized |
-| [`browser-relay-page/`](browser-relay-page/) | Dormant Firebase/MiakAPI browser host and deterministic artifact | Builds a two-file no-store artifact from a digest-pinned vendored MiakAPI module; its phased page API is intentionally not runner-compatible and grants no publication or live authority |
+| [`browser-relay-page/`](browser-relay-page/) | Dormant Firebase/MiakAPI browser host and deterministic artifact | Builds a two-file no-store artifact from a digest-pinned vendored MiakAPI module and loads it in three engines in CI; its phased page API is intentionally not runner-compatible and grants no publication or live authority |
 | [`browser-relay-monitoring/`](browser-relay-monitoring/) | Closed allow-listed monitoring preflight and evaluator | One post-merge read-only observation verified all six metric surfaces, the existing EUR 10 budget and the private edge/relay boundary; no mutation or acceptance execution occurred |
 | [`browser-relay-rollback/`](browser-relay-rollback/) | Closed-target rollback preflight | Post-merge observation verified all ten private-target facts and a four-resource Terraform no-change plan; its sanitized result records zero mutation, public-ingress change and acceptance execution |
 | [`browser-relay-orchestrator/`](browser-relay-orchestrator/) | Dormant single-use edge orchestrator | Post-merge read-only preflight proved the claim absent and the rollback target private and converged; no claim, mutation, public edge or live acceptance has run |
@@ -732,7 +732,11 @@ The page exposes a phased observation API rather than the runner's final
 40-assertion API, so an independent fixture/operator adapter must still combine
 browser facts with cloud-side evidence. The selected 600-second runner bound
 leaves separate 300-second reserves for callback cleanup and edge rollback.
-Nothing in this package publishes Hosting, opens ingress or executes a browser.
+Nothing in this package publishes Hosting, opens ingress or grants live browser
+execution.
+Its separate keyless CI job does load the dormant artifact with Chromium,
+Firefox and WebKit while blocking every non-artifact request; this is offline
+implementation evidence, not a live acceptance execution.
 The adjacent [`browser-relay-operation/`](browser-relay-operation/) package now
 closes the remaining ordering gap without executing it. The claimed edge owns
 the control-plane transition. Inside that single window the operation creates

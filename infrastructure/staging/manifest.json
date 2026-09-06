@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 79,
-  "status": "private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_host_and_artifact_implemented_not_wired_not_published_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled",
+  "revision": 80,
+  "status": "private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_artifact_ci_implemented_not_wired_not_published_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled",
   "environment": "staging",
   "project": {
     "project_id": "miakapp-v4-staging",
@@ -1717,16 +1717,18 @@
       "raw_diagnostics_committed": false
     },
     "browser_relay_page": {
-      "state": "closed_page_host_and_artifact_implemented_not_wired_not_published_not_executed",
+      "state": "three_engine_dormant_artifact_ci_implemented_not_wired_not_published_not_executed",
       "profile_path": "browser-relay-page/profile.json",
-      "profile_sha256": "73fd831b2f372e50206d024de031ce40f6a577b97767f385d14dbebcd2824d9c",
+      "profile_sha256": "2e9e809d8bb9b88a4e96b51a258d948e6f0d1467c38adaca8c6582e132113e1e",
       "browser_relay_plan_sha256": "dbf0e73a20875353f28466b4fe1edcb8e8d1fc6604d979002b36a7610c36aa9a",
       "runner_profile_sha256": "72b688ccd577f7b40b21d9f874bbca555324eaec1fbf2acbc87dee35cf83a536",
       "miakapi_commit": "a798a746847ba3d5c16128a08b33353269e770a4",
       "miakapi_bundle_sha256": "b9651758d3cf531dc739afac8d25196b34ded87cee402f68e66646a70bc30623",
       "firebase_sdk_version": "12.18.0",
       "vite_version": "8.2.2",
+      "playwright_version": "1.62.1",
       "page_api_methods": 8,
+      "three_engine_ci_gate_present": true,
       "runner_compatible": false,
       "firebase_auth_persistence": "memory_only",
       "app_check_provider": "recaptcha_enterprise",

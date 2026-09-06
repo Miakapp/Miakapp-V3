@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-browser-relay-page-profile/1",
-  "revision": 1,
-  "state": "closed_page_host_and_artifact_implemented_not_wired_not_published_not_executed",
+  "revision": 2,
+  "state": "three_engine_dormant_artifact_ci_implemented_not_wired_not_published_not_executed",
   "target": {
     "project_id": "miakapp-v4-staging",
     "origin": "https://miakapp-v4-staging.web.app",
@@ -17,7 +17,7 @@
     "unscheduled": true
   },
   "pins": {
-    "implementation_base_commit": "a065f05775890d503fc9756c6fd4e4247ebea3da",
+    "implementation_base_commit": "aba6e2f2167e0ab6389004a7cd299ca7fb1d6c2a",
     "browser_relay_plan_sha256": "dbf0e73a20875353f28466b4fe1edcb8e8d1fc6604d979002b36a7610c36aa9a",
     "browser_relay_runner_profile_sha256": "72b688ccd577f7b40b21d9f874bbca555324eaec1fbf2acbc87dee35cf83a536",
     "miakapi_commit": "a798a746847ba3d5c16128a08b33353269e770a4",
@@ -28,7 +28,12 @@
     "miakapi_bun_lock_sha256": "0ba5e8d70a2e43ed61928fdf38ac1961a78d48112c9209c92c60354042ac7595",
     "firebase_sdk_version": "12.18.0",
     "vite_version": "8.2.2",
+    "playwright_version": "1.62.1",
     "bun_version": "1.2.23",
+    "node_version": "22.22.0",
+    "dependency_lock_sha256": "f5836463d6c52b4c1772b834f0f2fac7ba7e97afe681439599a72957d9611bb3",
+    "offline_smoke_sha256": "7ba4c249b6e6817e1fbd6c09c4c39b85cd7f722e2a4b46ba7a4e76f8c021939d",
+    "ci_workflow_sha256": "e87ff37d17e3df650841181f31ebf09e8be07082b64114780fcb36914286174b",
     "boundary_source_sha256": "0908e830f11aab1cd95555a8f3d621d7aac5997bde4bfbe0359cb614bcdaf773",
     "runtime_source_sha256": "53599457ab5ab40fae85ac879df8785d1317fd072e6d7e24df23fc50ade41b4c",
     "page_source_sha256": "2d638c5caa58705147576b66581135440e60a4d39f58d9449234defde44aa5c7",
@@ -43,6 +48,7 @@
       "firefox",
       "webkit"
     ],
+    "three_engine_dormant_artifact_ci": true,
     "runner_compatible": false,
     "api": [
       "initialize",

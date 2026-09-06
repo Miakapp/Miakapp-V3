@@ -904,10 +904,12 @@ vertical-slice exit gates.
    pins this result.
    A separate dormant page host now implements memory-only Firebase Auth, real
    reCAPTCHA Enterprise App Check, the exact MiakAPI v4 browser module and a
-   deterministic no-store two-file artifact. It returns phased browser facts,
-   not the complete matrix result, and grants no Hosting publication or live
-   authority. The fixture/operator adapter and independent closed aggregator
-   remain required before the one allowed execution.
+   deterministic no-store two-file artifact. An offline CI gate loads that
+   artifact in Chromium, Firefox and WebKit while blocking every unexpected
+   request. It returns phased browser facts, not the complete matrix result,
+   and grants no Hosting publication or live authority. The fixture/operator
+   adapter and independent closed aggregator remain required before the one
+   allowed execution.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain
