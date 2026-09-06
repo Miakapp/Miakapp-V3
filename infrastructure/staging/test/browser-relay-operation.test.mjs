@@ -31,6 +31,7 @@ import {
   ORCHESTRATOR_PROFILE_SHA256,
   canonicalJson as orchestratorCanonicalJson,
   sha256 as orchestratorSha256,
+  validateOrchestratorPreflightResult,
 } from '../browser-relay-orchestrator/contract.mjs';
 import {
   buildOrchestratorClaim,
@@ -38,19 +39,26 @@ import {
 } from '../browser-relay-orchestrator/claim.mjs';
 import {
   OPERATION_IMPLEMENTATION_BASE_COMMIT,
+  OPERATION_PREFLIGHT_RESULT_SCHEMA,
   OPERATION_PROFILE_SHA256,
+  OPERATION_SOURCE_SHA256,
   StagingBrowserRelayOperationError,
   evaluateOperationMonitoringSample,
   rejectOperationPrivateMaterial,
   validateBrowserRelayOperationProfile,
   validateClosedRunnerResult,
   validateFinalCleanup,
+  validateOperationPreflightResultValue,
   validateOperationResult,
   validateWindowBaseline,
   validateWindowCleanup,
 } from '../browser-relay-operation/contract.mjs';
 import { validateBrowserRelayOperationRoot } from '../browser-relay-operation/guard.mjs';
 import { runSingleUseBrowserRelayOperation } from '../browser-relay-operation/operation.mjs';
+import {
+  buildOperationPreflightResult,
+  observeOperationPreflight,
+} from '../browser-relay-operation/preflight.mjs';
 import { RUNNER_RESULT_SCHEMA } from '../browser-relay-runner/contract.mjs';
 
 const START = Date.parse('2026-09-06T10:00:00.000Z');
@@ -461,8 +469,63 @@ test('pins a dormant envelope to plan revision 13 and all closed prerequisites',
   assert.equal(profile.execution.maximum_operation_executions, 1);
   assert.equal(profile.execution.relay_public_transition_is_last_before_matrix, true);
   assert.equal(profile.target.cloud_mutation_authorized_by_profile, false);
+  assert.equal(profile.preflight.cloud_mutations, 0);
   assert.equal(profile.evidence.live_execution_count, 0);
   assert.match(OPERATION_PROFILE_SHA256, /^[0-9a-f]{64}$/u);
+  assert.match(OPERATION_SOURCE_SHA256, /^[0-9a-f]{64}$/u);
+});
+
+test('reduces one fresh orchestrator observation to the closed operation preflight', () => {
+  const implementationCommit = 'a'.repeat(40);
+  const orchestrator = {
+    ...validateOrchestratorPreflightResult(),
+    implementation_commit: implementationCommit,
+  };
+  const result = buildOperationPreflightResult({ implementationCommit, orchestrator });
+  assert.equal(result.schema, OPERATION_PREFLIGHT_RESULT_SCHEMA);
+  assert.equal(result.claim_state, 'absent');
+  assert.equal(result.control_plane_state, 'canonical_private');
+  assert.equal(result.relay_phase, 'private_ready');
+  assert.equal(result.terraform_convergence, 'no_changes');
+  assert.equal(result.cloud_mutations, 0);
+  assert.equal(result.public_ingress_changes, 0);
+  assert.equal(result.acceptance_executions, 0);
+  assert.throws(
+    () => validateOperationPreflightResultValue({ ...result, runner_route_present: true }),
+    /runner_route_present/u,
+  );
+});
+
+test('composes only one read-only orchestrator observer during operation preflight', async () => {
+  const implementationCommit = 'b'.repeat(40);
+  const calls = [];
+  const result = await observeOperationPreflight(
+    { accessToken: 'test-ephemeral-access-token-value' },
+    {
+      implementationCommit,
+      terraformPlan: { planned_values: {} },
+      orchestratorObserver: async (session, options) => {
+        calls.push('orchestrator:observe');
+        assert.equal(session.accessToken, 'test-ephemeral-access-token-value');
+        assert.equal(options.implementationCommit, implementationCommit);
+        assert.deepEqual(options.terraformPlan, { planned_values: {} });
+        return {
+          ...validateOrchestratorPreflightResult(),
+          implementation_commit: implementationCommit,
+        };
+      },
+    },
+  );
+  assert.deepEqual(calls, ['orchestrator:observe']);
+  assert.equal(result.implementation_commit, implementationCommit);
+  assert.equal(result.acceptance_executions, 0);
+  await assert.rejects(
+    observeOperationPreflight(
+      { accessToken: 'test-ephemeral-access-token-value' },
+      { implementationCommit, mutationAdapter: async () => true },
+    ),
+    /read-only boundary/u,
+  );
 });
 
 test('runs one claimed matrix and preserves the exact two-level cleanup order', async () => {
@@ -623,7 +686,9 @@ test('requires the exact component inventory', async () => {
 });
 
 test('guards the exact dormant package and rejects extra, executable or linked entries', () => {
-  const names = ['README.md', 'contract.mjs', 'guard.mjs', 'operation.mjs', 'profile.json'];
+  const names = [
+    'README.md', 'contract.mjs', 'guard.mjs', 'operation.mjs', 'preflight.mjs', 'profile.json',
+  ];
   validateBrowserRelayOperationRoot(new URL('../browser-relay-operation/', import.meta.url));
 
   const extraRoot = mkdtempSync(join(tmpdir(), 'miakapp-browser-relay-operation-extra-'));

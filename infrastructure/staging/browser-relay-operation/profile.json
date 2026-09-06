@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-browser-relay-operation-profile/1",
   "revision": 1,
-  "state": "closed_single_use_live_operation_envelope_implemented_not_executed",
+  "state": "closed_single_use_live_operation_envelope_preflight_implemented_not_run",
   "target": {
     "project_id": "miakapp-v4-staging",
     "project_number": "1072737219170",
@@ -25,7 +25,28 @@
     "monitoring_preflight_result_sha256": "618e074b9e4e9b6a532b2ecbfc87614ff5b382f9632397c4e86d111272425f64",
     "rollback_profile_sha256": "b3517720cb3874f040601d6dfcc7b0ecaf385c16d6b4299c102e2001f8bf18e7",
     "rollback_preflight_result_sha256": "e8ceb2164be946d4edebfe2f08d8a3b230dcf9d2a05d9410738e751775950cd3",
-    "relay_services_private_ready_result_sha256": "27ee42c11af83f4e0133a6002540096b74d18ceb78a281e4fbd7c38b53cea4be"
+    "relay_services_private_ready_result_sha256": "27ee42c11af83f4e0133a6002540096b74d18ceb78a281e4fbd7c38b53cea4be",
+    "operation_source_sha256": "4ced79f80aa55fdfb1892b6d34187bb7d158b0205ba92ab3b7fabc28d0fb77b3"
+  },
+  "preflight": {
+    "required_observations": [
+      "atomic_claim_absent",
+      "control_plane_canonical_private",
+      "relay_services_exact_private_ready",
+      "relay_inventory_matches_pinned_result",
+      "relay_service_account_keyless",
+      "hosting_runner_route_absent",
+      "firebase_auth_users_zero",
+      "application_fixture_collections_zero",
+      "temporary_acceptance_iam_bindings_zero",
+      "fixed_minimum_instances_zero",
+      "relay_private_ready_terraform_plan_has_zero_changes"
+    ],
+    "maximum_age_seconds": 900,
+    "result_schema": "miakapp.staging-browser-relay-operation-preflight-result/1",
+    "cloud_mutations": 0,
+    "public_ingress_changes": 0,
+    "acceptance_executions": 0
   },
   "execution": {
     "entrypoint": "in_process_library_only",

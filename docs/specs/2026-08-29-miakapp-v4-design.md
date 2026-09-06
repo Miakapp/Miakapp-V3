@@ -896,6 +896,9 @@ vertical-slice exit gates.
    stop and relay privatization happen inside the edge callback; fixture and
    temporary-binding deletion happen only after the control plane is private
    again. It exposes no CLI or live adapter and grants no execution authority.
+   A separate unexecuted preflight accepts only the exact merged commit and one
+   fresh read-only orchestrator observation, then emits a closed private and
+   unclaimed baseline.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain
