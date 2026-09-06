@@ -385,7 +385,8 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`browser-relay-fixture-cloud/`](browser-relay-fixture-cloud/) | Dormant injected Google/Firebase fixture adapter | Implements bounded keyless JWT signing, fixed control-plane mutations, complete inventory and preconditioned atomic cleanup for the controller; no CLI, ambient credentials, IAM change or live authority is present |
 | [`browser-relay-fixture-miakapi/`](browser-relay-fixture-miakapi/) | Dormant pinned MiakAPI Node factory binding | Reproducibly vendors the exact coordinator commit, injects the Home Key exchange transport and permits one provider and coordinator construction without starting a session; no CLI or live authority is present |
 | [`browser-relay-aggregator/`](browser-relay-aggregator/) | Dormant independent-source engine-result aggregator | Assigns all 40 assertions and eight counters to exact source owners, accepts 18 single-use closed receipts in canonical order and emits only the existing runner schema; it is not wired or executed and grants no live authority |
-| [`browser-relay-page-receipt/`](browser-relay-page-receipt/) | Dormant browser-owned source receipt producer | Reduces 18 exact Chromium page facts or three secondary-browser facts into the aggregator's existing receipt schema; native lifecycle and identity-generation evidence fail closed, while the fixture-capacity and Playwright wiring gaps remain explicit |
+| [`browser-relay-page-receipt/`](browser-relay-page-receipt/) | Dormant browser-owned source receipt producer | Reduces 18 exact Chromium page facts or three secondary-browser facts into the aggregator's existing receipt schema; native lifecycle and identity-generation evidence fail closed, while the page-timing and Playwright wiring gaps remain explicit |
+| [`browser-relay-scenario-fixture/`](browser-relay-scenario-fixture/) | Dormant four-input scenario fixture controller | Composes the immutable fixture with a second exact synthetic Firebase identity, grants both identities state access through one coordinator and requires coordinator-first verified cleanup across both ownership domains; the replacement cloud adapter and Playwright bridge remain absent |
 | [`browser-relay-monitoring/`](browser-relay-monitoring/) | Closed allow-listed monitoring preflight and evaluator | One post-merge read-only observation verified all six metric surfaces, the existing EUR 10 budget and the private edge/relay boundary; no mutation or acceptance execution occurred |
 | [`browser-relay-rollback/`](browser-relay-rollback/) | Closed-target rollback preflight | Post-merge observation verified all ten private-target facts and a four-resource Terraform no-change plan; its sanitized result records zero mutation, public-ingress change and acceptance execution |
 | [`browser-relay-orchestrator/`](browser-relay-orchestrator/) | Dormant single-use edge orchestrator | Post-merge read-only preflight proved the claim absent and the rollback target private and converged; no claim, mutation, public edge or live acceptance has run |
@@ -799,10 +800,16 @@ failed/uncertain outcomes, persisted `pagehide`/`pageshow`, sign-out and a new
 identity generation only after the old page stopped. Firefox and WebKit each
 provide an exact start/stop triple. The producer emits only the aggregator's
 `browser_page` receipt and discards every fact on close or failure. It remains
-dormant because the current fixture exposes three private inputs while the
-complete matrix needs four, its two real renewal intervals require a 600-second
-page budget rather than 480 seconds, and the page scenario and Playwright bridge
-are not yet complete.
+dormant because its two real renewal intervals require a 600-second page budget
+rather than 480 seconds, and the page scenario and Playwright bridge are not yet
+complete. The adjacent
+[`browser-relay-scenario-fixture/`](browser-relay-scenario-fixture/) composes the
+immutable three-input fixture with a second exact synthetic Firebase identity.
+It provides the fourth Chromium input, extends the one coordinator's state
+access to both identities, forbids calls from the replacement identity and
+requires coordinator-first cleanup of both ownership domains. Its replacement
+Google/Firebase transport is deliberately still absent, so none of this grants
+live authority.
 The adjacent [`browser-relay-operation/`](browser-relay-operation/) package now
 closes the remaining ordering gap without executing it. The claimed edge owns
 the control-plane transition. Inside that single window the operation creates
