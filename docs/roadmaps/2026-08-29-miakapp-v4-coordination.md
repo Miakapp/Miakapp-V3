@@ -780,8 +780,16 @@ current consumer.
     independent closed aggregator is now present as well: every assertion,
     counter and public identifier has one exact source owner and 18 ordered
     single-use receipts reduce to the existing engine schema without retaining
-    raw evidence. Next implement those source observers and the Playwright
-    bridge before executing the matrix once.
+    raw evidence. The first source observer is now implemented as a closed
+    browser-page receipt producer: 18 exact Chromium facts cover renewal,
+    handoff, reconnect, persisted lifecycle, teardown and identity replacement,
+    while Firefox and WebKit each require three. It admits no assertion
+    booleans and retains no raw fact. The current fixture has three private page
+    inputs but the exact flow requires four; its Chromium page budget is 480
+    seconds while two live renewals plus scenario overhead require 600; and the
+    page/Playwright scenario is not wired. Close those explicit compatibility
+    gaps, then implement the
+    independent cloud observers before executing the matrix once.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform
     no-change plan. Its fresh post-merge preflight is complete and the rollback
