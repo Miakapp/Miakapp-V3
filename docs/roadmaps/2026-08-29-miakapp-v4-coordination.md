@@ -761,8 +761,14 @@ current consumer.
     Firefox and WebKit by a dedicated CI gate. Plan revision 15 preserves
     revision 14 byte-for-byte and pins that merged page profile and proof. It
     remains deliberately not runner-compatible and has no publisher or live
-    authority. Next add the independent fixture/operator adapter and closed
-    aggregation before executing the matrix once.
+    authority. The next source-only increment adds the independent fixed
+    synthetic-Home controller. It proves every fixture domain absent before
+    granting cleanup authority, configures one exact MiakAPI coordinator,
+    issues one non-reusable in-memory custom token per browser, supports the
+    reviewed relay rotation and requires coordinator-first verified cleanup.
+    It has no cloud transport or live authority. Next add its concrete operator
+    adapter and the independent closed aggregation before executing the matrix
+    once.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform
     no-change plan. Its fresh post-merge preflight is complete and the rollback
