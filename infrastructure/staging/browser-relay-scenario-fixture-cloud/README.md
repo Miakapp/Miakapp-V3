@@ -37,7 +37,8 @@ confirm absence but cannot delete an identity appearing in the meantime.
 
 This source package grants no mutation or execution authority by itself. It has
 not contacted Google or Firebase, and it remains disconnected from the live
-operation until the page/Playwright and independent-observer gates close.
+operation. The offline Playwright bridge is present, but the Chromium BFCache
+capability and independent-observer gates remain open.
 
 Validate it with:
 

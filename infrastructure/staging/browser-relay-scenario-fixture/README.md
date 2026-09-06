@@ -36,12 +36,14 @@ capacity and whose native lifecycle and typed outcomes are locally implemented.
 The real-browser checks prove explicit terminal cleanup before sequential
 replacement using offline fakes, then non-persisted native terminal fencing.
 They do not prove native completion of asynchronous Firebase cleanup.
-Native persisted BFCache restoration remains
-blocked by pinned Playwright 1.62.1, which explicitly does not support that
-testing; simulated persisted unit events are not native proof. The complete
-page scenario, Playwright bridge and independent cloud observers
-remain open. Neither package grants cloud mutation, Hosting
-publication, public ingress or live execution authority.
+Native persisted BFCache restoration remains blocked by pinned Playwright
+1.62.1, which explicitly does not support that testing; simulated persisted
+unit events are not native proof. The Playwright bridge now closes real
+browser-page receipts for the Firefox and WebKit triples and returns a distinct
+pre-input Chromium blocker. The complete Chromium page scenario, a
+BFCache-capable automation path and independent cloud observers remain open.
+Neither package grants cloud mutation, Hosting publication, public ingress or
+live execution authority.
 
 Validate it with:
 
