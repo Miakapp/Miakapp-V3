@@ -1,0 +1,63 @@
+{
+  "schema": "miakapp.staging-browser-relay-services-bootstrap-attempt-result/1",
+  "state": "failed_gen2_memory_requirement_partial_state_reconciled",
+  "project_id": "miakapp-v4-staging",
+  "project_number": "1072737219170",
+  "region": "europe-west9",
+  "observed_at": "2026-09-06T01:33:10.000Z",
+  "repository_commit": "c213d18760d371839a37bf4680ff85c9534ad43b",
+  "profile_sha256": "a5bc737620e57aed5c7e828b4d558e3b246ba13edb40944a40febba6c14a9316",
+  "metadata_sha256": "be2b2f7fe6c5a8717e020136047139b6bf86a0e5f7367ec398576df30ebdd28c",
+  "terraform_plan_sha256": "da2c30b3e9fa7eef8c32ca8bcb44b8e2d9116bc4167449d059bd61ff6900221e",
+  "baseline_sha256": "fdbce7203496d20768a4c4668262b3fdea262af22ed48ad02d36eed9f04c2413",
+  "claim": {
+    "object": "terraform/browser-relay-services/operations/private-bootstrap-v1.json",
+    "generation": "1788658024634812",
+    "size_bytes": 999,
+    "sha256": "92b94cce96d70d9d55482ae4612f2192cd4686d8d5ee160270cbeb2d74773ac4",
+    "attempted_at": "2026-09-06T01:27:04.584Z",
+    "retry_authorized": false,
+    "deletion_authorized": false,
+    "raw_contents_committed": false
+  },
+  "failure": {
+    "category": "cloud_run_gen2_memory_below_minimum",
+    "api_status": 400,
+    "field": "template.containers.resources.limits.memory",
+    "requested_memory": "256Mi",
+    "minimum_memory": "512Mi",
+    "execution_environment": "EXECUTION_ENVIRONMENT_GEN2"
+  },
+  "terraform_state": {
+    "object": "terraform/browser-relay-services/default.tfstate",
+    "generation": "1788658040492801",
+    "size_bytes": 9527,
+    "sha256": "c703ae655eb8b6292ae73ffa76d0746809190e312311fa5171e7bf5977fc27fc",
+    "terraform_version": "1.11.3",
+    "serial": 2,
+    "lineage_sha256": "3d99b2335a31d39b341036981987054211455d6ee4acd229cc0459cd0995807f",
+    "resource_addresses": [
+      "data.terraform_remote_state.workload[0]",
+      "google_service_account.relay[\"runtime\"]",
+      "terraform_data.deployment_guard[\"active\"]"
+    ],
+    "output_names": []
+  },
+  "effects": {
+    "terraform_guard_created": true,
+    "runtime_identity_created": true,
+    "runtime_identity_user_managed_keys": 0,
+    "runtime_identity_project_roles": 0,
+    "relay_services_created": 0,
+    "public_iam_members_created": 0,
+    "live_requests_by_driver": 0,
+    "hosting_releases": 0,
+    "persistent_credentials_created": 0,
+    "stress_test_executed": false
+  },
+  "recovery": {
+    "original_plan_replay_authorized": false,
+    "original_claim_deletion_authorized": false,
+    "separate_recovery_required": true
+  }
+}

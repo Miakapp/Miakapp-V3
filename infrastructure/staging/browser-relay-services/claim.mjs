@@ -3,7 +3,7 @@ import { isDeepStrictEqual } from 'node:util';
 import {
   BOOTSTRAP_CLAIM_OBJECT,
   PROJECT_ID,
-  RELAY_SERVICES_PROFILE_SHA256,
+  RELAY_SERVICES_V3_PROFILE_SHA256,
   STATE_BUCKET,
   canonicalJson,
   sha256,
@@ -180,7 +180,7 @@ export function buildRelayBootstrapClaim(metadataBytes, metadata, attemptedAt) {
     project_id: PROJECT_ID,
     repository_commit: checked.repository_commit,
     metadata_sha256: sha256(metadataBytes),
-    profile_sha256: RELAY_SERVICES_PROFILE_SHA256,
+    profile_sha256: RELAY_SERVICES_V3_PROFILE_SHA256,
     terraform_plan_sha256: checked.terraform_plan_sha256,
     baseline_sha256: checked.baseline_sha256,
     attempted_at: attemptedAt,

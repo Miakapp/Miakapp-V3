@@ -4,6 +4,7 @@ import { isDeepStrictEqual } from 'node:util';
 import {
   BOOTSTRAP_CLAIM_OBJECT,
   PROJECT_ID,
+  RECOVERY_CLAIM_OBJECT,
   REGION,
   STATE_BUCKET,
   STATE_OBJECT,
@@ -11,6 +12,7 @@ import {
   canonicalJson,
   sha256,
   validateRelayServicesProfile,
+  validateRelayServicesV3Profile,
 } from './contract.mjs';
 
 const MAXIMUM_JSON_BYTES = 8 * 1024 * 1024;
@@ -373,13 +375,13 @@ async function observeTerraformState(session, fetchImplementation) {
   });
 }
 
-async function observeClaimMetadata(session, fetchImplementation) {
+async function observeClaimMetadata(session, fetchImplementation, object, description) {
   const response = await request(
     fetchImplementation,
-    storageMetadataUrl(BOOTSTRAP_CLAIM_OBJECT),
+    storageMetadataUrl(object),
     session.accessToken,
     {
-      description: 'Relay bootstrap claim metadata inventory',
+      description: `${description} metadata inventory`,
       allowedStatuses: [200, 404],
       maximumBytes: 64 * 1024,
     },
@@ -388,21 +390,21 @@ async function observeClaimMetadata(session, fetchImplementation) {
     return Object.freeze({
       schema: 'miakapp.staging-browser-relay-services-claim-observation/1',
       bucket: STATE_BUCKET,
-      object: BOOTSTRAP_CLAIM_OBJECT,
+      object,
       state: 'absent',
     });
   }
-  const metadata = parseJson(response.bytes, 'Relay bootstrap claim metadata inventory');
+  const metadata = parseJson(response.bytes, `${description} metadata inventory`);
   if (!plainObject(metadata) || metadata.bucket !== STATE_BUCKET
-    || metadata.name !== BOOTSTRAP_CLAIM_OBJECT
+    || metadata.name !== object
     || !/^[1-9][0-9]*$/u.test(metadata.generation ?? '')
     || !/^[1-9][0-9]*$/u.test(metadata.size ?? '')) {
-    reject('Relay bootstrap claim metadata is malformed');
+    reject(`${description} metadata is malformed`);
   }
   return Object.freeze({
     schema: 'miakapp.staging-browser-relay-services-claim-observation/1',
     bucket: STATE_BUCKET,
-    object: BOOTSTRAP_CLAIM_OBJECT,
+    object,
     state: 'present',
     generation: metadata.generation,
     size_bytes: Number(metadata.size),
@@ -416,13 +418,14 @@ export async function observeRelayServicesInventory(
   const operator = validateSession(session);
   const transport = validateFetch(fetchImplementation);
   const profile = validateRelayServicesProfile();
-  const [services, serviceAccount, projectRoles, terraformState, operationClaim] =
+  const [services, serviceAccount, projectRoles, terraformState, bootstrapClaim, recoveryClaim] =
     await Promise.all([
       observeServices(operator, transport),
       observeServiceAccount(operator, transport),
       observeRelayProjectRoles(operator, transport),
       observeTerraformState(operator, transport),
-      observeClaimMetadata(operator, transport),
+      observeClaimMetadata(operator, transport, BOOTSTRAP_CLAIM_OBJECT, 'Relay bootstrap claim'),
+      observeClaimMetadata(operator, transport, RECOVERY_CLAIM_OBJECT, 'Relay recovery claim'),
     ]);
   const relayServiceValues = services.value.services
     .filter(({ name }) => profile.services.some((candidate) => candidate.name === serviceName(name)));
@@ -433,7 +436,7 @@ export async function observeRelayServicesInventory(
     normalizeRelayService(service, policies[index], profile))
     .sort((left, right) => left.id.localeCompare(right.id));
   return Object.freeze({
-    schema: 'miakapp.staging-browser-relay-services-inventory/1',
+    schema: 'miakapp.staging-browser-relay-services-inventory/2',
     project_id: PROJECT_ID,
     region: REGION,
     cloud_run_services: services.names,
@@ -441,12 +444,13 @@ export async function observeRelayServicesInventory(
     relay_service_account: serviceAccount,
     relay_project_roles: projectRoles,
     terraform_state: terraformState,
-    operation_claim: operationClaim,
+    bootstrap_claim: bootstrapClaim,
+    recovery_claim: recoveryClaim,
   });
 }
 
 export function validateRelayServicesBootstrapBaseline(value) {
-  const profile = validateRelayServicesProfile();
+  const profile = validateRelayServicesV3Profile();
   if (!plainObject(value)
     || value.schema !== 'miakapp.staging-browser-relay-services-inventory/1'
     || value.project_id !== PROJECT_ID
@@ -574,7 +578,7 @@ function validateDeployedRelay(relay, service, profile) {
 }
 
 export function validateRelayServicesPrivateBootstrapInventory(value, claimReceipt) {
-  const profile = validateRelayServicesProfile();
+  const profile = validateRelayServicesV3Profile();
   if (!plainObject(value)
     || value.schema !== 'miakapp.staging-browser-relay-services-inventory/1'
     || value.project_id !== PROJECT_ID
@@ -639,6 +643,143 @@ export function validateRelayServicesPrivateBootstrapInventory(value, claimRecei
     generation: claimReceipt.generation,
     size_bytes: claimReceipt.size_bytes,
   }, 'Private bootstrap operation claim');
+  return Object.freeze(value);
+}
+
+function validateRecoveryInventoryEnvelope(value, description) {
+  if (!plainObject(value)
+    || value.schema !== 'miakapp.staging-browser-relay-services-inventory/2'
+    || value.project_id !== PROJECT_ID || value.region !== REGION) {
+    reject(`${description} is malformed`);
+  }
+  exact(Object.keys(value).sort(), [
+    'bootstrap_claim', 'cloud_run_services', 'project_id', 'recovery_claim',
+    'region', 'relay_project_roles', 'relay_service_account', 'relays', 'schema',
+    'terraform_state',
+  ], `${description} fields`);
+  return value;
+}
+
+function expectedBootstrapClaim(profile) {
+  return {
+    schema: 'miakapp.staging-browser-relay-services-claim-observation/1',
+    bucket: STATE_BUCKET,
+    object: profile.operation.original_claim_object,
+    state: 'present',
+    generation: profile.operation.original_claim_generation,
+    size_bytes: profile.operation.original_claim_size_bytes,
+  };
+}
+
+function recoveryClaimAbsence() {
+  return {
+    schema: 'miakapp.staging-browser-relay-services-claim-observation/1',
+    bucket: STATE_BUCKET,
+    object: RECOVERY_CLAIM_OBJECT,
+    state: 'absent',
+  };
+}
+
+export function validateRelayServicesRecoveryBaseline(value) {
+  const profile = validateRelayServicesProfile();
+  validateRecoveryInventoryEnvelope(value, 'Relay-services recovery baseline');
+  exact(value.cloud_run_services, ['control-plane'], 'Recovery baseline Cloud Run services');
+  exact(value.relays, [], 'Recovery baseline relay services');
+  exact(value.relay_service_account, {
+    schema: 'miakapp.staging-browser-relay-service-account-observation/1',
+    email: profile.runtime_identity.email,
+    name: `projects/${PROJECT_ID}/serviceAccounts/${profile.runtime_identity.email}`,
+    state: 'active',
+    user_managed_keys: 0,
+  }, 'Recovery baseline relay service account');
+  exact(value.relay_project_roles, [], 'Recovery baseline relay project roles');
+  exact(value.terraform_state, {
+    schema: 'miakapp.staging-browser-relay-services-state-observation/1',
+    bucket: STATE_BUCKET,
+    object: STATE_OBJECT,
+    state: 'present',
+    generation: profile.operation.initial_state_generation,
+    size_bytes: profile.operation.initial_state_size_bytes,
+    sha256: profile.operation.initial_state_sha256,
+    terraform_version: TERRAFORM_VERSION,
+    serial: profile.operation.initial_state_serial,
+    lineage_sha256: profile.operation.initial_state_lineage_sha256,
+    resource_addresses: [
+      'data.terraform_remote_state.workload[0]',
+      'google_service_account.relay["runtime"]',
+      'terraform_data.deployment_guard["active"]',
+    ],
+    output_names: [],
+  }, 'Recovery baseline relay Terraform state');
+  exact(value.bootstrap_claim, expectedBootstrapClaim(profile), 'Recovery baseline bootstrap claim');
+  exact(value.recovery_claim, recoveryClaimAbsence(), 'Recovery claim absence');
+  return Object.freeze(value);
+}
+
+export function validateRelayServicesRecoveredInventory(value, recoveryClaimReceipt) {
+  const profile = validateRelayServicesProfile();
+  validateRecoveryInventoryEnvelope(value, 'Recovered private relay inventory');
+  if (!plainObject(recoveryClaimReceipt)
+    || !/^[1-9][0-9]*$/u.test(recoveryClaimReceipt.generation ?? '')
+    || !Number.isSafeInteger(recoveryClaimReceipt.size_bytes)
+    || recoveryClaimReceipt.size_bytes < 1) {
+    reject('Recovery claim receipt is malformed');
+  }
+  exact(value.cloud_run_services, [
+    'control-plane', 'miakapp-staging-relay-a', 'miakapp-staging-relay-b',
+  ], 'Recovered private Cloud Run services');
+  if (!Array.isArray(value.relays) || value.relays.length !== 2) {
+    reject('Recovered private inventory must contain exactly two relay services');
+  }
+  for (const service of profile.services) {
+    validateDeployedRelay(
+      value.relays.find((relay) => relay.id === service.id),
+      service,
+      profile,
+    );
+  }
+  exact(value.relay_service_account, {
+    schema: 'miakapp.staging-browser-relay-service-account-observation/1',
+    email: profile.runtime_identity.email,
+    name: `projects/${PROJECT_ID}/serviceAccounts/${profile.runtime_identity.email}`,
+    state: 'active',
+    user_managed_keys: 0,
+  }, 'Recovered relay service account');
+  exact(value.relay_project_roles, [], 'Recovered relay project roles');
+  if (!plainObject(value.terraform_state)
+    || value.terraform_state.schema
+      !== 'miakapp.staging-browser-relay-services-state-observation/1'
+    || value.terraform_state.bucket !== STATE_BUCKET
+    || value.terraform_state.object !== STATE_OBJECT
+    || value.terraform_state.state !== 'present'
+    || !/^[1-9][0-9]*$/u.test(value.terraform_state.generation ?? '')
+    || value.terraform_state.generation === profile.operation.initial_state_generation
+    || !Number.isSafeInteger(value.terraform_state.size_bytes)
+    || value.terraform_state.size_bytes < 1
+    || !/^[0-9a-f]{64}$/u.test(value.terraform_state.sha256 ?? '')
+    || value.terraform_state.terraform_version !== TERRAFORM_VERSION
+    || !Number.isSafeInteger(value.terraform_state.serial)
+    || value.terraform_state.serial <= profile.operation.initial_state_serial
+    || value.terraform_state.lineage_sha256 !== profile.operation.initial_state_lineage_sha256) {
+    reject('Recovered relay Terraform state did not advance from the reviewed partial state');
+  }
+  exact(value.terraform_state.resource_addresses, [
+    'data.terraform_remote_state.workload[0]',
+    'google_cloud_run_v2_service.relay["relay-a"]',
+    'google_cloud_run_v2_service.relay["relay-b"]',
+    'google_service_account.relay["runtime"]',
+    'terraform_data.deployment_guard["active"]',
+  ], 'Recovered relay Terraform state resources');
+  exact(value.terraform_state.output_names, ['staging_browser_relays'], 'Recovered relay outputs');
+  exact(value.bootstrap_claim, expectedBootstrapClaim(profile), 'Recovered bootstrap claim');
+  exact(value.recovery_claim, {
+    schema: 'miakapp.staging-browser-relay-services-claim-observation/1',
+    bucket: STATE_BUCKET,
+    object: RECOVERY_CLAIM_OBJECT,
+    state: 'present',
+    generation: recoveryClaimReceipt.generation,
+    size_bytes: recoveryClaimReceipt.size_bytes,
+  }, 'Recovered operation claim');
   return Object.freeze(value);
 }
 
