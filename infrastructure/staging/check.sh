@@ -140,6 +140,14 @@ node --check infrastructure/staging/browser-relay-rollback/contract.mjs
 node --check infrastructure/staging/browser-relay-rollback/guard.mjs
 node -e "import('./infrastructure/staging/browser-relay-rollback/contract.mjs').then(({ validateBrowserRelayRollbackProfile }) => validateBrowserRelayRollbackProfile())"
 node -e "import('./infrastructure/staging/browser-relay-rollback/contract.mjs').then(({ validateRollbackPreflightResult }) => validateRollbackPreflightResult())"
+node infrastructure/staging/browser-relay-orchestrator/guard.mjs \
+  "${repository_root}/infrastructure/staging/browser-relay-orchestrator"
+node --check infrastructure/staging/browser-relay-orchestrator/claim.mjs
+node --check infrastructure/staging/browser-relay-orchestrator/contract.mjs
+node --check infrastructure/staging/browser-relay-orchestrator/guard.mjs
+node --check infrastructure/staging/browser-relay-orchestrator/orchestrator.mjs
+node --check infrastructure/staging/browser-relay-orchestrator/preflight.mjs
+node -e "import('./infrastructure/staging/browser-relay-orchestrator/contract.mjs').then(({ validateBrowserRelayOrchestratorProfile }) => validateBrowserRelayOrchestratorProfile())"
 node infrastructure/staging/browser-relay-services/guard.mjs \
   "${repository_root}/infrastructure/staging/browser-relay-services"
 node --check infrastructure/staging/browser-relay-services/apply.mjs
