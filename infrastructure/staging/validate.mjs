@@ -19,10 +19,13 @@ import {
   BROWSER_RELAY_V11_PLAN_SHA256,
   BROWSER_RELAY_V12_PLAN_PATH,
   BROWSER_RELAY_V12_PLAN_SHA256,
+  BROWSER_RELAY_V13_PLAN_PATH,
+  BROWSER_RELAY_V13_PLAN_SHA256,
   validateBrowserRelayPlan,
   validateBrowserRelayV10Plan,
   validateBrowserRelayV11Plan,
   validateBrowserRelayV12Plan,
+  validateBrowserRelayV13Plan,
   validateBrowserRelayV8Plan,
   validateBrowserRelayV9Plan,
 } from './browser-relay/contract.mjs';
@@ -54,9 +57,13 @@ import {
 } from './browser-relay-orchestrator/contract.mjs';
 import {
   OPERATION_IMPLEMENTATION_BASE_COMMIT,
+  OPERATION_IMPLEMENTATION_COMMIT,
+  OPERATION_PREFLIGHT_RESULT_PATH,
+  OPERATION_PREFLIGHT_RESULT_SHA256,
   OPERATION_PROFILE_PATH,
   OPERATION_PROFILE_SHA256,
   validateBrowserRelayOperationProfile,
+  validateOperationPreflightResult,
 } from './browser-relay-operation/contract.mjs';
 import {
   BROWSER_RELAY_V10_PLAN_SHA256 as MONITORING_BROWSER_RELAY_PLAN_SHA256,
@@ -3746,10 +3753,10 @@ function validateEvidence(value) {
   );
   const expectedBrowserRelayPlan = {
     state:
-      'edge_orchestrator_preflighted_rollback_preflighted_monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed',
+      'operation_preflighted_edge_orchestrator_preflighted_rollback_preflighted_monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed',
     path: BROWSER_RELAY_PLAN_PATH,
     sha256: BROWSER_RELAY_PLAN_SHA256,
-    baseline_observed_at: '2026-09-06T04:08:50.844Z',
+    baseline_observed_at: '2026-09-06T09:15:20.386Z',
     baseline_control_plane_revision: 'control-plane-00010-vop',
     baseline_published_signing_keys: 2,
     baseline_current_signing_key_version: 1,
@@ -4089,7 +4096,10 @@ function validateEvidence(value) {
       'state',
       'profile_path',
       'profile_sha256',
+      'preflight_result_path',
+      'preflight_result_sha256',
       'implementation_base_commit',
+      'implementation_commit',
       'browser_relay_plan_sha256',
       'orchestrator_profile_sha256',
       'orchestrator_preflight_result_sha256',
@@ -4110,6 +4120,27 @@ function validateEvidence(value) {
       'window_cleanup_stages',
       'post_edge_cleanup_stages',
       'relay_public_transition_is_last_before_matrix',
+      'observed_at',
+      'claim_bucket',
+      'claim_object',
+      'claim_state',
+      'control_plane_state',
+      'control_plane_revision',
+      'control_plane_ingress',
+      'control_plane_public_invokers',
+      'relay_phase',
+      'relay_services',
+      'relay_public_invokers',
+      'relay_service_account_user_managed_keys',
+      'relay_inventory_sha256',
+      'runner_route_present',
+      'runner_route_status',
+      'firebase_auth_users',
+      'application_fixture_collections',
+      'temporary_iam_bindings',
+      'minimum_instances',
+      'terraform_convergence',
+      'terraform_managed_resource_noops',
       'cloud_compute_resources',
       'cloud_mutation_authorized',
       'public_ingress_authorized',
@@ -4117,19 +4148,27 @@ function validateEvidence(value) {
       'live_preflight_count',
       'live_execution_count',
       'claim_creations',
+      'cloud_mutations',
+      'public_ingress_changes',
+      'acceptance_executions',
       'result_present',
       'credentials_committed',
       'raw_cloud_responses_committed',
+      'terraform_plan_committed',
       'browser_diagnostics_committed',
     ],
   );
   const operationProfile = validateBrowserRelayOperationProfile();
+  const operationResult = validateOperationPreflightResult();
   const expectedBrowserRelayOperation = {
-    state: operationProfile.state,
+    state: operationResult.state,
     profile_path: OPERATION_PROFILE_PATH,
     profile_sha256: OPERATION_PROFILE_SHA256,
+    preflight_result_path: OPERATION_PREFLIGHT_RESULT_PATH,
+    preflight_result_sha256: OPERATION_PREFLIGHT_RESULT_SHA256,
     implementation_base_commit: OPERATION_IMPLEMENTATION_BASE_COMMIT,
-    browser_relay_plan_sha256: BROWSER_RELAY_PLAN_SHA256,
+    implementation_commit: OPERATION_IMPLEMENTATION_COMMIT,
+    browser_relay_plan_sha256: BROWSER_RELAY_V13_PLAN_SHA256,
     orchestrator_profile_sha256: ORCHESTRATOR_PROFILE_SHA256,
     orchestrator_preflight_result_sha256: ORCHESTRATOR_PREFLIGHT_RESULT_SHA256,
     runner_profile_sha256: BROWSER_RELAY_RUNNER_PROFILE_SHA256,
@@ -4154,6 +4193,28 @@ function validateEvidence(value) {
     post_edge_cleanup_stages: operationProfile.recovery.post_edge_cleanup_order.length,
     relay_public_transition_is_last_before_matrix:
       operationProfile.execution.relay_public_transition_is_last_before_matrix,
+    observed_at: operationResult.observed_at,
+    claim_bucket: operationResult.claim_bucket,
+    claim_object: operationResult.claim_object,
+    claim_state: operationResult.claim_state,
+    control_plane_state: operationResult.control_plane_state,
+    control_plane_revision: operationResult.control_plane_revision,
+    control_plane_ingress: operationResult.control_plane_ingress,
+    control_plane_public_invokers: operationResult.control_plane_public_invokers,
+    relay_phase: operationResult.relay_phase,
+    relay_services: operationResult.relay_services,
+    relay_public_invokers: operationResult.relay_public_invokers,
+    relay_service_account_user_managed_keys:
+      operationResult.relay_service_account_user_managed_keys,
+    relay_inventory_sha256: operationResult.relay_inventory_sha256,
+    runner_route_present: operationResult.runner_route_present,
+    runner_route_status: operationResult.runner_route_status,
+    firebase_auth_users: operationResult.firebase_auth_users,
+    application_fixture_collections: operationResult.application_fixture_collections,
+    temporary_iam_bindings: operationResult.temporary_iam_bindings,
+    minimum_instances: operationResult.minimum_instances,
+    terraform_convergence: operationResult.terraform_convergence,
+    terraform_managed_resource_noops: operationResult.terraform_managed_resource_noops,
     cloud_compute_resources: operationProfile.target.cloud_compute_resources,
     cloud_mutation_authorized:
       operationProfile.target.cloud_mutation_authorized_by_profile,
@@ -4161,13 +4222,16 @@ function validateEvidence(value) {
       operationProfile.target.public_ingress_authorized_by_profile,
     live_execution_authorized:
       operationProfile.target.acceptance_execution_authorized_by_profile,
-    live_preflight_count: operationProfile.evidence.live_preflight_count,
+    live_preflight_count: 1,
     live_execution_count: operationProfile.evidence.live_execution_count,
     claim_creations: operationProfile.evidence.claim_creations,
-    result_present: operationProfile.evidence.result_path !== null,
-    credentials_committed: operationProfile.evidence.credentials_committed,
-    raw_cloud_responses_committed:
-      operationProfile.evidence.raw_cloud_responses_committed,
+    cloud_mutations: operationResult.cloud_mutations,
+    public_ingress_changes: operationResult.public_ingress_changes,
+    acceptance_executions: operationResult.acceptance_executions,
+    result_present: true,
+    credentials_committed: operationResult.credential_material_retained,
+    raw_cloud_responses_committed: operationResult.raw_cloud_responses_retained,
+    terraform_plan_committed: operationResult.terraform_plan_retained,
     browser_diagnostics_committed:
       operationProfile.evidence.browser_diagnostics_committed,
   };
@@ -5094,10 +5158,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 77, 'manifest.revision');
+  exact(manifest.revision, 78, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_implemented_not_run_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -5481,6 +5545,17 @@ export function validateCommittedEvidence(
     fileSha256(browserRelayV12PlanPath),
     BROWSER_RELAY_V12_PLAN_SHA256,
     'browser-relay/plan-v12.json',
+  );
+  const browserRelayV13PlanPath = resolve(stagingRoot, BROWSER_RELAY_V13_PLAN_PATH);
+  const browserRelayV13Plan = validatedEvidenceFile(
+    browserRelayV13PlanPath,
+    validateBrowserRelayV13Plan,
+    'browser-relay/plan-v13.json',
+  );
+  exact(
+    fileSha256(browserRelayV13PlanPath),
+    BROWSER_RELAY_V13_PLAN_SHA256,
+    'browser-relay/plan-v13.json',
   );
   exactFields(browserRelayPlanManifest, {
     state: browserRelayPlan.state,
@@ -5970,9 +6045,9 @@ export function validateCommittedEvidence(
     'evidence.browser_relay_orchestrator result historical plan pin',
   );
   exact(
-    browserRelayPlan.pins.miakapp_v3_commit,
+    browserRelayV13Plan.pins.miakapp_v3_commit,
     ORCHESTRATOR_IMPLEMENTATION_COMMIT,
-    'evidence.browser_relay_plan orchestrator implementation pin',
+    'evidence.browser_relay_plan historical orchestrator implementation pin',
   );
   exact(
     browserRelayPlan.pins.browser_relay_orchestrator_profile_sha256,
@@ -6074,8 +6149,8 @@ export function validateCommittedEvidence(
   );
   exact(
     browserRelayOperationProfile.pins.browser_relay_plan_sha256,
-    BROWSER_RELAY_PLAN_SHA256,
-    'evidence.browser_relay_operation current plan pin',
+    BROWSER_RELAY_V13_PLAN_SHA256,
+    'evidence.browser_relay_operation historical plan pin',
   );
   exact(
     browserRelayOperationProfile.pins.orchestrator_profile_sha256,
@@ -6087,11 +6162,54 @@ export function validateCommittedEvidence(
     ORCHESTRATOR_PREFLIGHT_RESULT_SHA256,
     'evidence.browser_relay_operation orchestrator result pin',
   );
+  const browserRelayOperationResultPath = committedEvidencePath(
+    stagingRoot,
+    browserRelayOperationManifest.preflight_result_path,
+    OPERATION_PREFLIGHT_RESULT_PATH,
+    'evidence.browser_relay_operation.preflight_result_path',
+  );
+  const browserRelayOperationResult = validatedEvidenceFile(
+    browserRelayOperationResultPath,
+    validateOperationPreflightResult,
+    'evidence.browser_relay_operation.preflight_result_path',
+  );
+  exact(
+    fileSha256(browserRelayOperationResultPath),
+    browserRelayOperationManifest.preflight_result_sha256,
+    'evidence.browser_relay_operation.preflight_result_sha256',
+  );
+  exact(
+    browserRelayOperationResult.profile_sha256,
+    browserRelayOperationManifest.profile_sha256,
+    'evidence.browser_relay_operation result profile pin',
+  );
+  exact(
+    browserRelayOperationResult.browser_relay_plan_sha256,
+    BROWSER_RELAY_V13_PLAN_SHA256,
+    'evidence.browser_relay_operation result historical plan pin',
+  );
+  exact(
+    browserRelayPlan.pins.browser_relay_operation_profile_sha256,
+    browserRelayOperationManifest.profile_sha256,
+    'evidence.browser_relay_plan operation profile pin',
+  );
+  exact(
+    browserRelayPlan.pins.browser_relay_operation_preflight_result_sha256,
+    browserRelayOperationManifest.preflight_result_sha256,
+    'evidence.browser_relay_plan operation preflight result pin',
+  );
+  exact(
+    browserRelayPlan.pins.miakapp_v3_commit,
+    OPERATION_IMPLEMENTATION_COMMIT,
+    'evidence.browser_relay_plan operation implementation pin',
+  );
   exactFields(browserRelayOperationManifest, {
-    state: browserRelayOperationProfile.state,
+    state: browserRelayOperationResult.state,
     profile_sha256: OPERATION_PROFILE_SHA256,
+    preflight_result_sha256: OPERATION_PREFLIGHT_RESULT_SHA256,
     implementation_base_commit:
       browserRelayOperationProfile.pins.implementation_base_commit,
+    implementation_commit: browserRelayOperationResult.implementation_commit,
     browser_relay_plan_sha256:
       browserRelayOperationProfile.pins.browser_relay_plan_sha256,
     orchestrator_profile_sha256:
@@ -6131,6 +6249,31 @@ export function validateCommittedEvidence(
       browserRelayOperationProfile.recovery.post_edge_cleanup_order.length,
     relay_public_transition_is_last_before_matrix:
       browserRelayOperationProfile.execution.relay_public_transition_is_last_before_matrix,
+    observed_at: browserRelayOperationResult.observed_at,
+    claim_bucket: browserRelayOperationResult.claim_bucket,
+    claim_object: browserRelayOperationResult.claim_object,
+    claim_state: browserRelayOperationResult.claim_state,
+    control_plane_state: browserRelayOperationResult.control_plane_state,
+    control_plane_revision: browserRelayOperationResult.control_plane_revision,
+    control_plane_ingress: browserRelayOperationResult.control_plane_ingress,
+    control_plane_public_invokers:
+      browserRelayOperationResult.control_plane_public_invokers,
+    relay_phase: browserRelayOperationResult.relay_phase,
+    relay_services: browserRelayOperationResult.relay_services,
+    relay_public_invokers: browserRelayOperationResult.relay_public_invokers,
+    relay_service_account_user_managed_keys:
+      browserRelayOperationResult.relay_service_account_user_managed_keys,
+    relay_inventory_sha256: browserRelayOperationResult.relay_inventory_sha256,
+    runner_route_present: browserRelayOperationResult.runner_route_present,
+    runner_route_status: browserRelayOperationResult.runner_route_status,
+    firebase_auth_users: browserRelayOperationResult.firebase_auth_users,
+    application_fixture_collections:
+      browserRelayOperationResult.application_fixture_collections,
+    temporary_iam_bindings: browserRelayOperationResult.temporary_iam_bindings,
+    minimum_instances: browserRelayOperationResult.minimum_instances,
+    terraform_convergence: browserRelayOperationResult.terraform_convergence,
+    terraform_managed_resource_noops:
+      browserRelayOperationResult.terraform_managed_resource_noops,
     cloud_compute_resources:
       browserRelayOperationProfile.target.cloud_compute_resources,
     cloud_mutation_authorized:
@@ -6139,16 +6282,19 @@ export function validateCommittedEvidence(
       browserRelayOperationProfile.target.public_ingress_authorized_by_profile,
     live_execution_authorized:
       browserRelayOperationProfile.target.acceptance_execution_authorized_by_profile,
-    live_preflight_count:
-      browserRelayOperationProfile.evidence.live_preflight_count,
+    live_preflight_count: 1,
     live_execution_count:
       browserRelayOperationProfile.evidence.live_execution_count,
     claim_creations: browserRelayOperationProfile.evidence.claim_creations,
-    result_present: browserRelayOperationProfile.evidence.result_path !== null,
+    cloud_mutations: browserRelayOperationResult.cloud_mutations,
+    public_ingress_changes: browserRelayOperationResult.public_ingress_changes,
+    acceptance_executions: browserRelayOperationResult.acceptance_executions,
+    result_present: true,
     credentials_committed:
-      browserRelayOperationProfile.evidence.credentials_committed,
+      browserRelayOperationResult.credential_material_retained,
     raw_cloud_responses_committed:
-      browserRelayOperationProfile.evidence.raw_cloud_responses_committed,
+      browserRelayOperationResult.raw_cloud_responses_retained,
+    terraform_plan_committed: browserRelayOperationResult.terraform_plan_retained,
     browser_diagnostics_committed:
       browserRelayOperationProfile.evidence.browser_diagnostics_committed,
   }, 'evidence.browser_relay_operation');
@@ -6995,11 +7141,14 @@ export function validateCommittedEvidence(
     browserRelayPlan,
     browserRelayV11Plan,
     browserRelayV12Plan,
+    browserRelayV13Plan,
     browserRelayRunnerProfile,
     browserRelayRollbackProfile,
     browserRelayRollbackResult,
     browserRelayOrchestratorProfile,
     browserRelayOrchestratorResult,
+    browserRelayOperationProfile,
+    browserRelayOperationResult,
     relayServicesProfile,
     relayServicesV1Profile,
     relayServicesV2Profile,
@@ -7038,7 +7187,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; the single-use live-operation envelope and closed three-engine runner are implemented but unexecuted, two exact-audience Cloud Run relays are private-ready, unauthenticated invocation remains absent, and App Check enforcement is disabled.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; the single-use live-operation preflight succeeded privately without executing the closed three-engine runner, two exact-audience Cloud Run relays remain private-ready, unauthenticated invocation remains absent, and App Check enforcement is disabled.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';
