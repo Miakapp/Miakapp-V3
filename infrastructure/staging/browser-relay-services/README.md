@@ -14,29 +14,35 @@ both private scale-to-zero services at 512 MiB and updated the guard in place;
 the existing identity was an exact no-op. The post-apply convergence plan then
 caught one provider-only mismatch: Google provider 8.1.0 does not round-trip an
 explicit `binary_authorization.use_default = false` block when the Cloud Run API
-omits its default-disabled value. Cloud Run reports both services healthy and
-their IAM policies remain private, but their protocol audiences are not yet
-private-ready. The recovery is permanently consumed and recorded in
-`memory-recovery-failure-v1.json` rather than being retried.
+omits its default-disabled value. Cloud Run reported both services healthy and
+their IAM policies private, but the recovery ended before their protocol
+audiences became private-ready. The recovery is permanently consumed and
+recorded in `memory-recovery-failure-v1.json` rather than being retried.
 
-The current single-use private-ready entrypoint removes that non-round-tripping
-block and assigns each already-observed service URL as its exact WSS audience.
-Omitting the block preserves Cloud Run's disabled default; it does not enable
-Binary Authorization or ignore arbitrary drift. The reviewed saved plan may
-contain only two in-place audience updates and one guard update, with zero
-creates, zero deletes, zero public IAM members and zero workload requests.
+A third single-use transition then removed only that non-round-tripping block
+and assigned each independently observed service URL as its exact WSS audience.
+It converged at serial 4 with two generation-2 services, zero public IAM
+members, zero workload requests and no incremental fixed cost. The sanitized,
+digest-pinned result is committed as `private-ready-result-v1.json`; all three
+claims remain durable and every bootstrap, recovery and private-ready
+entrypoint is permanently retired. Omitting the explicit false block preserves
+Cloud Run's disabled default; it does not enable Binary Authorization or ignore
+arbitrary drift.
 
 The root now binds the merged Miakapp-Server source to the exact verified
 Artifact Registry digest
 `sha256:23a19a26e8a24f6434ab8bc557dfa3fa799e0262e3400170e3bf064101a890b1`.
 The image is no longer an operator-controlled Terraform variable. The v1
 profile without an image, v2 digest-bound dormant profile, consumed v3
-bootstrap profile and consumed v4 memory-recovery profile are retained as
-historical evidence. The current v5 profile pins both durable claims, both
-failure records, both assigned service URLs and the exact recovered serial-3
-backend state. All revisions share
-one keyless service account with no project role, secret, database access or VPC
-connector. Each service scales from zero to one 1-vCPU/512-MiB instance,
+bootstrap profile, consumed v4 memory-recovery profile and consumed v5
+private-ready profile are retained as historical evidence. The current v6
+profile pins all three durable claims, both failure records, the private-ready
+result, both assigned service URLs and the exact serial-4 backend state. The
+Terraform guard remains bound to the consumed v5 profile that produced serial 4;
+the v6 evidence wrapper therefore introduces no evidence-only guard drift. All
+revisions share one keyless service account with no project role, secret,
+database access or VPC connector. Each service scales from zero to one
+1-vCPU/512-MiB instance,
 accepts at most eight concurrent requests and has a 900-second request timeout
 for WebSockets.
 
@@ -55,19 +61,18 @@ The root therefore exposes exactly four declarative phases:
    `allUsers` `roles/run.invoker` members.
 
 The IAM resources depend on the services, so forward creation is public-last
-and Terraform teardown is IAM-first. The original bootstrap and memory-recovery
-claims remain durable and are never deleted or reused. Their entrypoints reject
-before environment validation or cloud access. The private-ready driver verifies
-both claims by exact generation, size and content digest, inventories the exact
-recovered state, validates an exact zero-create/three-update saved plan and binds
-it to a two-hour metadata document. Immediately before Terraform apply, it
-atomically creates a third generation-pinned claim. Any ambiguous outcome after
-that claim is non-retryable. It then requires an empty convergence plan and
-independently inventories Cloud Run, service-account keys, project roles,
-service IAM, Terraform state and all three claims without calling either
-workload endpoint. A separately reviewed operation must still coordinate the
-control-plane edge and prove rollback before any public window. Private-ready
-does not by itself satisfy `RELAY-01` or authorize public invocation.
+and Terraform teardown is IAM-first. The original bootstrap, memory-recovery
+and private-ready claims remain durable and are never deleted or reused. Every
+consumed entrypoint rejects before environment validation or cloud access. The
+completed private-ready driver verified both prerequisite claims by exact
+generation, size and content digest, inventoried the exact recovered state,
+accepted only its zero-create/three-update saved plan, atomically created the
+third generation-pinned claim and required an empty convergence plan. It
+independently inventoried Cloud Run, service-account keys, project roles,
+service IAM and Terraform state without calling either workload endpoint. A
+separately reviewed operation must still coordinate the control-plane edge and
+prove rollback before any public window. Private-ready does not by itself close
+`RELAY-01` or authorize public invocation.
 
 ## Admission and privacy boundary
 
@@ -106,13 +111,12 @@ terraform -chdir=infrastructure/staging/browser-relay-services test
 
 They are included in `npm run test:staging-manifest`.
 
-## Private-ready operator flow
+## Retired private-ready operator flow
 
-The original bootstrap and memory-recovery plan/apply paths reject every
-invocation because their global claims were consumed. The private-ready planner
-and apply driver run only from a clean commit that is byte-for-byte equal to
-`origin/main`. The private bundle must live outside the repository and is never
-committed:
+The original bootstrap, memory-recovery and private-ready plan/apply paths now
+reject every invocation before inspecting arguments, environment or cloud
+state. The commands are retained only as historical documentation and must not
+be run:
 
 ```sh
 MIAKAPP_STAGING_RELAY_SERVICES_READY_PLAN_CONFIRMATION=miakapp-v4-staging \
@@ -122,7 +126,7 @@ MIAKAPP_STAGING_RELAY_SERVICES_READY_APPLY_AUTHORIZATION='<exact planner output>
   infrastructure/staging/browser-relay-services/ready-apply.sh '<exact private bundle>'
 ```
 
-The apply command is single-use. Do not retry a bundle after
-`private-ready-mutation-attempted.json` exists and never delete any global claim
-to make a retry possible. Preserve the bundle and reconcile from fresh live
+The consumed apply bundle must never be retried. Never delete a global claim to
+make any of these operations appear reusable. Future public-window and teardown
+work must use a distinct, separately reviewed orchestration and fresh live
 evidence.

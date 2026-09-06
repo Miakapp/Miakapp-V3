@@ -16,6 +16,7 @@ export const ALLOWED_RELAY_SERVICE_FILES = Object.freeze([
   'locals.tf',
   'main.tf',
   'memory-recovery-failure-v1.json',
+  'private-ready-result-v1.json',
   'outputs.tf',
   'plan.mjs',
   'plan.sh',
@@ -23,6 +24,7 @@ export const ALLOWED_RELAY_SERVICE_FILES = Object.freeze([
   'profile-v2.json',
   'profile-v3.json',
   'profile-v4.json',
+  'profile-v5.json',
   'profile.json',
   'providers.tf',
   'recovery-apply.mjs',
@@ -122,6 +124,10 @@ export function validateRelayServicesRoot(rootUrl) {
     || consumedRecoveryEntrypoints.some((source) => (
       !source.includes('export const RELAY_SERVICES_MEMORY_RECOVERY_OPERATION_CONSUMED = true')
         || !source.includes('if (RELAY_SERVICES_MEMORY_RECOVERY_OPERATION_CONSUMED)')
+    ))
+    || [readyApply, readyPlan].some((source) => (
+      !source.includes('export const RELAY_SERVICES_PRIVATE_READY_OPERATION_CONSUMED = true')
+        || !source.includes('if (RELAY_SERVICES_PRIVATE_READY_OPERATION_CONSUMED)')
     ))
     || !recoveryClaim.includes("url.searchParams.set('ifGenerationMatch', '0')")
     || !recoveryApply.includes('validateRelayServicesRecoveredInventory')

@@ -1,0 +1,51 @@
+{
+  "schema": "miakapp.staging-browser-relay-services-private-ready-result/1",
+  "operation": "transition-private-browser-relays-to-assigned-audiences",
+  "project_id": "miakapp-v4-staging",
+  "project_number": "1072737219170",
+  "region": "europe-west9",
+  "repository_commit": "c2aec219c67b20f80e5a6ab5bf4205ed81145170",
+  "profile_sha256": "41392c96d68bf749c59757bc76d34a69e6eb407efa50b14f61b937c4f5a9b576",
+  "memory_recovery_failure_sha256": "5c41533a7b6a684e38abd9e8dd7d94d0f4e21cdd3bd9edf076821cca191932f7",
+  "terraform_plan_sha256": "55507ba9e0f518c0063bd294e41cc38f39d306c06291691c177258ae1c51f972",
+  "baseline_sha256": "7b7e446055f92eaad15aad9216a4fcf7b7a64b5b8cf8461c227afb7ce6ea16b6",
+  "claim_generation": "1788664144376292",
+  "claim_sha256": "db90861c9ad7fbbbb66a19d75f2fd67c37ad55e86f309529e4a77cec0feb5ef5",
+  "final_inventory_sha256": "421338fec676c1fccd0e6747d3e8837d4151b147c95b343172639800779b64d1",
+  "terraform_state_generation": "1788664157688934",
+  "terraform_state_sha256": "401101ec2a802fb61171fd4446f7be718c5fa912b64b18d3c738ba4c36919ac0",
+  "runtime_identity": "miakapp-staging-relay@miakapp-v4-staging.iam.gserviceaccount.com",
+  "runtime_project_roles": [],
+  "user_managed_keys": 0,
+  "relay_image": "europe-west9-docker.pkg.dev/miakapp-v4-staging/miakapp-control-plane/miakapp-server@sha256:23a19a26e8a24f6434ab8bc557dfa3fa799e0262e3400170e3bf064101a890b1",
+  "relays": [
+    {
+      "id": "relay-a",
+      "name": "miakapp-staging-relay-a",
+      "uri": "https://miakapp-staging-relay-a-aczhngqraq-od.a.run.app",
+      "audience": "wss://miakapp-staging-relay-a-aczhngqraq-od.a.run.app/ws",
+      "generation": "2",
+      "memory": "512Mi",
+      "public_invoker": false,
+      "minimum_instances": 0,
+      "maximum_instances": 1
+    },
+    {
+      "id": "relay-b",
+      "name": "miakapp-staging-relay-b",
+      "uri": "https://miakapp-staging-relay-b-aczhngqraq-od.a.run.app",
+      "audience": "wss://miakapp-staging-relay-b-aczhngqraq-od.a.run.app/ws",
+      "generation": "2",
+      "memory": "512Mi",
+      "public_invoker": false,
+      "minimum_instances": 0,
+      "maximum_instances": 1
+    }
+  ],
+  "public_iam_members": 0,
+  "live_requests_by_driver": 0,
+  "hosting_releases": 0,
+  "fixed_minimum_instances": 0,
+  "maximum_monthly_increment_eur": 0,
+  "retry_authorized": false
+}

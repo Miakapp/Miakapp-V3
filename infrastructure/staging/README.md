@@ -3,10 +3,10 @@
 Status: private audience-bound user-relay acceptance succeeded and retired;
 schema-2 two-key runtime deployed privately with version 1 current for the
 browser-relay rehearsal and version 2 retained; live browser-relay plan rebased
-but not deployed; exact private relay-image v2 build verified and deployed to
-two IAM-private, scale-to-zero relay services; their consumed memory recovery
-left one provider-default reconciliation caught by the convergence gate, and an
-exact private-ready transition is prepared;
+but not executed; exact private relay-image v2 build verified and deployed to
+two IAM-private, scale-to-zero relay services; their third one-shot transition
+assigned both exact WSS audiences, converged at serial 4 and retired without
+opening public invocation;
 guarded rehearsal entry converged and its one-shot tooling
 retired; real system-browser App Check provider token obtained and its
 temporary Hosting route retired; browser App Check API-only prerequisite applied and
@@ -42,10 +42,10 @@ verified v2 image digest is embedded in the profile and cannot be supplied as
 an operator variable. The original bootstrap failed safely at Cloud Run's Gen2
 memory floor; its distinct recovery created both private services at 512 MiB,
 then the convergence gate caught a provider-only explicit-false normalization.
-Both attempts are permanently claimed and retained as sanitized evidence. The
-current private-ready entrypoint can only reconcile that default, assign the two
-observed audiences and update the guard in place; it cannot create, destroy,
-open IAM, send a request or release Hosting.
+A third claimed transition removed only that non-round-tripping default,
+assigned the two observed audiences and converged without creating, destroying,
+opening IAM, sending a request or releasing Hosting. All three operations are
+permanently claimed, retained as sanitized evidence and retired.
 
 The guarded [`browser-relay-image/`](browser-relay-image/) package closed the
 next pre-deployment boundary without creating a service. It pins the exact
@@ -57,9 +57,9 @@ returns `pong` from a read-only, non-root, capability-free container. The first
 build exposed the missing Container Analysis prerequisite and is not
 deployable. After that API converged, the distinct v2 recovery reused the exact
 source generation and succeeded once. Its immutable digest is committed as
-sanitized evidence, but remains private and undeployed. Both one-shot
-entrypoints are permanently retired; no relay service, IAM binding or public
-ingress was created.
+sanitized evidence and remains private in Artifact Registry. Both one-shot
+entrypoints are permanently retired. The verified digest is now bound into both
+private relay services; no public IAM binding or public invocation was created.
 
 The [`signing-overlap/`](signing-overlap/) package records the converged next
 prerequisite: one non-retried Cloud KMS version creation behind two atomic GCS
@@ -379,8 +379,8 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`signing-overlap/`](signing-overlap/) | Monotone second KMS version creation and 60/330-second overlap rollout contract | Version 2 enabled after one direct request; two atomic claims retained and one-shot entrypoints retired; runtime, Terraform, IAM, ingress and requests unchanged |
 | [`browser-relay/`](browser-relay/) | Closed live browser, two-relay, signing-key and rollback acceptance plan | Rebases the current private `00010`/two-key/version-1-entry/App Check baseline; not deployed, every `LIVE-*` case pending, and no cloud mutation granted |
 | [`browser-relay-edge/`](browser-relay-edge/) | Dormant reversible control-plane edge state machine | Pins the atomic staging issuer/origin profile and public-last/private-first transition ordering; exposes no CLI and grants no cloud mutation |
-| [`browser-relay-services/`](browser-relay-services/) | Guarded two-relay Cloud Run Terraform state machine | Two private 512-MiB scale-0..1 services exist with a keyless role-free identity; both bootstrap claims are consumed, and an exact zero-create private-ready audience/reconciliation entrypoint is prepared |
-| [`browser-relay-image/`](browser-relay-image/) | Guarded one-shot private relay image build | Distinct v2 recovery succeeded once with exact source provenance and hardened smoke validation; immutable image retained privately and undeployed; all entrypoints retired |
+| [`browser-relay-services/`](browser-relay-services/) | Guarded two-relay Cloud Run Terraform state machine | Two private-ready 512-MiB scale-0..1 services use their exact assigned WSS audiences and a keyless role-free identity; all three claims remain durable and every one-shot entrypoint is retired |
+| [`browser-relay-image/`](browser-relay-image/) | Guarded one-shot private relay image build | Distinct v2 recovery succeeded once with exact source provenance and hardened smoke validation; immutable image is deployed only to the two IAM-private relays; all build entrypoints retired |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |
 | [`TEARDOWN.md`](TEARDOWN.md) | Manual recovery and teardown rehearsal | Documentation only |
@@ -433,8 +433,8 @@ prefix, `terraform/browser-app-check`, now stores its 15,925-byte serial-5
 state at generation `1788603682439071`; it contains the state guard, reCAPTCHA
 API service, one score key and its exact provider registration plus two data
 resources and one output. The eighth prefix,
-`terraform/browser-relay-services`, stores its 37,259-byte serial-3 state at
-generation `1788661250283535`; it contains two private relay services, one
+`terraform/browser-relay-services`, stores its 37,399-byte serial-4 state at
+generation `1788664157688934`; it contains two private-ready relay services, one
 role-free service account, the guard and no public IAM resource. The live
 Firestore database is the project's
 free-tier database; the five secret containers now each have one enabled
@@ -682,8 +682,8 @@ operator entrypoint. Its atomic claim and exact live orchestration remain part
 of the open `EDGE-01`/`ROLLBACK-01` gates.
 The separate relay-image operation is fully reviewed, permanently consumed and
 bound by immutable digest into both private relay services. Their exact Cloud
-Run URLs have been independently observed. The remaining private-ready step is
-a zero-create, zero-delete transition that replaces the two bootstrap audiences
-with those exact `wss://.../ws` values and removes only the provider's
-non-round-tripping explicit-false block. Public invocation, browser traffic and
-the edge transition remain separate later gates.
+Run URLs and WSS audiences have been independently observed after the
+zero-create, zero-delete private-ready transition. Its result and serial-4 state
+are pinned, its claim is durable and its entrypoints are retired. Public
+invocation, browser traffic and the edge transition remain separate later
+gates.

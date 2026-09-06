@@ -19,7 +19,7 @@ import {
   sha256,
   validatePrivateReadyRelayVariables,
   validateRelayServicesPrivateReadyAuthorization,
-  validateRelayServicesProfile,
+  validateRelayServicesV5Profile,
   verifyExactMain,
   writePrivateFile,
 } from './contract.mjs';
@@ -52,6 +52,9 @@ import { readAndValidatePrivateReadyRelayServicesPlan } from './validate-plan.mj
 
 const APPLY_AUTHORIZATION = 'MIAKAPP_STAGING_RELAY_SERVICES_READY_APPLY_AUTHORIZATION';
 const ATTEMPT_MARKER = 'private-ready-mutation-attempted.json';
+export const RELAY_SERVICES_PRIVATE_READY_OPERATION_CONSUMED = true;
+const RETIRED_MESSAGE =
+  'Relay private-ready transition already converged; this one-shot apply entrypoint is permanently retired';
 process.umask(0o077);
 
 function reject(message) {
@@ -104,7 +107,7 @@ async function observeBaseline(session) {
 }
 
 export function validateRelayServicesPrivateReadyTerraformOutput(value) {
-  const profile = validateRelayServicesProfile();
+  const profile = validateRelayServicesV5Profile();
   if (value === null || Array.isArray(value) || typeof value !== 'object'
     || value.schema !== 'miakapp.staging-browser-relay-services/1'
     || value.deployment_phase !== 'private_ready'
@@ -141,7 +144,7 @@ export function buildRelayServicesPrivateReadyResult({
   output,
   inventory,
 }) {
-  const profile = validateRelayServicesProfile();
+  const profile = validateRelayServicesV5Profile();
   const metadataBytes = Buffer.from(canonicalJson(metadata), 'utf8');
   const checkedClaim = validateRelayPrivateReadyClaimReceipt(
     claimReceipt,
@@ -213,6 +216,7 @@ async function captureUncertainInventory(bundle) {
 }
 
 async function main() {
+  if (RELAY_SERVICES_PRIVATE_READY_OPERATION_CONSUMED) throw new Error(RETIRED_MESSAGE);
   if (process.argv.length !== 3 || process.argv[2] === undefined) {
     throw new Error(`Usage: ${APPLY_AUTHORIZATION}=... ./ready-apply.sh <private-bundle>`);
   }
