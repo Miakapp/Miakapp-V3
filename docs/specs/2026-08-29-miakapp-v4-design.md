@@ -913,9 +913,15 @@ vertical-slice exit gates.
    lifecycle: initial absence gates all mutation and cleanup authority, one
    exact MiakAPI coordinator owns the synthetic state/function surface, browser
    custom tokens are fresh and ordered, and coordinator-first cleanup must end
-   in independently observed absence. It still has no cloud transport. The
-   concrete operator adapter and independent closed aggregator remain required
-   before the one allowed execution.
+   in independently observed absence. It still has no cloud transport. A
+   separate dormant Google/Firebase adapter now supplies that boundary only
+   when given an explicit ephemeral operator session and pinned MiakAPI
+   factories. It uses keyless IAM signing, bounds each control-plane mutation
+   to one attempt, and accepts cleanup only for the exact complete synthetic
+   ownership/key registries before one atomic preconditioned Firestore delete
+   and final Firebase UID deletion. The pinned MiakAPI factory binding and
+   independent closed aggregator remain required before the one allowed
+   execution.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain

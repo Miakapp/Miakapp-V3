@@ -56,10 +56,10 @@ test('rejects a staging manifest above the bounded 128-KiB envelope', () => {
 
 test('accepts the successful and retired private user-relay probe', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 82);
+  assert.equal(validated.revision, 83);
   assert.equal(
     validated.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_artifact_ci_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_artifact_ci_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
@@ -908,6 +908,44 @@ test('accepts the successful and retired private user-relay probe', () => {
     live_fixture_creations: 0,
     live_custom_tokens_issued: 0,
     live_coordinator_sessions: 0,
+    live_cleanup_executions: 0,
+    credentials_committed: false,
+    raw_cloud_responses_committed: false,
+  });
+  assert.deepEqual(validated.evidence.browser_relay_fixture_cloud, {
+    state: 'closed_google_firebase_adapter_implemented_not_wired_not_executed',
+    profile_path: 'browser-relay-fixture-cloud/profile.json',
+    profile_sha256: '4a0133ce6ef48bd18afb634cb23035b9d7527ba72b44c7a3a82405de5f67feb5',
+    implementation_base_commit: '0ac4852d0fc8985bf9b69fc63cfe39d5cbdc6571',
+    browser_relay_fixture_profile_sha256:
+      'cf9f75e8f385e386c695751b43258d792f8fe104aa7ec80c6e3471a21ac04047',
+    browser_relay_fixture_source_sha256:
+      '339cd223822dba232e1bacf263e6632669788c5a44bca39ea297cb8f47fbe838',
+    browser_relay_page_profile_sha256:
+      '2e9e809d8bb9b88a4e96b51a258d948e6f0d1467c38adaca8c6582e132113e1e',
+    deployed_control_plane_source_sha256:
+      '3e94305e17ee4df07f54f13560dac0a9491de3f89fb3ddbf4ab745c62dce8c7e',
+    miakapi_commit: 'a798a746847ba3d5c16128a08b33353269e770a4',
+    cloud_source_sha256:
+      '3bfca89fd132a2902776cffe3c7ac8bd9abd013b21d90396487edd0fd7253c77',
+    signer_service_account:
+      'miakapp-staging-probe@miakapp-v4-staging.iam.gserviceaccount.com',
+    maximum_inventory_cycles: 8,
+    maximum_signed_firebase_jwts: 4,
+    mutation_retries: 0,
+    firestore_cleanup_commits: 1,
+    firebase_identity_deletions: 1,
+    initial_absence_required_before_mutation: true,
+    coordinator_stop_required_before_data_cleanup: true,
+    firestore_update_time_preconditions: true,
+    final_absence_independently_observed: true,
+    cloud_compute_resources: 0,
+    cloud_mutation_authorized: false,
+    public_ingress_authorized: false,
+    hosting_publication_authorized: false,
+    live_execution_authorized: false,
+    live_http_requests: 0,
+    live_fixture_creations: 0,
     live_cleanup_executions: 0,
     credentials_committed: false,
     raw_cloud_responses_committed: false,

@@ -496,6 +496,20 @@ requires coordinator-first removal followed by verified final absence. It has
 no cloud transport, ambient credentials or live authority, and therefore made
 no staging mutation.
 
+The following source-only cloud adapter now implements that controller boundary
+without making it executable. It accepts only an injected ephemeral operator
+OAuth token, injected HTTP transport and the two factories from the pinned
+MiakAPI build. Its initial complete Firebase Auth and Firestore absence
+observation unlocks at most one identity, Home, Home Key and relay rotation,
+plus four distinct keyless custom-token signatures. Cleanup first requires the
+wrapped coordinator session count to be zero, then validates exact document
+schemas, ownership, routing and key cardinality. All present fixture documents
+are deleted in one Firestore commit with their observed `updateTime`
+preconditions, followed by project-scoped deletion of the fixed Firebase UID
+and an independent zero-count observation. Unknown mutation outcomes are read
+back but never retried. No CLI, IAM transition, Hosting release, public edge or
+live request was added.
+
 The guarded relay-image increment bound the exact merged Miakapp-Server tree to a deterministic
 53,098-byte archive, one digest-pinned Cloud Build Docker builder, verified
 SHA-256 source provenance and a hardened `/ping` smoke test. A generation-zero
