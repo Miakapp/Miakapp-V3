@@ -433,6 +433,17 @@ runner profile and marked only `RUNNER-01` satisfied. Edge orchestration,
 allow-listed monitoring and rollback preflight remain open, and every live
 matrix row remains pending.
 
+The adjacent dormant monitoring package now fixes the exact preflight contract
+without creating a dashboard, alert policy, scheduler or compute resource. It
+can read only six allow-listed Monitoring descriptors and five-minute
+header-only queries, the existing EUR 10 staging billing budget, and the exact
+private control-plane and relay boundaries. Raw metric points, time series,
+resource names, API errors and credentials cannot enter its closed result. Its
+bounded evaluator maps any count, duration, projected-cost or zero-counter
+violation to a stable rollback reason. `MONITORING-01` remains open until the
+merged package is used for a fresh read-only observation and that sanitized
+result is digest-pinned by a later plan revision.
+
 The guarded relay-image increment bound the exact merged Miakapp-Server tree to a deterministic
 53,098-byte archive, one digest-pinned Cloud Build Docker builder, verified
 SHA-256 source provenance and a hardened `/ping` smoke test. A generation-zero
