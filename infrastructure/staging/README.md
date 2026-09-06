@@ -379,6 +379,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`signing-overlap/`](signing-overlap/) | Monotone second KMS version creation and 60/330-second overlap rollout contract | Version 2 enabled after one direct request; two atomic claims retained and one-shot entrypoints retired; runtime, Terraform, IAM, ingress and requests unchanged |
 | [`browser-relay/`](browser-relay/) | Closed live browser, two-relay, signing-key and rollback acceptance plan | Rebases the current private `00010`/two-key/version-1-entry/App Check/two-relay baseline; not deployed, every `LIVE-*` case pending, and no cloud mutation granted |
 | [`browser-relay-edge/`](browser-relay-edge/) | Dormant reversible control-plane edge state machine | Pins the atomic staging issuer/origin profile and public-last/private-first transition ordering; exposes no CLI and grants no cloud mutation |
+| [`browser-relay-runner/`](browser-relay-runner/) | Dormant operator-local three-engine runner | Real offline CI smoke launches Chromium, Firefox and WebKit sequentially; private input stays in memory, output is closed, and no live run or cloud mutation is authorized |
 | [`browser-relay-services/`](browser-relay-services/) | Guarded two-relay Cloud Run Terraform state machine | Two private-ready 512-MiB scale-0..1 services use their exact assigned WSS audiences and a keyless role-free identity; all three claims remain durable and every one-shot entrypoint is retired |
 | [`browser-relay-image/`](browser-relay-image/) | Guarded one-shot private relay image build | Distinct v2 recovery succeeded once with exact source provenance and hardened smoke validation; immutable image is deployed only to the two IAM-private relays; all build entrypoints retired |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
@@ -678,8 +679,9 @@ localhost preview; that operation and all recovery paths are now permanently
 retired. The full browser-relay matrix must acquire fresh credentials and cannot
 reuse the consumed token or callback.
 Separate guarded implementations must still exist for the temporary edge
-transition, runner, metrics and rollback. The plan records these as open
-preconditions instead of promoting local fixtures to live evidence.
+transition, metrics and rollback. The plan still records the runner as open
+until its pinned implementation is merged and the next closed plan revision
+consumes it instead of promoting its offline smoke to live evidence.
 The dormant [`browser-relay-edge/`](browser-relay-edge/) library now covers the
 edge transition state machine and its emergency ingress closure, but exposes no
 operator entrypoint. Its atomic claim and exact live orchestration remain part
@@ -691,3 +693,9 @@ zero-create, zero-delete private-ready transition. Its result and serial-4 state
 are pinned, its claim is durable and its entrypoints are retired. Public
 invocation, browser traffic and the edge transition remain separate later
 gates.
+The dormant [`browser-relay-runner/`](browser-relay-runner/) package pins plan
+revision 9, Playwright 1.62.1 and the merged MiakAPI browser client. It has no
+CLI, publisher, credential loader or cloud adapter. Its dedicated CI gate
+intercepts the exact staging URL locally and proves three real ephemeral browser
+engines produce only the reviewed closed aggregate. It records zero live runs
+and grants no authority to publish Hosting or expose either private service.

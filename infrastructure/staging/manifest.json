@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 68,
-  "status": "private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_private_relays_ready_rebased_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled",
+  "revision": 69,
+  "status": "private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled",
   "environment": "staging",
   "project": {
     "project_id": "miakapp-v4-staging",
@@ -1691,6 +1691,30 @@
       "relay_services": 2,
       "runner_present": false,
       "completed_cases": 0
+    },
+    "browser_relay_runner": {
+      "state": "three_engine_closed_runner_implemented_not_executed",
+      "profile_path": "browser-relay-runner/profile.json",
+      "profile_sha256": "72b688ccd577f7b40b21d9f874bbca555324eaec1fbf2acbc87dee35cf83a536",
+      "browser_relay_plan_sha256": "bdf2cea284b1031a2a78e3ab029a733cad5e68efde8e9e01c5230e01fe8333dc",
+      "miakapi_commit": "a798a746847ba3d5c16128a08b33353269e770a4",
+      "playwright_version": "1.62.1",
+      "browser_engines": 3,
+      "maximum_invocations": 3,
+      "sequential": true,
+      "maximum_total_milliseconds": 840000,
+      "chromium_deadline_milliseconds": 720000,
+      "secondary_browser_deadline_milliseconds": 60000,
+      "output_assertions": 40,
+      "cloud_compute_resources": 0,
+      "three_engine_ci_gate_present": true,
+      "cloud_mutation_authorized": false,
+      "public_ingress_authorized": false,
+      "live_execution_authorized": false,
+      "live_execution_count": 0,
+      "result_present": false,
+      "credentials_committed": false,
+      "raw_diagnostics_committed": false
     },
     "browser_relay_image": {
       "state": "v1_failed_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized",

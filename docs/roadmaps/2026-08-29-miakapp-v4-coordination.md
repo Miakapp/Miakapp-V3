@@ -690,6 +690,10 @@ current consumer.
    prerequisites are converged, the bounded staging edge profile is present in
    source but not selected, and the consumed one-shot tooling is retired. The
    historical revision-8 plan remains byte-exact for the relay-image build pin.
+   A separately pinned dormant runner now launches Chromium, Firefox and WebKit
+   sequentially in a real offline CI smoke, uses ephemeral contexts and exposes
+   only closed semantic counters. Its profile records zero live runs and grants
+   no Hosting, cloud mutation or public-ingress authority.
 14. **In progress 2026-09-05** — the control-plane source now retains legacy
     single-key runtime compatibility while accepting a closed schema 2 with one
     selected KMS signer and at most two KMS-validated published public keys. Its
@@ -725,8 +729,9 @@ current consumer.
     scale-to-zero profile and matching process admission limits. Its immutable
     image digest and private-ready state have converged through three retained
     claims, with no public invoker, and all one-shot entrypoints are retired.
-    Next bind both state machines to a distinct atomic operation, three-engine runner,
-    monitoring and complete rollback guards. Execute the matrix once before
+    Next rebase the closed plan on the merged three-engine runner, then bind both
+    state machines to a distinct atomic operation, monitoring and complete
+    rollback guards. Execute the matrix once before
     retiring version 1 after the complete lease bound and wiring the real client
     and opaque broker into the production web shell. This reuses the existing
     keys and does not create a third KMS version.
