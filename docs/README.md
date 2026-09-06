@@ -58,8 +58,9 @@ implemented across several repositories.
   postflight; preflighted but not executed live.
 - [`../infrastructure/staging/browser-relay-operation/`](../infrastructure/staging/browser-relay-operation/)
   — dormant full-operation envelope fixing the public-last relay transition and
-  two-level cleanup order around the edge orchestrator, plus an unexecuted
-  read-only preflight; no live adapter or execution authority is present.
+  two-level cleanup order around the edge orchestrator; its post-merge
+  read-only preflight succeeded, but no live adapter or execution authority is
+  present.
 - [`../infrastructure/staging/browser-relay-services/`](../infrastructure/staging/browser-relay-services/)
   — applied four-phase Terraform model holding two private-ready, scale-to-zero
   relays with immutable image selection, finite process admission and public-last
@@ -132,12 +133,17 @@ finish with a canonical-private postflight. Its profile authorizes nothing. A
 post-merge read-only preflight proved the claim absent and the full rollback
 target private and Terraform-converged without creating a claim or making a
 cloud mutation. Plan revision 13 pins that sanitized result and closes
-`EDGE-01`; every `LIVE-*` row remains pending. The staging manifest retains the
-byte-exact earlier zero-relay plan used
+`EDGE-01`. The complete operation envelope then passed its own exact-commit
+read-only preflight: the operation claim was absent, the edge and both relays
+were private, the temporary route and application data were absent, and
+Terraform had no change. Plan revision 14 pins that closed result; every
+`LIVE-*` row remains pending. The staging manifest retains the byte-exact
+earlier zero-relay plan used
 by the image build, revision 9 used by the runner, revision 10 used by
 monitoring, revision 11 used by rollback and revision 12 used by the
-orchestrator preflight, pins the serial-4 private-ready result and rebases the
-current acceptance plan on matching fresh live inventories. The state transition,
+orchestrator preflight, plus revision 13 used by the operation preflight. It
+pins the serial-4 private-ready result and rebases the current acceptance plan
+on matching fresh live inventories. The state transition,
 intended cost, exposure and rollback boundary remain reviewable without
 pretending that a public edge or live browser matrix already exists.
 

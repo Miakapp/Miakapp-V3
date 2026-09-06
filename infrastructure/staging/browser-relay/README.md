@@ -4,7 +4,7 @@ This directory freezes the rebased reviewable plan for live browser, relay,
 signing-key and rollback acceptance. It contains no Terraform, deployer,
 invocation wrapper, credential or result. Reading or validating it authorizes no
 cloud mutation. The committed state is
-`edge_orchestrator_preflighted_rollback_preflighted_monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed`, all
+`operation_preflighted_edge_orchestrator_preflighted_rollback_preflighted_monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed`, all
 `LIVE-*` cases are pending and the canonical staging manifest records private
 control-plane ingress plus two IAM-private, scale-to-zero relays with no public
 invoker.
@@ -75,9 +75,8 @@ and [reCAPTCHA billing](https://cloud.google.com/recaptcha/docs/billing-informat
 
 ## Preconditions
 
-Revision 13 preserves the independent read-only observation completed for
-revision 9 at
-2026-09-06T04:08:50.844Z. It verified `control-plane-00010-vop`, private ingress,
+Revision 14 records the complete operation-envelope preflight observed at
+2026-09-06T09:15:20.386Z. It reverified `control-plane-00010-vop`, private ingress,
 zero unauthenticated invokers, two enabled and published signing versions with
 version 1 current for the rehearsal entry, a registered reCAPTCHA Enterprise
 provider, the prior real browser token result, zero enforcement records, zero
@@ -158,6 +157,16 @@ change and acceptance execution. Revision 12 pins that result and marks
 `ROLLBACK-01` satisfied.
 
 The adjacent
+[`browser-relay-operation/`](../browser-relay-operation/) package composes the
+complete public-last window and two-level cleanup boundary. Its post-merge
+read-only preflight proved the retained operation claim absent, the control
+plane canonical-private, both relays private-ready, the temporary Hosting route
+absent, application data empty and the relay Terraform root converged with four
+no-ops. The sanitized result records zero mutation, public-ingress change or
+acceptance execution. Revision 14 pins that result; it does not authorize or
+claim a live matrix run.
+
+The adjacent
 [`browser-relay-services/`](../browser-relay-services/) Terraform root now
 freezes the two services and their `absent`, private-bootstrap, private-ready
 and public-window phases. It requires a digest-only image, uses one keyless
@@ -176,8 +185,10 @@ runner package. The byte-exact [`plan-v10.json`](plan-v10.json) preserves the
 plan consumed by the monitoring preflight. The byte-exact
 [`plan-v11.json`](plan-v11.json) preserves the plan consumed by the rollback
 preflight. The byte-exact [`plan-v12.json`](plan-v12.json) preserves the plan
-consumed by the orchestrator preflight. Revision 13 can evolve without
-rewriting any immutable dependency.
+consumed by the orchestrator preflight. The byte-exact
+[`plan-v13.json`](plan-v13.json) preserves the plan consumed by the complete
+operation preflight. Revision 14 can evolve without rewriting any immutable
+dependency.
 
 The currently deployed runtime document publishes both signing keys with
 version 1 current and version 2 retained. This completes the rehearsal entry
