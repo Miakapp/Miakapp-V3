@@ -13,7 +13,7 @@ resource "terraform_data" "deployment_guard" {
 
   input = {
     deployment_phase    = var.deployment_phase
-    profile_sha256      = filesha256("${path.module}/profile.json")
+    profile_sha256      = local.profile.operation.converged_profile_sha256
     relay_audiences     = local.selected_audiences
     relay_image         = local.relay_image
     relay_source_commit = local.profile.pins.miakapp_server_commit
