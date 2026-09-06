@@ -154,6 +154,7 @@ node infrastructure/staging/browser-relay-operation/guard.mjs \
 node --check infrastructure/staging/browser-relay-operation/contract.mjs
 node --check infrastructure/staging/browser-relay-operation/guard.mjs
 node --check infrastructure/staging/browser-relay-operation/operation.mjs
+node --check infrastructure/staging/browser-relay-operation/preflight.mjs
 node -e "import('./infrastructure/staging/browser-relay-operation/contract.mjs').then(({ validateBrowserRelayOperationProfile }) => validateBrowserRelayOperationProfile())"
 node infrastructure/staging/browser-relay-services/guard.mjs \
   "${repository_root}/infrastructure/staging/browser-relay-services"
