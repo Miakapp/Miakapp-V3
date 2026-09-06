@@ -134,6 +134,17 @@ budget with zero mutation or acceptance execution. Revision 11 pins the closed
 result digest and marks `MONITORING-01` satisfied.
 
 The adjacent
+[`browser-relay-rollback/`](../browser-relay-rollback/) package now pins the
+six ordered rollback steps, every edge source file, the private-ready relay
+result and the exact canonical-private final state. Its dormant observer is
+limited to `GET`, `HEAD` and two read-only Google `POST` operations and requires
+ten closed-target facts plus a four-resource Terraform no-change plan. The
+profile records zero live observations and grants no mutation, public ingress
+or acceptance authority. `ROLLBACK-01` therefore remains open until a fresh
+post-merge preflight is sanitized, digest-pinned and consumed by a later plan
+revision.
+
+The adjacent
 [`browser-relay-services/`](../browser-relay-services/) Terraform root now
 freezes the two services and their `absent`, private-bootstrap, private-ready
 and public-window phases. It requires a digest-only image, uses one keyless

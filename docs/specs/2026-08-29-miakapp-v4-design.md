@@ -875,7 +875,12 @@ vertical-slice exit gates.
    budget and the exact private edge/relay boundary with zero mutation or
    acceptance execution. Current plan revision 11 preserves revision 10 byte
    for byte, pins that result and closes the monitoring precondition. Edge
-   orchestration and rollback preflight remain open.
+   orchestration and rollback preflight remain open. A separate dormant
+   rollback package now pins the six-step reverse transition, every edge source
+   dependency and ten exact closed-target observations. It accepts only an
+   independently rendered private-ready Terraform plan with four resource
+   no-ops and no change; no live observation or execution authority is claimed
+   until that implementation has merged.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain
