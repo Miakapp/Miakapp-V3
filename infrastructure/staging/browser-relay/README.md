@@ -4,7 +4,7 @@ This directory freezes the rebased reviewable plan for live browser, relay,
 signing-key and rollback acceptance. It contains no Terraform, deployer,
 invocation wrapper, credential or result. Reading or validating it authorizes no
 cloud mutation. The committed state is
-`operation_preflighted_edge_orchestrator_preflighted_rollback_preflighted_monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed`, all
+`page_three_engine_ci_pinned_operation_preflighted_edge_orchestrator_preflighted_rollback_preflighted_monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed`, all
 `LIVE-*` cases are pending and the canonical staging manifest records private
 control-plane ingress plus two IAM-private, scale-to-zero relays with no public
 invoker.
@@ -175,8 +175,9 @@ with the runner's final-result API until the independent fixture/operator
 adapter exists. It reserves 300 seconds for callback cleanup and another 300
 seconds for edge rollback. A dedicated keyless CI gate loads the dormant
 artifact without network access in all three browser engines. The package
-contains no publisher or live authority, so this plan still records every
-`LIVE-*` case as pending.
+contains no publisher or live authority. Revision 15 pins its exact profile and
+merged CI implementation, so this plan still records every `LIVE-*` case as
+pending.
 
 The adjacent
 [`browser-relay-services/`](../browser-relay-services/) Terraform root now
@@ -199,8 +200,9 @@ plan consumed by the monitoring preflight. The byte-exact
 preflight. The byte-exact [`plan-v12.json`](plan-v12.json) preserves the plan
 consumed by the orchestrator preflight. The byte-exact
 [`plan-v13.json`](plan-v13.json) preserves the plan consumed by the complete
-operation preflight. Revision 14 can evolve without rewriting any immutable
-dependency.
+operation preflight. The byte-exact [`plan-v14.json`](plan-v14.json) preserves
+the plan consumed by the page-host profile and CI proof. Revision 15 can evolve
+without rewriting any immutable dependency.
 
 The currently deployed runtime document publishes both signing keys with
 version 1 current and version 2 retained. This completes the rehearsal entry

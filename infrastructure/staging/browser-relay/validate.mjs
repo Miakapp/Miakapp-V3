@@ -11,7 +11,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       const plan = validateBrowserRelayPlan(process.argv[2]);
       console.log([
         `Validated ${plan.schema} for ${plan.target.project_id}.`,
-        'All nine implementation and preflight prerequisites are pinned; the complete live matrix remains pending, no cloud mutation is granted and no acceptance evidence is claimed.',
+        'All nine implementation and preflight prerequisites plus the page three-engine CI profile are pinned; the complete live matrix remains pending, no cloud mutation is granted and no acceptance evidence is claimed.',
       ].join(' '));
     } catch (error) {
       console.error(error instanceof Error ? error.message : 'Staging browser-relay plan is invalid');

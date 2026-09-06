@@ -142,11 +142,13 @@ cloud mutation. Plan revision 13 pins that sanitized result and closes
 read-only preflight: the operation claim was absent, the edge and both relays
 were private, the temporary route and application data were absent, and
 Terraform had no change. Plan revision 14 pins that closed result; every
-`LIVE-*` row remains pending. The staging manifest retains the byte-exact
-earlier zero-relay plan used
+`LIVE-*` row remains pending. Plan revision 15 preserves revision 14
+byte-for-byte and pins the merged page profile plus its independent three-engine
+offline CI proof. The staging manifest retains the byte-exact earlier zero-relay plan used
 by the image build, revision 9 used by the runner, revision 10 used by
 monitoring, revision 11 used by rollback and revision 12 used by the
-orchestrator preflight, plus revision 13 used by the operation preflight. It
+orchestrator preflight, revision 13 used by the operation preflight and revision
+14 used by the page-host proof. It
 pins the serial-4 private-ready result and rebases the current acceptance plan
 on matching fresh live inventories. The state transition,
 intended cost, exposure and rollback boundary remain reviewable without
