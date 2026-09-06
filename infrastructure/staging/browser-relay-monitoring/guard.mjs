@@ -8,6 +8,7 @@ const REQUIRED_FILES = Object.freeze([
   'cloud.mjs',
   'contract.mjs',
   'guard.mjs',
+  'preflight-result-v1.json',
   'profile.json',
 ]);
 

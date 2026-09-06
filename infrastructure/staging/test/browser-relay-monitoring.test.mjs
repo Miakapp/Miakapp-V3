@@ -19,6 +19,8 @@ import {
 import {
   APPROVED_BILLING_ACCOUNT_SHA256,
   BROWSER_RELAY_V10_PLAN_SHA256,
+  MONITORING_IMPLEMENTATION_COMMIT,
+  MONITORING_PREFLIGHT_RESULT_SHA256,
   MONITORING_PROFILE_SHA256,
   SAMPLE_RESULT_SCHEMA,
   StagingBrowserRelayMonitoringError,
@@ -26,6 +28,7 @@ import {
   evaluateMonitoringSample,
   validateBrowserRelayMonitoringProfile,
   validateMonitoringCloudObservation,
+  validateMonitoringPreflightResult,
 } from '../browser-relay-monitoring/contract.mjs';
 import {
   validateBrowserRelayMonitoringRoot,
@@ -155,6 +158,7 @@ test('builds a closed preflight result only at the exact private boundary', () =
   const observation = validateMonitoringCloudObservation(cloudObservation());
   const result = buildMonitoringPreflightResult(observation);
   assert.equal(result.state, 'allowlisted_monitoring_observed_at_private_boundary');
+  assert.equal(result.implementation_commit, MONITORING_IMPLEMENTATION_COMMIT);
   assert.equal(result.control_plane_state, 'canonical_private');
   assert.equal(result.control_plane_public_invokers, 0);
   assert.equal(result.relay_phase, 'private_ready');
@@ -166,6 +170,19 @@ test('builds a closed preflight result only at the exact private boundary', () =
   assert.deepEqual(result.budget_thresholds_eur, [2, 5, 10]);
   assert.equal(result.cloud_mutations, 0);
   assert.equal(result.raw_cloud_responses_retained, false);
+});
+
+test('pins the exact sanitized successful live monitoring preflight', () => {
+  const result = validateMonitoringPreflightResult();
+  assert.equal(result.implementation_commit, MONITORING_IMPLEMENTATION_COMMIT);
+  assert.equal(result.browser_relay_plan_sha256, BROWSER_RELAY_V10_PLAN_SHA256);
+  assert.equal(result.control_plane_public_invokers, 0);
+  assert.equal(result.relay_public_invokers, 0);
+  assert.equal(result.metric_descriptors_observed, 6);
+  assert.equal(result.allowlisted_queries_succeeded, 6);
+  assert.equal(result.cloud_mutations, 0);
+  assert.equal(result.acceptance_executions, 0);
+  assert.match(MONITORING_PREFLIGHT_RESULT_SHA256, /^[0-9a-f]{64}$/u);
 });
 
 test('rejects descriptor, budget, boundary, pagination and private-output drift', () => {
@@ -244,7 +261,10 @@ test('rejects an unapproved billing account before any cloud request', async () 
 });
 
 test('guards the exact dormant package and rejects extras, executables and symlinks', () => {
-  const names = ['README.md', 'cloud.mjs', 'contract.mjs', 'guard.mjs', 'profile.json'];
+  const names = [
+    'README.md', 'cloud.mjs', 'contract.mjs', 'guard.mjs',
+    'preflight-result-v1.json', 'profile.json',
+  ];
   validateBrowserRelayMonitoringRoot(
     new URL('../browser-relay-monitoring/', import.meta.url),
   );

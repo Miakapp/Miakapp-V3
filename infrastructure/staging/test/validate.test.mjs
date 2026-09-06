@@ -31,10 +31,10 @@ function rejects(mutator, pattern) {
 
 test('accepts the successful and retired private user-relay probe', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 70);
+  assert.equal(validated.revision, 71);
   assert.equal(
     validated.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
@@ -810,9 +810,9 @@ test('accepts the successful and retired private user-relay probe', () => {
     raw_state_committed: false,
   });
   assert.deepEqual(validated.evidence.browser_relay_plan, {
-    state: 'runner_implemented_private_relays_ready_plan_rebased_not_deployed',
+    state: 'monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed',
     path: 'browser-relay/plan.json',
-    sha256: '614493a6ffd1c8c45044585368ae21eefa82afb65f031d2fd4e9028b215098da',
+    sha256: '607fd1cf84c56c5becf870b6ca38b3721ab7cc5ec750f7374363f5ae2cc63fe6',
     baseline_observed_at: '2026-09-06T04:08:50.844Z',
     baseline_control_plane_revision: 'control-plane-00010-vop',
     baseline_published_signing_keys: 2,
@@ -820,7 +820,7 @@ test('accepts the successful and retired private user-relay probe', () => {
     browser_attestation_validated: true,
     firebase_auth_users: 0,
     application_fixture_collections: 0,
-    open_preconditions: 3,
+    open_preconditions: 2,
     cloud_mutation_authorized_by_plan: false,
     acceptance_executed: false,
     public_ingress_active: false,
@@ -852,6 +852,36 @@ test('accepts the successful and retired private user-relay probe', () => {
     result_present: false,
     credentials_committed: false,
     raw_diagnostics_committed: false,
+  });
+  assert.deepEqual(validated.evidence.browser_relay_monitoring, {
+    state: 'allowlisted_monitoring_observed_at_private_boundary',
+    profile_path: 'browser-relay-monitoring/profile.json',
+    profile_sha256: 'df5d04aa28658a6b0b2bd59087dd60a1d837f271bb85da00823e2d2e39b2e661',
+    preflight_result_path: 'browser-relay-monitoring/preflight-result-v1.json',
+    preflight_result_sha256:
+      '618e074b9e4e9b6a532b2ecbfc87614ff5b382f9632397c4e86d111272425f64',
+    implementation_commit: 'aa99fbabd5bdb336ee6eb2c913183e4f9dd501d2',
+    browser_relay_plan_sha256:
+      '614493a6ffd1c8c45044585368ae21eefa82afb65f031d2fd4e9028b215098da',
+    observed_at: '2026-09-06T06:09:31.222Z',
+    control_plane_state: 'canonical_private',
+    control_plane_revision: 'control-plane-00010-vop',
+    control_plane_public_invokers: 0,
+    relay_phase: 'private_ready',
+    relay_services: 2,
+    relay_public_invokers: 0,
+    metric_descriptors_observed: 6,
+    allowlisted_queries_succeeded: 6,
+    series_headers_observed: 0,
+    budget_state: 'configured',
+    budget_amount_eur: 10,
+    budget_thresholds_eur: [2, 5, 10],
+    budget_project_level_recipients: true,
+    cloud_mutations: 0,
+    public_ingress_changes: 0,
+    acceptance_executions: 0,
+    credentials_committed: false,
+    raw_cloud_responses_committed: false,
   });
   assert.deepEqual(validated.evidence.browser_relay_image, {
     state:
@@ -1200,7 +1230,7 @@ test('cross-checks manifest claims against all committed evidence artifacts', ()
   assert.equal(evidence.userRelayProbeRetirement.verifier_service_present, false);
   assert.equal(
     evidence.browserRelayPlan.state,
-    'runner_implemented_private_relays_ready_plan_rebased_not_deployed',
+    'monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed',
   );
   assert.equal(evidence.browserRelayPlan.evidence.state, 'absent');
   assert.equal(
@@ -2165,6 +2195,15 @@ test('requires every remaining blocker and staging evidence row', () => {
   rejects((candidate) => {
     candidate.evidence.browser_relay_runner.credentials_committed = true;
   }, /evidence\.browser_relay_runner\.credentials_committed/);
+  rejects((candidate) => {
+    candidate.evidence.browser_relay_monitoring.metric_descriptors_observed = 5;
+  }, /evidence\.browser_relay_monitoring\.metric_descriptors_observed/);
+  rejects((candidate) => {
+    candidate.evidence.browser_relay_monitoring.cloud_mutations = 1;
+  }, /evidence\.browser_relay_monitoring\.cloud_mutations/);
+  rejects((candidate) => {
+    candidate.evidence.browser_relay_monitoring.credentials_committed = true;
+  }, /evidence\.browser_relay_monitoring\.credentials_committed/);
   rejects((candidate) => {
     candidate.evidence.browser_app_check_prerequisite.recaptcha_api_enabled = false;
   }, /evidence\.browser_app_check_prerequisite\.recaptcha_api_enabled/);
