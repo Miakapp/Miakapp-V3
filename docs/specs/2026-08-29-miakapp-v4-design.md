@@ -880,7 +880,13 @@ vertical-slice exit gates.
    preflight accepted an independently rendered private-ready Terraform plan
    with four resource no-ops and no change. Current plan revision 12 preserves
    revision 11 byte for byte, pins that sanitized result and closes the rollback
-   precondition. Only edge orchestration remains open.
+   precondition. The remaining edge composition is now implemented as a dormant
+   in-process library pinned to those prerequisites and every edge source. It
+   uses one retained generation-zero claim before mutation, checks the unchanged
+   private baseline after claiming, permits one bounded callback and requires a
+   canonical-private postflight after success or failure. The profile grants no
+   live authority and has not been preflighted, claimed or executed, so only
+   edge orchestration remains open.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain

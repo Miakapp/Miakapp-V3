@@ -31,10 +31,10 @@ function rejects(mutator, pattern) {
 
 test('accepts the successful and retired private user-relay probe', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 73);
+  assert.equal(validated.revision, 74);
   assert.equal(
     validated.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rollback_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rollback_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_implemented_not_preflighted_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
@@ -922,6 +922,41 @@ test('accepts the successful and retired private user-relay probe', () => {
     raw_cloud_responses_committed: false,
     terraform_plan_committed: false,
   });
+  assert.deepEqual(validated.evidence.browser_relay_orchestrator, {
+    state: 'closed_single_use_edge_orchestrator_implemented_not_preflighted',
+    profile_path: 'browser-relay-orchestrator/profile.json',
+    profile_sha256:
+      '76b4e6bc718e44d71ee4b5f19376e3ec7df28d304384c2736294f1874349a6da',
+    implementation_base_commit: 'fb8291d79ca381c253b1237ea99bf8b0930bada7',
+    browser_relay_plan_sha256:
+      'b279f69cb91e8b20a96b3b45986cdc7f627f354eb541c881714bfcf0c38f2a20',
+    satisfied_preconditions: 8,
+    open_precondition: 'EDGE-01',
+    claim_bucket: 'miakapp-v4-staging-tfstate-1072737219170',
+    claim_object: 'browser-relay/operations/acceptance-v1.json',
+    claim_if_generation_match: 0,
+    maximum_claim_creations: 1,
+    claim_precedes_first_cloud_mutation: true,
+    baseline_reobserved_after_claim: true,
+    ambiguous_claim_stops_before_edge_mutation: true,
+    claim_retained: true,
+    retry_authorized: false,
+    deletion_authorized: false,
+    maximum_edge_window_executions: 1,
+    maximum_public_window_milliseconds: 1_200_000,
+    maximum_callback_execution_milliseconds: 900_000,
+    orchestration_stages: 7,
+    automatic_edge_rollback: true,
+    live_preflight_count: 0,
+    live_execution_count: 0,
+    claim_creations: 0,
+    cloud_mutations: 0,
+    public_ingress_changes: 0,
+    acceptance_executions: 0,
+    credentials_committed: false,
+    raw_cloud_responses_committed: false,
+    browser_diagnostics_committed: false,
+  });
   assert.deepEqual(validated.evidence.browser_relay_image, {
     state:
       'v1_failed_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized',
@@ -1287,6 +1322,11 @@ test('cross-checks manifest claims against all committed evidence artifacts', ()
     'rollback_target_preflighted_private_and_converged',
   );
   assert.equal(evidence.browserRelayRollbackResult.terraform_convergence, 'no_changes');
+  assert.equal(
+    evidence.browserRelayOrchestratorProfile.state,
+    'closed_single_use_edge_orchestrator_implemented_not_preflighted',
+  );
+  assert.equal(evidence.browserRelayOrchestratorProfile.claim.maximum_creations, 1);
   assert.equal(
     evidence.relayServicesProfile.state,
     'private_ready_succeeded_verified_public_window_not_authorized',
@@ -2262,6 +2302,15 @@ test('requires every remaining blocker and staging evidence row', () => {
   rejects((candidate) => {
     candidate.evidence.browser_relay_rollback.credentials_committed = true;
   }, /evidence\.browser_relay_rollback\.credentials_committed/);
+  rejects((candidate) => {
+    candidate.evidence.browser_relay_orchestrator.maximum_claim_creations = 2;
+  }, /evidence\.browser_relay_orchestrator\.maximum_claim_creations/);
+  rejects((candidate) => {
+    candidate.evidence.browser_relay_orchestrator.live_execution_count = 1;
+  }, /evidence\.browser_relay_orchestrator\.live_execution_count/);
+  rejects((candidate) => {
+    candidate.evidence.browser_relay_orchestrator.retry_authorized = true;
+  }, /evidence\.browser_relay_orchestrator\.retry_authorized/);
   rejects((candidate) => {
     candidate.evidence.browser_app_check_prerequisite.recaptcha_api_enabled = false;
   }, /evidence\.browser_app_check_prerequisite\.recaptcha_api_enabled/);

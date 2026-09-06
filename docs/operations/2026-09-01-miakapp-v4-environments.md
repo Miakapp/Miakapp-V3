@@ -458,6 +458,16 @@ canonical-private target and the no-change plan with zero mutation, ingress
 change or acceptance execution. Plan revision 12 pins the sanitized result and
 marks `ROLLBACK-01` satisfied; only edge orchestration remains open.
 
+The next dormant package implements that orchestration boundary without
+opening it. It pins plan revision 12 and every edge source, requires separate
+exact live authorization, atomically creates at most one retained GCS claim
+with generation zero, reobserves the unchanged private baseline after the
+claim, runs at most one bounded edge window and requires a canonical-private
+postflight after either success or failure. It exposes no CLI or scheduler and
+its profile grants no mutation, public ingress or acceptance execution. A fresh
+post-merge read-only preflight must still verify the claim absent and the full
+rollback target converged before `EDGE-01` can close.
+
 The guarded relay-image increment bound the exact merged Miakapp-Server tree to a deterministic
 53,098-byte archive, one digest-pinned Cloud Build Docker builder, verified
 SHA-256 source provenance and a hardened `/ping` smoke test. A generation-zero
