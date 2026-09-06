@@ -53,9 +53,16 @@ The local implementation dependency chain is now immutable:
   platform fixture:
   [`df10674`](https://github.com/Miakapp/Miakapp-Server/commit/df10674e034f30eec80760f5ec94bc108cff026f).
 
-The reciprocal V3 workflow checks out the last two commits exactly and verifies
-that the relay pins the `cc3bcd7` Go contract pseudo-version. Changing any pin is
-a new evidence event and requires this complete gate again.
+The reciprocal V3 workflow checks out MiakAPI at that exact commit and the
+Miakapp-Server test-only descendant
+[`140e651`](https://github.com/Miakapp/Miakapp-Server/commit/140e6517add101a243f92760334c7e6c3a0398e1).
+That descendant differs from deployed relay source `df10674` only in
+`test/integration/platform-auth.mjs`: it distinguishes an exchange that never
+received a response from Chromium's late response-then-abort lifecycle and
+asserts the exact POST/200 sequence. The production relay pin remains
+`df10674`. The workflow also verifies that the relay pins the `cc3bcd7` Go
+contract pseudo-version. Changing any pin is a new evidence event and requires
+this complete gate again.
 
 ## Local validation
 
