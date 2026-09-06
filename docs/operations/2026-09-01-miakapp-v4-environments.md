@@ -456,7 +456,7 @@ plan. It has no CLI, scheduler or writer. A fresh post-merge observation from
 exact commit `0fd0d05ee31f84d42cf69cc6f5cead9cbcad79be` verified the
 canonical-private target and the no-change plan with zero mutation, ingress
 change or acceptance execution. Plan revision 12 pins the sanitized result and
-marks `ROLLBACK-01` satisfied; only edge orchestration remains open.
+marks `ROLLBACK-01` satisfied at that historical boundary.
 
 The next dormant package implements that orchestration boundary without
 opening it. It pins plan revision 12 and every edge source, requires separate
@@ -465,8 +465,12 @@ with generation zero, reobserves the unchanged private baseline after the
 claim, runs at most one bounded edge window and requires a canonical-private
 postflight after either success or failure. It exposes no CLI or scheduler and
 its profile grants no mutation, public ingress or acceptance execution. A fresh
-post-merge read-only preflight must still verify the claim absent and the full
-rollback target converged before `EDGE-01` can close.
+post-merge read-only preflight from exact commit
+`6995856fc5cfd64a06176c83e9d24bc93558e05b` verified the claim absent and the
+full rollback target private and Terraform-converged. It retained no raw plan,
+credential or cloud response and made no mutation. Plan revision 13 archives
+the exact revision-12 input, pins this sanitized result and marks `EDGE-01`
+satisfied; every `LIVE-*` row remains pending.
 
 The guarded relay-image increment bound the exact merged Miakapp-Server tree to a deterministic
 53,098-byte archive, one digest-pinned Cloud Build Docker builder, verified

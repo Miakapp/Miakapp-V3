@@ -738,12 +738,16 @@ current consumer.
     closed result and marks monitoring satisfied. The separate post-merge
     rollback preflight then observed all ten canonical-private target facts and
     a four-resource Terraform no-change plan without mutation or acceptance.
-    Current plan revision 12 pins that sanitized result and marks rollback
-    satisfied. A dormant single-use orchestrator now binds both state machines
+    Plan revision 12 pins that sanitized result and marks rollback satisfied. A
+    dormant single-use orchestrator now binds both state machines
     and the merged three-engine runner to a distinct retained generation-zero
     claim, rechecks the private baseline after claiming and requires a private
-    postflight. It has no live authority or entrypoint. Next run and pin only
-    its read-only post-merge preflight before closing the edge gate.
+    postflight. It has no live authority or entrypoint. Its read-only post-merge
+    preflight proved the global claim absent and the full private rollback target
+    converged, with no mutation or acceptance execution. Current plan revision
+    13 archives the exact revision-12 input, pins that sanitized result and
+    closes the edge prerequisite. Next implement and preflight the exact
+    single-use live-operation envelope before executing the matrix once.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform
     no-change plan. Its fresh post-merge preflight is complete and the rollback

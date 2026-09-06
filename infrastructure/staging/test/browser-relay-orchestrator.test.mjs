@@ -27,12 +27,15 @@ import {
   ORCHESTRATOR_CLAIM_BUCKET,
   ORCHESTRATOR_CLAIM_OBJECT,
   ORCHESTRATOR_CLAIM_RECEIPT_SCHEMA,
+  ORCHESTRATOR_IMPLEMENTATION_COMMIT,
   ORCHESTRATOR_IMPLEMENTATION_BASE_COMMIT,
+  ORCHESTRATOR_PREFLIGHT_RESULT_SHA256,
   ORCHESTRATOR_PROFILE_SHA256,
   canonicalJson,
   rejectOrchestratorPrivateMaterial,
   sha256,
   validateBrowserRelayOrchestratorProfile,
+  validateOrchestratorPreflightResult,
 } from '../browser-relay-orchestrator/contract.mjs';
 import {
   buildOrchestratorClaim,
@@ -227,6 +230,20 @@ test('pins the single-use orchestrator to the eight satisfied prerequisites', ()
   assert.equal(profile.claim.if_generation_match, 0);
   assert.equal(profile.claim.retry_authorized, false);
   assert.equal(profile.target.cloud_mutation_authorized_by_profile, false);
+});
+
+test('pins the successful post-merge read-only preflight', () => {
+  const result = validateOrchestratorPreflightResult();
+  assert.equal(result.implementation_commit, ORCHESTRATOR_IMPLEMENTATION_COMMIT);
+  assert.equal(result.claim_state, 'absent');
+  assert.equal(result.control_plane_state, 'canonical_private');
+  assert.equal(result.relay_phase, 'private_ready');
+  assert.equal(result.terraform_convergence, 'no_changes');
+  assert.equal(result.cloud_mutations, 0);
+  assert.equal(
+    ORCHESTRATOR_PREFLIGHT_RESULT_SHA256,
+    '5ccbbab4edcc92820dbcf09ac592fdc7c57ebc277bd5c1f8a64a5fb9422f6e9e',
+  );
 });
 
 test('builds one retained claim that is not itself execution authorization', () => {
@@ -514,6 +531,7 @@ test('guards the exact dormant non-executable orchestrator package', () => {
     'guard.mjs',
     'orchestrator.mjs',
     'preflight.mjs',
+    'preflight-result-v1.json',
     'profile.json',
   ];
   validateBrowserRelayOrchestratorRoot(
