@@ -124,13 +124,16 @@ that sanitized result and closes `ROLLBACK-01`. A new dormant orchestrator now
 implements the remaining edge composition boundary: separate exact
 authorization precedes a globally serialized claim, the private baseline is
 checked on both sides of claim acquisition, and one bounded edge window must
-finish with a canonical-private postflight. Its profile authorizes nothing and
-no live preflight or claim has occurred, so `EDGE-01` remains open. The staging
-manifest retains the byte-exact earlier zero-relay plan used
+finish with a canonical-private postflight. Its profile authorizes nothing. A
+post-merge read-only preflight proved the claim absent and the full rollback
+target private and Terraform-converged without creating a claim or making a
+cloud mutation. Plan revision 13 pins that sanitized result and closes
+`EDGE-01`; every `LIVE-*` row remains pending. The staging manifest retains the
+byte-exact earlier zero-relay plan used
 by the image build, revision 9 used by the runner, revision 10 used by
-monitoring and revision 11 used by rollback, pins the serial-4 private-ready
-result and rebases the current acceptance plan on matching fresh live
-inventories. The state transition,
+monitoring, revision 11 used by rollback and revision 12 used by the
+orchestrator preflight, pins the serial-4 private-ready result and rebases the
+current acceptance plan on matching fresh live inventories. The state transition,
 intended cost, exposure and rollback boundary remain reviewable without
 pretending that a public edge or live browser matrix already exists.
 

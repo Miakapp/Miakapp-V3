@@ -1,5 +1,13 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import {
+  mkdtempSync,
+  readFileSync,
+  rmdirSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
 
 import {
@@ -7,6 +15,7 @@ import {
   validateCommittedEvidence,
   validateFirebaseRc,
   validateStagingManifest,
+  validateStagingManifestFile,
 } from '../validate.mjs';
 
 const manifestFixture = JSON.parse(readFileSync(new URL('../manifest.json', import.meta.url), 'utf8'));
@@ -29,12 +38,28 @@ function rejects(mutator, pattern) {
   );
 }
 
+test('rejects a staging manifest above the bounded 128-KiB envelope', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'miakapp-staging-manifest-'));
+  const path = join(directory, 'manifest.json');
+  try {
+    writeFileSync(path, ' '.repeat((128 * 1024) + 1));
+    assert.throws(
+      () => validateStagingManifestFile(path),
+      (error) => error instanceof StagingManifestError
+        && /exceeds 131072 bytes/u.test(error.message),
+    );
+  } finally {
+    unlinkSync(path);
+    rmdirSync(directory);
+  }
+});
+
 test('accepts the successful and retired private user-relay probe', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 74);
+  assert.equal(validated.revision, 75);
   assert.equal(
     validated.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rollback_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_implemented_not_preflighted_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
@@ -811,9 +836,9 @@ test('accepts the successful and retired private user-relay probe', () => {
   });
   assert.deepEqual(validated.evidence.browser_relay_plan, {
     state:
-      'rollback_preflighted_monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed',
+      'edge_orchestrator_preflighted_rollback_preflighted_monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed',
     path: 'browser-relay/plan.json',
-    sha256: 'b279f69cb91e8b20a96b3b45986cdc7f627f354eb541c881714bfcf0c38f2a20',
+    sha256: 'a74a130f3946c7beaca8c2f019f36b1641f1fa47e4c8b63c24754892a18d702a',
     baseline_observed_at: '2026-09-06T04:08:50.844Z',
     baseline_control_plane_revision: 'control-plane-00010-vop',
     baseline_published_signing_keys: 2,
@@ -821,7 +846,7 @@ test('accepts the successful and retired private user-relay probe', () => {
     browser_attestation_validated: true,
     firebase_auth_users: 0,
     application_fixture_collections: 0,
-    open_preconditions: 1,
+    open_preconditions: 0,
     cloud_mutation_authorized_by_plan: false,
     acceptance_executed: false,
     public_ingress_active: false,
@@ -923,17 +948,23 @@ test('accepts the successful and retired private user-relay probe', () => {
     terraform_plan_committed: false,
   });
   assert.deepEqual(validated.evidence.browser_relay_orchestrator, {
-    state: 'closed_single_use_edge_orchestrator_implemented_not_preflighted',
+    state: 'single_use_edge_orchestrator_preflight_succeeded_private_and_unclaimed',
     profile_path: 'browser-relay-orchestrator/profile.json',
     profile_sha256:
       '76b4e6bc718e44d71ee4b5f19376e3ec7df28d304384c2736294f1874349a6da',
+    preflight_result_path: 'browser-relay-orchestrator/preflight-result-v1.json',
+    preflight_result_sha256:
+      '5ccbbab4edcc92820dbcf09ac592fdc7c57ebc277bd5c1f8a64a5fb9422f6e9e',
     implementation_base_commit: 'fb8291d79ca381c253b1237ea99bf8b0930bada7',
+    implementation_commit: '6995856fc5cfd64a06176c83e9d24bc93558e05b',
     browser_relay_plan_sha256:
       'b279f69cb91e8b20a96b3b45986cdc7f627f354eb541c881714bfcf0c38f2a20',
-    satisfied_preconditions: 8,
-    open_precondition: 'EDGE-01',
+    satisfied_input_preconditions: 8,
+    closed_precondition: 'EDGE-01',
+    observed_at: '2026-09-06T08:06:38.345Z',
     claim_bucket: 'miakapp-v4-staging-tfstate-1072737219170',
     claim_object: 'browser-relay/operations/acceptance-v1.json',
+    claim_state: 'absent',
     claim_if_generation_match: 0,
     maximum_claim_creations: 1,
     claim_precedes_first_cloud_mutation: true,
@@ -947,7 +978,15 @@ test('accepts the successful and retired private user-relay probe', () => {
     maximum_callback_execution_milliseconds: 900_000,
     orchestration_stages: 7,
     automatic_edge_rollback: true,
-    live_preflight_count: 0,
+    control_plane_state: 'canonical_private',
+    control_plane_revision: 'control-plane-00010-vop',
+    control_plane_public_invokers: 0,
+    relay_phase: 'private_ready',
+    relay_services: 2,
+    relay_public_invokers: 0,
+    terraform_convergence: 'no_changes',
+    terraform_managed_resource_noops: 4,
+    live_preflight_count: 1,
     live_execution_count: 0,
     claim_creations: 0,
     cloud_mutations: 0,
@@ -955,6 +994,7 @@ test('accepts the successful and retired private user-relay probe', () => {
     acceptance_executions: 0,
     credentials_committed: false,
     raw_cloud_responses_committed: false,
+    terraform_plan_committed: false,
     browser_diagnostics_committed: false,
   });
   assert.deepEqual(validated.evidence.browser_relay_image, {
@@ -1304,7 +1344,7 @@ test('cross-checks manifest claims against all committed evidence artifacts', ()
   assert.equal(evidence.userRelayProbeRetirement.verifier_service_present, false);
   assert.equal(
     evidence.browserRelayPlan.state,
-    'rollback_preflighted_monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed',
+    'edge_orchestrator_preflighted_rollback_preflighted_monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed',
   );
   assert.equal(evidence.browserRelayPlan.evidence.state, 'absent');
   assert.equal(
@@ -1327,6 +1367,12 @@ test('cross-checks manifest claims against all committed evidence artifacts', ()
     'closed_single_use_edge_orchestrator_implemented_not_preflighted',
   );
   assert.equal(evidence.browserRelayOrchestratorProfile.claim.maximum_creations, 1);
+  assert.equal(evidence.browserRelayV12Plan.revision, 12);
+  assert.equal(
+    evidence.browserRelayOrchestratorResult.state,
+    'single_use_edge_orchestrator_preflight_succeeded_private_and_unclaimed',
+  );
+  assert.equal(evidence.browserRelayOrchestratorResult.claim_state, 'absent');
   assert.equal(
     evidence.relayServicesProfile.state,
     'private_ready_succeeded_verified_public_window_not_authorized',

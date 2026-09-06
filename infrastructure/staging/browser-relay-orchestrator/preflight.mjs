@@ -1,6 +1,5 @@
 import { isDeepStrictEqual } from 'node:util';
 
-import { BROWSER_RELAY_PLAN_SHA256 } from '../browser-relay/contract.mjs';
 import {
   MONITORING_PREFLIGHT_RESULT_SHA256,
 } from '../browser-relay-monitoring/contract.mjs';
@@ -9,6 +8,7 @@ import {
 } from '../browser-relay-rollback/contract.mjs';
 import { observeRollbackPreflight } from '../browser-relay-rollback/cloud.mjs';
 import {
+  BROWSER_RELAY_PLAN_SHA256,
   ORCHESTRATOR_CLAIM_BUCKET,
   ORCHESTRATOR_CLAIM_OBJECT,
   ORCHESTRATOR_PREFLIGHT_RESULT_SCHEMA,
