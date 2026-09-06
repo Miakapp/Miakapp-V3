@@ -35,9 +35,13 @@ invoker last and removes it first. Ingress becomes private before the canonical
 runtime is restored, and the IAM-independent emergency closure remains
 available if combined inventory cannot be read.
 
-This implementation does not yet satisfy `EDGE-01`. After merge, a fresh
-read-only preflight must prove that the global claim is absent and that the
-complete rollback target is still private and Terraform-converged. A later plan
-revision may pin that sanitized result and close `EDGE-01`. No claim, edge
-transition, relay invocation, Hosting publication or browser acceptance is
-performed by this increment.
+A fresh post-merge read-only preflight completed at
+`2026-09-06T08:06:38.345Z` from exact implementation commit
+`6995856fc5cfd64a06176c83e9d24bc93558e05b`. It proved that the global claim
+was absent, the complete rollback target remained canonical-private, both
+relays remained private-ready, and the independently rendered four-resource
+Terraform plan contained no changes. Its sanitized
+[`preflight-result-v1.json`](preflight-result-v1.json) records zero claim
+creation, mutation, public-ingress change and acceptance execution. Plan
+revision 13 pins that result and marks `EDGE-01` satisfied. No edge transition,
+relay invocation, Hosting publication or browser acceptance has occurred.
