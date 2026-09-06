@@ -63,6 +63,16 @@ import {
   validateBrowserRelayFixtureCloudProfile,
 } from './browser-relay-fixture-cloud/contract.mjs';
 import {
+  FIXTURE_MIAKAPI_BINDING_SOURCE_SHA256,
+  FIXTURE_MIAKAPI_IMPLEMENTATION_BASE_COMMIT,
+  FIXTURE_MIAKAPI_PROFILE_PATH,
+  FIXTURE_MIAKAPI_PROFILE_SHA256,
+  MIAKAPI_LICENSE_SHA256,
+  MIAKAPI_NODE_BUNDLE_SHA256,
+  MIAKAPI_NODE_ENTRY_SHA256,
+  validateBrowserRelayFixtureMiakApiProfile,
+} from './browser-relay-fixture-miakapi/contract.mjs';
+import {
   ROLLBACK_IMPLEMENTATION_COMMIT,
   ROLLBACK_PREFLIGHT_RESULT_PATH,
   ROLLBACK_PREFLIGHT_RESULT_SHA256,
@@ -2981,6 +2991,7 @@ function validateEvidence(value) {
     'browser_relay_page',
     'browser_relay_fixture',
     'browser_relay_fixture_cloud',
+    'browser_relay_fixture_miakapi',
     'browser_relay_monitoring',
     'browser_relay_rollback',
     'browser_relay_orchestrator',
@@ -5191,10 +5202,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 83, 'manifest.revision');
+  exact(manifest.revision, 84, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_artifact_ci_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_artifact_ci_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -6035,6 +6046,92 @@ export function validateCommittedEvidence(
     credentials_committed: false,
     raw_cloud_responses_committed: false,
   }, 'evidence.browser_relay_fixture_cloud');
+  const browserRelayFixtureMiakApiManifest = manifest.evidence.browser_relay_fixture_miakapi;
+  const browserRelayFixtureMiakApiProfilePath = committedEvidencePath(
+    stagingRoot,
+    browserRelayFixtureMiakApiManifest.profile_path,
+    FIXTURE_MIAKAPI_PROFILE_PATH,
+    'evidence.browser_relay_fixture_miakapi.profile_path',
+  );
+  const browserRelayFixtureMiakApiProfile = validatedEvidenceFile(
+    browserRelayFixtureMiakApiProfilePath,
+    validateBrowserRelayFixtureMiakApiProfile,
+    'evidence.browser_relay_fixture_miakapi.profile_path',
+  );
+  exact(
+    fileSha256(browserRelayFixtureMiakApiProfilePath),
+    FIXTURE_MIAKAPI_PROFILE_SHA256,
+    'evidence.browser_relay_fixture_miakapi.profile_sha256',
+  );
+  exact(
+    fileSha256(resolve(stagingRoot, 'browser-relay-fixture-miakapi/binding.mjs')),
+    FIXTURE_MIAKAPI_BINDING_SOURCE_SHA256,
+    'evidence.browser_relay_fixture_miakapi.binding_source_sha256',
+  );
+  exact(
+    fileSha256(resolve(
+      stagingRoot,
+      'browser-relay-fixture-miakapi/vendor/miakapi-node-v4.mjs',
+    )),
+    MIAKAPI_NODE_BUNDLE_SHA256,
+    'evidence.browser_relay_fixture_miakapi.miakapi_node_bundle_sha256',
+  );
+  exact(
+    fileSha256(resolve(stagingRoot, 'browser-relay-fixture-miakapi/vendor/LICENSE.miakapi')),
+    MIAKAPI_LICENSE_SHA256,
+    'evidence.browser_relay_fixture_miakapi.miakapi_license_sha256',
+  );
+  exactFields(browserRelayFixtureMiakApiManifest, {
+    state: browserRelayFixtureMiakApiProfile.state,
+    profile_sha256: FIXTURE_MIAKAPI_PROFILE_SHA256,
+    implementation_base_commit: FIXTURE_MIAKAPI_IMPLEMENTATION_BASE_COMMIT,
+    browser_relay_fixture_profile_sha256:
+      browserRelayFixtureMiakApiProfile.pins.browser_relay_fixture_profile_sha256,
+    browser_relay_fixture_cloud_profile_sha256:
+      browserRelayFixtureMiakApiProfile.pins.browser_relay_fixture_cloud_profile_sha256,
+    browser_relay_fixture_cloud_source_sha256:
+      browserRelayFixtureMiakApiProfile.pins.browser_relay_fixture_cloud_source_sha256,
+    miakapi_commit: browserRelayFixtureMiakApiProfile.pins.miakapi_commit,
+    miakapi_source_archive_sha256:
+      browserRelayFixtureMiakApiProfile.pins.miakapi_source_archive_sha256,
+    miakapi_package_sha256: browserRelayFixtureMiakApiProfile.pins.miakapi_package_sha256,
+    miakapi_bun_lock_sha256: browserRelayFixtureMiakApiProfile.pins.miakapi_bun_lock_sha256,
+    miakapi_node_entry_sha256: MIAKAPI_NODE_ENTRY_SHA256,
+    miakapi_node_bundle_sha256: MIAKAPI_NODE_BUNDLE_SHA256,
+    miakapi_license_sha256: MIAKAPI_LICENSE_SHA256,
+    binding_source_sha256: FIXTURE_MIAKAPI_BINDING_SOURCE_SHA256,
+    bundle_bytes: browserRelayFixtureMiakApiProfile.runtime.bundle_bytes,
+    vendored_modules: browserRelayFixtureMiakApiProfile.runtime.vendored_modules,
+    factory_calls_per_kind:
+      browserRelayFixtureMiakApiProfile.boundary.factory_calls_per_kind,
+    injected_transport_only:
+      browserRelayFixtureMiakApiProfile.boundary.home_key_exchange_transport
+        === 'explicit_injected_only',
+    ambient_fetch_fallback_reachable:
+      browserRelayFixtureMiakApiProfile.boundary.ambient_fetch_fallback_reachable,
+    construction_http_requests:
+      browserRelayFixtureMiakApiProfile.boundary.construction_http_requests,
+    construction_websocket_connections:
+      browserRelayFixtureMiakApiProfile.boundary.construction_websocket_connections,
+    coordinator_sessions_started:
+      browserRelayFixtureMiakApiProfile.boundary.coordinator_sessions_started,
+    cloud_compute_resources:
+      browserRelayFixtureMiakApiProfile.target.cloud_compute_resources,
+    cloud_mutation_authorized:
+      browserRelayFixtureMiakApiProfile.authority.cloud_mutation_authorized,
+    public_ingress_authorized:
+      browserRelayFixtureMiakApiProfile.authority.public_ingress_authorized,
+    live_execution_authorized:
+      browserRelayFixtureMiakApiProfile.authority.live_execution_authorized,
+    live_http_requests: browserRelayFixtureMiakApiProfile.evidence.live_http_requests,
+    live_websocket_connections:
+      browserRelayFixtureMiakApiProfile.evidence.live_websocket_connections,
+    live_coordinator_sessions:
+      browserRelayFixtureMiakApiProfile.evidence.live_coordinator_sessions,
+    cloud_mutations: browserRelayFixtureMiakApiProfile.evidence.cloud_mutations,
+    credentials_committed: false,
+    raw_cloud_responses_committed: false,
+  }, 'evidence.browser_relay_fixture_miakapi');
   const browserRelayMonitoringManifest = manifest.evidence.browser_relay_monitoring;
   const monitoringProfilePath = committedEvidencePath(
     stagingRoot,

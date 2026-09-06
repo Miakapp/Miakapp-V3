@@ -61,6 +61,10 @@ implemented across several repositories.
   IAM custom-token signing, exact control-plane writes, preconditioned atomic
   Firestore cleanup and administrative deletion of only the fixed synthetic
   UID; it has no CLI, ambient credentials or live authority.
+- [`../infrastructure/staging/browser-relay-fixture-miakapi/`](../infrastructure/staging/browser-relay-fixture-miakapi/)
+  — dormant reproducible Node binding to the exact MiakAPI commit; its
+  single-use factories force the Home Key exchange through the injected HTTP
+  transport and construct the synthetic coordinator without starting it.
 - [`../infrastructure/staging/browser-relay-monitoring/`](../infrastructure/staging/browser-relay-monitoring/)
   — allow-listed read-only monitoring contract whose post-merge preflight pins
   six metric surfaces, the existing EUR 10 budget and the private boundary.

@@ -773,8 +773,11 @@ current consumer.
     cluster and key registry, deletes Firestore atomically with per-document
     update-time preconditions, removes the synthetic Firebase UID last and
     requires independent absence. It remains dormant, has no CLI or binding
-    authority and has made no live request. Next add the pinned MiakAPI factory
-    binding and independent closed aggregation before executing the matrix once.
+    authority and has made no live request. The pinned MiakAPI Node factory
+    binding is now also present: its reproducible single-file bundle exposes
+    exactly one provider and coordinator construction, forces the Home Key
+    exchange through the injected transport and starts no session. Next add the
+    independent closed aggregation before executing the matrix once.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform
     no-change plan. Its fresh post-merge preflight is complete and the rollback
