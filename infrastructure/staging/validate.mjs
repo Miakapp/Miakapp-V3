@@ -12,8 +12,12 @@ import {
   validateBrowserRelayPlan,
 } from './browser-relay/contract.mjs';
 import {
+  RELAY_SERVICES_PROFILE_PATH,
   RELAY_SERVICES_PROFILE_SHA256,
+  RELAY_SERVICES_V1_PROFILE_PATH,
+  RELAY_SERVICES_V1_PROFILE_SHA256,
   validateRelayServicesProfile,
+  validateRelayServicesV1Profile,
 } from './browser-relay-services/contract.mjs';
 import {
   RELAY_IMAGE_PROFILE_PATH,
@@ -3682,7 +3686,12 @@ function validateEvidence(value) {
       'v2_result_sha256',
       'v2_result_observed_at',
       'browser_relay_plan_sha256',
+      'relay_services_profile_path',
       'relay_services_profile_sha256',
+      'relay_services_v1_profile_path',
+      'relay_services_v1_profile_sha256',
+      'relay_services_image_bound',
+      'relay_services_operator_entrypoint_present',
       'source_repository',
       'source_commit',
       'source_tree',
@@ -3721,7 +3730,7 @@ function validateEvidence(value) {
   );
   const expectedBrowserRelayImage = {
     state:
-      'v1_failed_container_analysis_converged_v2_recovery_succeeded_verified_not_deployed_entrypoints_retired',
+      'v1_failed_container_analysis_converged_v2_recovery_succeeded_verified_not_deployed_entrypoints_retired_relay_services_image_bound',
     profile_path: RELAY_IMAGE_PROFILE_PATH,
     profile_sha256: RELAY_IMAGE_PROFILE_SHA256,
     v1_profile_path: RELAY_IMAGE_V1_PROFILE_PATH,
@@ -3732,7 +3741,12 @@ function validateEvidence(value) {
     v2_result_sha256: RELAY_IMAGE_V2_RESULT_SHA256,
     v2_result_observed_at: '2026-09-06T00:00:34.396Z',
     browser_relay_plan_sha256: BROWSER_RELAY_PLAN_SHA256,
+    relay_services_profile_path: RELAY_SERVICES_PROFILE_PATH,
     relay_services_profile_sha256: RELAY_SERVICES_PROFILE_SHA256,
+    relay_services_v1_profile_path: RELAY_SERVICES_V1_PROFILE_PATH,
+    relay_services_v1_profile_sha256: RELAY_SERVICES_V1_PROFILE_SHA256,
+    relay_services_image_bound: true,
+    relay_services_operator_entrypoint_present: false,
     source_repository: 'https://github.com/Miakapp/Miakapp-Server.git',
     source_commit: 'df10674e034f30eec80760f5ec94bc108cff026f',
     source_tree: '0468ea08cd2d51b3e656c4adea9bb09b4a8a6ea1',
@@ -4481,10 +4495,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 62, 'manifest.revision');
+  exact(manifest.revision, 63, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rebased_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_not_deployed_entrypoints_retired_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rebased_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_not_deployed_entrypoints_retired_relay_services_verified_image_bound_not_deployed_enforcement_disabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -4837,9 +4851,12 @@ export function validateCommittedEvidence(
     runner_present: browserRelayPlan.baseline.browser_runner_present,
     completed_cases: browserRelayPlan.evidence.completed_case_ids.length,
   }, 'evidence.browser_relay_plan');
-  const relayServicesProfilePath = resolve(
+  const browserRelayImageManifest = manifest.evidence.browser_relay_image;
+  const relayServicesProfilePath = committedEvidencePath(
     stagingRoot,
-    'browser-relay-services/profile.json',
+    browserRelayImageManifest.relay_services_profile_path,
+    RELAY_SERVICES_PROFILE_PATH,
+    'evidence.browser_relay_image.relay_services_profile_path',
   );
   const relayServicesProfile = validatedEvidenceFile(
     relayServicesProfilePath,
@@ -4848,12 +4865,28 @@ export function validateCommittedEvidence(
   );
   exact(
     fileSha256(relayServicesProfilePath),
-    RELAY_SERVICES_PROFILE_SHA256,
-    'browser-relay-services/profile.json',
+    browserRelayImageManifest.relay_services_profile_sha256,
+    'evidence.browser_relay_image.relay_services_profile_sha256',
+  );
+  const relayServicesV1ProfilePath = committedEvidencePath(
+    stagingRoot,
+    browserRelayImageManifest.relay_services_v1_profile_path,
+    RELAY_SERVICES_V1_PROFILE_PATH,
+    'evidence.browser_relay_image.relay_services_v1_profile_path',
+  );
+  const relayServicesV1Profile = validatedEvidenceFile(
+    relayServicesV1ProfilePath,
+    validateRelayServicesV1Profile,
+    'evidence.browser_relay_image.relay_services_v1_profile_path',
+  );
+  exact(
+    fileSha256(relayServicesV1ProfilePath),
+    browserRelayImageManifest.relay_services_v1_profile_sha256,
+    'evidence.browser_relay_image.relay_services_v1_profile_sha256',
   );
   exact(
     browserRelayPlan.pins.relay_services_profile_sha256,
-    RELAY_SERVICES_PROFILE_SHA256,
+    RELAY_SERVICES_V1_PROFILE_SHA256,
     'browser-relay/plan.json pins.relay_services_profile_sha256',
   );
   exact(
@@ -4861,7 +4894,6 @@ export function validateCommittedEvidence(
     relayServicesProfile.pins.miakapp_server_commit,
     'browser-relay/plan.json pins.miakapp_server_commit',
   );
-  const browserRelayImageManifest = manifest.evidence.browser_relay_image;
   const browserRelayImageProfilePath = committedEvidencePath(
     stagingRoot,
     browserRelayImageManifest.profile_path,
@@ -4928,7 +4960,7 @@ export function validateCommittedEvidence(
   );
   exactFields(browserRelayImageManifest, {
     state:
-      'v1_failed_container_analysis_converged_v2_recovery_succeeded_verified_not_deployed_entrypoints_retired',
+      'v1_failed_container_analysis_converged_v2_recovery_succeeded_verified_not_deployed_entrypoints_retired_relay_services_image_bound',
     profile_sha256: RELAY_IMAGE_PROFILE_SHA256,
     v1_profile_sha256: RELAY_IMAGE_V1_PROFILE_SHA256,
     v1_result_sha256: RELAY_IMAGE_V1_RESULT_SHA256,
@@ -4936,8 +4968,11 @@ export function validateCommittedEvidence(
     v2_result_observed_at: browserRelayImageV2Result.observed_at,
     browser_relay_plan_sha256:
       browserRelayImageProfile.contracts.browser_relay_plan_sha256,
-    relay_services_profile_sha256:
+    relay_services_profile_sha256: RELAY_SERVICES_PROFILE_SHA256,
+    relay_services_v1_profile_sha256:
       browserRelayImageProfile.contracts.relay_services_profile_sha256,
+    relay_services_image_bound: true,
+    relay_services_operator_entrypoint_present: false,
     source_repository: browserRelayImageProfile.source.repository,
     source_commit: browserRelayImageProfile.source.commit,
     source_tree: browserRelayImageProfile.source.tree,
@@ -4980,7 +5015,7 @@ export function validateCommittedEvidence(
   );
   exact(
     browserRelayImageProfile.contracts.relay_services_profile_sha256,
-    RELAY_SERVICES_PROFILE_SHA256,
+    RELAY_SERVICES_V1_PROFILE_SHA256,
     'browser-relay-image/profile.json contracts.relay_services_profile_sha256',
   );
   exact(
@@ -5039,6 +5074,53 @@ export function validateCommittedEvidence(
     browserRelayImageProfile.build.builder_image.split('@')[1],
     browserRelayImageV2Result.build.builder_digest,
     'browser-relay-image/result-v2.json build.builder_digest',
+  );
+  exact(
+    relayServicesProfile.contracts.historical_profile_path,
+    RELAY_SERVICES_V1_PROFILE_PATH,
+    'browser-relay-services/profile.json contracts.historical_profile_path',
+  );
+  exact(
+    relayServicesProfile.contracts.historical_profile_sha256,
+    RELAY_SERVICES_V1_PROFILE_SHA256,
+    'browser-relay-services/profile.json contracts.historical_profile_sha256',
+  );
+  exact(
+    relayServicesProfile.contracts.relay_image_result_path,
+    RELAY_IMAGE_V2_RESULT_PATH,
+    'browser-relay-services/profile.json contracts.relay_image_result_path',
+  );
+  exact(
+    relayServicesProfile.contracts.relay_image_result_sha256,
+    RELAY_IMAGE_V2_RESULT_SHA256,
+    'browser-relay-services/profile.json contracts.relay_image_result_sha256',
+  );
+  exact(
+    relayServicesProfile.pins.miakapp_server_commit,
+    browserRelayImageV2Result.source.commit,
+    'browser-relay-services/profile.json pins.miakapp_server_commit',
+  );
+  for (const field of ['digest', 'digest_reference', 'config_digest']) {
+    exact(
+      relayServicesProfile.image[field],
+      browserRelayImageV2Result.image[field],
+      `browser-relay-services/profile.json image.${field}`,
+    );
+  }
+  exact(
+    relayServicesProfile.image.source_archive_sha256,
+    browserRelayImageV2Result.source.archive_sha256,
+    'browser-relay-services/profile.json image.source_archive_sha256',
+  );
+  exact(
+    relayServicesProfile.image.source_object_generation,
+    browserRelayImageV2Result.source.object_generation,
+    'browser-relay-services/profile.json image.source_object_generation',
+  );
+  exact(
+    relayServicesProfile.image.build_id,
+    browserRelayImageV2Result.build.id,
+    'browser-relay-services/profile.json image.build_id',
   );
   if (browserRelayImageProfile.operation.claim_object
       === browserRelayImageV1Profile.operation.claim_object
@@ -5296,6 +5378,7 @@ export function validateCommittedEvidence(
     userRelayProbeRetirement: authProbeRetirement,
     browserRelayPlan,
     relayServicesProfile,
+    relayServicesV1Profile,
     browserRelayImageProfile,
     browserRelayImageV1Profile,
     browserRelayImageV1Result,
@@ -5325,7 +5408,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; relay-image build v1 is consumed and not deployable, Container Analysis is converged, v2 recovery is verified and retained privately with its entrypoints retired, and App Check enforcement is disabled.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; relay-image v2 is verified and retained privately, the non-operational relay-services root is bound to its immutable digest, and App Check enforcement is disabled.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';

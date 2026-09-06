@@ -1,5 +1,6 @@
 locals {
-  profile = jsondecode(file("${path.module}/profile.json"))
+  profile     = jsondecode(file("${path.module}/profile.json"))
+  relay_image = local.profile.image.digest_reference
 
   terraform_source_files = [
     ".terraform.lock.hcl",

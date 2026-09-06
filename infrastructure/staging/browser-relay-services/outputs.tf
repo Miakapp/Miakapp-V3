@@ -7,7 +7,7 @@ output "staging_browser_relays" {
     project_number        = local.profile.project_number
     region                = local.profile.region
     relay_source_commit   = local.profile.pins.miakapp_server_commit
-    relay_image           = var.relay_image
+    relay_image           = local.relay_image
     runtime_identity      = local.enabled ? google_service_account.relay["runtime"].email : null
     runtime_project_roles = local.profile.runtime_identity.project_roles
     services = {
