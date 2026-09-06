@@ -15,7 +15,7 @@ resource "terraform_data" "deployment_guard" {
     deployment_phase    = var.deployment_phase
     profile_sha256      = filesha256("${path.module}/profile.json")
     relay_audiences     = local.selected_audiences
-    relay_image         = var.relay_image
+    relay_image         = local.relay_image
     relay_source_commit = local.profile.pins.miakapp_server_commit
   }
 
@@ -49,8 +49,9 @@ resource "terraform_data" "deployment_guard" {
 
     precondition {
       condition = (
-        startswith(var.relay_image, "${local.profile.image.repository}@sha256:") &&
-        length(regexall("@", var.relay_image)) == 1 &&
+        local.relay_image == local.profile.image.digest_reference &&
+        startswith(local.relay_image, "${local.profile.image.repository}@sha256:") &&
+        length(regexall("@", local.relay_image)) == 1 &&
         local.profile.image.digest_required == true &&
         local.profile.image.mutable_tags_allowed == false
       )

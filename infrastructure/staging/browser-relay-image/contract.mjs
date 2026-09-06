@@ -29,7 +29,7 @@ import {
   BROWSER_RELAY_PLAN_SHA256,
 } from '../browser-relay/contract.mjs';
 import {
-  RELAY_SERVICES_PROFILE_SHA256,
+  RELAY_SERVICES_V1_PROFILE_SHA256,
   validateRelayServicesProfile,
 } from '../browser-relay-services/contract.mjs';
 
@@ -170,7 +170,7 @@ export function validateRelayImageProfile(path = profilePath) {
     || profile.project?.project_number !== '1072737219170'
     || profile.project?.region !== 'europe-west9'
     || profile.contracts?.browser_relay_plan_sha256 !== BROWSER_RELAY_PLAN_SHA256
-    || profile.contracts?.relay_services_profile_sha256 !== RELAY_SERVICES_PROFILE_SHA256
+    || profile.contracts?.relay_services_profile_sha256 !== RELAY_SERVICES_V1_PROFILE_SHA256
     || profile.contracts?.v1_profile_sha256
       !== '2afcfc7b5f0b9fb524a59bd81cd5dcd98f73bf58c2619640b6a42bbbd0958981'
     || profile.contracts?.v1_result_sha256

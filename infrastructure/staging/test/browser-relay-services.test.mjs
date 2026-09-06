@@ -17,9 +17,11 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   RELAY_SERVICES_PROFILE_SHA256,
   RELAY_SERVICES_TERRAFORM_SOURCE_FILES,
+  RELAY_SERVICES_V1_PROFILE_SHA256,
   StagingRelayServicesProfileError,
   relayServicesTerraformSourceSha256,
   validateRelayServicesProfile,
+  validateRelayServicesV1Profile,
 } from '../browser-relay-services/contract.mjs';
 import {
   ALLOWED_RELAY_SERVICE_FILES,
@@ -57,11 +59,19 @@ function createGuardFixture(directory) {
   }
 }
 
-test('validates the immutable dormant relay-services profile', () => {
+test('validates the immutable digest-bound relay-services profile', () => {
   const profile = validateRelayServicesProfile(fileURLToPath(profileUrl));
-  assert.equal(RELAY_SERVICES_PROFILE_SHA256, 'bc9b231cc9724f19a26ef5c3bbd6da6a69ec79b00cb976e77c73015d5db10db7');
-  assert.equal(profile.terraform_source_sha256, '0674bea2b9ba1985910484c71cafd55356996ab3991f6794339219a7fa237037');
+  const historical = validateRelayServicesV1Profile();
+  assert.equal(RELAY_SERVICES_PROFILE_SHA256, '26535e8c8b56d5a0a0875049a1e76aade4e1246b0808470ab4483bc01a2f48cb');
+  assert.equal(RELAY_SERVICES_V1_PROFILE_SHA256, 'bc9b231cc9724f19a26ef5c3bbd6da6a69ec79b00cb976e77c73015d5db10db7');
+  assert.equal(profile.terraform_source_sha256, '8a9e1b5c37e1c25befccfd2b2eac838639a74901785c88e83521a2f897b9f746');
   assert.equal(profile.pins.miakapp_server_commit, 'df10674e034f30eec80760f5ec94bc108cff026f');
+  assert.equal(
+    profile.image.digest_reference,
+    'europe-west9-docker.pkg.dev/miakapp-v4-staging/miakapp-control-plane/miakapp-server@sha256:23a19a26e8a24f6434ab8bc557dfa3fa799e0262e3400170e3bf064101a890b1',
+  );
+  assert.equal(profile.contracts.historical_profile_sha256, RELAY_SERVICES_V1_PROFILE_SHA256);
+  assert.equal(historical.image.digest, undefined);
   assert.deepEqual(profile.runtime_identity.project_roles, []);
   assert.equal(profile.cloud_run.minimum_instances, 0);
   assert.equal(profile.cloud_run.maximum_instances, 1);
@@ -75,6 +85,7 @@ test('rejects any profile byte or safety-boundary drift', () => {
   withTemporaryDirectory((directory) => {
     for (const mutate of [
       (profile) => { profile.project_id = 'miakapp-3'; },
+      (profile) => { profile.image.digest = `sha256:${'0'.repeat(64)}`; },
       (profile) => { profile.image.mutable_tags_allowed = true; },
       (profile) => { profile.runtime_identity.project_roles = ['roles/editor']; },
       (profile) => { profile.cloud_run.maximum_instances = 2; },
@@ -94,7 +105,7 @@ test('rejects any profile byte or safety-boundary drift', () => {
 test('binds the profile to every operational Terraform source byte', () => {
   assert.equal(
     relayServicesTerraformSourceSha256(fileURLToPath(rootUrl)),
-    '0674bea2b9ba1985910484c71cafd55356996ab3991f6794339219a7fa237037',
+    '8a9e1b5c37e1c25befccfd2b2eac838639a74901785c88e83521a2f897b9f746',
   );
 
   withTemporaryDirectory((directory) => {
@@ -110,6 +121,16 @@ test('binds the profile to every operational Terraform source byte', () => {
         && /Terraform source digest has drifted/.test(error.message),
     );
   });
+});
+
+test('removes the relay image as an operator-controlled Terraform input', () => {
+  const variables = readFileSync(new URL('variables.tf', rootUrl), 'utf8');
+  const main = readFileSync(new URL('main.tf', rootUrl), 'utf8');
+  const foundation = readFileSync(new URL('foundation.tf', rootUrl), 'utf8');
+  assert.doesNotMatch(variables, /variable "relay_image"/u);
+  assert.doesNotMatch(`${main}\n${foundation}`, /var\.relay_image/u);
+  assert.match(main, /image = local\.relay_image/u);
+  assert.match(foundation, /local\.relay_image == local\.profile\.image\.digest_reference/u);
 });
 
 test('accepts only the closed, non-executable source inventory', () => {

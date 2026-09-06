@@ -4,7 +4,8 @@ Status: private audience-bound user-relay acceptance succeeded and retired;
 schema-2 two-key runtime deployed privately with version 1 current for the
 browser-relay rehearsal and version 2 retained; live browser-relay plan rebased
 but not deployed; exact private relay-image v2 build verified, retained privately
-and not deployed, with its one-shot entrypoints retired;
+and not deployed, with its one-shot entrypoints retired; relay-services root
+bound to that immutable digest without an operator entrypoint;
 guarded rehearsal entry converged and its one-shot tooling
 retired; real system-browser App Check provider token obtained and its
 temporary Hosting route retired; browser App Check API-only prerequisite applied and
@@ -32,12 +33,13 @@ rotation-entry prerequisites are satisfied, while the complete authenticated
 It contains no deployer or result and does not change the private cloud baseline
 described below.
 
-The dormant [`browser-relay-services/`](browser-relay-services/) root freezes
-two scale-to-zero Cloud Run services around the newly merged finite relay
+The non-operational [`browser-relay-services/`](browser-relay-services/) root
+freezes two scale-to-zero Cloud Run services around the merged finite relay
 admission profile. Its four phases solve the assigned-URL/audience bootstrap
-without opening IAM early, require a digest-only image and model public IAM as
-the final dependency. It has no execution entrypoint, saved plan, image digest
-or cloud evidence and has never been applied.
+without opening IAM early and model public IAM as the final dependency. The
+verified v2 image digest is now embedded in the profile and cannot be supplied
+as an operator variable. The root still has no execution entrypoint or saved
+plan and has never been applied.
 
 The guarded [`browser-relay-image/`](browser-relay-image/) package closed the
 next pre-deployment boundary without creating a service. It pins the exact
@@ -370,7 +372,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`signing-overlap/`](signing-overlap/) | Monotone second KMS version creation and 60/330-second overlap rollout contract | Version 2 enabled after one direct request; two atomic claims retained and one-shot entrypoints retired; runtime, Terraform, IAM, ingress and requests unchanged |
 | [`browser-relay/`](browser-relay/) | Closed live browser, two-relay, signing-key and rollback acceptance plan | Rebases the current private `00010`/two-key/version-1-entry/App Check baseline; not deployed, every `LIVE-*` case pending, and no cloud mutation granted |
 | [`browser-relay-edge/`](browser-relay-edge/) | Dormant reversible control-plane edge state machine | Pins the atomic staging issuer/origin profile and public-last/private-first transition ordering; exposes no CLI and grants no cloud mutation |
-| [`browser-relay-services/`](browser-relay-services/) | Dormant two-relay Cloud Run Terraform state machine | Pins scale 0..1, digest-only images, exact audiences, no-role runtime identity, finite process admission and public-last IAM; exposes no operator entrypoint and has not been applied |
+| [`browser-relay-services/`](browser-relay-services/) | Non-operational two-relay Cloud Run Terraform state machine | Binds the verified v2 image digest, scale 0..1, exact audiences, no-role runtime identity, finite process admission and public-last IAM; exposes no operator entrypoint and has not been applied |
 | [`browser-relay-image/`](browser-relay-image/) | Guarded one-shot private relay image build | Distinct v2 recovery succeeded once with exact source provenance and hardened smoke validation; immutable image retained privately and undeployed; all entrypoints retired |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
 | [`test/`](test/) | Closed-schema, inventory, IAM, state, workflow, and hostile-input tests | Credential-free |

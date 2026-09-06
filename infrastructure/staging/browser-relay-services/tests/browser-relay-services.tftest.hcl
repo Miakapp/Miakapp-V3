@@ -11,7 +11,6 @@ mock_provider "google" {
 
 variables {
   deployment_phase = "private_bootstrap"
-  relay_image      = "europe-west9-docker.pkg.dev/miakapp-v4-staging/miakapp-control-plane/miakapp-server@sha256:1111111111111111111111111111111111111111111111111111111111111111"
   relay_audiences = {
     relay-a = "wss://relay-a.bootstrap.invalid/ws"
     relay-b = "wss://relay-b.bootstrap.invalid/ws"
@@ -58,6 +57,7 @@ run "private_bootstrap_is_bounded_and_not_public" {
       service.template[0].scaling[0].max_instance_count == 1 &&
       service.template[0].max_instance_request_concurrency == 8 &&
       service.template[0].timeout == "900s" &&
+      service.template[0].containers[0].image == "europe-west9-docker.pkg.dev/miakapp-v4-staging/miakapp-control-plane/miakapp-server@sha256:23a19a26e8a24f6434ab8bc557dfa3fa799e0262e3400170e3bf064101a890b1" &&
       service.deletion_protection == false
     ])
     error_message = "Every relay must retain the reviewed scale, concurrency, timeout and deletion profile."
