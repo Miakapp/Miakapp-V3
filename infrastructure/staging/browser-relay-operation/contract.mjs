@@ -14,12 +14,15 @@ import {
   validateMonitoringPreflightResult,
 } from '../browser-relay-monitoring/contract.mjs';
 import {
+  ORCHESTRATOR_CLAIM_BUCKET,
+  ORCHESTRATOR_CLAIM_OBJECT,
   ORCHESTRATOR_PREFLIGHT_RESULT_SHA256,
   ORCHESTRATOR_PROFILE_SHA256,
   validateBrowserRelayOrchestratorProfile,
   validateOrchestratorPreflightResult,
 } from '../browser-relay-orchestrator/contract.mjs';
 import {
+  RELAY_PRIVATE_READY_INVENTORY_SHA256,
   ROLLBACK_PREFLIGHT_RESULT_SHA256,
   ROLLBACK_PROFILE_SHA256,
   validateBrowserRelayRollbackProfile,
@@ -37,14 +40,20 @@ import {
   validateRelayServicesPrivateReadyResult,
 } from '../browser-relay-services/contract.mjs';
 
+export { BROWSER_RELAY_PLAN_SHA256 };
+
 export const PROJECT_ID = 'miakapp-v4-staging';
 export const PROJECT_NUMBER = '1072737219170';
 export const REGION = 'europe-west9';
 export const OPERATION_PROFILE_PATH = 'browser-relay-operation/profile.json';
 export const OPERATION_PROFILE_SHA256 =
-  'a9f23d9995cc907059f42a7fe22adeac385930613574c34dc628d1c9b7ea1161';
+  'd1ff776c48c0aade724fc31a8d44c7e68fe5c81919eab7030998962017801a73';
 export const OPERATION_IMPLEMENTATION_BASE_COMMIT =
   'b82e152334a0bb30f6dcdbbe32abe44349bd9542';
+export const OPERATION_SOURCE_SHA256 =
+  '4ced79f80aa55fdfb1892b6d34187bb7d158b0205ba92ab3b7fabc28d0fb77b3';
+export const OPERATION_PREFLIGHT_RESULT_SCHEMA =
+  'miakapp.staging-browser-relay-operation-preflight-result/1';
 export const WINDOW_RESULT_SCHEMA =
   'miakapp.staging-browser-relay-operation-window-result/1';
 export const OPERATION_RESULT_SCHEMA =
@@ -60,6 +69,7 @@ const MAXIMUM_PROFILE_BYTES = 32 * 1024;
 const MAXIMUM_RESULT_BYTES = 64 * 1024;
 const SHA256 = /^[0-9a-f]{64}$/u;
 const COMMIT = /^[0-9a-f]{40}$/u;
+const TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u;
 const REVISION = /^(?:control-plane|miakapp-staging-relay-[ab])-[0-9]{5}-[a-z]{3}$/u;
 const PRIVATE_MATERIAL = Object.freeze([
   /-----BEGIN [A-Z ]*PRIVATE KEY-----/u,
@@ -172,6 +182,17 @@ function boundedInteger(value, minimum, maximum, path) {
   return value;
 }
 
+function canonicalTimestamp(value, path) {
+  if (typeof value !== 'string' || !TIMESTAMP.test(value)) {
+    reject(`${path} must be a canonical UTC timestamp`);
+  }
+  const milliseconds = Date.parse(value);
+  if (!Number.isFinite(milliseconds) || new Date(milliseconds).toISOString() !== value) {
+    reject(`${path} must be a canonical UTC timestamp`);
+  }
+  return milliseconds;
+}
+
 export function sha256(bytes) {
   return createHash('sha256').update(bytes).digest('hex');
 }
@@ -256,6 +277,11 @@ function validateDependencies(profile) {
     profile.pins.runner_source_sha256,
     'browser-relay runner source',
   );
+  exact(
+    sha256(readFileSync(new URL('operation.mjs', import.meta.url))),
+    profile.pins.operation_source_sha256,
+    'browser-relay operation source',
+  );
   exact(profile.budgets, {
     maximum_projected_incremental_milli_eur:
       plan.budgets.planned_incremental_upper_bound_eur * 1000,
@@ -298,13 +324,13 @@ export function validateBrowserRelayOperationProfile(path = profilePath) {
   exact(profile, expectedProfile, 'profile');
   exactKeys(profile, [
     'schema', 'revision', 'state', 'target', 'pins', 'execution', 'budgets',
-    'recovery', 'output', 'evidence',
+    'preflight', 'recovery', 'output', 'evidence',
   ], 'profile');
   exact(profile.schema, 'miakapp.staging-browser-relay-operation-profile/1',
     'profile.schema');
   exact(profile.revision, 1, 'profile.revision');
   exact(profile.state,
-    'closed_single_use_live_operation_envelope_implemented_not_executed',
+    'closed_single_use_live_operation_envelope_preflight_implemented_not_run',
     'profile.state');
   exact(profile.target, {
     project_id: PROJECT_ID,
@@ -323,7 +349,7 @@ export function validateBrowserRelayOperationProfile(path = profilePath) {
     'orchestrator_source_sha256', 'runner_profile_sha256', 'runner_source_sha256',
     'monitoring_profile_sha256', 'monitoring_preflight_result_sha256',
     'rollback_profile_sha256', 'rollback_preflight_result_sha256',
-    'relay_services_private_ready_result_sha256',
+    'relay_services_private_ready_result_sha256', 'operation_source_sha256',
   ], 'profile.pins');
   if (!COMMIT.test(profile.pins.implementation_base_commit)) {
     reject('profile.pins.implementation_base_commit is not a full commit');
@@ -335,6 +361,28 @@ export function validateBrowserRelayOperationProfile(path = profilePath) {
       reject(`profile.pins.${key} is not a SHA-256 digest`);
     }
   }
+  exact(profile.pins.operation_source_sha256, OPERATION_SOURCE_SHA256,
+    'profile.pins.operation_source_sha256');
+  exact(profile.preflight, {
+    required_observations: [
+      'atomic_claim_absent',
+      'control_plane_canonical_private',
+      'relay_services_exact_private_ready',
+      'relay_inventory_matches_pinned_result',
+      'relay_service_account_keyless',
+      'hosting_runner_route_absent',
+      'firebase_auth_users_zero',
+      'application_fixture_collections_zero',
+      'temporary_acceptance_iam_bindings_zero',
+      'fixed_minimum_instances_zero',
+      'relay_private_ready_terraform_plan_has_zero_changes',
+    ],
+    maximum_age_seconds: 900,
+    result_schema: OPERATION_PREFLIGHT_RESULT_SCHEMA,
+    cloud_mutations: 0,
+    public_ingress_changes: 0,
+    acceptance_executions: 0,
+  }, 'profile.preflight');
   exact(profile.execution, {
     entrypoint: 'in_process_library_only',
     separate_exact_authorization_required: true,
@@ -397,6 +445,94 @@ export function validateBrowserRelayOperationProfile(path = profilePath) {
   }, 'profile.evidence');
   validateDependencies(profile);
   return Object.freeze(profile);
+}
+
+export function validateOperationPreflightResultValue(value) {
+  rejectOperationPrivateMaterial(value, 'operation_preflight_result');
+  validateClosedSize(value, 'operation_preflight_result');
+  const result = exactKeys(value, [
+    'schema', 'state', 'project_id', 'project_number', 'region', 'observed_at',
+    'implementation_commit', 'profile_sha256', 'operation_source_sha256',
+    'browser_relay_plan_sha256', 'orchestrator_profile_sha256',
+    'orchestrator_preflight_result_sha256', 'claim_bucket', 'claim_object',
+    'claim_state', 'control_plane_state', 'control_plane_revision',
+    'control_plane_ingress', 'control_plane_public_invokers', 'relay_phase',
+    'relay_services', 'relay_public_invokers',
+    'relay_service_account_user_managed_keys', 'relay_inventory_sha256',
+    'runner_route_present', 'runner_route_status', 'firebase_auth_users',
+    'application_fixture_collections', 'temporary_iam_bindings',
+    'minimum_instances', 'terraform_convergence',
+    'terraform_managed_resource_noops', 'cloud_mutations',
+    'public_ingress_changes', 'acceptance_executions',
+    'credential_material_retained', 'raw_cloud_responses_retained',
+    'terraform_plan_retained',
+  ], 'operation_preflight_result');
+  exact(result.schema, OPERATION_PREFLIGHT_RESULT_SCHEMA,
+    'operation_preflight_result.schema');
+  exact(result.state,
+    'single_use_live_operation_preflight_succeeded_private_and_unclaimed',
+    'operation_preflight_result.state');
+  exact(result.project_id, PROJECT_ID, 'operation_preflight_result.project_id');
+  exact(result.project_number, PROJECT_NUMBER, 'operation_preflight_result.project_number');
+  exact(result.region, REGION, 'operation_preflight_result.region');
+  canonicalTimestamp(result.observed_at, 'operation_preflight_result.observed_at');
+  if (!COMMIT.test(result.implementation_commit)) {
+    reject('operation_preflight_result.implementation_commit is not a full commit');
+  }
+  exact(result.profile_sha256, OPERATION_PROFILE_SHA256,
+    'operation_preflight_result.profile_sha256');
+  exact(result.operation_source_sha256, OPERATION_SOURCE_SHA256,
+    'operation_preflight_result.operation_source_sha256');
+  exact(result.browser_relay_plan_sha256, BROWSER_RELAY_PLAN_SHA256,
+    'operation_preflight_result.browser_relay_plan_sha256');
+  exact(result.orchestrator_profile_sha256, ORCHESTRATOR_PROFILE_SHA256,
+    'operation_preflight_result.orchestrator_profile_sha256');
+  exact(result.orchestrator_preflight_result_sha256,
+    ORCHESTRATOR_PREFLIGHT_RESULT_SHA256,
+    'operation_preflight_result.orchestrator_preflight_result_sha256');
+  exact(result.claim_bucket, ORCHESTRATOR_CLAIM_BUCKET,
+    'operation_preflight_result.claim_bucket');
+  exact(result.claim_object, ORCHESTRATOR_CLAIM_OBJECT,
+    'operation_preflight_result.claim_object');
+  exact(result.claim_state, 'absent', 'operation_preflight_result.claim_state');
+  exact(result.control_plane_state, 'canonical_private',
+    'operation_preflight_result.control_plane_state');
+  if (typeof result.control_plane_revision !== 'string'
+    || !REVISION.test(result.control_plane_revision)
+    || !result.control_plane_revision.startsWith('control-plane-')) {
+    reject('operation_preflight_result.control_plane_revision is invalid');
+  }
+  exact(result.control_plane_ingress, 'ALLOW_INTERNAL_ONLY',
+    'operation_preflight_result.control_plane_ingress');
+  exact(result.control_plane_public_invokers, 0,
+    'operation_preflight_result.control_plane_public_invokers');
+  exact(result.relay_phase, 'private_ready', 'operation_preflight_result.relay_phase');
+  exact(result.relay_services, 2, 'operation_preflight_result.relay_services');
+  exact(result.relay_public_invokers, 0,
+    'operation_preflight_result.relay_public_invokers');
+  exact(result.relay_service_account_user_managed_keys, 0,
+    'operation_preflight_result.relay_service_account_user_managed_keys');
+  exact(result.relay_inventory_sha256, RELAY_PRIVATE_READY_INVENTORY_SHA256,
+    'operation_preflight_result.relay_inventory_sha256');
+  exact(result.runner_route_present, false,
+    'operation_preflight_result.runner_route_present');
+  exact(result.runner_route_status, 404, 'operation_preflight_result.runner_route_status');
+  for (const field of [
+    'firebase_auth_users', 'application_fixture_collections',
+    'temporary_iam_bindings', 'minimum_instances',
+  ]) exact(result[field], 0, `operation_preflight_result.${field}`);
+  exact(result.terraform_convergence, 'no_changes',
+    'operation_preflight_result.terraform_convergence');
+  exact(result.terraform_managed_resource_noops, 4,
+    'operation_preflight_result.terraform_managed_resource_noops');
+  for (const field of ['cloud_mutations', 'public_ingress_changes', 'acceptance_executions']) {
+    exact(result[field], 0, `operation_preflight_result.${field}`);
+  }
+  for (const field of [
+    'credential_material_retained', 'raw_cloud_responses_retained',
+    'terraform_plan_retained',
+  ]) exact(result[field], false, `operation_preflight_result.${field}`);
+  return Object.freeze({ ...result });
 }
 
 export function validateWindowBaseline(value) {

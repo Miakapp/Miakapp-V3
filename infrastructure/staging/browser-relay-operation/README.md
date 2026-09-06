@@ -1,12 +1,21 @@
 # Dormant staging browser-relay live-operation envelope
 
-Status: complete single-use ordering and cleanup envelope implemented; no live
-execution, Hosting publication, fixture creation or public ingress authorized
+Status: complete single-use ordering, cleanup and read-only preflight envelope
+implemented; preflight not run and no live execution, Hosting publication,
+fixture creation or public ingress authorized
 
 This package closes the composition gap between the already preflighted edge
 orchestrator and the live browser-relay matrix. It is an in-process library
 only. It has no CLI, credential loader, scheduler or cloud adapter, and
 importing it performs no work.
+
+The adjacent `preflight.mjs` composes exactly one fresh invocation of the
+already closed orchestrator preflight. It accepts only an ephemeral in-memory
+operator session, the exact merged implementation commit and the same
+read-only observer seams. Its closed result requires the global claim absent,
+the canonical-private control plane, two private-ready relays, no runner,
+fixtures or temporary bindings, and a four-resource Terraform no-change plan.
+It has no CLI or writer and rejects mutation adapters.
 
 The outer orchestrator retains ownership of exact authorization, the atomic
 generation-zero claim and the control-plane edge. Inside its one callback, this

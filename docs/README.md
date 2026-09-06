@@ -58,8 +58,8 @@ implemented across several repositories.
   postflight; preflighted but not executed live.
 - [`../infrastructure/staging/browser-relay-operation/`](../infrastructure/staging/browser-relay-operation/)
   — dormant full-operation envelope fixing the public-last relay transition and
-  two-level cleanup order around the edge orchestrator; no live adapter or
-  execution authority is present.
+  two-level cleanup order around the edge orchestrator, plus an unexecuted
+  read-only preflight; no live adapter or execution authority is present.
 - [`../infrastructure/staging/browser-relay-services/`](../infrastructure/staging/browser-relay-services/)
   — applied four-phase Terraform model holding two private-ready, scale-to-zero
   relays with immutable image selection, finite process admission and public-last
