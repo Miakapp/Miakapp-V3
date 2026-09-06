@@ -51,6 +51,11 @@ implemented across several repositories.
   page host with a deterministic two-file artifact loaded in all three browser
   engines by an offline CI gate; deliberately not wired to the runner until
   independent fixture and cloud observations can be combined.
+- [`../infrastructure/staging/browser-relay-fixture/`](../infrastructure/staging/browser-relay-fixture/)
+  — dormant single-fixture lifecycle controller with absence-gated creation and
+  deletion, an exact synthetic MiakAPI coordinator, one fresh in-memory custom
+  token per browser, guarded relay rotation and verified coordinator-first
+  cleanup; its cloud adapter and live execution remain separate.
 - [`../infrastructure/staging/browser-relay-monitoring/`](../infrastructure/staging/browser-relay-monitoring/)
   — allow-listed read-only monitoring contract whose post-merge preflight pins
   six metric surfaces, the existing EUR 10 budget and the private boundary.

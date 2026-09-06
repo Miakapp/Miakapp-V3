@@ -488,6 +488,13 @@ execution. Plan revision 14 preserves revision 13 byte for byte and pins this
 result before any page or fixture adapter is reviewed. Plan revision 15
 preserves revision 14 byte-for-byte and pins the merged dormant page profile
 plus its three-engine offline CI proof; it still grants no live authority.
+The following source-only fixture controller fixes the single synthetic
+namespace and refuses mutation unless every related Firebase Auth and Firestore
+domain is initially absent. It configures the exact coordinator state, ACL and
+idempotent call surface, emits fresh browser tokens in a bounded order and
+requires coordinator-first removal followed by verified final absence. It has
+no cloud transport, ambient credentials or live authority, and therefore made
+no staging mutation.
 
 The guarded relay-image increment bound the exact merged Miakapp-Server tree to a deterministic
 53,098-byte archive, one digest-pinned Cloud Build Docker builder, verified

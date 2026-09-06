@@ -909,8 +909,13 @@ vertical-slice exit gates.
    request. It returns phased browser facts, not the complete matrix result,
    and grants no Hosting publication or live authority. Current plan revision
    15 preserves revision 14 byte-for-byte and pins the merged page profile and
-   CI proof. The fixture/operator adapter and independent closed aggregator
-   remain required before the one allowed execution.
+   CI proof. A separate dormant controller now closes the single synthetic-Home
+   lifecycle: initial absence gates all mutation and cleanup authority, one
+   exact MiakAPI coordinator owns the synthetic state/function surface, browser
+   custom tokens are fresh and ordered, and coordinator-first cleanup must end
+   in independently observed absence. It still has no cloud transport. The
+   concrete operator adapter and independent closed aggregator remain required
+   before the one allowed execution.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain
