@@ -70,7 +70,8 @@ jobs:
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           repository: Miakapp/Miakapp-Server
-          ref: df10674e034f30eec80760f5ec94bc108cff026f
+          # Test-only descendant of deployed relay source df10674; production files are unchanged.
+          ref: 140e6517add101a243f92760334c7e6c3a0398e1
           path: .integration/miakapp-server
       - name: Check out the pinned MiakAPI coordinator SDK
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5

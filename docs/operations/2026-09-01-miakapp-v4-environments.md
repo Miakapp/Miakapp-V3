@@ -428,6 +428,10 @@ IDs, Cloud Run revision IDs and stable outcome classes. A real three-engine
 offline smoke intercepts the exact staging URL locally; it neither contacts nor
 mutates staging. No Hosting route, live result, credential, raw browser
 diagnostic or public-ingress authority exists in this package.
+After merge, plan revision 10 archived that exact revision 9 input, pinned the
+runner profile and marked only `RUNNER-01` satisfied. Edge orchestration,
+allow-listed monitoring and rollback preflight remain open, and every live
+matrix row remains pending.
 
 The guarded relay-image increment bound the exact merged Miakapp-Server tree to a deterministic
 53,098-byte archive, one digest-pinned Cloud Build Docker builder, verified

@@ -11,13 +11,15 @@ import {
   BROWSER_RELAY_PLAN_SHA256,
   BROWSER_RELAY_V8_PLAN_PATH,
   BROWSER_RELAY_V8_PLAN_SHA256,
+  BROWSER_RELAY_V9_PLAN_PATH,
+  BROWSER_RELAY_V9_PLAN_SHA256,
   validateBrowserRelayPlan,
   validateBrowserRelayV8Plan,
+  validateBrowserRelayV9Plan,
 } from './browser-relay/contract.mjs';
 import {
   BROWSER_RELAY_RUNNER_PROFILE_PATH,
   BROWSER_RELAY_RUNNER_PROFILE_SHA256,
-  BROWSER_RELAY_V9_PLAN_SHA256,
   validateBrowserRelayRunnerProfile,
 } from './browser-relay-runner/contract.mjs';
 import {
@@ -3693,7 +3695,7 @@ function validateEvidence(value) {
     ],
   );
   const expectedBrowserRelayPlan = {
-    state: 'private_relays_ready_plan_rebased_not_deployed',
+    state: 'runner_implemented_private_relays_ready_plan_rebased_not_deployed',
     path: BROWSER_RELAY_PLAN_PATH,
     sha256: BROWSER_RELAY_PLAN_SHA256,
     baseline_observed_at: '2026-09-06T04:08:50.844Z',
@@ -3703,7 +3705,7 @@ function validateEvidence(value) {
     browser_attestation_validated: true,
     firebase_auth_users: 0,
     application_fixture_collections: 0,
-    open_preconditions: 4,
+    open_preconditions: 3,
     cloud_mutation_authorized_by_plan: false,
     acceptance_executed: false,
     public_ingress_active: false,
@@ -4685,10 +4687,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 69, 'manifest.revision');
+  exact(manifest.revision, 70, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -5029,6 +5031,17 @@ export function validateCommittedEvidence(
     BROWSER_RELAY_V8_PLAN_SHA256,
     'browser-relay/plan-v8.json',
   );
+  const browserRelayV9PlanPath = resolve(stagingRoot, BROWSER_RELAY_V9_PLAN_PATH);
+  const browserRelayV9Plan = validatedEvidenceFile(
+    browserRelayV9PlanPath,
+    validateBrowserRelayV9Plan,
+    'browser-relay/plan-v9.json',
+  );
+  exact(
+    fileSha256(browserRelayV9PlanPath),
+    BROWSER_RELAY_V9_PLAN_SHA256,
+    'browser-relay/plan-v9.json',
+  );
   exactFields(browserRelayPlanManifest, {
     state: browserRelayPlan.state,
     baseline_observed_at: browserRelayPlan.baseline.observed_at,
@@ -5069,6 +5082,16 @@ export function validateCommittedEvidence(
     browserRelayRunnerManifest.profile_sha256,
     'evidence.browser_relay_runner.profile_sha256',
   );
+  exact(
+    browserRelayPlan.pins.browser_relay_runner_profile_sha256,
+    browserRelayRunnerManifest.profile_sha256,
+    'evidence.browser_relay_plan runner profile pin',
+  );
+  exact(
+    browserRelayPlan.preconditions.find(({ id }) => id === 'RUNNER-01')?.state,
+    'satisfied',
+    'evidence.browser_relay_plan RUNNER-01 precondition',
+  );
   exactFields(browserRelayRunnerManifest, {
     state: browserRelayRunnerProfile.state,
     browser_relay_plan_sha256:
@@ -5100,10 +5123,10 @@ export function validateCommittedEvidence(
   }, 'evidence.browser_relay_runner');
   exact(
     browserRelayRunnerProfile.pins.browser_relay_plan_sha256,
-    browserRelayPlanManifest.sha256,
-    'evidence.browser_relay_runner browser-relay plan pin',
+    BROWSER_RELAY_V9_PLAN_SHA256,
+    'evidence.browser_relay_runner historical browser-relay plan pin',
   );
-  const browserMatrix = new Map(browserRelayPlan.matrix.map((entry) => [entry.id, entry]));
+  const browserMatrix = new Map(browserRelayV9Plan.matrix.map((entry) => [entry.id, entry]));
   exactArray(
     browserRelayRunnerProfile.assertions.chromium,
     ['LIVE-02', 'LIVE-03', 'LIVE-04', 'LIVE-05', 'LIVE-06', 'LIVE-07', 'LIVE-08',
@@ -5120,17 +5143,17 @@ export function validateCommittedEvidence(
   ], 'evidence.browser_relay_runner WebKit assertions');
   exactArray(
     browserRelayRunnerProfile.output.allowed_observations,
-    browserRelayPlan.evidence.allowed_observations,
+    browserRelayV9Plan.evidence.allowed_observations,
     'evidence.browser_relay_runner allowed observations',
   );
   exactArray(
     browserRelayRunnerProfile.output.forbidden_observations,
-    browserRelayPlan.evidence.forbidden_observations,
+    browserRelayV9Plan.evidence.forbidden_observations,
     'evidence.browser_relay_runner forbidden observations',
   );
   exact(
     browserRelayRunnerProfile.execution.maximum_invocations,
-    browserRelayPlan.topology.runner.maximum_invocations,
+    browserRelayV9Plan.topology.runner.maximum_invocations,
     'evidence.browser_relay_runner invocation budget',
   );
   exact(
@@ -5140,22 +5163,22 @@ export function validateCommittedEvidence(
   );
   exact(
     browserRelayRunnerProfile.output.maximum_app_check_assessments,
-    browserRelayPlan.budgets.maximum_recaptcha_assessments,
+    browserRelayV9Plan.budgets.maximum_recaptcha_assessments,
     'evidence.browser_relay_runner App Check budget',
   );
   exact(
     browserRelayRunnerProfile.output.maximum_control_plane_exchanges,
-    browserRelayPlan.budgets.maximum_control_plane_exchanges,
+    browserRelayV9Plan.budgets.maximum_control_plane_exchanges,
     'evidence.browser_relay_runner control-plane budget',
   );
   exact(
     browserRelayRunnerProfile.output.maximum_kms_signatures,
-    browserRelayPlan.budgets.maximum_kms_signatures,
+    browserRelayV9Plan.budgets.maximum_kms_signatures,
     'evidence.browser_relay_runner KMS budget',
   );
   exact(
     browserRelayRunnerProfile.output.maximum_firestore_writes,
-    browserRelayPlan.budgets.maximum_firestore_writes,
+    browserRelayV9Plan.budgets.maximum_firestore_writes,
     'evidence.browser_relay_runner Firestore budget',
   );
   const rootPackage = readBoundedJson(resolve(stagingRoot, '../../package.json'), 8 * 1024);
