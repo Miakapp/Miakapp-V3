@@ -17,8 +17,8 @@
     "browser_relay_page_profile_sha256": "2e9e809d8bb9b88a4e96b51a258d948e6f0d1467c38adaca8c6582e132113e1e",
     "browser_relay_fixture_profile_sha256": "cf9f75e8f385e386c695751b43258d792f8fe104aa7ec80c6e3471a21ac04047",
     "browser_relay_fixture_source_sha256": "339cd223822dba232e1bacf263e6632669788c5a44bca39ea297cb8f47fbe838",
-    "browser_relay_fixture_cloud_profile_sha256": "4a0133ce6ef48bd18afb634cb23035b9d7527ba72b44c7a3a82405de5f67feb5",
-    "browser_relay_page_receipt_profile_sha256": "a3da42e63f0c5e470da483e9def3d0b9ed7f5ce983777424794118f1873a13a0",
+    "browser_relay_fixture_cloud_profile_sha256": "217f897541fc53b9077066ad0105826bf8130f5727ff9094903b58f7549b9deb",
+    "browser_relay_page_receipt_profile_sha256": "c3678c6c0021c78c906ae76004e3c2be72496a839471ecef483d7a55c67b3469",
     "fixture_source_sha256": "6324e8156f987a32b112135a0bbaef2766b63e16f8b81b1e0a526816c7f132bf"
   },
   "scenario": {

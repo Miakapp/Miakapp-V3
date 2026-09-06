@@ -172,6 +172,12 @@ node --check infrastructure/staging/browser-relay-scenario-fixture/contract.mjs
 node --check infrastructure/staging/browser-relay-scenario-fixture/fixture.mjs
 node --check infrastructure/staging/browser-relay-scenario-fixture/guard.mjs
 node -e "import('./infrastructure/staging/browser-relay-scenario-fixture/contract.mjs').then(({ validateBrowserRelayScenarioFixtureProfile }) => validateBrowserRelayScenarioFixtureProfile())"
+node infrastructure/staging/browser-relay-scenario-fixture-cloud/guard.mjs \
+  "${repository_root}/infrastructure/staging/browser-relay-scenario-fixture-cloud"
+node --check infrastructure/staging/browser-relay-scenario-fixture-cloud/cloud.mjs
+node --check infrastructure/staging/browser-relay-scenario-fixture-cloud/contract.mjs
+node --check infrastructure/staging/browser-relay-scenario-fixture-cloud/guard.mjs
+node -e "import('./infrastructure/staging/browser-relay-scenario-fixture-cloud/contract.mjs').then(({ validateBrowserRelayScenarioFixtureCloudProfile }) => validateBrowserRelayScenarioFixtureCloudProfile())"
 node infrastructure/staging/browser-relay-monitoring/guard.mjs \
   "${repository_root}/infrastructure/staging/browser-relay-monitoring"
 node --check infrastructure/staging/browser-relay-monitoring/cloud.mjs
@@ -366,6 +372,7 @@ node --test \
   infrastructure/staging/test/browser-relay-aggregator.test.mjs \
   infrastructure/staging/test/browser-relay-page-receipt.test.mjs \
   infrastructure/staging/test/browser-relay-scenario-fixture.test.mjs \
+  infrastructure/staging/test/browser-relay-scenario-fixture-cloud.test.mjs \
   infrastructure/staging/test/browser-relay-image.test.mjs \
   infrastructure/staging/test/browser-relay-monitoring.test.mjs \
   infrastructure/staging/test/browser-relay-operation.test.mjs \
