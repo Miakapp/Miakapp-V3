@@ -853,16 +853,17 @@ vertical-slice exit gates.
    synthetic-only. The closed staging plan is now rebased against the private
    `control-plane-00010-vop` two-key/version-1-rehearsal-entry runtime with the
    bounded staging edge profile present in source but not selected, completed
-   real-browser App Check prerequisite and historical
-   zero-user/zero-fixture/zero-relay baseline; it still grants no public ingress
-   or browser execution. The pinned relay now has finite connection, attempt,
+   real-browser App Check prerequisite and fresh zero-user/zero-fixture/two-
+   private-relay baseline; it still grants no public ingress or browser
+   execution. The pinned relay now has finite connection, attempt,
    tracked-peer, Home and aggregate queue budgets. Its four-phase Terraform root
    has converged two private-ready, scale-to-zero services with exact audiences,
    immutable images and public-last IAM; all three one-shot entrypoints are
    retired. The separate guarded build recovered once after its initial
    prerequisite failure and produced the exact verified digest now bound to both
    private services. No unauthenticated invocation or live browser request has
-   occurred.
+   occurred. The byte-exact earlier zero-relay plan is retained only as the
+   immutable dependency consumed by the historical relay-image build.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain

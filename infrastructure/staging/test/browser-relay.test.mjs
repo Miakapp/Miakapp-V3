@@ -13,13 +13,16 @@ import test from 'node:test';
 
 import {
   BROWSER_RELAY_PLAN_SHA256,
+  BROWSER_RELAY_V8_PLAN_SHA256,
   StagingBrowserRelayPlanError,
   validateBrowserRelayPlan,
   validateBrowserRelayPlanValue,
+  validateBrowserRelayV8Plan,
 } from '../browser-relay/contract.mjs';
 import { validateBrowserRelayRoot } from '../browser-relay/guard.mjs';
 
 const planPath = new URL('../browser-relay/plan.json', import.meta.url);
+const v8PlanPath = new URL('../browser-relay/plan-v8.json', import.meta.url);
 const planFixture = JSON.parse(readFileSync(planPath, 'utf8'));
 
 function plan() {
@@ -35,19 +38,32 @@ function rejects(mutator, pattern = /drifted|invalid|must|reviewed|credential/u)
   );
 }
 
-test('accepts the bounded-relay browser design without claiming matrix evidence', () => {
+test('accepts the private-ready rebased browser design without claiming matrix evidence', () => {
   const validated = validateBrowserRelayPlan(planPath);
   assert.equal(validated.schema, 'miakapp.staging-browser-relay-plan/1');
-  assert.equal(validated.revision, 8);
-  assert.equal(validated.state, 'relay_process_admission_merged_root_reviewed_not_deployed');
+  assert.equal(validated.revision, 9);
+  assert.equal(validated.state, 'private_relays_ready_plan_rebased_not_deployed');
   assert.equal(validated.target.project_id, 'miakapp-v4-staging');
   assert.equal(validated.target.cloud_mutation_authorized_by_document, false);
   assert.equal(validated.target.public_ingress_currently_active, false);
   assert.equal(validated.target.acceptance_executed, false);
-  assert.equal(validated.pins.relay_services_profile_sha256, 'bc9b231cc9724f19a26ef5c3bbd6da6a69ec79b00cb976e77c73015d5db10db7');
+  assert.equal(validated.pins.relay_services_profile_sha256, 'd47449d0b175b47ac0fdde5e0eb80c8b5d0eb43e4ac9a8af091c51f9aa4c390a');
+  assert.equal(validated.pins.relay_services_converged_profile_sha256, '41392c96d68bf749c59757bc76d34a69e6eb407efa50b14f61b937c4f5a9b576');
+  assert.equal(validated.pins.relay_services_private_ready_result_sha256, '27ee42c11af83f4e0133a6002540096b74d18ceb78a281e4fbd7c38b53cea4be');
+  assert.equal(validated.pins.relay_services_live_inventory_sha256, '421338fec676c1fccd0e6747d3e8837d4151b147c95b343172639800779b64d1');
   assert.equal(validated.evidence.state, 'absent');
   assert.deepEqual(validated.evidence.completed_case_ids, []);
   assert.match(BROWSER_RELAY_PLAN_SHA256, /^[0-9a-f]{64}$/u);
+});
+
+test('preserves the byte-exact revision-8 plan used by the relay image operation', () => {
+  const historical = validateBrowserRelayV8Plan(v8PlanPath);
+  assert.equal(historical.revision, 8);
+  assert.equal(historical.state, 'relay_process_admission_merged_root_reviewed_not_deployed');
+  assert.equal(
+    BROWSER_RELAY_V8_PLAN_SHA256,
+    '4a5c13999d9f7f328b1b8b867bbd86d4c5e80cb980d9eb1324028ea0e5785343',
+  );
 });
 
 test('pins a reversible scale-to-zero topology and a bounded public window', () => {
@@ -58,7 +74,11 @@ test('pins a reversible scale-to-zero topology and a bounded public window', () 
     relay.minimum_instances === 0
     && relay.maximum_instances === 1
     && relay.runtime_iam_roles.length === 0
-    && relay.endpoint_before_apply === null
+    && relay.private_ready_generation === 2
+    && relay.private_ready_audience.startsWith('wss://miakapp-staging-relay-')
+    && relay.public_invoker_before_window === false
+    && relay.unauthenticated_invoker_during_window === true
+    && relay.memory_mib === 512
     && relay.maximum_connections === 8
     && relay.maximum_connections_per_immediate_peer === 8
     && relay.maximum_aggregate_queued_bytes === 4194304
@@ -85,9 +105,14 @@ test('pins a reversible scale-to-zero topology and a bounded public window', () 
   assert.equal(validated.baseline.app_check.browser_attestation_validated, true);
   assert.equal(validated.baseline.application_data.firebase_auth_users, 0);
   assert.equal(validated.baseline.application_data.application_fixture_collections, 0);
+  assert.deepEqual(validated.baseline.cloud_run_services, [
+    'control-plane', 'miakapp-staging-relay-a', 'miakapp-staging-relay-b',
+  ]);
+  assert.equal(validated.baseline.relay_services, 2);
+  assert.equal(validated.baseline.relay_service_account_present, true);
   assert.deepEqual(
     validated.preconditions.filter(({ state }) => state === 'satisfied').map(({ id }) => id),
-    ['PIN-01', 'SIGNING-01', 'APP-CHECK-01', 'ROTATION-ENTRY-01'],
+    ['PIN-01', 'SIGNING-01', 'APP-CHECK-01', 'ROTATION-ENTRY-01', 'RELAY-01'],
   );
 });
 
@@ -129,6 +154,8 @@ test('rejects target, evidence and public-baseline escalation', () => {
   rejects((candidate) => { candidate.baseline.app_check.browser_attestation_validated = false; });
   rejects((candidate) => { candidate.baseline.application_data.firebase_auth_users = 1; });
   rejects((candidate) => { candidate.baseline.application_data.application_fixture_collections = 1; });
+  rejects((candidate) => { candidate.baseline.relay_services = 0; });
+  rejects((candidate) => { candidate.baseline.relay_service_account_present = false; });
   rejects((candidate) => { candidate.evidence.state = 'succeeded'; });
   rejects((candidate) => { candidate.evidence.completed_case_ids.push('LIVE-01'); });
 });
@@ -139,6 +166,9 @@ test('rejects fixed-cost, scale, duration, volume and free-tier drift', () => {
   rejects((candidate) => { candidate.topology.relays[0].runtime_iam_roles.push('roles/viewer'); });
   rejects((candidate) => { candidate.topology.relays[0].minimum_instances = 1; });
   rejects((candidate) => { candidate.topology.relays[0].maximum_instances = 2; });
+  rejects((candidate) => { candidate.topology.relays[0].private_ready_generation = 1; });
+  rejects((candidate) => { candidate.topology.relays[0].public_invoker_before_window = true; });
+  rejects((candidate) => { candidate.topology.relays[0].memory_mib = 256; });
   rejects((candidate) => { candidate.topology.relays[0].maximum_connections = 9; });
   rejects((candidate) => { candidate.topology.relays[0].maximum_connections_per_immediate_peer = 9; });
   rejects((candidate) => { candidate.topology.relays[0].maximum_aggregate_queued_bytes = 4194305; });
@@ -156,6 +186,7 @@ test('rejects fixed-cost, scale, duration, volume and free-tier drift', () => {
 test('rejects omitted blockers, reordered cases and false key-rotation claims', () => {
   rejects((candidate) => { candidate.preconditions[3].state = 'open'; });
   rejects((candidate) => { candidate.preconditions.pop(); });
+  rejects((candidate) => { candidate.preconditions[5].state = 'open'; });
   rejects((candidate) => { candidate.matrix.reverse(); });
   rejects((candidate) => { candidate.matrix[4].state = 'succeeded'; });
   rejects((candidate) => { candidate.matrix[4].maximum_runs = 2; });
@@ -170,7 +201,9 @@ test('rejects omitted blockers, reordered cases and false key-rotation claims', 
 
 test('rejects rollback weakening, unknown fields and credential material', () => {
   rejects((candidate) => { candidate.rollback.ordered_steps.shift(); });
-  rejects((candidate) => { candidate.rollback.required_final_state.relay_services = 1; });
+  rejects((candidate) => { candidate.rollback.required_final_state.relay_services = 0; });
+  rejects((candidate) => { candidate.rollback.required_final_state.relay_phase = 'absent'; });
+  rejects((candidate) => { candidate.rollback.required_final_state.relay_public_invokers = 1; });
   rejects((candidate) => { candidate.rollback.required_final_state.miakapp_3_touched = true; });
   rejects((candidate) => { candidate.unreviewed = true; });
   rejects((candidate) => { candidate.access_token = 'Bearer should-never-be-here'; }, /credential/u);
@@ -183,7 +216,7 @@ test('guards the exact non-executable browser-relay package inventory', () => {
   validateBrowserRelayRoot(new URL('../browser-relay/', import.meta.url));
 
   const root = mkdtempSync(join(tmpdir(), 'miakapp-browser-relay-root-'));
-  for (const name of ['README.md', 'contract.mjs', 'guard.mjs', 'plan.json', 'validate.mjs']) {
+  for (const name of ['README.md', 'contract.mjs', 'guard.mjs', 'plan-v8.json', 'plan.json', 'validate.mjs']) {
     copyFileSync(new URL(`../browser-relay/${name}`, import.meta.url), join(root, name));
     chmodSync(join(root, name), 0o600);
   }
@@ -196,7 +229,7 @@ test('guards the exact non-executable browser-relay package inventory', () => {
 
 test('rejects symlinked or executable package entries', () => {
   const executableRoot = mkdtempSync(join(tmpdir(), 'miakapp-browser-relay-executable-'));
-  for (const name of ['README.md', 'contract.mjs', 'guard.mjs', 'plan.json', 'validate.mjs']) {
+  for (const name of ['README.md', 'contract.mjs', 'guard.mjs', 'plan-v8.json', 'plan.json', 'validate.mjs']) {
     copyFileSync(new URL(`../browser-relay/${name}`, import.meta.url), join(executableRoot, name));
     chmodSync(join(executableRoot, name), name === 'validate.mjs' ? 0o700 : 0o600);
   }
@@ -206,7 +239,7 @@ test('rejects symlinked or executable package entries', () => {
   );
 
   const symlinkRoot = mkdtempSync(join(tmpdir(), 'miakapp-browser-relay-symlink-'));
-  for (const name of ['README.md', 'contract.mjs', 'guard.mjs', 'plan.json']) {
+  for (const name of ['README.md', 'contract.mjs', 'guard.mjs', 'plan-v8.json', 'plan.json']) {
     copyFileSync(new URL(`../browser-relay/${name}`, import.meta.url), join(symlinkRoot, name));
     chmodSync(join(symlinkRoot, name), 0o600);
   }

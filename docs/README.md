@@ -40,8 +40,8 @@ implemented across several repositories.
   rollback for audience-bound browser relay credentials.
 - [`../infrastructure/staging/browser-relay/`](../infrastructure/staging/browser-relay/)
   — digest-pinned closed plan for the live browser, two-relay, signing-key and
-  rollback matrix; rebased against the current private two-key/App Check state
-  but not deployed, with every live case pending.
+  rollback matrix; rebased against the current private two-key/App Check and
+  private-ready two-relay state but not deployed, with every live case pending.
 - [`../infrastructure/staging/browser-relay-services/`](../infrastructure/staging/browser-relay-services/)
   — applied four-phase Terraform model holding two private-ready, scale-to-zero
   relays with immutable image selection, finite process admission and public-last
@@ -95,9 +95,10 @@ and the temporary Hosting route was retired. Two digest-pinned, scale-to-zero
 relay services are now private-ready with exact assigned audiences and no
 public IAM member. The complete disconnect matrix, authenticated browser-relay
 flow, public ingress and broader staging acceptance remain open. The staging
-manifest pins both the earlier zero-relay planning baseline and the later
-serial-4 private-ready result, making the state transition, intended cost,
-exposure and rollback boundary reviewable without pretending that a public edge
+manifest retains the byte-exact earlier zero-relay plan used by the image build,
+pins the serial-4 private-ready result and rebases the current acceptance plan on
+a matching fresh live inventory. The state transition, intended cost, exposure
+and rollback boundary remain reviewable without pretending that a public edge
 or live browser matrix already exists.
 
 Repository-specific implementation plans must link back to these documents and
