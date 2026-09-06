@@ -58,9 +58,9 @@ prerequisite added no fixed-cost service.
 
 The operation created no Cloud Run service, runtime identity, IAM binding,
 public principal, browser request or persistent credential. Deployment remains
-unauthorized. A later reviewed change must bind the successful immutable digest
-into the dormant relay-services Terraform profile before any private bootstrap
-plan can exist.
+unauthorized. The successful immutable digest is now bound into the
+non-operational relay-services Terraform profile; a separate reviewed
+orchestrator and private bootstrap plan are still required before deployment.
 
 ## Permanent retirement
 

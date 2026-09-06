@@ -49,7 +49,7 @@ resource "google_cloud_run_v2_service" "relay" {
 
     containers {
       name  = "relay"
-      image = var.relay_image
+      image = local.relay_image
 
       ports {
         name           = "http1"

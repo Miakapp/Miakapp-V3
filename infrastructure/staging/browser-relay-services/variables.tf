@@ -13,19 +13,6 @@ variable "deployment_phase" {
   }
 }
 
-variable "relay_image" {
-  description = "Digest-only Artifact Registry reference built from the pinned Miakapp-Server commit."
-  type        = string
-
-  validation {
-    condition = can(regex(
-      "^europe-west9-docker\\.pkg\\.dev/miakapp-v4-staging/miakapp-control-plane/miakapp-server@sha256:[0-9a-f]{64}$",
-      var.relay_image,
-    ))
-    error_message = "The relay image must be the exact reviewed Artifact Registry repository plus a lowercase sha256 digest."
-  }
-}
-
 variable "relay_audiences" {
   description = "Exact WSS audiences observed from the two Cloud Run services after private bootstrap."
   type        = map(string)

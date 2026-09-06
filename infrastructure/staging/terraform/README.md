@@ -196,6 +196,13 @@ state, Cloud Run service, IAM binding or public ingress; Container Scanning
 remained disabled. The atomic recovery claim is retained and its plan/apply
 entrypoints are permanently retired.
 
+The relay-services profile now embeds that exact digest and links back to the
+sanitized build result. Terraform no longer accepts a relay image variable, so
+a planner cannot substitute another digest. The previous image-less profile is
+retained separately for the historical browser-relay plan and build contract.
+This source change exposes no operator entrypoint and has not deployed either
+relay service.
+
 ## Explicit boundaries
 
 Terraform source is inherently apply-capable. Repository guards and supported
