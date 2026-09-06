@@ -739,8 +739,11 @@ current consumer.
     rollback preflight then observed all ten canonical-private target facts and
     a four-resource Terraform no-change plan without mutation or acceptance.
     Current plan revision 12 pins that sanitized result and marks rollback
-    satisfied. Next bind both state machines and the merged three-engine runner
-    to a distinct atomic operation.
+    satisfied. A dormant single-use orchestrator now binds both state machines
+    and the merged three-engine runner to a distinct retained generation-zero
+    claim, rechecks the private baseline after claiming and requires a private
+    postflight. It has no live authority or entrypoint. Next run and pin only
+    its read-only post-merge preflight before closing the edge gate.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform
     no-change plan. Its fresh post-merge preflight is complete and the rollback

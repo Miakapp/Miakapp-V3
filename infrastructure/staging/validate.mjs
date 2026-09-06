@@ -38,6 +38,14 @@ import {
   validateRollbackPreflightResult,
 } from './browser-relay-rollback/contract.mjs';
 import {
+  ORCHESTRATOR_CLAIM_BUCKET,
+  ORCHESTRATOR_CLAIM_OBJECT,
+  ORCHESTRATOR_IMPLEMENTATION_BASE_COMMIT,
+  ORCHESTRATOR_PROFILE_PATH,
+  ORCHESTRATOR_PROFILE_SHA256,
+  validateBrowserRelayOrchestratorProfile,
+} from './browser-relay-orchestrator/contract.mjs';
+import {
   BROWSER_RELAY_V10_PLAN_SHA256 as MONITORING_BROWSER_RELAY_PLAN_SHA256,
   MONITORING_IMPLEMENTATION_COMMIT,
   MONITORING_PREFLIGHT_RESULT_PATH,
@@ -2924,6 +2932,7 @@ function validateEvidence(value) {
     'browser_relay_runner',
     'browser_relay_monitoring',
     'browser_relay_rollback',
+    'browser_relay_orchestrator',
     'browser_relay_image',
     'browser_app_check_prerequisite',
     'browser_app_check_attestation',
@@ -3954,6 +3963,83 @@ function validateEvidence(value) {
       `evidence.browser_relay_rollback.${field}`,
     );
   }
+  const browserRelayOrchestrator = record(
+    evidence.browser_relay_orchestrator,
+    'evidence.browser_relay_orchestrator',
+    [
+      'state',
+      'profile_path',
+      'profile_sha256',
+      'implementation_base_commit',
+      'browser_relay_plan_sha256',
+      'satisfied_preconditions',
+      'open_precondition',
+      'claim_bucket',
+      'claim_object',
+      'claim_if_generation_match',
+      'maximum_claim_creations',
+      'claim_precedes_first_cloud_mutation',
+      'baseline_reobserved_after_claim',
+      'ambiguous_claim_stops_before_edge_mutation',
+      'claim_retained',
+      'retry_authorized',
+      'deletion_authorized',
+      'maximum_edge_window_executions',
+      'maximum_public_window_milliseconds',
+      'maximum_callback_execution_milliseconds',
+      'orchestration_stages',
+      'automatic_edge_rollback',
+      'live_preflight_count',
+      'live_execution_count',
+      'claim_creations',
+      'cloud_mutations',
+      'public_ingress_changes',
+      'acceptance_executions',
+      'credentials_committed',
+      'raw_cloud_responses_committed',
+      'browser_diagnostics_committed',
+    ],
+  );
+  const expectedBrowserRelayOrchestrator = {
+    state: 'closed_single_use_edge_orchestrator_implemented_not_preflighted',
+    profile_path: ORCHESTRATOR_PROFILE_PATH,
+    profile_sha256: ORCHESTRATOR_PROFILE_SHA256,
+    implementation_base_commit: ORCHESTRATOR_IMPLEMENTATION_BASE_COMMIT,
+    browser_relay_plan_sha256: BROWSER_RELAY_PLAN_SHA256,
+    satisfied_preconditions: 8,
+    open_precondition: 'EDGE-01',
+    claim_bucket: ORCHESTRATOR_CLAIM_BUCKET,
+    claim_object: ORCHESTRATOR_CLAIM_OBJECT,
+    claim_if_generation_match: 0,
+    maximum_claim_creations: 1,
+    claim_precedes_first_cloud_mutation: true,
+    baseline_reobserved_after_claim: true,
+    ambiguous_claim_stops_before_edge_mutation: true,
+    claim_retained: true,
+    retry_authorized: false,
+    deletion_authorized: false,
+    maximum_edge_window_executions: 1,
+    maximum_public_window_milliseconds: 1_200_000,
+    maximum_callback_execution_milliseconds: 900_000,
+    orchestration_stages: 7,
+    automatic_edge_rollback: true,
+    live_preflight_count: 0,
+    live_execution_count: 0,
+    claim_creations: 0,
+    cloud_mutations: 0,
+    public_ingress_changes: 0,
+    acceptance_executions: 0,
+    credentials_committed: false,
+    raw_cloud_responses_committed: false,
+    browser_diagnostics_committed: false,
+  };
+  for (const [field, expected] of Object.entries(expectedBrowserRelayOrchestrator)) {
+    exact(
+      browserRelayOrchestrator[field],
+      expected,
+      `evidence.browser_relay_orchestrator.${field}`,
+    );
+  }
   const browserRelayImage = record(
     evidence.browser_relay_image,
     'evidence.browser_relay_image',
@@ -4870,10 +4956,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 73, 'manifest.revision');
+  exact(manifest.revision, 74, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rollback_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rollback_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_implemented_not_preflighted_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -5691,6 +5777,75 @@ export function validateCommittedEvidence(
       browserRelayRollbackResult.raw_cloud_responses_retained,
     terraform_plan_committed: browserRelayRollbackResult.terraform_plan_retained,
   }, 'evidence.browser_relay_rollback');
+  const browserRelayOrchestratorManifest = manifest.evidence.browser_relay_orchestrator;
+  const browserRelayOrchestratorProfilePath = committedEvidencePath(
+    stagingRoot,
+    browserRelayOrchestratorManifest.profile_path,
+    ORCHESTRATOR_PROFILE_PATH,
+    'evidence.browser_relay_orchestrator.profile_path',
+  );
+  const browserRelayOrchestratorProfile = validatedEvidenceFile(
+    browserRelayOrchestratorProfilePath,
+    validateBrowserRelayOrchestratorProfile,
+    'evidence.browser_relay_orchestrator.profile_path',
+  );
+  exact(
+    fileSha256(browserRelayOrchestratorProfilePath),
+    browserRelayOrchestratorManifest.profile_sha256,
+    'evidence.browser_relay_orchestrator.profile_sha256',
+  );
+  exactFields(browserRelayOrchestratorManifest, {
+    state: browserRelayOrchestratorProfile.state,
+    profile_sha256: ORCHESTRATOR_PROFILE_SHA256,
+    implementation_base_commit:
+      browserRelayOrchestratorProfile.pins.implementation_base_commit,
+    browser_relay_plan_sha256:
+      browserRelayOrchestratorProfile.pins.browser_relay_plan_sha256,
+    satisfied_preconditions:
+      browserRelayOrchestratorProfile.preflight.required_satisfied_preconditions.length,
+    open_precondition:
+      browserRelayOrchestratorProfile.preflight.required_open_precondition,
+    claim_bucket: browserRelayOrchestratorProfile.claim.bucket,
+    claim_object: browserRelayOrchestratorProfile.claim.object,
+    claim_if_generation_match:
+      browserRelayOrchestratorProfile.claim.if_generation_match,
+    maximum_claim_creations:
+      browserRelayOrchestratorProfile.claim.maximum_creations,
+    claim_precedes_first_cloud_mutation:
+      browserRelayOrchestratorProfile.claim.claim_precedes_first_cloud_mutation,
+    baseline_reobserved_after_claim:
+      browserRelayOrchestratorProfile.claim.baseline_reobserved_after_claim,
+    ambiguous_claim_stops_before_edge_mutation:
+      browserRelayOrchestratorProfile.recovery.ambiguous_claim_stops_before_edge_mutation,
+    claim_retained: browserRelayOrchestratorProfile.claim.retained,
+    retry_authorized: browserRelayOrchestratorProfile.claim.retry_authorized,
+    deletion_authorized: browserRelayOrchestratorProfile.claim.deletion_authorized,
+    maximum_edge_window_executions:
+      browserRelayOrchestratorProfile.execution.maximum_edge_window_executions,
+    maximum_public_window_milliseconds:
+      browserRelayOrchestratorProfile.execution.maximum_public_window_milliseconds,
+    maximum_callback_execution_milliseconds:
+      browserRelayOrchestratorProfile.execution.maximum_callback_execution_milliseconds,
+    orchestration_stages: browserRelayOrchestratorProfile.execution.stages.length,
+    automatic_edge_rollback:
+      browserRelayOrchestratorProfile.recovery.automatic_edge_rollback,
+    live_preflight_count:
+      browserRelayOrchestratorProfile.evidence.live_preflight_count,
+    live_execution_count:
+      browserRelayOrchestratorProfile.evidence.live_execution_count,
+    claim_creations: browserRelayOrchestratorProfile.evidence.claim_creations,
+    cloud_mutations: browserRelayOrchestratorProfile.evidence.cloud_mutations,
+    public_ingress_changes:
+      browserRelayOrchestratorProfile.evidence.public_ingress_changes,
+    acceptance_executions:
+      browserRelayOrchestratorProfile.evidence.acceptance_executions,
+    credentials_committed:
+      browserRelayOrchestratorProfile.evidence.credentials_committed,
+    raw_cloud_responses_committed:
+      browserRelayOrchestratorProfile.evidence.raw_cloud_responses_committed,
+    browser_diagnostics_committed:
+      browserRelayOrchestratorProfile.evidence.browser_diagnostics_committed,
+  }, 'evidence.browser_relay_orchestrator');
   const browserRelayImageManifest = manifest.evidence.browser_relay_image;
   const relayServicesProfilePath = committedEvidencePath(
     stagingRoot,
@@ -6536,6 +6691,7 @@ export function validateCommittedEvidence(
     browserRelayRunnerProfile,
     browserRelayRollbackProfile,
     browserRelayRollbackResult,
+    browserRelayOrchestratorProfile,
     relayServicesProfile,
     relayServicesV1Profile,
     relayServicesV2Profile,
