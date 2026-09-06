@@ -48,8 +48,9 @@ implemented across several repositories.
   its real three-engine offline CI smoke is implementation evidence only.
 - [`../infrastructure/staging/browser-relay-page/`](../infrastructure/staging/browser-relay-page/)
   — dormant memory-only Firebase Auth, real App Check and digest-pinned MiakAPI
-  page host with a deterministic two-file artifact; deliberately not wired to
-  the runner until independent fixture and cloud observations can be combined.
+  page host with a deterministic two-file artifact loaded in all three browser
+  engines by an offline CI gate; deliberately not wired to the runner until
+  independent fixture and cloud observations can be combined.
 - [`../infrastructure/staging/browser-relay-monitoring/`](../infrastructure/staging/browser-relay-monitoring/)
   — allow-listed read-only monitoring contract whose post-merge preflight pins
   six metric surfaces, the existing EUR 10 budget and the private boundary.

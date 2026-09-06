@@ -29,13 +29,13 @@ export * from './boundary.mjs';
 
 export const BROWSER_RELAY_PAGE_PROFILE_PATH = 'browser-relay-page/profile.json';
 export const BROWSER_RELAY_PAGE_PROFILE_SHA256 =
-  '73fd831b2f372e50206d024de031ce40f6a577b97767f385d14dbebcd2824d9c';
+  '2e9e809d8bb9b88a4e96b51a258d948e6f0d1467c38adaca8c6582e132113e1e';
 export const BROWSER_RELAY_PLAN_SHA256 =
   'dbf0e73a20875353f28466b4fe1edcb8e8d1fc6604d979002b36a7610c36aa9a';
 export const BROWSER_RELAY_RUNNER_PROFILE_SHA256 =
   '72b688ccd577f7b40b21d9f874bbca555324eaec1fbf2acbc87dee35cf83a536';
 export const MIAKAPI_COMMIT = 'a798a746847ba3d5c16128a08b33353269e770a4';
-export const IMPLEMENTATION_BASE_COMMIT = 'a065f05775890d503fc9756c6fd4e4247ebea3da';
+export const IMPLEMENTATION_BASE_COMMIT = 'aba6e2f2167e0ab6389004a7cd299ca7fb1d6c2a';
 export const MIAKAPI_SOURCE_ARCHIVE_SHA256 =
   '499ba3b4205538691341aaa8cea76f9d232308aed01522cc5f35aebcf9cc9c5a';
 export const MIAKAPI_PACKAGE_SHA256 =
@@ -48,7 +48,15 @@ export const MIAKAPI_BUN_LOCK_SHA256 =
   '0ba5e8d70a2e43ed61928fdf38ac1961a78d48112c9209c92c60354042ac7595';
 export const FIREBASE_SDK_VERSION = '12.18.0';
 export const VITE_VERSION = '8.2.2';
+export const PLAYWRIGHT_VERSION = '1.62.1';
 export const BUN_VERSION = '1.2.23';
+export const NODE_VERSION = '22.22.0';
+export const DEPENDENCY_LOCK_SHA256 =
+  'f5836463d6c52b4c1772b834f0f2fac7ba7e97afe681439599a72957d9611bb3';
+export const OFFLINE_SMOKE_SHA256 =
+  '7ba4c249b6e6817e1fbd6c09c4c39b85cd7f722e2a4b46ba7a4e76f8c021939d';
+export const CI_WORKFLOW_SHA256 =
+  'e87ff37d17e3df650841181f31ebf09e8be07082b64114780fcb36914286174b';
 
 const MAXIMUM_PROFILE_BYTES = 32 * 1024;
 const SHA256 = /^[0-9a-f]{64}$/u;
@@ -102,10 +110,10 @@ function validateProfileValue(value) {
   ], 'profile');
   exact(profile, expectedProfile, 'profile');
   exact(profile.schema, 'miakapp.staging-browser-relay-page-profile/1', 'profile.schema');
-  exact(profile.revision, 1, 'profile.revision');
+  exact(profile.revision, 2, 'profile.revision');
   exact(
     profile.state,
-    'closed_page_host_and_artifact_implemented_not_wired_not_published_not_executed',
+    'three_engine_dormant_artifact_ci_implemented_not_wired_not_published_not_executed',
     'profile.state',
   );
   exactKeys(profile.target, [
@@ -140,7 +148,12 @@ function validateProfileValue(value) {
     'miakapi_bun_lock_sha256',
     'firebase_sdk_version',
     'vite_version',
+    'playwright_version',
     'bun_version',
+    'node_version',
+    'dependency_lock_sha256',
+    'offline_smoke_sha256',
+    'ci_workflow_sha256',
     'boundary_source_sha256',
     'runtime_source_sha256',
     'page_source_sha256',
@@ -160,6 +173,9 @@ function validateProfileValue(value) {
     'miakapi_bundle_sha256',
     'miakapi_browser_entry_sha256',
     'miakapi_bun_lock_sha256',
+    'dependency_lock_sha256',
+    'offline_smoke_sha256',
+    'ci_workflow_sha256',
     'boundary_source_sha256',
     'runtime_source_sha256',
     'page_source_sha256',
@@ -188,11 +204,21 @@ function validateProfileValue(value) {
   exact(profile.pins.firebase_sdk_version, FIREBASE_SDK_VERSION,
     'profile.pins.firebase_sdk_version');
   exact(profile.pins.vite_version, VITE_VERSION, 'profile.pins.vite_version');
+  exact(profile.pins.playwright_version, PLAYWRIGHT_VERSION,
+    'profile.pins.playwright_version');
   exact(profile.pins.bun_version, BUN_VERSION, 'profile.pins.bun_version');
+  exact(profile.pins.node_version, NODE_VERSION, 'profile.pins.node_version');
+  exact(profile.pins.dependency_lock_sha256, DEPENDENCY_LOCK_SHA256,
+    'profile.pins.dependency_lock_sha256');
+  exact(profile.pins.offline_smoke_sha256, OFFLINE_SMOKE_SHA256,
+    'profile.pins.offline_smoke_sha256');
+  exact(profile.pins.ci_workflow_sha256, CI_WORKFLOW_SHA256,
+    'profile.pins.ci_workflow_sha256');
   exactKeys(profile.page, [
     'private_input_schema',
     'safe_observation_schema',
     'browser_order',
+    'three_engine_dormant_artifact_ci',
     'runner_compatible',
     'api',
     'firebase_auth_persistence',
@@ -210,6 +236,8 @@ function validateProfileValue(value) {
   exact(profile.page.safe_observation_schema, PAGE_OBSERVATION_SCHEMA,
     'profile.page.safe_observation_schema');
   exact(profile.page.browser_order, BROWSER_ORDER, 'profile.page.browser_order');
+  exact(profile.page.three_engine_dormant_artifact_ci, true,
+    'profile.page.three_engine_dormant_artifact_ci');
   exact(profile.page.runner_compatible, false, 'profile.page.runner_compatible');
   exact(profile.page.api, [
     'initialize',

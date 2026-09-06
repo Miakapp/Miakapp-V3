@@ -195,8 +195,9 @@ test('pins a dormant page host with two independent cleanup reserves and no auth
   const profile = validateBrowserRelayPageProfile();
   assert.equal(
     profile.state,
-    'closed_page_host_and_artifact_implemented_not_wired_not_published_not_executed',
+    'three_engine_dormant_artifact_ci_implemented_not_wired_not_published_not_executed',
   );
+  assert.equal(profile.page.three_engine_dormant_artifact_ci, true);
   assert.equal(profile.page.runner_compatible, false);
   assert.equal(profile.page.app_check_persistence, 'memory_only_indexeddb_blocked');
   assert.equal(profile.authority.hosting_publication_authorized, false);
