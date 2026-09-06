@@ -381,6 +381,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`browser-relay-edge/`](browser-relay-edge/) | Dormant reversible control-plane edge state machine | Pins the atomic staging issuer/origin profile and public-last/private-first transition ordering; exposes no CLI and grants no cloud mutation |
 | [`browser-relay-runner/`](browser-relay-runner/) | Dormant operator-local three-engine runner | Real offline CI smoke launches Chromium, Firefox and WebKit sequentially; private input stays in memory, output is closed, and no live run or cloud mutation is authorized |
 | [`browser-relay-page/`](browser-relay-page/) | Dormant Firebase/MiakAPI browser host and deterministic artifact | Builds a two-file no-store artifact from a digest-pinned vendored MiakAPI module and loads it in three engines in CI; its phased page API is intentionally not runner-compatible and grants no publication or live authority |
+| [`browser-relay-fixture/`](browser-relay-fixture/) | Dormant single synthetic-Home lifecycle controller | Proves initial absence before creation, configures the fixed MiakAPI coordinator, emits one in-memory custom token per browser, supports one relay rotation and requires coordinator-first cleanup plus verified final absence; no cloud adapter or live authority is present |
 | [`browser-relay-monitoring/`](browser-relay-monitoring/) | Closed allow-listed monitoring preflight and evaluator | One post-merge read-only observation verified all six metric surfaces, the existing EUR 10 budget and the private edge/relay boundary; no mutation or acceptance execution occurred |
 | [`browser-relay-rollback/`](browser-relay-rollback/) | Closed-target rollback preflight | Post-merge observation verified all ten private-target facts and a four-resource Terraform no-change plan; its sanitized result records zero mutation, public-ingress change and acceptance execution |
 | [`browser-relay-orchestrator/`](browser-relay-orchestrator/) | Dormant single-use edge orchestrator | Post-merge read-only preflight proved the claim absent and the rollback target private and converged; no claim, mutation, public edge or live acceptance has run |
@@ -738,6 +739,18 @@ execution.
 Its separate keyless CI job does load the dormant artifact with Chromium,
 Firefox and WebKit while blocking every non-artifact request; this is offline
 implementation evidence, not a live acceptance execution.
+The adjacent [`browser-relay-fixture/`](browser-relay-fixture/) package now
+implements the fixed application fixture lifecycle behind an exact injected
+boundary. It refuses both creation and deletion unless all fixture domains were
+first proved empty, so an existing namespace can never be mistaken for
+disposable test data. After that proof, partial or ambiguous creation remains
+recoverable. The controller confines the Firebase identity token and Home Key
+to memory, configures the exact `acceptance.temperature` state, user ACL and
+idempotent `acceptance.set` function, and issues fresh custom tokens only in the
+reviewed Chromium/Firefox/WebKit order. Cleanup stops the coordinator before
+data removal and must observe every fixed domain absent. The package has no
+cloud transport, ambient credential lookup, CLI, retry loop or live authority;
+no staging mutation was made.
 The adjacent [`browser-relay-operation/`](browser-relay-operation/) package now
 closes the remaining ordering gap without executing it. The claimed edge owns
 the control-plane transition. Inside that single window the operation creates
