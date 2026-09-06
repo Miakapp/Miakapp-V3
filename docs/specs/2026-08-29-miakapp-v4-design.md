@@ -929,9 +929,13 @@ vertical-slice exit gates.
    grants no live authority. Its first source-specific producer now derives the
    browser-owned receipt from ordered cumulative page/state/call facts and
    native persisted lifecycle events instead of accepting assertion booleans.
-   It explicitly leaves the four-input fixture capacity, 600-second Chromium
-   budget, complete page scenario, independent cloud observers and Playwright
-   bridge open before the one allowed execution.
+   A separate closed scenario fixture now supplies the required fourth page
+   input from a second exact synthetic Firebase identity, extends the one
+   coordinator's state access to both identities and requires both cleanup
+   domains to reach absence. The replacement-identity cloud adapter,
+   600-second Chromium budget, complete page scenario, independent cloud
+   observers and Playwright bridge remain open before the one allowed
+   execution.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain
