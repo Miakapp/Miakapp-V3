@@ -1,0 +1,103 @@
+{
+  "schema": "miakapp.staging-browser-relay-services-memory-recovery-attempt-result/1",
+  "state": "private_services_created_provider_default_drift_reconciliation_required",
+  "project_id": "miakapp-v4-staging",
+  "project_number": "1072737219170",
+  "region": "europe-west9",
+  "observed_at": "2026-09-06T02:25:17.000Z",
+  "repository_commit": "20df3c92b02e06e7ebab574f0e7d70e2d85188aa",
+  "profile_sha256": "0f8b966a7bf412156a83b0ddc76996abc6b49c28d81cda0f3e4d2b1c16912733",
+  "metadata_sha256": "a76b9efb02a2b11fe618fd96e49bc831cd0441874c2c8a84bf7f7160905be755",
+  "terraform_plan_sha256": "41c90aaed50091627579797053d98e954dd8a6830d8d3c9f8b7178bb44d10831",
+  "terraform_plan_json_sha256": "e678dd2bdf7de766602ce4b2849f1a82f7ce6901e17e9bc10a27c69aec619b11",
+  "baseline_sha256": "468977250bd5d59036c28c493e6cf8f07e64bb667589da838cf7d75c891deabe",
+  "claim": {
+    "object": "terraform/browser-relay-services/operations/private-bootstrap-memory-recovery-v1.json",
+    "generation": "1788661237671763",
+    "size_bytes": 1375,
+    "sha256": "9f8d46aea073062fce6334dcb8c5b3f128d880624878908e4c9b09db06ed61b1",
+    "attempted_at": "2026-09-06T02:20:37.601Z",
+    "retry_authorized": false,
+    "deletion_authorized": false,
+    "raw_contents_committed": false
+  },
+  "failure": {
+    "category": "cloud_run_binary_authorization_false_not_round_tripped",
+    "stage": "post_apply_convergence_plan",
+    "terraform_plan_exit_code": 2,
+    "provider": "registry.terraform.io/hashicorp/google",
+    "provider_version": "8.1.0",
+    "field": "binary_authorization.use_default",
+    "configured_value": false,
+    "observed_value": "omitted",
+    "planned_creates": 0,
+    "planned_updates": 2,
+    "planned_deletes": 0,
+    "affected_resources": [
+      "google_cloud_run_v2_service.relay[\"relay-a\"]",
+      "google_cloud_run_v2_service.relay[\"relay-b\"]"
+    ]
+  },
+  "terraform_state": {
+    "object": "terraform/browser-relay-services/default.tfstate",
+    "generation": "1788661250283535",
+    "size_bytes": 37259,
+    "sha256": "a91d739f31a01854183b98a8fdc36c58365d166d8c721471ca12b27251596e76",
+    "terraform_version": "1.11.3",
+    "serial": 3,
+    "lineage_sha256": "3d99b2335a31d39b341036981987054211455d6ee4acd229cc0459cd0995807f",
+    "resource_addresses": [
+      "data.terraform_remote_state.workload[0]",
+      "google_cloud_run_v2_service.relay[\"relay-a\"]",
+      "google_cloud_run_v2_service.relay[\"relay-b\"]",
+      "google_service_account.relay[\"runtime\"]",
+      "terraform_data.deployment_guard[\"active\"]"
+    ],
+    "output_names": [
+      "staging_browser_relays"
+    ]
+  },
+  "relays": [
+    {
+      "id": "relay-a",
+      "name": "miakapp-staging-relay-a",
+      "uri": "https://miakapp-staging-relay-a-aczhngqraq-od.a.run.app",
+      "generation": "1",
+      "ready": true,
+      "reconciling": false,
+      "memory": "512Mi",
+      "minimum_instances": 0,
+      "maximum_instances": 1,
+      "public_iam_members": 0
+    },
+    {
+      "id": "relay-b",
+      "name": "miakapp-staging-relay-b",
+      "uri": "https://miakapp-staging-relay-b-aczhngqraq-od.a.run.app",
+      "generation": "1",
+      "ready": true,
+      "reconciling": false,
+      "memory": "512Mi",
+      "minimum_instances": 0,
+      "maximum_instances": 1,
+      "public_iam_members": 0
+    }
+  ],
+  "effects": {
+    "relay_services_created": 2,
+    "relay_services_ready": 2,
+    "runtime_identity_user_managed_keys": 0,
+    "runtime_identity_project_roles": 0,
+    "public_iam_members_created": 0,
+    "live_requests_by_driver": 0,
+    "hosting_releases": 0,
+    "persistent_credentials_created": 0,
+    "stress_test_executed": false
+  },
+  "reconciliation": {
+    "original_plan_replay_authorized": false,
+    "memory_recovery_plan_replay_authorized": false,
+    "claim_deletion_authorized": false,
+    "private_ready_transition_required": true
+  }
+}

@@ -15,12 +15,14 @@ export const ALLOWED_RELAY_SERVICE_FILES = Object.freeze([
   'inventory.mjs',
   'locals.tf',
   'main.tf',
+  'memory-recovery-failure-v1.json',
   'outputs.tf',
   'plan.mjs',
   'plan.sh',
   'profile-v1.json',
   'profile-v2.json',
   'profile-v3.json',
+  'profile-v4.json',
   'profile.json',
   'providers.tf',
   'recovery-apply.mjs',
@@ -28,6 +30,11 @@ export const ALLOWED_RELAY_SERVICE_FILES = Object.freeze([
   'recovery-claim.mjs',
   'recovery-plan.mjs',
   'recovery-plan.sh',
+  'ready-apply.mjs',
+  'ready-apply.sh',
+  'ready-claim.mjs',
+  'ready-plan.mjs',
+  'ready-plan.sh',
   'terraform-cli.tfrc',
   'validate-plan.mjs',
   'variables.tf',
@@ -46,6 +53,7 @@ function exactNames(actual, expected, path) {
 
 const EXECUTABLE_FILES = new Set([
   'apply.sh', 'plan.sh', 'recovery-apply.sh', 'recovery-plan.sh',
+  'ready-apply.sh', 'ready-plan.sh',
 ]);
 
 function validateRegularFile(url, description, executable = false) {
@@ -99,19 +107,31 @@ export function validateRelayServicesRoot(rootUrl) {
 
   const consumedEntrypoints = ['apply.mjs', 'plan.mjs']
     .map((name) => readFileSync(new URL(name, rootUrl), 'utf8'));
+  const consumedRecoveryEntrypoints = ['recovery-apply.mjs', 'recovery-plan.mjs']
+    .map((name) => readFileSync(new URL(name, rootUrl), 'utf8'));
   const recoveryClaim = readFileSync(new URL('recovery-claim.mjs', rootUrl), 'utf8');
   const recoveryApply = readFileSync(new URL('recovery-apply.mjs', rootUrl), 'utf8');
   const recoveryPlan = readFileSync(new URL('recovery-plan.mjs', rootUrl), 'utf8');
+  const readyClaim = readFileSync(new URL('ready-claim.mjs', rootUrl), 'utf8');
+  const readyApply = readFileSync(new URL('ready-apply.mjs', rootUrl), 'utf8');
+  const readyPlan = readFileSync(new URL('ready-plan.mjs', rootUrl), 'utf8');
   if (consumedEntrypoints.some((source) => (
     !source.includes('export const RELAY_SERVICES_BOOTSTRAP_OPERATION_CONSUMED = true')
       || !source.includes('if (RELAY_SERVICES_BOOTSTRAP_OPERATION_CONSUMED)')
   ))
+    || consumedRecoveryEntrypoints.some((source) => (
+      !source.includes('export const RELAY_SERVICES_MEMORY_RECOVERY_OPERATION_CONSUMED = true')
+        || !source.includes('if (RELAY_SERVICES_MEMORY_RECOVERY_OPERATION_CONSUMED)')
+    ))
     || !recoveryClaim.includes("url.searchParams.set('ifGenerationMatch', '0')")
     || !recoveryApply.includes('validateRelayServicesRecoveredInventory')
     || !recoveryPlan.includes('readAndValidateRecoveryRelayServicesPlan')
+    || !readyClaim.includes("url.searchParams.set('ifGenerationMatch', '0')")
+    || !readyApply.includes('validateRelayServicesPrivateReadyInventory')
+    || !readyPlan.includes('readAndValidatePrivateReadyRelayServicesPlan')
     || /gcloud[\s\S]{0,80}(?:run deploy|storage rm)|allUsers|allAuthenticatedUsers/u
-      .test(`${recoveryClaim}\n${recoveryApply}\n${recoveryPlan}`)) {
-    throw new Error('Relay-services recovery source differs from the reviewed one-shot boundary');
+      .test(`${recoveryClaim}\n${recoveryApply}\n${recoveryPlan}\n${readyClaim}\n${readyApply}\n${readyPlan}`)) {
+    throw new Error('Relay-services transition source differs from the reviewed one-shot boundary');
   }
 }
 

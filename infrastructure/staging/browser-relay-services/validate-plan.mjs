@@ -6,10 +6,13 @@ import {
   REGION,
   RELAY_SERVICES_PROFILE_SHA256,
   RELAY_SERVICES_V3_PROFILE_SHA256,
+  RELAY_SERVICES_V4_PROFILE_SHA256,
   TERRAFORM_VERSION,
   bootstrapRelayVariables,
+  privateReadyRelayVariables,
   validateRelayServicesProfile,
   validateRelayServicesV3Profile,
+  validateRelayServicesV4Profile,
 } from './contract.mjs';
 
 const GOOGLE_PROVIDER = 'registry.terraform.io/hashicorp/google';
@@ -441,7 +444,7 @@ function validateRecoveryResourceChanges(plan, profile) {
   exact(guard.change.before.input, previousInput, 'Previous relay deployment guard input');
   exact(guard.change.before.output, previousInput, 'Previous relay deployment guard output');
   exact(guard.change.before.triggers_replace, null, 'Previous relay deployment guard replacement');
-  validateGuard(guard, profile, RELAY_SERVICES_PROFILE_SHA256);
+  validateGuard(guard, profile, RELAY_SERVICES_V4_PROFILE_SHA256);
 }
 
 function validateRecoveryPriorState(plan) {
@@ -470,7 +473,7 @@ function validateRecoveryPriorState(plan) {
 }
 
 export function validateRecoveryRelayServicesPlan(plan) {
-  const profile = validateRelayServicesProfile();
+  const profile = validateRelayServicesV4Profile();
   if (!plainObject(plan) || plan.format_version !== '1.2'
     || plan.terraform_version !== TERRAFORM_VERSION
     || plan.applyable !== true || plan.complete !== true || plan.errored !== false
@@ -529,4 +532,327 @@ export function readAndValidateInitialRelayServicesPlan(path) {
     return reject('Terraform relay-services plan JSON is invalid');
   }
   return validateInitialRelayServicesPlan(plan);
+}
+
+function differencePaths(before, after, path = '', differences = []) {
+  if (isDeepStrictEqual(before, after)) return differences;
+  const beforeObject = plainObject(before);
+  const afterObject = plainObject(after);
+  if (beforeObject && afterObject) {
+    for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
+      differencePaths(before[key], after[key], path === '' ? key : `${path}.${key}`, differences);
+    }
+    return differences;
+  }
+  if (Array.isArray(before) && Array.isArray(after) && before.length === after.length) {
+    before.forEach((entry, index) => {
+      differencePaths(entry, after[index], `${path}[${index}]`, differences);
+    });
+    return differences;
+  }
+  differences.push(path);
+  return differences;
+}
+
+function validateReadyServiceSnapshot(value, service, profile, audience, description) {
+  if (!plainObject(value) || !Array.isArray(value.template) || value.template.length !== 1
+    || !Array.isArray(value.template[0].containers)
+    || value.template[0].containers.length !== 1) {
+    reject(`${description} is malformed`);
+  }
+  const template = value.template[0];
+  const container = template.containers[0];
+  exact(value.project, PROJECT_ID, `${description}.project`);
+  exact(value.location, REGION, `${description}.location`);
+  exact(value.name, service.name, `${description}.name`);
+  exact(value.ingress, profile.cloud_run.ingress, `${description}.ingress`);
+  exact(value.labels, {
+    component: 'browser-relay',
+    environment: 'staging',
+    'managed-by': 'terraform',
+    product: 'miakapp-v4',
+    relay: service.id,
+  }, `${description}.labels`);
+  exact(value.deletion_protection, false, `${description}.deletion_protection`);
+  exact(value.default_uri_disabled, false, `${description}.default_uri_disabled`);
+  exact(value.invoker_iam_disabled, false, `${description}.invoker_iam_disabled`);
+  exact(value.iap_enabled, false, `${description}.iap_enabled`);
+  exact(value.launch_stage, 'GA', `${description}.launch_stage`);
+  exact(value.binary_authorization, [], `${description}.binary_authorization`);
+  exact(value.annotations, {}, `${description}.annotations`);
+  exact(value.build_config, [], `${description}.build_config`);
+  exact(value.custom_audiences, [], `${description}.custom_audiences`);
+  exact(value.tags, null, `${description}.tags`);
+  exact(template.execution_environment, profile.cloud_run.execution_environment,
+    `${description}.execution_environment`);
+  exact(template.service_account, profile.runtime_identity.email, `${description}.service_account`);
+  exact(template.max_instance_request_concurrency, profile.cloud_run.concurrency,
+    `${description}.concurrency`);
+  exact(template.scaling, [{
+    max_instance_count: profile.cloud_run.maximum_instances,
+    min_instance_count: profile.cloud_run.minimum_instances,
+  }], `${description}.scaling`);
+  exact(template.timeout, `${profile.cloud_run.request_timeout_seconds}s`, `${description}.timeout`);
+  exact(template.session_affinity, false, `${description}.session_affinity`);
+  exact(template.volumes, [], `${description}.volumes`);
+  exact(template.vpc_access, [], `${description}.vpc_access`);
+  exact(template.annotations, {}, `${description}.template.annotations`);
+  exact(container.name, 'relay', `${description}.container.name`);
+  exact(container.image, profile.image.digest_reference, `${description}.container.image`);
+  exact(container.command, [], `${description}.container.command`);
+  exact(container.args, [], `${description}.container.args`);
+  exact(container.depends_on, [], `${description}.container.depends_on`);
+  exact(container.volume_mounts, [], `${description}.container.volume_mounts`);
+  exact(container.ports, [{ container_port: profile.cloud_run.port, name: 'http1' }],
+    `${description}.container.ports`);
+  exact(container.resources, [{
+    cpu_idle: true,
+    limits: { cpu: profile.cloud_run.cpu, memory: profile.cloud_run.memory },
+    startup_cpu_boost: false,
+  }], `${description}.container.resources`);
+  exact(container.startup_probe, [{
+    failure_threshold: 10,
+    grpc: [],
+    http_get: [{ http_headers: [], path: '/ping', port: profile.cloud_run.port }],
+    initial_delay_seconds: 0,
+    period_seconds: 2,
+    tcp_socket: [],
+    timeout_seconds: 2,
+  }], `${description}.container.startup_probe`);
+  const environment = expectedEnvironment(profile, service);
+  environment.MIAKAPP_RELAY_AUDIENCE = audience;
+  exact(normalizeEnvironment(container.env, description), environment, `${description}.environment`);
+  exact(value.traffic, [{
+    percent: 100,
+    revision: '',
+    tag: '',
+    type: 'TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST',
+  }], `${description}.traffic`);
+}
+
+function validateReadyResourceDrift(plan, profile) {
+  if (!Array.isArray(plan.resource_drift) || plan.resource_drift.length !== 2) {
+    reject('Terraform private-ready plan must contain the two reviewed refresh normalizations');
+  }
+  const expectedPaths = [
+    'annotations',
+    'custom_audiences',
+    'template[0].annotations',
+    'template[0].containers[0].args',
+    'template[0].containers[0].command',
+    'template[0].containers[0].depends_on',
+  ];
+  const byAddress = new Map(plan.resource_drift.map((change) => [change.address, change]));
+  if (byAddress.size !== 2) reject('Terraform private-ready refresh contains duplicate resources');
+  for (const service of profile.services) {
+    const address = `google_cloud_run_v2_service.relay[${JSON.stringify(service.id)}]`;
+    const change = byAddress.get(address);
+    if (!plainObject(change) || change.mode !== 'managed'
+      || change.type !== 'google_cloud_run_v2_service'
+      || change.provider_name !== GOOGLE_PROVIDER
+      || !isDeepStrictEqual(change.change?.actions, ['update'])) {
+      reject(`${address} refresh drift is not the reviewed provider normalization`);
+    }
+    exact(
+      differencePaths(change.change.before, change.change.after).sort(),
+      expectedPaths,
+      `${address} refresh normalization paths`,
+    );
+    validateReadyServiceSnapshot(
+      change.change.after,
+      service,
+      profile,
+      service.bootstrap_audience,
+      `${address}.refreshed`,
+    );
+  }
+}
+
+function privateReadyGuardInput(profile, profileSha256, phase, audiences) {
+  return {
+    deployment_phase: phase,
+    profile_sha256: profileSha256,
+    relay_audiences: audiences,
+    relay_image: profile.image.digest_reference,
+    relay_source_commit: profile.pins.miakapp_server_commit,
+  };
+}
+
+function validateReadyResourceChanges(plan, profile) {
+  const expectedActions = {
+    'google_cloud_run_v2_service.relay["relay-a"]': ['update'],
+    'google_cloud_run_v2_service.relay["relay-b"]': ['update'],
+    'google_service_account.relay["runtime"]': ['no-op'],
+    'terraform_data.deployment_guard["active"]': ['update'],
+  };
+  if (!Array.isArray(plan.resource_changes)) reject('Private-ready resource changes are missing');
+  const byAddress = new Map();
+  for (const change of plan.resource_changes) {
+    if (!plainObject(change) || typeof change.address !== 'string'
+      || byAddress.has(change.address) || expectedActions[change.address] === undefined) {
+      reject('Private-ready plan contains an unreviewed resource change');
+    }
+    byAddress.set(change.address, change);
+    exact(change.mode, 'managed', `${change.address}.mode`);
+    exact(change.type, PLANNED_RESOURCES[change.address], `${change.address}.type`);
+    exact(change.provider_name,
+      change.type === 'terraform_data' ? TERRAFORM_PROVIDER : GOOGLE_PROVIDER,
+      `${change.address}.provider`);
+    exact(change.change?.actions, expectedActions[change.address], `${change.address}.actions`);
+    if (change.change?.importing !== undefined) reject('Private-ready plan contains an import');
+  }
+  exact([...byAddress.keys()].sort(), Object.keys(expectedActions).sort(),
+    'Private-ready resource addresses');
+  for (const service of profile.services) {
+    const address = `google_cloud_run_v2_service.relay[${JSON.stringify(service.id)}]`;
+    const change = byAddress.get(address);
+    validateReadyServiceSnapshot(
+      change.change.before,
+      service,
+      profile,
+      service.bootstrap_audience,
+      `${address}.before`,
+    );
+    validateReadyServiceSnapshot(
+      change.change.after,
+      service,
+      profile,
+      service.ready_audience,
+      `${address}.after`,
+    );
+    exact(
+      differencePaths(change.change.before, change.change.after).sort(),
+      ['template[0].containers[0].env[16].value'],
+      `${address} private-ready changes`,
+    );
+  }
+  const serviceAccount = byAddress.get('google_service_account.relay["runtime"]');
+  if (!plainObject(serviceAccount.change.before)
+    || !isDeepStrictEqual(serviceAccount.change.before, serviceAccount.change.after)) {
+    reject('Private-ready runtime identity must remain an exact no-op');
+  }
+  validateServiceAccount(serviceAccount, profile);
+  const guard = byAddress.get('terraform_data.deployment_guard["active"]');
+  const previous = validateRelayServicesV4Profile();
+  const previousInput = privateReadyGuardInput(
+    previous,
+    RELAY_SERVICES_V4_PROFILE_SHA256,
+    'private_bootstrap',
+    bootstrapRelayVariables(previous).relay_audiences,
+  );
+  const nextInput = privateReadyGuardInput(
+    profile,
+    RELAY_SERVICES_PROFILE_SHA256,
+    'private_ready',
+    privateReadyRelayVariables(profile).relay_audiences,
+  );
+  if (!plainObject(guard.change.before) || !plainObject(guard.change.after)
+    || typeof guard.change.before.id !== 'string' || guard.change.before.id.length < 16
+    || guard.change.before.id !== guard.change.after.id) {
+    reject('Private-ready deployment guard identity is invalid');
+  }
+  exact(guard.change.before.input, previousInput, 'Private-ready previous guard input');
+  exact(guard.change.before.output, previousInput, 'Private-ready previous guard output');
+  exact(guard.change.before.triggers_replace, null, 'Private-ready previous guard replacement');
+  exact(guard.change.after.input, nextInput, 'Private-ready next guard input');
+  exact(guard.change.after.triggers_replace, null, 'Private-ready next guard replacement');
+}
+
+function validateReadyPriorState(plan) {
+  const root = plan.prior_state?.values?.root_module;
+  if (!plainObject(root) || root.child_modules !== undefined || !Array.isArray(root.resources)) {
+    reject('Private-ready prior state must contain one flat reviewed root module');
+  }
+  const expected = {
+    'data.terraform_remote_state.workload[0]': ['data', 'terraform_remote_state', TERRAFORM_PROVIDER],
+    'google_cloud_run_v2_service.relay["relay-a"]': ['managed', 'google_cloud_run_v2_service', GOOGLE_PROVIDER],
+    'google_cloud_run_v2_service.relay["relay-b"]': ['managed', 'google_cloud_run_v2_service', GOOGLE_PROVIDER],
+    'google_service_account.relay["runtime"]': ['managed', 'google_service_account', GOOGLE_PROVIDER],
+    'terraform_data.deployment_guard["active"]': ['managed', 'terraform_data', TERRAFORM_PROVIDER],
+  };
+  const resources = new Map(root.resources.map((resource) => [resource.address, resource]));
+  if (resources.size !== root.resources.length) reject('Private-ready prior state has duplicates');
+  exact([...resources.keys()].sort(), Object.keys(expected).sort(), 'Private-ready prior resources');
+  for (const [address, [mode, type, provider]] of Object.entries(expected)) {
+    const resource = resources.get(address);
+    exact(resource.mode, mode, `${address}.prior mode`);
+    exact(resource.type, type, `${address}.prior type`);
+    exact(resource.provider_name, provider, `${address}.prior provider`);
+  }
+}
+
+function validateReadyChecks(plan) {
+  if (!Array.isArray(plan.checks)) reject('Private-ready checks are missing');
+  const expected = Object.fromEntries(Object.entries(EXPECTED_CHECKS).map(([address, check]) => [
+    address,
+    {
+      status: 'pass',
+      instances: Object.fromEntries(Object.keys(check.instances).map((instance) => [instance, 'pass'])),
+    },
+  ]));
+  const observed = {};
+  for (const check of plan.checks) {
+    const address = check.address?.to_display;
+    if (typeof address !== 'string' || observed[address] !== undefined
+      || expected[address] === undefined || !Array.isArray(check.instances)) {
+      reject('Private-ready plan contains an unreviewed check');
+    }
+    observed[address] = {
+      status: check.status,
+      instances: Object.fromEntries(check.instances.map((instance) => [
+        instance.address?.to_display,
+        instance.status,
+      ])),
+    };
+  }
+  exact(observed, expected, 'Private-ready Terraform checks');
+}
+
+export function validatePrivateReadyRelayServicesPlan(plan) {
+  const profile = validateRelayServicesProfile();
+  if (!plainObject(plan) || plan.format_version !== '1.2'
+    || plan.terraform_version !== TERRAFORM_VERSION
+    || plan.applyable !== true || plan.complete !== true || plan.errored !== false) {
+    reject('Terraform private-ready plan format or version is invalid');
+  }
+  rejectForbiddenValues(plan.variables);
+  rejectForbiddenValues(plan.resource_changes);
+  rejectForbiddenValues(plan.planned_values);
+  rejectForbiddenValues(plan.resource_drift);
+  exact(plan.variables, Object.fromEntries(Object.entries(privateReadyRelayVariables(profile))
+    .map(([name, value]) => [name, { value }])), 'Terraform private-ready variables');
+  validateConfiguration(plan);
+  validateReadyResourceDrift(plan, profile);
+  validateReadyResourceChanges(plan, profile);
+  validatePlannedValues(plan);
+  validateReadyPriorState(plan);
+  validateReadyChecks(plan);
+  return Object.freeze({
+    create: 0,
+    update: 3,
+    no_op: 1,
+    delete: 0,
+    replace: 0,
+    import: 0,
+    relay_services_updated: 2,
+    service_accounts_unchanged: 1,
+    provider_refresh_normalizations: 2,
+    public_iam_members: 0,
+    live_requests: 0,
+    resource_addresses: Object.freeze(Object.keys(PLANNED_RESOURCES).sort()),
+  });
+}
+
+export function readAndValidatePrivateReadyRelayServicesPlan(path) {
+  const bytes = readFileSync(path);
+  if (bytes.byteLength === 0 || bytes.byteLength > MAXIMUM_PLAN_BYTES) {
+    reject('Terraform private-ready plan JSON size is invalid');
+  }
+  let plan;
+  try {
+    plan = JSON.parse(bytes.toString('utf8'));
+  } catch {
+    return reject('Terraform private-ready plan JSON is invalid');
+  }
+  return validatePrivateReadyRelayServicesPlan(plan);
 }

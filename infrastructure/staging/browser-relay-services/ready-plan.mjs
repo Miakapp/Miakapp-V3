@@ -10,11 +10,11 @@ import { isDeepStrictEqual } from 'node:util';
 import {
   PROJECT_ID,
   assertSafeWorkloadEnvironment,
-  bootstrapRelayVariables,
-  buildRelayServicesRecoveryPlanMetadata,
+  buildRelayServicesPrivateReadyPlanMetadata,
   canonicalJson,
-  createPrivateRelayServicesRecoveryBundle,
-  relayServicesRecoveryAuthorization,
+  createPrivateRelayServicesReadyBundle,
+  privateReadyRelayVariables,
+  relayServicesPrivateReadyAuthorization,
   verifyExactMain,
   writePrivateFile,
 } from './contract.mjs';
@@ -31,44 +31,45 @@ import {
 import { validateRelayServicesRoot } from './guard.mjs';
 import {
   observeRelayServicesInventory,
-  validateRelayServicesRecoveryBaseline,
+  validateRelayServicesPrivateReadyBaseline,
 } from './inventory.mjs';
 import {
-  observePinnedOriginalRelayBootstrapClaim,
-} from './recovery-claim.mjs';
-import {
-  readAndValidateRecoveryRelayServicesPlan,
-} from './validate-plan.mjs';
+  observePinnedPrivateReadyPrerequisiteClaims,
+  observeRelayPrivateReadyClaimAbsent,
+} from './ready-claim.mjs';
+import { readAndValidatePrivateReadyRelayServicesPlan } from './validate-plan.mjs';
 
-const PLAN_CONFIRMATION = 'MIAKAPP_STAGING_RELAY_SERVICES_RECOVERY_PLAN_CONFIRMATION';
-export const RELAY_SERVICES_MEMORY_RECOVERY_OPERATION_CONSUMED = true;
+const PLAN_CONFIRMATION = 'MIAKAPP_STAGING_RELAY_SERVICES_READY_PLAN_CONFIRMATION';
 process.umask(0o077);
 
+async function observeBaseline(session) {
+  return validateRelayServicesPrivateReadyBaseline({
+    schema: 'miakapp.staging-browser-relay-services-private-ready-baseline/1',
+    inventory: await observeRelayServicesInventory(session),
+    private_ready_claim: await observeRelayPrivateReadyClaimAbsent(session),
+  });
+}
+
 async function main() {
-  if (RELAY_SERVICES_MEMORY_RECOVERY_OPERATION_CONSUMED) {
-    throw new Error('The relay memory-recovery planner is consumed after its single attempt; use the private-ready transition');
-  }
   if (process.argv.length !== 3 || process.argv[2] === undefined) {
-    throw new Error(`Usage: ${PLAN_CONFIRMATION}=${PROJECT_ID} ./recovery-plan.sh <private-parent>`);
+    throw new Error(`Usage: ${PLAN_CONFIRMATION}=${PROJECT_ID} ./ready-plan.sh <private-parent>`);
   }
   assertSafeWorkloadEnvironment(process.env, PLAN_CONFIRMATION);
   if (process.env[PLAN_CONFIRMATION] !== PROJECT_ID) {
-    throw new Error(`Set ${PLAN_CONFIRMATION}=${PROJECT_ID} to acknowledge the exact relay recovery target`);
+    throw new Error(`Set ${PLAN_CONFIRMATION}=${PROJECT_ID} to acknowledge the exact private-ready target`);
   }
   validateRelayServicesRoot(new URL('./', import.meta.url));
   validateToolchain();
   validateStagingManifest();
   const repositoryCommit = verifyExactMain(repositoryRoot);
   const session = await verifiedOperatorSession();
-  const baseline = validateRelayServicesRecoveryBaseline(
-    await observeRelayServicesInventory(session),
-  );
-  await observePinnedOriginalRelayBootstrapClaim(session);
+  const baseline = await observeBaseline(session);
+  await observePinnedPrivateReadyPrerequisiteClaims(session);
 
-  const bundle = createPrivateRelayServicesRecoveryBundle(process.argv[2], repositoryRoot);
-  const terraformData = createTerraformData(bundle, 'memory-recovery-plan');
+  const bundle = createPrivateRelayServicesReadyBundle(process.argv[2], repositoryRoot);
+  const terraformData = createTerraformData(bundle, 'private-ready-plan');
   try {
-    const variables = bootstrapRelayVariables();
+    const variables = privateReadyRelayVariables();
     const variablesBytes = Buffer.from(canonicalJson(variables), 'utf8');
     const variablesPath = join(bundle, 'relay-services.auto.tfvars.json');
     writePrivateFile(variablesPath, variablesBytes);
@@ -93,7 +94,7 @@ async function main() {
       description: 'terraform-validate',
     });
 
-    const planPath = join(bundle, 'relay-services-memory-recovery.tfplan');
+    const planPath = join(bundle, 'relay-services-private-ready.tfplan');
     const planned = run('terraform', [
       'plan',
       '-input=false',
@@ -107,10 +108,10 @@ async function main() {
       env: environment,
       allowedStatuses: [2],
       diagnosticDirectory: bundle,
-      description: 'terraform-recovery-plan',
+      description: 'terraform-private-ready-plan',
     });
     if (planned.status !== 2) {
-      throw new Error('Private relay recovery plan must contain the reviewed bounded delta');
+      throw new Error('Private-ready plan must contain the reviewed three in-place updates');
     }
     chmodSync(planPath, 0o400);
 
@@ -118,22 +119,20 @@ async function main() {
       cwd: relayServicesRoot,
       env: environment,
       diagnosticDirectory: bundle,
-      description: 'terraform-recovery-show',
+      description: 'terraform-private-ready-show',
     });
     const planJsonBytes = Buffer.from(shown.stdout);
-    const planJsonPath = join(bundle, 'relay-services-memory-recovery.tfplan.json');
+    const planJsonPath = join(bundle, 'relay-services-private-ready.tfplan.json');
     writePrivateFile(planJsonPath, planJsonBytes, 0o400);
-    const summary = readAndValidateRecoveryRelayServicesPlan(planJsonPath);
+    const summary = readAndValidatePrivateReadyRelayServicesPlan(planJsonPath);
     const planBytes = readFileSync(planPath);
 
-    const baselineAfterPlan = validateRelayServicesRecoveryBaseline(
-      await observeRelayServicesInventory(session),
-    );
-    await observePinnedOriginalRelayBootstrapClaim(session);
+    const baselineAfterPlan = await observeBaseline(session);
+    await observePinnedPrivateReadyPrerequisiteClaims(session);
     if (!isDeepStrictEqual(baselineAfterPlan, baseline)) {
-      throw new Error('Relay-services recovery planning changed the reviewed partial baseline');
+      throw new Error('Private-ready planning changed the reviewed live baseline');
     }
-    const metadata = buildRelayServicesRecoveryPlanMetadata({
+    const metadata = buildRelayServicesPrivateReadyPlanMetadata({
       repositoryCommit,
       createdAt: new Date().toISOString(),
       planBytes,
@@ -151,12 +150,12 @@ async function main() {
     verifyExactMain(repositoryRoot, repositoryCommit);
 
     process.stdout.write([
-      `Private relay recovery bundle: ${bundle}`,
+      `Private relay-ready bundle: ${bundle}`,
       `Plan SHA-256: ${metadata.terraform_plan_sha256}`,
       `Baseline SHA-256: ${metadata.baseline_sha256}`,
-      `Authorization: ${relayServicesRecoveryAuthorization(planBytes, repositoryCommit, metadata.baseline_sha256)}`,
-      'Planned delta: 2 creates, 1 in-place guard update, 1 identity no-op, 0 deletes.',
-      'Relays remain private and scale 0..1 at 512 MiB; public invokers: 0; live requests: 0; Hosting releases: 0.',
+      `Authorization: ${relayServicesPrivateReadyAuthorization(planBytes, repositoryCommit, metadata.baseline_sha256)}`,
+      'Planned delta: 2 in-place audience updates, 1 in-place guard update, 1 identity no-op, 0 creates, 0 deletes.',
+      'Relays remain private and scale 0..1; public invokers: 0; live requests: 0; Hosting releases: 0.',
       '',
     ].join('\n'));
   } finally {
@@ -166,7 +165,7 @@ async function main() {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   main().catch((error) => {
-    console.error(error instanceof Error ? error.message : 'Private relay recovery planning failed');
+    console.error(error instanceof Error ? error.message : 'Private relay-ready planning failed');
     process.exitCode = 1;
   });
 }

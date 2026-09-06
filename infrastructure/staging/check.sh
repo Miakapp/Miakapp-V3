@@ -132,7 +132,19 @@ node --check infrastructure/staging/browser-relay-services/plan.mjs
 node --check infrastructure/staging/browser-relay-services/recovery-apply.mjs
 node --check infrastructure/staging/browser-relay-services/recovery-claim.mjs
 node --check infrastructure/staging/browser-relay-services/recovery-plan.mjs
+node --check infrastructure/staging/browser-relay-services/ready-apply.mjs
+node --check infrastructure/staging/browser-relay-services/ready-claim.mjs
+node --check infrastructure/staging/browser-relay-services/ready-plan.mjs
 node --check infrastructure/staging/browser-relay-services/validate-plan.mjs
+for relay_script in \
+  infrastructure/staging/browser-relay-services/apply.sh \
+  infrastructure/staging/browser-relay-services/plan.sh \
+  infrastructure/staging/browser-relay-services/recovery-apply.sh \
+  infrastructure/staging/browser-relay-services/recovery-plan.sh \
+  infrastructure/staging/browser-relay-services/ready-apply.sh \
+  infrastructure/staging/browser-relay-services/ready-plan.sh; do
+  bash -n "$relay_script"
+done
 node infrastructure/staging/browser-relay-services/contract.mjs \
   infrastructure/staging/browser-relay-services/profile.json
 node infrastructure/staging/browser-relay-image/guard.mjs \
