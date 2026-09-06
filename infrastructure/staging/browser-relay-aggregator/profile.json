@@ -14,10 +14,10 @@
     "implementation_base_commit": "2a3939b2c59b3ec78be93f8daaa98e89eaadafec",
     "browser_relay_plan_sha256": "6c7661d9be861e4f8d13ccd5d2fd0f3eaa34ea2b4d7af2e9b41d1867d6c37211",
     "browser_relay_runner_profile_sha256": "72b688ccd577f7b40b21d9f874bbca555324eaec1fbf2acbc87dee35cf83a536",
-    "browser_relay_page_profile_sha256": "2e9e809d8bb9b88a4e96b51a258d948e6f0d1467c38adaca8c6582e132113e1e",
-    "browser_relay_fixture_profile_sha256": "cf9f75e8f385e386c695751b43258d792f8fe104aa7ec80c6e3471a21ac04047",
-    "browser_relay_fixture_cloud_profile_sha256": "217f897541fc53b9077066ad0105826bf8130f5727ff9094903b58f7549b9deb",
-    "browser_relay_fixture_miakapi_profile_sha256": "da5f22226afb51637e5ce0ecf585a039b550375a49550637589223ad314b59ea",
+    "browser_relay_page_profile_sha256": "c57e53dfeb25a0b5169854c535a535072151387b91ec4c07f889cac60bf83539",
+    "browser_relay_fixture_profile_sha256": "0dad7b7478829b88a234c6f6551ad7da7616ac46f12ca37c12bef3ffcdfefe22",
+    "browser_relay_fixture_cloud_profile_sha256": "a7afcaef4a4c71e2ef501d389e87b96f17a92056c57614785a79e5d9b21b9196",
+    "browser_relay_fixture_miakapi_profile_sha256": "0745341053e1b475ef38f8fbdf3b367de734a18da45f5c2c9fc6b042e98f810f",
     "aggregator_source_sha256": "d4446df01e831b89530eabbcaa4c1c46e6e33b12ba73b1f101fadeb83901ae5c"
   },
   "aggregation": {

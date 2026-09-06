@@ -380,13 +380,13 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`browser-relay/`](browser-relay/) | Closed live browser, two-relay, signing-key and rollback acceptance plan | Rebases the current private `00010`/two-key/version-1-entry/App Check/two-relay baseline; not deployed, every `LIVE-*` case pending, and no cloud mutation granted |
 | [`browser-relay-edge/`](browser-relay-edge/) | Dormant reversible control-plane edge state machine | Pins the atomic staging issuer/origin profile and public-last/private-first transition ordering; exposes no CLI and grants no cloud mutation |
 | [`browser-relay-runner/`](browser-relay-runner/) | Dormant operator-local three-engine runner | Real offline CI smoke launches Chromium, Firefox and WebKit sequentially; private input stays in memory, output is closed, and no live run or cloud mutation is authorized |
-| [`browser-relay-page/`](browser-relay-page/) | Dormant Firebase/MiakAPI browser host and deterministic artifact | Builds a two-file no-store artifact from a digest-pinned vendored MiakAPI module and loads it in three engines in CI; its phased page API is intentionally not runner-compatible and grants no publication or live authority |
+| [`browser-relay-page/`](browser-relay-page/) | Dormant Firebase/MiakAPI scenario host and deterministic artifact | Revision 3 implements serialized lifecycle and typed outcomes; pinned browsers prove native terminal fencing and separately explicit cleanup before sequential replacement using offline fakes, not native async Firebase cleanup or persisted BFCache restoration; no live authority is granted |
 | [`browser-relay-fixture/`](browser-relay-fixture/) | Dormant single synthetic-Home lifecycle controller | Proves initial absence before creation, configures the fixed MiakAPI coordinator, emits one in-memory custom token per browser, supports one relay rotation and requires coordinator-first cleanup plus verified final absence; the controller itself has no transport or live authority |
 | [`browser-relay-fixture-cloud/`](browser-relay-fixture-cloud/) | Dormant injected Google/Firebase fixture adapter | Implements bounded keyless JWT signing, fixed control-plane mutations, complete inventory and preconditioned atomic cleanup for the controller; no CLI, ambient credentials, IAM change or live authority is present |
 | [`browser-relay-fixture-miakapi/`](browser-relay-fixture-miakapi/) | Dormant pinned MiakAPI Node factory binding | Reproducibly vendors the exact coordinator commit, injects the Home Key exchange transport and permits one provider and coordinator construction without starting a session; no CLI or live authority is present |
 | [`browser-relay-aggregator/`](browser-relay-aggregator/) | Dormant independent-source engine-result aggregator | Assigns all 40 assertions and eight counters to exact source owners, accepts 18 single-use closed receipts in canonical order and emits only the existing runner schema; it is not wired or executed and grants no live authority |
-| [`browser-relay-page-receipt/`](browser-relay-page-receipt/) | Dormant browser-owned source receipt producer | Reduces 18 exact Chromium page facts or three secondary-browser facts into the aggregator's existing receipt schema; native lifecycle and identity-generation evidence fail closed, while the page-timing and Playwright wiring gaps remain explicit |
-| [`browser-relay-scenario-fixture/`](browser-relay-scenario-fixture/) | Dormant four-input scenario fixture controller | Composes the immutable fixture with a second exact synthetic Firebase identity, grants both identities state access through one coordinator and requires coordinator-first verified cleanup across both ownership domains; its historical compatibility profile remains unchanged and the Playwright bridge remains absent |
+| [`browser-relay-page-receipt/`](browser-relay-page-receipt/) | Dormant browser-owned source receipt producer | Reduces 18 exact Chromium page facts or three secondary-browser facts into the aggregator's existing receipt schema; page timing capacity is satisfied, while complete scenario, identity-generation evidence and Playwright wiring remain required |
+| [`browser-relay-scenario-fixture/`](browser-relay-scenario-fixture/) | Dormant four-input scenario fixture controller | Composes the immutable fixture with a second exact synthetic Firebase identity, grants both identities state access through one coordinator and requires coordinator-first verified cleanup across both ownership domains; original fixture capacity limits remain explicit and the Playwright bridge remains absent |
 | [`browser-relay-scenario-fixture-cloud/`](browser-relay-scenario-fixture-cloud/) | Dormant injected replacement-identity Google/Firebase adapter | Supplies only the exact second synthetic UID through bounded keyless signing, token-bound identity verification and independently observed cleanup; closes the cloud implementation gap without wiring the scenario or granting live, IAM, Hosting or public-ingress authority |
 | [`browser-relay-monitoring/`](browser-relay-monitoring/) | Closed allow-listed monitoring preflight and evaluator | One post-merge read-only observation verified all six metric surfaces, the existing EUR 10 budget and the private edge/relay boundary; no mutation or acceptance execution occurred |
 | [`browser-relay-rollback/`](browser-relay-rollback/) | Closed-target rollback preflight | Post-merge observation verified all ten private-target facts and a four-resource Terraform no-change plan; its sanitized result records zero mutation, public-ingress change and acceptance execution |
@@ -725,7 +725,9 @@ gates.
 The dormant [`browser-relay-runner/`](browser-relay-runner/) package pins plan
 revision 9, Playwright 1.62.1 and the merged MiakAPI browser client. Current
 plan revision 15 pins the merged runner profile and the page host's independent
-three-engine CI profile. The package has no
+three-engine revision-2 CI profile, retained byte-exact as
+`browser-relay-page/profile-v2.json`. Current page revision 3 pins plan 15
+without changing that historical CI claim. The package has no
 CLI, publisher, credential loader or cloud adapter. Its dedicated CI gate
 intercepts the exact staging URL locally and proves three real ephemeral browser
 engines produce only the reviewed closed aggregate. It records zero live runs
@@ -738,13 +740,26 @@ are checked for absence from WebSocket bytes without retaining frames. Its
 deterministic builder emits one HTML and one JavaScript file with no source map.
 The page exposes a phased observation API rather than the runner's final
 40-assertion API, so an independent fixture/operator adapter must still combine
-browser facts with cloud-side evidence. The selected 600-second runner bound
-leaves separate 300-second reserves for callback cleanup and edge rollback.
+browser facts with cloud-side evidence. Revision 3 implements serialized native
+page lifecycle and typed call outcomes locally. Its separate bounded lifecycle
+observation retains no raw event or credential and leaves the original safe
+observation schema unchanged. The selected 720-second runner bound allocates
+600 seconds to Chromium and 60 to each secondary engine, leaving 180 seconds
+for callback cleanup and 300 for edge rollback within the unchanged ceilings.
 Nothing in this package publishes Hosting, opens ingress or grants live browser
 execution.
 Its separate keyless CI job does load the dormant artifact with Chromium,
 Firefox and WebKit while blocking every non-artifact request; this is offline
-implementation evidence, not a live acceptance execution.
+implementation evidence, not a live acceptance execution. A separately
+allowlisted loopback harness first proves explicit terminal cleanup before
+sequential identity replacement using offline Firebase/MiakAPI fakes. It then
+proves trusted non-persisted native pagehide synchronous terminal fencing and
+zero active sockets, with IndexedDB blocked while stopping or restored after
+stopped, not completion of asynchronous
+Firebase cleanup. Playwright 1.62.1 explicitly does not support
+BFCache testing, so native persisted restoration remains unproven with state
+`blocked_by_pinned_playwright`. The simulated trusted persisted unit test is
+not native BFCache proof and cannot close the full scenario gate.
 The adjacent [`browser-relay-fixture/`](browser-relay-fixture/) package now
 implements the fixed application fixture lifecycle behind an exact injected
 boundary. It refuses both creation and deletion unless all fixture domains were
@@ -801,22 +816,24 @@ failed/uncertain outcomes, persisted `pagehide`/`pageshow`, sign-out and a new
 identity generation only after the old page stopped. Firefox and WebKit each
 provide an exact start/stop triple. The producer emits only the aggregator's
 `browser_page` receipt and discards every fact on close or failure. It remains
-dormant because its two real renewal intervals require a 600-second page budget
-rather than 480 seconds, and the page scenario and Playwright bridge are not yet
-complete. The adjacent
+dormant because the complete page scenario and Playwright bridge are not yet
+complete. Current page revision 3 supplies the required 600-second Chromium
+budget and local lifecycle/outcome APIs; those capabilities alone are not
+acceptance evidence. The adjacent
 [`browser-relay-scenario-fixture/`](browser-relay-scenario-fixture/) composes the
 immutable three-input fixture with a second exact synthetic Firebase identity.
 It provides the fourth Chromium input, extends the one coordinator's state
 access to both identities, forbids calls from the replacement identity and
-requires coordinator-first cleanup of both ownership domains. Its original
-compatibility profile remains a historical snapshot. The separate
+requires coordinator-first cleanup of both ownership domains. The original
+fixture's three-input/one-identity limits remain explicit, while current
+dependency pins and timing metadata follow page revision 3. The separate
 [`browser-relay-scenario-fixture-cloud/`](browser-relay-scenario-fixture-cloud/)
 now implements the replacement Google/Firebase transport behind an explicitly
 injected ephemeral session and HTTP implementation. It bounds the lifecycle to
 two distinct keyless signatures, binds the exchanged token to the exact
 replacement identity through one account lookup, and requires independently
 observed absence after cleanup without retrying uncertain mutations. This
-closes only the second-identity cloud implementation gap: the 600-second page
+closes only the second-identity cloud implementation gap: the complete page
 scenario, Playwright bridge, independent cloud observers and live wiring remain
 open. All mutation, IAM, Hosting, public-ingress and execution authority remains
 closed.

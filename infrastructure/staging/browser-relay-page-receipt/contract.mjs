@@ -12,6 +12,7 @@ import {
 } from '../browser-relay-runner/contract.mjs';
 import {
   BROWSER_RELAY_PAGE_PROFILE_SHA256,
+  MAXIMUM_CHROMIUM_MILLISECONDS,
   validateBrowserRelayPageProfile,
   validatePageSafeObservation,
 } from '../browser-relay-page/contract.mjs';
@@ -26,7 +27,7 @@ import {
 
 export const PAGE_RECEIPT_PROFILE_PATH = 'browser-relay-page-receipt/profile.json';
 export const PAGE_RECEIPT_PROFILE_SHA256 =
-  'c3678c6c0021c78c906ae76004e3c2be72496a839471ecef483d7a55c67b3469';
+  '37f3b7a23b28a42f2a073e85744e986ecced39e64ff045aee915378a7b4aaaa3';
 export const PAGE_RECEIPT_IMPLEMENTATION_BASE_COMMIT =
   '361cabb9a88d5cb3efebd40f3f803cf7023c02e3';
 export const PAGE_RECEIPT_SOURCE_SHA256 =
@@ -392,9 +393,9 @@ function validateProfileValue(value) {
     current_fixture_private_inputs: 3,
     required_matrix_private_inputs: REQUIRED_MATRIX_PRIVATE_INPUTS,
     fixture_capacity_satisfied: false,
-    current_page_chromium_milliseconds: 480_000,
+    current_page_chromium_milliseconds: MAXIMUM_CHROMIUM_MILLISECONDS,
     required_page_chromium_milliseconds: 600_000,
-    page_timing_capacity_satisfied: false,
+    page_timing_capacity_satisfied: true,
     page_host_api_scenario_complete: false,
     playwright_bridge_present: false,
     aggregator_wired: false,
