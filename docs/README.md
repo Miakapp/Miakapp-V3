@@ -77,7 +77,12 @@ implemented across several repositories.
   — dormant composition around the immutable fixture that supplies four exact
   page inputs across two genuine synthetic Firebase identities, extends the one
   coordinator's state access, and requires coordinator-first cleanup of both
-  identity domains; its replacement cloud adapter remains explicitly open.
+  identity domains; its original compatibility profile remains a historical
+  snapshot and its replacement transport is supplied by the separate adapter.
+- [`../infrastructure/staging/browser-relay-scenario-fixture-cloud/`](../infrastructure/staging/browser-relay-scenario-fixture-cloud/)
+  — dormant replacement-identity Google/Firebase adapter with injected transport,
+  bounded keyless signing, token-bound identity verification and independently
+  observed cleanup; it closes the implementation gap without live wiring.
 - [`../infrastructure/staging/browser-relay-monitoring/`](../infrastructure/staging/browser-relay-monitoring/)
   — allow-listed read-only monitoring contract whose post-merge preflight pins
   six metric surfaces, the existing EUR 10 budget and the private boundary.
@@ -190,11 +195,15 @@ page lifecycle and a fresh identity generation. It retains no raw fact and
 the original three-input fixture remains byte-exact. A separate scenario
 fixture now supplies the required fourth input from a second exact synthetic
 Firebase identity and grants both identities state access through the same
-coordinator. The replacement identity's Google/Firebase adapter is still
-absent, and the page's 480-second Chromium budget must become 600 seconds.
-None of these packages grants Hosting publication or live authority; the next
-replacement-cloud/page increment and Playwright bridge must close those gaps
-before the runner can execute.
+coordinator. A separate dormant Google/Firebase adapter now implements that
+replacement identity's bounded cloud lifecycle, including token-bound identity
+verification and independently observed cleanup. The older compatibility
+profiles remain historical snapshots; the new adapter resolves only the
+second-identity cloud implementation gap and has not been live wired or
+executed. The page's 480-second Chromium budget must still become 600 seconds.
+None of these packages grants Hosting publication or live authority; the page
+scenario, Playwright bridge and independent cloud observers must close their
+remaining gaps before the runner can execute.
 
 Repository-specific implementation plans must link back to these documents and
 must not redefine a shared contract locally.

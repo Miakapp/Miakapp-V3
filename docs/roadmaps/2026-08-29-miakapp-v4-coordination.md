@@ -788,12 +788,16 @@ current consumer.
     three private page inputs, but a separate closed scenario fixture now
     supplies the fourth from a second genuine synthetic Firebase identity,
     extends the unique coordinator's state access to both identities and
-    requires both cleanup domains to reach absence. Its replacement-identity
-    cloud adapter is not yet implemented; the Chromium page budget remains 480
-    seconds while two live renewals plus scenario overhead require 600; and the
-    page/Playwright scenario is not wired. Close those remaining compatibility
-    gaps, then implement the
-    independent cloud observers before executing the matrix once.
+    requires both cleanup domains to reach absence. The separate dormant
+    replacement-identity cloud adapter is now implemented: injected ephemeral
+    credentials and transport bound two keyless signatures, token-bound
+    identity verification and independently observed cleanup without mutation
+    retries. Its profile records the implementation while the older
+    compatibility snapshots remain unchanged; no live wiring or execution is
+    present. The Chromium page budget remains 480 seconds while two live
+    renewals plus scenario overhead require 600, and the page/Playwright
+    scenario is not wired. Close those remaining compatibility gaps, then
+    implement the independent cloud observers before executing the matrix once.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform
     no-change plan. Its fresh post-merge preflight is complete and the rollback

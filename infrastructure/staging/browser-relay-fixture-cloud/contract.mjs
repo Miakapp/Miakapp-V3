@@ -21,11 +21,11 @@ import {
 
 export const FIXTURE_CLOUD_PROFILE_PATH = 'browser-relay-fixture-cloud/profile.json';
 export const FIXTURE_CLOUD_PROFILE_SHA256 =
-  '4a0133ce6ef48bd18afb634cb23035b9d7527ba72b44c7a3a82405de5f67feb5';
+  '217f897541fc53b9077066ad0105826bf8130f5727ff9094903b58f7549b9deb';
 export const FIXTURE_CLOUD_IMPLEMENTATION_BASE_COMMIT =
   '0ac4852d0fc8985bf9b69fc63cfe39d5cbdc6571';
 export const FIXTURE_CLOUD_SOURCE_SHA256 =
-  '3bfca89fd132a2902776cffe3c7ac8bd9abd013b21d90396487edd0fd7253c77';
+  'cc99b6e4aef08fb47c56a1e9303a3e71945b085939c30ef67ff2f7849795ef0d';
 export const FIXTURE_SIGNER_SERVICE_ACCOUNT =
   'miakapp-staging-probe@miakapp-v4-staging.iam.gserviceaccount.com';
 
@@ -131,7 +131,7 @@ function validateProfileValue(value) {
   exact(profile, expectedProfile, 'profile');
   exact(profile.schema, 'miakapp.staging-browser-relay-fixture-cloud-profile/1',
     'profile.schema');
-  exact(profile.revision, 1, 'profile.revision');
+  exact(profile.revision, 2, 'profile.revision');
   exact(profile.state, 'closed_google_firebase_adapter_implemented_not_wired_not_executed',
     'profile.state');
 
@@ -219,6 +219,7 @@ function validateProfileValue(value) {
     'control_plane_relay_rotations',
     'explicit_injected_transport',
     'firebase_identity_creations',
+    'firebase_identity_binding_reads',
     'firebase_identity_deletions',
     'firestore_cleanup_commits',
     'maximum_inventory_cycles',
@@ -235,6 +236,7 @@ function validateProfileValue(value) {
     maximum_inventory_cycles: 8,
     maximum_signed_firebase_jwts: 4,
     firebase_identity_creations: 1,
+    firebase_identity_binding_reads: 1,
     control_plane_home_creations: 1,
     control_plane_home_key_creations: 1,
     control_plane_relay_rotations: 1,

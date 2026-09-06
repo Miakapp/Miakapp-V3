@@ -28,7 +28,7 @@ import {
 
 export const FIXTURE_MIAKAPI_PROFILE_PATH = 'browser-relay-fixture-miakapi/profile.json';
 export const FIXTURE_MIAKAPI_PROFILE_SHA256 =
-  '4fefc7eecf45f8cd25566e789d33d4d400336e271f6129adae2b93ee697398df';
+  'da5f22226afb51637e5ce0ecf585a039b550375a49550637589223ad314b59ea';
 export const FIXTURE_MIAKAPI_IMPLEMENTATION_BASE_COMMIT =
   'ce32f8841bbc93f3b2e99f0f30da1c45e728eab1';
 export const MIAKAPI_NODE_ENTRY_SHA256 =

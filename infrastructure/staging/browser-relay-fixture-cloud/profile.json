@@ -1,6 +1,6 @@
 {
   "schema": "miakapp.staging-browser-relay-fixture-cloud-profile/1",
-  "revision": 1,
+  "revision": 2,
   "state": "closed_google_firebase_adapter_implemented_not_wired_not_executed",
   "target": {
     "project_id": "miakapp-v4-staging",
@@ -20,7 +20,7 @@
     "browser_relay_page_profile_sha256": "2e9e809d8bb9b88a4e96b51a258d948e6f0d1467c38adaca8c6582e132113e1e",
     "deployed_control_plane_source_sha256": "3e94305e17ee4df07f54f13560dac0a9491de3f89fb3ddbf4ab745c62dce8c7e",
     "miakapi_commit": "a798a746847ba3d5c16128a08b33353269e770a4",
-    "cloud_source_sha256": "3bfca89fd132a2902776cffe3c7ac8bd9abd013b21d90396487edd0fd7253c77"
+    "cloud_source_sha256": "cc99b6e4aef08fb47c56a1e9303a3e71945b085939c30ef67ff2f7849795ef0d"
   },
   "credential_boundary": {
     "operator_oauth_access_token": "injected_ephemeral_memory_only",
@@ -41,6 +41,7 @@
     "maximum_inventory_cycles": 8,
     "maximum_signed_firebase_jwts": 4,
     "firebase_identity_creations": 1,
+    "firebase_identity_binding_reads": 1,
     "control_plane_home_creations": 1,
     "control_plane_home_key_creations": 1,
     "control_plane_relay_rotations": 1,
