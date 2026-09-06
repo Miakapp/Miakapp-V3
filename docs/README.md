@@ -65,6 +65,10 @@ implemented across several repositories.
   — dormant reproducible Node binding to the exact MiakAPI commit; its
   single-use factories force the Home Key exchange through the injected HTTP
   transport and construct the synthetic coordinator without starting it.
+- [`../infrastructure/staging/browser-relay-aggregator/`](../infrastructure/staging/browser-relay-aggregator/)
+  — dormant single-use evidence aggregator assigning every runner assertion,
+  counter and public identifier to one exact browser or independent cloud
+  source; invalid, missing, duplicated or out-of-order receipts fail closed.
 - [`../infrastructure/staging/browser-relay-monitoring/`](../infrastructure/staging/browser-relay-monitoring/)
   — allow-listed read-only monitoring contract whose post-merge preflight pins
   six metric surfaces, the existing EUR 10 budget and the private boundary.
@@ -168,9 +172,11 @@ on matching fresh live inventories. The state transition,
 intended cost, exposure and rollback boundary remain reviewable without
 pretending that a public edge or live browser matrix already exists.
 The separate page-host foundation now builds locally and returns only bounded
-browser observations. It grants no Hosting publication or live authority; the
-next adapter must drive fixtures and independently aggregate the remaining
-control-plane, relay, KMS, Firestore and lifecycle assertions.
+browser observations. The separate closed aggregator now assigns all browser
+and cloud assertions, counters and public identifiers to non-overlapping source
+owners. Neither package grants Hosting publication or live authority; the next
+adapters must drive the page and independently derive each source receipt
+before the runner can execute.
 
 Repository-specific implementation plans must link back to these documents and
 must not redefine a shared contract locally.

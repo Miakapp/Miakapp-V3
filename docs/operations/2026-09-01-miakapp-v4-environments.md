@@ -520,6 +520,17 @@ provider. Neither factory construction starts a session or performs HTTP or
 WebSocket I/O. No package-registry lookup, credential, cloud mutation, public
 edge or live request was introduced.
 
+The following source-only aggregator closes the evidence-reduction boundary
+without adding an observer or execution path. It gives every runner assertion
+exactly one browser or independent infrastructure owner, and similarly limits
+each bounded counter and public identifier to one source. Chromium requires
+eight canonical receipts; Firefox and WebKit require five each. Invalid,
+missing, duplicated or out-of-order evidence permanently fails the single-use
+instance, while successful closure emits only the existing engine result
+schema. The package has no CLI, cloud client, credentials, Hosting publisher,
+mutation authority or live evidence. Source observers and the operator-side
+Playwright bridge remain separate work before the matrix can run.
+
 The guarded relay-image increment bound the exact merged Miakapp-Server tree to a deterministic
 53,098-byte archive, one digest-pinned Cloud Build Docker builder, verified
 SHA-256 source provenance and a hardened `/ping` smoke test. A generation-zero

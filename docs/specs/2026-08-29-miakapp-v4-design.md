@@ -922,8 +922,12 @@ vertical-slice exit gates.
    and final Firebase UID deletion. A separate reproducible binding now pins the
    exact MiakAPI Node bundle, injects the Home Key exchange transport and
    permits only the expected provider/coordinator pair without starting it. The
-   independent closed aggregator remains required before the one allowed
-   execution.
+   separate closed aggregator now assigns all 40 runner assertions and eight
+   counters to non-overlapping browser, App Check, Hosting, control-plane,
+   relay, coordinator, KMS and Firestore owners. It accepts exactly 18 ordered
+   single-use source receipts across the three browsers, retains none and
+   grants no live authority. Source-specific observer and Playwright adapters
+   remain required before the one allowed execution.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain
