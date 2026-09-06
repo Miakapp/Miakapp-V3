@@ -1,0 +1,147 @@
+{
+  "schema": "miakapp.staging-browser-relay-runner-profile/1",
+  "revision": 1,
+  "state": "three_engine_closed_runner_implemented_not_executed",
+  "target": {
+    "project_id": "miakapp-v4-staging",
+    "origin": "https://miakapp-v4-staging.web.app",
+    "path": "/__acceptance/browser-relay/",
+    "cloud_compute_resources": 0,
+    "unscheduled": true,
+    "cloud_mutation_authorized_by_profile": false,
+    "public_ingress_authorized_by_profile": false,
+    "live_execution_authorized_by_profile": false
+  },
+  "pins": {
+    "miakapp_v3_commit": "390bb20853a4b2794a57b9a851f3b23ecc685915",
+    "browser_relay_plan_sha256": "bdf2cea284b1031a2a78e3ab029a733cad5e68efde8e9e01c5230e01fe8333dc",
+    "runner_driver_sha256": "9863c8a6b311c1fedfa08e866cb42204bf5fd993ab5d8fdb8e5e7efcad455219",
+    "offline_smoke_sha256": "5b429248642be0cece2447eef83911067184661ba3110da58f9bfa8e55bbead0",
+    "ci_workflow_sha256": "8602db39779d8e5a01e490d2bac2ebf9e1a1a3b3186401b23ec5079d63c67a9e",
+    "dependency_lock_sha256": "f5836463d6c52b4c1772b834f0f2fac7ba7e97afe681439599a72957d9611bb3",
+    "miakapi_commit": "a798a746847ba3d5c16128a08b33353269e770a4",
+    "playwright_package": "playwright",
+    "playwright_version": "1.62.1",
+    "node_version": "22.22.0",
+    "bun_version": "1.2.23"
+  },
+  "execution": {
+    "browser_order": [
+      "chromium",
+      "firefox",
+      "webkit"
+    ],
+    "maximum_invocations": 3,
+    "sequential": true,
+    "headless": true,
+    "maximum_total_milliseconds": 840000,
+    "browser_deadlines_milliseconds": {
+      "chromium": 720000,
+      "firefox": 60000,
+      "webkit": 60000
+    },
+    "maximum_navigation_milliseconds": 30000,
+    "maximum_private_input_bytes_per_browser": 65536,
+    "private_input_delivery": "process_memory_to_page_argument",
+    "persistent_browser_profile": false,
+    "storage_state": false,
+    "downloads": false,
+    "service_workers": "block",
+    "trace_recording": false,
+    "har_recording": false,
+    "video_recording": false,
+    "screenshot_recording": false,
+    "websocket_frame_recording": false,
+    "browser_console_collection": false,
+    "playwright_diagnostics": false
+  },
+  "assertions": {
+    "chromium": [
+      "real_browser_provider_attestation",
+      "exact_firebase_app_id",
+      "missing_and_invalid_app_check_denied",
+      "no_token_consumption_mode",
+      "exact_origin_cors_and_preflight",
+      "foreign_origin_denied",
+      "source_and_uid_admission_observed",
+      "no_authenticated_response_cache",
+      "chromium_initial_exchange_and_hello",
+      "authoritative_snapshot_and_patch",
+      "one_call_completes",
+      "source_credentials_confined_to_https",
+      "version_2_jwk_prepublished_for_at_least_sixty_seconds",
+      "same_relay_scheduled_reauthentication",
+      "version_2_kid_accepted_on_existing_socket",
+      "one_browser_websocket",
+      "authoritative_route_changes_to_relay_b",
+      "already_issued_atomic_credential_is_reused",
+      "old_socket_closes_before_new_socket_opens",
+      "state_and_call_recover_on_relay_b",
+      "wrong_relay_audience_denied",
+      "wrong_home_denied",
+      "wrong_role_denied",
+      "unknown_kid_refresh_is_bounded",
+      "disconnect_reconnect_and_resync_are_bounded",
+      "no_physical_call_replay",
+      "uncertain_effect_is_outcome_unknown",
+      "maximum_one_active_browser_socket",
+      "visibility_pause_resume_is_bounded",
+      "bfcache_restore_revalidates_identity",
+      "sign_out_stops_and_discards_immediately",
+      "identity_tuple_change_requires_new_session",
+      "version_1_jwk_retained_for_three_hundred_thirty_seconds",
+      "version_1_jwk_removed_after_lease_bound",
+      "kms_version_1_disabled_not_destroyed",
+      "new_sessions_continue_on_version_2"
+    ],
+    "firefox": [
+      "firefox_initial_session_and_teardown",
+      "no_browser_specific_credential_persistence"
+    ],
+    "webkit": [
+      "webkit_initial_session_and_teardown",
+      "no_browser_specific_credential_persistence"
+    ]
+  },
+  "output": {
+    "engine_result_schema": "miakapp.staging-browser-relay-engine-result/1",
+    "runner_result_schema": "miakapp.staging-browser-relay-runner-result/1",
+    "allowed_observations": [
+      "bounded_counts",
+      "durations",
+      "public_key_ids",
+      "revision_ids",
+      "stable_outcome_classes"
+    ],
+    "forbidden_observations": [
+      "browser_storage",
+      "email",
+      "execution_identifier",
+      "firebase_uid",
+      "har",
+      "home_traffic",
+      "raw_request_or_response",
+      "token",
+      "trace_context",
+      "video",
+      "websocket_frame"
+    ],
+    "maximum_app_check_assessments": 16,
+    "maximum_control_plane_exchanges": 16,
+    "maximum_kms_signatures": 16,
+    "maximum_firestore_writes": 64,
+    "maximum_active_websockets": 1,
+    "required_zero_counters": [
+      "source_credentials_on_websocket",
+      "browser_credential_persistence_events",
+      "physical_call_replays"
+    ]
+  },
+  "evidence": {
+    "state": "absent",
+    "live_execution_count": 0,
+    "result_path": null,
+    "credentials_committed": false,
+    "raw_diagnostics_committed": false
+  }
+}

@@ -31,10 +31,10 @@ function rejects(mutator, pattern) {
 
 test('accepts the successful and retired private user-relay probe', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 68);
+  assert.equal(validated.revision, 69);
   assert.equal(
     validated.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_private_relays_ready_rebased_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
@@ -828,6 +828,31 @@ test('accepts the successful and retired private user-relay probe', () => {
     runner_present: false,
     completed_cases: 0,
   });
+  assert.deepEqual(validated.evidence.browser_relay_runner, {
+    state: 'three_engine_closed_runner_implemented_not_executed',
+    profile_path: 'browser-relay-runner/profile.json',
+    profile_sha256: '72b688ccd577f7b40b21d9f874bbca555324eaec1fbf2acbc87dee35cf83a536',
+    browser_relay_plan_sha256:
+      'bdf2cea284b1031a2a78e3ab029a733cad5e68efde8e9e01c5230e01fe8333dc',
+    miakapi_commit: 'a798a746847ba3d5c16128a08b33353269e770a4',
+    playwright_version: '1.62.1',
+    browser_engines: 3,
+    maximum_invocations: 3,
+    sequential: true,
+    maximum_total_milliseconds: 840_000,
+    chromium_deadline_milliseconds: 720_000,
+    secondary_browser_deadline_milliseconds: 60_000,
+    output_assertions: 40,
+    cloud_compute_resources: 0,
+    three_engine_ci_gate_present: true,
+    cloud_mutation_authorized: false,
+    public_ingress_authorized: false,
+    live_execution_authorized: false,
+    live_execution_count: 0,
+    result_present: false,
+    credentials_committed: false,
+    raw_diagnostics_committed: false,
+  });
   assert.deepEqual(validated.evidence.browser_relay_image, {
     state:
       'v1_failed_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized',
@@ -1175,6 +1200,11 @@ test('cross-checks manifest claims against all committed evidence artifacts', ()
   assert.equal(evidence.userRelayProbeRetirement.verifier_service_present, false);
   assert.equal(evidence.browserRelayPlan.state, 'private_relays_ready_plan_rebased_not_deployed');
   assert.equal(evidence.browserRelayPlan.evidence.state, 'absent');
+  assert.equal(
+    evidence.browserRelayRunnerProfile.state,
+    'three_engine_closed_runner_implemented_not_executed',
+  );
+  assert.equal(evidence.browserRelayRunnerProfile.execution.browser_order.length, 3);
   assert.equal(
     evidence.relayServicesProfile.state,
     'private_ready_succeeded_verified_public_window_not_authorized',
@@ -2123,6 +2153,15 @@ test('requires every remaining blocker and staging evidence row', () => {
   rejects((candidate) => {
     candidate.evidence.browser_relay_plan.baseline_current_signing_key_version = 2;
   }, /evidence\.browser_relay_plan\.baseline_current_signing_key_version/);
+  rejects((candidate) => {
+    candidate.evidence.browser_relay_runner.maximum_invocations = 4;
+  }, /evidence\.browser_relay_runner\.maximum_invocations/);
+  rejects((candidate) => {
+    candidate.evidence.browser_relay_runner.live_execution_authorized = true;
+  }, /evidence\.browser_relay_runner\.live_execution_authorized/);
+  rejects((candidate) => {
+    candidate.evidence.browser_relay_runner.credentials_committed = true;
+  }, /evidence\.browser_relay_runner\.credentials_committed/);
   rejects((candidate) => {
     candidate.evidence.browser_app_check_prerequisite.recaptcha_api_enabled = false;
   }, /evidence\.browser_app_check_prerequisite\.recaptcha_api_enabled/);

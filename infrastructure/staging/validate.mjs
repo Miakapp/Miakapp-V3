@@ -15,6 +15,12 @@ import {
   validateBrowserRelayV8Plan,
 } from './browser-relay/contract.mjs';
 import {
+  BROWSER_RELAY_RUNNER_PROFILE_PATH,
+  BROWSER_RELAY_RUNNER_PROFILE_SHA256,
+  BROWSER_RELAY_V9_PLAN_SHA256,
+  validateBrowserRelayRunnerProfile,
+} from './browser-relay-runner/contract.mjs';
+import {
   RELAY_SERVICES_PROFILE_PATH,
   RELAY_SERVICES_PROFILE_SHA256,
   RELAY_SERVICES_BOOTSTRAP_FAILURE_PATH,
@@ -2888,6 +2894,7 @@ function validateEvidence(value) {
     'firebase_auth_baseline',
     'user_relay_probe',
     'browser_relay_plan',
+    'browser_relay_runner',
     'browser_relay_image',
     'browser_app_check_prerequisite',
     'browser_app_check_attestation',
@@ -3706,6 +3713,61 @@ function validateEvidence(value) {
   };
   for (const [field, expected] of Object.entries(expectedBrowserRelayPlan)) {
     exact(browserRelayPlan[field], expected, `evidence.browser_relay_plan.${field}`);
+  }
+  const browserRelayRunner = record(
+    evidence.browser_relay_runner,
+    'evidence.browser_relay_runner',
+    [
+      'state',
+      'profile_path',
+      'profile_sha256',
+      'browser_relay_plan_sha256',
+      'miakapi_commit',
+      'playwright_version',
+      'browser_engines',
+      'maximum_invocations',
+      'sequential',
+      'maximum_total_milliseconds',
+      'chromium_deadline_milliseconds',
+      'secondary_browser_deadline_milliseconds',
+      'output_assertions',
+      'cloud_compute_resources',
+      'three_engine_ci_gate_present',
+      'cloud_mutation_authorized',
+      'public_ingress_authorized',
+      'live_execution_authorized',
+      'live_execution_count',
+      'result_present',
+      'credentials_committed',
+      'raw_diagnostics_committed',
+    ],
+  );
+  const expectedBrowserRelayRunner = {
+    state: 'three_engine_closed_runner_implemented_not_executed',
+    profile_path: BROWSER_RELAY_RUNNER_PROFILE_PATH,
+    profile_sha256: BROWSER_RELAY_RUNNER_PROFILE_SHA256,
+    browser_relay_plan_sha256: BROWSER_RELAY_V9_PLAN_SHA256,
+    miakapi_commit: 'a798a746847ba3d5c16128a08b33353269e770a4',
+    playwright_version: '1.62.1',
+    browser_engines: 3,
+    maximum_invocations: 3,
+    sequential: true,
+    maximum_total_milliseconds: 840_000,
+    chromium_deadline_milliseconds: 720_000,
+    secondary_browser_deadline_milliseconds: 60_000,
+    output_assertions: 40,
+    cloud_compute_resources: 0,
+    three_engine_ci_gate_present: true,
+    cloud_mutation_authorized: false,
+    public_ingress_authorized: false,
+    live_execution_authorized: false,
+    live_execution_count: 0,
+    result_present: false,
+    credentials_committed: false,
+    raw_diagnostics_committed: false,
+  };
+  for (const [field, expected] of Object.entries(expectedBrowserRelayRunner)) {
+    exact(browserRelayRunner[field], expected, `evidence.browser_relay_runner.${field}`);
   }
   const browserRelayImage = record(
     evidence.browser_relay_image,
@@ -4623,10 +4685,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 68, 'manifest.revision');
+  exact(manifest.revision, 69, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_private_relays_ready_rebased_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -4990,6 +5052,143 @@ export function validateCommittedEvidence(
     runner_present: browserRelayPlan.baseline.browser_runner_present,
     completed_cases: browserRelayPlan.evidence.completed_case_ids.length,
   }, 'evidence.browser_relay_plan');
+  const browserRelayRunnerManifest = manifest.evidence.browser_relay_runner;
+  const browserRelayRunnerProfilePath = committedEvidencePath(
+    stagingRoot,
+    browserRelayRunnerManifest.profile_path,
+    BROWSER_RELAY_RUNNER_PROFILE_PATH,
+    'evidence.browser_relay_runner.profile_path',
+  );
+  const browserRelayRunnerProfile = validatedEvidenceFile(
+    browserRelayRunnerProfilePath,
+    validateBrowserRelayRunnerProfile,
+    'evidence.browser_relay_runner.profile_path',
+  );
+  exact(
+    fileSha256(browserRelayRunnerProfilePath),
+    browserRelayRunnerManifest.profile_sha256,
+    'evidence.browser_relay_runner.profile_sha256',
+  );
+  exactFields(browserRelayRunnerManifest, {
+    state: browserRelayRunnerProfile.state,
+    browser_relay_plan_sha256:
+      browserRelayRunnerProfile.pins.browser_relay_plan_sha256,
+    miakapi_commit: browserRelayRunnerProfile.pins.miakapi_commit,
+    playwright_version: browserRelayRunnerProfile.pins.playwright_version,
+    browser_engines: browserRelayRunnerProfile.execution.browser_order.length,
+    maximum_invocations: browserRelayRunnerProfile.execution.maximum_invocations,
+    sequential: browserRelayRunnerProfile.execution.sequential,
+    maximum_total_milliseconds:
+      browserRelayRunnerProfile.execution.maximum_total_milliseconds,
+    chromium_deadline_milliseconds:
+      browserRelayRunnerProfile.execution.browser_deadlines_milliseconds.chromium,
+    secondary_browser_deadline_milliseconds:
+      browserRelayRunnerProfile.execution.browser_deadlines_milliseconds.firefox,
+    output_assertions: Object.values(browserRelayRunnerProfile.assertions)
+      .reduce((total, assertions) => total + assertions.length, 0),
+    cloud_compute_resources: browserRelayRunnerProfile.target.cloud_compute_resources,
+    cloud_mutation_authorized:
+      browserRelayRunnerProfile.target.cloud_mutation_authorized_by_profile,
+    public_ingress_authorized:
+      browserRelayRunnerProfile.target.public_ingress_authorized_by_profile,
+    live_execution_authorized:
+      browserRelayRunnerProfile.target.live_execution_authorized_by_profile,
+    live_execution_count: browserRelayRunnerProfile.evidence.live_execution_count,
+    result_present: browserRelayRunnerProfile.evidence.result_path !== null,
+    credentials_committed: browserRelayRunnerProfile.evidence.credentials_committed,
+    raw_diagnostics_committed: browserRelayRunnerProfile.evidence.raw_diagnostics_committed,
+  }, 'evidence.browser_relay_runner');
+  exact(
+    browserRelayRunnerProfile.pins.browser_relay_plan_sha256,
+    browserRelayPlanManifest.sha256,
+    'evidence.browser_relay_runner browser-relay plan pin',
+  );
+  const browserMatrix = new Map(browserRelayPlan.matrix.map((entry) => [entry.id, entry]));
+  exactArray(
+    browserRelayRunnerProfile.assertions.chromium,
+    ['LIVE-02', 'LIVE-03', 'LIVE-04', 'LIVE-05', 'LIVE-06', 'LIVE-07', 'LIVE-08',
+      'LIVE-09', 'LIVE-11'].flatMap((id) => browserMatrix.get(id).assertions),
+    'evidence.browser_relay_runner Chromium assertions',
+  );
+  exactArray(browserRelayRunnerProfile.assertions.firefox, [
+    browserMatrix.get('LIVE-10').assertions[0],
+    browserMatrix.get('LIVE-10').assertions[2],
+  ], 'evidence.browser_relay_runner Firefox assertions');
+  exactArray(browserRelayRunnerProfile.assertions.webkit, [
+    browserMatrix.get('LIVE-10').assertions[1],
+    browserMatrix.get('LIVE-10').assertions[2],
+  ], 'evidence.browser_relay_runner WebKit assertions');
+  exactArray(
+    browserRelayRunnerProfile.output.allowed_observations,
+    browserRelayPlan.evidence.allowed_observations,
+    'evidence.browser_relay_runner allowed observations',
+  );
+  exactArray(
+    browserRelayRunnerProfile.output.forbidden_observations,
+    browserRelayPlan.evidence.forbidden_observations,
+    'evidence.browser_relay_runner forbidden observations',
+  );
+  exact(
+    browserRelayRunnerProfile.execution.maximum_invocations,
+    browserRelayPlan.topology.runner.maximum_invocations,
+    'evidence.browser_relay_runner invocation budget',
+  );
+  exact(
+    browserRelayRunnerProfile.execution.browser_deadlines_milliseconds.firefox,
+    browserRelayRunnerProfile.execution.browser_deadlines_milliseconds.webkit,
+    'evidence.browser_relay_runner secondary browser deadlines',
+  );
+  exact(
+    browserRelayRunnerProfile.output.maximum_app_check_assessments,
+    browserRelayPlan.budgets.maximum_recaptcha_assessments,
+    'evidence.browser_relay_runner App Check budget',
+  );
+  exact(
+    browserRelayRunnerProfile.output.maximum_control_plane_exchanges,
+    browserRelayPlan.budgets.maximum_control_plane_exchanges,
+    'evidence.browser_relay_runner control-plane budget',
+  );
+  exact(
+    browserRelayRunnerProfile.output.maximum_kms_signatures,
+    browserRelayPlan.budgets.maximum_kms_signatures,
+    'evidence.browser_relay_runner KMS budget',
+  );
+  exact(
+    browserRelayRunnerProfile.output.maximum_firestore_writes,
+    browserRelayPlan.budgets.maximum_firestore_writes,
+    'evidence.browser_relay_runner Firestore budget',
+  );
+  const rootPackage = readBoundedJson(resolve(stagingRoot, '../../package.json'), 8 * 1024);
+  exact(
+    rootPackage.devDependencies?.playwright,
+    browserRelayRunnerProfile.pins.playwright_version,
+    'browser-relay runner Playwright dependency',
+  );
+  const runnerDriverPath = resolve(stagingRoot, 'browser-relay-runner/driver.mjs');
+  const runnerSmokePath = resolve(stagingRoot, 'test/browser-relay-runner-browser.mjs');
+  const runnerWorkflowPath = resolve(
+    stagingRoot,
+    '../../.github/workflows/browser-relay-runner.yml',
+  );
+  const dependencyLockPath = resolve(stagingRoot, '../../bun.lock');
+  exact(fileSha256(runnerDriverPath), browserRelayRunnerProfile.pins.runner_driver_sha256,
+    'evidence.browser_relay_runner driver digest');
+  exact(fileSha256(runnerSmokePath), browserRelayRunnerProfile.pins.offline_smoke_sha256,
+    'evidence.browser_relay_runner offline smoke digest');
+  exact(fileSha256(runnerWorkflowPath), browserRelayRunnerProfile.pins.ci_workflow_sha256,
+    'evidence.browser_relay_runner CI workflow digest');
+  exact(fileSha256(dependencyLockPath), browserRelayRunnerProfile.pins.dependency_lock_sha256,
+    'evidence.browser_relay_runner dependency lock digest');
+  const runnerWorkflow = readFileSync(runnerWorkflowPath, 'utf8');
+  if (!runnerWorkflow.includes('playwright install --with-deps chromium firefox webkit')
+    || !runnerWorkflow.includes('browser-relay-runner-browser.mjs')) {
+    reject('evidence.browser_relay_runner.three_engine_ci_gate_present', 'has drifted');
+  }
+  exact(
+    browserRelayRunnerManifest.three_engine_ci_gate_present,
+    true,
+    'evidence.browser_relay_runner.three_engine_ci_gate_present',
+  );
   const browserRelayImageManifest = manifest.evidence.browser_relay_image;
   const relayServicesProfilePath = committedEvidencePath(
     stagingRoot,
@@ -5831,6 +6030,7 @@ export function validateCommittedEvidence(
     userRelayProbe: authProbe,
     userRelayProbeRetirement: authProbeRetirement,
     browserRelayPlan,
+    browserRelayRunnerProfile,
     relayServicesProfile,
     relayServicesV1Profile,
     relayServicesV2Profile,
@@ -5869,7 +6069,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; relay-image v2 is verified, two exact-audience Cloud Run relays are private-ready, all relay one-shot entrypoints are retired, unauthenticated invocation remains absent, and App Check enforcement is disabled.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; the closed three-engine runner is implemented but unexecuted, two exact-audience Cloud Run relays are private-ready, unauthenticated invocation remains absent, and App Check enforcement is disabled.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';

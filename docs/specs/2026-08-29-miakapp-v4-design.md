@@ -863,7 +863,12 @@ vertical-slice exit gates.
    prerequisite failure and produced the exact verified digest now bound to both
    private services. No unauthenticated invocation or live browser request has
    occurred. The byte-exact earlier zero-relay plan is retained only as the
-   immutable dependency consumed by the historical relay-image build.
+   immutable dependency consumed by the historical relay-image build. The
+   operator-local runner is now a separately pinned dormant library whose real
+   offline CI smoke launches Chromium, Firefox and WebKit sequentially. Its
+   ephemeral contexts accept private input only in memory and return a closed
+   aggregate with no browser diagnostics or credential material; no live matrix
+   case is claimed by that smoke.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain
