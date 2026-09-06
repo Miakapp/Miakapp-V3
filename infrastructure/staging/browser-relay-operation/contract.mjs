@@ -3,8 +3,8 @@ import { lstatSync, readFileSync } from 'node:fs';
 import { isDeepStrictEqual } from 'node:util';
 
 import {
-  BROWSER_RELAY_PLAN_SHA256,
-  validateBrowserRelayPlan,
+  BROWSER_RELAY_V13_PLAN_SHA256 as BROWSER_RELAY_PLAN_SHA256,
+  validateBrowserRelayV13Plan,
 } from '../browser-relay/contract.mjs';
 import {
   MONITORING_PREFLIGHT_RESULT_SHA256,
@@ -50,8 +50,14 @@ export const OPERATION_PROFILE_SHA256 =
   'd1ff776c48c0aade724fc31a8d44c7e68fe5c81919eab7030998962017801a73';
 export const OPERATION_IMPLEMENTATION_BASE_COMMIT =
   'b82e152334a0bb30f6dcdbbe32abe44349bd9542';
+export const OPERATION_IMPLEMENTATION_COMMIT =
+  'ae21e4922d3f70fffe9218cd975f180faca486f0';
 export const OPERATION_SOURCE_SHA256 =
   '4ced79f80aa55fdfb1892b6d34187bb7d158b0205ba92ab3b7fabc28d0fb77b3';
+export const OPERATION_PREFLIGHT_RESULT_PATH =
+  'browser-relay-operation/preflight-result-v1.json';
+export const OPERATION_PREFLIGHT_RESULT_SHA256 =
+  'e3e7e6fab86b1cd777be94b9a9d2c215698d1ab842c92bfd54b6f4ff7d15e436';
 export const OPERATION_PREFLIGHT_RESULT_SCHEMA =
   'miakapp.staging-browser-relay-operation-preflight-result/1';
 export const WINDOW_RESULT_SCHEMA =
@@ -64,6 +70,7 @@ export const MAXIMUM_PUBLIC_WINDOW_MILLISECONDS = 1_200_000;
 export const MAXIMUM_CALLBACK_EXECUTION_MILLISECONDS = 900_000;
 
 const profilePath = new URL('profile.json', import.meta.url);
+const preflightResultPath = new URL('preflight-result-v1.json', import.meta.url);
 const expectedProfile = JSON.parse(readFileSync(profilePath, 'utf8'));
 const MAXIMUM_PROFILE_BYTES = 32 * 1024;
 const MAXIMUM_RESULT_BYTES = 64 * 1024;
@@ -225,7 +232,9 @@ export function rejectOperationPrivateMaterial(value, path = 'value') {
 }
 
 function validateDependencies(profile) {
-  const plan = validateBrowserRelayPlan(new URL('../browser-relay/plan.json', import.meta.url));
+  const plan = validateBrowserRelayV13Plan(
+    new URL('../browser-relay/plan-v13.json', import.meta.url),
+  );
   exact(plan.revision, 13, 'browser-relay plan revision');
   exact(plan.target.cloud_mutation_authorized_by_document, false,
     'browser-relay plan mutation authority');
@@ -533,6 +542,30 @@ export function validateOperationPreflightResultValue(value) {
     'terraform_plan_retained',
   ]) exact(result[field], false, `operation_preflight_result.${field}`);
   return Object.freeze({ ...result });
+}
+
+export function validateOperationPreflightResult(path = preflightResultPath) {
+  const entry = lstatSync(path);
+  if (!entry.isFile() || entry.isSymbolicLink() || entry.size < 1
+    || entry.size > MAXIMUM_RESULT_BYTES) {
+    reject('Operation preflight result must be a bounded regular file');
+  }
+  const bytes = readFileSync(path);
+  exact(sha256(bytes), OPERATION_PREFLIGHT_RESULT_SHA256,
+    'operation preflight result digest');
+  let value;
+  try {
+    value = JSON.parse(bytes.toString('utf8'));
+  } catch {
+    return reject('Operation preflight result must be valid JSON');
+  }
+  if (canonicalJson(value) !== bytes.toString('utf8')) {
+    reject('Operation preflight result is not canonical JSON');
+  }
+  const result = validateOperationPreflightResultValue(value);
+  exact(result.implementation_commit, OPERATION_IMPLEMENTATION_COMMIT,
+    'operation_preflight_result.implementation_commit');
+  return result;
 }
 
 export function validateWindowBaseline(value) {

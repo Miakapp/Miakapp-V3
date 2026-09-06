@@ -39,6 +39,8 @@ import {
 } from '../browser-relay-orchestrator/claim.mjs';
 import {
   OPERATION_IMPLEMENTATION_BASE_COMMIT,
+  OPERATION_IMPLEMENTATION_COMMIT,
+  OPERATION_PREFLIGHT_RESULT_SHA256,
   OPERATION_PREFLIGHT_RESULT_SCHEMA,
   OPERATION_PROFILE_SHA256,
   OPERATION_SOURCE_SHA256,
@@ -49,6 +51,7 @@ import {
   validateClosedRunnerResult,
   validateFinalCleanup,
   validateOperationPreflightResultValue,
+  validateOperationPreflightResult,
   validateOperationResult,
   validateWindowBaseline,
   validateWindowCleanup,
@@ -475,6 +478,21 @@ test('pins a dormant envelope to plan revision 13 and all closed prerequisites',
   assert.match(OPERATION_SOURCE_SHA256, /^[0-9a-f]{64}$/u);
 });
 
+test('pins the successful post-merge read-only operation preflight', () => {
+  const result = validateOperationPreflightResult();
+  assert.equal(result.implementation_commit, OPERATION_IMPLEMENTATION_COMMIT);
+  assert.equal(result.claim_state, 'absent');
+  assert.equal(result.control_plane_state, 'canonical_private');
+  assert.equal(result.relay_phase, 'private_ready');
+  assert.equal(result.runner_route_present, false);
+  assert.equal(result.terraform_convergence, 'no_changes');
+  assert.equal(result.cloud_mutations, 0);
+  assert.equal(
+    OPERATION_PREFLIGHT_RESULT_SHA256,
+    'e3e7e6fab86b1cd777be94b9a9d2c215698d1ab842c92bfd54b6f4ff7d15e436',
+  );
+});
+
 test('reduces one fresh orchestrator observation to the closed operation preflight', () => {
   const implementationCommit = 'a'.repeat(40);
   const orchestrator = {
@@ -687,7 +705,8 @@ test('requires the exact component inventory', async () => {
 
 test('guards the exact dormant package and rejects extra, executable or linked entries', () => {
   const names = [
-    'README.md', 'contract.mjs', 'guard.mjs', 'operation.mjs', 'preflight.mjs', 'profile.json',
+    'README.md', 'contract.mjs', 'guard.mjs', 'operation.mjs', 'preflight.mjs',
+    'preflight-result-v1.json', 'profile.json',
   ];
   validateBrowserRelayOperationRoot(new URL('../browser-relay-operation/', import.meta.url));
 
