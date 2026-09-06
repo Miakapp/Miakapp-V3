@@ -1,0 +1,122 @@
+{
+  "schema": "miakapp.staging-browser-relay-scenario-fixture-profile/1",
+  "revision": 1,
+  "state": "closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed",
+  "target": {
+    "project_id": "miakapp-v4-staging",
+    "project_number": "1072737219170",
+    "region": "europe-west9",
+    "home_id": "miakapp-v4-staging-browser-relay-v1",
+    "data_policy": "synthetic_only",
+    "cloud_compute_resources": 0,
+    "unscheduled": true
+  },
+  "pins": {
+    "implementation_base_commit": "168d9ae8d1cf6e31af92fce220a77ab2878effd4",
+    "browser_relay_plan_sha256": "6c7661d9be861e4f8d13ccd5d2fd0f3eaa34ea2b4d7af2e9b41d1867d6c37211",
+    "browser_relay_page_profile_sha256": "2e9e809d8bb9b88a4e96b51a258d948e6f0d1467c38adaca8c6582e132113e1e",
+    "browser_relay_fixture_profile_sha256": "cf9f75e8f385e386c695751b43258d792f8fe104aa7ec80c6e3471a21ac04047",
+    "browser_relay_fixture_source_sha256": "339cd223822dba232e1bacf263e6632669788c5a44bca39ea297cb8f47fbe838",
+    "browser_relay_fixture_cloud_profile_sha256": "4a0133ce6ef48bd18afb634cb23035b9d7527ba72b44c7a3a82405de5f67feb5",
+    "browser_relay_page_receipt_profile_sha256": "a3da42e63f0c5e470da483e9def3d0b9ed7f5ce983777424794118f1873a13a0",
+    "fixture_source_sha256": "6324e8156f987a32b112135a0bbaef2766b63e16f8b81b1e0a526816c7f132bf"
+  },
+  "scenario": {
+    "primary_synthetic_uid": "miakapp-v4-staging-browser-relay-v1",
+    "replacement_synthetic_uid": "miakapp-v4-staging-browser-relay-replacement-v1",
+    "firebase_identities": 2,
+    "homes": 1,
+    "coordinators": 1,
+    "coordinator_state_access_users": 2,
+    "page_private_input_schema": "miakapp.staging-browser-relay-page-input/1",
+    "page_private_input_order": [
+      {
+        "browser": "chromium",
+        "identity_generation": 1
+      },
+      {
+        "browser": "chromium",
+        "identity_generation": 2
+      },
+      {
+        "browser": "firefox",
+        "identity_generation": 1
+      },
+      {
+        "browser": "webkit",
+        "identity_generation": 1
+      }
+    ],
+    "page_private_inputs": 4,
+    "primary_identity_page_inputs": 3,
+    "replacement_identity_page_inputs": 1,
+    "custom_token_reuse": false,
+    "replacement_identity_calls": 0
+  },
+  "lifecycle": {
+    "both_identities_absent_before_mutation": true,
+    "cleanup_authority_requires_independent_initial_absence": true,
+    "replacement_identity_creation_retries": 0,
+    "replacement_custom_token_retries": 0,
+    "coordinator_stop_precedes_all_data_cleanup": true,
+    "both_identities_absent_after_cleanup": true,
+    "unknown_replacement_mutation_outcome_requires_cleanup": true,
+    "cleanup_attempts_both_ownership_domains": true
+  },
+  "private_material": {
+    "primary_controller_credentials": "delegated_memory_only",
+    "replacement_identity_bootstrap": "injected_memory_only",
+    "page_custom_tokens": "memory_only_one_per_input",
+    "retained_page_token_digests": 4,
+    "raw_dependency_responses_retained": false,
+    "private_values_in_closed_results": false,
+    "arbitrary_dependency_errors_propagated": false
+  },
+  "compatibility": {
+    "page_receipt_required_private_inputs": 4,
+    "scenario_fixture_private_inputs": 4,
+    "fixture_capacity_satisfied": true,
+    "page_receipt_required_identity_generations": 2,
+    "scenario_fixture_identity_generations": 2,
+    "identity_generation_capacity_satisfied": true,
+    "current_cloud_adapter_firebase_identities": 1,
+    "replacement_cloud_adapter_present": false,
+    "page_timing_capacity_satisfied": false,
+    "page_host_api_scenario_complete": false,
+    "playwright_bridge_present": false,
+    "aggregator_wired": false
+  },
+  "output": {
+    "replacement_absence_schema": "miakapp.staging-browser-relay-replacement-absence/1",
+    "replacement_identity_schema": "miakapp.staging-browser-relay-replacement-identity/1",
+    "scenario_absence_schema": "miakapp.staging-browser-relay-scenario-absence/1",
+    "allowed_observations": [
+      "bounded_counts",
+      "stable_lifecycle_state",
+      "synthetic_state_expectation"
+    ],
+    "forbidden_observations": [
+      "email",
+      "firebase_uid",
+      "home_key",
+      "raw_request_or_response",
+      "token"
+    ]
+  },
+  "authority": {
+    "cloud_mutation_authorized": false,
+    "public_ingress_authorized": false,
+    "hosting_publication_authorized": false,
+    "live_execution_authorized": false
+  },
+  "evidence": {
+    "state": "absent",
+    "live_fixture_creations": 0,
+    "live_replacement_identities": 0,
+    "live_page_custom_tokens_issued": 0,
+    "live_cleanup_executions": 0,
+    "cloud_mutations": 0,
+    "credentials_committed": false,
+    "raw_cloud_responses_committed": false
+  }
+}

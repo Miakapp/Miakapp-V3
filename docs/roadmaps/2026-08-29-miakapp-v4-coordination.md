@@ -784,10 +784,14 @@ current consumer.
     browser-page receipt producer: 18 exact Chromium facts cover renewal,
     handoff, reconnect, persisted lifecycle, teardown and identity replacement,
     while Firefox and WebKit each require three. It admits no assertion
-    booleans and retains no raw fact. The current fixture has three private page
-    inputs but the exact flow requires four; its Chromium page budget is 480
+    booleans and retains no raw fact. The immutable original fixture still has
+    three private page inputs, but a separate closed scenario fixture now
+    supplies the fourth from a second genuine synthetic Firebase identity,
+    extends the unique coordinator's state access to both identities and
+    requires both cleanup domains to reach absence. Its replacement-identity
+    cloud adapter is not yet implemented; the Chromium page budget remains 480
     seconds while two live renewals plus scenario overhead require 600; and the
-    page/Playwright scenario is not wired. Close those explicit compatibility
+    page/Playwright scenario is not wired. Close those remaining compatibility
     gaps, then implement the
     independent cloud observers before executing the matrix once.
     A dormant rollback package now pins all six reverse steps, the exact private

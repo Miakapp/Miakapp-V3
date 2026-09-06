@@ -72,7 +72,12 @@ implemented across several repositories.
 - [`../infrastructure/staging/browser-relay-page-receipt/`](../infrastructure/staging/browser-relay-page-receipt/)
   — dormant browser-owned receipt producer that reduces exact cumulative page,
   state, call and native lifecycle facts without accepting assertion booleans;
-  fixture capacity and the Playwright bridge remain explicitly open.
+  page timing and the Playwright bridge remain explicitly open.
+- [`../infrastructure/staging/browser-relay-scenario-fixture/`](../infrastructure/staging/browser-relay-scenario-fixture/)
+  — dormant composition around the immutable fixture that supplies four exact
+  page inputs across two genuine synthetic Firebase identities, extends the one
+  coordinator's state access, and requires coordinator-first cleanup of both
+  identity domains; its replacement cloud adapter remains explicitly open.
 - [`../infrastructure/staging/browser-relay-monitoring/`](../infrastructure/staging/browser-relay-monitoring/)
   — allow-listed read-only monitoring contract whose post-merge preflight pins
   six metric surfaces, the existing EUR 10 budget and the private boundary.
@@ -182,10 +187,13 @@ owners. The first source producer now derives the complete `browser_page`
 receipt from 18 ordered Chromium facts and three facts in each secondary
 browser, including scheduled renewal intervals, serialized handoff, persisted
 page lifecycle and a fresh identity generation. It retains no raw fact and
-explicitly records that the current three-input fixture is one input short and
-that the page's 480-second Chromium budget must become 600 seconds.
+the original three-input fixture remains byte-exact. A separate scenario
+fixture now supplies the required fourth input from a second exact synthetic
+Firebase identity and grants both identities state access through the same
+coordinator. The replacement identity's Google/Firebase adapter is still
+absent, and the page's 480-second Chromium budget must become 600 seconds.
 None of these packages grants Hosting publication or live authority; the next
-fixture/page increment and Playwright bridge must close that compatibility gap
+replacement-cloud/page increment and Playwright bridge must close those gaps
 before the runner can execute.
 
 Repository-specific implementation plans must link back to these documents and

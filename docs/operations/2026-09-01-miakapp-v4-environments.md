@@ -533,11 +533,14 @@ now reduces the browser-owned portion from exact cumulative page facts. It
 requires 18 facts in Chromium and three in each secondary browser, validates
 the two scheduled renewal intervals, serialized handoff, native persisted page
 lifecycle, prior-identity teardown and a fresh identity generation, then emits
-only the aggregator receipt. It records rather than conceals the current
-fixture shortfall (four page inputs required, three available) and the absent
-480-to-600-second Chromium budget increase plus page-scenario/Playwright wiring.
-Independent cloud observers and those explicit compatibility fixes remain
-required before the matrix can run.
+only the aggregator receipt. The immutable three-input fixture remains pinned;
+a separate scenario controller now composes it with one replacement synthetic
+Firebase identity, provides the four exact ordered page inputs, extends the
+single coordinator's state access to both identities and requires both cleanup
+domains to converge. The replacement-identity cloud adapter and the
+480-to-600-second Chromium budget increase plus page-scenario/Playwright wiring
+remain absent. Independent cloud observers and those explicit compatibility
+fixes remain required before the matrix can run.
 
 The guarded relay-image increment bound the exact merged Miakapp-Server tree to a deterministic
 53,098-byte archive, one digest-pinned Cloud Build Docker builder, verified
