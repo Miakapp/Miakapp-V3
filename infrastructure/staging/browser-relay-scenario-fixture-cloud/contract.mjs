@@ -25,7 +25,7 @@ import {
 export const SCENARIO_FIXTURE_CLOUD_PROFILE_PATH =
   'browser-relay-scenario-fixture-cloud/profile.json';
 export const SCENARIO_FIXTURE_CLOUD_PROFILE_SHA256 =
-  'ac461ba647ba8a738d03a823538625bb34776daf37a2d9eb7c102dbc8240fa21';
+  'd15e9c2a5630f321801ad52f684ec4154b19eb431d35fd0692d06a955f54fcb3';
 export const SCENARIO_FIXTURE_CLOUD_IMPLEMENTATION_BASE_COMMIT =
   'c28f6ae3f12f09ed9078fd167e25eaeaadd770b6';
 export const SCENARIO_FIXTURE_CLOUD_SOURCE_SHA256 =
@@ -218,7 +218,7 @@ function validateProfileValue(value) {
     replacement_cloud_adapter_present: true,
     fixture_capacity_satisfied: true,
     identity_generation_capacity_satisfied: true,
-    page_timing_capacity_satisfied: false,
+    page_timing_capacity_satisfied: true,
     page_host_api_scenario_complete: false,
     playwright_bridge_present: false,
     aggregator_wired: false,

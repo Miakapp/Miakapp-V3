@@ -13,8 +13,10 @@ export const RELAY_B_URL =
 export const HOME_ID = 'miakapp-v4-staging-browser-relay-v1';
 export const PAGE_PRIVATE_INPUT_SCHEMA = 'miakapp.staging-browser-relay-page-input/1';
 export const PAGE_OBSERVATION_SCHEMA = 'miakapp.staging-browser-relay-page-observation/1';
-export const MAXIMUM_RUNNER_MILLISECONDS = 600_000;
-export const MAXIMUM_CHROMIUM_MILLISECONDS = 480_000;
+export const PAGE_LIFECYCLE_OBSERVATION_SCHEMA =
+  'miakapp.staging-browser-relay-page-lifecycle-observation/1';
+export const MAXIMUM_RUNNER_MILLISECONDS = 720_000;
+export const MAXIMUM_CHROMIUM_MILLISECONDS = 600_000;
 export const MAXIMUM_FIREFOX_MILLISECONDS = 60_000;
 export const MAXIMUM_WEBKIT_MILLISECONDS = 60_000;
 export const MAXIMUM_CALLBACK_MILLISECONDS = 900_000;
@@ -61,6 +63,7 @@ const PAGE_STATES = [
   'dormant',
   'initialized',
   'ready',
+  'stopping',
   'suspended',
   'stopped',
   'failed',
@@ -242,5 +245,47 @@ export function validatePageSafeObservation(value) {
     relay_ids: relayIds,
     client_statuses: Object.freeze([...observation.client_statuses]),
     failure_classes: Object.freeze([...observation.failure_classes]),
+  });
+}
+
+export function validatePageLifecycleObservation(value) {
+  rejectPagePrivateMaterial(value, 'lifecycle');
+  const observation = exactKeys(value, [
+    'schema', 'browser', 'events', 'suspensions', 'resumptions', 'sign_outs',
+    'disposals', 'state_transitions', 'call_outcomes',
+  ], 'lifecycle');
+  exact(observation.schema, PAGE_LIFECYCLE_OBSERVATION_SCHEMA, 'lifecycle.schema');
+  if (!BROWSER_ORDER.includes(observation.browser)) reject('lifecycle.browser is invalid');
+  for (const field of ['events', 'state_transitions', 'call_outcomes']) {
+    if (!Array.isArray(observation[field]) || observation[field].length > 64) {
+      reject(`lifecycle.${field} is outside its reviewed bound`);
+    }
+  }
+  const events = observation.events.map((value) => {
+    const event = exactKeys(value, ['event', 'persisted'], 'lifecycle.events');
+    if (!['pagehide', 'pageshow'].includes(event.event)
+      || typeof event.persisted !== 'boolean') reject('lifecycle.events is invalid');
+    return Object.freeze({ ...event });
+  });
+  const transitions = observation.state_transitions.map((value) => {
+    const transition = exactKeys(value, ['revision', 'stale'], 'lifecycle.state_transitions');
+    boundedInteger(transition.revision, 0, Number.MAX_SAFE_INTEGER, 'lifecycle.revision');
+    if (typeof transition.stale !== 'boolean') reject('lifecycle.stale is invalid');
+    return Object.freeze({ ...transition });
+  });
+  if (observation.call_outcomes.some((outcome) => (
+    !['applied', 'failed', 'outcome_unknown'].includes(outcome)
+  ))) reject('lifecycle.call_outcomes is invalid');
+  for (const field of ['suspensions', 'resumptions']) {
+    boundedInteger(observation[field], 0, 4, `lifecycle.${field}`);
+  }
+  for (const field of ['sign_outs', 'disposals']) {
+    boundedInteger(observation[field], 0, 1, `lifecycle.${field}`);
+  }
+  return Object.freeze({
+    ...observation,
+    events: Object.freeze(events),
+    state_transitions: Object.freeze(transitions),
+    call_outcomes: Object.freeze([...observation.call_outcomes]),
   });
 }

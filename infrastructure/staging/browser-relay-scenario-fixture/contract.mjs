@@ -35,7 +35,7 @@ import {
 export const SCENARIO_FIXTURE_PROFILE_PATH =
   'browser-relay-scenario-fixture/profile.json';
 export const SCENARIO_FIXTURE_PROFILE_SHA256 =
-  '910478fdb175dcae2cff8307f340748a3d2347f31f3e0384f3e0689a7cf264f4';
+  '3a59be8724fd101417191cb6f175a6f22458d80a380bab6a1e27a54cc4fc74a9';
 export const SCENARIO_FIXTURE_IMPLEMENTATION_BASE_COMMIT =
   '168d9ae8d1cf6e31af92fce220a77ab2878effd4';
 export const SCENARIO_FIXTURE_SOURCE_SHA256 =
@@ -296,7 +296,7 @@ function validateProfileValue(value) {
     identity_generation_capacity_satisfied: true,
     current_cloud_adapter_firebase_identities: 1,
     replacement_cloud_adapter_present: false,
-    page_timing_capacity_satisfied: false,
+    page_timing_capacity_satisfied: true,
     page_host_api_scenario_complete: false,
     playwright_bridge_present: false,
     aggregator_wired: false,

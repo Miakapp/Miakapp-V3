@@ -41,11 +41,17 @@ import {
 import {
   BROWSER_RELAY_PAGE_PROFILE_PATH,
   BROWSER_RELAY_PAGE_PROFILE_SHA256,
+  BROWSER_RELAY_PAGE_V2_PROFILE_PATH,
+  BROWSER_RELAY_PAGE_V2_PROFILE_SHA256,
   CI_WORKFLOW_SHA256 as BROWSER_RELAY_PAGE_CI_WORKFLOW_SHA256,
   DEPENDENCY_LOCK_SHA256 as BROWSER_RELAY_PAGE_DEPENDENCY_LOCK_SHA256,
   MIAKAPI_BUNDLE_SHA256 as BROWSER_RELAY_PAGE_MIAKAPI_BUNDLE_SHA256,
+  OFFLINE_BFCACHE_ENTRY_SHA256 as BROWSER_RELAY_PAGE_OFFLINE_BFCACHE_ENTRY_SHA256,
+  OFFLINE_NODE_TEST_SHA256 as BROWSER_RELAY_PAGE_OFFLINE_NODE_TEST_SHA256,
+  OFFLINE_PAGE_HARNESS_SHA256 as BROWSER_RELAY_PAGE_OFFLINE_PAGE_HARNESS_SHA256,
   OFFLINE_SMOKE_SHA256 as BROWSER_RELAY_PAGE_OFFLINE_SMOKE_SHA256,
   validateBrowserRelayPageProfile,
+  validateBrowserRelayPageV2Profile,
 } from './browser-relay-page/contract.mjs';
 import {
   FIXTURE_IMPLEMENTATION_BASE_COMMIT,
@@ -3837,7 +3843,7 @@ function validateEvidence(value) {
       'page_three_engine_ci_pinned_operation_preflighted_edge_orchestrator_preflighted_rollback_preflighted_monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed',
     path: BROWSER_RELAY_PLAN_PATH,
     sha256: BROWSER_RELAY_PLAN_SHA256,
-    page_profile_sha256: BROWSER_RELAY_PAGE_PROFILE_SHA256,
+    page_profile_sha256: BROWSER_RELAY_PAGE_V2_PROFILE_SHA256,
     baseline_observed_at: '2026-09-06T09:15:20.386Z',
     baseline_control_plane_revision: 'control-plane-00010-vop',
     baseline_published_signing_keys: 2,
@@ -5240,10 +5246,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 88, 'manifest.revision');
+  exact(manifest.revision, 89, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_artifact_ci_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_page_receipt_closed_producer_implemented_not_wired_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_page_receipt_closed_producer_implemented_not_wired_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -5822,6 +5828,22 @@ export function validateCommittedEvidence(
     'evidence.browser_relay_runner.three_engine_ci_gate_present',
   );
   const browserRelayPageManifest = manifest.evidence.browser_relay_page;
+  const browserRelayPageV2ProfilePath = committedEvidencePath(
+    stagingRoot,
+    browserRelayPageManifest.v2_profile_path,
+    BROWSER_RELAY_PAGE_V2_PROFILE_PATH,
+    'evidence.browser_relay_page.v2_profile_path',
+  );
+  const browserRelayPageV2Profile = validatedEvidenceFile(
+    browserRelayPageV2ProfilePath,
+    validateBrowserRelayPageV2Profile,
+    'evidence.browser_relay_page.v2_profile_path',
+  );
+  exact(
+    browserRelayPageV2Profile.pins.browser_relay_plan_sha256,
+    BROWSER_RELAY_V14_PLAN_SHA256,
+    'evidence.browser_relay_page historical revision-2 plan pin',
+  );
   const browserRelayPageProfilePath = committedEvidencePath(
     stagingRoot,
     browserRelayPageManifest.profile_path,
@@ -5840,8 +5862,8 @@ export function validateCommittedEvidence(
   );
   exact(
     browserRelayPageProfile.pins.browser_relay_plan_sha256,
-    BROWSER_RELAY_V14_PLAN_SHA256,
-    'evidence.browser_relay_page historical plan pin',
+    BROWSER_RELAY_PLAN_SHA256,
+    'evidence.browser_relay_page current revision-15 plan pin',
   );
   exact(
     browserRelayPageProfile.pins.browser_relay_runner_profile_sha256,
@@ -5893,6 +5915,17 @@ export function validateCommittedEvidence(
   );
   exact(fileSha256(pageSmokePath), BROWSER_RELAY_PAGE_OFFLINE_SMOKE_SHA256,
     'evidence.browser_relay_page offline smoke digest');
+  for (const [relativePath, expectedDigest] of [
+    ['test/browser-relay-page.test.mjs', BROWSER_RELAY_PAGE_OFFLINE_NODE_TEST_SHA256],
+    ['test/helpers/browser-relay-page-bfcache-entry.mjs', BROWSER_RELAY_PAGE_OFFLINE_BFCACHE_ENTRY_SHA256],
+    ['test/helpers/browser-relay-page-harness.mjs', BROWSER_RELAY_PAGE_OFFLINE_PAGE_HARNESS_SHA256],
+  ]) {
+    const helperPath = committedEvidencePath(
+      stagingRoot, relativePath, relativePath, 'evidence.browser_relay_page offline helper',
+    );
+    exact(fileSha256(helperPath), expectedDigest,
+      `evidence.browser_relay_page ${relativePath} digest`);
+  }
   exact(fileSha256(pageWorkflowPath), BROWSER_RELAY_PAGE_CI_WORKFLOW_SHA256,
     'evidence.browser_relay_page CI workflow digest');
   exact(fileSha256(dependencyLockPath), BROWSER_RELAY_PAGE_DEPENDENCY_LOCK_SHA256,
@@ -5902,9 +5935,11 @@ export function validateCommittedEvidence(
     || !pageWorkflow.includes('browser-relay-page-browser.mjs')) {
     reject('evidence.browser_relay_page.three_engine_ci_gate_present', 'has drifted');
   }
-  exactFields(browserRelayPageManifest, {
+  const expectedBrowserRelayPageManifest = {
     state: browserRelayPageProfile.state,
+    profile_revision: browserRelayPageProfile.revision,
     profile_sha256: BROWSER_RELAY_PAGE_PROFILE_SHA256,
+    v2_profile_sha256: BROWSER_RELAY_PAGE_V2_PROFILE_SHA256,
     browser_relay_plan_sha256: browserRelayPageProfile.pins.browser_relay_plan_sha256,
     runner_profile_sha256:
       browserRelayPageProfile.pins.browser_relay_runner_profile_sha256,
@@ -5914,6 +5949,44 @@ export function validateCommittedEvidence(
     vite_version: browserRelayPageProfile.pins.vite_version,
     playwright_version: browserRelayPageProfile.pins.playwright_version,
     page_api_methods: browserRelayPageProfile.page.api.length,
+    lifecycle_observation_schema: browserRelayPageProfile.lifecycle.observation_schema,
+    lifecycle_observation_fields:
+      browserRelayPageProfile.lifecycle.observation_fields.length,
+    native_lifecycle_wiring_implemented:
+      browserRelayPageProfile.lifecycle.native_lifecycle_wiring_implemented,
+    trusted_lifecycle_events_only:
+      browserRelayPageProfile.lifecycle.trusted_events_only,
+    serialized_lifecycle_operations:
+      browserRelayPageProfile.lifecycle.serialized_operations.length,
+    typed_call_outcomes_implemented:
+      browserRelayPageProfile.lifecycle.typed_call_outcomes_implemented,
+    offline_validation_browser_engines:
+      browserRelayPageProfile.offline_validation.browser_order.length,
+    offline_dormant_artifact_proven:
+      browserRelayPageProfile.offline_validation.dormant_artifact_proven,
+    offline_native_non_persisted_pagehide_terminal_fence_proven:
+      browserRelayPageProfile.offline_validation.native_non_persisted_pagehide_terminal_fence_proven,
+    offline_native_non_persisted_async_firebase_cleanup_proven:
+      browserRelayPageProfile.offline_validation.native_non_persisted_async_firebase_cleanup_proven,
+    offline_explicit_terminal_cleanup_before_sequential_replacement_proven:
+      browserRelayPageProfile.offline_validation
+        .explicit_terminal_cleanup_before_sequential_replacement_proven,
+    offline_sequential_identity_replacement_proven:
+      browserRelayPageProfile.offline_validation.sequential_identity_replacement_proven,
+    offline_lifecycle_dependency_mode:
+      browserRelayPageProfile.offline_validation.lifecycle_dependency_mode,
+    pinned_playwright_bfcache_testing_supported:
+      browserRelayPageProfile.offline_validation.pinned_playwright_bfcache_testing_supported,
+    native_persisted_bfcache_restoration_proven:
+      browserRelayPageProfile.offline_validation.native_persisted_bfcache_restoration_proven,
+    native_persisted_bfcache_state:
+      browserRelayPageProfile.offline_validation.native_persisted_bfcache_state,
+    simulated_trusted_persisted_unit_test:
+      browserRelayPageProfile.offline_validation.simulated_trusted_persisted_unit_test,
+    simulated_persisted_test_is_native_bfcache_proof:
+      browserRelayPageProfile.offline_validation.simulated_persisted_test_is_native_bfcache_proof,
+    live_cloud_acceptance_proven:
+      browserRelayPageProfile.offline_validation.live_cloud_acceptance_proven,
     three_engine_ci_gate_present:
       browserRelayPageProfile.page.three_engine_dormant_artifact_ci,
     runner_compatible: browserRelayPageProfile.page.runner_compatible,
@@ -5950,7 +6023,12 @@ export function validateCommittedEvidence(
     live_execution_count: browserRelayPageProfile.evidence.live_execution_count,
     credentials_committed: false,
     raw_diagnostics_committed: false,
-  }, 'evidence.browser_relay_page');
+  };
+  record(browserRelayPageManifest, 'evidence.browser_relay_page', [
+    'profile_path', 'v2_profile_path', ...Object.keys(expectedBrowserRelayPageManifest),
+  ]);
+  exactFields(browserRelayPageManifest, expectedBrowserRelayPageManifest,
+    'evidence.browser_relay_page');
   const browserRelayFixtureManifest = manifest.evidence.browser_relay_fixture;
   const browserRelayFixtureProfilePath = committedEvidencePath(
     stagingRoot,
@@ -7045,8 +7123,8 @@ export function validateCommittedEvidence(
   );
   exact(
     browserRelayPlan.pins.browser_relay_page_profile_sha256,
-    BROWSER_RELAY_PAGE_PROFILE_SHA256,
-    'evidence.browser_relay_plan page profile pin',
+    BROWSER_RELAY_PAGE_V2_PROFILE_SHA256,
+    'evidence.browser_relay_plan historical page revision-2 CI pin',
   );
   exactFields(browserRelayOperationManifest, {
     state: browserRelayOperationResult.state,
@@ -7990,6 +8068,7 @@ export function validateCommittedEvidence(
     browserRelayV14Plan,
     browserRelayRunnerProfile,
     browserRelayPageProfile,
+    browserRelayPageV2Profile,
     browserRelayAggregatorProfile,
     browserRelayPageReceiptProfile,
     browserRelayScenarioFixtureCloudProfile,

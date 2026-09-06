@@ -14,11 +14,11 @@
   "pins": {
     "implementation_base_commit": "168d9ae8d1cf6e31af92fce220a77ab2878effd4",
     "browser_relay_plan_sha256": "6c7661d9be861e4f8d13ccd5d2fd0f3eaa34ea2b4d7af2e9b41d1867d6c37211",
-    "browser_relay_page_profile_sha256": "2e9e809d8bb9b88a4e96b51a258d948e6f0d1467c38adaca8c6582e132113e1e",
-    "browser_relay_fixture_profile_sha256": "cf9f75e8f385e386c695751b43258d792f8fe104aa7ec80c6e3471a21ac04047",
+    "browser_relay_page_profile_sha256": "c57e53dfeb25a0b5169854c535a535072151387b91ec4c07f889cac60bf83539",
+    "browser_relay_fixture_profile_sha256": "0dad7b7478829b88a234c6f6551ad7da7616ac46f12ca37c12bef3ffcdfefe22",
     "browser_relay_fixture_source_sha256": "339cd223822dba232e1bacf263e6632669788c5a44bca39ea297cb8f47fbe838",
-    "browser_relay_fixture_cloud_profile_sha256": "217f897541fc53b9077066ad0105826bf8130f5727ff9094903b58f7549b9deb",
-    "browser_relay_page_receipt_profile_sha256": "c3678c6c0021c78c906ae76004e3c2be72496a839471ecef483d7a55c67b3469",
+    "browser_relay_fixture_cloud_profile_sha256": "a7afcaef4a4c71e2ef501d389e87b96f17a92056c57614785a79e5d9b21b9196",
+    "browser_relay_page_receipt_profile_sha256": "37f3b7a23b28a42f2a073e85744e986ecced39e64ff045aee915378a7b4aaaa3",
     "fixture_source_sha256": "6324e8156f987a32b112135a0bbaef2766b63e16f8b81b1e0a526816c7f132bf"
   },
   "scenario": {
@@ -81,7 +81,7 @@
     "identity_generation_capacity_satisfied": true,
     "current_cloud_adapter_firebase_identities": 1,
     "replacement_cloud_adapter_present": false,
-    "page_timing_capacity_satisfied": false,
+    "page_timing_capacity_satisfied": true,
     "page_host_api_scenario_complete": false,
     "playwright_bridge_present": false,
     "aggregator_wired": false

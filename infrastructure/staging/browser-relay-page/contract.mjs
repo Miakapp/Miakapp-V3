@@ -14,6 +14,7 @@ import {
   MAXIMUM_PUBLIC_WINDOW_MILLISECONDS,
   MAXIMUM_RUNNER_MILLISECONDS,
   MAXIMUM_WEBKIT_MILLISECONDS,
+  PAGE_LIFECYCLE_OBSERVATION_SCHEMA,
   PAGE_OBSERVATION_SCHEMA,
   PAGE_PRIVATE_INPUT_SCHEMA,
   RELAY_A_URL,
@@ -28,14 +29,17 @@ import {
 export * from './boundary.mjs';
 
 export const BROWSER_RELAY_PAGE_PROFILE_PATH = 'browser-relay-page/profile.json';
-export const BROWSER_RELAY_PAGE_PROFILE_SHA256 =
+export const BROWSER_RELAY_PAGE_V2_PROFILE_PATH = 'browser-relay-page/profile-v2.json';
+export const BROWSER_RELAY_PAGE_V2_PROFILE_SHA256 =
   '2e9e809d8bb9b88a4e96b51a258d948e6f0d1467c38adaca8c6582e132113e1e';
+export const BROWSER_RELAY_PAGE_PROFILE_SHA256 =
+  'c57e53dfeb25a0b5169854c535a535072151387b91ec4c07f889cac60bf83539';
 export const BROWSER_RELAY_PLAN_SHA256 =
-  'dbf0e73a20875353f28466b4fe1edcb8e8d1fc6604d979002b36a7610c36aa9a';
+  '6c7661d9be861e4f8d13ccd5d2fd0f3eaa34ea2b4d7af2e9b41d1867d6c37211';
 export const BROWSER_RELAY_RUNNER_PROFILE_SHA256 =
   '72b688ccd577f7b40b21d9f874bbca555324eaec1fbf2acbc87dee35cf83a536';
 export const MIAKAPI_COMMIT = 'a798a746847ba3d5c16128a08b33353269e770a4';
-export const IMPLEMENTATION_BASE_COMMIT = 'aba6e2f2167e0ab6389004a7cd299ca7fb1d6c2a';
+export const IMPLEMENTATION_BASE_COMMIT = '95e17c95703058606490b61156a6efb25e9fd581';
 export const MIAKAPI_SOURCE_ARCHIVE_SHA256 =
   '499ba3b4205538691341aaa8cea76f9d232308aed01522cc5f35aebcf9cc9c5a';
 export const MIAKAPI_PACKAGE_SHA256 =
@@ -54,9 +58,15 @@ export const NODE_VERSION = '22.22.0';
 export const DEPENDENCY_LOCK_SHA256 =
   'f5836463d6c52b4c1772b834f0f2fac7ba7e97afe681439599a72957d9611bb3';
 export const OFFLINE_SMOKE_SHA256 =
-  '7ba4c249b6e6817e1fbd6c09c4c39b85cd7f722e2a4b46ba7a4e76f8c021939d';
+  '103a05d8eaad78babcc7ca91cbf28a793fd3eb210346dd411f32bc69eb66ba97';
+export const OFFLINE_NODE_TEST_SHA256 =
+  '3b6e6c1e164841f16483889f9faca5c7adefd43e33e3a5a2f153863c11d448e2';
+export const OFFLINE_BFCACHE_ENTRY_SHA256 =
+  'd457bcf42b4a0a4f172b955db7a5f5722aeeba9b0838d195d94347fd38578a8b';
+export const OFFLINE_PAGE_HARNESS_SHA256 =
+  '38650b2967fbda7692d1684119f9aef4789eb632e76832eff49968d34f7b3d92';
 export const CI_WORKFLOW_SHA256 =
-  'e87ff37d17e3df650841181f31ebf09e8be07082b64114780fcb36914286174b';
+  '2951591b361277e7556c040947f8695fc584bb3e7015808664620f8e9b6be409';
 
 const MAXIMUM_PROFILE_BYTES = 32 * 1024;
 const SHA256 = /^[0-9a-f]{64}$/u;
@@ -103,6 +113,8 @@ function validateProfileValue(value) {
     'target',
     'pins',
     'page',
+    'lifecycle',
+    'offline_validation',
     'timing',
     'artifact',
     'authority',
@@ -110,10 +122,10 @@ function validateProfileValue(value) {
   ], 'profile');
   exact(profile, expectedProfile, 'profile');
   exact(profile.schema, 'miakapp.staging-browser-relay-page-profile/1', 'profile.schema');
-  exact(profile.revision, 2, 'profile.revision');
+  exact(profile.revision, 3, 'profile.revision');
   exact(
     profile.state,
-    'three_engine_dormant_artifact_ci_implemented_not_wired_not_published_not_executed',
+    'three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed',
     'profile.state',
   );
   exactKeys(profile.target, [
@@ -153,6 +165,9 @@ function validateProfileValue(value) {
     'node_version',
     'dependency_lock_sha256',
     'offline_smoke_sha256',
+    'offline_node_test_sha256',
+    'offline_bfcache_entry_sha256',
+    'offline_page_harness_sha256',
     'ci_workflow_sha256',
     'boundary_source_sha256',
     'runtime_source_sha256',
@@ -175,6 +190,9 @@ function validateProfileValue(value) {
     'miakapi_bun_lock_sha256',
     'dependency_lock_sha256',
     'offline_smoke_sha256',
+    'offline_node_test_sha256',
+    'offline_bfcache_entry_sha256',
+    'offline_page_harness_sha256',
     'ci_workflow_sha256',
     'boundary_source_sha256',
     'runtime_source_sha256',
@@ -212,6 +230,12 @@ function validateProfileValue(value) {
     'profile.pins.dependency_lock_sha256');
   exact(profile.pins.offline_smoke_sha256, OFFLINE_SMOKE_SHA256,
     'profile.pins.offline_smoke_sha256');
+  exact(profile.pins.offline_node_test_sha256, OFFLINE_NODE_TEST_SHA256,
+    'profile.pins.offline_node_test_sha256');
+  exact(profile.pins.offline_bfcache_entry_sha256, OFFLINE_BFCACHE_ENTRY_SHA256,
+    'profile.pins.offline_bfcache_entry_sha256');
+  exact(profile.pins.offline_page_harness_sha256, OFFLINE_PAGE_HARNESS_SHA256,
+    'profile.pins.offline_page_harness_sha256');
   exact(profile.pins.ci_workflow_sha256, CI_WORKFLOW_SHA256,
     'profile.pins.ci_workflow_sha256');
   exactKeys(profile.page, [
@@ -243,6 +267,7 @@ function validateProfileValue(value) {
     'initialize',
     'start',
     'observe',
+    'observeLifecycle',
     'observeState',
     'call',
     'suspend',
@@ -267,6 +292,37 @@ function validateProfileValue(value) {
     'profile.page.browser_console_collected');
   exact(profile.page.network_payloads_collected, false,
     'profile.page.network_payloads_collected');
+  exact(profile.lifecycle, {
+    observation_schema: PAGE_LIFECYCLE_OBSERVATION_SCHEMA,
+    observation_fields: [
+      'schema', 'browser', 'events', 'suspensions', 'resumptions', 'sign_outs', 'disposals',
+      'state_transitions', 'call_outcomes',
+    ],
+    event_fields: ['event', 'persisted'],
+    native_event_types: ['pagehide', 'pageshow'],
+    trusted_events_only: true,
+    native_lifecycle_wiring_implemented: true,
+    serialized_operations: ['suspend', 'resume', 'stop'],
+    state_transition_fields: ['revision', 'stale'],
+    call_outcomes: ['applied', 'failed', 'outcome_unknown'],
+    typed_call_outcomes_implemented: true,
+    raw_events_retained: false,
+  }, 'profile.lifecycle');
+  exact(profile.offline_validation, {
+    browser_order: BROWSER_ORDER,
+    dormant_artifact_proven: true,
+    native_non_persisted_pagehide_terminal_fence_proven: true,
+    native_non_persisted_async_firebase_cleanup_proven: false,
+    explicit_terminal_cleanup_before_sequential_replacement_proven: true,
+    sequential_identity_replacement_proven: true,
+    lifecycle_dependency_mode: 'offline_fakes',
+    pinned_playwright_bfcache_testing_supported: false,
+    native_persisted_bfcache_restoration_proven: false,
+    native_persisted_bfcache_state: 'blocked_by_pinned_playwright',
+    simulated_trusted_persisted_unit_test: true,
+    simulated_persisted_test_is_native_bfcache_proof: false,
+    live_cloud_acceptance_proven: false,
+  }, 'profile.offline_validation');
   exactKeys(profile.timing, [
     'maximum_runner_milliseconds',
     'maximum_chromium_milliseconds',
@@ -301,6 +357,18 @@ function validateProfileValue(value) {
       + profile.timing.maximum_webkit_milliseconds,
     profile.timing.maximum_runner_milliseconds,
     'profile.timing per-browser total',
+  );
+  exact(
+    profile.timing.maximum_runner_milliseconds
+      + profile.timing.callback_cleanup_reserve_milliseconds,
+    profile.timing.maximum_callback_milliseconds,
+    'profile.timing callback total',
+  );
+  exact(
+    profile.timing.maximum_callback_milliseconds
+      + profile.timing.edge_rollback_reserve_milliseconds,
+    profile.timing.maximum_public_window_milliseconds,
+    'profile.timing public-window total',
   );
   exactKeys(profile.artifact, [
     'build_tool',
@@ -364,6 +432,28 @@ export function validateBrowserRelayPageProfile(
     reject('Browser-relay page profile is not canonical JSON');
   }
   return validateProfileValue(value);
+}
+
+export function validateBrowserRelayPageV2Profile(
+  path = new URL('profile-v2.json', import.meta.url),
+) {
+  const entry = lstatSync(path);
+  if (!entry.isFile() || entry.isSymbolicLink() || (entry.mode & 0o111) !== 0
+    || entry.size === 0 || entry.size > MAXIMUM_PROFILE_BYTES) {
+    reject('Historical page revision-2 profile must be a bounded non-executable regular file');
+  }
+  const bytes = readFileSync(path);
+  if (sha256(bytes) !== BROWSER_RELAY_PAGE_V2_PROFILE_SHA256) {
+    reject('Historical page revision-2 profile digest has drifted');
+  }
+  const profile = JSON.parse(bytes.toString('utf8'));
+  exact(profile.schema, 'miakapp.staging-browser-relay-page-profile/1',
+    'historical profile.schema');
+  exact(profile.revision, 2, 'historical profile.revision');
+  exact(profile.pins.browser_relay_plan_sha256,
+    'dbf0e73a20875353f28466b4fe1edcb8e8d1fc6604d979002b36a7610c36aa9a',
+    'historical profile plan revision-14 pin');
+  return Object.freeze(profile);
 }
 
 export {

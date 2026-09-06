@@ -15,9 +15,9 @@
   },
   "pins": {
     "implementation_base_commit": "c28f6ae3f12f09ed9078fd167e25eaeaadd770b6",
-    "browser_relay_fixture_cloud_profile_sha256": "217f897541fc53b9077066ad0105826bf8130f5727ff9094903b58f7549b9deb",
+    "browser_relay_fixture_cloud_profile_sha256": "a7afcaef4a4c71e2ef501d389e87b96f17a92056c57614785a79e5d9b21b9196",
     "browser_relay_fixture_cloud_source_sha256": "cc99b6e4aef08fb47c56a1e9303a3e71945b085939c30ef67ff2f7849795ef0d",
-    "browser_relay_scenario_fixture_profile_sha256": "910478fdb175dcae2cff8307f340748a3d2347f31f3e0384f3e0689a7cf264f4",
+    "browser_relay_scenario_fixture_profile_sha256": "3a59be8724fd101417191cb6f175a6f22458d80a380bab6a1e27a54cc4fc74a9",
     "browser_relay_scenario_fixture_source_sha256": "6324e8156f987a32b112135a0bbaef2766b63e16f8b81b1e0a526816c7f132bf",
     "cloud_source_sha256": "a4da72dcd1e4b245b79325655e603b9ccb8937ca868c824f640ecc188dade97d"
   },
@@ -60,7 +60,7 @@
     "replacement_cloud_adapter_present": true,
     "fixture_capacity_satisfied": true,
     "identity_generation_capacity_satisfied": true,
-    "page_timing_capacity_satisfied": false,
+    "page_timing_capacity_satisfied": true,
     "page_host_api_scenario_complete": false,
     "playwright_bridge_present": false,
     "aggregator_wired": false

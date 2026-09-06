@@ -759,7 +759,21 @@ current consumer.
     memory-only Firebase Auth, real App Check and a digest-pinned MiakAPI bundle;
     its deterministic artifact is loaded without network access in Chromium,
     Firefox and WebKit by a dedicated CI gate. Plan revision 15 preserves
-    revision 14 byte-for-byte and pins that merged page profile and proof. It
+    revision 14 byte-for-byte and pins that merged revision-2 page profile and
+    proof. Its exact profile is archived as `profile-v2.json`; current page
+    revision 3 pins unchanged plan 15 and implements serialized native lifecycle
+    handling plus typed call outcomes through a separate bounded observation.
+    It allocates 600 seconds to Chromium and 60 seconds to each secondary
+    engine, preserving 180 seconds for callback cleanup and 300 for edge
+    rollback inside the unchanged outer ceilings. Real pinned-browser checks
+    prove the dormant artifact and explicit terminal cleanup before sequential
+    identity replacement using offline fakes. The later trusted non-persisted
+    native pagehide proves synchronous terminal fencing, not completion of
+    asynchronous Firebase cleanup. Playwright 1.62.1
+    explicitly does not support BFCache testing, leaving native persisted
+    restoration `blocked_by_pinned_playwright`; simulated trusted persisted
+    unit events are not native proof. These checks grant no cloud or live
+    acceptance. It
     remains deliberately not runner-compatible and has no publisher or live
     authority. The next source-only increment added the independent fixed
     synthetic-Home controller. It proves every fixture domain absent before
@@ -792,11 +806,12 @@ current consumer.
     replacement-identity cloud adapter is now implemented: injected ephemeral
     credentials and transport bound two keyless signatures, token-bound
     identity verification and independently observed cleanup without mutation
-    retries. Its profile records the implementation while the older
-    compatibility snapshots remain unchanged; no live wiring or execution is
-    present. The Chromium page budget remains 480 seconds while two live
-    renewals plus scenario overhead require 600, and the page/Playwright
-    scenario is not wired. Close those remaining compatibility gaps, then
+    retries. Its profile records the implementation while original fixture
+    capacity limits remain explicit; current dependency pins and timing
+    capacity follow page revision 3. No live wiring or execution is present.
+    The Chromium timing and local lifecycle/outcome APIs are implemented, but
+    the complete page scenario and Playwright receipt bridge are not wired.
+    Close those remaining compatibility gaps, then
     implement the independent cloud observers before executing the matrix once.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform

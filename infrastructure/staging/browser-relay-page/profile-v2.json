@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-browser-relay-page-profile/1",
-  "revision": 3,
-  "state": "three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed",
+  "revision": 2,
+  "state": "three_engine_dormant_artifact_ci_implemented_not_wired_not_published_not_executed",
   "target": {
     "project_id": "miakapp-v4-staging",
     "origin": "https://miakapp-v4-staging.web.app",
@@ -17,8 +17,8 @@
     "unscheduled": true
   },
   "pins": {
-    "implementation_base_commit": "95e17c95703058606490b61156a6efb25e9fd581",
-    "browser_relay_plan_sha256": "6c7661d9be861e4f8d13ccd5d2fd0f3eaa34ea2b4d7af2e9b41d1867d6c37211",
+    "implementation_base_commit": "aba6e2f2167e0ab6389004a7cd299ca7fb1d6c2a",
+    "browser_relay_plan_sha256": "dbf0e73a20875353f28466b4fe1edcb8e8d1fc6604d979002b36a7610c36aa9a",
     "browser_relay_runner_profile_sha256": "72b688ccd577f7b40b21d9f874bbca555324eaec1fbf2acbc87dee35cf83a536",
     "miakapi_commit": "a798a746847ba3d5c16128a08b33353269e770a4",
     "miakapi_source_archive_sha256": "499ba3b4205538691341aaa8cea76f9d232308aed01522cc5f35aebcf9cc9c5a",
@@ -32,14 +32,11 @@
     "bun_version": "1.2.23",
     "node_version": "22.22.0",
     "dependency_lock_sha256": "f5836463d6c52b4c1772b834f0f2fac7ba7e97afe681439599a72957d9611bb3",
-    "offline_smoke_sha256": "103a05d8eaad78babcc7ca91cbf28a793fd3eb210346dd411f32bc69eb66ba97",
-    "offline_node_test_sha256": "3b6e6c1e164841f16483889f9faca5c7adefd43e33e3a5a2f153863c11d448e2",
-    "offline_bfcache_entry_sha256": "d457bcf42b4a0a4f172b955db7a5f5722aeeba9b0838d195d94347fd38578a8b",
-    "offline_page_harness_sha256": "38650b2967fbda7692d1684119f9aef4789eb632e76832eff49968d34f7b3d92",
-    "ci_workflow_sha256": "2951591b361277e7556c040947f8695fc584bb3e7015808664620f8e9b6be409",
-    "boundary_source_sha256": "dcd434d405436f64e4c637eef94a1b4e5463a3afe579dff3e2cddbddcc10e5a2",
-    "runtime_source_sha256": "6a81ed297fc31698120c87b7e2103554718b7b62829cbfa1995fbb9af3487768",
-    "page_source_sha256": "2a9d4f65cbead0abeed1b3c331abb09ca15448e29a615e5698b5321f49385ccd",
+    "offline_smoke_sha256": "7ba4c249b6e6817e1fbd6c09c4c39b85cd7f722e2a4b46ba7a4e76f8c021939d",
+    "ci_workflow_sha256": "e87ff37d17e3df650841181f31ebf09e8be07082b64114780fcb36914286174b",
+    "boundary_source_sha256": "0908e830f11aab1cd95555a8f3d621d7aac5997bde4bfbe0359cb614bcdaf773",
+    "runtime_source_sha256": "53599457ab5ab40fae85ac879df8785d1317fd072e6d7e24df23fc50ade41b4c",
+    "page_source_sha256": "2d638c5caa58705147576b66581135440e60a4d39f58d9449234defde44aa5c7",
     "artifact_source_sha256": "d66e0578924f8380d075935b7f46cb79de5683f18d82c600b852e2f9686f704a",
     "index_sha256": "ad1d70ebadcc356744127ca36b5a1de47634f2a2cdc9da5d631ef2d3c95a732f"
   },
@@ -57,7 +54,6 @@
       "initialize",
       "start",
       "observe",
-      "observeLifecycle",
       "observeState",
       "call",
       "suspend",
@@ -74,73 +70,14 @@
     "browser_console_collected": false,
     "network_payloads_collected": false
   },
-  "lifecycle": {
-    "observation_schema": "miakapp.staging-browser-relay-page-lifecycle-observation/1",
-    "observation_fields": [
-      "schema",
-      "browser",
-      "events",
-      "suspensions",
-      "resumptions",
-      "sign_outs",
-      "disposals",
-      "state_transitions",
-      "call_outcomes"
-    ],
-    "event_fields": [
-      "event",
-      "persisted"
-    ],
-    "native_event_types": [
-      "pagehide",
-      "pageshow"
-    ],
-    "trusted_events_only": true,
-    "native_lifecycle_wiring_implemented": true,
-    "serialized_operations": [
-      "suspend",
-      "resume",
-      "stop"
-    ],
-    "state_transition_fields": [
-      "revision",
-      "stale"
-    ],
-    "call_outcomes": [
-      "applied",
-      "failed",
-      "outcome_unknown"
-    ],
-    "typed_call_outcomes_implemented": true,
-    "raw_events_retained": false
-  },
-  "offline_validation": {
-    "browser_order": [
-      "chromium",
-      "firefox",
-      "webkit"
-    ],
-    "dormant_artifact_proven": true,
-    "native_non_persisted_pagehide_terminal_fence_proven": true,
-    "native_non_persisted_async_firebase_cleanup_proven": false,
-    "explicit_terminal_cleanup_before_sequential_replacement_proven": true,
-    "sequential_identity_replacement_proven": true,
-    "lifecycle_dependency_mode": "offline_fakes",
-    "pinned_playwright_bfcache_testing_supported": false,
-    "native_persisted_bfcache_restoration_proven": false,
-    "native_persisted_bfcache_state": "blocked_by_pinned_playwright",
-    "simulated_trusted_persisted_unit_test": true,
-    "simulated_persisted_test_is_native_bfcache_proof": false,
-    "live_cloud_acceptance_proven": false
-  },
   "timing": {
-    "maximum_runner_milliseconds": 720000,
-    "maximum_chromium_milliseconds": 600000,
+    "maximum_runner_milliseconds": 600000,
+    "maximum_chromium_milliseconds": 480000,
     "maximum_firefox_milliseconds": 60000,
     "maximum_webkit_milliseconds": 60000,
     "maximum_callback_milliseconds": 900000,
     "maximum_public_window_milliseconds": 1200000,
-    "callback_cleanup_reserve_milliseconds": 180000,
+    "callback_cleanup_reserve_milliseconds": 300000,
     "edge_rollback_reserve_milliseconds": 300000
   },
   "artifact": {

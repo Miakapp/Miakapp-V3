@@ -1,7 +1,11 @@
 import { lstatSync, readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { sha256 } from './contract.mjs';
+import {
+  sha256,
+  validateBrowserRelayPageProfile,
+  validateBrowserRelayPageV2Profile,
+} from './contract.mjs';
 
 const ROOT_FILES = Object.freeze([
   'README.md',
@@ -12,6 +16,7 @@ const ROOT_FILES = Object.freeze([
   'index.html',
   'page.mjs',
   'profile.json',
+  'profile-v2.json',
   'runtime.mjs',
 ]);
 const ROOT_DIRECTORIES = Object.freeze(['vendor']);
@@ -52,6 +57,7 @@ export function validateBrowserRelayPageRoot(rootUrl) {
     reject('Browser-relay page root contains an unsupported entry');
   }
   for (const name of ROOT_FILES) regularFile(new URL(name, rootUrl), name);
+  validateBrowserRelayPageV2Profile(new URL('profile-v2.json', rootUrl));
   const vendorUrl = new URL('vendor/', rootUrl);
   const vendorEntry = lstatSync(vendorUrl);
   if (!vendorEntry.isDirectory() || vendorEntry.isSymbolicLink()) {
@@ -64,7 +70,7 @@ export function validateBrowserRelayPageRoot(rootUrl) {
   }
   for (const name of VENDOR_FILES) regularFile(new URL(name, vendorUrl), `vendor/${name}`);
 
-  const profile = JSON.parse(readFileSync(new URL('profile.json', rootUrl), 'utf8'));
+  const profile = validateBrowserRelayPageProfile(new URL('profile.json', rootUrl));
   const sources = Object.fromEntries([
     ['boundary_source_sha256', 'boundary.mjs'],
     ['runtime_source_sha256', 'runtime.mjs'],

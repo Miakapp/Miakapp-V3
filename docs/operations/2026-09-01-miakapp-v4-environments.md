@@ -537,10 +537,21 @@ only the aggregator receipt. The immutable three-input fixture remains pinned;
 a separate scenario controller now composes it with one replacement synthetic
 Firebase identity, provides the four exact ordered page inputs, extends the
 single coordinator's state access to both identities and requires both cleanup
-domains to converge. The replacement-identity cloud adapter and the
-480-to-600-second Chromium budget increase plus page-scenario/Playwright wiring
-remain absent. Independent cloud observers and those explicit compatibility
-fixes remain required before the matrix can run.
+domains to converge. The replacement-identity cloud adapter now implements the
+second exact UID behind injected ephemeral credentials and transport, without
+live wiring. Current page revision 3 supplies a 600-second Chromium budget,
+serialized native lifecycle handling and typed call outcomes, with separate
+bounded lifecycle observations. Real pinned-browser smoke proves the dormant
+artifact plus explicit terminal cleanup before sequential replacement using
+offline fakes. The later trusted non-persisted native pagehide proves
+synchronous terminal fencing, not completion of asynchronous Firebase cleanup.
+Playwright 1.62.1 explicitly does not support
+BFCache testing: native persisted restoration remains
+`blocked_by_pinned_playwright`, and simulated trusted persisted unit events
+are not native BFCache proof. Plan 15 and its archived page-2 CI profile
+remain byte-exact historical evidence. Complete page-scenario/Playwright wiring
+and independent cloud observers remain required before the matrix can run;
+no package grants Hosting publication or live execution authority.
 
 The guarded relay-image increment bound the exact merged Miakapp-Server tree to a deterministic
 53,098-byte archive, one digest-pinned Cloud Build Docker builder, verified

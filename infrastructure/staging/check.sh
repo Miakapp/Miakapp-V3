@@ -135,7 +135,10 @@ node --check infrastructure/staging/browser-relay-page/guard.mjs
 node --check infrastructure/staging/browser-relay-page/page.mjs
 node --check infrastructure/staging/browser-relay-page/runtime.mjs
 node --check infrastructure/staging/test/browser-relay-page-browser.mjs
+node --check infrastructure/staging/test/helpers/browser-relay-page-bfcache-entry.mjs
+node --check infrastructure/staging/test/helpers/browser-relay-page-harness.mjs
 node -e "import('./infrastructure/staging/browser-relay-page/contract.mjs').then(({ validateBrowserRelayPageProfile }) => validateBrowserRelayPageProfile())"
+node -e "import('./infrastructure/staging/browser-relay-page/contract.mjs').then(({ validateBrowserRelayPageV2Profile }) => validateBrowserRelayPageV2Profile())"
 node infrastructure/staging/browser-relay-fixture/guard.mjs \
   "${repository_root}/infrastructure/staging/browser-relay-fixture"
 node --check infrastructure/staging/browser-relay-fixture/contract.mjs

@@ -8,6 +8,7 @@ on:
       - '.github/workflows/browser-relay-page.yml'
       - 'infrastructure/staging/browser-relay-page/**'
       - 'infrastructure/staging/test/browser-relay-page*.mjs'
+      - 'infrastructure/staging/test/helpers/browser-relay-page-*.mjs'
       - 'package.json'
       - 'bun.lock'
   pull_request:
@@ -15,6 +16,7 @@ on:
       - '.github/workflows/browser-relay-page.yml'
       - 'infrastructure/staging/browser-relay-page/**'
       - 'infrastructure/staging/test/browser-relay-page*.mjs'
+      - 'infrastructure/staging/test/helpers/browser-relay-page-*.mjs'
       - 'package.json'
       - 'bun.lock'
 
@@ -40,5 +42,5 @@ jobs:
         run: node --test infrastructure/staging/test/browser-relay-page.test.mjs
       - name: Install the three pinned browser engines
         run: ./node_modules/.bin/playwright install --with-deps chromium firefox webkit
-      - name: Load the artifact in three browsers without network access
+      - name: Exercise the offline page lifecycle in three browsers
         run: node infrastructure/staging/test/browser-relay-page-browser.mjs
