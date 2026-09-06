@@ -919,8 +919,10 @@ vertical-slice exit gates.
    factories. It uses keyless IAM signing, bounds each control-plane mutation
    to one attempt, and accepts cleanup only for the exact complete synthetic
    ownership/key registries before one atomic preconditioned Firestore delete
-   and final Firebase UID deletion. The pinned MiakAPI factory binding and
-   independent closed aggregator remain required before the one allowed
+   and final Firebase UID deletion. A separate reproducible binding now pins the
+   exact MiakAPI Node bundle, injects the Home Key exchange transport and
+   permits only the expected provider/coordinator pair without starting it. The
+   independent closed aggregator remains required before the one allowed
    execution.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,

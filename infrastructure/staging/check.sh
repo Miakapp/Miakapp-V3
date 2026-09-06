@@ -148,6 +148,12 @@ node --check infrastructure/staging/browser-relay-fixture-cloud/cloud.mjs
 node --check infrastructure/staging/browser-relay-fixture-cloud/contract.mjs
 node --check infrastructure/staging/browser-relay-fixture-cloud/guard.mjs
 node -e "import('./infrastructure/staging/browser-relay-fixture-cloud/contract.mjs').then(({ validateBrowserRelayFixtureCloudProfile }) => validateBrowserRelayFixtureCloudProfile())"
+node infrastructure/staging/browser-relay-fixture-miakapi/guard.mjs \
+  "${repository_root}/infrastructure/staging/browser-relay-fixture-miakapi"
+node --check infrastructure/staging/browser-relay-fixture-miakapi/binding.mjs
+node --check infrastructure/staging/browser-relay-fixture-miakapi/contract.mjs
+node --check infrastructure/staging/browser-relay-fixture-miakapi/guard.mjs
+node -e "import('./infrastructure/staging/browser-relay-fixture-miakapi/contract.mjs').then(({ validateBrowserRelayFixtureMiakApiProfile }) => validateBrowserRelayFixtureMiakApiProfile())"
 node infrastructure/staging/browser-relay-monitoring/guard.mjs \
   "${repository_root}/infrastructure/staging/browser-relay-monitoring"
 node --check infrastructure/staging/browser-relay-monitoring/cloud.mjs
@@ -337,6 +343,7 @@ node --test \
   infrastructure/staging/test/browser-attestation.test.mjs \
   infrastructure/staging/test/browser-relay-edge.test.mjs \
   infrastructure/staging/test/browser-relay-fixture-cloud.test.mjs \
+  infrastructure/staging/test/browser-relay-fixture-miakapi.test.mjs \
   infrastructure/staging/test/browser-relay-fixture.test.mjs \
   infrastructure/staging/test/browser-relay-image.test.mjs \
   infrastructure/staging/test/browser-relay-monitoring.test.mjs \
