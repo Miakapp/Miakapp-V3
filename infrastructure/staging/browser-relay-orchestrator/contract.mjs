@@ -3,8 +3,8 @@ import { lstatSync, readFileSync } from 'node:fs';
 import { isDeepStrictEqual } from 'node:util';
 
 import {
-  BROWSER_RELAY_PLAN_SHA256,
-  validateBrowserRelayPlan,
+  BROWSER_RELAY_V12_PLAN_SHA256 as BROWSER_RELAY_PLAN_SHA256,
+  validateBrowserRelayV12Plan,
 } from '../browser-relay/contract.mjs';
 import {
   MONITORING_PREFLIGHT_RESULT_SHA256,
@@ -42,6 +42,12 @@ export const ORCHESTRATOR_PROFILE_SHA256 =
   '76b4e6bc718e44d71ee4b5f19376e3ec7df28d304384c2736294f1874349a6da';
 export const ORCHESTRATOR_IMPLEMENTATION_BASE_COMMIT =
   'fb8291d79ca381c253b1237ea99bf8b0930bada7';
+export const ORCHESTRATOR_IMPLEMENTATION_COMMIT =
+  '6995856fc5cfd64a06176c83e9d24bc93558e05b';
+export const ORCHESTRATOR_PREFLIGHT_RESULT_PATH =
+  'browser-relay-orchestrator/preflight-result-v1.json';
+export const ORCHESTRATOR_PREFLIGHT_RESULT_SHA256 =
+  '5ccbbab4edcc92820dbcf09ac592fdc7c57ebc277bd5c1f8a64a5fb9422f6e9e';
 export const ORCHESTRATOR_CLAIM_BUCKET = STATE_BUCKET;
 export const ORCHESTRATOR_CLAIM_OBJECT =
   'browser-relay/operations/acceptance-v1.json';
@@ -55,6 +61,7 @@ export const MAXIMUM_PUBLIC_WINDOW_MILLISECONDS = 1_200_000;
 export const MAXIMUM_CALLBACK_EXECUTION_MILLISECONDS = 900_000;
 
 const profilePath = new URL('profile.json', import.meta.url);
+const preflightResultPath = new URL('preflight-result-v1.json', import.meta.url);
 const expectedProfile = JSON.parse(readFileSync(profilePath, 'utf8'));
 const MAXIMUM_FILE_BYTES = 32 * 1024;
 const SHA256 = /^[0-9a-f]{64}$/u;
@@ -246,9 +253,7 @@ function validateDependencyPins(pins) {
 }
 
 function validateDependencies(profile) {
-  const plan = validateBrowserRelayPlan(
-    new URL('../browser-relay/plan.json', import.meta.url),
-  );
+  const plan = validateBrowserRelayV12Plan();
   exact(plan.revision, 12, 'browser-relay plan revision');
   exact(
     plan.preconditions.filter(({ state }) => state === 'satisfied').map(({ id }) => id),
@@ -475,6 +480,36 @@ export function validateOrchestratorPreflightResultValue(value) {
     reject('preflight_result.control_plane_revision is invalid');
   }
   return Object.freeze(result);
+}
+
+export function validateOrchestratorPreflightResult(path = preflightResultPath) {
+  const entry = lstatSync(path);
+  if (!entry.isFile() || entry.isSymbolicLink() || entry.size < 1
+    || entry.size > MAXIMUM_FILE_BYTES) {
+    reject('Orchestrator preflight result must be a bounded regular file');
+  }
+  const bytes = readFileSync(path);
+  exact(
+    sha256(bytes),
+    ORCHESTRATOR_PREFLIGHT_RESULT_SHA256,
+    'orchestrator preflight result digest',
+  );
+  let value;
+  try {
+    value = JSON.parse(bytes.toString('utf8'));
+  } catch {
+    return reject('Orchestrator preflight result must be valid JSON');
+  }
+  if (canonicalJson(value) !== bytes.toString('utf8')) {
+    reject('Orchestrator preflight result is not canonical JSON');
+  }
+  const result = validateOrchestratorPreflightResultValue(value);
+  exact(
+    result.implementation_commit,
+    ORCHESTRATOR_IMPLEMENTATION_COMMIT,
+    'orchestrator preflight result implementation commit',
+  );
+  return result;
 }
 
 export function validateClaimTimestamp(value, path) {

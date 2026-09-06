@@ -4,7 +4,7 @@ This directory freezes the rebased reviewable plan for live browser, relay,
 signing-key and rollback acceptance. It contains no Terraform, deployer,
 invocation wrapper, credential or result. Reading or validating it authorizes no
 cloud mutation. The committed state is
-`monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed`, all
+`edge_orchestrator_preflighted_rollback_preflighted_monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed`, all
 `LIVE-*` cases are pending and the canonical staging manifest records private
 control-plane ingress plus two IAM-private, scale-to-zero relays with no public
 invoker.
@@ -75,7 +75,7 @@ and [reCAPTCHA billing](https://cloud.google.com/recaptcha/docs/billing-informat
 
 ## Preconditions
 
-Revision 12 preserves the independent read-only observation completed for
+Revision 13 preserves the independent read-only observation completed for
 revision 9 at
 2026-09-06T04:08:50.844Z. It verified `control-plane-00010-vop`, private ingress,
 zero unauthenticated invokers, two enabled and published signing versions with
@@ -103,10 +103,11 @@ the Function and its
 deployment guard in place, retained both published keys, source, build, IAM,
 private ingress and scale, and made no live request. Its one-shot wrappers are
 retired. The complete authenticated browser case remains part of `LIVE-02`.
-Before any public transition, the new digest-bound single-use orchestrator must
-pass its post-merge read-only preflight and be pinned by the plan. That package
-atomically composes the already reviewed edge, runner, monitoring and rollback
-boundaries but does not itself grant live authority.
+Before any public transition, the new digest-bound single-use orchestrator had
+to pass its post-merge read-only preflight and be pinned by the plan. That
+preflight is now complete. The package atomically composes the already reviewed
+edge, runner, monitoring and rollback boundaries but does not itself grant live
+authority.
 
 The adjacent [`browser-relay-runner/`](../browser-relay-runner/) package now
 implements the runner precondition as a dormant, profile-pinned library. Its dedicated
@@ -125,8 +126,12 @@ separate exact authorization before observing or acquiring that claim,
 reobserves an unchanged canonical-private baseline after acquisition, allows
 one bounded edge window and requires a canonical-private postflight after
 success or failure. It remains a dormant in-process library and grants no live
-authority. `EDGE-01` stays open until its post-merge read-only preflight proves
-the claim absent and the complete rollback target unchanged.
+authority. Its post-merge preflight from exact commit
+`6995856fc5cfd64a06176c83e9d24bc93558e05b` proved the claim absent, the
+canonical-private control plane and both private-ready relays unchanged, and a
+four-resource Terraform no-change plan. The sanitized result records no claim,
+mutation, public-ingress change or acceptance execution. Revision 13 pins that
+result and marks `EDGE-01` satisfied.
 
 The adjacent
 [`browser-relay-monitoring/`](../browser-relay-monitoring/) package now freezes
@@ -170,7 +175,9 @@ consumed by the relay-image build. The byte-exact
 runner package. The byte-exact [`plan-v10.json`](plan-v10.json) preserves the
 plan consumed by the monitoring preflight. The byte-exact
 [`plan-v11.json`](plan-v11.json) preserves the plan consumed by the rollback
-preflight. Revision 12 can evolve without rewriting any immutable dependency.
+preflight. The byte-exact [`plan-v12.json`](plan-v12.json) preserves the plan
+consumed by the orchestrator preflight. Revision 13 can evolve without
+rewriting any immutable dependency.
 
 The currently deployed runtime document publishes both signing keys with
 version 1 current and version 2 retained. This completes the rehearsal entry
@@ -198,8 +205,9 @@ bounded staging edge-profile source as private revision
 was applied by exact saved plan SHA-256
 `346dd483045090c31e6bf7da715bfb2d71a3c4672a85aa16aa92992058a71393`.
 It preserved the canonical runtime SHA-256, private ingress, IAM and scale and
-made no Function request. `EDGE-01` remains open until the separate ingress,
-runtime-profile, IAM and rollback operations are digest-bound and preflighted.
+made no Function request. The separate ingress, runtime-profile, IAM and
+rollback operations are now digest-bound by the preflighted single-use
+orchestrator; no public transition has run.
 
 ## Matrix and evidence boundary
 

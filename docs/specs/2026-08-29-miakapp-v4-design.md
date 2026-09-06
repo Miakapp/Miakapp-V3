@@ -878,15 +878,18 @@ vertical-slice exit gates.
    rollback package pins the six-step reverse transition, every edge source
    dependency and ten exact closed-target observations. Its post-merge
    preflight accepted an independently rendered private-ready Terraform plan
-   with four resource no-ops and no change. Current plan revision 12 preserves
-   revision 11 byte for byte, pins that sanitized result and closes the rollback
+   with four resource no-ops and no change. Plan revision 12 preserves revision
+   11 byte for byte, pins that sanitized result and closes the rollback
    precondition. The remaining edge composition is now implemented as a dormant
    in-process library pinned to those prerequisites and every edge source. It
    uses one retained generation-zero claim before mutation, checks the unchanged
    private baseline after claiming, permits one bounded callback and requires a
    canonical-private postflight after success or failure. The profile grants no
-   live authority and has not been preflighted, claimed or executed, so only
-   edge orchestration remains open.
+   live authority. Its post-merge read-only preflight proved the claim absent
+   and the complete private rollback target converged with no mutation. Current
+   plan revision 13 preserves revision 12 byte for byte, pins the sanitized
+   preflight result and closes the edge prerequisite without claiming any live
+   matrix execution.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain
