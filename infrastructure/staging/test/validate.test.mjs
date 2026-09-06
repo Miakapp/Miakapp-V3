@@ -31,10 +31,10 @@ function rejects(mutator, pattern) {
 
 test('accepts the successful and retired private user-relay probe', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 67);
+  assert.equal(validated.revision, 68);
   assert.equal(
     validated.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rebased_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_private_relays_ready_rebased_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
@@ -810,21 +810,21 @@ test('accepts the successful and retired private user-relay probe', () => {
     raw_state_committed: false,
   });
   assert.deepEqual(validated.evidence.browser_relay_plan, {
-    state: 'relay_process_admission_merged_root_reviewed_not_deployed',
+    state: 'private_relays_ready_plan_rebased_not_deployed',
     path: 'browser-relay/plan.json',
-    sha256: '4a5c13999d9f7f328b1b8b867bbd86d4c5e80cb980d9eb1324028ea0e5785343',
-    baseline_observed_at: '2026-09-05T19:49:07.829Z',
+    sha256: 'bdf2cea284b1031a2a78e3ab029a733cad5e68efde8e9e01c5230e01fe8333dc',
+    baseline_observed_at: '2026-09-06T04:08:50.844Z',
     baseline_control_plane_revision: 'control-plane-00010-vop',
     baseline_published_signing_keys: 2,
     baseline_current_signing_key_version: 1,
     browser_attestation_validated: true,
     firebase_auth_users: 0,
     application_fixture_collections: 0,
-    open_preconditions: 5,
+    open_preconditions: 4,
     cloud_mutation_authorized_by_plan: false,
     acceptance_executed: false,
     public_ingress_active: false,
-    relay_services: 0,
+    relay_services: 2,
     runner_present: false,
     completed_cases: 0,
   });
@@ -1173,7 +1173,7 @@ test('cross-checks manifest claims against all committed evidence artifacts', ()
   assert.equal(evidence.userRelayProbe.execution.state, 'SUCCEEDED');
   assert.equal(evidence.userRelayProbeRetirement.workflow_present, false);
   assert.equal(evidence.userRelayProbeRetirement.verifier_service_present, false);
-  assert.equal(evidence.browserRelayPlan.state, 'relay_process_admission_merged_root_reviewed_not_deployed');
+  assert.equal(evidence.browserRelayPlan.state, 'private_relays_ready_plan_rebased_not_deployed');
   assert.equal(evidence.browserRelayPlan.evidence.state, 'absent');
   assert.equal(
     evidence.relayServicesProfile.state,
@@ -2112,7 +2112,7 @@ test('requires every remaining blocker and staging evidence row', () => {
     candidate.evidence.browser_relay_plan.public_ingress_active = true;
   }, /evidence\.browser_relay_plan\.public_ingress_active/);
   rejects((candidate) => {
-    candidate.evidence.browser_relay_plan.relay_services = 2;
+    candidate.evidence.browser_relay_plan.relay_services = 0;
   }, /evidence\.browser_relay_plan\.relay_services/);
   rejects((candidate) => {
     candidate.evidence.browser_relay_plan.completed_cases = 1;

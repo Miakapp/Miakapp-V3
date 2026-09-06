@@ -677,17 +677,19 @@ current consumer.
 12. **Done 2026-09-05** — replace the active V3 Vue entry point with the first
     React trusted-host shell, a closed ABI 1 semantic renderer, an explicitly
     offline interactive adapter, fail-closed tests and a dedicated web CI gate.
-13. **Design, live-baseline rebase and rotation entry done 2026-09-05** — freeze the separate live relay, browser,
+13. **Design, live-baseline rebase and rotation entry done 2026-09-06** — freeze the separate live relay, browser,
     signing-key and rollback acceptance matrix as a digest-pinned closed plan.
     It selects a reversible provider-endpoint topology, scale and invocation
     ceilings, twelve pending semantic cases and a deterministic cleanup state;
-   it contains no deployer and claims no live acceptance evidence. Revision 7
+   it contains no deployer and claims no live acceptance evidence. Revision 9
    independently rebases the plan on `control-plane-00010-vop`, two published
     signing keys with version 1 current for the rehearsal, completed browser App
     Check attestation, zero Firebase Auth users, zero application fixture
-   collections and zero relay services. Its guarded rotation-entry prerequisite
-   is converged, the bounded staging edge profile is present in source but not
-   selected, and the consumed one-shot tooling is retired.
+   collections and two generation-2 private-ready relays with exact audiences,
+   512 MiB, scale 0..1 and no public IAM. Its guarded rotation-entry and relay
+   prerequisites are converged, the bounded staging edge profile is present in
+   source but not selected, and the consumed one-shot tooling is retired. The
+   historical revision-8 plan remains byte-exact for the relay-image build pin.
 14. **In progress 2026-09-05** — the control-plane source now retains legacy
     single-key runtime compatibility while accepting a closed schema 2 with one
     selected KMS signer and at most two KMS-validated published public keys. Its

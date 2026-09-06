@@ -4,9 +4,9 @@ This directory freezes the rebased reviewable plan for live browser, relay,
 signing-key and rollback acceptance. It contains no Terraform, deployer,
 invocation wrapper, credential or result. Reading or validating it authorizes no
 cloud mutation. The committed state is
-`relay_process_admission_merged_root_reviewed_not_deployed`, all `LIVE-*`
-cases are pending and the canonical staging manifest still records private
-control-plane ingress with zero relay services.
+`private_relays_ready_plan_rebased_not_deployed`, all `LIVE-*` cases are
+pending and the canonical staging manifest records private control-plane
+ingress plus two IAM-private, scale-to-zero relays with no public invoker.
 
 Run the credential-free validator from the repository root:
 
@@ -74,15 +74,18 @@ and [reCAPTCHA billing](https://cloud.google.com/recaptcha/docs/billing-informat
 
 ## Preconditions
 
-Revision 8 retains the independent read-only observation from
-2026-09-05T19:49:07.829Z. It verified `control-plane-00010-vop`, private ingress,
+Revision 9 records the independent read-only observation completed at
+2026-09-06T04:08:50.844Z. It verified `control-plane-00010-vop`, private ingress,
 zero unauthenticated invokers, two enabled and published signing versions with
-version 1 current for the rehearsal entry, a registered reCAPTCHA Enterprise provider, the prior real
-browser token result, zero enforcement records, zero debug tokens, zero Firebase
-Auth users, zero application fixture collections, zero relay services and an
-HTTP 404 runner route. Firestore contained only ten bounded admission/audit
-documents across its three expected technical collections; no Home or user
-collection existed.
+version 1 current for the rehearsal entry, a registered reCAPTCHA Enterprise
+provider, the prior real browser token result, zero enforcement records, zero
+debug tokens, zero Firebase Auth users, zero application fixture collections,
+two generation-2 private-ready relay services and an HTTP 404 runner route.
+The relays use their exact assigned WSS audiences, the verified image digest,
+512 MiB, a role-free keyless identity, scale 0..1 and zero public IAM bindings.
+The live inventory SHA-256 exactly matches the immutable private-ready result.
+Firestore contained only ten bounded admission/audit documents across its three
+expected technical collections; no Home or user collection existed.
 
 The immutable cross-repository pins, finite relay process admission, two-key runtime, readable provider,
 standalone real-browser token observation, guarded rotation entry and bounded
@@ -101,10 +104,9 @@ retired. The complete authenticated browser case remains part of `LIVE-02`.
 Before any public transition, the remaining work must provide:
 
 1. a digest-bound and reversible control-plane ingress transition;
-2. two digest-pinned relay services using a keyless no-role identity;
-3. a three-engine runner that emits closed semantic counters only;
-4. allow-listed metric and billing observations; and
-5. a rollback plan that is rendered and checked before the live window opens.
+2. a three-engine runner that emits closed semantic counters only;
+3. allow-listed metric and billing observations; and
+4. a rollback plan that is rendered and checked before the live window opens.
 
 The adjacent [`browser-relay-edge/`](../browser-relay-edge/) package now
 implements and tests the dormant transition state machine. It selects the edge
@@ -118,11 +120,16 @@ The adjacent
 freezes the two services and their `absent`, private-bootstrap, private-ready
 and public-window phases. It requires a digest-only image, uses one keyless
 no-role identity, agrees with the relay's finite process admission, and models
-public IAM last plus teardown in reverse dependency order. It intentionally has
-no plan/apply entrypoint and has never been applied. `RELAY-01` remains open
-until an immutable image digest, exact private plans, independently observed
-service audiences and a preflighted teardown are bound by the later one-shot
-orchestrator.
+public IAM last plus rollback in reverse dependency order. The three claimed
+private operations have converged, their entrypoints are permanently retired,
+and the fresh independent inventory matches their sanitized result exactly.
+`RELAY-01` is therefore satisfied. A later one-shot orchestrator must still
+bind the already private-ready services to the bounded public window and restore
+this exact private-ready phase afterward.
+
+The byte-exact [`plan-v8.json`](plan-v8.json) preserves the historical plan
+consumed by the relay-image build. Revision 9 can evolve without rewriting that
+immutable dependency.
 
 The currently deployed runtime document publishes both signing keys with
 version 1 current and version 2 retained. This completes the rehearsal entry
@@ -172,9 +179,12 @@ contract validates such an artifact.
 ## Rollback baseline
 
 Rollback removes the runner route first, stops the browser and coordinator
-without replaying physical calls, removes public relay traffic and services,
-restores the control plane to internal-only ingress with zero unauthenticated
-invokers, deletes every synthetic fixture and temporary grant, and requires
-zero-change plans. A prior KMS version is disabled only after its public JWK has
-served the full 330-second retirement interval; it is not destroyed. Miakapp 3,
-production projects and real Home data are outside this plan.
+without replaying physical calls, removes the two public relay invoker bindings,
+restores the relays to their exact private-ready phase and restores the control
+plane to internal-only ingress with zero unauthenticated invokers. It then
+deletes every synthetic fixture and temporary grant and requires zero-change
+plans. The keyless relay identity and two scale-to-zero private services remain;
+destroying them is a distinct operation. A prior KMS version is disabled only
+after its public JWK has served the full 330-second retirement interval; it is
+not destroyed. Miakapp 3, production projects and real Home data are outside
+this plan.

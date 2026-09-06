@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-browser-relay-plan/1",
-  "revision": 9,
-  "state": "private_relays_ready_plan_rebased_not_deployed",
+  "revision": 8,
+  "state": "relay_process_admission_merged_root_reviewed_not_deployed",
   "target": {
     "project_id": "miakapp-v4-staging",
     "project_number": "1072737219170",
@@ -17,15 +17,12 @@
     "acceptance_executed": false
   },
   "pins": {
-    "miakapp_v3_commit": "790aff87a1af8730a06b8f1c3b089b6f6e13c7cf",
+    "miakapp_v3_commit": "ba4fc9caed566fa39fc66371192fb1821b4232ff",
     "deployed_control_plane_commit": "ba4fc9caed566fa39fc66371192fb1821b4232ff",
     "deployed_control_plane_source_sha256": "3e94305e17ee4df07f54f13560dac0a9491de3f89fb3ddbf4ab745c62dce8c7e",
     "miakapi_commit": "a798a746847ba3d5c16128a08b33353269e770a4",
     "miakapp_server_commit": "df10674e034f30eec80760f5ec94bc108cff026f",
-    "relay_services_profile_sha256": "d47449d0b175b47ac0fdde5e0eb80c8b5d0eb43e4ac9a8af091c51f9aa4c390a",
-    "relay_services_converged_profile_sha256": "41392c96d68bf749c59757bc76d34a69e6eb407efa50b14f61b937c4f5a9b576",
-    "relay_services_private_ready_result_sha256": "27ee42c11af83f4e0133a6002540096b74d18ceb78a281e4fbd7c38b53cea4be",
-    "relay_services_live_inventory_sha256": "421338fec676c1fccd0e6747d3e8837d4151b147c95b343172639800779b64d1",
+    "relay_services_profile_sha256": "bc9b231cc9724f19a26ef5c3bbd6da6a69ec79b00cb976e77c73015d5db10db7",
     "protocol_contract_commit": "cc3bcd70fdb4b058f990ca2607693a2043faebaf",
     "node_version": "22.22.0",
     "bun_version": "1.2.23",
@@ -34,7 +31,7 @@
     "terraform_version": "1.11.3"
   },
   "baseline": {
-    "observed_at": "2026-09-06T04:08:50.844Z",
+    "observed_at": "2026-09-05T19:49:07.829Z",
     "control_plane": {
       "service": "control-plane",
       "revision": "control-plane-00010-vop",
@@ -91,12 +88,10 @@
       }
     },
     "cloud_run_services": [
-      "control-plane",
-      "miakapp-staging-relay-a",
-      "miakapp-staging-relay-b"
+      "control-plane"
     ],
-    "relay_services": 2,
-    "relay_service_account_present": true,
+    "relay_services": 0,
+    "relay_service_account_present": false,
     "browser_runner_present": false,
     "app_engine_application_present": false
   },
@@ -131,14 +126,12 @@
       {
         "id": "relay-a",
         "service_name": "miakapp-staging-relay-a",
-        "private_ready_audience": "wss://miakapp-staging-relay-a-aczhngqraq-od.a.run.app/ws",
-        "private_ready_generation": 2,
+        "endpoint_before_apply": null,
         "endpoint_source": "observed_cloud_run_uri_with_wss_scheme_and_ws_path",
         "websocket_path": "/ws",
         "health_path": "/ping",
         "ingress": "INGRESS_TRAFFIC_ALL",
-        "public_invoker_before_window": false,
-        "unauthenticated_invoker_during_window": true,
+        "unauthenticated_invoker": true,
         "application_authentication": "audience_bound_relay_user_hello",
         "allowed_origin": "https://miakapp-v4-staging.web.app",
         "service_account": "miakapp-staging-relay@miakapp-v4-staging.iam.gserviceaccount.com",
@@ -148,7 +141,7 @@
         "concurrency": 8,
         "request_timeout_seconds": 900,
         "cpu": 1,
-        "memory_mib": 512,
+        "memory_mib": 256,
         "cpu_idle": true,
         "maximum_queued_bytes_per_connection": 262144,
         "maximum_connections": 8,
@@ -163,14 +156,12 @@
       {
         "id": "relay-b",
         "service_name": "miakapp-staging-relay-b",
-        "private_ready_audience": "wss://miakapp-staging-relay-b-aczhngqraq-od.a.run.app/ws",
-        "private_ready_generation": 2,
+        "endpoint_before_apply": null,
         "endpoint_source": "observed_cloud_run_uri_with_wss_scheme_and_ws_path",
         "websocket_path": "/ws",
         "health_path": "/ping",
         "ingress": "INGRESS_TRAFFIC_ALL",
-        "public_invoker_before_window": false,
-        "unauthenticated_invoker_during_window": true,
+        "unauthenticated_invoker": true,
         "application_authentication": "audience_bound_relay_user_hello",
         "allowed_origin": "https://miakapp-v4-staging.web.app",
         "service_account": "miakapp-staging-relay@miakapp-v4-staging.iam.gserviceaccount.com",
@@ -180,7 +171,7 @@
         "concurrency": 8,
         "request_timeout_seconds": 900,
         "cpu": 1,
-        "memory_mib": 512,
+        "memory_mib": 256,
         "cpu_idle": true,
         "maximum_queued_bytes_per_connection": 262144,
         "maximum_connections": 8,
@@ -276,8 +267,8 @@
     },
     {
       "id": "RELAY-01",
-      "state": "satisfied",
-      "requirement": "two_digest_pinned_relay_services_are_private_ready_keyless_roleless_and_bounded"
+      "state": "open",
+      "requirement": "two_digest_pinned_relay_services_have_bounded_terraform_and_teardown"
     },
     {
       "id": "RUNNER-01",
@@ -303,7 +294,7 @@
       "assertions": [
         "exact_project_region_and_pins",
         "zero_preexisting_synthetic_fixtures",
-        "two_private_ready_relays_with_zero_public_invokers",
+        "zero_public_relay_services",
         "private_control_plane_baseline",
         "rollback_plan_ready"
       ]
@@ -424,7 +415,7 @@
       "assertions": [
         "runner_removed_before_session_drain",
         "control_plane_returns_private",
-        "relay_services_return_to_private_ready_with_temporary_iam_absent",
+        "relay_services_and_temporary_iam_are_absent",
         "synthetic_fixtures_are_absent",
         "terraform_converges_and_cost_stays_bounded"
       ]
@@ -489,7 +480,7 @@
     "ordered_steps": [
       "remove_acceptance_runner_route",
       "stop_browser_and_coordinator_without_replay",
-      "remove_public_relay_invokers_and_restore_private_ready_relay_phase",
+      "remove_public_relay_traffic_and_services",
       "restore_private_control_plane_ingress_and_invoker_policy",
       "delete_synthetic_fixtures_and_temporary_bindings",
       "verify_zero_unexpected_traffic_and_zero_change_plans"
@@ -497,10 +488,7 @@
     "required_final_state": {
       "control_plane_ingress": "ALLOW_INTERNAL_ONLY",
       "control_plane_unauthenticated_invokers": 0,
-      "relay_services": 2,
-      "relay_phase": "private_ready",
-      "relay_public_invokers": 0,
-      "relay_service_account_user_managed_keys": 0,
+      "relay_services": 0,
       "runner_route_present": false,
       "synthetic_users": 0,
       "synthetic_homes": 0,

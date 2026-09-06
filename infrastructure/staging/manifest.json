@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-intent/1",
-  "revision": 67,
-  "status": "private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rebased_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled",
+  "revision": 68,
+  "status": "private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_private_relays_ready_rebased_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled",
   "environment": "staging",
   "project": {
     "project_id": "miakapp-v4-staging",
@@ -1674,21 +1674,21 @@
       "raw_diagnostics_committed": false
     },
     "browser_relay_plan": {
-      "state": "relay_process_admission_merged_root_reviewed_not_deployed",
+      "state": "private_relays_ready_plan_rebased_not_deployed",
       "path": "browser-relay/plan.json",
-      "sha256": "4a5c13999d9f7f328b1b8b867bbd86d4c5e80cb980d9eb1324028ea0e5785343",
-      "baseline_observed_at": "2026-09-05T19:49:07.829Z",
+      "sha256": "bdf2cea284b1031a2a78e3ab029a733cad5e68efde8e9e01c5230e01fe8333dc",
+      "baseline_observed_at": "2026-09-06T04:08:50.844Z",
       "baseline_control_plane_revision": "control-plane-00010-vop",
       "baseline_published_signing_keys": 2,
       "baseline_current_signing_key_version": 1,
       "browser_attestation_validated": true,
       "firebase_auth_users": 0,
       "application_fixture_collections": 0,
-      "open_preconditions": 5,
+      "open_preconditions": 4,
       "cloud_mutation_authorized_by_plan": false,
       "acceptance_executed": false,
       "public_ingress_active": false,
-      "relay_services": 0,
+      "relay_services": 2,
       "runner_present": false,
       "completed_cases": 0
     },
