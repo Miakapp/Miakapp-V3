@@ -37,7 +37,10 @@ import {
 import {
   BROWSER_RELAY_PAGE_PROFILE_PATH,
   BROWSER_RELAY_PAGE_PROFILE_SHA256,
+  CI_WORKFLOW_SHA256 as BROWSER_RELAY_PAGE_CI_WORKFLOW_SHA256,
+  DEPENDENCY_LOCK_SHA256 as BROWSER_RELAY_PAGE_DEPENDENCY_LOCK_SHA256,
   MIAKAPI_BUNDLE_SHA256 as BROWSER_RELAY_PAGE_MIAKAPI_BUNDLE_SHA256,
+  OFFLINE_SMOKE_SHA256 as BROWSER_RELAY_PAGE_OFFLINE_SMOKE_SHA256,
   validateBrowserRelayPageProfile,
 } from './browser-relay-page/contract.mjs';
 import {
@@ -5165,10 +5168,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 79, 'manifest.revision');
+  exact(manifest.revision, 80, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_host_and_artifact_implemented_not_wired_not_published_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_artifact_ci_implemented_not_wired_not_published_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -5794,6 +5797,27 @@ export function validateCommittedEvidence(
     browserRelayPageProfile.pins.vite_version,
     'evidence.browser_relay_page Vite dependency',
   );
+  exact(
+    rootPackage.devDependencies?.playwright,
+    browserRelayPageProfile.pins.playwright_version,
+    'evidence.browser_relay_page Playwright dependency',
+  );
+  const pageSmokePath = resolve(stagingRoot, 'test/browser-relay-page-browser.mjs');
+  const pageWorkflowPath = resolve(
+    stagingRoot,
+    '../../.github/workflows/browser-relay-page.yml',
+  );
+  exact(fileSha256(pageSmokePath), BROWSER_RELAY_PAGE_OFFLINE_SMOKE_SHA256,
+    'evidence.browser_relay_page offline smoke digest');
+  exact(fileSha256(pageWorkflowPath), BROWSER_RELAY_PAGE_CI_WORKFLOW_SHA256,
+    'evidence.browser_relay_page CI workflow digest');
+  exact(fileSha256(dependencyLockPath), BROWSER_RELAY_PAGE_DEPENDENCY_LOCK_SHA256,
+    'evidence.browser_relay_page dependency lock digest');
+  const pageWorkflow = readFileSync(pageWorkflowPath, 'utf8');
+  if (!pageWorkflow.includes('playwright install --with-deps chromium firefox webkit')
+    || !pageWorkflow.includes('browser-relay-page-browser.mjs')) {
+    reject('evidence.browser_relay_page.three_engine_ci_gate_present', 'has drifted');
+  }
   exactFields(browserRelayPageManifest, {
     state: browserRelayPageProfile.state,
     profile_sha256: BROWSER_RELAY_PAGE_PROFILE_SHA256,
@@ -5804,7 +5828,10 @@ export function validateCommittedEvidence(
     miakapi_bundle_sha256: browserRelayPageProfile.pins.miakapi_bundle_sha256,
     firebase_sdk_version: browserRelayPageProfile.pins.firebase_sdk_version,
     vite_version: browserRelayPageProfile.pins.vite_version,
+    playwright_version: browserRelayPageProfile.pins.playwright_version,
     page_api_methods: browserRelayPageProfile.page.api.length,
+    three_engine_ci_gate_present:
+      browserRelayPageProfile.page.three_engine_dormant_artifact_ci,
     runner_compatible: browserRelayPageProfile.page.runner_compatible,
     firebase_auth_persistence: browserRelayPageProfile.page.firebase_auth_persistence,
     app_check_provider: browserRelayPageProfile.page.app_check_provider,

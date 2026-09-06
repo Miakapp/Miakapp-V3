@@ -173,8 +173,10 @@ browser module, and builds exactly one HTML plus one JavaScript file. Its phased
 API emits only closed browser observations and is intentionally incompatible
 with the runner's final-result API until the independent fixture/operator
 adapter exists. It reserves 300 seconds for callback cleanup and another 300
-seconds for edge rollback. The package contains no publisher or live authority,
-so this plan still records every `LIVE-*` case as pending.
+seconds for edge rollback. A dedicated keyless CI gate loads the dormant
+artifact without network access in all three browser engines. The package
+contains no publisher or live authority, so this plan still records every
+`LIVE-*` case as pending.
 
 The adjacent
 [`browser-relay-services/`](../browser-relay-services/) Terraform root now
