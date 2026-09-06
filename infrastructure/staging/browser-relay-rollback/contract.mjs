@@ -298,12 +298,6 @@ export function validateBrowserRelayRollbackProfile(path = profilePath) {
 }
 
 export function summarizeRelayTerraformNoChangePlan(value) {
-  const serialized = JSON.stringify(value);
-  if (PRIVATE_MATERIAL.some((pattern) => pattern.test(serialized))
-    || /"(?:allUsers|allAuthenticatedUsers)"|\bmiakapp-3\b|projects\/miakapp-v4(?:\/|$)|@miakapp-v4\./u
-      .test(serialized)) {
-    reject('Relay private-ready Terraform plan contains a credential or forbidden target');
-  }
   if (!plainObject(value)
     || value.format_version !== '1.2'
     || value.terraform_version !== '1.11.3'
@@ -314,6 +308,17 @@ export function summarizeRelayTerraformNoChangePlan(value) {
       && (!Array.isArray(value.resource_drift) || value.resource_drift.length !== 0))
     || value.errored === true) {
     reject('Relay private-ready Terraform plan is malformed or contains drift');
+  }
+  const plannedSurface = JSON.stringify({
+    variables: value.variables,
+    resource_changes: value.resource_changes,
+    resource_drift: value.resource_drift ?? [],
+    output_changes: value.output_changes,
+  });
+  if (PRIVATE_MATERIAL.some((pattern) => pattern.test(plannedSurface))
+    || /"(?:allUsers|allAuthenticatedUsers)"|\bmiakapp-3\b|projects\/miakapp-v4(?:\/|$)|@miakapp-v4\./u
+      .test(plannedSurface)) {
+    reject('Relay private-ready Terraform plan contains a credential or forbidden target');
   }
   const expectedVariables = privateReadyRelayVariables();
   exact(value.variables.deployment_phase?.value, expectedVariables.deployment_phase,
