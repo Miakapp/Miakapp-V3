@@ -383,6 +383,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`browser-relay-monitoring/`](browser-relay-monitoring/) | Closed allow-listed monitoring preflight and evaluator | One post-merge read-only observation verified all six metric surfaces, the existing EUR 10 budget and the private edge/relay boundary; no mutation or acceptance execution occurred |
 | [`browser-relay-rollback/`](browser-relay-rollback/) | Closed-target rollback preflight | Post-merge observation verified all ten private-target facts and a four-resource Terraform no-change plan; its sanitized result records zero mutation, public-ingress change and acceptance execution |
 | [`browser-relay-orchestrator/`](browser-relay-orchestrator/) | Dormant single-use edge orchestrator | Post-merge read-only preflight proved the claim absent and the rollback target private and converged; no claim, mutation, public edge or live acceptance has run |
+| [`browser-relay-operation/`](browser-relay-operation/) | Dormant full live-operation envelope | Composes the claimed edge, public-last relay transition, one matrix and two-level cleanup; no cloud adapter, live authority or execution is present |
 | [`browser-relay-services/`](browser-relay-services/) | Guarded two-relay Cloud Run Terraform state machine | Two private-ready 512-MiB scale-0..1 services use their exact assigned WSS audiences and a keyless role-free identity; all three claims remain durable and every one-shot entrypoint is retired |
 | [`browser-relay-image/`](browser-relay-image/) | Guarded one-shot private relay image build | Distinct v2 recovery succeeded once with exact source provenance and hardened smoke validation; immutable image is deployed only to the two IAM-private relays; all build entrypoints retired |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
@@ -719,6 +720,17 @@ CLI, publisher, credential loader or cloud adapter. Its dedicated CI gate
 intercepts the exact staging URL locally and proves three real ephemeral browser
 engines produce only the reviewed closed aggregate. It records zero live runs
 and grants no authority to publish Hosting or expose either private service.
+The adjacent [`browser-relay-operation/`](browser-relay-operation/) package now
+closes the remaining ordering gap without executing it. The claimed edge owns
+the control-plane transition. Inside that single window the operation creates
+only synthetic fixtures, verifies the temporary runner, samples the existing
+monitoring contract and makes both relays public only immediately before the
+matrix. Its first unconditional cleanup removes the runner, stops sessions and
+restores private relays. After the edge orchestrator has restored the canonical
+private control plane, its second cleanup removes fixtures and temporary
+bindings and requires the complete rollback target. The package has no CLI,
+cloud adapter or authorization source, records zero runs, and plan revision 13
+remains entirely pending.
 The dormant
 [`browser-relay-monitoring/`](browser-relay-monitoring/) package separately
 pins the six permitted header-only Cloud Monitoring queries, the existing EUR

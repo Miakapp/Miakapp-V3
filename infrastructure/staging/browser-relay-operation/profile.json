@@ -1,0 +1,134 @@
+{
+  "schema": "miakapp.staging-browser-relay-operation-profile/1",
+  "revision": 1,
+  "state": "closed_single_use_live_operation_envelope_implemented_not_executed",
+  "target": {
+    "project_id": "miakapp-v4-staging",
+    "project_number": "1072737219170",
+    "region": "europe-west9",
+    "data_policy": "synthetic_only",
+    "cloud_compute_resources": 0,
+    "unscheduled": true,
+    "cloud_mutation_authorized_by_profile": false,
+    "public_ingress_authorized_by_profile": false,
+    "acceptance_execution_authorized_by_profile": false
+  },
+  "pins": {
+    "implementation_base_commit": "b82e152334a0bb30f6dcdbbe32abe44349bd9542",
+    "browser_relay_plan_sha256": "a74a130f3946c7beaca8c2f019f36b1641f1fa47e4c8b63c24754892a18d702a",
+    "orchestrator_profile_sha256": "76b4e6bc718e44d71ee4b5f19376e3ec7df28d304384c2736294f1874349a6da",
+    "orchestrator_preflight_result_sha256": "5ccbbab4edcc92820dbcf09ac592fdc7c57ebc277bd5c1f8a64a5fb9422f6e9e",
+    "orchestrator_source_sha256": "43845f412afbca0c45e895ac5573c3991a4de29c11de6e3798b6523b5b4fdb52",
+    "runner_profile_sha256": "72b688ccd577f7b40b21d9f874bbca555324eaec1fbf2acbc87dee35cf83a536",
+    "runner_source_sha256": "9863c8a6b311c1fedfa08e866cb42204bf5fd993ab5d8fdb8e5e7efcad455219",
+    "monitoring_profile_sha256": "df5d04aa28658a6b0b2bd59087dd60a1d837f271bb85da00823e2d2e39b2e661",
+    "monitoring_preflight_result_sha256": "618e074b9e4e9b6a532b2ecbfc87614ff5b382f9632397c4e86d111272425f64",
+    "rollback_profile_sha256": "b3517720cb3874f040601d6dfcc7b0ecaf385c16d6b4299c102e2001f8bf18e7",
+    "rollback_preflight_result_sha256": "e8ceb2164be946d4edebfe2f08d8a3b230dcf9d2a05d9410738e751775950cd3",
+    "relay_services_private_ready_result_sha256": "27ee42c11af83f4e0133a6002540096b74d18ceb78a281e4fbd7c38b53cea4be"
+  },
+  "execution": {
+    "entrypoint": "in_process_library_only",
+    "separate_exact_authorization_required": true,
+    "maximum_operation_executions": 1,
+    "maximum_claim_creations": 1,
+    "maximum_edge_window_executions": 1,
+    "maximum_matrix_executions": 1,
+    "maximum_browser_invocations": 3,
+    "maximum_public_window_milliseconds": 1200000,
+    "maximum_callback_execution_milliseconds": 900000,
+    "relay_public_transition_is_last_before_matrix": true,
+    "outer_stages": [
+      "run_claimed_edge_orchestrator",
+      "remove_synthetic_fixtures_after_canonical_edge",
+      "remove_temporary_bindings_after_canonical_edge",
+      "verify_complete_canonical_private_cleanup"
+    ],
+    "window_stages": [
+      "observe_pristine_edge_public_baseline",
+      "create_synthetic_fixture",
+      "publish_acceptance_runner",
+      "verify_acceptance_runner",
+      "sample_monitoring_before_matrix",
+      "open_two_relays_public_last",
+      "execute_matrix_once",
+      "sample_monitoring_after_matrix",
+      "remove_acceptance_runner_first",
+      "stop_browser_and_coordinator_sessions",
+      "restore_two_relays_private_ready",
+      "verify_window_cleanup"
+    ],
+    "credentials_persisted": false,
+    "raw_cloud_responses_persisted": false,
+    "browser_diagnostics_persisted": false
+  },
+  "budgets": {
+    "maximum_projected_incremental_milli_eur": 1000,
+    "maximum_cloud_builds": 4,
+    "maximum_recaptcha_assessments": 16,
+    "maximum_control_plane_exchanges": 16,
+    "maximum_kms_signatures": 16,
+    "maximum_firestore_writes": 64,
+    "maximum_relay_services": 2,
+    "maximum_instances_per_service": 1,
+    "maximum_total_relay_instance_seconds": 2400,
+    "maximum_control_plane_public_instance_seconds": 1200,
+    "stress_test": false
+  },
+  "recovery": {
+    "window_cleanup_always_attempted": true,
+    "window_cleanup_order": [
+      "remove_acceptance_runner",
+      "stop_browser_and_coordinator_sessions",
+      "restore_two_relays_private_ready",
+      "verify_window_cleanup"
+    ],
+    "edge_rollback_owned_by_orchestrator": true,
+    "post_edge_cleanup_always_attempted": true,
+    "post_edge_cleanup_order": [
+      "remove_synthetic_fixtures",
+      "remove_temporary_bindings",
+      "verify_complete_canonical_private_cleanup"
+    ],
+    "cleanup_failures_are_never_masked": true,
+    "required_final_state": "canonical_private_relays_private_runner_absent_fixtures_absent"
+  },
+  "output": {
+    "matrix_result_schema": "miakapp.staging-browser-relay-operation-matrix-result/1",
+    "window_result_schema": "miakapp.staging-browser-relay-operation-window-result/1",
+    "operation_result_schema": "miakapp.staging-browser-relay-operation-result/1",
+    "allowed_observations": [
+      "bounded_counts",
+      "durations",
+      "public_key_ids",
+      "revision_ids",
+      "stable_outcome_classes"
+    ],
+    "forbidden_observations": [
+      "browser_storage",
+      "email",
+      "execution_identifier",
+      "firebase_uid",
+      "har",
+      "home_traffic",
+      "raw_request_or_response",
+      "token",
+      "trace_context",
+      "video",
+      "websocket_frame"
+    ]
+  },
+  "evidence": {
+    "state": "absent",
+    "live_preflight_count": 0,
+    "live_execution_count": 0,
+    "claim_creations": 0,
+    "result_path": null,
+    "cloud_mutations": 0,
+    "public_ingress_changes": 0,
+    "acceptance_executions": 0,
+    "credentials_committed": false,
+    "raw_cloud_responses_committed": false,
+    "browser_diagnostics_committed": false
+  }
+}
