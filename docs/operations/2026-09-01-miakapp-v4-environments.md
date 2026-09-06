@@ -510,6 +510,16 @@ and an independent zero-count observation. Unknown mutation outcomes are read
 back but never retried. No CLI, IAM transition, Hosting release, public edge or
 live request was added.
 
+The following dormant MiakAPI binding removes the cloud adapter's abstract SDK
+factory boundary without wiring an execution. Its reproducible 160,762-byte
+Node ESM bundle comes from the same pinned commit as the browser artifact, with
+source archive, package, lock, entry, bundle and license digests all fixed. The
+wrapper admits one canonical Home Key provider and the exact coordinator only,
+passes the injected HTTP function into MiakAPI and rejects any substituted
+provider. Neither factory construction starts a session or performs HTTP or
+WebSocket I/O. No package-registry lookup, credential, cloud mutation, public
+edge or live request was introduced.
+
 The guarded relay-image increment bound the exact merged Miakapp-Server tree to a deterministic
 53,098-byte archive, one digest-pinned Cloud Build Docker builder, verified
 SHA-256 source provenance and a hardened `/ping` smoke test. A generation-zero
