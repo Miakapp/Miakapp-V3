@@ -32,9 +32,12 @@ Only `GET`, `HEAD` and the two read-only Google `POST` methods
 cloud responses, Terraform state, Terraform plan bytes, credentials, user IDs,
 Home traffic and browser diagnostics cannot enter the closed result.
 
-This implementation does not yet satisfy `ROLLBACK-01`. Its immutable profile
-records no live preflight. After this code merges, one fresh observation and
-fresh no-change Terraform plan must be produced from that exact merged commit,
-reduced to a sanitized result, digest-pinned and consumed by a later
-browser-relay plan revision. Until then, `EDGE-01`, `ROLLBACK-01` and every
-`LIVE-*` row remain open.
+The post-merge preflight completed at `2026-09-06T07:06:13.282Z` from exact
+implementation commit `0fd0d05ee31f84d42cf69cc6f5cead9cbcad79be`. Its
+sanitized result is committed as
+[`preflight-result-v1.json`](preflight-result-v1.json), with SHA-256
+`e8ceb2164be946d4edebfe2f08d8a3b230dcf9d2a05d9410738e751775950cd3`.
+It observed the exact canonical-private target and a zero-change Terraform
+plan without a cloud mutation, public-ingress change or acceptance execution.
+Plan revision 12 pins that result and marks `ROLLBACK-01` satisfied. Only
+`EDGE-01` and every `LIVE-*` row remain open.

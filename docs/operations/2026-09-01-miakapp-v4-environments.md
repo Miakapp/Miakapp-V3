@@ -446,16 +446,17 @@ result retains no raw response or credential and records zero cloud mutations,
 public-ingress changes and acceptance executions. Plan revision 11 archives the
 exact revision-10 input, pins both monitoring digests and marks
 `MONITORING-01` satisfied. Edge orchestration and rollback preflight remain
-open.
+open at that historical revision.
 
 The dormant rollback package now fixes the exact reverse dependency order and
 canonical closed target before any edge can open. It pins all six plan steps,
 the edge implementation, the private-ready relay result and ten read-only
 preflight observations, including an exact four-resource Terraform no-change
-plan. It has no CLI, scheduler, writer or live result; its profile records zero
-mutations, ingress changes and acceptance executions. `ROLLBACK-01` remains
-open until a fresh post-merge observation is reduced to sanitized evidence and
-consumed by a later acceptance-plan revision.
+plan. It has no CLI, scheduler or writer. A fresh post-merge observation from
+exact commit `0fd0d05ee31f84d42cf69cc6f5cead9cbcad79be` verified the
+canonical-private target and the no-change plan with zero mutation, ingress
+change or acceptance execution. Plan revision 12 pins the sanitized result and
+marks `ROLLBACK-01` satisfied; only edge orchestration remains open.
 
 The guarded relay-image increment bound the exact merged Miakapp-Server tree to a deterministic
 53,098-byte archive, one digest-pinned Cloud Build Docker builder, verified
