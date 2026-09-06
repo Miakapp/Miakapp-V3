@@ -108,6 +108,12 @@ Before any public transition, the remaining work must provide:
 3. allow-listed metric and billing observations; and
 4. a rollback plan that is rendered and checked before the live window opens.
 
+The adjacent [`browser-relay-runner/`](../browser-relay-runner/) package now
+implements the second item as a dormant, profile-pinned library. Its dedicated
+offline CI smoke launches all three real Playwright engines, but revision 9
+correctly keeps `RUNNER-01` open until a later plan rebase consumes the merged
+implementation. That smoke is not live staging evidence.
+
 The adjacent [`browser-relay-edge/`](../browser-relay-edge/) package now
 implements and tests the dormant transition state machine. It selects the edge
 runtime while private, opens ingress before adding the public IAM member, and

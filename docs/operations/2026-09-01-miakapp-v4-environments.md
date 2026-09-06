@@ -420,6 +420,15 @@ the three expected bounded admission/audit collections. This observation
 granted no deployment or public-ingress authority. The earlier revision-8 plan
 remains byte-exact because the historical relay-image operation pins its digest.
 
+The dormant browser-relay runner then pinned that revision-9 plan and the
+merged V3/MiakAPI commits. Its closed driver launches Chromium, Firefox and
+WebKit sequentially with one ephemeral context each, accepts private page input
+only in process memory and emits only bounded counts, durations, public key
+IDs, Cloud Run revision IDs and stable outcome classes. A real three-engine
+offline smoke intercepts the exact staging URL locally; it neither contacts nor
+mutates staging. No Hosting route, live result, credential, raw browser
+diagnostic or public-ingress authority exists in this package.
+
 The guarded relay-image increment bound the exact merged Miakapp-Server tree to a deterministic
 53,098-byte archive, one digest-pinned Cloud Build Docker builder, verified
 SHA-256 source provenance and a hardened `/ping` smoke test. A generation-zero
