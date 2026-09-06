@@ -22,11 +22,17 @@ import {
   RELAY_SERVICES_V2_PROFILE_SHA256,
   RELAY_SERVICES_V3_PROFILE_PATH,
   RELAY_SERVICES_V3_PROFILE_SHA256,
+  RELAY_SERVICES_V4_PROFILE_PATH,
+  RELAY_SERVICES_V4_PROFILE_SHA256,
+  RELAY_SERVICES_MEMORY_RECOVERY_FAILURE_PATH,
+  RELAY_SERVICES_MEMORY_RECOVERY_FAILURE_SHA256,
   validateRelayServicesBootstrapFailure,
+  validateRelayServicesMemoryRecoveryFailure,
   validateRelayServicesProfile,
   validateRelayServicesV1Profile,
   validateRelayServicesV2Profile,
   validateRelayServicesV3Profile,
+  validateRelayServicesV4Profile,
 } from './browser-relay-services/contract.mjs';
 import {
   RELAY_IMAGE_PROFILE_PATH,
@@ -711,6 +717,7 @@ function validateTerraform(value) {
     'firebase_auth_root',
     'auth_probe_root',
     'browser_app_check_root',
+    'browser_relay_services_root',
     'terraform_version',
     'providers',
     'backend',
@@ -735,7 +742,7 @@ function validateTerraform(value) {
   ]);
   exact(
     terraform.state,
-    'all_seven_roots_converged_browser_app_check_provider_registered',
+    'seven_roots_converged_relay_services_private_ready_pending',
     'terraform.state',
   );
   exact(
@@ -766,6 +773,11 @@ function validateTerraform(value) {
     'browser-app-check',
     'terraform.browser_app_check_root',
   );
+  exact(
+    terraform.browser_relay_services_root,
+    'browser-relay-services',
+    'terraform.browser_relay_services_root',
+  );
   exact(terraform.terraform_version, '1.11.3', 'terraform.terraform_version');
   if (!Array.isArray(terraform.providers)) reject('terraform.providers', 'must be an array');
   if (terraform.providers.length !== 2) reject('terraform.providers', 'must contain exactly 2 entries');
@@ -788,6 +800,7 @@ function validateTerraform(value) {
     'firebase_auth_prefix',
     'auth_probe_prefix',
     'browser_app_check_prefix',
+    'browser_relay_services_prefix',
     'bootstrap_migration_template',
     'bootstrap_migration_state',
     'locking_enabled',
@@ -797,7 +810,7 @@ function validateTerraform(value) {
   exact(backend.type, 'gcs', 'terraform.backend.type');
   exact(
     backend.state,
-    'all_seven_terraform_state_roots_present',
+    'all_eight_terraform_state_roots_present',
     'terraform.backend.state',
   );
   exact(backend.bucket, 'miakapp-v4-staging-tfstate-1072737219170', 'terraform.backend.bucket');
@@ -815,6 +828,11 @@ function validateTerraform(value) {
     backend.browser_app_check_prefix,
     'terraform/browser-app-check',
     'terraform.backend.browser_app_check_prefix',
+  );
+  exact(
+    backend.browser_relay_services_prefix,
+    'terraform/browser-relay-services',
+    'terraform.backend.browser_relay_services_prefix',
   );
   exact(
     backend.bootstrap_migration_template,
@@ -3703,17 +3721,29 @@ function validateEvidence(value) {
       'relay_services_v2_profile_sha256',
       'relay_services_v3_profile_path',
       'relay_services_v3_profile_sha256',
+      'relay_services_v4_profile_path',
+      'relay_services_v4_profile_sha256',
       'relay_services_bootstrap_failure_path',
       'relay_services_bootstrap_failure_sha256',
+      'relay_services_memory_recovery_failure_path',
+      'relay_services_memory_recovery_failure_sha256',
       'relay_services_bootstrap_attempted',
       'relay_services_bootstrap_failure_category',
+      'relay_services_memory_recovery_attempted',
+      'relay_services_memory_recovery_failure_category',
       'relay_services_original_claim_generation',
       'relay_services_original_claim_sha256',
+      'relay_services_memory_recovery_claim_generation',
+      'relay_services_memory_recovery_claim_sha256',
       'relay_services_partial_state_generation',
       'relay_services_partial_state_sha256',
       'relay_services_partial_state_serial',
+      'relay_services_recovered_state_generation',
+      'relay_services_recovered_state_sha256',
+      'relay_services_recovered_state_serial',
       'relay_services_original_entrypoints_retired',
-      'relay_services_recovery_entrypoint_present',
+      'relay_services_recovery_entrypoints_retired',
+      'relay_services_private_ready_entrypoint_present',
       'relay_services_image_bound',
       'relay_services_operator_entrypoint_present',
       'source_repository',
@@ -3747,14 +3777,18 @@ function validateEvidence(value) {
       'container_analysis_api_enabled',
       'container_scanning_api_enabled',
       'relay_services',
-      'public_ingress_active',
+      'relay_services_cloud_run_ready',
+      'relay_services_private_ready',
+      'relay_services_network_ingress',
+      'relay_services_public_iam_members',
+      'unauthenticated_public_invocation_active',
       'new_fixed_cost_services',
       'maximum_incremental_eur',
     ],
   );
   const expectedBrowserRelayImage = {
     state:
-      'v1_failed_container_analysis_converged_v2_recovery_succeeded_verified_not_deployed_entrypoints_retired_relay_services_private_bootstrap_failed_memory_partial_state_reconciled_recovery_entrypoint_prepared_not_executed',
+      'v1_failed_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_created_provider_default_drift_reconciliation_required_private_ready_entrypoint_prepared_not_executed',
     profile_path: RELAY_IMAGE_PROFILE_PATH,
     profile_sha256: RELAY_IMAGE_PROFILE_SHA256,
     v1_profile_path: RELAY_IMAGE_V1_PROFILE_PATH,
@@ -3773,19 +3807,35 @@ function validateEvidence(value) {
     relay_services_v2_profile_sha256: RELAY_SERVICES_V2_PROFILE_SHA256,
     relay_services_v3_profile_path: RELAY_SERVICES_V3_PROFILE_PATH,
     relay_services_v3_profile_sha256: RELAY_SERVICES_V3_PROFILE_SHA256,
+    relay_services_v4_profile_path: RELAY_SERVICES_V4_PROFILE_PATH,
+    relay_services_v4_profile_sha256: RELAY_SERVICES_V4_PROFILE_SHA256,
     relay_services_bootstrap_failure_path: RELAY_SERVICES_BOOTSTRAP_FAILURE_PATH,
     relay_services_bootstrap_failure_sha256: RELAY_SERVICES_BOOTSTRAP_FAILURE_SHA256,
+    relay_services_memory_recovery_failure_path: RELAY_SERVICES_MEMORY_RECOVERY_FAILURE_PATH,
+    relay_services_memory_recovery_failure_sha256:
+      RELAY_SERVICES_MEMORY_RECOVERY_FAILURE_SHA256,
     relay_services_bootstrap_attempted: true,
     relay_services_bootstrap_failure_category: 'cloud_run_gen2_memory_below_minimum',
+    relay_services_memory_recovery_attempted: true,
+    relay_services_memory_recovery_failure_category:
+      'cloud_run_binary_authorization_false_not_round_tripped',
     relay_services_original_claim_generation: '1788658024634812',
     relay_services_original_claim_sha256:
       '92b94cce96d70d9d55482ae4612f2192cd4686d8d5ee160270cbeb2d74773ac4',
+    relay_services_memory_recovery_claim_generation: '1788661237671763',
+    relay_services_memory_recovery_claim_sha256:
+      '9f8d46aea073062fce6334dcb8c5b3f128d880624878908e4c9b09db06ed61b1',
     relay_services_partial_state_generation: '1788658040492801',
     relay_services_partial_state_sha256:
       'c703ae655eb8b6292ae73ffa76d0746809190e312311fa5171e7bf5977fc27fc',
     relay_services_partial_state_serial: 2,
+    relay_services_recovered_state_generation: '1788661250283535',
+    relay_services_recovered_state_sha256:
+      'a91d739f31a01854183b98a8fdc36c58365d166d8c721471ca12b27251596e76',
+    relay_services_recovered_state_serial: 3,
     relay_services_original_entrypoints_retired: true,
-    relay_services_recovery_entrypoint_present: true,
+    relay_services_recovery_entrypoints_retired: true,
+    relay_services_private_ready_entrypoint_present: true,
     relay_services_image_bound: true,
     relay_services_operator_entrypoint_present: true,
     source_repository: 'https://github.com/Miakapp/Miakapp-Server.git',
@@ -3821,8 +3871,12 @@ function validateEvidence(value) {
     entrypoints_retired: true,
     container_analysis_api_enabled: true,
     container_scanning_api_enabled: false,
-    relay_services: 0,
-    public_ingress_active: false,
+    relay_services: 2,
+    relay_services_cloud_run_ready: 2,
+    relay_services_private_ready: 0,
+    relay_services_network_ingress: 'INGRESS_TRAFFIC_ALL',
+    relay_services_public_iam_members: 0,
+    unauthenticated_public_invocation_active: false,
     new_fixed_cost_services: 0,
     maximum_incremental_eur: 1,
   };
@@ -4536,10 +4590,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 65, 'manifest.revision');
+  exact(manifest.revision, 66, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rebased_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_not_deployed_entrypoints_retired_relay_services_private_bootstrap_failed_memory_partial_state_reconciled_recovery_entrypoint_prepared_not_executed_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rebased_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_created_provider_default_drift_reconciliation_required_private_ready_entrypoint_prepared_not_executed_enforcement_disabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -4957,6 +5011,22 @@ export function validateCommittedEvidence(
     browserRelayImageManifest.relay_services_v3_profile_sha256,
     'evidence.browser_relay_image.relay_services_v3_profile_sha256',
   );
+  const relayServicesV4ProfilePath = committedEvidencePath(
+    stagingRoot,
+    browserRelayImageManifest.relay_services_v4_profile_path,
+    RELAY_SERVICES_V4_PROFILE_PATH,
+    'evidence.browser_relay_image.relay_services_v4_profile_path',
+  );
+  const relayServicesV4Profile = validatedEvidenceFile(
+    relayServicesV4ProfilePath,
+    validateRelayServicesV4Profile,
+    'evidence.browser_relay_image.relay_services_v4_profile_path',
+  );
+  exact(
+    fileSha256(relayServicesV4ProfilePath),
+    browserRelayImageManifest.relay_services_v4_profile_sha256,
+    'evidence.browser_relay_image.relay_services_v4_profile_sha256',
+  );
   const relayServicesBootstrapFailurePath = committedEvidencePath(
     stagingRoot,
     browserRelayImageManifest.relay_services_bootstrap_failure_path,
@@ -4972,6 +5042,22 @@ export function validateCommittedEvidence(
     fileSha256(relayServicesBootstrapFailurePath),
     browserRelayImageManifest.relay_services_bootstrap_failure_sha256,
     'evidence.browser_relay_image.relay_services_bootstrap_failure_sha256',
+  );
+  const relayServicesMemoryRecoveryFailurePath = committedEvidencePath(
+    stagingRoot,
+    browserRelayImageManifest.relay_services_memory_recovery_failure_path,
+    RELAY_SERVICES_MEMORY_RECOVERY_FAILURE_PATH,
+    'evidence.browser_relay_image.relay_services_memory_recovery_failure_path',
+  );
+  const relayServicesMemoryRecoveryFailure = validatedEvidenceFile(
+    relayServicesMemoryRecoveryFailurePath,
+    validateRelayServicesMemoryRecoveryFailure,
+    'evidence.browser_relay_image.relay_services_memory_recovery_failure_path',
+  );
+  exact(
+    fileSha256(relayServicesMemoryRecoveryFailurePath),
+    browserRelayImageManifest.relay_services_memory_recovery_failure_sha256,
+    'evidence.browser_relay_image.relay_services_memory_recovery_failure_sha256',
   );
   exact(
     browserRelayPlan.pins.relay_services_profile_sha256,
@@ -5049,7 +5135,7 @@ export function validateCommittedEvidence(
   );
   exactFields(browserRelayImageManifest, {
     state:
-      'v1_failed_container_analysis_converged_v2_recovery_succeeded_verified_not_deployed_entrypoints_retired_relay_services_private_bootstrap_failed_memory_partial_state_reconciled_recovery_entrypoint_prepared_not_executed',
+      'v1_failed_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_created_provider_default_drift_reconciliation_required_private_ready_entrypoint_prepared_not_executed',
     profile_sha256: RELAY_IMAGE_PROFILE_SHA256,
     v1_profile_sha256: RELAY_IMAGE_V1_PROFILE_SHA256,
     v1_result_sha256: RELAY_IMAGE_V1_RESULT_SHA256,
@@ -5062,20 +5148,37 @@ export function validateCommittedEvidence(
       browserRelayImageProfile.contracts.relay_services_profile_sha256,
     relay_services_v2_profile_sha256: RELAY_SERVICES_V2_PROFILE_SHA256,
     relay_services_v3_profile_sha256: RELAY_SERVICES_V3_PROFILE_SHA256,
+    relay_services_v4_profile_sha256: RELAY_SERVICES_V4_PROFILE_SHA256,
     relay_services_bootstrap_failure_sha256: RELAY_SERVICES_BOOTSTRAP_FAILURE_SHA256,
+    relay_services_memory_recovery_failure_sha256:
+      RELAY_SERVICES_MEMORY_RECOVERY_FAILURE_SHA256,
     relay_services_bootstrap_attempted: true,
     relay_services_bootstrap_failure_category:
       relayServicesBootstrapFailure.failure.category,
+    relay_services_memory_recovery_attempted: true,
+    relay_services_memory_recovery_failure_category:
+      relayServicesMemoryRecoveryFailure.failure.category,
     relay_services_original_claim_generation:
       relayServicesBootstrapFailure.claim.generation,
     relay_services_original_claim_sha256: relayServicesBootstrapFailure.claim.sha256,
+    relay_services_memory_recovery_claim_generation:
+      relayServicesMemoryRecoveryFailure.claim.generation,
+    relay_services_memory_recovery_claim_sha256:
+      relayServicesMemoryRecoveryFailure.claim.sha256,
     relay_services_partial_state_generation:
       relayServicesBootstrapFailure.terraform_state.generation,
     relay_services_partial_state_sha256:
       relayServicesBootstrapFailure.terraform_state.sha256,
     relay_services_partial_state_serial: relayServicesBootstrapFailure.terraform_state.serial,
+    relay_services_recovered_state_generation:
+      relayServicesMemoryRecoveryFailure.terraform_state.generation,
+    relay_services_recovered_state_sha256:
+      relayServicesMemoryRecoveryFailure.terraform_state.sha256,
+    relay_services_recovered_state_serial:
+      relayServicesMemoryRecoveryFailure.terraform_state.serial,
     relay_services_original_entrypoints_retired: true,
-    relay_services_recovery_entrypoint_present: true,
+    relay_services_recovery_entrypoints_retired: true,
+    relay_services_private_ready_entrypoint_present: true,
     relay_services_image_bound: true,
     relay_services_operator_entrypoint_present: true,
     source_repository: browserRelayImageProfile.source.repository,
@@ -5108,8 +5211,15 @@ export function validateCommittedEvidence(
     entrypoints_retired: true,
     container_analysis_api_enabled: browserRelayImageV2Result.effects.container_analysis_enabled,
     container_scanning_api_enabled: browserRelayImageV2Result.effects.container_scanning_enabled,
-    relay_services: 0,
-    public_ingress_active: browserRelayImageV2Result.effects.public_ingress_created,
+    relay_services: relayServicesMemoryRecoveryFailure.effects.relay_services_created,
+    relay_services_cloud_run_ready:
+      relayServicesMemoryRecoveryFailure.effects.relay_services_ready,
+    relay_services_private_ready: 0,
+    relay_services_network_ingress: relayServicesProfile.cloud_run.ingress,
+    relay_services_public_iam_members:
+      relayServicesMemoryRecoveryFailure.effects.public_iam_members_created,
+    unauthenticated_public_invocation_active:
+      relayServicesMemoryRecoveryFailure.effects.public_iam_members_created !== 0,
     new_fixed_cost_services: browserRelayImageProfile.cost.new_fixed_cost_services,
     maximum_incremental_eur: browserRelayImageProfile.cost.maximum_incremental_eur,
   }, 'evidence.browser_relay_image');
@@ -5201,14 +5311,24 @@ export function validateCommittedEvidence(
     'browser-relay-services/profile.json contracts.digest_bound_profile_sha256',
   );
   exact(
-    relayServicesProfile.contracts.previous_profile_path,
+    relayServicesProfile.contracts.bootstrap_profile_path,
     RELAY_SERVICES_V3_PROFILE_PATH,
-    'browser-relay-services/profile.json contracts.previous_profile_path',
+    'browser-relay-services/profile.json contracts.bootstrap_profile_path',
   );
   exact(
-    relayServicesProfile.contracts.previous_profile_sha256,
+    relayServicesProfile.contracts.bootstrap_profile_sha256,
     RELAY_SERVICES_V3_PROFILE_SHA256,
-    'browser-relay-services/profile.json contracts.previous_profile_sha256',
+    'browser-relay-services/profile.json contracts.bootstrap_profile_sha256',
+  );
+  exact(
+    relayServicesProfile.contracts.memory_recovery_profile_path,
+    RELAY_SERVICES_V4_PROFILE_PATH,
+    'browser-relay-services/profile.json contracts.memory_recovery_profile_path',
+  );
+  exact(
+    relayServicesProfile.contracts.memory_recovery_profile_sha256,
+    RELAY_SERVICES_V4_PROFILE_SHA256,
+    'browser-relay-services/profile.json contracts.memory_recovery_profile_sha256',
   );
   exact(
     relayServicesProfile.contracts.bootstrap_failure_path,
@@ -5221,9 +5341,29 @@ export function validateCommittedEvidence(
     'browser-relay-services/profile.json contracts.bootstrap_failure_sha256',
   );
   exact(
+    relayServicesProfile.contracts.memory_recovery_failure_path,
+    RELAY_SERVICES_MEMORY_RECOVERY_FAILURE_PATH,
+    'browser-relay-services/profile.json contracts.memory_recovery_failure_path',
+  );
+  exact(
+    relayServicesProfile.contracts.memory_recovery_failure_sha256,
+    RELAY_SERVICES_MEMORY_RECOVERY_FAILURE_SHA256,
+    'browser-relay-services/profile.json contracts.memory_recovery_failure_sha256',
+  );
+  exact(
     relayServicesV3Profile.contracts.previous_profile_sha256,
     RELAY_SERVICES_V2_PROFILE_SHA256,
     'browser-relay-services/profile-v3.json contracts.previous_profile_sha256',
+  );
+  exact(
+    relayServicesV4Profile.contracts.previous_profile_sha256,
+    RELAY_SERVICES_V3_PROFILE_SHA256,
+    'browser-relay-services/profile-v4.json contracts.previous_profile_sha256',
+  );
+  exact(
+    relayServicesV4Profile.contracts.bootstrap_failure_sha256,
+    RELAY_SERVICES_BOOTSTRAP_FAILURE_SHA256,
+    'browser-relay-services/profile-v4.json contracts.bootstrap_failure_sha256',
   );
   exact(
     relayServicesBootstrapFailure.profile_sha256,
@@ -5231,12 +5371,22 @@ export function validateCommittedEvidence(
     'browser-relay-services/bootstrap-failure-v1.json profile_sha256',
   );
   exact(
+    relayServicesMemoryRecoveryFailure.profile_sha256,
+    RELAY_SERVICES_V4_PROFILE_SHA256,
+    'browser-relay-services/memory-recovery-failure-v1.json profile_sha256',
+  );
+  exact(
     relayServicesBootstrapFailure.claim.sha256,
     relayServicesProfile.operation.original_claim_sha256,
     'browser-relay-services/profile.json operation.original_claim_sha256',
   );
   exact(
-    relayServicesBootstrapFailure.terraform_state.sha256,
+    relayServicesMemoryRecoveryFailure.claim.sha256,
+    relayServicesProfile.operation.memory_recovery_claim_sha256,
+    'browser-relay-services/profile.json operation.memory_recovery_claim_sha256',
+  );
+  exact(
+    relayServicesMemoryRecoveryFailure.terraform_state.sha256,
     relayServicesProfile.operation.initial_state_sha256,
     'browser-relay-services/profile.json operation.initial_state_sha256',
   );
@@ -5247,8 +5397,8 @@ export function validateCommittedEvidence(
   );
   exact(
     relayServicesV2Profile.terraform_source_sha256,
-    relayServicesProfile.terraform_source_sha256,
-    'browser-relay-services/profile-v2.json terraform_source_sha256',
+    relayServicesV4Profile.terraform_source_sha256,
+    'browser-relay-services/profile-v2.json and profile-v4.json terraform_source_sha256',
   );
   exact(
     relayServicesProfile.contracts.relay_image_result_path,
@@ -5546,7 +5696,9 @@ export function validateCommittedEvidence(
     relayServicesV1Profile,
     relayServicesV2Profile,
     relayServicesV3Profile,
+    relayServicesV4Profile,
     relayServicesBootstrapFailure,
+    relayServicesMemoryRecoveryFailure,
     browserRelayImageProfile,
     browserRelayImageV1Profile,
     browserRelayImageV1Result,
@@ -5576,7 +5728,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; relay-image v2 is verified, the failed private relay bootstrap is reconciled, its bounded memory recovery is prepared but unexecuted, public invocation remains absent, and App Check enforcement is disabled.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; relay-image v2 is verified, two IAM-private Cloud Run relays are healthy but still use bootstrap audiences, the consumed recovery's provider-default mismatch awaits the prepared private-ready transition, unauthenticated invocation remains absent, and App Check enforcement is disabled.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';
