@@ -24,6 +24,12 @@ import {
   PAGE_LIFECYCLE_OBSERVATION_SCHEMA,
 } from '../browser-relay-page/contract.mjs';
 import {
+  PLAYWRIGHT_BRIDGE_PROFILE_PATH,
+  PLAYWRIGHT_BRIDGE_PROFILE_SHA256,
+  PLAYWRIGHT_BRIDGE_SOURCE_SHA256,
+  validateBrowserRelayPlaywrightBridgeProfile,
+} from '../browser-relay-playwright-bridge/contract.mjs';
+import {
   SCENARIO_FIXTURE_CLOUD_IMPLEMENTATION_BASE_COMMIT,
   SCENARIO_FIXTURE_CLOUD_PROFILE_PATH,
   SCENARIO_FIXTURE_CLOUD_PROFILE_SHA256,
@@ -69,10 +75,10 @@ test('rejects a staging manifest above the bounded 128-KiB envelope', () => {
 
 test('accepts the successful and retired private user-relay probe', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 89);
+  assert.equal(validated.revision, 90);
   assert.equal(
     validated.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_page_receipt_closed_producer_implemented_not_wired_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_playwright_bridge_closed_secondary_receipts_chromium_bfcache_blocked_not_wired_not_executed_browser_relay_page_receipt_closed_bridge_bound_not_aggregated_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
@@ -1685,6 +1691,89 @@ test('rejects missing or unreviewed page evidence fields', () => {
       && /evidence\.browser_relay_page/u.test(error.message));
 });
 
+test('pins the offline Playwright bridge while keeping Chromium and cloud wiring blocked', () => {
+  const candidate = manifest();
+  const profile = validateBrowserRelayPlaywrightBridgeProfile();
+  const evidence = candidate.evidence.browser_relay_playwright_bridge;
+  const committed = validateCommittedEvidence(candidate);
+  assert.deepEqual(committed.browserRelayPlaywrightBridgeProfile, profile);
+  assert.equal(evidence.profile_path, PLAYWRIGHT_BRIDGE_PROFILE_PATH);
+  assert.equal(evidence.profile_sha256, PLAYWRIGHT_BRIDGE_PROFILE_SHA256);
+  assert.equal(evidence.bridge_source_sha256, PLAYWRIGHT_BRIDGE_SOURCE_SHA256);
+  assert.equal(evidence.playwright_bfcache_testing_supported, false);
+  assert.equal(evidence.chromium_blocked_before_page_or_private_input, true);
+  assert.equal(evidence.chromium_receipt_transport_complete, false);
+  assert.equal(evidence.secondary_receipt_transports_complete, 2);
+  assert.equal(evidence.blocked_result_is_engine_result, false);
+  assert.equal(evidence.offline_secondary_receipts, 2);
+  assert.equal(evidence.chromium_private_inputs_requested, 0);
+  assert.equal(evidence.independent_cloud_observers_present, false);
+  assert.equal(evidence.aggregator_wired, false);
+  assert.equal(evidence.cloud_mutation_authorized, false);
+  assert.equal(evidence.live_execution_authorized, false);
+  assert.equal(evidence.live_execution_count, 0);
+});
+
+test('rejects Playwright bridge capability, evidence and authority drift', () => {
+  for (const [field, value] of [
+    ['profile_path', '../../unreviewed.json'],
+    ['profile_sha256', '0'.repeat(64)],
+    ['bridge_source_sha256', '0'.repeat(64)],
+    ['playwright_types_sha256', '0'.repeat(64)],
+    ['playwright_bfcache_testing_supported', true],
+    ['chromium_blocked_before_page_or_private_input', false],
+    ['chromium_receipt_transport_complete', true],
+    ['secondary_receipt_transports_complete', 1],
+    ['page_host_api_scenario_complete', true],
+    ['independent_cloud_observers_present', true],
+    ['aggregator_wired', true],
+    ['blocked_result_is_engine_result', true],
+    ['cloud_mutation_authorized', true],
+    ['hosting_publication_authorized', true],
+    ['public_ingress_authorized', true],
+    ['live_execution_authorized', true],
+    ['offline_secondary_receipts', 3],
+    ['chromium_private_inputs_requested', 1],
+    ['live_page_facts', 1],
+    ['live_receipts', 1],
+    ['cloud_mutations', 1],
+    ['live_execution_count', 1],
+    ['credentials_committed', true],
+    ['raw_page_diagnostics_committed', true],
+  ]) {
+    const candidate = manifest();
+    candidate.evidence.browser_relay_playwright_bridge[field] = value;
+    assert.throws(
+      () => validateCommittedEvidence(candidate),
+      (error) => error instanceof StagingManifestError
+        && error.message.includes(`evidence.browser_relay_playwright_bridge.${field}`),
+      `Expected rejection of ${field} drift`,
+    );
+  }
+});
+
+test('rejects missing and unreviewed Playwright bridge evidence fields', () => {
+  for (const field of Object.keys(
+    manifestFixture.evidence.browser_relay_playwright_bridge,
+  )) {
+    const candidate = manifest();
+    delete candidate.evidence.browser_relay_playwright_bridge[field];
+    assert.throws(
+      () => validateCommittedEvidence(candidate),
+      (error) => error instanceof StagingManifestError
+        && /evidence\.browser_relay_playwright_bridge/u.test(error.message),
+      `Expected rejection of missing ${field}`,
+    );
+  }
+  const candidate = manifest();
+  candidate.evidence.browser_relay_playwright_bridge.unreviewed_capability = true;
+  assert.throws(
+    () => validateCommittedEvidence(candidate),
+    (error) => error instanceof StagingManifestError
+      && /evidence\.browser_relay_playwright_bridge/u.test(error.message),
+  );
+});
+
 test('pins the dormant replacement cloud adapter while preserving its unwired compatibility limits', () => {
   const candidate = manifest();
   const profile = validateBrowserRelayScenarioFixtureCloudProfile();
@@ -1713,7 +1802,7 @@ test('pins the dormant replacement cloud adapter while preserving its unwired co
   assert.equal(evidence.live_execution_count, 0);
   assert.equal(evidence.page_timing_capacity_satisfied, true);
   assert.equal(evidence.page_host_api_scenario_complete, false);
-  assert.equal(evidence.playwright_bridge_present, false);
+  assert.equal(evidence.playwright_bridge_present, true);
   assert.equal(evidence.aggregator_wired, false);
   assert.equal(candidate.evidence.browser_relay_scenario_fixture.replacement_cloud_adapter_present,
     false);
@@ -1736,7 +1825,7 @@ test('rejects replacement cloud artifact, budget, compatibility and authority dr
     ['replacement_cloud_adapter_present', false],
     ['page_timing_capacity_satisfied', false],
     ['page_host_api_scenario_complete', true],
-    ['playwright_bridge_present', true],
+    ['playwright_bridge_present', false],
     ['aggregator_wired', true],
     ['cloud_mutation_authorized', true],
     ['public_ingress_authorized', true],

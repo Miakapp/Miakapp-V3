@@ -163,6 +163,14 @@ node --check infrastructure/staging/browser-relay-aggregator/aggregator.mjs
 node --check infrastructure/staging/browser-relay-aggregator/contract.mjs
 node --check infrastructure/staging/browser-relay-aggregator/guard.mjs
 node -e "import('./infrastructure/staging/browser-relay-aggregator/contract.mjs').then(({ validateBrowserRelayAggregatorProfile }) => validateBrowserRelayAggregatorProfile())"
+node infrastructure/staging/browser-relay-playwright-bridge/guard.mjs \
+  "${repository_root}/infrastructure/staging/browser-relay-playwright-bridge"
+node --check infrastructure/staging/browser-relay-playwright-bridge/bridge.mjs
+node --check infrastructure/staging/browser-relay-playwright-bridge/contract.mjs
+node --check infrastructure/staging/browser-relay-playwright-bridge/guard.mjs
+node --check infrastructure/staging/test/browser-relay-playwright-bridge-browser.mjs
+node --check infrastructure/staging/test/helpers/browser-relay-playwright-bridge-entry.mjs
+node -e "import('./infrastructure/staging/browser-relay-playwright-bridge/contract.mjs').then(({ validateBrowserRelayPlaywrightBridgeProfile }) => validateBrowserRelayPlaywrightBridgeProfile())"
 node infrastructure/staging/browser-relay-page-receipt/guard.mjs \
   "${repository_root}/infrastructure/staging/browser-relay-page-receipt"
 node --check infrastructure/staging/browser-relay-page-receipt/contract.mjs
@@ -373,6 +381,7 @@ node --test \
   infrastructure/staging/test/browser-relay-fixture-miakapi.test.mjs \
   infrastructure/staging/test/browser-relay-fixture.test.mjs \
   infrastructure/staging/test/browser-relay-aggregator.test.mjs \
+  infrastructure/staging/test/browser-relay-playwright-bridge.test.mjs \
   infrastructure/staging/test/browser-relay-page-receipt.test.mjs \
   infrastructure/staging/test/browser-relay-scenario-fixture.test.mjs \
   infrastructure/staging/test/browser-relay-scenario-fixture-cloud.test.mjs \

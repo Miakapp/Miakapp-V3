@@ -18,7 +18,7 @@
     "browser_relay_fixture_profile_sha256": "0dad7b7478829b88a234c6f6551ad7da7616ac46f12ca37c12bef3ffcdfefe22",
     "browser_relay_fixture_source_sha256": "339cd223822dba232e1bacf263e6632669788c5a44bca39ea297cb8f47fbe838",
     "browser_relay_fixture_cloud_profile_sha256": "a7afcaef4a4c71e2ef501d389e87b96f17a92056c57614785a79e5d9b21b9196",
-    "browser_relay_page_receipt_profile_sha256": "37f3b7a23b28a42f2a073e85744e986ecced39e64ff045aee915378a7b4aaaa3",
+    "browser_relay_page_receipt_profile_sha256": "740d21178e963fb82a3cd923a1adf6cbf6af2b62a633f0b97058fbda4f1e906a",
     "fixture_source_sha256": "6324e8156f987a32b112135a0bbaef2766b63e16f8b81b1e0a526816c7f132bf"
   },
   "scenario": {
@@ -83,7 +83,7 @@
     "replacement_cloud_adapter_present": false,
     "page_timing_capacity_satisfied": true,
     "page_host_api_scenario_complete": false,
-    "playwright_bridge_present": false,
+    "playwright_bridge_present": true,
     "aggregator_wired": false
   },
   "output": {

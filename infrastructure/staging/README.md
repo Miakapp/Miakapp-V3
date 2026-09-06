@@ -385,8 +385,9 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`browser-relay-fixture-cloud/`](browser-relay-fixture-cloud/) | Dormant injected Google/Firebase fixture adapter | Implements bounded keyless JWT signing, fixed control-plane mutations, complete inventory and preconditioned atomic cleanup for the controller; no CLI, ambient credentials, IAM change or live authority is present |
 | [`browser-relay-fixture-miakapi/`](browser-relay-fixture-miakapi/) | Dormant pinned MiakAPI Node factory binding | Reproducibly vendors the exact coordinator commit, injects the Home Key exchange transport and permits one provider and coordinator construction without starting a session; no CLI or live authority is present |
 | [`browser-relay-aggregator/`](browser-relay-aggregator/) | Dormant independent-source engine-result aggregator | Assigns all 40 assertions and eight counters to exact source owners, accepts 18 single-use closed receipts in canonical order and emits only the existing runner schema; it is not wired or executed and grants no live authority |
-| [`browser-relay-page-receipt/`](browser-relay-page-receipt/) | Dormant browser-owned source receipt producer | Reduces 18 exact Chromium page facts or three secondary-browser facts into the aggregator's existing receipt schema; page timing capacity is satisfied, while complete scenario, identity-generation evidence and Playwright wiring remain required |
-| [`browser-relay-scenario-fixture/`](browser-relay-scenario-fixture/) | Dormant four-input scenario fixture controller | Composes the immutable fixture with a second exact synthetic Firebase identity, grants both identities state access through one coordinator and requires coordinator-first verified cleanup across both ownership domains; original fixture capacity limits remain explicit and the Playwright bridge remains absent |
+| [`browser-relay-playwright-bridge/`](browser-relay-playwright-bridge/) | Dormant page-to-receipt Playwright bridge | Lazily drives the phased host and real receipt producer for Firefox/WebKit; Chromium is blocked before page or private-input acquisition because pinned Playwright cannot prove native BFCache restoration; no engine result, cloud receipt or live authority is produced |
+| [`browser-relay-page-receipt/`](browser-relay-page-receipt/) | Dormant browser-owned source receipt producer | Revision 2 reduces 18 exact Chromium page facts or three secondary-browser facts, cross-checks cumulative host lifecycle evidence, typed call outcomes and terminal cleanup, and is bound to the bridge but not the independent-source aggregator |
+| [`browser-relay-scenario-fixture/`](browser-relay-scenario-fixture/) | Dormant four-input scenario fixture controller | Composes the immutable fixture with a second exact synthetic Firebase identity, grants both identities state access through one coordinator and requires coordinator-first verified cleanup across both ownership domains; the bridge is present while the complete Chromium scenario remains blocked |
 | [`browser-relay-scenario-fixture-cloud/`](browser-relay-scenario-fixture-cloud/) | Dormant injected replacement-identity Google/Firebase adapter | Supplies only the exact second synthetic UID through bounded keyless signing, token-bound identity verification and independently observed cleanup; closes the cloud implementation gap without wiring the scenario or granting live, IAM, Hosting or public-ingress authority |
 | [`browser-relay-monitoring/`](browser-relay-monitoring/) | Closed allow-listed monitoring preflight and evaluator | One post-merge read-only observation verified all six metric surfaces, the existing EUR 10 budget and the private edge/relay boundary; no mutation or acceptance execution occurred |
 | [`browser-relay-rollback/`](browser-relay-rollback/) | Closed-target rollback preflight | Post-merge observation verified all ten private-target facts and a four-resource Terraform no-change plan; its sanitized result records zero mutation, public-ingress change and acceptance execution |
@@ -814,12 +815,21 @@ provide 18 ordered, cumulative facts from the pinned page boundary, including
 two scheduled renewal intervals, one-maximum-socket relay handoff, stable
 failed/uncertain outcomes, persisted `pagehide`/`pageshow`, sign-out and a new
 identity generation only after the old page stopped. Firefox and WebKit each
-provide an exact start/stop triple. The producer emits only the aggregator's
-`browser_page` receipt and discards every fact on close or failure. It remains
-dormant because the complete page scenario and Playwright bridge are not yet
-complete. Current page revision 3 supplies the required 600-second Chromium
-budget and local lifecycle/outcome APIs; those capabilities alone are not
-acceptance evidence. The adjacent
+provide an exact start/stop triple. Revision 2 also carries the bounded host
+lifecycle projection with every fact, uses its typed call outcomes and verifies
+terminal sign-out/disposal without depending on a fenced asynchronous SDK
+callback. The producer emits only the aggregator's `browser_page` receipt and
+discards every fact on close or failure. The adjacent
+[`browser-relay-playwright-bridge/`](browser-relay-playwright-bridge/) now owns
+the page-to-receipt transport for Firefox and WebKit, including lazy private
+input acquisition and page cleanup before receipt closure. Chromium returns a
+distinct blocked result before page or private-input acquisition because pinned
+Playwright 1.62.1 explicitly cannot test BFCache restoration; that result is
+not an engine result and cannot satisfy the persisted lifecycle facts. Current
+page revision 3 supplies the required 600-second Chromium budget and local
+lifecycle/outcome APIs, but the complete Chromium scenario and all independent
+cloud observers remain absent. These offline capabilities are not acceptance
+evidence. The adjacent
 [`browser-relay-scenario-fixture/`](browser-relay-scenario-fixture/) composes the
 immutable three-input fixture with a second exact synthetic Firebase identity.
 It provides the fourth Chromium input, extends the one coordinator's state
@@ -833,10 +843,10 @@ injected ephemeral session and HTTP implementation. It bounds the lifecycle to
 two distinct keyless signatures, binds the exchanged token to the exact
 replacement identity through one account lookup, and requires independently
 observed absence after cleanup without retrying uncertain mutations. This
-closes only the second-identity cloud implementation gap: the complete page
-scenario, Playwright bridge, independent cloud observers and live wiring remain
-open. All mutation, IAM, Hosting, public-ingress and execution authority remains
-closed.
+closes only the second-identity cloud implementation gap: the complete Chromium
+page scenario, a BFCache-capable automation path, independent cloud observers
+and live aggregator wiring remain open. All mutation, IAM, Hosting,
+public-ingress and execution authority remains closed.
 The adjacent [`browser-relay-operation/`](browser-relay-operation/) package now
 closes the remaining ordering gap without executing it. The claimed edge owns
 the control-plane transition. Inside that single window the operation creates

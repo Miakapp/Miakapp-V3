@@ -89,6 +89,18 @@ import {
   validateBrowserRelayAggregatorProfile,
 } from './browser-relay-aggregator/contract.mjs';
 import {
+  PLAYWRIGHT_BRIDGE_BROWSER_SMOKE_SHA256,
+  PLAYWRIGHT_BRIDGE_IMPLEMENTATION_BASE_COMMIT,
+  PLAYWRIGHT_BRIDGE_OFFLINE_ENTRY_SHA256,
+  PLAYWRIGHT_BRIDGE_PROFILE_PATH,
+  PLAYWRIGHT_BRIDGE_PROFILE_SHA256,
+  PLAYWRIGHT_BRIDGE_RESULT_SCHEMA,
+  PLAYWRIGHT_BRIDGE_SOURCE_SHA256,
+  PLAYWRIGHT_BRIDGE_WORKFLOW_SHA256,
+  PLAYWRIGHT_TYPES_SHA256,
+  validateBrowserRelayPlaywrightBridgeProfile,
+} from './browser-relay-playwright-bridge/contract.mjs';
+import {
   PAGE_FACT_ORDER_BY_BROWSER,
   PAGE_RECEIPT_IMPLEMENTATION_BASE_COMMIT,
   PAGE_RECEIPT_PROFILE_PATH,
@@ -3033,6 +3045,7 @@ function validateEvidence(value) {
     'browser_relay_fixture_cloud',
     'browser_relay_fixture_miakapi',
     'browser_relay_aggregator',
+    'browser_relay_playwright_bridge',
     'browser_relay_page_receipt',
     'browser_relay_scenario_fixture',
     'browser_relay_scenario_fixture_cloud',
@@ -5246,10 +5259,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 89, 'manifest.revision');
+  exact(manifest.revision, 90, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_page_receipt_closed_producer_implemented_not_wired_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_playwright_bridge_closed_secondary_receipts_chromium_bfcache_blocked_not_wired_not_executed_browser_relay_page_receipt_closed_bridge_bound_not_aggregated_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -6331,6 +6344,179 @@ export function validateCommittedEvidence(
     raw_receipts_committed:
       browserRelayAggregatorProfile.evidence.raw_receipts_committed,
   }, 'evidence.browser_relay_aggregator');
+  const browserRelayPlaywrightBridgeManifest = record(
+    manifest.evidence.browser_relay_playwright_bridge,
+    'evidence.browser_relay_playwright_bridge',
+    [
+      'state',
+      'profile_path',
+      'profile_sha256',
+      'implementation_base_commit',
+      'browser_relay_runner_profile_sha256',
+      'browser_relay_page_profile_sha256',
+      'browser_relay_aggregator_profile_sha256',
+      'playwright_version',
+      'playwright_types_sha256',
+      'bridge_source_sha256',
+      'browser_smoke_sha256',
+      'offline_entry_sha256',
+      'workflow_sha256',
+      'result_schema',
+      'page_fact_schema',
+      'source_receipt_schema',
+      'private_input_provider_lazy',
+      'page_provider_lazy',
+      'receipt_producer_injected',
+      'page_owned_until_cleanup',
+      'maximum_secondary_milliseconds',
+      'playwright_bfcache_testing_supported',
+      'chromium_blocked_before_page_or_private_input',
+      'chromium_receipt_transport_complete',
+      'secondary_receipt_transports_complete',
+      'page_host_api_scenario_complete',
+      'independent_cloud_observers_present',
+      'aggregator_wired',
+      'blocked_reason',
+      'blocked_result_is_engine_result',
+      'cloud_compute_resources',
+      'cloud_mutation_authorized',
+      'hosting_publication_authorized',
+      'public_ingress_authorized',
+      'live_execution_authorized',
+      'offline_browser_engines',
+      'blocked_browser_capability_checks',
+      'offline_secondary_receipts',
+      'chromium_private_inputs_requested',
+      'live_page_facts',
+      'live_receipts',
+      'cloud_mutations',
+      'live_execution_count',
+      'credentials_committed',
+      'raw_page_diagnostics_committed',
+    ],
+  );
+  const browserRelayPlaywrightBridgeProfilePath = committedEvidencePath(
+    stagingRoot,
+    browserRelayPlaywrightBridgeManifest.profile_path,
+    PLAYWRIGHT_BRIDGE_PROFILE_PATH,
+    'evidence.browser_relay_playwright_bridge.profile_path',
+  );
+  const browserRelayPlaywrightBridgeProfile = validatedEvidenceFile(
+    browserRelayPlaywrightBridgeProfilePath,
+    validateBrowserRelayPlaywrightBridgeProfile,
+    'evidence.browser_relay_playwright_bridge.profile_path',
+  );
+  exact(
+    fileSha256(browserRelayPlaywrightBridgeProfilePath),
+    PLAYWRIGHT_BRIDGE_PROFILE_SHA256,
+    'evidence.browser_relay_playwright_bridge.profile_sha256',
+  );
+  exact(
+    fileSha256(resolve(stagingRoot, 'browser-relay-playwright-bridge/bridge.mjs')),
+    PLAYWRIGHT_BRIDGE_SOURCE_SHA256,
+    'evidence.browser_relay_playwright_bridge.bridge_source_sha256',
+  );
+  exact(
+    fileSha256(resolve(stagingRoot, 'test/browser-relay-playwright-bridge-browser.mjs')),
+    PLAYWRIGHT_BRIDGE_BROWSER_SMOKE_SHA256,
+    'evidence.browser_relay_playwright_bridge.browser_smoke_sha256',
+  );
+  exact(
+    fileSha256(resolve(stagingRoot, 'test/helpers/browser-relay-playwright-bridge-entry.mjs')),
+    PLAYWRIGHT_BRIDGE_OFFLINE_ENTRY_SHA256,
+    'evidence.browser_relay_playwright_bridge.offline_entry_sha256',
+  );
+  exact(
+    fileSha256(resolve(stagingRoot, '../../.github/workflows/browser-relay-playwright-bridge.yml')),
+    PLAYWRIGHT_BRIDGE_WORKFLOW_SHA256,
+    'evidence.browser_relay_playwright_bridge.workflow_sha256',
+  );
+  exact(
+    fileSha256(resolve(stagingRoot, '../../node_modules/playwright-core/types/types.d.ts')),
+    PLAYWRIGHT_TYPES_SHA256,
+    'evidence.browser_relay_playwright_bridge.playwright_types_sha256',
+  );
+  exactFields(browserRelayPlaywrightBridgeManifest, {
+    state: browserRelayPlaywrightBridgeProfile.state,
+    profile_sha256: PLAYWRIGHT_BRIDGE_PROFILE_SHA256,
+    implementation_base_commit: PLAYWRIGHT_BRIDGE_IMPLEMENTATION_BASE_COMMIT,
+    browser_relay_runner_profile_sha256:
+      browserRelayPlaywrightBridgeProfile.pins.browser_relay_runner_profile_sha256,
+    browser_relay_page_profile_sha256:
+      browserRelayPlaywrightBridgeProfile.pins.browser_relay_page_profile_sha256,
+    browser_relay_aggregator_profile_sha256:
+      browserRelayPlaywrightBridgeProfile.pins.browser_relay_aggregator_profile_sha256,
+    playwright_version: browserRelayPlaywrightBridgeProfile.pins.playwright_version,
+    playwright_types_sha256: PLAYWRIGHT_TYPES_SHA256,
+    bridge_source_sha256: PLAYWRIGHT_BRIDGE_SOURCE_SHA256,
+    browser_smoke_sha256: PLAYWRIGHT_BRIDGE_BROWSER_SMOKE_SHA256,
+    offline_entry_sha256: PLAYWRIGHT_BRIDGE_OFFLINE_ENTRY_SHA256,
+    workflow_sha256: PLAYWRIGHT_BRIDGE_WORKFLOW_SHA256,
+    result_schema: PLAYWRIGHT_BRIDGE_RESULT_SCHEMA,
+    page_fact_schema: browserRelayPlaywrightBridgeProfile.bridge.page_fact_schema,
+    source_receipt_schema:
+      browserRelayPlaywrightBridgeProfile.bridge.source_receipt_schema,
+    private_input_provider_lazy:
+      browserRelayPlaywrightBridgeProfile.bridge.private_input_provider_lazy,
+    page_provider_lazy:
+      browserRelayPlaywrightBridgeProfile.bridge.page_provider_lazy,
+    receipt_producer_injected:
+      browserRelayPlaywrightBridgeProfile.bridge.receipt_producer_injected,
+    page_owned_until_cleanup:
+      browserRelayPlaywrightBridgeProfile.bridge.page_owned_until_cleanup,
+    maximum_secondary_milliseconds:
+      browserRelayPlaywrightBridgeProfile.bridge.maximum_secondary_milliseconds,
+    playwright_bfcache_testing_supported:
+      browserRelayPlaywrightBridgeProfile.compatibility.playwright_bfcache_testing_supported,
+    chromium_blocked_before_page_or_private_input:
+      browserRelayPlaywrightBridgeProfile.compatibility
+        .chromium_blocked_before_page_or_private_input,
+    chromium_receipt_transport_complete:
+      browserRelayPlaywrightBridgeProfile.compatibility
+        .chromium_receipt_transport_complete,
+    secondary_receipt_transports_complete:
+      Number(browserRelayPlaywrightBridgeProfile.compatibility
+        .firefox_receipt_transport_complete)
+      + Number(browserRelayPlaywrightBridgeProfile.compatibility
+        .webkit_receipt_transport_complete),
+    page_host_api_scenario_complete:
+      browserRelayPlaywrightBridgeProfile.compatibility.page_host_api_scenario_complete,
+    independent_cloud_observers_present:
+      browserRelayPlaywrightBridgeProfile.compatibility.independent_cloud_observers_present,
+    aggregator_wired:
+      browserRelayPlaywrightBridgeProfile.compatibility.aggregator_wired,
+    blocked_reason: browserRelayPlaywrightBridgeProfile.output.blocked_reason,
+    blocked_result_is_engine_result:
+      browserRelayPlaywrightBridgeProfile.output.blocked_result_is_engine_result,
+    cloud_compute_resources:
+      browserRelayPlaywrightBridgeProfile.target.cloud_compute_resources,
+    cloud_mutation_authorized:
+      browserRelayPlaywrightBridgeProfile.authority.cloud_mutation_authorized,
+    hosting_publication_authorized:
+      browserRelayPlaywrightBridgeProfile.authority.hosting_publication_authorized,
+    public_ingress_authorized:
+      browserRelayPlaywrightBridgeProfile.authority.public_ingress_authorized,
+    live_execution_authorized:
+      browserRelayPlaywrightBridgeProfile.authority.live_execution_authorized,
+    offline_browser_engines:
+      browserRelayPlaywrightBridgeProfile.evidence.offline_browser_engines,
+    blocked_browser_capability_checks:
+      browserRelayPlaywrightBridgeProfile.evidence.blocked_browser_capability_checks,
+    offline_secondary_receipts:
+      browserRelayPlaywrightBridgeProfile.evidence.offline_secondary_receipts,
+    chromium_private_inputs_requested:
+      browserRelayPlaywrightBridgeProfile.evidence.chromium_private_inputs_requested,
+    live_page_facts:
+      browserRelayPlaywrightBridgeProfile.evidence.live_page_facts,
+    live_receipts: browserRelayPlaywrightBridgeProfile.evidence.live_receipts,
+    cloud_mutations: browserRelayPlaywrightBridgeProfile.evidence.cloud_mutations,
+    live_execution_count:
+      browserRelayPlaywrightBridgeProfile.evidence.live_execution_count,
+    credentials_committed:
+      browserRelayPlaywrightBridgeProfile.evidence.credentials_committed,
+    raw_page_diagnostics_committed:
+      browserRelayPlaywrightBridgeProfile.evidence.raw_page_diagnostics_committed,
+  }, 'evidence.browser_relay_playwright_bridge');
   const browserRelayPageReceiptManifest = manifest.evidence.browser_relay_page_receipt;
   const browserRelayPageReceiptProfilePath = committedEvidencePath(
     stagingRoot,
@@ -6371,8 +6557,12 @@ export function validateCommittedEvidence(
       browserRelayPageReceiptProfile.pins.browser_relay_page_profile_sha256,
     browser_relay_aggregator_profile_sha256:
       browserRelayPageReceiptProfile.pins.browser_relay_aggregator_profile_sha256,
+    browser_relay_playwright_bridge_profile_sha256:
+      browserRelayPageReceiptProfile.pins.browser_relay_playwright_bridge_profile_sha256,
     producer_source_sha256: PAGE_RECEIPT_SOURCE_SHA256,
     page_fact_schema: browserRelayPageReceiptProfile.producer.page_fact_schema,
+    page_lifecycle_observation_schema:
+      browserRelayPageReceiptProfile.producer.page_lifecycle_observation_schema,
     source_receipt_schema: browserRelayPageReceiptProfile.producer.source_receipt_schema,
     chromium_facts: PAGE_FACT_ORDER_BY_BROWSER.chromium.length,
     secondary_browser_facts: PAGE_FACT_ORDER_BY_BROWSER.firefox.length,
@@ -6399,6 +6589,10 @@ export function validateCommittedEvidence(
     single_use: browserRelayPageReceiptProfile.producer.single_use,
     fact_order_exact: browserRelayPageReceiptProfile.producer.fact_order_exact,
     fact_retries: browserRelayPageReceiptProfile.producer.fact_retries,
+    lifecycle_observation_required:
+      browserRelayPageReceiptProfile.producer.lifecycle_observation_required,
+    lifecycle_observation_cumulative:
+      browserRelayPageReceiptProfile.producer.lifecycle_observation_cumulative,
     raw_facts_retained: browserRelayPageReceiptProfile.producer.raw_facts_retained,
     native_pagehide_pageshow_persisted_required:
       browserRelayPageReceiptProfile.producer.native_pagehide_pageshow_persisted_required,
@@ -8070,6 +8264,7 @@ export function validateCommittedEvidence(
     browserRelayPageProfile,
     browserRelayPageV2Profile,
     browserRelayAggregatorProfile,
+    browserRelayPlaywrightBridgeProfile,
     browserRelayPageReceiptProfile,
     browserRelayScenarioFixtureCloudProfile,
     browserRelayRollbackProfile,
@@ -8116,7 +8311,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; the dormant page, two-identity scenario fixture, replacement-identity cloud adapter, independent-source aggregator and browser-page receipt producer are digest-pinned without live authority, the single-use operation remains privately preflighted and unexecuted, both exact-audience relays remain private-ready, unauthenticated invocation remains absent, and App Check enforcement is disabled.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; the dormant page, two-identity scenario fixture, replacement-identity cloud adapter, independent-source aggregator, Playwright bridge and browser-page receipt producer are digest-pinned without live authority, the Chromium BFCache path remains blocked before private input, the single-use operation remains privately preflighted and unexecuted, both exact-audience relays remain private-ready, unauthenticated invocation remains absent, and App Check enforcement is disabled.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';

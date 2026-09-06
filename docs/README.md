@@ -72,11 +72,16 @@ implemented across several repositories.
   — dormant single-use evidence aggregator assigning every runner assertion,
   counter and public identifier to one exact browser or independent cloud
   source; invalid, missing, duplicated or out-of-order receipts fail closed.
+- [`../infrastructure/staging/browser-relay-playwright-bridge/`](../infrastructure/staging/browser-relay-playwright-bridge/)
+  — dormant fail-closed Playwright page-to-receipt bridge with lazy private
+  input acquisition and owned page cleanup; real Firefox and WebKit engines
+  close exact page receipts offline, while Chromium remains blocked before
+  page or private-input acquisition by pinned Playwright's BFCache limitation.
 - [`../infrastructure/staging/browser-relay-page-receipt/`](../infrastructure/staging/browser-relay-page-receipt/)
   — dormant browser-owned receipt producer that reduces exact cumulative page,
   state, call and native lifecycle facts without accepting assertion booleans;
-  page timing capacity is satisfied, but the complete scenario and Playwright
-  bridge remain explicitly open.
+  revision 2 is digest-bound to the adjacent bridge, while the complete
+  Chromium scenario and independent-source aggregation remain explicitly open.
 - [`../infrastructure/staging/browser-relay-scenario-fixture/`](../infrastructure/staging/browser-relay-scenario-fixture/)
   — dormant composition around the immutable fixture that supplies four exact
   page inputs across two genuine synthetic Firebase identities, extends the one
@@ -219,10 +224,14 @@ replacement identity's bounded cloud lifecycle, including token-bound identity
 verification and independently observed cleanup. The original fixture limits
 remain explicit, while current dependency pins and timing capacity follow page
 revision 3. The replacement adapter resolves only the second-identity cloud
-implementation gap and has not been live wired or executed.
-None of these packages grants Hosting publication or live authority; the page
-scenario, Playwright bridge and independent cloud observers must close their
-remaining gaps before the runner can execute.
+implementation gap and has not been live wired or executed. The separate
+Playwright bridge now proves the real offline Firefox and WebKit
+page-to-receipt transport with lazy private inputs and owned cleanup. Chromium
+still fails closed before page or private-input acquisition because pinned
+Playwright cannot prove native persisted BFCache restoration. None of these
+packages grants Hosting publication or live authority; the complete Chromium
+scenario, a BFCache-capable automation path, independent cloud observers and
+aggregator wiring must close before the one allowed live matrix can execute.
 
 Repository-specific implementation plans must link back to these documents and
 must not redefine a shared contract locally.
