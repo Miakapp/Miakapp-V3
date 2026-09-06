@@ -1,0 +1,80 @@
+{
+  "schema": "miakapp.staging-browser-relay-image-result/2",
+  "state": "private_image_recovered_verified_not_deployed",
+  "project_id": "miakapp-v4-staging",
+  "project_number": "1072737219170",
+  "region": "europe-west9",
+  "repository_commit": "5cd537484d341d429a269c8d72de979f3643b066",
+  "profile_sha256": "6ab86de257a4e85d51a47d528240b3862a79120d1383bab6a9092011abd3f76b",
+  "metadata_sha256": "0a3376ba1dfeb31ab4b5fb68c8f31516938d6cf87c0446c8583b14b459efaa3e",
+  "observed_at": "2026-09-06T00:00:34.396Z",
+  "source": {
+    "repository": "https://github.com/Miakapp/Miakapp-Server.git",
+    "commit": "df10674e034f30eec80760f5ec94bc108cff026f",
+    "tree": "0468ea08cd2d51b3e656c4adea9bb09b4a8a6ea1",
+    "archive_sha256": "93fd720736453e3555be625bbb993194f48a5388821169c939674b04088f158e",
+    "archive_bytes": 53098,
+    "object_generation": "1788648564283151"
+  },
+  "claim": {
+    "generation": "1788652620212083",
+    "sha256": "ac1f6a326b54306737f3e4d885f55aec4e43fe3ecf6144324e51e2199dca1b03",
+    "maximum_builds": 1,
+    "retry_authorized": false,
+    "deletion_authorized": false
+  },
+  "build": {
+    "operation_name_sha256": "06805ae5a324a35b13963c1b5d6f30a839513c1e94b48eba845adca6582ecf19",
+    "id": "70e25c75-3c30-497a-982a-f7bebe71c4ee",
+    "status": "SUCCESS",
+    "builder_digest": "sha256:3d00b6c1a9b862621c30fc74d4f2abfc62bcbdee631ed3febd31e7edbdf6252c",
+    "requested_verify_option": "VERIFIED",
+    "source_provenance_hash": "SHA256"
+  },
+  "image": {
+    "schema": "miakapp.staging-browser-relay-image-publication/1",
+    "tag_reference": "europe-west9-docker.pkg.dev/miakapp-v4-staging/miakapp-control-plane/miakapp-server:source-df10674e034f30eec80760f5ec94bc108cff026f-verified-v2",
+    "digest": "sha256:23a19a26e8a24f6434ab8bc557dfa3fa799e0262e3400170e3bf064101a890b1",
+    "digest_reference": "europe-west9-docker.pkg.dev/miakapp-v4-staging/miakapp-control-plane/miakapp-server@sha256:23a19a26e8a24f6434ab8bc557dfa3fa799e0262e3400170e3bf064101a890b1",
+    "manifest_media_type": "application/vnd.docker.distribution.manifest.v2+json",
+    "manifest_sha256": "23a19a26e8a24f6434ab8bc557dfa3fa799e0262e3400170e3bf064101a890b1",
+    "config_digest": "sha256:344314bad3b6f6f1f280737b3d010cdcafb2ead6cf868c8b97e2c367401001a9",
+    "compressed_bytes": 4024536,
+    "layers": 13,
+    "os": "linux",
+    "architecture": "amd64",
+    "user": "65532",
+    "entrypoint": [
+      "/usr/local/bin/miakapp-server"
+    ],
+    "exposed_ports": [
+      "3000/tcp"
+    ],
+    "labels": {
+      "com.miakapp.staging.source-archive-sha256": "93fd720736453e3555be625bbb993194f48a5388821169c939674b04088f158e",
+      "com.miakapp.staging.source-tree": "0468ea08cd2d51b3e656c4adea9bb09b4a8a6ea1",
+      "org.opencontainers.image.revision": "df10674e034f30eec80760f5ec94bc108cff026f",
+      "org.opencontainers.image.source": "https://github.com/Miakapp/Miakapp-Server",
+      "org.opencontainers.image.title": "Miakapp Server",
+      "org.opencontainers.image.vendor": "Miakapp"
+    }
+  },
+  "recovery": {
+    "v1_result_sha256": "c24b5cc5fe3a48a6a35365e6c404734aaf657832af8ce16c7a67c1c8e94ec1a9",
+    "v1_build_id": "171b3a0b-8c4e-4d3c-888f-aaba6504b3f3",
+    "v1_build_status": "FAILURE",
+    "v1_image_digest": "sha256:fb506072777eb8c59b117c36e8333f2ec7389ecc36ba14e937ba5b0519f1a535",
+    "source_reused": true,
+    "source_upload_performed": false
+  },
+  "effects": {
+    "recovery_builds_submitted": 1,
+    "cloud_run_services_created": 0,
+    "public_ingress_created": false,
+    "iam_bindings_created": 0,
+    "persistent_credentials_created": 0,
+    "container_analysis_enabled": true,
+    "container_scanning_enabled": false,
+    "stress_test_executed": false
+  }
+}

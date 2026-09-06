@@ -25,8 +25,11 @@ import {
   RELAY_IMAGE_V1_PROFILE_SHA256,
   RELAY_IMAGE_V1_RESULT_PATH,
   RELAY_IMAGE_V1_RESULT_SHA256,
+  RELAY_IMAGE_V2_RESULT_PATH,
+  RELAY_IMAGE_V2_RESULT_SHA256,
   validateRelayImageV1Profile,
   validateRelayImageV1Result,
+  validateRelayImageV2Result,
 } from './browser-relay-image/result.mjs';
 import { validateBrowserAppCheckEvidence } from './browser-app-check/evidence.mjs';
 import { validateFirebaseAuthEvidence } from './firebase-auth/evidence.mjs';
@@ -3675,6 +3678,9 @@ function validateEvidence(value) {
       'v1_profile_sha256',
       'v1_result_path',
       'v1_result_sha256',
+      'v2_result_path',
+      'v2_result_sha256',
+      'v2_result_observed_at',
       'browser_relay_plan_sha256',
       'relay_services_profile_sha256',
       'source_repository',
@@ -3684,7 +3690,9 @@ function validateEvidence(value) {
       'source_archive_bytes',
       'source_object_generation',
       'source_reuse_required',
+      'source_reused',
       'source_upload_authorized',
+      'source_upload_performed',
       'builder_digest',
       'machine_type',
       'requested_verify_option',
@@ -3692,9 +3700,17 @@ function validateEvidence(value) {
       'v1_attempted_builds',
       'v2_attempted_builds',
       'v2_claim_present',
+      'v2_claim_generation',
+      'v2_claim_sha256',
+      'v2_build_id',
+      'v2_operation_name_sha256',
       'v1_private_image_present',
       'verified_image_present',
+      'verified_image_digest',
+      'verified_image_config_digest',
+      'verified_image_compressed_bytes',
       'deployment_authorized',
+      'entrypoints_retired',
       'container_analysis_api_enabled',
       'container_scanning_api_enabled',
       'relay_services',
@@ -3704,13 +3720,17 @@ function validateEvidence(value) {
     ],
   );
   const expectedBrowserRelayImage = {
-    state: 'v1_failed_container_analysis_converged_v2_recovery_reviewed_not_built',
+    state:
+      'v1_failed_container_analysis_converged_v2_recovery_succeeded_verified_not_deployed_entrypoints_retired',
     profile_path: RELAY_IMAGE_PROFILE_PATH,
     profile_sha256: RELAY_IMAGE_PROFILE_SHA256,
     v1_profile_path: RELAY_IMAGE_V1_PROFILE_PATH,
     v1_profile_sha256: RELAY_IMAGE_V1_PROFILE_SHA256,
     v1_result_path: RELAY_IMAGE_V1_RESULT_PATH,
     v1_result_sha256: RELAY_IMAGE_V1_RESULT_SHA256,
+    v2_result_path: RELAY_IMAGE_V2_RESULT_PATH,
+    v2_result_sha256: RELAY_IMAGE_V2_RESULT_SHA256,
+    v2_result_observed_at: '2026-09-06T00:00:34.396Z',
     browser_relay_plan_sha256: BROWSER_RELAY_PLAN_SHA256,
     relay_services_profile_sha256: RELAY_SERVICES_PROFILE_SHA256,
     source_repository: 'https://github.com/Miakapp/Miakapp-Server.git',
@@ -3720,17 +3740,30 @@ function validateEvidence(value) {
     source_archive_bytes: 53098,
     source_object_generation: '1788648564283151',
     source_reuse_required: true,
+    source_reused: true,
     source_upload_authorized: false,
+    source_upload_performed: false,
     builder_digest: 'sha256:3d00b6c1a9b862621c30fc74d4f2abfc62bcbdee631ed3febd31e7edbdf6252c',
     machine_type: 'E2_MEDIUM',
     requested_verify_option: 'VERIFIED',
     maximum_builds: 1,
     v1_attempted_builds: 1,
-    v2_attempted_builds: 0,
-    v2_claim_present: false,
+    v2_attempted_builds: 1,
+    v2_claim_present: true,
+    v2_claim_generation: '1788652620212083',
+    v2_claim_sha256: 'ac1f6a326b54306737f3e4d885f55aec4e43fe3ecf6144324e51e2199dca1b03',
+    v2_build_id: '70e25c75-3c30-497a-982a-f7bebe71c4ee',
+    v2_operation_name_sha256:
+      '06805ae5a324a35b13963c1b5d6f30a839513c1e94b48eba845adca6582ecf19',
     v1_private_image_present: true,
-    verified_image_present: false,
+    verified_image_present: true,
+    verified_image_digest:
+      'sha256:23a19a26e8a24f6434ab8bc557dfa3fa799e0262e3400170e3bf064101a890b1',
+    verified_image_config_digest:
+      'sha256:344314bad3b6f6f1f280737b3d010cdcafb2ead6cf868c8b97e2c367401001a9',
+    verified_image_compressed_bytes: 4024536,
     deployment_authorized: false,
+    entrypoints_retired: true,
     container_analysis_api_enabled: true,
     container_scanning_api_enabled: false,
     relay_services: 0,
@@ -4448,10 +4481,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 61, 'manifest.revision');
+  exact(manifest.revision, 62, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rebased_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_reviewed_not_built_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_rebased_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_not_deployed_entrypoints_retired_enforcement_disabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -4877,11 +4910,30 @@ export function validateCommittedEvidence(
     browserRelayImageManifest.v1_result_sha256,
     'evidence.browser_relay_image.v1_result_sha256',
   );
+  const browserRelayImageV2ResultPath = committedEvidencePath(
+    stagingRoot,
+    browserRelayImageManifest.v2_result_path,
+    RELAY_IMAGE_V2_RESULT_PATH,
+    'evidence.browser_relay_image.v2_result_path',
+  );
+  const browserRelayImageV2Result = validatedEvidenceFile(
+    browserRelayImageV2ResultPath,
+    validateRelayImageV2Result,
+    'evidence.browser_relay_image.v2_result_path',
+  );
+  exact(
+    fileSha256(browserRelayImageV2ResultPath),
+    browserRelayImageManifest.v2_result_sha256,
+    'evidence.browser_relay_image.v2_result_sha256',
+  );
   exactFields(browserRelayImageManifest, {
-    state: 'v1_failed_container_analysis_converged_v2_recovery_reviewed_not_built',
+    state:
+      'v1_failed_container_analysis_converged_v2_recovery_succeeded_verified_not_deployed_entrypoints_retired',
     profile_sha256: RELAY_IMAGE_PROFILE_SHA256,
     v1_profile_sha256: RELAY_IMAGE_V1_PROFILE_SHA256,
     v1_result_sha256: RELAY_IMAGE_V1_RESULT_SHA256,
+    v2_result_sha256: RELAY_IMAGE_V2_RESULT_SHA256,
+    v2_result_observed_at: browserRelayImageV2Result.observed_at,
     browser_relay_plan_sha256:
       browserRelayImageProfile.contracts.browser_relay_plan_sha256,
     relay_services_profile_sha256:
@@ -4893,23 +4945,31 @@ export function validateCommittedEvidence(
     source_archive_bytes: browserRelayImageProfile.source.archive_bytes,
     source_object_generation: browserRelayImageProfile.source.object_generation,
     source_reuse_required: browserRelayImageProfile.recovery.source_reuse_required,
+    source_reused: browserRelayImageV2Result.recovery.source_reused,
     source_upload_authorized: browserRelayImageProfile.operation.source_upload_authorized,
+    source_upload_performed: browserRelayImageV2Result.recovery.source_upload_performed,
     builder_digest: browserRelayImageProfile.build.builder_image.split('@')[1],
     machine_type: browserRelayImageProfile.build.machine_type,
     requested_verify_option: browserRelayImageProfile.build.requested_verify_option,
     maximum_builds: browserRelayImageProfile.build.maximum_builds,
     v1_attempted_builds: browserRelayImageV1Result.effects.cloud_builds_submitted,
-    v2_attempted_builds: 0,
-    v2_claim_present: false,
+    v2_attempted_builds: browserRelayImageV2Result.effects.recovery_builds_submitted,
+    v2_claim_present: true,
+    v2_claim_generation: browserRelayImageV2Result.claim.generation,
+    v2_claim_sha256: browserRelayImageV2Result.claim.sha256,
+    v2_build_id: browserRelayImageV2Result.build.id,
+    v2_operation_name_sha256: browserRelayImageV2Result.build.operation_name_sha256,
     v1_private_image_present: browserRelayImageV1Result.build.image_push_observed,
-    verified_image_present: browserRelayImageV1Result.build.verified_provenance_created,
-    deployment_authorized: browserRelayImageV1Result.image.deployment_authorized,
-    container_analysis_api_enabled:
-      browserRelayImageProfile.prerequisites.container_analysis_api_enabled,
-    container_scanning_api_enabled:
-      browserRelayImageProfile.prerequisites.container_scanning_api_enabled,
+    verified_image_present: browserRelayImageV2Result.build.status === 'SUCCESS',
+    verified_image_digest: browserRelayImageV2Result.image.digest,
+    verified_image_config_digest: browserRelayImageV2Result.image.config_digest,
+    verified_image_compressed_bytes: browserRelayImageV2Result.image.compressed_bytes,
+    deployment_authorized: false,
+    entrypoints_retired: true,
+    container_analysis_api_enabled: browserRelayImageV2Result.effects.container_analysis_enabled,
+    container_scanning_api_enabled: browserRelayImageV2Result.effects.container_scanning_enabled,
     relay_services: 0,
-    public_ingress_active: false,
+    public_ingress_active: browserRelayImageV2Result.effects.public_ingress_created,
     new_fixed_cost_services: browserRelayImageProfile.cost.new_fixed_cost_services,
     maximum_incremental_eur: browserRelayImageProfile.cost.maximum_incremental_eur,
   }, 'evidence.browser_relay_image');
@@ -4938,17 +4998,47 @@ export function validateCommittedEvidence(
     RELAY_IMAGE_V1_PROFILE_SHA256,
     'browser-relay-image/result-v1.json profile_sha256',
   );
+  exact(
+    browserRelayImageV2Result.profile_sha256,
+    RELAY_IMAGE_PROFILE_SHA256,
+    'browser-relay-image/result-v2.json profile_sha256',
+  );
+  exact(
+    browserRelayImageV2Result.recovery.v1_result_sha256,
+    RELAY_IMAGE_V1_RESULT_SHA256,
+    'browser-relay-image/result-v2.json recovery.v1_result_sha256',
+  );
   for (const field of ['repository', 'commit', 'tree', 'archive_sha256', 'archive_bytes']) {
     exact(
       browserRelayImageProfile.source[field],
       browserRelayImageV1Profile.source[field],
       `browser-relay-image/profile.json source.${field}`,
     );
+    exact(
+      browserRelayImageProfile.source[field],
+      browserRelayImageV2Result.source[field],
+      `browser-relay-image/result-v2.json source.${field}`,
+    );
   }
   exact(
     browserRelayImageProfile.source.object_generation,
     browserRelayImageV1Result.source.object_generation,
     'browser-relay-image/profile.json source.object_generation',
+  );
+  exact(
+    browserRelayImageProfile.source.object_generation,
+    browserRelayImageV2Result.source.object_generation,
+    'browser-relay-image/result-v2.json source.object_generation',
+  );
+  exact(
+    browserRelayImageProfile.image.tag_reference,
+    browserRelayImageV2Result.image.tag_reference,
+    'browser-relay-image/result-v2.json image.tag_reference',
+  );
+  exact(
+    browserRelayImageProfile.build.builder_image.split('@')[1],
+    browserRelayImageV2Result.build.builder_digest,
+    'browser-relay-image/result-v2.json build.builder_digest',
   );
   if (browserRelayImageProfile.operation.claim_object
       === browserRelayImageV1Profile.operation.claim_object
@@ -5209,6 +5299,7 @@ export function validateCommittedEvidence(
     browserRelayImageProfile,
     browserRelayImageV1Profile,
     browserRelayImageV1Result,
+    browserRelayImageV2Result,
     browserAppCheck,
     browserAttestation,
     signingOverlap,
@@ -5234,7 +5325,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; relay-image build v1 is consumed and not deployable, Container Analysis is converged, v2 recovery is reviewed but not built, and App Check enforcement is disabled.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; relay-image build v1 is consumed and not deployable, Container Analysis is converged, v2 recovery is verified and retained privately with its entrypoints retired, and App Check enforcement is disabled.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';
