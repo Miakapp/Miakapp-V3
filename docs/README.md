@@ -46,6 +46,10 @@ implemented across several repositories.
   — dormant operator-local Chromium, Firefox and WebKit driver with ephemeral
   contexts, in-memory private input and a strictly closed counter-only result;
   its real three-engine offline CI smoke is implementation evidence only.
+- [`../infrastructure/staging/browser-relay-page/`](../infrastructure/staging/browser-relay-page/)
+  — dormant memory-only Firebase Auth, real App Check and digest-pinned MiakAPI
+  page host with a deterministic two-file artifact; deliberately not wired to
+  the runner until independent fixture and cloud observations can be combined.
 - [`../infrastructure/staging/browser-relay-monitoring/`](../infrastructure/staging/browser-relay-monitoring/)
   — allow-listed read-only monitoring contract whose post-merge preflight pins
   six metric surfaces, the existing EUR 10 budget and the private boundary.
@@ -146,6 +150,10 @@ pins the serial-4 private-ready result and rebases the current acceptance plan
 on matching fresh live inventories. The state transition,
 intended cost, exposure and rollback boundary remain reviewable without
 pretending that a public edge or live browser matrix already exists.
+The separate page-host foundation now builds locally and returns only bounded
+browser observations. It grants no Hosting publication or live authority; the
+next adapter must drive fixtures and independently aggregate the remaining
+control-plane, relay, KMS, Firestore and lifecycle assertions.
 
 Repository-specific implementation plans must link back to these documents and
 must not redefine a shared contract locally.
