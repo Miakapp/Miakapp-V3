@@ -19,7 +19,7 @@ import {
   sha256,
   validateBootstrapRelayVariables,
   validateRelayServicesBootstrapAuthorization,
-  validateRelayServicesProfile,
+  validateRelayServicesV4Profile,
   verifyExactMain,
   writePrivateFile,
 } from './contract.mjs';
@@ -109,7 +109,7 @@ function writeMutationAttemptMarker(bundle, metadata) {
 }
 
 export function validateRelayServicesTerraformOutput(value) {
-  const profile = validateRelayServicesProfile();
+  const profile = validateRelayServicesV4Profile();
   if (value === null || Array.isArray(value) || typeof value !== 'object'
     || value.schema !== 'miakapp.staging-browser-relay-services/1'
     || value.deployment_phase !== 'private_bootstrap'
@@ -153,7 +153,7 @@ export function buildRelayServicesBootstrapResult({
   output,
   inventory,
 }) {
-  const profile = validateRelayServicesProfile();
+  const profile = validateRelayServicesV4Profile();
   const checkedClaim = validateRelayBootstrapClaimReceipt(
     claimReceipt,
     Buffer.from(canonicalJson(metadata), 'utf8'),

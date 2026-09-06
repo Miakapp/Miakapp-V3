@@ -27,10 +27,6 @@ resource "google_cloud_run_v2_service" "relay" {
     relay = each.key
   })
 
-  binary_authorization {
-    use_default = false
-  }
-
   template {
     execution_environment            = local.profile.cloud_run.execution_environment
     max_instance_request_concurrency = local.profile.cloud_run.concurrency

@@ -41,9 +41,13 @@ import {
 } from './validate-plan.mjs';
 
 const PLAN_CONFIRMATION = 'MIAKAPP_STAGING_RELAY_SERVICES_RECOVERY_PLAN_CONFIRMATION';
+export const RELAY_SERVICES_MEMORY_RECOVERY_OPERATION_CONSUMED = true;
 process.umask(0o077);
 
 async function main() {
+  if (RELAY_SERVICES_MEMORY_RECOVERY_OPERATION_CONSUMED) {
+    throw new Error('The relay memory-recovery planner is consumed after its single attempt; use the private-ready transition');
+  }
   if (process.argv.length !== 3 || process.argv[2] === undefined) {
     throw new Error(`Usage: ${PLAN_CONFIRMATION}=${PROJECT_ID} ./recovery-plan.sh <private-parent>`);
   }
