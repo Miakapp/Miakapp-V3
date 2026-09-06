@@ -1237,13 +1237,18 @@ test('retires bootstrap replay and keeps recovery claim-first, single-use and re
 });
 
 test('rejects consumed or hostile recovery execution before any cloud access', () => {
+  const hostileEnvironment = {
+    HOME: process.env.HOME ?? '/private/tmp',
+    PATH: process.env.PATH ?? '/usr/bin:/bin',
+    GOOGLE_APPLICATION_CREDENTIALS: '/private/tmp/forbidden',
+  };
   for (const name of ['plan.mjs', 'apply.mjs']) {
     const result = spawnSync(
       process.execPath,
       [fileURLToPath(new URL(`../browser-relay-services/${name}`, import.meta.url))],
       {
         encoding: 'utf8',
-        env: { ...process.env, GOOGLE_APPLICATION_CREDENTIALS: '/private/tmp/forbidden' },
+        env: hostileEnvironment,
       },
     );
     assert.equal(result.status, 1);
@@ -1263,9 +1268,8 @@ test('rejects consumed or hostile recovery execution before any cloud access', (
       {
         encoding: 'utf8',
         env: {
-          ...process.env,
+          ...hostileEnvironment,
           [confirmation]: 'intentionally-invalid',
-          GOOGLE_APPLICATION_CREDENTIALS: '/private/tmp/forbidden',
         },
       },
     );
