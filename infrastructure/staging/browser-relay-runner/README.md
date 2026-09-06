@@ -42,8 +42,8 @@ smoke test intercepts the exact target URL locally and proves the same driver
 launches all three real engines while keeping a private marker out of its closed
 output. That is implementation evidence, not live staging evidence.
 
-The next browser-relay plan rebase may mark `RUNNER-01` satisfied only after
-this package and its real three-engine CI gate are merged. A later separately
-claimed orchestrator must provide fresh in-memory credentials, publish the
-reviewed page bundle, open and close the bounded edge, persist only the closed
-result and remove the runner route before session drain.
+Browser-relay plan revision 10 pins this package after its merge and marks
+`RUNNER-01` satisfied. A later separately claimed orchestrator must still
+provide fresh in-memory credentials, publish the reviewed page bundle, open
+and close the bounded edge, persist only the closed result and remove the
+runner route before session drain.

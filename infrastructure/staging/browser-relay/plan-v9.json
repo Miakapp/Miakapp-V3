@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-browser-relay-plan/1",
-  "revision": 10,
-  "state": "runner_implemented_private_relays_ready_plan_rebased_not_deployed",
+  "revision": 9,
+  "state": "private_relays_ready_plan_rebased_not_deployed",
   "target": {
     "project_id": "miakapp-v4-staging",
     "project_number": "1072737219170",
@@ -17,7 +17,7 @@
     "acceptance_executed": false
   },
   "pins": {
-    "miakapp_v3_commit": "11aa803d14add26c286a5885d1c5370a33d6c6d6",
+    "miakapp_v3_commit": "790aff87a1af8730a06b8f1c3b089b6f6e13c7cf",
     "deployed_control_plane_commit": "ba4fc9caed566fa39fc66371192fb1821b4232ff",
     "deployed_control_plane_source_sha256": "3e94305e17ee4df07f54f13560dac0a9491de3f89fb3ddbf4ab745c62dce8c7e",
     "miakapi_commit": "a798a746847ba3d5c16128a08b33353269e770a4",
@@ -26,7 +26,6 @@
     "relay_services_converged_profile_sha256": "41392c96d68bf749c59757bc76d34a69e6eb407efa50b14f61b937c4f5a9b576",
     "relay_services_private_ready_result_sha256": "27ee42c11af83f4e0133a6002540096b74d18ceb78a281e4fbd7c38b53cea4be",
     "relay_services_live_inventory_sha256": "421338fec676c1fccd0e6747d3e8837d4151b147c95b343172639800779b64d1",
-    "browser_relay_runner_profile_sha256": "72b688ccd577f7b40b21d9f874bbca555324eaec1fbf2acbc87dee35cf83a536",
     "protocol_contract_commit": "cc3bcd70fdb4b058f990ca2607693a2043faebaf",
     "node_version": "22.22.0",
     "bun_version": "1.2.23",
@@ -282,7 +281,7 @@
     },
     {
       "id": "RUNNER-01",
-      "state": "satisfied",
+      "state": "open",
       "requirement": "three_engine_runner_emits_only_closed_semantic_counters"
     },
     {
