@@ -1,7 +1,8 @@
 # Dormant staging browser-relay page host
 
-Status: closed page host and deterministic artifact builder implemented; not
-wired to the three-engine runner, published, or executed
+Status: closed page host, deterministic artifact builder and three-engine
+dormant CI smoke implemented; not wired to the live runner, published, or
+executed
 
 This package is the browser-side foundation for the single-use relay acceptance
 operation. It composes the exact MiakAPI browser SDK with Firebase Auth and
@@ -48,6 +49,12 @@ content-addressed gzip bytes and exact no-store/CSP headers for a future bounded
 Hosting publisher. Building into an operator-private temporary directory is a
 local operation; this package contains no publisher, CLI, credential loader,
 cloud adapter or live authority.
+
+The dedicated keyless GitHub workflow rebuilds those exact bytes and loads them
+with every non-artifact request blocked in Chromium, Firefox and WebKit. It
+checks the immutable dormant API, CSP-compatible module load and absence of the
+runner result API. This is offline implementation evidence only: it supplies no
+Firebase custom token, opens no relay and does not count as a live matrix run.
 
 The execution envelope is intentionally narrower than the already-reviewed
 maximums: 600 seconds for all three engines (480 + 60 + 60), followed by a

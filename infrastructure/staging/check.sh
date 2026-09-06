@@ -134,6 +134,7 @@ node --check infrastructure/staging/browser-relay-page/contract.mjs
 node --check infrastructure/staging/browser-relay-page/guard.mjs
 node --check infrastructure/staging/browser-relay-page/page.mjs
 node --check infrastructure/staging/browser-relay-page/runtime.mjs
+node --check infrastructure/staging/test/browser-relay-page-browser.mjs
 node -e "import('./infrastructure/staging/browser-relay-page/contract.mjs').then(({ validateBrowserRelayPageProfile }) => validateBrowserRelayPageProfile())"
 node infrastructure/staging/browser-relay-monitoring/guard.mjs \
   "${repository_root}/infrastructure/staging/browser-relay-monitoring"

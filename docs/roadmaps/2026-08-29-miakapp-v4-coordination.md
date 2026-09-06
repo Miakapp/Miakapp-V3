@@ -757,9 +757,11 @@ current consumer.
     mutation or acceptance. Plan revision 14 preserves revision 13 byte for
     byte and pins that result. The exact page-host foundation now uses
     memory-only Firebase Auth, real App Check and a digest-pinned MiakAPI bundle;
-    it is deliberately not runner-compatible and has no publisher or live
-    authority. Next add the independent fixture/operator adapter and closed
-    aggregation before executing the matrix once.
+    its deterministic artifact is loaded without network access in Chromium,
+    Firefox and WebKit by a dedicated CI gate. It remains deliberately not
+    runner-compatible and has no publisher or live authority. Next add the
+    independent fixture/operator adapter and closed aggregation before
+    executing the matrix once.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform
     no-change plan. Its fresh post-merge preflight is complete and the rollback
