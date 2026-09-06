@@ -14,7 +14,7 @@
   "pins": {
     "implementation_base_commit": "338c241f3420b456de1a30509c7144422122da48",
     "browser_relay_plan_sha256": "6c7661d9be861e4f8d13ccd5d2fd0f3eaa34ea2b4d7af2e9b41d1867d6c37211",
-    "browser_relay_page_profile_sha256": "2e9e809d8bb9b88a4e96b51a258d948e6f0d1467c38adaca8c6582e132113e1e",
+    "browser_relay_page_profile_sha256": "c57e53dfeb25a0b5169854c535a535072151387b91ec4c07f889cac60bf83539",
     "miakapi_commit": "a798a746847ba3d5c16128a08b33353269e770a4",
     "fixture_source_sha256": "339cd223822dba232e1bacf263e6632669788c5a44bca39ea297cb8f47fbe838"
   },

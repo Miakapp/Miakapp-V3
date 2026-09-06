@@ -4,7 +4,9 @@ import {
   copyFileSync,
   mkdtempSync,
   readFileSync,
+  rmdirSync,
   symlinkSync,
+  unlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -32,6 +34,12 @@ import {
   validateBrowserRelayV9Plan,
 } from '../browser-relay/contract.mjs';
 import { validateBrowserRelayRoot } from '../browser-relay/guard.mjs';
+import {
+  BROWSER_RELAY_PAGE_PROFILE_SHA256,
+  BROWSER_RELAY_PAGE_V2_PROFILE_SHA256,
+  sha256,
+  validateBrowserRelayPageV2Profile,
+} from '../browser-relay-page/contract.mjs';
 
 const planPath = new URL('../browser-relay/plan.json', import.meta.url);
 const v10PlanPath = new URL('../browser-relay/plan-v10.json', import.meta.url);
@@ -92,7 +100,41 @@ test('accepts the page-CI-pinned browser design without claiming matrix evidence
   assert.match(BROWSER_RELAY_PLAN_SHA256, /^[0-9a-f]{64}$/u);
 });
 
-test('preserves the byte-exact revision-14 plan consumed by the page CI profile', () => {
+test('preserves the byte-exact page revision-2 CI profile independently of current page revisions', () => {
+  const historicalPath = new URL('../browser-relay-page/profile-v2.json', import.meta.url);
+  const historical = validateBrowserRelayPageV2Profile(historicalPath);
+  assert.equal(historical.revision, 2);
+  assert.equal(sha256(readFileSync(historicalPath)), BROWSER_RELAY_PAGE_V2_PROFILE_SHA256);
+  assert.equal(historical.pins.browser_relay_plan_sha256, BROWSER_RELAY_V14_PLAN_SHA256);
+  assert.equal(planFixture.pins.browser_relay_page_profile_sha256,
+    BROWSER_RELAY_PAGE_V2_PROFILE_SHA256);
+  assert.notEqual(BROWSER_RELAY_PAGE_PROFILE_SHA256, BROWSER_RELAY_PAGE_V2_PROFILE_SHA256);
+  rejects((candidate) => {
+    candidate.pins.browser_relay_page_profile_sha256 = BROWSER_RELAY_PAGE_PROFILE_SHA256;
+  }, /page_profile_sha256/u);
+});
+
+test('rejects modified, symlinked or executable historical page snapshots', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'miakapp-page-v2-history-'));
+  const path = join(directory, 'profile-v2.json');
+  const link = join(directory, 'linked-profile.json');
+  const committed = new URL('../browser-relay-page/profile-v2.json', import.meta.url);
+  try {
+    writeFileSync(path, `${readFileSync(committed, 'utf8')} `);
+    assert.throws(() => validateBrowserRelayPageV2Profile(path), /digest has drifted/u);
+    copyFileSync(committed, path);
+    symlinkSync(path, link);
+    assert.throws(() => validateBrowserRelayPageV2Profile(link), /regular file/u);
+    chmodSync(path, 0o700);
+    assert.throws(() => validateBrowserRelayPageV2Profile(path), /non-executable/u);
+  } finally {
+    unlinkSync(link);
+    unlinkSync(path);
+    rmdirSync(directory);
+  }
+});
+
+test('preserves the byte-exact revision-14 plan consumed by the historical page CI profile', () => {
   const historical = validateBrowserRelayV14Plan(v14PlanPath);
   assert.equal(historical.revision, 14);
   assert.equal(
