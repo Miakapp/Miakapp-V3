@@ -166,6 +166,16 @@ no-ops. The sanitized result records zero mutation, public-ingress change or
 acceptance execution. Revision 14 pins that result; it does not authorize or
 claim a live matrix run.
 
+The adjacent [`browser-relay-page/`](../browser-relay-page/) package implements
+the first exact page-side adapter against revision 14. It combines memory-only
+Firebase Auth, reCAPTCHA Enterprise App Check and the digest-pinned MiakAPI v4
+browser module, and builds exactly one HTML plus one JavaScript file. Its phased
+API emits only closed browser observations and is intentionally incompatible
+with the runner's final-result API until the independent fixture/operator
+adapter exists. It reserves 300 seconds for callback cleanup and another 300
+seconds for edge rollback. The package contains no publisher or live authority,
+so this plan still records every `LIVE-*` case as pending.
+
 The adjacent
 [`browser-relay-services/`](../browser-relay-services/) Terraform root now
 freezes the two services and their `absent`, private-bootstrap, private-ready

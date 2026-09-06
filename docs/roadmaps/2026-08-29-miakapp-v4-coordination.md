@@ -755,8 +755,11 @@ current consumer.
     `ae21e4922d3f70fffe9218cd975f180faca486f0` and proved the claim absent plus
     the complete private, empty and Terraform-converged baseline with zero
     mutation or acceptance. Plan revision 14 preserves revision 13 byte for
-    byte and pins that result. Next add its exact page and fixture adapters
-    before executing the matrix once.
+    byte and pins that result. The exact page-host foundation now uses
+    memory-only Firebase Auth, real App Check and a digest-pinned MiakAPI bundle;
+    it is deliberately not runner-compatible and has no publisher or live
+    authority. Next add the independent fixture/operator adapter and closed
+    aggregation before executing the matrix once.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform
     no-change plan. Its fresh post-merge preflight is complete and the rollback
