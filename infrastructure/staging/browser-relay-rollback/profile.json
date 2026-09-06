@@ -1,0 +1,140 @@
+{
+  "schema": "miakapp.staging-browser-relay-rollback-profile/1",
+  "revision": 1,
+  "state": "closed_rollback_preflight_implemented_not_observed",
+  "target": {
+    "project_id": "miakapp-v4-staging",
+    "project_number": "1072737219170",
+    "region": "europe-west9",
+    "hosting_origin": "https://miakapp-v4-staging.web.app",
+    "cloud_compute_resources": 0,
+    "unscheduled": true,
+    "cloud_mutation_authorized_by_profile": false,
+    "public_ingress_authorized_by_profile": false,
+    "acceptance_execution_authorized_by_profile": false
+  },
+  "pins": {
+    "implementation_base_commit": "79d2f8a45d626b25488a312bc8a4b5999a9515ee",
+    "browser_relay_plan_sha256": "607fd1cf84c56c5becf870b6ca38b3721ab7cc5ec750f7374363f5ae2cc63fe6",
+    "monitoring_preflight_result_sha256": "618e074b9e4e9b6a532b2ecbfc87614ff5b382f9632397c4e86d111272425f64",
+    "runner_profile_sha256": "72b688ccd577f7b40b21d9f874bbca555324eaec1fbf2acbc87dee35cf83a536",
+    "relay_services_profile_sha256": "d47449d0b175b47ac0fdde5e0eb80c8b5d0eb43e4ac9a8af091c51f9aa4c390a",
+    "relay_services_converged_profile_sha256": "41392c96d68bf749c59757bc76d34a69e6eb407efa50b14f61b937c4f5a9b576",
+    "relay_services_private_ready_result_sha256": "27ee42c11af83f4e0133a6002540096b74d18ceb78a281e4fbd7c38b53cea4be",
+    "edge_cloud_sha256": "1cfe0dba18bcf74bcec1fda1956f7ee72a0b4f7928a9c569ae6e76872425a2df",
+    "edge_inventory_sha256": "006618acf57791367f49bc52c3d683c1cdcc3b301e65c738569f6ac5f076f83c",
+    "edge_runtime_sha256": "7a446e63faeefd1e269f80422ca9d4fe244fb71256e5e48cc3bef65a235ba880",
+    "edge_window_sha256": "b7ee57a47b6b4663b0f3356fc09d11efb98e288c9adfb851912ed53f8b00be50"
+  },
+  "rollback": {
+    "ordered_steps": [
+      "remove_acceptance_runner_route",
+      "stop_browser_and_coordinator_without_replay",
+      "remove_public_relay_invokers_and_restore_private_ready_relay_phase",
+      "restore_private_control_plane_ingress_and_invoker_policy",
+      "delete_synthetic_fixtures_and_temporary_bindings",
+      "verify_zero_unexpected_traffic_and_zero_change_plans"
+    ],
+    "emergency_actions": [
+      "abort_browser_and_coordinator",
+      "close_control_plane_ingress_without_iam_dependency",
+      "remove_public_relay_invokers",
+      "restore_private_ready_relay_phase",
+      "restore_canonical_control_plane_runtime"
+    ],
+    "recoverable_edge_states": [
+      "canonical_private",
+      "edge_private",
+      "edge_ingress_ready",
+      "edge_public",
+      "recoverable_partial"
+    ],
+    "maximum_edge_observation_attempts": 3,
+    "maximum_public_window_seconds": 1200,
+    "maximum_callback_execution_seconds": 900,
+    "public_last_opening": true,
+    "private_first_closure": true,
+    "runner_removed_before_session_drain": true,
+    "physical_call_replay_allowed": false,
+    "destroy_relay_services_on_routine_rollback": false,
+    "destroy_signing_keys_on_routine_rollback": false
+  },
+  "preflight": {
+    "required_observations": [
+      "control_plane_canonical_private",
+      "relay_services_exact_private_ready",
+      "relay_inventory_matches_pinned_result",
+      "relay_service_account_keyless",
+      "hosting_runner_route_absent",
+      "firebase_auth_users_zero",
+      "application_fixture_collections_zero",
+      "temporary_acceptance_iam_bindings_zero",
+      "fixed_minimum_instances_zero",
+      "relay_private_ready_terraform_plan_has_zero_changes"
+    ],
+    "allowed_http_methods": [
+      "GET",
+      "HEAD",
+      "POST_READ_ONLY"
+    ],
+    "runner_path": "/__acceptance/browser-relay/",
+    "expected_technical_root_collections": [
+      "controlAdmissionBuckets",
+      "controlAdmissionState",
+      "controlAudit"
+    ],
+    "maximum_root_collections": 3,
+    "temporary_binding_condition_title_prefix": "temporary_browser_relay_acceptance",
+    "maximum_plan_creates": 0,
+    "maximum_plan_updates": 0,
+    "maximum_plan_deletes": 0,
+    "maximum_plan_replacements": 0
+  },
+  "required_final_state": {
+    "control_plane_ingress": "ALLOW_INTERNAL_ONLY",
+    "control_plane_unauthenticated_invokers": 0,
+    "relay_services": 2,
+    "relay_phase": "private_ready",
+    "relay_public_invokers": 0,
+    "relay_service_account_user_managed_keys": 0,
+    "runner_route_present": false,
+    "synthetic_users": 0,
+    "synthetic_homes": 0,
+    "temporary_iam_bindings": 0,
+    "minimum_instances": 0,
+    "terraform_convergence": "no_changes",
+    "miakapp_3_touched": false
+  },
+  "output": {
+    "preflight_result_schema": "miakapp.staging-browser-relay-rollback-preflight-result/1",
+    "allowed_observations": [
+      "bounded_counts",
+      "revision_ids",
+      "stable_state_classes",
+      "terraform_action_counts"
+    ],
+    "forbidden_observations": [
+      "browser_storage",
+      "email",
+      "execution_identifier",
+      "firebase_uid",
+      "home_traffic",
+      "raw_cloud_response",
+      "terraform_state",
+      "token",
+      "trace_context",
+      "websocket_frame"
+    ]
+  },
+  "evidence": {
+    "state": "absent",
+    "live_preflight_count": 0,
+    "result_path": null,
+    "cloud_mutations": 0,
+    "public_ingress_changes": 0,
+    "acceptance_executions": 0,
+    "credentials_committed": false,
+    "raw_cloud_responses_committed": false,
+    "terraform_plan_committed": false
+  }
+}
