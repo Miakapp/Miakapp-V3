@@ -746,8 +746,13 @@ current consumer.
     preflight proved the global claim absent and the full private rollback target
     converged, with no mutation or acceptance execution. Current plan revision
     13 archives the exact revision-12 input, pins that sanitized result and
-    closes the edge prerequisite. Next implement and preflight the exact
-    single-use live-operation envelope before executing the matrix once.
+    closes the edge prerequisite. The exact single-use live-operation envelope
+    is now implemented as a dormant in-process composition: it opens the two
+    relays last, validates one closed matrix result, removes the runner and
+    sessions before restoring private relays, then deletes fixtures only after
+    the control plane is canonical-private. It has no cloud adapter or live
+    authority. Next merge and independently preflight that envelope, then add
+    its exact page and fixture adapters before executing the matrix once.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform
     no-change plan. Its fresh post-merge preflight is complete and the rollback
