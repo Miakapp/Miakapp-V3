@@ -6,12 +6,12 @@ import {
   PROJECT_ID,
   RECOVERY_CLAIM_OBJECT,
   RELAY_SERVICES_MEMORY_RECOVERY_FAILURE_SHA256,
-  RELAY_SERVICES_PROFILE_SHA256,
+  RELAY_SERVICES_V5_PROFILE_SHA256,
   STATE_BUCKET,
   canonicalJson,
   sha256,
   validateRelayServicesPrivateReadyPlanMetadata,
-  validateRelayServicesProfile,
+  validateRelayServicesV5Profile,
 } from './contract.mjs';
 
 const MAXIMUM_RESPONSE_BYTES = 64 * 1024;
@@ -195,7 +195,7 @@ export async function observePinnedPrivateReadyPrerequisiteClaims(
 ) {
   const operator = validateSession(session);
   const transport = validateFetch(fetchImplementation);
-  const profile = validateRelayServicesProfile();
+  const profile = validateRelayServicesV5Profile();
   const [bootstrap, memoryRecovery] = await Promise.all([
     observePinnedClaim(operator, transport, {
       object: BOOTSTRAP_CLAIM_OBJECT,
@@ -220,7 +220,7 @@ export function buildRelayPrivateReadyClaim(metadataBytes, metadata, attemptedAt
     reject('Relay private-ready metadata bytes are invalid');
   }
   const checked = validateRelayServicesPrivateReadyPlanMetadata(metadata);
-  const profile = validateRelayServicesProfile();
+  const profile = validateRelayServicesV5Profile();
   const attempted = canonicalTimestamp(attemptedAt, 'attempted_at');
   const created = canonicalTimestamp(checked.created_at, 'metadata.created_at');
   const expires = canonicalTimestamp(checked.expires_at, 'metadata.expires_at');
@@ -235,7 +235,7 @@ export function buildRelayPrivateReadyClaim(metadataBytes, metadata, attemptedAt
     project_id: PROJECT_ID,
     repository_commit: checked.repository_commit,
     metadata_sha256: sha256(metadataBytes),
-    profile_sha256: RELAY_SERVICES_PROFILE_SHA256,
+    profile_sha256: RELAY_SERVICES_V5_PROFILE_SHA256,
     memory_recovery_failure_sha256: RELAY_SERVICES_MEMORY_RECOVERY_FAILURE_SHA256,
     original_claim_generation: checked.original_claim_generation,
     original_claim_sha256: checked.original_claim_sha256,
@@ -333,7 +333,7 @@ export function validateRelayPrivateReadyClaimReceipt(value, metadataBytes, meta
     || !COMMIT.test(receipt.repository_commit ?? '')
     || receipt.repository_commit !== checked.repository_commit
     || receipt.metadata_sha256 !== sha256(metadataBytes)
-    || receipt.profile_sha256 !== RELAY_SERVICES_PROFILE_SHA256
+    || receipt.profile_sha256 !== RELAY_SERVICES_V5_PROFILE_SHA256
     || receipt.memory_recovery_failure_sha256
       !== RELAY_SERVICES_MEMORY_RECOVERY_FAILURE_SHA256
     || receipt.original_claim_generation !== checked.original_claim_generation

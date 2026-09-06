@@ -40,6 +40,9 @@ import {
 import { readAndValidatePrivateReadyRelayServicesPlan } from './validate-plan.mjs';
 
 const PLAN_CONFIRMATION = 'MIAKAPP_STAGING_RELAY_SERVICES_READY_PLAN_CONFIRMATION';
+export const RELAY_SERVICES_PRIVATE_READY_OPERATION_CONSUMED = true;
+const RETIRED_MESSAGE =
+  'Relay private-ready transition already converged; this one-shot planning entrypoint is permanently retired';
 process.umask(0o077);
 
 async function observeBaseline(session) {
@@ -51,6 +54,7 @@ async function observeBaseline(session) {
 }
 
 async function main() {
+  if (RELAY_SERVICES_PRIVATE_READY_OPERATION_CONSUMED) throw new Error(RETIRED_MESSAGE);
   if (process.argv.length !== 3 || process.argv[2] === undefined) {
     throw new Error(`Usage: ${PLAN_CONFIRMATION}=${PROJECT_ID} ./ready-plan.sh <private-parent>`);
   }

@@ -57,6 +57,9 @@ export const RELAY_SERVICES_V3_PROFILE_SHA256 =
 export const RELAY_SERVICES_V4_PROFILE_PATH = 'browser-relay-services/profile-v4.json';
 export const RELAY_SERVICES_V4_PROFILE_SHA256 =
   '0f8b966a7bf412156a83b0ddc76996abc6b49c28d81cda0f3e4d2b1c16912733';
+export const RELAY_SERVICES_V5_PROFILE_PATH = 'browser-relay-services/profile-v5.json';
+export const RELAY_SERVICES_V5_PROFILE_SHA256 =
+  '41392c96d68bf749c59757bc76d34a69e6eb407efa50b14f61b937c4f5a9b576';
 export const RELAY_SERVICES_BOOTSTRAP_FAILURE_PATH =
   'browser-relay-services/bootstrap-failure-v1.json';
 export const RELAY_SERVICES_BOOTSTRAP_FAILURE_SHA256 =
@@ -65,9 +68,13 @@ export const RELAY_SERVICES_MEMORY_RECOVERY_FAILURE_PATH =
   'browser-relay-services/memory-recovery-failure-v1.json';
 export const RELAY_SERVICES_MEMORY_RECOVERY_FAILURE_SHA256 =
   '5c41533a7b6a684e38abd9e8dd7d94d0f4e21cdd3bd9edf076821cca191932f7';
+export const RELAY_SERVICES_PRIVATE_READY_RESULT_PATH =
+  'browser-relay-services/private-ready-result-v1.json';
+export const RELAY_SERVICES_PRIVATE_READY_RESULT_SHA256 =
+  '27ee42c11af83f4e0133a6002540096b74d18ceb78a281e4fbd7c38b53cea4be';
 export const RELAY_SERVICES_PROFILE_PATH = 'browser-relay-services/profile.json';
 export const RELAY_SERVICES_PROFILE_SHA256 =
-  '41392c96d68bf749c59757bc76d34a69e6eb407efa50b14f61b937c4f5a9b576';
+  'd47449d0b175b47ac0fdde5e0eb80c8b5d0eb43e4ac9a8af091c51f9aa4c390a';
 export const PROJECT_ID = 'miakapp-v4-staging';
 export const PROJECT_NUMBER = '1072737219170';
 export const REGION = 'europe-west9';
@@ -120,8 +127,10 @@ const v1ProfilePath = join(root, 'profile-v1.json');
 const v2ProfilePath = join(root, 'profile-v2.json');
 const v3ProfilePath = join(root, 'profile-v3.json');
 const v4ProfilePath = join(root, 'profile-v4.json');
+const v5ProfilePath = join(root, 'profile-v5.json');
 const bootstrapFailurePath = join(root, 'bootstrap-failure-v1.json');
 const memoryRecoveryFailurePath = join(root, 'memory-recovery-failure-v1.json');
+const privateReadyResultPath = join(root, 'private-ready-result-v1.json');
 
 const EXPECTED_V3_PROFILE = Object.freeze({
   schema: 'miakapp.staging-relay-services-profile/3',
@@ -315,7 +324,7 @@ const EXPECTED_V4_PROFILE = Object.freeze({
   },
 });
 
-const EXPECTED_PROFILE = Object.freeze({
+const EXPECTED_V5_PROFILE = Object.freeze({
   ...EXPECTED_V4_PROFILE,
   schema: 'miakapp.staging-relay-services-profile/5',
   state: 'private_ready_transition_entrypoint_prepared_not_executed',
@@ -376,6 +385,58 @@ const EXPECTED_PROFILE = Object.freeze({
     maximum_terraform_updates: 3,
     maximum_terraform_deletes: 0,
     maximum_cloud_run_service_updates: 2,
+    maximum_relay_services: 2,
+    maximum_public_iam_members: 0,
+    maximum_live_requests: 0,
+    maximum_monthly_increment_eur: 0,
+    retry_authorized: false,
+    destroy_authorized: false,
+    public_invocation_authorized: false,
+    hosting_release_authorized: false,
+    persistent_credentials_authorized: false,
+  },
+});
+
+const EXPECTED_PROFILE = Object.freeze({
+  ...EXPECTED_V5_PROFILE,
+  schema: 'miakapp.staging-relay-services-profile/6',
+  state: 'private_ready_succeeded_verified_public_window_not_authorized',
+  terraform_source_sha256: '34f58506b984c6df2b618d4b52622fbc00756ae3a2dd501bbb69d7c7a89f9fe6',
+  contracts: {
+    ...EXPECTED_V5_PROFILE.contracts,
+    private_ready_profile_path: RELAY_SERVICES_V5_PROFILE_PATH,
+    private_ready_profile_sha256: RELAY_SERVICES_V5_PROFILE_SHA256,
+    private_ready_result_path: RELAY_SERVICES_PRIVATE_READY_RESULT_PATH,
+    private_ready_result_sha256: RELAY_SERVICES_PRIVATE_READY_RESULT_SHA256,
+  },
+  operation: {
+    phase: 'private_ready',
+    kind: 'hold_verified_private_relays',
+    claim_bucket: STATE_BUCKET,
+    claim_object: PRIVATE_READY_CLAIM_OBJECT,
+    claim_generation: '1788664144376292',
+    claim_size_bytes: 1570,
+    claim_sha256:
+      'db90861c9ad7fbbbb66a19d75f2fd67c37ad55e86f309529e4a77cec0feb5ef5',
+    original_claim_object: BOOTSTRAP_CLAIM_OBJECT,
+    original_claim_generation: '1788658024634812',
+    original_claim_size_bytes: 999,
+    original_claim_sha256:
+      '92b94cce96d70d9d55482ae4612f2192cd4686d8d5ee160270cbeb2d74773ac4',
+    memory_recovery_claim_object: RECOVERY_CLAIM_OBJECT,
+    memory_recovery_claim_generation: '1788661237671763',
+    memory_recovery_claim_size_bytes: 1375,
+    memory_recovery_claim_sha256:
+      '9f8d46aea073062fce6334dcb8c5b3f128d880624878908e4c9b09db06ed61b1',
+    state_object: STATE_OBJECT,
+    converged_state_generation: '1788664157688934',
+    converged_state_size_bytes: 37399,
+    converged_state_sha256:
+      '401101ec2a802fb61171fd4446f7be718c5fa912b64b18d3c738ba4c36919ac0',
+    converged_state_serial: 4,
+    converged_state_lineage_sha256:
+      '3d99b2335a31d39b341036981987054211455d6ee4acd229cc0459cd0995807f',
+    converged_profile_sha256: RELAY_SERVICES_V5_PROFILE_SHA256,
     maximum_relay_services: 2,
     maximum_public_iam_members: 0,
     maximum_live_requests: 0,
@@ -574,6 +635,93 @@ export function validateRelayServicesV4Profile(path = v4ProfilePath) {
     reject('Consumed memory-recovery profile does not match the reviewed v4 boundary');
   }
   return Object.freeze(profile);
+}
+
+export function validateRelayServicesV5Profile(path = v5ProfilePath) {
+  const entry = lstatSync(path);
+  if (!entry.isFile() || entry.isSymbolicLink() || entry.size === 0
+    || entry.size > MAXIMUM_PROFILE_BYTES) {
+    reject('Consumed private-ready profile must be a bounded regular file');
+  }
+  const bytes = readFileSync(path);
+  if (sha256(bytes) !== RELAY_SERVICES_V5_PROFILE_SHA256) {
+    reject('Consumed private-ready profile digest has drifted');
+  }
+  let profile;
+  try {
+    profile = JSON.parse(bytes.toString('utf8'));
+  } catch {
+    return reject('Consumed private-ready profile must be valid JSON');
+  }
+  if (canonicalJson(profile) !== bytes.toString('utf8')) {
+    reject('Consumed private-ready profile is not canonical JSON');
+  }
+  rejectPrivateMaterial(profile, 'consumed_private_ready_profile');
+  if (!isDeepStrictEqual(profile, EXPECTED_V5_PROFILE)) {
+    reject('Consumed private-ready profile does not match the reviewed v5 boundary');
+  }
+  return Object.freeze(profile);
+}
+
+export function validateRelayServicesPrivateReadyResult(path = privateReadyResultPath) {
+  const entry = lstatSync(path);
+  if (!entry.isFile() || entry.isSymbolicLink() || entry.size === 0
+    || entry.size > MAXIMUM_PROFILE_BYTES) {
+    reject('Private-ready result must be a bounded regular file');
+  }
+  const bytes = readFileSync(path);
+  if (sha256(bytes) !== RELAY_SERVICES_PRIVATE_READY_RESULT_SHA256) {
+    reject('Private-ready result digest has drifted');
+  }
+  let result;
+  try {
+    result = JSON.parse(bytes.toString('utf8'));
+  } catch {
+    return reject('Private-ready result must be valid JSON');
+  }
+  if (canonicalJson(result) !== bytes.toString('utf8')) {
+    reject('Private-ready result is not canonical JSON');
+  }
+  rejectPrivateMaterial(result, 'private_ready_result');
+  if (result.schema !== 'miakapp.staging-browser-relay-services-private-ready-result/1'
+    || result.operation !== 'transition-private-browser-relays-to-assigned-audiences'
+    || result.project_id !== PROJECT_ID || result.project_number !== PROJECT_NUMBER
+    || result.region !== REGION
+    || result.repository_commit !== 'c2aec219c67b20f80e5a6ab5bf4205ed81145170'
+    || result.profile_sha256 !== RELAY_SERVICES_V5_PROFILE_SHA256
+    || result.memory_recovery_failure_sha256
+      !== RELAY_SERVICES_MEMORY_RECOVERY_FAILURE_SHA256
+    || result.terraform_plan_sha256
+      !== '55507ba9e0f518c0063bd294e41cc38f39d306c06291691c177258ae1c51f972'
+    || result.baseline_sha256
+      !== '7b7e446055f92eaad15aad9216a4fcf7b7a64b5b8cf8461c227afb7ce6ea16b6'
+    || result.claim_generation !== '1788664144376292'
+    || result.claim_sha256
+      !== 'db90861c9ad7fbbbb66a19d75f2fd67c37ad55e86f309529e4a77cec0feb5ef5'
+    || result.final_inventory_sha256
+      !== '421338fec676c1fccd0e6747d3e8837d4151b147c95b343172639800779b64d1'
+    || result.terraform_state_generation !== '1788664157688934'
+    || result.terraform_state_sha256
+      !== '401101ec2a802fb61171fd4446f7be718c5fa912b64b18d3c738ba4c36919ac0'
+    || result.runtime_identity !== EXPECTED_V5_PROFILE.runtime_identity.email
+    || !isDeepStrictEqual(result.runtime_project_roles, [])
+    || result.user_managed_keys !== 0
+    || result.relay_image !== EXPECTED_V5_PROFILE.image.digest_reference
+    || !Array.isArray(result.relays) || result.relays.length !== 2
+    || result.relays.some((relay, index) => {
+      const service = EXPECTED_V5_PROFILE.services[index];
+      return relay.id !== service.id || relay.name !== service.name
+        || relay.uri !== service.assigned_uri || relay.audience !== service.ready_audience
+        || relay.generation !== '2' || relay.memory !== '512Mi'
+        || relay.public_invoker !== false || relay.minimum_instances !== 0
+        || relay.maximum_instances !== 1;
+    })
+    || result.public_iam_members !== 0 || result.live_requests_by_driver !== 0
+    || result.hosting_releases !== 0 || result.fixed_minimum_instances !== 0
+    || result.maximum_monthly_increment_eur !== 0 || result.retry_authorized !== false) {
+    reject('Private-ready result does not match the exact sanitized transition evidence');
+  }
+  return Object.freeze(result);
 }
 
 export function validateRelayServicesBootstrapFailure(path = bootstrapFailurePath) {
@@ -787,8 +935,10 @@ export function validateRelayServicesProfile(path = profilePath) {
   if (!isDeepStrictEqual(profile, EXPECTED_PROFILE)) reject('Profile does not match the reviewed relay-services boundary');
   validateRelayServicesV3Profile();
   validateRelayServicesV4Profile();
+  validateRelayServicesV5Profile();
   validateRelayServicesBootstrapFailure();
   validateRelayServicesMemoryRecoveryFailure();
+  validateRelayServicesPrivateReadyResult();
   if (relayServicesTerraformSourceSha256(dirname(path)) !== profile.terraform_source_sha256) {
     reject('Operational Terraform source digest has drifted');
   }
@@ -805,7 +955,7 @@ export function bootstrapRelayVariables(profile = validateRelayServicesProfile()
 }
 
 export function validateBootstrapRelayVariables(value) {
-  const profile = validateRelayServicesProfile();
+  const profile = validateRelayServicesV3Profile();
   const variables = exactKeys(
     value,
     ['deployment_phase', 'relay_audiences'],
@@ -817,7 +967,7 @@ export function validateBootstrapRelayVariables(value) {
   return Object.freeze(variables);
 }
 
-export function privateReadyRelayVariables(profile = validateRelayServicesProfile()) {
+export function privateReadyRelayVariables(profile = validateRelayServicesV5Profile()) {
   return Object.freeze({
     deployment_phase: 'private_ready',
     relay_audiences: Object.freeze(Object.fromEntries(
@@ -832,7 +982,7 @@ export function validatePrivateReadyRelayVariables(value) {
     ['deployment_phase', 'relay_audiences'],
     'Relay-services private-ready variables',
   );
-  if (!isDeepStrictEqual(variables, privateReadyRelayVariables())) {
+  if (!isDeepStrictEqual(variables, privateReadyRelayVariables(validateRelayServicesV5Profile()))) {
     reject('Relay-services private-ready variables do not match the assigned service URIs');
   }
   return Object.freeze(variables);
@@ -1258,7 +1408,7 @@ export function buildRelayServicesPrivateReadyPlanMetadata({
   baseline,
   summary,
 }) {
-  const profile = validateRelayServicesProfile();
+  const profile = validateRelayServicesV5Profile();
   const recoveryFailure = validateRelayServicesMemoryRecoveryFailure();
   if (!COMMIT.test(repositoryCommit)
     || !Buffer.isBuffer(planBytes) || planBytes.byteLength === 0
@@ -1279,7 +1429,7 @@ export function buildRelayServicesPrivateReadyPlanMetadata({
     created_at: createdAt,
     expires_at: new Date(created + PLAN_TTL_MILLISECONDS).toISOString(),
     operator_user_sha256: OPERATOR_USER_SHA256,
-    profile_sha256: RELAY_SERVICES_PROFILE_SHA256,
+    profile_sha256: RELAY_SERVICES_V5_PROFILE_SHA256,
     bootstrap_failure_sha256: RELAY_SERVICES_BOOTSTRAP_FAILURE_SHA256,
     memory_recovery_failure_sha256: RELAY_SERVICES_MEMORY_RECOVERY_FAILURE_SHA256,
     original_claim_generation: profile.operation.original_claim_generation,
@@ -1310,7 +1460,7 @@ export function buildRelayServicesPrivateReadyPlanMetadata({
 }
 
 export function validateRelayServicesPrivateReadyPlanMetadata(value, now = Date.now()) {
-  const profile = validateRelayServicesProfile();
+  const profile = validateRelayServicesV5Profile();
   const recoveryFailure = validateRelayServicesMemoryRecoveryFailure();
   const metadata = exactKeys(value, [
     'schema', 'operation', 'project_id', 'project_number', 'region', 'repository_commit',
@@ -1332,7 +1482,7 @@ export function validateRelayServicesPrivateReadyPlanMetadata(value, now = Date.
     || metadata.project_id !== PROJECT_ID || metadata.project_number !== PROJECT_NUMBER
     || metadata.region !== REGION || !COMMIT.test(metadata.repository_commit)
     || metadata.operator_user_sha256 !== OPERATOR_USER_SHA256
-    || metadata.profile_sha256 !== RELAY_SERVICES_PROFILE_SHA256
+    || metadata.profile_sha256 !== RELAY_SERVICES_V5_PROFILE_SHA256
     || metadata.bootstrap_failure_sha256 !== RELAY_SERVICES_BOOTSTRAP_FAILURE_SHA256
     || metadata.memory_recovery_failure_sha256
       !== RELAY_SERVICES_MEMORY_RECOVERY_FAILURE_SHA256
@@ -1399,7 +1549,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   } else {
     try {
       const profile = validateRelayServicesProfile(profilePath);
-      console.log(`Validated ${profile.schema} for ${profile.project_id}; two private relays exist and the exact private-ready reconciliation is prepared but has not executed.`);
+      console.log(`Validated ${profile.schema} for ${profile.project_id}; two exact-audience relays are private-ready, all three claims are pinned and every one-shot entrypoint is retired.`);
     } catch (error) {
       console.error(error instanceof Error ? error.message : 'Staging relay-services profile is invalid');
       process.exitCode = 1;

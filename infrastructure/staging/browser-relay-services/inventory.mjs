@@ -15,6 +15,7 @@ import {
   validateRelayServicesProfile,
   validateRelayServicesV4Profile,
   validateRelayServicesV3Profile,
+  validateRelayServicesV5Profile,
 } from './contract.mjs';
 
 const MAXIMUM_JSON_BYTES = 8 * 1024 * 1024;
@@ -817,8 +818,11 @@ function expectedRecoveryClaim(profile) {
   };
 }
 
-function validateCurrentPrivateRelayEnvelope(inventory, description) {
-  const profile = validateRelayServicesProfile();
+function validateCurrentPrivateRelayEnvelope(
+  inventory,
+  description,
+  profile = validateRelayServicesProfile(),
+) {
   validateRecoveryInventoryEnvelope(inventory, description);
   exact(inventory.cloud_run_services, [
     'control-plane', 'miakapp-staging-relay-a', 'miakapp-staging-relay-b',
@@ -851,6 +855,7 @@ export function validateRelayServicesPrivateReadyBaseline(value) {
   const profile = validateCurrentPrivateRelayEnvelope(
     value.inventory,
     'Relay-services private-ready baseline',
+    validateRelayServicesV5Profile(),
   );
   for (const service of profile.services) {
     const relay = value.inventory.relays.find((candidate) => candidate.id === service.id);
@@ -887,6 +892,7 @@ export function validateRelayServicesPrivateReadyInventory(inventory, claimRecei
   const profile = validateCurrentPrivateRelayEnvelope(
     inventory,
     'Relay-services private-ready inventory',
+    validateRelayServicesV5Profile(),
   );
   if (!plainObject(claimReceipt)
     || !/^[1-9][0-9]*$/u.test(claimReceipt.generation ?? '')

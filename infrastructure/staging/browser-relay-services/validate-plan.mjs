@@ -4,13 +4,13 @@ import { isDeepStrictEqual } from 'node:util';
 import {
   PROJECT_ID,
   REGION,
-  RELAY_SERVICES_PROFILE_SHA256,
+  RELAY_SERVICES_V5_PROFILE_SHA256,
   RELAY_SERVICES_V3_PROFILE_SHA256,
   RELAY_SERVICES_V4_PROFILE_SHA256,
   TERRAFORM_VERSION,
   bootstrapRelayVariables,
   privateReadyRelayVariables,
-  validateRelayServicesProfile,
+  validateRelayServicesV5Profile,
   validateRelayServicesV3Profile,
   validateRelayServicesV4Profile,
 } from './contract.mjs';
@@ -742,7 +742,7 @@ function validateReadyResourceChanges(plan, profile) {
   );
   const nextInput = privateReadyGuardInput(
     profile,
-    RELAY_SERVICES_PROFILE_SHA256,
+    RELAY_SERVICES_V5_PROFILE_SHA256,
     'private_ready',
     privateReadyRelayVariables(profile).relay_audiences,
   );
@@ -809,7 +809,7 @@ function validateReadyChecks(plan) {
 }
 
 export function validatePrivateReadyRelayServicesPlan(plan) {
-  const profile = validateRelayServicesProfile();
+  const profile = validateRelayServicesV5Profile();
   if (!plainObject(plan) || plan.format_version !== '1.2'
     || plan.terraform_version !== TERRAFORM_VERSION
     || plan.applyable !== true || plan.complete !== true || plan.errored !== false) {

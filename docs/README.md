@@ -43,9 +43,9 @@ implemented across several repositories.
   rollback matrix; rebased against the current private two-key/App Check state
   but not deployed, with every live case pending.
 - [`../infrastructure/staging/browser-relay-services/`](../infrastructure/staging/browser-relay-services/)
-  — dormant four-phase Terraform model for two scale-to-zero relays, immutable
-  image selection, finite process admission and public-last IAM; it exposes no
-  operator entrypoint and has not been applied.
+  — applied four-phase Terraform model holding two private-ready, scale-to-zero
+  relays with immutable image selection, finite process admission and public-last
+  IAM; all consumed operator entrypoints are retired.
 - [`../infrastructure/staging/`](../infrastructure/staging/)
   — closed staging intent, digest-pinned live evidence, credential-free policy
   validator and teardown rehearsal. Cloud mutation remains behind separate
@@ -91,14 +91,14 @@ also proves live Firebase Auth/App Check enforcement, KMS-backed user-relay sign
 audience rotation and cleanup on the deployed control plane. The complete
 standalone provider-attestation prerequisite was later closed when the default
 system browser obtained one real reCAPTCHA Enterprise-backed App Check token
-and the temporary Hosting route was retired. The complete disconnect matrix,
-authenticated browser-relay flow, live relay topology, public ingress and
-broader staging acceptance remain open. The staging manifest now pins the
-rebased browser-relay plan and its zero-user, zero-fixture, zero-relay baseline,
-making its intended resource, cost,
-exposure and rollback boundary reviewable without pretending that the required
-runtime and staging adapters have been deployed or that a public edge already
-exists.
+and the temporary Hosting route was retired. Two digest-pinned, scale-to-zero
+relay services are now private-ready with exact assigned audiences and no
+public IAM member. The complete disconnect matrix, authenticated browser-relay
+flow, public ingress and broader staging acceptance remain open. The staging
+manifest pins both the earlier zero-relay planning baseline and the later
+serial-4 private-ready result, making the state transition, intended cost,
+exposure and rollback boundary reviewable without pretending that a public edge
+or live browser matrix already exists.
 
 Repository-specific implementation plans must link back to these documents and
 must not redefine a shared contract locally.
