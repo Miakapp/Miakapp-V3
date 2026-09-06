@@ -679,9 +679,9 @@ localhost preview; that operation and all recovery paths are now permanently
 retired. The full browser-relay matrix must acquire fresh credentials and cannot
 reuse the consumed token or callback.
 Separate guarded implementations must still exist for the temporary edge
-transition, metrics and rollback. The plan still records the runner as open
-until its pinned implementation is merged and the next closed plan revision
-consumes it instead of promoting its offline smoke to live evidence.
+transition, metrics and rollback. Plan revision 10 now consumes the merged
+runner profile and records `RUNNER-01` as satisfied without promoting its
+offline smoke to live evidence.
 The dormant [`browser-relay-edge/`](browser-relay-edge/) library now covers the
 edge transition state machine and its emergency ingress closure, but exposes no
 operator entrypoint. Its atomic claim and exact live orchestration remain part
@@ -694,7 +694,8 @@ are pinned, its claim is durable and its entrypoints are retired. Public
 invocation, browser traffic and the edge transition remain separate later
 gates.
 The dormant [`browser-relay-runner/`](browser-relay-runner/) package pins plan
-revision 9, Playwright 1.62.1 and the merged MiakAPI browser client. It has no
+revision 9, Playwright 1.62.1 and the merged MiakAPI browser client. Current
+plan revision 10 pins the merged runner profile. The package has no
 CLI, publisher, credential loader or cloud adapter. Its dedicated CI gate
 intercepts the exact staging URL locally and proves three real ephemeral browser
 engines produce only the reviewed closed aggregate. It records zero live runs
