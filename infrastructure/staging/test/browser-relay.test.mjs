@@ -17,6 +17,7 @@ import {
   BROWSER_RELAY_V11_PLAN_SHA256,
   BROWSER_RELAY_V12_PLAN_SHA256,
   BROWSER_RELAY_V13_PLAN_SHA256,
+  BROWSER_RELAY_V14_PLAN_SHA256,
   BROWSER_RELAY_V8_PLAN_SHA256,
   BROWSER_RELAY_V9_PLAN_SHA256,
   StagingBrowserRelayPlanError,
@@ -26,6 +27,7 @@ import {
   validateBrowserRelayV11Plan,
   validateBrowserRelayV12Plan,
   validateBrowserRelayV13Plan,
+  validateBrowserRelayV14Plan,
   validateBrowserRelayV8Plan,
   validateBrowserRelayV9Plan,
 } from '../browser-relay/contract.mjs';
@@ -36,6 +38,7 @@ const v10PlanPath = new URL('../browser-relay/plan-v10.json', import.meta.url);
 const v11PlanPath = new URL('../browser-relay/plan-v11.json', import.meta.url);
 const v12PlanPath = new URL('../browser-relay/plan-v12.json', import.meta.url);
 const v13PlanPath = new URL('../browser-relay/plan-v13.json', import.meta.url);
+const v14PlanPath = new URL('../browser-relay/plan-v14.json', import.meta.url);
 const v8PlanPath = new URL('../browser-relay/plan-v8.json', import.meta.url);
 const v9PlanPath = new URL('../browser-relay/plan-v9.json', import.meta.url);
 const planFixture = JSON.parse(readFileSync(planPath, 'utf8'));
@@ -53,23 +56,28 @@ function rejects(mutator, pattern = /drifted|invalid|must|reviewed|credential/u)
   );
 }
 
-test('accepts the operation-preflighted browser design without claiming matrix evidence', () => {
+test('accepts the page-CI-pinned browser design without claiming matrix evidence', () => {
   const validated = validateBrowserRelayPlan(planPath);
   assert.equal(validated.schema, 'miakapp.staging-browser-relay-plan/1');
-  assert.equal(validated.revision, 14);
+  assert.equal(validated.revision, 15);
   assert.equal(
     validated.state,
-    'operation_preflighted_edge_orchestrator_preflighted_rollback_preflighted_monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed',
+    'page_three_engine_ci_pinned_operation_preflighted_edge_orchestrator_preflighted_rollback_preflighted_monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed',
   );
   assert.equal(validated.target.project_id, 'miakapp-v4-staging');
   assert.equal(validated.target.cloud_mutation_authorized_by_document, false);
   assert.equal(validated.target.public_ingress_currently_active, false);
   assert.equal(validated.target.acceptance_executed, false);
+  assert.equal(
+    validated.pins.miakapp_v3_commit,
+    'f8918874a0860ae3ae95ec03185169d4fc6bee77',
+  );
   assert.equal(validated.pins.relay_services_profile_sha256, 'd47449d0b175b47ac0fdde5e0eb80c8b5d0eb43e4ac9a8af091c51f9aa4c390a');
   assert.equal(validated.pins.relay_services_converged_profile_sha256, '41392c96d68bf749c59757bc76d34a69e6eb407efa50b14f61b937c4f5a9b576');
   assert.equal(validated.pins.relay_services_private_ready_result_sha256, '27ee42c11af83f4e0133a6002540096b74d18ceb78a281e4fbd7c38b53cea4be');
   assert.equal(validated.pins.relay_services_live_inventory_sha256, '421338fec676c1fccd0e6747d3e8837d4151b147c95b343172639800779b64d1');
   assert.equal(validated.pins.browser_relay_runner_profile_sha256, '72b688ccd577f7b40b21d9f874bbca555324eaec1fbf2acbc87dee35cf83a536');
+  assert.equal(validated.pins.browser_relay_page_profile_sha256, '2e9e809d8bb9b88a4e96b51a258d948e6f0d1467c38adaca8c6582e132113e1e');
   assert.equal(validated.pins.browser_relay_monitoring_profile_sha256, 'df5d04aa28658a6b0b2bd59087dd60a1d837f271bb85da00823e2d2e39b2e661');
   assert.equal(validated.pins.browser_relay_monitoring_preflight_result_sha256, '618e074b9e4e9b6a532b2ecbfc87614ff5b382f9632397c4e86d111272425f64');
   assert.equal(validated.pins.browser_relay_rollback_profile_sha256, 'b3517720cb3874f040601d6dfcc7b0ecaf385c16d6b4299c102e2001f8bf18e7');
@@ -82,6 +90,24 @@ test('accepts the operation-preflighted browser design without claiming matrix e
   assert.equal(validated.evidence.state, 'absent');
   assert.deepEqual(validated.evidence.completed_case_ids, []);
   assert.match(BROWSER_RELAY_PLAN_SHA256, /^[0-9a-f]{64}$/u);
+});
+
+test('preserves the byte-exact revision-14 plan consumed by the page CI profile', () => {
+  const historical = validateBrowserRelayV14Plan(v14PlanPath);
+  assert.equal(historical.revision, 14);
+  assert.equal(
+    historical.state,
+    'operation_preflighted_edge_orchestrator_preflighted_rollback_preflighted_monitoring_observed_runner_implemented_private_relays_ready_plan_rebased_not_deployed',
+  );
+  assert.equal(historical.preconditions.every(({ state }) => state === 'satisfied'), true);
+  assert.equal(
+    Object.hasOwn(historical.pins, 'browser_relay_page_profile_sha256'),
+    false,
+  );
+  assert.equal(
+    BROWSER_RELAY_V14_PLAN_SHA256,
+    'dbf0e73a20875353f28466b4fe1edcb8e8d1fc6604d979002b36a7610c36aa9a',
+  );
 });
 
 test('preserves the byte-exact revision-13 plan consumed by the operation preflight', () => {
@@ -308,6 +334,9 @@ test('rejects fixed-cost, scale, duration, volume and free-tier drift', () => {
 });
 
 test('rejects omitted blockers, reordered cases and false key-rotation claims', () => {
+  rejects((candidate) => {
+    candidate.pins.browser_relay_page_profile_sha256 = '0'.repeat(64);
+  });
   rejects((candidate) => { candidate.preconditions[3].state = 'open'; });
   rejects((candidate) => { candidate.preconditions.pop(); });
   rejects((candidate) => { candidate.preconditions[5].state = 'open'; });
@@ -343,7 +372,7 @@ test('guards the exact non-executable browser-relay package inventory', () => {
   validateBrowserRelayRoot(new URL('../browser-relay/', import.meta.url));
 
   const root = mkdtempSync(join(tmpdir(), 'miakapp-browser-relay-root-'));
-  for (const name of ['README.md', 'contract.mjs', 'guard.mjs', 'plan-v8.json', 'plan-v9.json', 'plan-v10.json', 'plan-v11.json', 'plan-v12.json', 'plan-v13.json', 'plan.json', 'validate.mjs']) {
+  for (const name of ['README.md', 'contract.mjs', 'guard.mjs', 'plan-v8.json', 'plan-v9.json', 'plan-v10.json', 'plan-v11.json', 'plan-v12.json', 'plan-v13.json', 'plan-v14.json', 'plan.json', 'validate.mjs']) {
     copyFileSync(new URL(`../browser-relay/${name}`, import.meta.url), join(root, name));
     chmodSync(join(root, name), 0o600);
   }
@@ -356,7 +385,7 @@ test('guards the exact non-executable browser-relay package inventory', () => {
 
 test('rejects symlinked or executable package entries', () => {
   const executableRoot = mkdtempSync(join(tmpdir(), 'miakapp-browser-relay-executable-'));
-  for (const name of ['README.md', 'contract.mjs', 'guard.mjs', 'plan-v8.json', 'plan-v9.json', 'plan-v10.json', 'plan-v11.json', 'plan-v12.json', 'plan-v13.json', 'plan.json', 'validate.mjs']) {
+  for (const name of ['README.md', 'contract.mjs', 'guard.mjs', 'plan-v8.json', 'plan-v9.json', 'plan-v10.json', 'plan-v11.json', 'plan-v12.json', 'plan-v13.json', 'plan-v14.json', 'plan.json', 'validate.mjs']) {
     copyFileSync(new URL(`../browser-relay/${name}`, import.meta.url), join(executableRoot, name));
     chmodSync(join(executableRoot, name), name === 'validate.mjs' ? 0o700 : 0o600);
   }
@@ -366,7 +395,7 @@ test('rejects symlinked or executable package entries', () => {
   );
 
   const symlinkRoot = mkdtempSync(join(tmpdir(), 'miakapp-browser-relay-symlink-'));
-  for (const name of ['README.md', 'contract.mjs', 'guard.mjs', 'plan-v8.json', 'plan-v9.json', 'plan-v10.json', 'plan-v11.json', 'plan-v12.json', 'plan-v13.json', 'plan.json']) {
+  for (const name of ['README.md', 'contract.mjs', 'guard.mjs', 'plan-v8.json', 'plan-v9.json', 'plan-v10.json', 'plan-v11.json', 'plan-v12.json', 'plan-v13.json', 'plan-v14.json', 'plan.json']) {
     copyFileSync(new URL(`../browser-relay/${name}`, import.meta.url), join(symlinkRoot, name));
     chmodSync(join(symlinkRoot, name), 0o600);
   }
