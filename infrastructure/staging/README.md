@@ -386,11 +386,11 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`browser-relay-fixture-miakapi/`](browser-relay-fixture-miakapi/) | Dormant pinned MiakAPI Node factory binding | Reproducibly vendors the exact coordinator commit, injects the Home Key exchange transport and permits one provider and coordinator construction without starting a session; no CLI or live authority is present |
 | [`browser-relay-aggregator/`](browser-relay-aggregator/) | Dormant independent-source engine-result aggregator | Assigns all 40 assertions and eight counters to exact source owners, accepts 18 single-use closed receipts in canonical order and emits only the existing runner schema; it is not wired or executed and grants no live authority |
 | [`browser-relay-independent-observers/`](browser-relay-independent-observers/) | Dormant non-page source observers and closed runner-result reducer | Validates 43 exact facts, 15 private receipts, source ledgers, revision/signing lineage and common-clock LIVE-09/10/11 windows; all dependency contracts are digest-pinned, while authenticated live acquisition remains absent |
-| [`browser-relay-evidence-session/`](browser-relay-evidence-session/) | Dormant operation-local evidence capability | Owns the common monotonic epoch, attenuates browser/source ports, derives fact envelopes and closes one interleaved result; durable-claim and live-adapter binding remain absent |
-| [`browser-relay-case-scheduler/`](browser-relay-case-scheduler/) | Dormant exact LIVE-02..LIVE-11 scheduler | Owns 11 case stages, all 67 projection partitions and browser/page/global closure order; its Chromium adapter is separate, while claim binding and live authority remain absent |
+| [`browser-relay-evidence-session/`](browser-relay-evidence-session/) | Dormant operation-local evidence capability | Owns the common monotonic epoch, attenuates browser/source ports, derives fact envelopes and closes one interleaved result; this primitive contains no claim or live-adapter binding, while the complete graph is bound separately |
+| [`browser-relay-case-scheduler/`](browser-relay-case-scheduler/) | Dormant exact LIVE-02..LIVE-11 scheduler | Owns 11 case stages, all 67 projection partitions and browser/page/global closure order; this package contains no claim or live authority, while the complete graph is bound separately |
 | [`browser-relay-chromium-case-adapter/`](browser-relay-chromium-case-adapter/) | Dormant Chromium scenario/scheduler composition | Maps the ready four-input fixture, native two-page driver and all 18 page projections into their exact scheduler stages, then closes all 40 assertions offline; independent live sources, secondary drivers, operation binding and live authority remain absent |
-| [`browser-relay-secondary-case-adapter/`](browser-relay-secondary-case-adapter/) | Dormant secondary page/scheduler composition | Layers the unchanged Firefox/WebKit Playwright bridge beneath the Chromium adapter, validates and projects six complete page facts into the two `LIVE-10` stages, proves page closure and closes the same 40 assertions offline; live providers, independent sources, process IPC, claim binding and authority remain absent |
-| [`browser-relay-independent-case-adapter/`](browser-relay-independent-case-adapter/) | Dormant independent-source/scheduler composition | Fills the final adapter slot with seven source-owned observer capabilities, derives kind and sequence, projects 43 observations into their exact stages and closes all 40 assertions offline; genuine transports, live providers, process IPC, claim binding and authority remain absent |
+| [`browser-relay-secondary-case-adapter/`](browser-relay-secondary-case-adapter/) | Dormant secondary page/scheduler composition | Layers the unchanged Firefox/WebKit Playwright bridge beneath the Chromium adapter, validates and projects six complete page facts into the two `LIVE-10` stages, proves page closure and closes the same 40 assertions offline; live providers, independent sources, process IPC and authority remain absent from this layer, while graph-level claim binding is separate |
+| [`browser-relay-independent-case-adapter/`](browser-relay-independent-case-adapter/) | Dormant independent-source/scheduler composition | Fills the final adapter slot with seven source-owned observer capabilities, derives kind and sequence, projects 43 observations into their exact stages and closes all 40 assertions offline; genuine transports, live providers, process IPC and authority remain absent from this layer, while graph-level claim binding is separate |
 | [`browser-relay-chromium-scenario/`](browser-relay-chromium-scenario/) | Dormant complete Chromium page-scenario driver | Owns two pages and inputs, closes the real 18-fact receipt, and proves one native BFCache restore through trusted persisted page events plus exact CDP navigation; its projection port is composed offline, while live authority remains absent |
 | [`browser-relay-playwright-bridge/`](browser-relay-playwright-bridge/) | Dormant page-to-receipt Playwright bridge | Lazily drives the phased host and real receipt producer for Firefox/WebKit; its legacy Chromium path stays blocked before page or private-input acquisition because high-level Playwright cannot prove native BFCache restoration |
 | [`browser-relay-page-receipt/`](browser-relay-page-receipt/) | Dormant browser-owned source receipt producer | Revision 2 reduces 18 exact Chromium page facts or three secondary-browser facts, cross-checks cumulative host lifecycle evidence, typed call outcomes and terminal cleanup, is bound to the bridge and now combines offline with every independent source |
@@ -400,6 +400,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`browser-relay-rollback/`](browser-relay-rollback/) | Closed-target rollback preflight | Post-merge observation verified all ten private-target facts and a four-resource Terraform no-change plan; its sanitized result records zero mutation, public-ingress change and acceptance execution |
 | [`browser-relay-orchestrator/`](browser-relay-orchestrator/) | Dormant single-use edge orchestrator | Post-merge read-only preflight proved the claim absent and the rollback target private and converged; no claim, mutation, public edge or live acceptance has run |
 | [`browser-relay-operation/`](browser-relay-operation/) | Dormant full live-operation and preflight envelope | Composes the claimed edge, public-last relay transition, one matrix and two-level cleanup; its exact post-merge read-only preflight succeeded privately, while no cloud adapter, live authority or execution is present |
+| [`browser-relay-operation-case-adapter/`](browser-relay-operation-case-adapter/) | Dormant durable-claim/matrix composition root | Hard-wires the unchanged single-use operation to the complete three-browser schedule, admits one canonical post-claim matrix within the claim lifetime and exposes neither lineage nor authority; live providers and dedicated-process IPC remain absent |
 | [`browser-relay-services/`](browser-relay-services/) | Guarded two-relay Cloud Run Terraform state machine | Two private-ready 512-MiB scale-0..1 services use their exact assigned WSS audiences and a keyless role-free identity; all three claims remain durable and every one-shot entrypoint is retired |
 | [`browser-relay-image/`](browser-relay-image/) | Guarded one-shot private relay image build | Distinct v2 recovery succeeded once with exact source provenance and hardened smoke validation; immutable image is deployed only to the two IAM-private relays; all build entrypoints retired |
 | [`automation/`](automation/) | GitHub policy record, historical recovery blueprint, strict plan validator, and operator inspection | One-shot workflow disabled and removed; plan/apply entrypoints inert |
@@ -861,9 +862,9 @@ clears everything on success, abort or failure. It emits only the closed runner
 result. Its production entrypoint captures the system monotonic clock at module
 initialization and accepts no injection; the separate test-clock entrypoint and
 shared implementation are explicitly forbidden from any future live import
-graph. Live provenance remains blocked until this primitive is bound to the
-durable orchestrator claim and genuine source adapters. No live wiring or
-authority is claimed. The adjacent
+graph. This primitive itself contains no claim binding; the complete graph is
+now bound by the separate operation case adapter, while genuine source adapters
+remain absent. No live wiring or authority is claimed. The adjacent
 [`browser-relay-case-scheduler/`](browser-relay-case-scheduler/) package now
 implements the missing case-level topology offline. It composes only the
 production evidence-session entrypoint and executes 11 fixed stages: Chromium
@@ -877,9 +878,10 @@ Cancellation uses a protected listener to signal active work, deliberately
 waits for that invoked work to settle, then performs global close exactly once
 as the final drain barrier. Its concrete Chromium adapter is the separate
 dormant package below; a layered adapter now supplies both secondary page paths
-offline, while claim binding, trusted live page providers, network,
-credentials and live authority remain absent. The former manifest-capacity
-blocker is closed: the revision-97 semantic object is assembled from a small
+offline, while the later operation case adapter supplies graph-level claim
+binding. Trusted live page providers, network, credentials and live authority
+remain absent. The former manifest-capacity
+blocker is closed: the revision-98 semantic object is assembled from a small
 index and five independently bounded, digest-pinned canonical fragments.
 Browser-relay scenario and operations evidence have separate physical owners;
 each retains substantial room below the unchanged 96-KiB ceiling. The complete
@@ -946,9 +948,16 @@ projects only `{ observation }` while the evidence session remains the sole
 owner of time, envelopes, receipts and results. Same-stage observers run
 concurrently. The complete schedule smoke combines all 43 independent
 observations with real offline Firefox/WebKit pages and the separately proven
-Chromium scenario. Genuine live observers and page providers, durable claim and
-operation binding, dedicated-process IPC, Hosting publication and live
-execution remain absent.
+Chromium scenario. Genuine live observers and page providers, dedicated-process
+IPC, Hosting publication and live execution remain absent.
+The adjacent
+[`browser-relay-operation-case-adapter/`](browser-relay-operation-case-adapter/)
+now hard-wires that complete schedule into the unchanged single-use operation.
+It accepts exactly one canonical claim receipt, retains only a private
+non-serializable capability, admits one matrix callback wholly inside the claim
+lifetime and forwards only the edge `AbortSignal`. Its offline integration uses
+the real operation envelope and proves both cleanup levels while exposing no
+claim lineage. This is code-level binding, not live execution or authority.
 The adjacent
 [`browser-relay-page-receipt/`](browser-relay-page-receipt/) package implements
 the first exact source producer. It accepts no assertion map: Chromium must
@@ -989,8 +998,9 @@ observed absence after cleanup without retrying uncertain mutations. This
 closes only the second-identity cloud implementation gap. The standalone
 Chromium page scenario, BFCache path, three-browser ready-fixture/scheduler
 composition and deterministic source-observer wiring are now complete offline,
-but genuine live source transports, trusted live page providers,
-operation/claim binding and dedicated-process isolation remain open.
+and operation/claim binding is now closed offline. Genuine live source
+transports, trusted live page providers and dedicated-process isolation remain
+open.
 All mutation, IAM, Hosting, public-ingress and execution authority remains
 closed.
 The adjacent [`browser-relay-operation/`](browser-relay-operation/) package now
