@@ -89,8 +89,8 @@ implemented across several repositories.
   topology, attenuates all 67 page/source projections to their owning case,
   awaits browser start and page/browser/global closure, and returns only the
   closed runner result. Its concrete Chromium adapter is the separate dormant
-  package below; claim binding, the secondary-browser adapters and live
-  authority remain absent.
+  package below, and the secondary page paths are composed by the following
+  layered adapter; claim binding and live authority remain absent.
 - [`../infrastructure/staging/browser-relay-chromium-case-adapter/`](../infrastructure/staging/browser-relay-chromium-case-adapter/)
   — dormant source-only composition of a ready-only four-method fixture facade, native
   two-page Chromium scenario and fixed case scheduler. It maps all 18 page
@@ -100,6 +100,14 @@ implemented across several repositories.
   scenario plus delegated work before one global close. Its offline integration closes all 40
   runner assertions without granting fixture lifecycle, cloud, Hosting,
   operation or live-execution authority.
+- [`../infrastructure/staging/browser-relay-secondary-case-adapter/`](../infrastructure/staging/browser-relay-secondary-case-adapter/)
+  — dormant source-only layer that composes the unchanged Playwright bridge for
+  real offline Firefox and WebKit pages beneath the Chromium adapter. It
+  validates each complete page fact before projecting only the five semantic
+  fields into `LIVE-10`, preserves the evidence session as envelope and receipt
+  owner, proves both page closures and closes the same 40-assertion schedule.
+  Live page providers, independent source acquisition, process isolation,
+  durable-claim binding and every live/cloud authority remain absent.
 - [`../infrastructure/staging/browser-relay-chromium-scenario/`](../infrastructure/staging/browser-relay-chromium-scenario/)
   — dormant two-page Chromium driver that owns the complete 18-fact page
   scenario and closes the existing receipt producer offline. Its pinned CDP
@@ -242,7 +250,7 @@ three-engine offline CI proof. The archived `profile-v2.json` preserves that
 claim, while current page revision 3 pins unchanged plan 15. The staging manifest
 bundle uses a small bundle-revision-2 canonical index and five fixed, size- and
 digest-bound fragments, with browser-relay scenario and operations evidence
-separated physically, while assembling the current revision-95 semantic object. It
+separated physically, while assembling the current revision-96 semantic object. It
 retains the byte-exact earlier zero-relay plan used
 by the image build, revision 9 used by the runner, revision 10 used by
 monitoring, revision 11 used by rollback and revision 12 used by the
@@ -317,11 +325,12 @@ restoration. The dedicated Chromium driver closes the complete page scenario
 and BFCache automation gap offline without weakening that blocker. Its native
 witness records Chromium's visible `pagehide` dispatch, later trusted hidden
 transition and visible `pageshow` separately, under the reviewed Hosting
-`no-store` and security-header policy. None of
-these packages grants Hosting publication or live authority; composing the
-fixture/controller, genuine source adapters and Chromium driver into the
-scheduler/session and binding that graph to the durable operation claim must
-close before the one allowed live matrix can execute.
+`no-store` and security-header policy. The layered case adapters now compose
+all three complete page scenarios into the scheduler/session offline. None of
+these packages grants Hosting publication or live authority; genuine live page
+providers and independent source adapters, dedicated-process IPC, fixture
+lifecycle wiring and durable operation-claim binding must close before the one
+allowed live matrix can execute.
 
 Repository-specific implementation plans must link back to these documents and
 must not redefine a shared contract locally.
