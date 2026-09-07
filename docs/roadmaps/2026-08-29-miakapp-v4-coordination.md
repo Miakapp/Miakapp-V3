@@ -770,9 +770,10 @@ current consumer.
     identity replacement using offline fakes. The later trusted non-persisted
     native pagehide proves synchronous terminal fencing, not completion of
     asynchronous Firebase cleanup. Playwright 1.62.1
-    explicitly does not support BFCache testing, leaving native persisted
-    restoration `blocked_by_pinned_playwright`; simulated trusted persisted
-    unit events are not native proof. These checks grant no cloud or live
+    explicitly does not support high-level BFCache testing, leaving that bridge
+    `blocked_by_pinned_playwright`; simulated trusted persisted unit events are
+    not native proof. A separate pinned-CDP driver now supplies native offline
+    proof without changing the bridge. These checks grant no cloud or live
     acceptance. It
     remains deliberately not runner-compatible and has no publisher or live
     authority. The next source-only increment added the independent fixed
@@ -819,7 +820,7 @@ current consumer.
     capacity prerequisite is now closed: the stable entry point indexes four
     fixed canonical fragments with exact path, mount, byte-length and SHA-256
     bindings, per-file ceilings and one aggregate ceiling while reconstructing
-    the revision-93 semantic object. The immutable original
+    the revision-94 semantic object. The immutable original
     fixture still has three private page inputs, but a separate closed scenario fixture now
     supplies the fourth from a second genuine synthetic Firebase identity,
     extends the unique coordinator's state access to both identities and
@@ -835,10 +836,28 @@ current consumer.
     in real offline Firefox and WebKit engines. Chromium returns a distinct
     blocked result before acquiring either dependency because pinned Playwright
     cannot prove native persisted BFCache restoration; that result cannot stand
-    in for an engine result. No live wiring or execution is present. Close the
-    complete Chromium page scenario and BFCache-capable automation gap, then
-    implement the independent live source adapters and aggregator wiring before
-    executing the matrix once.
+    in for an engine result. A separate native Chromium driver now owns both
+    page identities, executes all 18 page facts into the existing receipt and
+    accepts BFCache only when the trusted persisted page sequence captures
+    visible `pagehide` dispatch, the later trusted hidden transition and visible
+    `pageshow`, and those checkpoints agree with an exact CDP
+    `BackForwardCacheRestore`. Its pinned full-browser smoke uses the reviewed
+    Hosting `no-store` and security headers, rejects both latched diagnostics
+    and active Playwright trace/HAR/video/logger capture before private input,
+    binds token-bearing evaluation to Page/Frame/channel identities observed
+    from the pinned factories, pins the ChannelOwner dispatch helpers and
+    connection transport callback, and rejects forged prototypes, channels,
+    channel methods, helper shadows and transport hooks before token acquisition.
+    Its pinned native channel cleanup bypasses caller close overrides and verifies
+    Page/Frame removal from the connection. It is offline and
+    leaves the legacy bridge blocker intact. The driver explicitly trusts its
+    three injected providers, page navigation/content/init scripts and exclusive
+    ownership of the in-process Playwright connection; its leases are defense in
+    depth, not a same-realm sandbox. Dedicated-process browser ownership with
+    validated IPC is required before any untrusted or shared live composition.
+    No live wiring or execution is present. Compose the fixture/controller and Chromium driver into the case
+    scheduler, then implement the independent live source adapters and
+    aggregator wiring before executing the matrix once.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform
     no-change plan. Its fresh post-merge preflight is complete and the rollback

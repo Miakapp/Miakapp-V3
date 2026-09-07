@@ -1,0 +1,634 @@
+import { createHash } from 'node:crypto';
+import { lstatSync, readFileSync } from 'node:fs';
+import { isDeepStrictEqual } from 'node:util';
+
+import {
+  SOURCE_RECEIPT_SCHEMA,
+  validateSourceReceipt,
+} from '../browser-relay-aggregator/contract.mjs';
+import {
+  CASE_SCHEDULER_PROFILE_SHA256,
+  validateBrowserRelayCaseSchedulerProfile,
+} from '../browser-relay-case-scheduler/contract.mjs';
+import {
+  MAXIMUM_CHROMIUM_MILLISECONDS,
+  PLAYWRIGHT_VERSION,
+  TARGET_URL,
+  validateBrowserRelayPageProfile,
+} from '../browser-relay-page/contract.mjs';
+import {
+  MAXIMUM_LIFECYCLE_PAUSE_MILLISECONDS,
+  MAXIMUM_RENEWAL_INTERVAL_MILLISECONDS,
+  MINIMUM_RENEWAL_INTERVAL_MILLISECONDS,
+  PAGE_FACT_ORDER_BY_BROWSER,
+  PAGE_FACT_SCHEMA,
+  PAGE_LIFECYCLE_EVENT_SCHEMA,
+  PAGE_RECEIPT_PROFILE_SHA256,
+  validateBrowserRelayPageReceiptProfile,
+} from '../browser-relay-page-receipt/contract.mjs';
+import {
+  PLAYWRIGHT_BRIDGE_PROFILE_SHA256,
+  PLAYWRIGHT_TYPES_SHA256,
+  validateBrowserRelayPlaywrightBridgeProfile,
+} from '../browser-relay-playwright-bridge/contract.mjs';
+import {
+  SCENARIO_FIXTURE_PROFILE_SHA256,
+  SCENARIO_INPUT_ORDER,
+  validateBrowserRelayScenarioFixtureProfile,
+} from '../browser-relay-scenario-fixture/contract.mjs';
+
+export const CHROMIUM_SCENARIO_PROFILE_PATH =
+  'browser-relay-chromium-scenario/profile.json';
+export const CHROMIUM_SCENARIO_PROFILE_SHA256 =
+  '5d35e5bb0a4873f5b0336d64a649b06b49b112081b5897ba238115c4333af8dd';
+export const CHROMIUM_SCENARIO_IMPLEMENTATION_BASE_COMMIT =
+  '326c30e7fcbf49954bc63e3db71c8575faf2130f';
+export const CHROMIUM_SCENARIO_DEPENDENCY_CONTRACTS_SHA256 =
+  'f4c5ecae34d612b6b0bccfddea21bf8a723da18aa6fce2f88ce1fc090eac36b3';
+export const CHROMIUM_SCENARIO_INTERNAL_SOURCE_SHA256 =
+  'f879a1eaefe8a6c977332788087b5a7428754a0ada17fc4bec6fc7522789a0ea';
+export const CHROMIUM_SCENARIO_GUARD_SOURCE_SHA256 =
+  '7ceb35b9d68af39363745c8f435044a84428f7f8c029bcf10c98df7a9807e337';
+export const CHROMIUM_SCENARIO_UNIT_TEST_SHA256 =
+  '460cf84141750999bd97718b9a3cf1519065f596d44c25340933a2e2e8315e26';
+export const CHROMIUM_SCENARIO_SOURCE_SHA256 =
+  '9643da47aaf2eafa16e430753ad9215eba5ed8dac1aa8a371239a32f69c719ed';
+export const CHROMIUM_SCENARIO_TESTING_SOURCE_SHA256 =
+  'b0435097b26d27d123801c144c6e7d432da06b00671b8388d98b084564efd1cd';
+export const CHROMIUM_SCENARIO_AWAY_SHA256 =
+  '3717b56d02833f7021e4aa03c2de4456e00e98fb0dd6db0b1552d15e736c979e';
+export const CHROMIUM_SCENARIO_OFFLINE_HELPER_SHA256 =
+  '907e3f4962f64749d2157b05eeea75b1497abba39bd0b03e17dfde6faa1fe169';
+export const CHROMIUM_SCENARIO_BROWSER_SMOKE_SHA256 =
+  '59e558cc4ca9d736942c92201c5c23fa93c85b2ccf450e9016ef8ee3392431fe';
+export const CHROMIUM_SCENARIO_WORKFLOW_SHA256 =
+  'eb6fed3c538c256c9ec0df4f041bbfbdaee6e4ed188e2673d2a2f736beb26586';
+export const BROWSER_RELAY_RUNNER_DRIVER_SHA256 =
+  '9863c8a6b311c1fedfa08e866cb42204bf5fd993ab5d8fdb8e5e7efcad455219';
+export const PLAYWRIGHT_PROTOCOL_TYPES_SHA256 =
+  'b836eed98b79fabb54f1df73252a0ce178b8df4a89794251ade2fa0c5e52b678';
+export const PLAYWRIGHT_CORE_BUNDLE_SHA256 =
+  '9393fa79e1c67c74edc26b610d65a4f7ed73d345a762465cc88340a33a2454ac';
+export const PLAYWRIGHT_UTILS_BUNDLE_SHA256 =
+  '580f571bf063e2256b51b3946a035bc452fc0e22808d5547b198baea39923a32';
+export const CHROMIUM_SCENARIO_RESULT_SCHEMA =
+  'miakapp.staging-browser-relay-chromium-scenario-result/1';
+export const CHROMIUM_SCENARIO_STATE_CONTROL_SCHEMA =
+  'miakapp.staging-browser-relay-chromium-state-control/1';
+export const CHROMIUM_SCENARIO_CALL_CONTROL_SCHEMA =
+  'miakapp.staging-browser-relay-chromium-call-control/1';
+export const CHROMIUM_SCENARIO_AWAY_URL =
+  'https://miakapp-v4-staging.web.app/__acceptance/browser-relay/chromium-away.html';
+export const MAXIMUM_CHROMIUM_SCENARIO_MILLISECONDS = MAXIMUM_CHROMIUM_MILLISECONDS;
+export const MAXIMUM_CHROMIUM_CLEANUP_MILLISECONDS = 2_000;
+
+export const CONTROL_PHASE_ORDER = Object.freeze([
+  'authoritative_state',
+  'patched_state',
+  'initial_call',
+  'same_relay_reauthenticated',
+  'relay_handoff_stale',
+  'relay_b_ready',
+  'relay_b_state',
+  'relay_b_call',
+  'failed_call',
+  'uncertain_call',
+  'relay_b_recovered',
+]);
+
+export const CONTROL_PHASE_OUTPUTS = Object.freeze({
+  authoritative_state: 'state_expectation',
+  patched_state: 'state_expectation',
+  initial_call: 'call_target',
+  same_relay_reauthenticated: 'undefined',
+  relay_handoff_stale: 'undefined',
+  relay_b_ready: 'undefined',
+  relay_b_state: 'state_expectation',
+  relay_b_call: 'call_target',
+  failed_call: 'call_target',
+  uncertain_call: 'call_target',
+  relay_b_recovered: 'state_expectation',
+});
+
+const expectedProfile = JSON.parse(
+  readFileSync(new URL('profile.json', import.meta.url), 'utf8'),
+);
+const profilePath = new URL('profile.json', import.meta.url);
+const internalPath = new URL('internal.mjs', import.meta.url);
+const guardPath = new URL('guard.mjs', import.meta.url);
+const scenarioPath = new URL('scenario.mjs', import.meta.url);
+const testingPath = new URL('testing.mjs', import.meta.url);
+const awayPath = new URL('away.html', import.meta.url);
+const helperPath = new URL(
+  '../test/helpers/browser-relay-chromium-scenario-entry.mjs',
+  import.meta.url,
+);
+const browserSmokePath = new URL(
+  '../test/browser-relay-chromium-scenario-browser.mjs',
+  import.meta.url,
+);
+const unitTestPath = new URL(
+  '../test/browser-relay-chromium-scenario.test.mjs',
+  import.meta.url,
+);
+const workflowPath = new URL(
+  '../../../.github/workflows/browser-relay-chromium-scenario.yml',
+  import.meta.url,
+);
+const runnerDriverPath = new URL('../browser-relay-runner/driver.mjs', import.meta.url);
+const packagePath = new URL('../../../package.json', import.meta.url);
+const playwrightTypesPath = new URL(
+  '../../../node_modules/playwright-core/types/types.d.ts',
+  import.meta.url,
+);
+const playwrightProtocolTypesPath = new URL(
+  '../../../node_modules/playwright-core/types/protocol.d.ts',
+  import.meta.url,
+);
+const playwrightCoreBundlePath = new URL(
+  '../../../node_modules/playwright-core/lib/coreBundle.js',
+  import.meta.url,
+);
+const playwrightUtilsBundlePath = new URL(
+  '../../../node_modules/playwright-core/lib/utilsBundle.js',
+  import.meta.url,
+);
+const DEPENDENCY_CONTRACT_PATHS = Object.freeze([
+  '../browser-relay-aggregator/contract.mjs',
+  '../browser-relay-case-scheduler/contract.mjs',
+  '../browser-relay-page/contract.mjs',
+  '../browser-relay-page-receipt/contract.mjs',
+  '../browser-relay-playwright-bridge/contract.mjs',
+  '../browser-relay-scenario-fixture/contract.mjs',
+].sort());
+const SHA256 = /^[0-9a-f]{64}$/u;
+const COMMIT = /^[0-9a-f]{40}$/u;
+const PRIVATE_MATERIAL = Object.freeze([
+  /-----BEGIN [A-Z ]*PRIVATE KEY-----/u,
+  /\bBearer\s+[A-Za-z0-9._~+/-]+=*/iu,
+  /\bAIza[A-Za-z0-9_-]{35}\b/u,
+  /\bya29\.[A-Za-z0-9._-]+\b/u,
+  /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/u,
+]);
+const FORBIDDEN_FIELDS = new Set([
+  'access_token',
+  'app_check_token',
+  'authorization',
+  'cookie',
+  'custom_token',
+  'email',
+  'firebase_custom_token',
+  'firebase_id_token',
+  'firebase_uid',
+  'har',
+  'home_key',
+  'id_token',
+  'password',
+  'private_key',
+  'raw_cdp_event',
+  'raw_error',
+  'raw_request',
+  'raw_response',
+  'refresh_token',
+  'request_headers',
+  'response_headers',
+  'token',
+  'trace_context',
+  'video',
+  'websocket_frame',
+]);
+
+export class StagingBrowserRelayChromiumScenarioError extends Error {
+  constructor(message = 'Staging browser-relay Chromium scenario failed closed') {
+    super(message);
+    this.name = 'StagingBrowserRelayChromiumScenarioError';
+  }
+}
+
+function reject(message) {
+  throw new StagingBrowserRelayChromiumScenarioError(message);
+}
+
+function plainObject(value) {
+  if (value === null || Array.isArray(value) || typeof value !== 'object') return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+function exactKeys(value, keys, path) {
+  if (!plainObject(value)
+    || !isDeepStrictEqual(Object.keys(value).sort(), [...keys].sort())) {
+    reject(`${path} must contain exactly the reviewed fields`);
+  }
+  return value;
+}
+
+function exact(value, expected, path) {
+  if (!isDeepStrictEqual(value, expected)) reject(`${path} has drifted`);
+}
+
+function boundedInteger(value, minimum, maximum, path) {
+  if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
+    reject(`${path} is outside its reviewed bound`);
+  }
+  return value;
+}
+
+export function sha256(value) {
+  return createHash('sha256').update(value).digest('hex');
+}
+
+export function rejectChromiumScenarioPrivateMaterial(value, path = 'output') {
+  if (typeof value === 'string') {
+    if (PRIVATE_MATERIAL.some((pattern) => pattern.test(value))) {
+      reject(`${path} contains private material`);
+    }
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => rejectChromiumScenarioPrivateMaterial(
+      entry,
+      `${path}[${index}]`,
+    ));
+    return;
+  }
+  if (plainObject(value)) {
+    for (const [key, entry] of Object.entries(value)) {
+      if (FORBIDDEN_FIELDS.has(key)) reject(`${path}.${key} is forbidden`);
+      rejectChromiumScenarioPrivateMaterial(entry, `${path}.${key}`);
+    }
+  }
+}
+
+function validateStateExpectation(value) {
+  const expectation = exactKeys(value, ['path', 'revision', 'value'], 'state_expectation');
+  exact(expectation.path, 'acceptance.temperature', 'state_expectation.path');
+  boundedInteger(expectation.revision, 1, 64, 'state_expectation.revision');
+  boundedInteger(expectation.value, -100, 200, 'state_expectation.value');
+  return Object.freeze({ ...expectation });
+}
+
+export function validateChromiumScenarioControlResult(phase, value) {
+  rejectChromiumScenarioPrivateMaterial(value, 'control_result');
+  const output = CONTROL_PHASE_OUTPUTS[phase];
+  if (output === undefined) reject('Chromium scenario control phase is not reviewed');
+  if (output === 'undefined') {
+    if (value !== undefined) reject(`Chromium scenario ${phase} must return undefined`);
+    return undefined;
+  }
+  if (output === 'state_expectation') {
+    const result = exactKeys(value, ['schema', 'state_expectation'], 'control_result');
+    exact(result.schema, CHROMIUM_SCENARIO_STATE_CONTROL_SCHEMA, 'control_result.schema');
+    return Object.freeze({
+      schema: result.schema,
+      state_expectation: validateStateExpectation(result.state_expectation),
+    });
+  }
+  const result = exactKeys(value, ['schema', 'call_target'], 'control_result');
+  exact(result.schema, CHROMIUM_SCENARIO_CALL_CONTROL_SCHEMA, 'control_result.schema');
+  boundedInteger(result.call_target, -100, 200, 'control_result.call_target');
+  return Object.freeze({ ...result });
+}
+
+export function validateChromiumScenarioResult(value) {
+  rejectChromiumScenarioPrivateMaterial(value, 'scenario_result');
+  const result = exactKeys(value, [
+    'schema',
+    'browser',
+    'state',
+    'private_inputs_requested',
+    'page_instances',
+    'native_bfcache_restores',
+    'receipt',
+  ], 'scenario_result');
+  exact(result.schema, CHROMIUM_SCENARIO_RESULT_SCHEMA, 'scenario_result.schema');
+  exact(result.browser, 'chromium', 'scenario_result.browser');
+  exact(result.state, 'receipt_closed', 'scenario_result.state');
+  exact(result.private_inputs_requested, 2, 'scenario_result.private_inputs_requested');
+  exact(result.page_instances, 2, 'scenario_result.page_instances');
+  exact(result.native_bfcache_restores, 1, 'scenario_result.native_bfcache_restores');
+  const receipt = validateSourceReceipt(result.receipt, 'chromium', 'browser_page');
+  return Object.freeze({ ...result, receipt });
+}
+
+export function chromiumScenarioDependencyContractsSha256() {
+  const hash = createHash('sha256');
+  for (const path of DEPENDENCY_CONTRACT_PATHS) {
+    hash.update(path);
+    hash.update('\0');
+    hash.update(readFileSync(new URL(path, import.meta.url)));
+    hash.update('\0');
+  }
+  return hash.digest('hex');
+}
+
+function regularPinnedFile(path, maximumBytes, expectedSha256, description) {
+  const entry = lstatSync(path);
+  if (!entry.isFile() || entry.isSymbolicLink() || (entry.mode & 0o111) !== 0
+    || entry.size === 0 || entry.size > maximumBytes
+    || sha256(readFileSync(path)) !== expectedSha256) {
+    reject(`${description} differs from the reviewed regular file`);
+  }
+}
+
+function validateProfileValue(profile) {
+  rejectChromiumScenarioPrivateMaterial(profile, 'profile');
+  exactKeys(profile, [
+    'schema', 'revision', 'state', 'target', 'pins', 'scenario', 'bfcache',
+    'timing', 'trust_boundary', 'lifecycle', 'compatibility', 'output',
+    'authority', 'evidence',
+  ], 'profile');
+  exact(profile, expectedProfile, 'profile');
+  exact(profile.schema, 'miakapp.staging-browser-relay-chromium-scenario-profile/1',
+    'profile.schema');
+  exact(profile.revision, 1, 'profile.revision');
+  exact(
+    profile.state,
+    'closed_complete_chromium_page_scenario_cdp_bfcache_offline_proven_not_wired_not_live_executed',
+    'profile.state',
+  );
+  exact(profile.target, {
+    project_id: 'miakapp-v4-staging',
+    project_number: '1072737219170',
+    region: 'europe-west9',
+    page_url: TARGET_URL,
+    away_url: CHROMIUM_SCENARIO_AWAY_URL,
+    data_policy: 'synthetic_only',
+    cloud_compute_resources: 0,
+    unscheduled: true,
+  }, 'profile.target');
+  exact(profile.pins, {
+    implementation_base_commit: CHROMIUM_SCENARIO_IMPLEMENTATION_BASE_COMMIT,
+    browser_relay_page_profile_sha256:
+      'c57e53dfeb25a0b5169854c535a535072151387b91ec4c07f889cac60bf83539',
+    browser_relay_page_receipt_profile_sha256: PAGE_RECEIPT_PROFILE_SHA256,
+    browser_relay_scenario_fixture_profile_sha256: SCENARIO_FIXTURE_PROFILE_SHA256,
+    browser_relay_playwright_bridge_profile_sha256: PLAYWRIGHT_BRIDGE_PROFILE_SHA256,
+    browser_relay_case_scheduler_profile_sha256: CASE_SCHEDULER_PROFILE_SHA256,
+    browser_relay_runner_driver_sha256: BROWSER_RELAY_RUNNER_DRIVER_SHA256,
+    dependency_contracts_sha256: CHROMIUM_SCENARIO_DEPENDENCY_CONTRACTS_SHA256,
+    playwright_version: PLAYWRIGHT_VERSION,
+    playwright_types_sha256: PLAYWRIGHT_TYPES_SHA256,
+    playwright_protocol_types_sha256: PLAYWRIGHT_PROTOCOL_TYPES_SHA256,
+    playwright_core_bundle_sha256: PLAYWRIGHT_CORE_BUNDLE_SHA256,
+    playwright_utils_bundle_sha256: PLAYWRIGHT_UTILS_BUNDLE_SHA256,
+    internal_source_sha256: CHROMIUM_SCENARIO_INTERNAL_SOURCE_SHA256,
+    guard_source_sha256: CHROMIUM_SCENARIO_GUARD_SOURCE_SHA256,
+    unit_test_sha256: CHROMIUM_SCENARIO_UNIT_TEST_SHA256,
+    scenario_source_sha256: CHROMIUM_SCENARIO_SOURCE_SHA256,
+    testing_source_sha256: CHROMIUM_SCENARIO_TESTING_SOURCE_SHA256,
+    away_document_sha256: CHROMIUM_SCENARIO_AWAY_SHA256,
+    offline_helper_sha256: CHROMIUM_SCENARIO_OFFLINE_HELPER_SHA256,
+    browser_smoke_sha256: CHROMIUM_SCENARIO_BROWSER_SMOKE_SHA256,
+    workflow_sha256: CHROMIUM_SCENARIO_WORKFLOW_SHA256,
+  }, 'profile.pins');
+  if (!COMMIT.test(profile.pins.implementation_base_commit)
+    || Object.entries(profile.pins).some(([key, entry]) => (
+      key.endsWith('_sha256') && !SHA256.test(entry)
+    ))) reject('profile.pins contains an invalid immutable identifier');
+  exact(profile.scenario, {
+    result_schema: CHROMIUM_SCENARIO_RESULT_SCHEMA,
+    page_fact_schema: PAGE_FACT_SCHEMA,
+    page_lifecycle_event_schema: PAGE_LIFECYCLE_EVENT_SCHEMA,
+    browser: 'chromium',
+    page_fact_order: PAGE_FACT_ORDER_BY_BROWSER.chromium,
+    control_phase_order: CONTROL_PHASE_ORDER,
+    control_phase_outputs: CONTROL_PHASE_OUTPUTS,
+    dependency_methods: ['openPage', 'privateInputProvider', 'controlPhase'],
+    page_api_methods: [
+      'initialize', 'start', 'observe', 'observeLifecycle', 'observeState',
+      'call', 'suspend', 'resume', 'stop',
+    ],
+    page_instances: 2,
+    private_inputs: 2,
+    identity_generation_order:
+      SCENARIO_INPUT_ORDER.slice(0, 2).map(({ identity_generation: value }) => value),
+    first_page_terminal_before_replacement: true,
+    page_closed_before_receipt: true,
+    receipt_producer_internal: true,
+    caller_supplied_facts: false,
+    caller_supplied_timestamps: false,
+    caller_supplied_assertions: false,
+    caller_supplied_results: false,
+  }, 'profile.scenario');
+  exact(profile.bfcache, {
+    automation: 'chromium_cdp',
+    playwright_high_level_supported: false,
+    playwright_disable_flag_filtered_by_page_provider: true,
+    outbound_navigation_api: 'playwright_page_goto',
+    restore_navigation_api: 'Page.navigateToHistoryEntry',
+    restored_page_read_api: 'Runtime.evaluate',
+    cdp_commands: [
+      'Page.enable', 'Page.getFrameTree', 'Page.getNavigationHistory',
+      'Page.navigateToHistoryEntry', 'Runtime.evaluate',
+    ],
+    cdp_events: ['Page.frameNavigated', 'Page.backForwardCacheNotUsed'],
+    page_positive_witness: 'trusted_persisted_pagehide_and_pageshow',
+    browser_positive_witness: 'BackForwardCacheRestore',
+    dual_positive_witness_required: true,
+    pagehide_dispatch_visibility_state: 'visible',
+    pagehide_completed_visibility_state: 'hidden',
+    pagehide_hidden_transition: 'trusted_visibilitychange',
+    pageshow_dispatch_visibility_state: 'visible',
+    pageshow_completed_visibility_state: 'visible',
+    maximum_restores: 1,
+    raw_failure_reasons_retained: false,
+    absence_of_failure_is_success: false,
+    navigation_timing_is_success: false,
+  }, 'profile.bfcache');
+  exact(profile.timing, {
+    maximum_chromium_milliseconds: MAXIMUM_CHROMIUM_SCENARIO_MILLISECONDS,
+    minimum_renewal_interval_milliseconds: MINIMUM_RENEWAL_INTERVAL_MILLISECONDS,
+    maximum_renewal_interval_milliseconds: MAXIMUM_RENEWAL_INTERVAL_MILLISECONDS,
+    maximum_lifecycle_pause_milliseconds: MAXIMUM_LIFECYCLE_PAUSE_MILLISECONDS,
+    maximum_cleanup_milliseconds: MAXIMUM_CHROMIUM_CLEANUP_MILLISECONDS,
+    production_clock: 'process_hrtime_bigint',
+    production_clock_caller_injected: false,
+    test_clock_entrypoint_separate: true,
+  }, 'profile.timing');
+  exact(profile.trust_boundary, {
+    open_page_provider_trusted: true,
+    private_input_provider_trusted: true,
+    control_phase_provider_trusted: true,
+    page_navigation_trusted: true,
+    page_content_and_init_scripts_trusted: true,
+    playwright_connection_exclusive_during_run: true,
+    unrelated_playwright_activity_supported_during_run: false,
+    same_realm_hostile_code_supported: false,
+    playwright_leases_are_defense_in_depth: true,
+    isolated_process_required_before_untrusted_live_wiring: true,
+    validated_ipc_required_before_untrusted_live_wiring: true,
+  }, 'profile.trust_boundary');
+  exact(profile.lifecycle, {
+    external_abort_cooperative: true,
+    internal_abort_signal: true,
+    external_abort_listener_protected: true,
+    injected_dependency_abort_race: true,
+    injected_dependency_drain_bounded: true,
+    latched_playwright_diagnostics_rejected: true,
+    playwright_capture_rechecked_around_private_input: true,
+    playwright_capture_protocol_lease_required: true,
+    playwright_pending_capture_transition_rejected: true,
+    playwright_instrumentation_lease_required: true,
+    playwright_page_factory_provenance_required: true,
+    playwright_network_observer_lease_required: true,
+    playwright_unowned_cdp_rejected: true,
+    playwright_cdp_factory_provenance_required: true,
+    playwright_cdp_channel_identity_lease_required: true,
+    playwright_core_debug_logger_lease_required: true,
+    playwright_frame_prototype_pinned: true,
+    playwright_channel_identity_lease_required: true,
+    playwright_channel_owner_helpers_pinned: true,
+    playwright_transport_callback_pinned: true,
+    caller_owned_page_evaluate_bypassed: true,
+    caller_owned_page_close_bypassed: true,
+    playwright_native_page_close_verified: true,
+    playwright_trace_har_video_logger_rejected: true,
+    late_browser_resource_cleanup_attached: true,
+    late_browser_resource_cleanup_retried: true,
+    browser_operation_drain_bounded: true,
+    unsettled_dependency_work_prevents_cleanup_convergence: true,
+    trusted_runtime_mutex_required: true,
+    trusted_runtime_cleanup_poison_latched: true,
+    cdp_detached_before_page_close: true,
+    page_cleanup_independent_of_cdp_cleanup: true,
+    producer_abort_once: true,
+    raw_dependency_errors_propagated: false,
+    raw_browser_diagnostics_retained: false,
+    safe_page_witness_non_enumerable: true,
+  }, 'profile.lifecycle');
+  exact(profile.compatibility, {
+    page_host_compatible: true,
+    page_receipt_producer_composed: true,
+    scenario_fixture_compatible: true,
+    complete_chromium_page_scenario: true,
+    bfcache_capable_automation: true,
+    legacy_playwright_bridge_chromium_blocked: true,
+    scenario_fixture_wired: false,
+    case_scheduler_wired: false,
+    independent_live_source_adapters_present: false,
+    live_aggregator_wired: false,
+    durable_claim_binding_present: false,
+    live_operation_wired: false,
+    away_document_hosting_wired: false,
+  }, 'profile.compatibility');
+  exact(profile.output.source_receipt_schema, SOURCE_RECEIPT_SCHEMA,
+    'profile.output.source_receipt_schema');
+  exact(profile.output, {
+    source_receipt_schema: SOURCE_RECEIPT_SCHEMA,
+    source: 'browser_page',
+    partial_results_exposed: false,
+    raw_facts_exposed: false,
+    raw_cdp_events_exposed: false,
+    private_inputs_exposed: false,
+    confidentiality_scope: 'scenario_output_and_diagnostics_only',
+    controller_errors_exposed: false,
+    allowed_observations: [
+      'closed_browser_page_receipt', 'native_bfcache_restore_count',
+      'page_instance_count', 'private_input_request_count',
+    ],
+  }, 'profile.output');
+  exact(profile.authority, {
+    cloud_mutation_authorized: false,
+    hosting_publication_authorized: false,
+    iam_binding_mutation_authorized: false,
+    public_ingress_authorized: false,
+    live_execution_authorized: false,
+  }, 'profile.authority');
+  exact(profile.evidence, {
+    state: 'offline_only',
+    offline_chromium_engines: 1,
+    offline_complete_scenarios: 1,
+    offline_closed_page_receipts: 1,
+    offline_native_persisted_bfcache_restores: 1,
+    live_page_facts: 0,
+    live_receipts: 0,
+    cloud_requests: 0,
+    cloud_mutations: 0,
+    hosting_publications: 0,
+    live_execution_count: 0,
+    credentials_committed: false,
+    raw_browser_diagnostics_committed: false,
+  }, 'profile.evidence');
+  return Object.freeze(structuredClone(profile));
+}
+
+function validatePinnedPlaywrightContract() {
+  let packageValue;
+  try {
+    packageValue = JSON.parse(readFileSync(packagePath, 'utf8'));
+  } catch {
+    return reject('Repository package metadata is invalid');
+  }
+  exact(packageValue.devDependencies?.playwright, PLAYWRIGHT_VERSION,
+    'repository Playwright dependency');
+  regularPinnedFile(playwrightTypesPath, 2 * 1024 * 1024, PLAYWRIGHT_TYPES_SHA256,
+    'Pinned Playwright type contract');
+  regularPinnedFile(
+    playwrightProtocolTypesPath,
+    4 * 1024 * 1024,
+    PLAYWRIGHT_PROTOCOL_TYPES_SHA256,
+    'Pinned Playwright CDP protocol contract',
+  );
+  regularPinnedFile(
+    playwrightCoreBundlePath,
+    8 * 1024 * 1024,
+    PLAYWRIGHT_CORE_BUNDLE_SHA256,
+    'Pinned Playwright Chromium launch contract',
+  );
+  regularPinnedFile(
+    playwrightUtilsBundlePath,
+    8 * 1024 * 1024,
+    PLAYWRIGHT_UTILS_BUNDLE_SHA256,
+    'Pinned Playwright diagnostic contract',
+  );
+  const types = readFileSync(playwrightTypesPath, 'utf8');
+  const protocol = readFileSync(playwrightProtocolTypesPath, 'utf8');
+  const core = readFileSync(playwrightCoreBundlePath, 'utf8');
+  const utils = readFileSync(playwrightUtilsBundlePath, 'utf8');
+  if (!types.includes('Testing Back/Forward Cache (BFCache) is not supported.')
+    || !protocol.includes('"Navigation"|"BackForwardCacheRestore"')
+    || !protocol.includes('navigateToHistoryEntryParameters')
+    || !protocol.includes('backForwardCacheNotUsedPayload')
+    || !core.includes('"--disable-back-forward-cache"')
+    || !utils.includes('inspectOpts')) {
+    reject('Pinned Chromium BFCache automation contract has drifted');
+  }
+}
+
+export function validateBrowserRelayChromiumScenarioProfile() {
+  exact(
+    chromiumScenarioDependencyContractsSha256(),
+    CHROMIUM_SCENARIO_DEPENDENCY_CONTRACTS_SHA256,
+    'Chromium scenario dependency contracts digest',
+  );
+  validateBrowserRelayPageProfile();
+  validateBrowserRelayPageReceiptProfile();
+  validateBrowserRelayScenarioFixtureProfile();
+  validateBrowserRelayPlaywrightBridgeProfile();
+  validateBrowserRelayCaseSchedulerProfile();
+  validatePinnedPlaywrightContract();
+  for (const [path, maximum, digest, description] of [
+    [profilePath, 32 * 1024, CHROMIUM_SCENARIO_PROFILE_SHA256, 'Chromium scenario profile'],
+    [internalPath, 192 * 1024, CHROMIUM_SCENARIO_INTERNAL_SOURCE_SHA256, 'Chromium scenario internal source'],
+    [guardPath, 16 * 1024, CHROMIUM_SCENARIO_GUARD_SOURCE_SHA256, 'Chromium scenario guard source'],
+    [unitTestPath, 64 * 1024, CHROMIUM_SCENARIO_UNIT_TEST_SHA256, 'Chromium scenario unit test'],
+    [scenarioPath, 8 * 1024, CHROMIUM_SCENARIO_SOURCE_SHA256, 'Chromium scenario source'],
+    [testingPath, 8 * 1024, CHROMIUM_SCENARIO_TESTING_SOURCE_SHA256, 'Chromium scenario testing source'],
+    [awayPath, 2 * 1024, CHROMIUM_SCENARIO_AWAY_SHA256, 'Chromium scenario away document'],
+    [helperPath, 48 * 1024, CHROMIUM_SCENARIO_OFFLINE_HELPER_SHA256, 'Chromium scenario offline helper'],
+    [browserSmokePath, 48 * 1024, CHROMIUM_SCENARIO_BROWSER_SMOKE_SHA256, 'Chromium scenario browser smoke'],
+    [workflowPath, 8 * 1024, CHROMIUM_SCENARIO_WORKFLOW_SHA256, 'Chromium scenario workflow'],
+    [runnerDriverPath, 32 * 1024, BROWSER_RELAY_RUNNER_DRIVER_SHA256, 'Browser-relay runner diagnostic source'],
+  ]) regularPinnedFile(path, maximum, digest, description);
+  let value;
+  try {
+    value = JSON.parse(readFileSync(profilePath, 'utf8'));
+  } catch {
+    return reject('Chromium scenario profile is not valid JSON');
+  }
+  if (`${JSON.stringify(value, null, 2)}\n` !== readFileSync(profilePath, 'utf8')) {
+    reject('Chromium scenario profile is not canonical JSON');
+  }
+  return validateProfileValue(value);
+}

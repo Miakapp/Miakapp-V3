@@ -62,7 +62,9 @@ live provenance guarantee.
 
 This directory contains no HTTP client, credential loader, CLI, scheduler,
 browser automation, cloud mutation or publication path. Importing it initiates
-no network, browser or cloud work. A later adapter must acquire the reviewed
+no network, browser or cloud work. The separate native Chromium scenario now
+closes its 18-fact page receipt offline, but is not composed with these source
+producers. A later adapter must acquire the reviewed
 facts from their named live sources, discard private material before crossing
 this boundary, supply the three closed page receipts outside the page context,
 and call this one runner-result boundary inside the existing single-use

@@ -14,9 +14,9 @@
     "implementation_base_commit": "7f208f25254e9ba28991f286fd3ec1e5517fede8",
     "browser_relay_plan_sha256": "6c7661d9be861e4f8d13ccd5d2fd0f3eaa34ea2b4d7af2e9b41d1867d6c37211",
     "browser_relay_runner_profile_sha256": "72b688ccd577f7b40b21d9f874bbca555324eaec1fbf2acbc87dee35cf83a536",
-    "browser_relay_page_receipt_profile_sha256": "740d21178e963fb82a3cd923a1adf6cbf6af2b62a633f0b97058fbda4f1e906a",
-    "browser_relay_independent_observers_profile_sha256": "497755bd6d037f587e8f8c5cad98ca7f93495887922dd34dd4230f12d8437f59",
-    "dependency_contracts_sha256": "af55700786535b0cd771357fc86ab55d09a0a5151fb0c2698f157b310d789b2a",
+    "browser_relay_page_receipt_profile_sha256": "13c5329ae85e06f0e50f6a73c187918767bbac64edee9e0ff24e60142b671c95",
+    "browser_relay_independent_observers_profile_sha256": "adb1755f60466da5babb4aa3527445f6423c0dfee6b0927e73eee041e25e3969",
+    "dependency_contracts_sha256": "eaaf21b624e98fbe66ad51b1c0fa1c0522de8c73a57fed9dc41328063cd9646e",
     "session_source_sha256": "057470503c72c69808f7462e08fd317efe18b2a74e8b81f0f5e2745204efb9c0",
     "internal_source_sha256": "6ac5a3d81af327ab2687b4e544a9127649726affcae2fffbbcadc7e26ac8bd5e",
     "testing_source_sha256": "c3e33a2f40c7c16f6ded6bc2a931c38b6f98b24160ac29d2d564e6a879617a96"

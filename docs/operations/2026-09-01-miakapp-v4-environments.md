@@ -555,13 +555,31 @@ bounded lifecycle observations. Real pinned-browser smoke proves the dormant
 artifact plus explicit terminal cleanup before sequential replacement using
 offline fakes. The later trusted non-persisted native pagehide proves
 synchronous terminal fencing, not completion of asynchronous Firebase cleanup.
-Playwright 1.62.1 explicitly does not support
-BFCache testing: native persisted restoration remains
-`blocked_by_pinned_playwright`, and simulated trusted persisted unit events
-are not native BFCache proof. Plan 15 and its archived page-2 CI profile
-remain byte-exact historical evidence. Complete page-scenario/Playwright wiring
-and independent live source adapters remain required before the matrix can run;
-no package grants Hosting publication or live execution authority.
+Playwright 1.62.1 explicitly does not support high-level BFCache testing: the
+legacy bridge remains `blocked_by_pinned_playwright`, and simulated trusted
+persisted unit events are not native BFCache proof. A separate pinned-CDP
+driver now owns both Chromium pages, executes all 18 page facts into the real
+receipt producer and accepts restoration only when the trusted persisted page
+sequence captures visible `pagehide` dispatch, the later trusted transition to
+hidden and visible `pageshow`, and agrees with an exact browser-level
+`BackForwardCacheRestore`. Its full-browser smoke uses the reviewed Hosting
+`no-store` and security headers, proves that active tracing is rejected before
+private input, and rejects forged Frame prototypes, replacement channels,
+injected channel evaluation methods, ChannelOwner helper shadows and connection
+transport hooks before token acquisition. Native channel cleanup bypasses caller
+close overrides and verifies both the Page closed flag and Page/Frame removal
+from the connection. The harness explicitly trusts its injected providers,
+page navigation/content/init scripts and exclusive ownership of the in-process
+Playwright connection; these leases are not a same-realm sandbox. Any untrusted
+or shared live wiring requires dedicated-process browser ownership and validated
+narrow IPC. It is offline and
+does not weaken the bridge blocker. Current and
+latched diagnostics, HAR, video and API logging are rejected by the same pinned
+capture boundary. Plan 15 and its archived page-2 CI profile remain byte-exact
+historical evidence.
+Fixture/controller and scheduler composition plus independent live source
+adapters remain required before the matrix can run; no package grants Hosting
+publication or live execution authority.
 
 The guarded relay-image increment bound the exact merged Miakapp-Server tree to a deterministic
 53,098-byte archive, one digest-pinned Cloud Build Docker builder, verified

@@ -187,6 +187,16 @@ node --check infrastructure/staging/browser-relay-case-scheduler/internal.mjs
 node --check infrastructure/staging/browser-relay-case-scheduler/scheduler.mjs
 node --check infrastructure/staging/browser-relay-case-scheduler/testing.mjs
 node -e "import('./infrastructure/staging/browser-relay-case-scheduler/contract.mjs').then(({ validateBrowserRelayCaseSchedulerProfile }) => validateBrowserRelayCaseSchedulerProfile())"
+node infrastructure/staging/browser-relay-chromium-scenario/guard.mjs \
+  "${repository_root}/infrastructure/staging/browser-relay-chromium-scenario"
+node --check infrastructure/staging/browser-relay-chromium-scenario/contract.mjs
+node --check infrastructure/staging/browser-relay-chromium-scenario/guard.mjs
+node --check infrastructure/staging/browser-relay-chromium-scenario/internal.mjs
+node --check infrastructure/staging/browser-relay-chromium-scenario/scenario.mjs
+node --check infrastructure/staging/browser-relay-chromium-scenario/testing.mjs
+node --check infrastructure/staging/test/browser-relay-chromium-scenario-browser.mjs
+node --check infrastructure/staging/test/helpers/browser-relay-chromium-scenario-entry.mjs
+node -e "import('./infrastructure/staging/browser-relay-chromium-scenario/contract.mjs').then(({ validateBrowserRelayChromiumScenarioProfile }) => validateBrowserRelayChromiumScenarioProfile())"
 node infrastructure/staging/browser-relay-playwright-bridge/guard.mjs \
   "${repository_root}/infrastructure/staging/browser-relay-playwright-bridge"
 node --check infrastructure/staging/browser-relay-playwright-bridge/bridge.mjs
@@ -408,6 +418,7 @@ node --test \
   infrastructure/staging/test/browser-relay-independent-observers.test.mjs \
   infrastructure/staging/test/browser-relay-evidence-session.test.mjs \
   infrastructure/staging/test/browser-relay-case-scheduler.test.mjs \
+  infrastructure/staging/test/browser-relay-chromium-scenario.test.mjs \
   infrastructure/staging/test/browser-relay-playwright-bridge.test.mjs \
   infrastructure/staging/test/browser-relay-page-receipt.test.mjs \
   infrastructure/staging/test/browser-relay-scenario-fixture.test.mjs \
