@@ -90,6 +90,46 @@ let instrumentationListener;
 let instrumentationTarget;
 let now = 1_000;
 
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return Object.freeze({ promise, reject, resolve });
+}
+
+async function withDeadline(promise, label, milliseconds = 20_000) {
+  let timer;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(`${label} timed out after ${milliseconds}ms`)),
+          milliseconds,
+        );
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function pageProjectionPort(record) {
+  const port = { record };
+  Object.defineProperty(port, 'toJSON', {
+    configurable: false,
+    enumerable: false,
+    writable: false,
+    value() {
+      throw new Error('Native Chromium projection port cannot be serialized');
+    },
+  });
+  return Object.freeze(port);
+}
+
 function hostingHeaders(contentType) {
   return { ...HOSTING_HEADERS, 'Content-Type': contentType };
 }
@@ -927,7 +967,10 @@ try {
   currentStage = 'concurrent-run-late-page-cleanup';
   await proveConcurrentRunAndLatePageCleanup();
   currentStage = 'complete-scenario';
-  const result = await runBrowserRelayChromiumScenarioInternal({
+  const fact12Projected = deferred();
+  const releaseFact12 = deferred();
+  const projections = [];
+  const execution = runBrowserRelayChromiumScenarioInternal({
     openPage: openOfflinePage,
     async privateInputProvider(requestedBrowser, identityGeneration, signal) {
       assert.equal(requestedBrowser, 'chromium');
@@ -952,6 +995,22 @@ try {
       ), step);
     },
   }, {
+    pageProjectionPort: pageProjectionPort(async (projection, signal) => {
+      assert.equal(signal.aborted, false);
+      assert.deepEqual(Object.keys(projection).sort(), [
+        'call_observation',
+        'lifecycle_event',
+        'lifecycle_observation',
+        'observation',
+        'state_observation',
+      ]);
+      projections.push(projection);
+      if (projections.length === 12) {
+        fact12Projected.resolve();
+        await releaseFact12.promise;
+      }
+      return true;
+    }),
     signal: undefined,
     timing: {
       clock: () => now,
@@ -960,6 +1019,34 @@ try {
       maximumMilliseconds: 600_000,
     },
   });
+  let barrierFailure;
+  try {
+    await withDeadline(
+      Promise.race([
+        fact12Projected.promise,
+        execution.then(
+          () => { throw new Error('Native Chromium scenario closed before fact 12'); },
+          (error) => { throw error; },
+        ),
+      ]),
+      'Native Chromium fact-12 projection',
+    );
+    currentStage = 'native-fact-12-backpressure';
+    assert.equal(projections.length, 12);
+    assert.equal(pages.length, 1);
+    assert.equal(pages[0].isClosed(), false);
+    assert.equal(pages[0].url(), TARGET_URL);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(projections.length, 12);
+    assert.equal(pages.length, 1);
+    assert.equal(pages[0].url(), TARGET_URL);
+  } catch (error) {
+    barrierFailure = error;
+  } finally {
+    releaseFact12.resolve(true);
+  }
+  const result = await withDeadline(execution, 'Native Chromium scenario completion');
+  if (barrierFailure !== undefined) throw barrierFailure;
   currentStage = 'closed-result';
   assert.equal(result.state, 'receipt_closed');
   assert.equal(result.receipt.state, 'observed_closed');
@@ -970,6 +1057,7 @@ try {
   assert.equal(result.page_instances, 2);
   assert.equal(result.private_inputs_requested, 2);
   assert.equal(privateInputRequests, 2);
+  assert.equal(projections.length, 18);
   assert.ok(instrumentationApiCalls > 0);
   assert.equal(instrumentationPrivateCaptures, 0);
   assert.equal(pages.length, 2);

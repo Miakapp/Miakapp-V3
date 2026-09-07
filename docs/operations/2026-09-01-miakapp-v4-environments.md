@@ -577,9 +577,15 @@ does not weaken the bridge blocker. Current and
 latched diagnostics, HAR, video and API logging are rejected by the same pinned
 capture boundary. Plan 15 and its archived page-2 CI profile remain byte-exact
 historical evidence.
-Fixture/controller and scheduler composition plus independent live source
-adapters remain required before the matrix can run; no package grants Hosting
-publication or live execution authority.
+A dormant Chromium case adapter now composes a ready-only four-method fixture
+facade, native two-page scenario and fixed scheduler. Its exact staged
+projection/control mapping closes all 40 assertions offline, including a
+physical fact-12 acknowledgement barrier that prevents BFCache work before
+`LIVE-09`; cancellation drains the scenario and every delegated callback before
+the remaining adapter's one global close. Genuine independent live source adapters, Firefox/WebKit live
+drivers, dedicated-process IPC and durable operation/claim binding remain
+required before the matrix can run. No package grants Hosting publication or
+live execution authority.
 
 The guarded relay-image increment bound the exact merged Miakapp-Server tree to a deterministic
 53,098-byte archive, one digest-pinned Cloud Build Docker builder, verified

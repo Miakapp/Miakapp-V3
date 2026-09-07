@@ -129,6 +129,13 @@ import {
   validateBrowserRelayCaseSchedulerProfile,
 } from './browser-relay-case-scheduler/contract.mjs';
 import {
+  CHROMIUM_CASE_ADAPTER_DEPENDENCY_CONTRACTS_SHA256,
+  CHROMIUM_CASE_ADAPTER_IMPLEMENTATION_BASE_COMMIT,
+  CHROMIUM_CASE_ADAPTER_PROFILE_PATH,
+  CHROMIUM_CASE_ADAPTER_PROFILE_SHA256,
+  validateBrowserRelayChromiumCaseAdapterProfile,
+} from './browser-relay-chromium-case-adapter/contract.mjs';
+import {
   CHROMIUM_SCENARIO_PROFILE_PATH,
   CHROMIUM_SCENARIO_PROFILE_SHA256,
   validateBrowserRelayChromiumScenarioProfile,
@@ -274,7 +281,9 @@ const EVIDENCE_SESSION_CONTRACT_SHA256 =
 const CASE_SCHEDULER_CONTRACT_SHA256 =
   '1665dd419dfe5e4d601a70e4f7de9935ef254b6b2a5b4c6577f87d5fda2a5187';
 const CHROMIUM_SCENARIO_CONTRACT_SHA256 =
-  '34b21cdd891aaf5821de5afb8a6facb608d58d47f8c161b6abf11a154d5f5302';
+  '61feb77fcfc61018c302f1fc698cc00645a7a5e4407f6fd270622312b7bc8a79';
+const CHROMIUM_CASE_ADAPTER_CONTRACT_SHA256 =
+  '52e0223e4ea7852dcdd4c0a320acf7b381303ad3bf3edf286abbf0a8c56d782e';
 
 const SERVICE_IDS = [
   'firebase-auth',
@@ -3106,6 +3115,7 @@ function validateEvidence(value) {
     'browser_relay_independent_observers',
     'browser_relay_evidence_session',
     'browser_relay_case_scheduler',
+    'browser_relay_chromium_case_adapter',
     'chromium_scenario_automation',
     'browser_relay_playwright_bridge',
     'browser_relay_page_receipt',
@@ -5321,10 +5331,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 94, 'manifest.revision');
+  exact(manifest.revision, 95, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_independent_observers_closed_source_fact_producers_interleaved_runner_result_supported_not_wired_not_executed_browser_relay_evidence_session_closed_operation_local_capability_monotonic_epoch_implemented_not_wired_not_executed_browser_relay_case_scheduler_closed_case_interleaving_implemented_not_wired_not_executed_browser_relay_chromium_scenario_closed_complete_page_cdp_bfcache_offline_proven_not_wired_not_live_executed_browser_relay_playwright_bridge_closed_secondary_receipts_chromium_bfcache_blocked_not_wired_not_executed_browser_relay_page_receipt_closed_bridge_bound_not_aggregated_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_independent_observers_closed_source_fact_producers_interleaved_runner_result_supported_not_wired_not_executed_browser_relay_evidence_session_closed_operation_local_capability_monotonic_epoch_implemented_not_wired_not_executed_browser_relay_case_scheduler_closed_case_interleaving_implemented_not_wired_not_executed_browser_relay_chromium_case_adapter_closed_native_scenario_scheduler_composed_offline_proven_not_live_wired_not_executed_browser_relay_chromium_scenario_closed_complete_page_projected_with_backpressure_offline_proven_not_wired_not_live_executed_browser_relay_playwright_bridge_closed_secondary_receipts_chromium_bfcache_blocked_not_wired_not_executed_browser_relay_page_receipt_closed_bridge_bound_not_aggregated_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -6896,6 +6906,131 @@ export function validateCommittedEvidence(
     browserRelayCaseSchedulerExpected,
     'evidence.browser_relay_case_scheduler',
   );
+  const chromiumCaseAdapterManifest =
+    manifest.evidence.browser_relay_chromium_case_adapter;
+  const chromiumCaseAdapterProfilePath = committedEvidencePath(
+    stagingRoot,
+    chromiumCaseAdapterManifest.profile_path,
+    CHROMIUM_CASE_ADAPTER_PROFILE_PATH,
+    'evidence.browser_relay_chromium_case_adapter.profile_path',
+  );
+  const chromiumCaseAdapterProfile = validatedEvidenceFile(
+    chromiumCaseAdapterProfilePath,
+    validateBrowserRelayChromiumCaseAdapterProfile,
+    'evidence.browser_relay_chromium_case_adapter.profile_path',
+  );
+  exact(
+    fileSha256(chromiumCaseAdapterProfilePath),
+    CHROMIUM_CASE_ADAPTER_PROFILE_SHA256,
+    'evidence.browser_relay_chromium_case_adapter.profile_sha256',
+  );
+  exact(
+    fileSha256(resolve(stagingRoot, 'browser-relay-chromium-case-adapter/contract.mjs')),
+    CHROMIUM_CASE_ADAPTER_CONTRACT_SHA256,
+    'evidence.browser_relay_chromium_case_adapter.contract_source_sha256',
+  );
+  const chromiumCaseAdapterExpected = {
+    state: chromiumCaseAdapterProfile.state,
+    profile_path: CHROMIUM_CASE_ADAPTER_PROFILE_PATH,
+    profile_sha256: CHROMIUM_CASE_ADAPTER_PROFILE_SHA256,
+    profile_schema: chromiumCaseAdapterProfile.schema,
+    profile_revision: chromiumCaseAdapterProfile.revision,
+    contract_source_sha256: CHROMIUM_CASE_ADAPTER_CONTRACT_SHA256,
+    target: chromiumCaseAdapterProfile.target,
+    pins: chromiumCaseAdapterProfile.pins,
+    composition: chromiumCaseAdapterProfile.composition,
+    controls: chromiumCaseAdapterProfile.controls,
+    trust_boundary: chromiumCaseAdapterProfile.trust_boundary,
+    compatibility: chromiumCaseAdapterProfile.compatibility,
+    output: chromiumCaseAdapterProfile.output,
+    authority: chromiumCaseAdapterProfile.authority,
+    evidence: chromiumCaseAdapterProfile.evidence,
+  };
+  record(
+    chromiumCaseAdapterManifest,
+    'evidence.browser_relay_chromium_case_adapter',
+    Object.keys(chromiumCaseAdapterExpected),
+  );
+  exactStructured(
+    chromiumCaseAdapterManifest,
+    chromiumCaseAdapterExpected,
+    'evidence.browser_relay_chromium_case_adapter',
+  );
+  exact(
+    chromiumCaseAdapterProfile.pins.browser_relay_case_scheduler_profile_sha256,
+    CASE_SCHEDULER_PROFILE_SHA256,
+    'evidence.browser_relay_chromium_case_adapter.pins.browser_relay_case_scheduler_profile_sha256',
+  );
+  exact(
+    chromiumCaseAdapterProfile.pins.browser_relay_chromium_scenario_profile_sha256,
+    CHROMIUM_SCENARIO_PROFILE_SHA256,
+    'evidence.browser_relay_chromium_case_adapter.pins.browser_relay_chromium_scenario_profile_sha256',
+  );
+  exact(
+    chromiumCaseAdapterProfile.pins.browser_relay_scenario_fixture_profile_sha256,
+    SCENARIO_FIXTURE_PROFILE_SHA256,
+    'evidence.browser_relay_chromium_case_adapter.pins.browser_relay_scenario_fixture_profile_sha256',
+  );
+  exact(
+    chromiumCaseAdapterProfile.pins.browser_relay_evidence_session_profile_sha256,
+    EVIDENCE_SESSION_PROFILE_SHA256,
+    'evidence.browser_relay_chromium_case_adapter.pins.browser_relay_evidence_session_profile_sha256',
+  );
+  exact(
+    chromiumCaseAdapterProfile.pins.browser_relay_page_receipt_profile_sha256,
+    PAGE_RECEIPT_PROFILE_SHA256,
+    'evidence.browser_relay_chromium_case_adapter.pins.browser_relay_page_receipt_profile_sha256',
+  );
+  exact(
+    chromiumCaseAdapterProfile.pins.browser_relay_runner_profile_sha256,
+    BROWSER_RELAY_RUNNER_PROFILE_SHA256,
+    'evidence.browser_relay_chromium_case_adapter.pins.browser_relay_runner_profile_sha256',
+  );
+  exact(
+    chromiumCaseAdapterProfile.pins.dependency_contracts_sha256,
+    CHROMIUM_CASE_ADAPTER_DEPENDENCY_CONTRACTS_SHA256,
+    'evidence.browser_relay_chromium_case_adapter.pins.dependency_contracts_sha256',
+  );
+  exact(
+    chromiumCaseAdapterProfile.pins.implementation_base_commit,
+    CHROMIUM_CASE_ADAPTER_IMPLEMENTATION_BASE_COMMIT,
+    'evidence.browser_relay_chromium_case_adapter.pins.implementation_base_commit',
+  );
+  exact(
+    chromiumCaseAdapterProfile.compatibility.case_scheduler_composed,
+    true,
+    'evidence.browser_relay_chromium_case_adapter.compatibility.case_scheduler_composed',
+  );
+  exact(
+    chromiumCaseAdapterProfile.compatibility.complete_chromium_page_scenario_composed,
+    true,
+    'evidence.browser_relay_chromium_case_adapter.compatibility.complete_chromium_page_scenario_composed',
+  );
+  exact(
+    chromiumCaseAdapterProfile.compatibility.independent_live_source_adapters_present,
+    false,
+    'evidence.browser_relay_chromium_case_adapter.compatibility.independent_live_source_adapters_present',
+  );
+  exact(
+    chromiumCaseAdapterProfile.compatibility.secondary_live_browser_drivers_present,
+    false,
+    'evidence.browser_relay_chromium_case_adapter.compatibility.secondary_live_browser_drivers_present',
+  );
+  exact(
+    chromiumCaseAdapterProfile.compatibility.live_operation_wired,
+    false,
+    'evidence.browser_relay_chromium_case_adapter.compatibility.live_operation_wired',
+  );
+  exact(
+    chromiumCaseAdapterProfile.authority.live_execution_authorized,
+    false,
+    'evidence.browser_relay_chromium_case_adapter.authority.live_execution_authorized',
+  );
+  exact(
+    chromiumCaseAdapterProfile.evidence.live_execution_count,
+    0,
+    'evidence.browser_relay_chromium_case_adapter.evidence.live_execution_count',
+  );
   const chromiumScenarioManifest = manifest.evidence.chromium_scenario_automation;
   const chromiumScenarioProfilePath = committedEvidencePath(
     stagingRoot,
@@ -6986,6 +7121,17 @@ export function validateCommittedEvidence(
     browserRelayChromiumScenarioProfile.compatibility.bfcache_capable_automation,
     true,
     'evidence.chromium_scenario_automation.compatibility.bfcache_capable_automation',
+  );
+  exact(
+    browserRelayChromiumScenarioProfile.scenario.page_projection_record_awaited,
+    true,
+    'evidence.chromium_scenario_automation.scenario.page_projection_record_awaited',
+  );
+  exact(
+    browserRelayChromiumScenarioProfile.compatibility
+      .case_scheduler_projection_port_compatible,
+    true,
+    'evidence.chromium_scenario_automation.compatibility.case_scheduler_projection_port_compatible',
   );
   exact(
     browserRelayCaseSchedulerProfile.compatibility.complete_chromium_page_scenario,
@@ -8932,6 +9078,7 @@ export function validateCommittedEvidence(
     browserRelayIndependentObserversProfile,
     browserRelayEvidenceSessionProfile,
     browserRelayCaseSchedulerProfile,
+    browserRelayChromiumCaseAdapterProfile: chromiumCaseAdapterProfile,
     browserRelayChromiumScenarioProfile,
     browserRelayPlaywrightBridgeProfile,
     browserRelayPageReceiptProfile,

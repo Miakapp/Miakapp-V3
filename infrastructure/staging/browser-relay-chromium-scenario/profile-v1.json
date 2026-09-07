@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-browser-relay-chromium-scenario-profile/1",
-  "revision": 2,
-  "state": "closed_complete_chromium_page_scenario_projected_with_backpressure_offline_proven_not_wired_not_live_executed",
+  "revision": 1,
+  "state": "closed_complete_chromium_page_scenario_cdp_bfcache_offline_proven_not_wired_not_live_executed",
   "target": {
     "project_id": "miakapp-v4-staging",
     "project_number": "1072737219170",
@@ -13,8 +13,7 @@
     "unscheduled": true
   },
   "pins": {
-    "implementation_base_commit": "04037dfd9b15a328a03611c80256589844fc2a1d",
-    "profile_v1_sha256": "5d35e5bb0a4873f5b0336d64a649b06b49b112081b5897ba238115c4333af8dd",
+    "implementation_base_commit": "326c30e7fcbf49954bc63e3db71c8575faf2130f",
     "browser_relay_page_profile_sha256": "c57e53dfeb25a0b5169854c535a535072151387b91ec4c07f889cac60bf83539",
     "browser_relay_page_receipt_profile_sha256": "13c5329ae85e06f0e50f6a73c187918767bbac64edee9e0ff24e60142b671c95",
     "browser_relay_scenario_fixture_profile_sha256": "6403bd381d04134e5a7725a4083b5aa74c27706dd56b53fe8a2925c67b0ce386",
@@ -27,15 +26,15 @@
     "playwright_protocol_types_sha256": "b836eed98b79fabb54f1df73252a0ce178b8df4a89794251ade2fa0c5e52b678",
     "playwright_core_bundle_sha256": "9393fa79e1c67c74edc26b610d65a4f7ed73d345a762465cc88340a33a2454ac",
     "playwright_utils_bundle_sha256": "580f571bf063e2256b51b3946a035bc452fc0e22808d5547b198baea39923a32",
-    "internal_source_sha256": "aadbb184a8fc34026cb5b4ff44f9bf9e3844823b156e26ff97cdb78171f86a04",
-    "guard_source_sha256": "d04b2032ab369d1da9d2e1a796c31e4ed3d2985561649841c1605a384dc0e65d",
-    "unit_test_sha256": "621c747616f9250c3fa66df5db546f4e43936069ba5d3c9101b47af7318e669a",
-    "scenario_source_sha256": "51326c6e4bde25b004b31b1cafe35c408382e393155d333ec9c4a35e0f9814cd",
-    "testing_source_sha256": "0059bfccaaf41667114d1c4146302ef6afc78a101284a4df68b673e34cdc7826",
+    "internal_source_sha256": "f879a1eaefe8a6c977332788087b5a7428754a0ada17fc4bec6fc7522789a0ea",
+    "guard_source_sha256": "7ceb35b9d68af39363745c8f435044a84428f7f8c029bcf10c98df7a9807e337",
+    "unit_test_sha256": "460cf84141750999bd97718b9a3cf1519065f596d44c25340933a2e2e8315e26",
+    "scenario_source_sha256": "9643da47aaf2eafa16e430753ad9215eba5ed8dac1aa8a371239a32f69c719ed",
+    "testing_source_sha256": "b0435097b26d27d123801c144c6e7d432da06b00671b8388d98b084564efd1cd",
     "away_document_sha256": "3717b56d02833f7021e4aa03c2de4456e00e98fb0dd6db0b1552d15e736c979e",
     "offline_helper_sha256": "907e3f4962f64749d2157b05eeea75b1497abba39bd0b03e17dfde6faa1fe169",
-    "browser_smoke_sha256": "0274cc1d855e6fb9013106aecd9fbc0fc6e7d465f056519c8182b9c74574dc71",
-    "workflow_sha256": "f4b0f6b60b0fa4c311ed4228d9b196ec6fce00ed4bc4196e3cbf6fdea5c7a02b"
+    "browser_smoke_sha256": "59e558cc4ca9d736942c92201c5c23fa93c85b2ccf450e9016ef8ee3392431fe",
+    "workflow_sha256": "eb6fed3c538c256c9ec0df4f041bbfbdaee6e4ed188e2673d2a2f736beb26586"
   },
   "scenario": {
     "result_schema": "miakapp.staging-browser-relay-chromium-scenario-result/1",
@@ -93,21 +92,6 @@
       "privateInputProvider",
       "controlPhase"
     ],
-    "page_projection_entrypoint": "runBrowserRelayChromiumScenarioWithPageProjectionPort",
-    "page_projection_port_fields": [
-      "record",
-      "toJSON"
-    ],
-    "page_projection_fields": [
-      "call_observation",
-      "lifecycle_event",
-      "lifecycle_observation",
-      "observation",
-      "state_observation"
-    ],
-    "page_projection_acknowledgement": "exact_true",
-    "page_projection_port_nonserializable": true,
-    "page_projection_record_awaited": true,
     "page_api_methods": [
       "initialize",
       "start",
@@ -178,7 +162,6 @@
     "open_page_provider_trusted": true,
     "private_input_provider_trusted": true,
     "control_phase_provider_trusted": true,
-    "page_projection_port_trusted": true,
     "page_navigation_trusted": true,
     "page_content_and_init_scripts_trusted": true,
     "playwright_connection_exclusive_during_run": true,
@@ -222,9 +205,6 @@
     "cdp_detached_before_page_close": true,
     "page_cleanup_independent_of_cdp_cleanup": true,
     "producer_abort_once": true,
-    "page_projection_backpressure_required": true,
-    "page_projection_abort_race": true,
-    "page_projection_failure_closed": true,
     "raw_dependency_errors_propagated": false,
     "raw_browser_diagnostics_retained": false,
     "safe_page_witness_non_enumerable": true
@@ -237,7 +217,6 @@
     "bfcache_capable_automation": true,
     "legacy_playwright_bridge_chromium_blocked": true,
     "scenario_fixture_wired": false,
-    "case_scheduler_projection_port_compatible": true,
     "case_scheduler_wired": false,
     "independent_live_source_adapters_present": false,
     "live_aggregator_wired": false,
@@ -252,12 +231,10 @@
     "raw_facts_exposed": false,
     "raw_cdp_events_exposed": false,
     "private_inputs_exposed": false,
-    "reviewed_page_projections_exposed_to_explicit_port": true,
-    "confidentiality_scope": "scenario_output_projection_port_and_diagnostics_only",
+    "confidentiality_scope": "scenario_output_and_diagnostics_only",
     "controller_errors_exposed": false,
     "allowed_observations": [
       "closed_browser_page_receipt",
-      "reviewed_page_projection",
       "native_bfcache_restore_count",
       "page_instance_count",
       "private_input_request_count"
@@ -275,7 +252,6 @@
     "offline_chromium_engines": 1,
     "offline_complete_scenarios": 1,
     "offline_closed_page_receipts": 1,
-    "offline_projected_page_facts": 18,
     "offline_native_persisted_bfcache_restores": 1,
     "live_page_facts": 0,
     "live_receipts": 0,

@@ -1013,10 +1013,19 @@ vertical-slice exit gates.
    remain explicit, current page timing capacity is satisfied, and nothing is
    live wired or executed. The standalone Chromium scenario and BFCache
    automation gaps are closed offline behind a pinned no-capture boundary that
-   rejects diagnostics, trace, HAR, video and API logging before private input;
-   fixture/controller composition, genuine independent source adapters,
-   scheduler wiring and durable operation binding remain open before the one
-   allowed execution.
+   rejects diagnostics, trace, HAR, video and API logging before private input.
+   A separate dormant Chromium case adapter now composes that native scenario,
+   the ready four-input fixture interface and the fixed scheduler. It projects
+   all 18 page facts into the exact five Chromium case scopes, executes the 11
+   fixed fixture controls only after their owning stage activates, and keeps
+   fact 12 unacknowledged until `LIVE-09`, physically fencing BFCache and
+   replacement-page work out of `LIVE-08`. It delegates every independent
+   source and Firefox/WebKit path, aborts and drains the scenario plus delegated
+   callbacks before one global close, and closes all 40 runner assertions using
+   offline evidence.
+   Genuine independent source adapters, secondary live-browser drivers,
+   dedicated-process IPC, durable operation/claim binding, Hosting publication
+   and live authority remain open before the one allowed execution.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain
