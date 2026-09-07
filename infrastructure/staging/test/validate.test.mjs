@@ -1,14 +1,7 @@
 import assert from 'node:assert/strict';
-import {
-  mkdtempSync,
-  readFileSync,
-  rmdirSync,
-  unlinkSync,
-  writeFileSync,
-} from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import {
   StagingManifestError,
@@ -43,8 +36,11 @@ import {
   SCENARIO_FIXTURE_CLOUD_SOURCE_SHA256,
   validateBrowserRelayScenarioFixtureCloudProfile,
 } from '../browser-relay-scenario-fixture-cloud/contract.mjs';
+import { loadStagingManifestBundle } from '../manifest-bundle.mjs';
 
-const manifestFixture = JSON.parse(readFileSync(new URL('../manifest.json', import.meta.url), 'utf8'));
+const manifestFixture = loadStagingManifestBundle(
+  fileURLToPath(new URL('../manifest.json', import.meta.url)),
+);
 const firebaseRcFixture = JSON.parse(readFileSync(new URL('../../../.firebaserc', import.meta.url), 'utf8'));
 
 function manifest() {
@@ -63,22 +59,6 @@ function rejects(mutator, pattern) {
     (error) => error instanceof StagingManifestError && pattern.test(error.message),
   );
 }
-
-test('rejects a staging manifest above the bounded 128-KiB envelope', () => {
-  const directory = mkdtempSync(join(tmpdir(), 'miakapp-staging-manifest-'));
-  const path = join(directory, 'manifest.json');
-  try {
-    writeFileSync(path, ' '.repeat((128 * 1024) + 1));
-    assert.throws(
-      () => validateStagingManifestFile(path),
-      (error) => error instanceof StagingManifestError
-        && /exceeds 131072 bytes/u.test(error.message),
-    );
-  } finally {
-    unlinkSync(path);
-    rmdirSync(directory);
-  }
-});
 
 test('accepts the successful and retired private user-relay probe', () => {
   const validated = validateStagingManifest(manifest());

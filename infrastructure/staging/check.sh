@@ -24,6 +24,7 @@ if [[ "$terraform_version" != "1.11.3" ]]; then
 fi
 
 node infrastructure/staging/validate.mjs infrastructure/staging/manifest.json
+node --check infrastructure/staging/manifest-bundle.mjs
 node infrastructure/staging/automation/validate-policy.mjs \
   infrastructure/staging/automation/github-policy.json
 node infrastructure/staging/automation/guard.mjs \
@@ -404,6 +405,7 @@ node --test \
   infrastructure/staging/test/firebase-auth.test.mjs \
   infrastructure/staging/test/foundation-state.test.mjs \
   infrastructure/staging/test/github-policy.test.mjs \
+  infrastructure/staging/test/manifest-bundle.test.mjs \
   infrastructure/staging/test/probe.test.mjs \
   infrastructure/staging/test/signing-overlap.test.mjs \
   infrastructure/staging/test/validate.test.mjs \
