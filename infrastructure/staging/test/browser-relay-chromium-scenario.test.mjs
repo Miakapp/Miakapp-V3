@@ -26,7 +26,10 @@ import {
   runBrowserRelayChromiumScenarioInternalForTesting as runBrowserRelayChromiumScenarioInternal,
 } from '../browser-relay-chromium-scenario/internal.mjs';
 import { runBrowserRelayChromiumScenario } from '../browser-relay-chromium-scenario/scenario.mjs';
-import { runBrowserRelayChromiumScenarioForTesting } from '../browser-relay-chromium-scenario/testing.mjs';
+import {
+  runBrowserRelayChromiumScenarioForTesting,
+  runBrowserRelayChromiumScenarioWithPageProjectionPortForTesting,
+} from '../browser-relay-chromium-scenario/testing.mjs';
 import { validateBrowserRelayChromiumScenarioRoot } from '../browser-relay-chromium-scenario/guard.mjs';
 import { TARGET_URL } from '../browser-relay-page/contract.mjs';
 import { chromiumPageFacts } from './helpers/browser-relay-evidence-fixture.mjs';
@@ -38,6 +41,7 @@ const SCENARIO_FILES = Object.freeze([
   'contract.mjs',
   'guard.mjs',
   'internal.mjs',
+  'profile-v1.json',
   'profile.json',
   'scenario.mjs',
   'testing.mjs',
@@ -55,6 +59,29 @@ function deferred() {
     reject = rejectPromise;
   });
   return { promise, resolve, reject };
+}
+
+function pageProjectionPort(record) {
+  const port = { record };
+  Object.defineProperty(port, 'toJSON', {
+    configurable: false,
+    enumerable: false,
+    writable: false,
+    value() {
+      throw new Error('Chromium scenario page-projection ports cannot be serialized');
+    },
+  });
+  return Object.freeze(port);
+}
+
+function projectPageFact(fact) {
+  return {
+    call_observation: fact.call_observation,
+    lifecycle_event: fact.lifecycle_event,
+    lifecycle_observation: fact.lifecycle_observation,
+    observation: fact.observation,
+    state_observation: fact.state_observation,
+  };
 }
 
 async function waitFor(predicate) {
@@ -503,6 +530,98 @@ test('drives all 18 Chromium phases through two pages into the actual closed rec
       { selectedOperation: 'stop', selectedArgument: null },
     ],
   );
+});
+
+test('projects all 18 reviewed page facts through the explicit testing port', async () => {
+  const fixture = scenarioFixture();
+  const projections = [];
+  const signals = [];
+  const port = pageProjectionPort((projection, signal) => {
+    projections.push(projection);
+    signals.push(signal);
+    return true;
+  });
+  assert.throws(() => JSON.stringify(port), /cannot be serialized/u);
+  const result = await runBrowserRelayChromiumScenarioWithPageProjectionPortForTesting(
+    fixture.dependencies,
+    port,
+    { ...fixture.timing, signal: undefined },
+  );
+  assert.equal(result.state, 'receipt_closed');
+  assert.deepEqual(projections, chromiumPageFacts().map(projectPageFact));
+  assert.equal(signals.length, 18);
+  assert.ok(signals.every((signal) => signal instanceof AbortSignal));
+  assert.equal(new Set(signals).size, 1);
+  assert.equal(signals[0].aborted, true);
+});
+
+test('backpressures browser work until each page projection is accepted', async () => {
+  const fixture = scenarioFixture();
+  const gate = deferred();
+  const projections = [];
+  const execution = runBrowserRelayChromiumScenarioInternal(fixture.dependencies, {
+    pageProjectionPort: pageProjectionPort((projection) => {
+      projections.push(projection);
+      return projections.length === 12 ? gate.promise : true;
+    }),
+    signal: undefined,
+    timing: fixture.timing,
+  });
+  await waitFor(() => projections.length === 12);
+  assert.deepEqual(fixture.pages[0].cdpEvents, []);
+  assert.equal(fixture.pages.length, 1);
+  gate.resolve(true);
+  const result = await execution;
+  assert.equal(result.state, 'receipt_closed');
+  assert.equal(projections.length, 18);
+});
+
+test('fails closed on an invalid or rejecting page-projection port', async () => {
+  {
+    const fixture = scenarioFixture();
+    await assert.rejects(
+      runBrowserRelayChromiumScenarioInternal(fixture.dependencies, {
+        pageProjectionPort: { record() { return true; } },
+        signal: undefined,
+        timing: fixture.timing,
+      }),
+      /page-projection port is invalid/u,
+    );
+    assert.deepEqual(fixture.order, []);
+  }
+  for (const response of [
+    () => false,
+    () => Promise.reject(new Error('raw projection failure')),
+  ]) {
+    const fixture = scenarioFixture();
+    await assert.rejects(
+      runBrowserRelayChromiumScenarioInternal(fixture.dependencies, {
+        pageProjectionPort: pageProjectionPort(response),
+        signal: undefined,
+        timing: fixture.timing,
+      }),
+      /failed before a closed receipt/u,
+    );
+    assert.equal(fixture.pages[0].isClosed(), true);
+  }
+
+  {
+    const fixture = scenarioFixture();
+    const options = {
+      pageProjectionPort: pageProjectionPort(() => true),
+      signal: undefined,
+      timing: fixture.timing,
+    };
+    Object.defineProperty(options, Symbol('unreviewed'), {
+      enumerable: true,
+      value: true,
+    });
+    await assert.rejects(
+      runBrowserRelayChromiumScenarioInternal(fixture.dependencies, options),
+      /options must contain the reviewed fields/u,
+    );
+    assert.deepEqual(fixture.order, []);
+  }
 });
 
 test('rejects unreviewed controller evidence before it can become a page fact', async () => {
@@ -1089,7 +1208,7 @@ test('validates closed control and public result shapes', () => {
 
 test('pins the dormant profile and keeps production timing separate from testing', () => {
   const profile = validateBrowserRelayChromiumScenarioProfile();
-  assert.equal(profile.revision, 1);
+  assert.equal(profile.revision, 2);
   assert.equal(profile.scenario.page_fact_order.length, 18);
   assert.equal(profile.scenario.control_phase_order.length, 11);
   assert.equal(
@@ -1122,14 +1241,22 @@ test('pins the dormant profile and keeps production timing separate from testing
   assert.equal(profile.lifecycle.late_browser_resource_cleanup_retried, true);
   assert.equal(profile.lifecycle.trusted_runtime_mutex_required, true);
   assert.equal(profile.lifecycle.trusted_runtime_cleanup_poison_latched, true);
+  assert.equal(profile.lifecycle.page_projection_backpressure_required, true);
+  assert.equal(profile.lifecycle.page_projection_abort_race, true);
+  assert.equal(profile.lifecycle.page_projection_failure_closed, true);
   assert.equal(profile.trust_boundary.same_realm_hostile_code_supported, false);
   assert.equal(profile.trust_boundary.playwright_connection_exclusive_during_run, true);
   assert.equal(
     profile.trust_boundary.isolated_process_required_before_untrusted_live_wiring,
     true,
   );
-  assert.equal(profile.output.confidentiality_scope, 'scenario_output_and_diagnostics_only');
+  assert.equal(
+    profile.output.confidentiality_scope,
+    'scenario_output_projection_port_and_diagnostics_only',
+  );
+  assert.equal(profile.output.reviewed_page_projections_exposed_to_explicit_port, true);
   assert.equal(profile.compatibility.complete_chromium_page_scenario, true);
+  assert.equal(profile.compatibility.case_scheduler_projection_port_compatible, true);
   assert.equal(profile.compatibility.case_scheduler_wired, false);
   assert.equal(profile.compatibility.live_operation_wired, false);
   assert.ok(Object.values(profile.authority).every((value) => value === false));

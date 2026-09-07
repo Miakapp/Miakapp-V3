@@ -9,6 +9,7 @@ const ROOT_FILES = Object.freeze([
   'contract.mjs',
   'guard.mjs',
   'internal.mjs',
+  'profile-v1.json',
   'profile.json',
   'scenario.mjs',
   'testing.mjs',
@@ -118,6 +119,10 @@ export function validateBrowserRelayChromiumScenarioRoot(rootUrl) {
     'const second = await acquirePage(2)',
     'producer.close()',
     'producer.abort()',
+    'validatePageProjectionPort',
+    'validateBrowserRelayPageFact',
+    'pageProjectionPort.record(projection, controller.signal)',
+    "accepted !== true",
     "const debug = env.DEBUG ?? ''",
     "debug.trim() !== ''",
     'env.PWDEBUG !== undefined',
@@ -192,7 +197,11 @@ export function validateBrowserRelayChromiumScenarioRoot(rootUrl) {
   if (!scenario.includes('process.hrtime.bigint()')
     || scenario.includes('./testing.mjs')
     || scenario.includes('ForTesting')
-    || !testing.includes('runBrowserRelayChromiumScenarioForTesting')) {
+    || !scenario.includes('runBrowserRelayChromiumScenarioWithPageProjectionPort')
+    || !testing.includes('runBrowserRelayChromiumScenarioForTesting')
+    || !testing.includes(
+      'runBrowserRelayChromiumScenarioWithPageProjectionPortForTesting',
+    )) {
     reject('Browser-relay Chromium scenario entrypoint separation has drifted');
   }
   const guardedSource = `${contract}\n${internal}\n${scenario}\n${testing}`;

@@ -19,6 +19,7 @@ import {
   PAGE_FACT_SCHEMA,
   MAXIMUM_LIFECYCLE_PAUSE_MILLISECONDS,
   validatePageCallObservation,
+  validateBrowserRelayPageFact,
   validatePageLifecycleEvent,
   validatePageStateObservation,
 } from '../browser-relay-page-receipt/contract.mjs';
@@ -45,6 +46,13 @@ const TIMING_FIELDS = Object.freeze([
   'clock',
   'maximumMilliseconds',
   'setTimer',
+]);
+const PAGE_PROJECTION_FIELDS = Object.freeze([
+  'call_observation',
+  'lifecycle_event',
+  'lifecycle_observation',
+  'observation',
+  'state_observation',
 ]);
 const PAGE_API_METHODS = Object.freeze([
   'initialize',
@@ -702,6 +710,30 @@ function validateDependencies(value) {
     field,
     Function.prototype.bind.call(dependencies[field], value),
   ])));
+}
+
+function validatePageProjectionPort(value) {
+  if (value === undefined) return undefined;
+  try {
+    const ownKeys = Reflect.ownKeys(value);
+    const descriptors = Object.getOwnPropertyDescriptors(value);
+    if (!plainObject(value)
+      || ownKeys.some((key) => typeof key !== 'string')
+      || !isDeepStrictEqual(ownKeys.sort(), ['record', 'toJSON'])
+      || !descriptors.record?.enumerable
+      || !Object.hasOwn(descriptors.record, 'value')
+      || typeof descriptors.record.value !== 'function'
+      || descriptors.toJSON?.enumerable !== false
+      || !Object.hasOwn(descriptors.toJSON, 'value')
+      || typeof descriptors.toJSON.value !== 'function') {
+      reject('Chromium scenario page-projection port is invalid');
+    }
+    return Object.freeze({
+      record: Function.prototype.bind.call(descriptors.record.value, value),
+    });
+  } catch {
+    return reject('Chromium scenario page-projection port is invalid');
+  }
 }
 
 function validateTiming(value) {
@@ -4104,7 +4136,23 @@ async function runBrowserRelayChromiumScenarioImplementation(
   validatePlaywrightDiagnosticBoundary(playwrightDiagnosticLease);
   const dependencies = validateDependencies(dependenciesValue);
   const trustedPlaywrightRuntime = playwrightBoundary !== SYNTHETIC_PLAYWRIGHT_BOUNDARY;
-  const options = exactKeys(optionsValue, ['signal', 'timing'], 'Chromium scenario options');
+  let optionKeys;
+  let options;
+  try {
+    optionKeys = Reflect.ownKeys(optionsValue);
+    if (optionKeys.some((key) => typeof key !== 'string')) {
+      reject('Chromium scenario options must contain the reviewed fields');
+    }
+    optionKeys.sort();
+    const optionFields = isDeepStrictEqual(optionKeys, ['signal', 'timing'])
+      ? ['signal', 'timing']
+      : ['pageProjectionPort', 'signal', 'timing'];
+    options = exactKeys(optionsValue, optionFields, 'Chromium scenario options');
+  } catch (error) {
+    if (error instanceof StagingBrowserRelayChromiumScenarioError) throw error;
+    return reject('Chromium scenario options must contain the reviewed fields');
+  }
+  const pageProjectionPort = validatePageProjectionPort(options.pageProjectionPort);
   const externalSignal = validateSignal(options.signal);
   const timing = validateTiming(options.timing);
   const controller = new AbortController();
@@ -4414,9 +4462,9 @@ async function runBrowserRelayChromiumScenarioImplementation(
       validatePlaywrightCaptureLease(lease);
     }
   };
-  const record = (sequence, checkpoint, extras = {}, elapsedOverride) => {
+  const record = async (sequence, checkpoint, extras = {}, elapsedOverride) => {
     const elapsed = elapsedOverride ?? ensureActive();
-    producer.record(Object.freeze({
+    const fact = validateBrowserRelayPageFact(Object.freeze({
       schema: PAGE_FACT_SCHEMA,
       browser: 'chromium',
       sequence,
@@ -4430,7 +4478,26 @@ async function runBrowserRelayChromiumScenarioImplementation(
       state_observation: extras.state ?? null,
       call_observation: extras.call ?? null,
       lifecycle_event: extras.event ?? null,
-    }));
+    }), 'chromium', sequence);
+    producer.record(fact);
+    if (pageProjectionPort === undefined) return;
+    const projection = Object.freeze(Object.fromEntries(
+      PAGE_PROJECTION_FIELDS.map((field) => [field, fact[field]]),
+    ));
+    let accepted;
+    try {
+      accepted = await abortable(
+        track(pageProjectionPort.record(projection, controller.signal)),
+        controller.signal,
+      );
+    } catch {
+      return reject('Chromium scenario page projection failed closed');
+    }
+    ensureActive();
+    validateDiagnostics();
+    if (accepted !== true) {
+      reject('Chromium scenario page projection was not accepted');
+    }
   };
 
   try {
@@ -4456,9 +4523,9 @@ async function runBrowserRelayChromiumScenarioImplementation(
     privateInput = await input(1, first);
     let checkpoint = await invoke(first, 'initialize', privateInput);
     privateInput = undefined;
-    record(1, checkpoint);
+    await record(1, checkpoint);
     checkpoint = await invoke(first, 'start', null);
-    record(2, checkpoint);
+    await record(2, checkpoint);
     await installBfcacheWitness(
       first,
       controller.signal,
@@ -4469,39 +4536,39 @@ async function runBrowserRelayChromiumScenarioImplementation(
 
     const authoritative = await control('authoritative_state');
     checkpoint = await invoke(first, 'observeState', authoritative.state_expectation);
-    record(3, checkpoint, { state: checkpoint.actionResult });
+    await record(3, checkpoint, { state: checkpoint.actionResult });
     const patched = await control('patched_state');
     checkpoint = await invoke(first, 'observeState', patched.state_expectation);
-    record(4, checkpoint, { state: checkpoint.actionResult });
+    await record(4, checkpoint, { state: checkpoint.actionResult });
     const initialCall = await control('initial_call');
     checkpoint = await invoke(first, 'callApplied', initialCall.call_target);
-    record(5, checkpoint, { call: checkpoint.actionResult });
+    await record(5, checkpoint, { call: checkpoint.actionResult });
 
     await control('same_relay_reauthenticated');
     checkpoint = await invoke(first, 'observe', null);
-    record(6, checkpoint);
+    await record(6, checkpoint);
     await control('relay_handoff_stale');
     checkpoint = await invoke(first, 'observeState', patched.state_expectation);
-    record(7, checkpoint, { state: checkpoint.actionResult });
+    await record(7, checkpoint, { state: checkpoint.actionResult });
     await control('relay_b_ready');
     checkpoint = await invoke(first, 'observe', null);
-    record(8, checkpoint);
+    await record(8, checkpoint);
     const relayB = await control('relay_b_state');
     checkpoint = await invoke(first, 'observeState', relayB.state_expectation);
-    record(9, checkpoint, { state: checkpoint.actionResult });
+    await record(9, checkpoint, { state: checkpoint.actionResult });
     const relayBCall = await control('relay_b_call');
     checkpoint = await invoke(first, 'callApplied', relayBCall.call_target);
-    record(10, checkpoint, { call: checkpoint.actionResult });
+    await record(10, checkpoint, { call: checkpoint.actionResult });
 
     const failedCall = await control('failed_call');
     await invoke(first, 'callFailed', failedCall.call_target);
     const uncertainCall = await control('uncertain_call');
     await invoke(first, 'callUncertain', uncertainCall.call_target);
     checkpoint = await invoke(first, 'observeState', relayB.state_expectation);
-    record(11, checkpoint, { state: checkpoint.actionResult });
+    await record(11, checkpoint, { state: checkpoint.actionResult });
     const recovered = await control('relay_b_recovered');
     checkpoint = await invoke(first, 'observeState', recovered.state_expectation);
-    record(12, checkpoint, { state: checkpoint.actionResult });
+    await record(12, checkpoint, { state: checkpoint.actionResult });
 
     cdp = await createCdpSession(
       first,
@@ -4526,7 +4593,12 @@ async function runBrowserRelayChromiumScenarioImplementation(
       trustedPlaywrightRuntime,
       validateDiagnostics,
     );
-    record(13, bfcache.pagehide, { event: bfcache.pagehide.event }, bfcache.pagehideElapsed);
+    await record(
+      13,
+      bfcache.pagehide,
+      { event: bfcache.pagehide.event },
+      bfcache.pagehideElapsed,
+    );
     const restoredState = validateCheckpoint(
       await evaluateRestored(
         cdp,
@@ -4539,7 +4611,7 @@ async function runBrowserRelayChromiumScenarioImplementation(
       ),
       'observeState',
     );
-    record(14, restoredState, {
+    await record(14, restoredState, {
       state: restoredState.actionResult,
       event: bfcache.pageshow.event,
     });
@@ -4555,7 +4627,7 @@ async function runBrowserRelayChromiumScenarioImplementation(
       ),
       'stop',
     );
-    record(15, checkpoint);
+    await record(15, checkpoint);
     if (!await detachCdp(
       cdp,
       timing,
@@ -4569,11 +4641,11 @@ async function runBrowserRelayChromiumScenarioImplementation(
     privateInput = await input(2, second);
     checkpoint = await invoke(second, 'initialize', privateInput);
     privateInput = undefined;
-    record(16, checkpoint);
+    await record(16, checkpoint);
     checkpoint = await invoke(second, 'start', null);
-    record(17, checkpoint);
+    await record(17, checkpoint);
     checkpoint = await invoke(second, 'stop', null);
-    record(18, checkpoint);
+    await record(18, checkpoint);
     if (!await closeOwnedPage(second)) reject('Chromium replacement page cleanup did not converge');
     validateCaptureLeases();
     if (controlIndex !== CONTROL_PHASE_ORDER.length) {
