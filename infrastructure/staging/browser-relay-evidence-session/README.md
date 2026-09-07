@@ -29,9 +29,8 @@ Chromium LIVE-11 evidence. Only the session closes page receipts, browser spans
 and the final matrix. The final output is the existing closed runner result;
 raw facts, receipts and capability identity remain private.
 
-This is an offline composition primitive, not live provenance yet. It is not
-bound to the durable orchestrator claim, is not passed into the operation
-envelope, and this directory contains no scheduler or source adapter. The
+This is an offline composition primitive, not live provenance yet. This
+directory itself has no claim, operation, scheduler or source adapter. The
 separate `browser-relay-case-scheduler` package now composes the production
 session entrypoint without granting live authority. Layered Chromium and
 secondary-browser adapters now feed all 24 page projections through that
@@ -41,8 +40,10 @@ observations through source-owned scopes without receiving envelopes or
 timestamps. Genuine live transports remain absent. This directory contains no
 HTTP client, browser launcher, credential loader, CLI, environment reader,
 cloud mutation or publication path. Importing it performs no browser, network
-or cloud work. Live transport, claim and operation bindings require a later
-reviewed integration.
+or cloud work. The separate `browser-relay-operation-case-adapter` now binds the
+complete schedule containing this session to one validated durable claim and
+the unchanged operation envelope offline. Genuine live transports and providers
+still require a later reviewed integration.
 
 Deterministic unit tests use the separate `testing.mjs` entrypoint and its
 explicit injected-clock factory. That entrypoint and the shared `internal.mjs`

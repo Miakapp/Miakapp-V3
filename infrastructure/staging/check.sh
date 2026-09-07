@@ -280,6 +280,14 @@ node --check infrastructure/staging/browser-relay-operation/guard.mjs
 node --check infrastructure/staging/browser-relay-operation/operation.mjs
 node --check infrastructure/staging/browser-relay-operation/preflight.mjs
 node -e "import('./infrastructure/staging/browser-relay-operation/contract.mjs').then(({ validateBrowserRelayOperationProfile, validateOperationPreflightResult }) => { validateBrowserRelayOperationProfile(); validateOperationPreflightResult(); })"
+node infrastructure/staging/browser-relay-operation-case-adapter/guard.mjs \
+  "${repository_root}/infrastructure/staging/browser-relay-operation-case-adapter"
+node --check infrastructure/staging/browser-relay-operation-case-adapter/adapter.mjs
+node --check infrastructure/staging/browser-relay-operation-case-adapter/contract.mjs
+node --check infrastructure/staging/browser-relay-operation-case-adapter/guard.mjs
+node --check infrastructure/staging/browser-relay-operation-case-adapter/internal.mjs
+node --check infrastructure/staging/browser-relay-operation-case-adapter/testing.mjs
+node -e "import('./infrastructure/staging/browser-relay-operation-case-adapter/contract.mjs').then(({ validateBrowserRelayOperationCaseAdapterProfile }) => validateBrowserRelayOperationCaseAdapterProfile())"
 node infrastructure/staging/browser-relay-services/guard.mjs \
   "${repository_root}/infrastructure/staging/browser-relay-services"
 node --check infrastructure/staging/browser-relay-services/apply.mjs
@@ -456,6 +464,7 @@ node --test \
   infrastructure/staging/test/browser-relay-image.test.mjs \
   infrastructure/staging/test/browser-relay-monitoring.test.mjs \
   infrastructure/staging/test/browser-relay-operation.test.mjs \
+  infrastructure/staging/test/browser-relay-operation-case-adapter.test.mjs \
   infrastructure/staging/test/browser-relay-page.test.mjs \
   infrastructure/staging/test/browser-relay-rollback.test.mjs \
   infrastructure/staging/test/browser-relay-runner.test.mjs \
