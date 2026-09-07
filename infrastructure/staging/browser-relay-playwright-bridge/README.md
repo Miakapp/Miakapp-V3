@@ -25,9 +25,10 @@ restore with dual positive witnesses offline; this bridge intentionally remains
 unchanged and blocked.
 
 This package does not produce any App Check, hosting, control-plane, relay,
-coordinator, KMS or Firestore receipt. It is not connected to the independent
-source aggregator, is not scheduled, performs no cloud mutation and authorizes
-no live execution or public ingress.
+coordinator, KMS or Firestore receipt. The adjacent secondary case adapter now
+injects its receipt producer and schedules the Firefox/WebKit paths alongside
+independent synthetic sources in one complete offline run. That composition
+performs no cloud mutation and authorizes no live execution or public ingress.
 
 Offline validation uses the real page runtime with synthetic dependencies in
 Firefox and WebKit. A separate pinned-capability check exercises the Chromium

@@ -669,6 +669,231 @@
         "raw_facts_committed": false
       }
     },
+    "browser_relay_secondary_case_adapter": {
+      "state": "closed_secondary_page_case_scheduler_composition_offline_proven_not_live_wired_not_executed",
+      "profile_path": "browser-relay-secondary-case-adapter/profile.json",
+      "profile_sha256": "f4c21ccbf187771508f9ce634863c1f78edc107eec91925bbf7842c2e4da4119",
+      "profile_schema": "miakapp.staging-browser-relay-secondary-case-adapter-profile/1",
+      "profile_revision": 1,
+      "contract_source_sha256": "764a05ac206460ebd794180b58d17c65b7080918202b6d581fc3a595f683c246",
+      "target": {
+        "project_id": "miakapp-v4-staging",
+        "project_number": "1072737219170",
+        "region": "europe-west9",
+        "data_policy": "synthetic_only",
+        "cloud_compute_resources": 0,
+        "unscheduled": true
+      },
+      "pins": {
+        "implementation_base_commit": "2e1bceb254e29ffdf7fe46d49c8a67ff8426e23f",
+        "browser_relay_plan_sha256": "6c7661d9be861e4f8d13ccd5d2fd0f3eaa34ea2b4d7af2e9b41d1867d6c37211",
+        "browser_relay_case_scheduler_profile_sha256": "7452581c6b5e633c800b9e143e643f7a5386b303e5d553376846dbff83701120",
+        "browser_relay_chromium_case_adapter_profile_sha256": "2aa85ce1b4ce8fe99baa2523a9b4524b9b8c2a763c74fe6b17b312ee43e52d48",
+        "browser_relay_evidence_session_profile_sha256": "c51cbba4c3dc2f771e48f8d9e3e3f9908d48cc7e1c7eea0e6f3fa1835ed3024f",
+        "browser_relay_page_receipt_profile_sha256": "13c5329ae85e06f0e50f6a73c187918767bbac64edee9e0ff24e60142b671c95",
+        "browser_relay_playwright_bridge_profile_sha256": "d303d105a16168306739383fcb00c7eba3164d75c9ea657604aba2c949aeb6a7",
+        "browser_relay_runner_profile_sha256": "72b688ccd577f7b40b21d9f874bbca555324eaec1fbf2acbc87dee35cf83a536",
+        "browser_relay_scenario_fixture_profile_sha256": "6403bd381d04134e5a7725a4083b5aa74c27706dd56b53fe8a2925c67b0ce386",
+        "dependency_contracts_sha256": "3fa27b8ea5471db97d97092f47eb208a96e2b6e414e27921d5f15079ca898db0",
+        "adapter_source_sha256": "85e5da426b278d79513e84a75d15cafe69a596122c531a50adebfec9aac23c69",
+        "internal_source_sha256": "5102d9e921e1077d23b703658c120e5b38782c3e58aac35419baf7db43d2988a",
+        "testing_source_sha256": "fc424aae4bc254ad6c76308b3abc3d450a18bcb7c021f27db16ec5ca5f97f4df",
+        "guard_source_sha256": "4ec3e8ee9e0ca30985ad3d8f3e92834252221b5c87cdfd765812e368c492ebf1",
+        "unit_test_sha256": "c36d177f29e3de6cfd55731e69e1517b5675d9ae61fd9bacc3428977a30bf2bc",
+        "browser_smoke_sha256": "9fc5be0372ce4df3bcc8248a9b4bb65e6f191946d004748b2abec40446d5be6a",
+        "workflow_sha256": "b5e9ca6e4bcc840d69b7798be1b42c849dc22cc6192ab80b72b88d19fc7ba161"
+      },
+      "composition": {
+        "component_fields": [
+          "fixture",
+          "openChromiumPage",
+          "openSecondaryPage",
+          "prepareChromiumPhase",
+          "remainingAdapter"
+        ],
+        "fixture_methods": [
+          "stateExpectation",
+          "setTemperature",
+          "privateInput",
+          "rotateRelayToB"
+        ],
+        "remaining_adapter_methods": [
+          "startBrowser",
+          "execute",
+          "closePage",
+          "closeBrowser",
+          "close"
+        ],
+        "stage_order": [
+          {
+            "case_id": "LIVE-02",
+            "browser": "chromium"
+          },
+          {
+            "case_id": "LIVE-03",
+            "browser": "chromium"
+          },
+          {
+            "case_id": "LIVE-04",
+            "browser": "chromium"
+          },
+          {
+            "case_id": "LIVE-05",
+            "browser": "chromium"
+          },
+          {
+            "case_id": "LIVE-06",
+            "browser": "chromium"
+          },
+          {
+            "case_id": "LIVE-07",
+            "browser": "chromium"
+          },
+          {
+            "case_id": "LIVE-08",
+            "browser": "chromium"
+          },
+          {
+            "case_id": "LIVE-09",
+            "browser": "chromium"
+          },
+          {
+            "case_id": "LIVE-10",
+            "browser": "firefox"
+          },
+          {
+            "case_id": "LIVE-10",
+            "browser": "webkit"
+          },
+          {
+            "case_id": "LIVE-11",
+            "browser": "chromium"
+          }
+        ],
+        "browser_start_order": [
+          "chromium",
+          "firefox",
+          "webkit"
+        ],
+        "page_close_order": [
+          "firefox",
+          "webkit"
+        ],
+        "browser_close_order": [
+          "firefox",
+          "webkit",
+          "chromium"
+        ],
+        "secondary_browser_order": [
+          "firefox",
+          "webkit"
+        ],
+        "secondary_private_input_order": [
+          {
+            "browser": "firefox",
+            "identity_generation": 1
+          },
+          {
+            "browser": "webkit",
+            "identity_generation": 1
+          }
+        ],
+        "page_projection_fields": [
+          "call_observation",
+          "lifecycle_event",
+          "lifecycle_observation",
+          "observation",
+          "state_observation"
+        ],
+        "secondary_case_id": "LIVE-10",
+        "secondary_page_facts_per_browser": 3,
+        "bridge_receipt_producer_adapted": true,
+        "complete_fact_validated_before_projection": true,
+        "session_owns_authoritative_fact_envelope": true,
+        "session_owns_authoritative_receipt": true,
+        "bridge_receipt_is_page_closure_proof_only": true,
+        "remaining_browser_page_source_blocked": true,
+        "remaining_scope_nonserializable": true,
+        "remaining_scope_revoked_after_stage": true,
+        "shared_fixture_instance_required": true,
+        "fixture_creation_and_removal_owned_by_operation": true,
+        "fixture_lifecycle_methods_granted": false,
+        "page_projection_acknowledgement": "exact_true",
+        "page_projection_backpressure": true,
+        "cancellation_rechecked_before_external_action": true,
+        "caller_supplied_case_order": false,
+        "caller_supplied_page_fact_metadata": false,
+        "caller_supplied_timestamps": false,
+        "caller_supplied_receipts": false,
+        "caller_supplied_results": false,
+        "global_close_once": true,
+        "global_close_aborts_and_drains_bridges": true,
+        "global_close_drains_dependency_tasks": true,
+        "late_secondary_page_cleanup_before_remaining_close": true,
+        "global_close_drains_remaining_tasks": true
+      },
+      "trust_boundary": {
+        "ready_fixture_trusted": true,
+        "chromium_page_provider_trusted": true,
+        "chromium_phase_preparer_trusted": true,
+        "secondary_page_provider_trusted": true,
+        "remaining_adapter_trusted": true,
+        "same_realm_hostile_code_supported": false,
+        "isolated_process_present": false,
+        "validated_ipc_present": false,
+        "isolated_process_required_before_untrusted_live_wiring": true,
+        "validated_ipc_required_before_untrusted_live_wiring": true
+      },
+      "compatibility": {
+        "case_scheduler_composed": true,
+        "chromium_case_adapter_composed": true,
+        "evidence_session_composed_by_scheduler": true,
+        "scenario_fixture_interface_composed": true,
+        "complete_chromium_page_scenario_composed": true,
+        "complete_secondary_page_scenarios_composed": true,
+        "complete_three_browser_page_scenarios_composed": true,
+        "native_chromium_bfcache_composed": true,
+        "secondary_page_closure_proven": true,
+        "independent_live_source_adapters_present": false,
+        "secondary_live_browser_providers_present": false,
+        "dedicated_process_browser_driver_present": false,
+        "durable_claim_binding_present": false,
+        "live_operation_wired": false,
+        "hosting_publication_wired": false
+      },
+      "output": {
+        "runner_result_schema": "miakapp.staging-browser-relay-runner-result/1",
+        "partial_results_exposed": false,
+        "raw_facts_exposed": false,
+        "raw_browser_diagnostics_exposed": false,
+        "private_inputs_exposed": false,
+        "bridge_receipts_exposed": false,
+        "fixture_identity_exposed": false,
+        "underlying_errors_exposed": false
+      },
+      "authority": {
+        "cloud_mutation_authorized": false,
+        "hosting_publication_authorized": false,
+        "iam_binding_mutation_authorized": false,
+        "public_ingress_authorized": false,
+        "live_execution_authorized": false
+      },
+      "evidence": {
+        "state": "offline_only",
+        "offline_complete_compositions": 1,
+        "offline_secondary_browser_engines": 2,
+        "offline_secondary_page_projections": 6,
+        "offline_secondary_bridge_receipts": 2,
+        "offline_closed_runner_results": 1,
+        "live_source_facts": 0,
+        "cloud_requests": 0,
+        "cloud_mutations": 0,
+        "hosting_publications": 0,
+        "live_execution_count": 0,
+        "credentials_committed": false,
+        "raw_facts_committed": false
+      }
+    },
     "chromium_scenario_automation": {
       "state": "closed_complete_chromium_page_scenario_projected_with_backpressure_offline_proven_not_wired_not_live_executed",
       "profile_path": "browser-relay-chromium-scenario/profile.json",
