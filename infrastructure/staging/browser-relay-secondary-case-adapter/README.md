@@ -2,13 +2,13 @@
 
 This dormant source-only package inserts the existing Firefox and WebKit
 Playwright bridge into the fixed browser-relay case schedule. It layers between
-the Chromium case adapter and the remaining independent-source adapter, so the
+the Chromium case adapter and the independent case adapter, so the
 complete production import graph is:
 
-`case scheduler → Chromium case adapter → secondary case adapter → remaining adapter`.
+`case scheduler → Chromium case adapter → secondary case adapter → independent case adapter`.
 
 The caller supplies one shared ready scenario fixture, the reviewed Chromium
-page and phase providers, one trusted secondary page provider and the remaining
+page and phase providers, one trusted secondary page provider and the downstream
 five-method adapter. The same fixture instance supplies Chromium generations one
 and two, followed by Firefox generation one and WebKit generation one. Fixture
 creation, removal and final absence still belong to the future operation layer;
@@ -35,7 +35,9 @@ synchronous record call.
 The downstream scope rejects `browser_page` for every browser. Chromium page
 facts remain exclusively owned by the native Chromium adapter, Firefox/WebKit
 page facts by this adapter, and App Check, Hosting, control-plane, relay,
-coordinator, KMS and Firestore facts by the remaining adapter.
+coordinator, KMS and Firestore facts by the downstream adapter. The current
+independent case adapter fills that slot with seven source-owned observer
+capabilities in deterministic offline composition.
 
 ## Lifecycle and failure boundary
 

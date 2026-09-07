@@ -821,7 +821,7 @@ current consumer.
     fixed canonical fragments, with separate browser-relay scenario and
     operations owners, exact path, mount, byte-length and SHA-256 bindings,
     per-file ceilings and one aggregate ceiling while reconstructing the
-    revision-96 semantic object. The immutable original
+    revision-97 semantic object. The immutable original
     fixture still has three private page inputs, but a separate closed scenario fixture now
     supplies the fourth from a second genuine synthetic Firebase identity,
     extends the unique coordinator's state access to both identities and
@@ -864,10 +864,15 @@ current consumer.
     WebKit, validates all six complete facts before five-field projection into
     the two `LIVE-10` stages, treats the bridge receipts only as page-closure
     proof and closes the same 40 assertions with both real engines offline.
-    Next implement genuine independent source adapters plus trusted live page
-    providers, isolate browser ownership behind validated IPC, and bind the
-    scheduler/session to the durable operation claim before executing the matrix
-    once.
+    A final layered independent case adapter now fills the downstream slot with
+    seven fixed source observers and one browser-lifecycle owner. It grants each
+    source only a revocable observation-recording scope, derives source kind and
+    sequence, and closes all 43 independent observations plus the same result in
+    a complete offline schedule smoke with real pinned Firefox and WebKit pages
+    and the separately proven Chromium scenario. Next implement genuine source
+    transports plus trusted live page providers, isolate browser ownership
+    behind validated IPC, and bind the scheduler/session to the durable
+    operation claim before executing the matrix once.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform
     no-change plan. Its fresh post-merge preflight is complete and the rollback

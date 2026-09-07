@@ -1035,7 +1035,16 @@ vertical-slice exit gates.
    page/private-input acquisitions that can outlive the bridge result and closes
    a late page before downstream teardown. This is source-only implementation
    evidence, not a live browser provider or provenance boundary.
-   Genuine independent source adapters, trusted live-browser providers,
+   A final dormant independent case adapter now fills the remaining scheduler
+   slot with seven source-owned observer capabilities and a separate
+   browser-lifecycle owner. It derives the exact source kind and sequence,
+   validates each complete observation, projects only `{ observation }` into
+   the evidence session and preserves concurrency between sources in one case.
+   Its complete offline schedule smoke combines real pinned Firefox and WebKit
+   pages with the separately proven Chromium scenario, closes all 43 source
+   observations and the same 40-assertion result without creating a transport
+   or live authority.
+   Genuine independent source transports, trusted live-browser providers,
    dedicated-process IPC, durable operation/claim binding, Hosting publication
    and live authority remain open before the one allowed execution.
    Arbitrary self-hosted relay selection remains disabled until

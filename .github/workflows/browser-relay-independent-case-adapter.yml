@@ -1,0 +1,83 @@
+name: Browser relay independent case adapter
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/browser-relay-independent-case-adapter.yml'
+      - 'package.json'
+      - 'bun.lock'
+      - 'infrastructure/staging/browser-relay/**'
+      - 'infrastructure/staging/browser-relay-aggregator/**'
+      - 'infrastructure/staging/browser-relay-case-scheduler/**'
+      - 'infrastructure/staging/browser-relay-chromium-case-adapter/**'
+      - 'infrastructure/staging/browser-relay-chromium-scenario/**'
+      - 'infrastructure/staging/browser-relay-evidence-session/**'
+      - 'infrastructure/staging/browser-relay-independent-case-adapter/**'
+      - 'infrastructure/staging/browser-relay-independent-observers/**'
+      - 'infrastructure/staging/browser-relay-page/**'
+      - 'infrastructure/staging/browser-relay-page-receipt/**'
+      - 'infrastructure/staging/browser-relay-playwright-bridge/**'
+      - 'infrastructure/staging/browser-relay-runner/**'
+      - 'infrastructure/staging/browser-relay-scenario-fixture/**'
+      - 'infrastructure/staging/browser-relay-secondary-case-adapter/**'
+      - 'infrastructure/staging/test/browser-relay-independent-case-adapter*.mjs'
+      - 'infrastructure/staging/test/helpers/browser-relay-evidence-fixture.mjs'
+      - 'infrastructure/staging/test/helpers/browser-relay-independent-source-harness.mjs'
+      - 'infrastructure/staging/test/helpers/browser-relay-page-harness.mjs'
+      - 'infrastructure/staging/test/helpers/browser-relay-playwright-bridge-entry.mjs'
+  pull_request:
+    paths:
+      - '.github/workflows/browser-relay-independent-case-adapter.yml'
+      - 'package.json'
+      - 'bun.lock'
+      - 'infrastructure/staging/browser-relay/**'
+      - 'infrastructure/staging/browser-relay-aggregator/**'
+      - 'infrastructure/staging/browser-relay-case-scheduler/**'
+      - 'infrastructure/staging/browser-relay-chromium-case-adapter/**'
+      - 'infrastructure/staging/browser-relay-chromium-scenario/**'
+      - 'infrastructure/staging/browser-relay-evidence-session/**'
+      - 'infrastructure/staging/browser-relay-independent-case-adapter/**'
+      - 'infrastructure/staging/browser-relay-independent-observers/**'
+      - 'infrastructure/staging/browser-relay-page/**'
+      - 'infrastructure/staging/browser-relay-page-receipt/**'
+      - 'infrastructure/staging/browser-relay-playwright-bridge/**'
+      - 'infrastructure/staging/browser-relay-runner/**'
+      - 'infrastructure/staging/browser-relay-scenario-fixture/**'
+      - 'infrastructure/staging/browser-relay-secondary-case-adapter/**'
+      - 'infrastructure/staging/test/browser-relay-independent-case-adapter*.mjs'
+      - 'infrastructure/staging/test/helpers/browser-relay-evidence-fixture.mjs'
+      - 'infrastructure/staging/test/helpers/browser-relay-independent-source-harness.mjs'
+      - 'infrastructure/staging/test/helpers/browser-relay-page-harness.mjs'
+      - 'infrastructure/staging/test/helpers/browser-relay-playwright-bridge-entry.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Browser relay independent case adapter / validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      DEBUG: ''
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22.22.0
+          package-manager-cache: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: 1.2.23
+      - name: Install locked dependencies
+        run: bun install --frozen-lockfile
+      - name: Install full pinned Firefox, WebKit, and system dependencies
+        run: ./node_modules/.bin/playwright install --with-deps firefox webkit
+      - name: Validate source boundary and unit scenarios
+        run: |
+          node infrastructure/staging/browser-relay-independent-case-adapter/guard.mjs infrastructure/staging/browser-relay-independent-case-adapter
+          node --test infrastructure/staging/test/browser-relay-independent-case-adapter.test.mjs
+      - name: Exercise complete real offline Firefox and WebKit composition
+        run: node infrastructure/staging/test/browser-relay-independent-case-adapter-browser.mjs
