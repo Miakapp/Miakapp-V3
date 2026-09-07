@@ -68,7 +68,8 @@ function lifecycle(type) {
   return {
     schema: PAGE_LIFECYCLE_EVENT_SCHEMA,
     type,
-    visibility_state: type === 'pagehide' ? 'hidden' : 'visible',
+    dispatch_visibility_state: 'visible',
+    completed_visibility_state: type === 'pagehide' ? 'hidden' : 'visible',
     persisted: true,
   };
 }

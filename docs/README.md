@@ -52,8 +52,9 @@ implemented across several repositories.
   a 600-second Chromium budget; its two-file artifact is loaded in all three
   engines by an offline CI gate. Native non-persisted terminal fencing and
   separately explicit cleanup before replacement are proven using offline
-  fakes, not native async Firebase cleanup; native persisted BFCache remains
-  blocked by pinned Playwright, and live runner wiring remains absent.
+  fakes, not native async Firebase cleanup; its high-level Playwright BFCache
+  path remains blocked, while the separate native driver below closes that
+  offline proof without adding live runner wiring.
 - [`../infrastructure/staging/browser-relay-fixture/`](../infrastructure/staging/browser-relay-fixture/)
   — dormant single-fixture lifecycle controller with absence-gated creation and
   deletion, an exact synthetic MiakAPI coordinator, one fresh in-memory custom
@@ -88,16 +89,39 @@ implemented across several repositories.
   topology, attenuates all 67 page/source projections to their owning case,
   awaits browser start and page/browser/global closure, and returns only the
   closed runner result. It has no claim binding, concrete adapter or live authority.
+- [`../infrastructure/staging/browser-relay-chromium-scenario/`](../infrastructure/staging/browser-relay-chromium-scenario/)
+  — dormant two-page Chromium driver that owns the complete 18-fact page
+  scenario and closes the existing receipt producer offline. Its pinned CDP
+  restore requires trusted persisted page events plus an exact browser-level
+  `BackForwardCacheRestore`; current and latched diagnostics plus active
+  trace/HAR/video/logger capture are rejected before private input, and a
+  protocol lease blocks or latches reviewed observer transitions until page
+  cleanup. This is explicitly a trusted, exclusively owned Playwright-process
+  harness, not a same-realm sandbox: the injected providers, page navigation,
+  content/init scripts and quiescent connection are trusted. Untrusted live
+  wiring requires dedicated-process browser ownership and validated narrow IPC.
+  Within that boundary, a main-frame instrumentation lease keeps ordinary
+  Playwright test listeners off the private argument path and bypasses
+  caller-owned page wrappers. The production path
+  additionally records exact Page/Frame/channel identities while the pinned
+  factories create them and locks the trusted evaluation channel, ChannelOwner
+  helpers and connection transport callback; forged prototypes, channels,
+  protocol methods and transport hooks fail before
+  token acquisition. Cleanup bypasses caller-owned close methods and accepts a
+  close only after native state plus Page/Frame connection removal agree.
+  Fixture/scheduler composition and live authority remain absent.
 - [`../infrastructure/staging/browser-relay-playwright-bridge/`](../infrastructure/staging/browser-relay-playwright-bridge/)
   — dormant fail-closed Playwright page-to-receipt bridge with lazy private
   input acquisition and owned page cleanup; real Firefox and WebKit engines
-  close exact page receipts offline, while Chromium remains blocked before
-  page or private-input acquisition by pinned Playwright's BFCache limitation.
+  close exact page receipts offline, while this legacy path intentionally keeps
+  Chromium blocked before page or private-input acquisition by pinned
+  Playwright's high-level BFCache limitation.
 - [`../infrastructure/staging/browser-relay-page-receipt/`](../infrastructure/staging/browser-relay-page-receipt/)
   — dormant browser-owned receipt producer that reduces exact cumulative page,
   state, call and native lifecycle facts without accepting assertion booleans;
   revision 2 is digest-bound to the adjacent bridge and combines with every
-  independent source offline, while the complete live Chromium scenario remains open.
+  independent source offline. The standalone driver now closes its full
+  Chromium input; live cross-source composition remains open.
 - [`../infrastructure/staging/browser-relay-scenario-fixture/`](../infrastructure/staging/browser-relay-scenario-fixture/)
   — dormant composition around the immutable fixture that supplies four exact
   page inputs across two genuine synthetic Firebase identities, extends the one
@@ -204,7 +228,7 @@ byte-for-byte and pins the merged revision-2 page profile plus its independent
 three-engine offline CI proof. The archived `profile-v2.json` preserves that
 claim, while current page revision 3 pins unchanged plan 15. The staging manifest
 bundle uses a small canonical index and four fixed, size- and digest-bound
-fragments while assembling the current revision-93 semantic object. It
+fragments while assembling the current revision-94 semantic object. It
 retains the byte-exact earlier zero-relay plan used
 by the image build, revision 9 used by the runner, revision 10 used by
 monitoring, revision 11 used by rollback and revision 12 used by the
@@ -225,8 +249,21 @@ native pagehide proves synchronous terminal fencing and zero active sockets;
 IndexedDB is blocked while stopping or restored after stopped. It does not
 prove completion of asynchronous Firebase cleanup.
 Playwright 1.62.1 explicitly does not support BFCache testing: native persisted
-restoration remains `blocked_by_pinned_playwright`, and simulated trusted
-persisted unit events are not native BFCache proof. These checks provide no
+restoration remains `blocked_by_pinned_playwright` in the high-level bridge, and
+simulated trusted persisted unit events are not native BFCache proof. A separate
+pinned-CDP driver now owns two Chromium pages, drives all 18 facts into the real
+receipt producer and accepts restoration only when trusted persisted page
+events agree with an exact browser-level `BackForwardCacheRestore`. Its full
+Chromium smoke also proves that an active trace is rejected before token
+acquisition and that an unawaited trace-chunk transition cannot reach a
+  token-bearing page action. It also installs a real Playwright instrumentation
+  listener and proves that the listener receives no token within the explicitly
+  trusted, exclusively owned process boundary. The injected providers and page
+  content are not an adversarial same-realm confidentiality boundary. The same smoke rejects
+forged Frame prototypes, replacement channels, injected channel evaluation
+methods, ChannelOwner/transport shadows and a caller-owned no-op close before
+private input is requested, while still proving native page closure. The smoke
+remains offline: these checks provide no
 cloud, publication or live acceptance. The separate closed aggregator assigns
 all browser
 and cloud assertions, counters and public identifiers to non-overlapping source
@@ -260,12 +297,17 @@ revision 3. The replacement adapter resolves only the second-identity cloud
 implementation gap and has not been live wired or executed. The separate
 Playwright bridge now proves the real offline Firefox and WebKit
 page-to-receipt transport with lazy private inputs and owned cleanup. Chromium
-still fails closed before page or private-input acquisition because pinned
-Playwright cannot prove native persisted BFCache restoration. None of these
-packages grants Hosting publication or live authority; the complete Chromium
-scenario, a BFCache-capable automation path, genuine source adapters and binding
-the scheduler/session to the durable operation claim must close before the one
-allowed live matrix can execute.
+still fails closed in that legacy bridge before page or private-input
+acquisition because pinned Playwright cannot prove native persisted BFCache
+restoration. The dedicated Chromium driver closes the complete page scenario
+and BFCache automation gap offline without weakening that blocker. Its native
+witness records Chromium's visible `pagehide` dispatch, later trusted hidden
+transition and visible `pageshow` separately, under the reviewed Hosting
+`no-store` and security-header policy. None of
+these packages grants Hosting publication or live authority; composing the
+fixture/controller, genuine source adapters and Chromium driver into the
+scheduler/session and binding that graph to the durable operation claim must
+close before the one allowed live matrix can execute.
 
 Repository-specific implementation plans must link back to these documents and
 must not redefine a shared contract locally.

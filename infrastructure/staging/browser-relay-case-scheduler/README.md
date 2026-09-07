@@ -65,5 +65,7 @@ future live import graph.
 This directory contains no browser launcher, network or cloud client, credential
 source, environment reader, CLI, durable-claim binding, operation adapter,
 publication or mutation path. Importing it performs no live work. Genuine source
-adapters, operation/claim binding, complete Chromium automation and native
-BFCache proof remain required before the single live matrix can be authorized.
+adapters and operation/claim binding remain required before the single live
+matrix can be authorized. The separate Chromium scenario package now proves
+the complete 18-fact page path and native BFCache restoration offline, but it
+has not yet been composed as this scheduler's concrete page adapter.

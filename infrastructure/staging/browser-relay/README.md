@@ -181,11 +181,16 @@ A dedicated keyless CI gate loads the dormant
 artifact without external network access in all three browser engines and
 proves explicit cleanup before sequential identity replacement using offline
 fakes. The later trusted non-persisted native pagehide proves synchronous
-terminal fencing, not completion of asynchronous Firebase cleanup. Native
-persisted BFCache restoration remains
-unproven: pinned Playwright 1.62.1 explicitly does not support that testing, and
-simulated persisted unit events do not satisfy the native requirement. The
-package
+terminal fencing, not completion of asynchronous Firebase cleanup. Pinned
+Playwright 1.62.1 explicitly does not support high-level BFCache testing, so
+the legacy bridge remains blocked for Chromium and simulated persisted unit
+events still do not count as native proof. The separate dormant
+[`browser-relay-chromium-scenario/`](../browser-relay-chromium-scenario/)
+driver now closes that standalone automation gap offline: it combines the
+trusted persisted page lifecycle sequence with the exact CDP
+`BackForwardCacheRestore` event while serving the reviewed Hosting cache and
+security headers. It is not yet composed with the scenario fixture or case
+scheduler and grants no live authority. The page package
 contains no publisher or live authority. Revision 15 retains its exact
 revision-2 profile and merged CI implementation pins; `profile-v2.json` preserves
 those page bytes. This plan still records every `LIVE-*` case as pending.

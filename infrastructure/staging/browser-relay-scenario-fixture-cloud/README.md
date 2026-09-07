@@ -37,8 +37,9 @@ confirm absence but cannot delete an identity appearing in the meantime.
 
 This source package grants no mutation or execution authority by itself. It has
 not contacted Google or Firebase, and it remains disconnected from the live
-operation. The offline Playwright bridge is present, but the Chromium BFCache
-capability and independent-observer gates remain open.
+operation. The standalone Chromium driver now proves the complete page and
+native BFCache path offline, but this adapter is not composed into it and the
+independent live-observer gates remain open.
 
 Validate it with:
 
