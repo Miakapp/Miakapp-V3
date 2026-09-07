@@ -810,13 +810,16 @@ current consumer.
     ports accept projections only, derive all envelopes and timing, enforce
     Firefox then WebKit between Chromium LIVE-09 and LIVE-11, and revoke/clear
     on every terminal path. The closed runner-result boundary now permits those
-    overlapping spans when exact offsets are supplied. Live wiring must still
-    bind the session to the durable claim and add the case-level scheduler and
-    genuine source adapters. The manifest
+    overlapping spans when exact offsets are supplied. A separate dormant case
+    scheduler now runs the exact 11-stage `LIVE-02..LIVE-11` topology, partitions
+    all 67 projections into revoked case/browser scopes, awaits explicit adapter
+    browser-start and page/browser/global-close boundaries, and emits only the
+    closed session result. Live wiring must still bind the scheduler/session to
+    the durable claim and add genuine source adapters. The manifest
     capacity prerequisite is now closed: the stable entry point indexes four
     fixed canonical fragments with exact path, mount, byte-length and SHA-256
     bindings, per-file ceilings and one aggregate ceiling while reconstructing
-    the revision-92 semantic object. The immutable original
+    the revision-93 semantic object. The immutable original
     fixture still has three private page inputs, but a separate closed scenario fixture now
     supplies the fourth from a second genuine synthetic Firebase identity,
     extends the unique coordinator's state access to both identities and

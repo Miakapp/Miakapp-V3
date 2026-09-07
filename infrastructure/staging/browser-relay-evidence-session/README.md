@@ -31,7 +31,9 @@ raw facts, receipts and capability identity remain private.
 
 This is an offline composition primitive, not live provenance yet. It is not
 bound to the durable orchestrator claim, is not passed into the operation
-envelope, and has no scheduler or source adapter. The directory contains no
+envelope, and this directory contains no scheduler or source adapter. The
+separate `browser-relay-case-scheduler` package now composes the production
+session entrypoint without granting live authority. This directory contains no
 HTTP client, browser launcher, credential loader, CLI, environment reader,
 cloud mutation or publication path. Importing it performs no browser, network
 or cloud work. Those remaining bindings require a later reviewed integration.
