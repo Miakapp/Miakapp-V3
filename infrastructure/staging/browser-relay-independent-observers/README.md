@@ -44,8 +44,13 @@ bracketed: Firefox and WebKit share Chromium's activation revision and each
 secondary browser window must fall after the Chromium page receipt closes
 LIVE-09 but before Chromium begins LIVE-11. The current
 runner's whole-engine Chromium-then-Firefox-then-WebKit loop cannot express
-that ordering and is explicitly incompatible; live orchestration must
-interleave the global cases and close engine aggregates afterward.
+that ordering and is explicitly incompatible; the result boundary now accepts
+reviewed overlapping engine spans when their exact operation offsets are
+provided, while its two-argument legacy mode retains the sequential duration
+invariant. The offset-aware path rejects reversed or overlapping secondary
+engine spans and requires WebKit to finish before Chromium begins LIVE-11.
+Live orchestration must still interleave the global cases and close engine
+aggregates afterward.
 
 These pure producers do not yet authenticate source provenance. A later live
 adapter must acquire every fact, browser-start offset and page-receipt-close

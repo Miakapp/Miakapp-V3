@@ -193,6 +193,60 @@ test('rejects false assertions, private output, unknown fields and aggregate bud
   assert.throws(() => buildClosedRunnerResult(excessive, 200_000), /outside its reviewed bound/u);
 });
 
+test('accepts overlapping engine spans only with exact operation offsets', () => {
+  const overlapping = BROWSER_ORDER.map((browser) => engineResult(browser, {
+    duration_milliseconds: browser === 'chromium' ? 600_000 : 2_000,
+  }));
+  assert.throws(
+    () => buildClosedRunnerResult(overlapping, 600_000),
+    /shorter than its engine durations/u,
+  );
+
+  const starts = { chromium: 0, firefox: 551_000, webkit: 554_000 };
+  const result = buildClosedRunnerResult(overlapping, 600_000, starts);
+  assert.equal(result.duration_milliseconds, 600_000);
+  assert.deepEqual(result.engine_results.map((entry) => entry.duration_milliseconds), [
+    600_000,
+    2_000,
+    2_000,
+  ]);
+
+  assert.throws(
+    () => buildClosedRunnerResult(overlapping, 600_000, {
+      chromium: 0,
+      firefox: 551_000,
+    }),
+    /exactly the reviewed fields/u,
+  );
+  assert.throws(
+    () => buildClosedRunnerResult(overlapping, 600_000, {
+      ...starts,
+      chromium: 1,
+    }),
+    /chromium has drifted/u,
+  );
+  assert.throws(
+    () => buildClosedRunnerResult(overlapping, 600_000, {
+      ...starts,
+      webkit: 599_000,
+    }),
+    /webkit engine duration exceeds the runner timeline/u,
+  );
+  assert.throws(
+    () => buildClosedRunnerResult(overlapping, 600_000, {
+      ...starts,
+      webkit: 552_000,
+    }),
+    /secondary engine spans are not strictly ordered/u,
+  );
+  const shortChromium = overlapping.map((entry) => structuredClone(entry));
+  shortChromium[0].duration_milliseconds = 555_000;
+  assert.throws(
+    () => buildClosedRunnerResult(shortChromium, 600_000, starts),
+    /secondary engine spans are not contained by Chromium/u,
+  );
+});
+
 test('collapses browser and private-input failures without retaining arbitrary diagnostics', async () => {
   const calls = [];
   const receivedInputs = [];

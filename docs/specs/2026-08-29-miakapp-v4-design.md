@@ -957,12 +957,19 @@ vertical-slice exit gates.
    retains no raw cloud response, log entry, document, private identifier or
    credential. Its receipts combine offline with the three page receipts into
    all 40 runner assertions, while live source acquisition remains absent.
-   Before live wiring, one non-exportable operation capability and common
-   monotonic epoch must bind every source and reject replayed, persisted or
-   cross-operation evidence. The current whole-engine sequential runner is not
-   compatible with the canonical case order: live orchestration must run the
-   Firefox/WebKit case after V2 activation and before V1 retirement, then close
-   the engine aggregates.
+   A separate dormant evidence session now implements the operation-local half
+   of that boundary. It owns one non-serializable capability and monotonic epoch,
+   issues ports attenuated to one browser/source, derives fact envelopes and
+   timing, rejects caller timestamps/sequences/receipts, enforces Firefox then
+   WebKit between LIVE-09 and LIVE-11, and revokes and clears all retained facts
+   on every terminal path. The runner-result contract accepts the resulting
+   overlapping spans with exact offsets while retaining its legacy sequential
+   mode. The production entrypoint captures its system clock at module
+   initialization and accepts no injected clock; the explicit testing
+   entrypoint and its shared internal implementation are not authorized in a
+   future live import graph. This is offline implementation evidence only:
+   live orchestration must still bind the session to the durable claim and
+   connect the case scheduler and genuine source adapters.
    A separate closed scenario fixture now supplies the required fourth page
    input from a second exact synthetic Firebase identity, extends the one
    coordinator's state access to both identities and requires both cleanup

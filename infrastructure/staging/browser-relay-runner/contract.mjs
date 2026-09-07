@@ -369,7 +369,11 @@ export function validateEngineResult(value, browser) {
   });
 }
 
-export function buildClosedRunnerResult(engineResults, durationMilliseconds) {
+export function buildClosedRunnerResult(
+  engineResults,
+  durationMilliseconds,
+  browserStartElapsedMilliseconds = undefined,
+) {
   if (!Array.isArray(engineResults) || engineResults.length !== BROWSER_ORDER.length) {
     reject('Runner requires exactly three engine results');
   }
@@ -378,12 +382,45 @@ export function buildClosedRunnerResult(engineResults, durationMilliseconds) {
   const validated = engineResults.map((result, index) => (
     validateEngineResult(result, BROWSER_ORDER[index])
   ));
-  const reportedDuration = validated.reduce(
-    (total, result) => total + result.duration_milliseconds,
-    0,
-  );
-  if (reportedDuration > durationMilliseconds) {
-    reject('Runner duration is shorter than its engine durations');
+  if (browserStartElapsedMilliseconds === undefined) {
+    const reportedDuration = validated.reduce(
+      (total, result) => total + result.duration_milliseconds,
+      0,
+    );
+    if (reportedDuration > durationMilliseconds) {
+      reject('Runner duration is shorter than its engine durations');
+    }
+  } else {
+    const browserStarts = exactKeys(
+      browserStartElapsedMilliseconds,
+      BROWSER_ORDER,
+      'runner.browser_start_elapsed_milliseconds',
+    );
+    const browserEnds = {};
+    exact(
+      browserStarts.chromium,
+      0,
+      'runner.browser_start_elapsed_milliseconds.chromium',
+    );
+    for (const [index, browser] of BROWSER_ORDER.entries()) {
+      const start = boundedInteger(
+        browserStarts[browser],
+        0,
+        durationMilliseconds,
+        `runner.browser_start_elapsed_milliseconds.${browser}`,
+      );
+      if (start + validated[index].duration_milliseconds > durationMilliseconds) {
+        reject(`${browser} engine duration exceeds the runner timeline`);
+      }
+      browserEnds[browser] = start + validated[index].duration_milliseconds;
+    }
+    if (browserStarts.firefox <= browserStarts.chromium
+      || browserEnds.firefox >= browserStarts.webkit) {
+      reject('Runner secondary engine spans are not strictly ordered');
+    }
+    if (browserEnds.webkit >= browserEnds.chromium) {
+      reject('Runner secondary engine spans are not contained by Chromium');
+    }
   }
   const sum = (key) => validated.reduce((total, result) => total + result.counters[key], 0);
   const counters = {
