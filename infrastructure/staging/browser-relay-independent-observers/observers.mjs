@@ -371,7 +371,12 @@ function operationFactElapsed(factValuesByBrowser, browserStarts, browser, sourc
     + factElapsed(factValuesByBrowser[browser], source, kind);
 }
 
-function validateCrossBrowserTimeline(factValuesByBrowser, browserStarts, pageReceiptCloses) {
+function validateCrossBrowserTimeline(
+  factValuesByBrowser,
+  browserStarts,
+  pageReceiptCloses,
+  durations,
+) {
   const liveEightCompleted = operationFactElapsed(
     factValuesByBrowser,
     browserStarts,
@@ -386,8 +391,16 @@ function validateCrossBrowserTimeline(factValuesByBrowser, browserStarts, pageRe
     'control_plane',
     'version_1_jwk_retained',
   );
+  const firefoxFinished = browserStarts.firefox + durations.firefox;
+  const webkitFinished = browserStarts.webkit + durations.webkit;
   if (pageReceiptCloses.chromium <= liveEightCompleted) {
     reject('Chromium page receipt does not close after the final LIVE-08 signal');
+  }
+  if (firefoxFinished >= browserStarts.webkit) {
+    reject('Firefox does not finish before the WebKit browser window starts');
+  }
+  if (webkitFinished >= liveElevenStarted) {
+    reject('WebKit does not finish before Chromium LIVE-11 starts');
   }
   for (const browser of ['firefox', 'webkit']) {
     const operationElapsed = Object.values(factValuesByBrowser[browser])
@@ -477,7 +490,12 @@ export function produceBrowserRelayIndependentRunnerResult(value) {
       reject(`${browser} page receipt closure is outside its browser window`);
     }
   }
-  validateCrossBrowserTimeline(factsByBrowser, browserStarts, pageReceiptCloses);
+  validateCrossBrowserTimeline(
+    factsByBrowser,
+    browserStarts,
+    pageReceiptCloses,
+    durations,
+  );
   const engineResults = BROWSER_ORDER.map((browser) => {
     const receiptsBySource = Object.fromEntries(
       independentReceipts[browser].map((receipt) => [receipt.source, receipt]),
@@ -487,5 +505,9 @@ export function produceBrowserRelayIndependentRunnerResult(value) {
     ));
     return aggregateClosedBrowserRelayEngineEvidence(browser, receipts, durations[browser]);
   });
-  return buildClosedRunnerResult(engineResults, input.total_duration_milliseconds);
+  return buildClosedRunnerResult(
+    engineResults,
+    input.total_duration_milliseconds,
+    browserStarts,
+  );
 }

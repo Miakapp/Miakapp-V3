@@ -804,14 +804,19 @@ current consumer.
     Firestore receipts across the three browsers. Combined offline with the
     page receipts, they close all 18 aggregator inputs and 40 runner assertions
     without accepting assertion maps or retaining raw source material. They
-    have no live source adapters or execution authority. Live wiring must first
-    add a single non-replayable operation capability and common monotonic epoch
-    across every source, and replace the current whole-engine sequential runner
-    with case-level interleaving so LIVE-10 remains before LIVE-11. The manifest
+    have no live source adapters or execution authority. A separate dormant
+    evidence session now provides one non-serializable, operation-local
+    capability and common monotonic epoch across every source. Its attenuated
+    ports accept projections only, derive all envelopes and timing, enforce
+    Firefox then WebKit between Chromium LIVE-09 and LIVE-11, and revoke/clear
+    on every terminal path. The closed runner-result boundary now permits those
+    overlapping spans when exact offsets are supplied. Live wiring must still
+    bind the session to the durable claim and add the case-level scheduler and
+    genuine source adapters. The manifest
     capacity prerequisite is now closed: the stable entry point indexes four
     fixed canonical fragments with exact path, mount, byte-length and SHA-256
     bindings, per-file ceilings and one aggregate ceiling while reconstructing
-    the unchanged revision-91 semantic object. The immutable original
+    the revision-92 semantic object. The immutable original
     fixture still has three private page inputs, but a separate closed scenario fixture now
     supplies the fourth from a second genuine synthetic Firebase identity,
     extends the unique coordinator's state access to both identities and

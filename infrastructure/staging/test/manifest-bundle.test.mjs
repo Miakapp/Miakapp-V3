@@ -83,7 +83,7 @@ function rejectsFixture(mutator, pattern) {
   }
 }
 
-test('assembles the canonical committed bundle into the unchanged semantic manifest', () => {
+test('assembles the canonical committed bundle into the current semantic manifest', () => {
   const manifest = loadStagingManifestBundle(committedIndexPath);
   assert.deepEqual(Object.keys(manifest), [
     'schema',
@@ -134,6 +134,7 @@ test('assembles the canonical committed bundle into the unchanged semantic manif
     'browser_relay_fixture_miakapi',
     'browser_relay_aggregator',
     'browser_relay_independent_observers',
+    'browser_relay_evidence_session',
     'browser_relay_playwright_bridge',
     'browser_relay_page_receipt',
     'browser_relay_scenario_fixture',
@@ -154,7 +155,7 @@ test('assembles the canonical committed bundle into the unchanged semantic manif
     'environment_decision',
   ]);
   assert.equal(manifest.schema, 'miakapp.staging-intent/1');
-  assert.equal(manifest.revision, 91);
+  assert.equal(manifest.revision, 92);
   assert.equal(manifest.project.project_id, 'miakapp-v4-staging');
   assert.equal(manifest.terraform.bootstrap_execution.bootstrap_completed, true);
   assert.equal(
