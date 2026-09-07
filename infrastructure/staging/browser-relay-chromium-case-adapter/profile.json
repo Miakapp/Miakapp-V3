@@ -1,0 +1,236 @@
+{
+  "schema": "miakapp.staging-browser-relay-chromium-case-adapter-profile/1",
+  "revision": 1,
+  "state": "closed_chromium_scenario_case_scheduler_composition_offline_proven_not_live_wired_not_executed",
+  "target": {
+    "project_id": "miakapp-v4-staging",
+    "project_number": "1072737219170",
+    "region": "europe-west9",
+    "data_policy": "synthetic_only",
+    "cloud_compute_resources": 0,
+    "unscheduled": true
+  },
+  "pins": {
+    "implementation_base_commit": "04037dfd9b15a328a03611c80256589844fc2a1d",
+    "browser_relay_plan_sha256": "6c7661d9be861e4f8d13ccd5d2fd0f3eaa34ea2b4d7af2e9b41d1867d6c37211",
+    "browser_relay_case_scheduler_profile_sha256": "7452581c6b5e633c800b9e143e643f7a5386b303e5d553376846dbff83701120",
+    "browser_relay_chromium_scenario_profile_sha256": "7c7ccfba00f3755c15f2533aa09048d35de39400ba1bfdf310898b5d7112f290",
+    "browser_relay_scenario_fixture_profile_sha256": "6403bd381d04134e5a7725a4083b5aa74c27706dd56b53fe8a2925c67b0ce386",
+    "browser_relay_evidence_session_profile_sha256": "c51cbba4c3dc2f771e48f8d9e3e3f9908d48cc7e1c7eea0e6f3fa1835ed3024f",
+    "browser_relay_page_receipt_profile_sha256": "13c5329ae85e06f0e50f6a73c187918767bbac64edee9e0ff24e60142b671c95",
+    "browser_relay_runner_profile_sha256": "72b688ccd577f7b40b21d9f874bbca555324eaec1fbf2acbc87dee35cf83a536",
+    "dependency_contracts_sha256": "5fe5699a6a2c603cab69632682bb546b127092bac34c8b9e0eb96e641be0f774",
+    "adapter_source_sha256": "58b7b519b9ab55c0deb89655f30fbdc5a0cec0d2818849220e3f7abce7178988",
+    "internal_source_sha256": "16b2b8096e7dcb4ef8cf29118de696e6b553b549343afc97794994b5901a1b87",
+    "testing_source_sha256": "6461713caf9b0212b8b153aa3c2321550c58d3023471fa0880f4449080adca6a",
+    "guard_source_sha256": "375aaeb28adb7b21641ff01ebe08efe0825d4df22f36097b92740b061bfec0d8",
+    "unit_test_sha256": "ab9144f7b27e785a0f1613c86ac86c1b6a5d20bee5f9ba47a0b5533d0226db69",
+    "workflow_sha256": "f4b0f6b60b0fa4c311ed4228d9b196ec6fce00ed4bc4196e3cbf6fdea5c7a02b"
+  },
+  "composition": {
+    "component_fields": [
+      "fixture",
+      "openChromiumPage",
+      "prepareChromiumPhase",
+      "remainingAdapter"
+    ],
+    "fixture_methods": [
+      "stateExpectation",
+      "setTemperature",
+      "privateInput",
+      "rotateRelayToB"
+    ],
+    "remaining_adapter_methods": [
+      "startBrowser",
+      "execute",
+      "closePage",
+      "closeBrowser",
+      "close"
+    ],
+    "stage_order": [
+      {
+        "case_id": "LIVE-02",
+        "browser": "chromium"
+      },
+      {
+        "case_id": "LIVE-03",
+        "browser": "chromium"
+      },
+      {
+        "case_id": "LIVE-04",
+        "browser": "chromium"
+      },
+      {
+        "case_id": "LIVE-05",
+        "browser": "chromium"
+      },
+      {
+        "case_id": "LIVE-06",
+        "browser": "chromium"
+      },
+      {
+        "case_id": "LIVE-07",
+        "browser": "chromium"
+      },
+      {
+        "case_id": "LIVE-08",
+        "browser": "chromium"
+      },
+      {
+        "case_id": "LIVE-09",
+        "browser": "chromium"
+      },
+      {
+        "case_id": "LIVE-10",
+        "browser": "firefox"
+      },
+      {
+        "case_id": "LIVE-10",
+        "browser": "webkit"
+      },
+      {
+        "case_id": "LIVE-11",
+        "browser": "chromium"
+      }
+    ],
+    "chromium_page_stage_by_sequence": [
+      "LIVE-04",
+      "LIVE-04",
+      "LIVE-04",
+      "LIVE-04",
+      "LIVE-04",
+      "LIVE-05",
+      "LIVE-06",
+      "LIVE-06",
+      "LIVE-06",
+      "LIVE-06",
+      "LIVE-08",
+      "LIVE-08",
+      "LIVE-09",
+      "LIVE-09",
+      "LIVE-09",
+      "LIVE-09",
+      "LIVE-09",
+      "LIVE-09"
+    ],
+    "chromium_control_stage_by_phase": {
+      "authoritative_state": "LIVE-04",
+      "patched_state": "LIVE-04",
+      "initial_call": "LIVE-04",
+      "same_relay_reauthenticated": "LIVE-05",
+      "relay_handoff_stale": "LIVE-06",
+      "relay_b_ready": "LIVE-06",
+      "relay_b_state": "LIVE-06",
+      "relay_b_call": "LIVE-06",
+      "failed_call": "LIVE-08",
+      "uncertain_call": "LIVE-08",
+      "relay_b_recovered": "LIVE-08"
+    },
+    "page_projection_fields": [
+      "call_observation",
+      "lifecycle_event",
+      "lifecycle_observation",
+      "observation",
+      "state_observation"
+    ],
+    "browser_start_order": [
+      "chromium",
+      "firefox",
+      "webkit"
+    ],
+    "page_close_order": [
+      "chromium",
+      "firefox",
+      "webkit"
+    ],
+    "browser_close_order": [
+      "firefox",
+      "webkit",
+      "chromium"
+    ],
+    "scenario_starts_in_case": "LIVE-04",
+    "fact_12_acknowledgement_waits_for_case": "LIVE-09",
+    "chromium_page_close_proof": "validated_native_scenario_result",
+    "remaining_chromium_page_source_blocked": true,
+    "remaining_scope_nonserializable": true,
+    "remaining_scope_revoked_after_stage": true,
+    "fixture_creation_and_removal_owned_by_operation": true,
+    "fixture_lifecycle_methods_granted": false,
+    "page_projection_acknowledgement": "exact_true",
+    "page_projection_backpressure": true,
+    "cancellation_rechecked_before_external_action": true,
+    "caller_supplied_case_order": false,
+    "caller_supplied_page_fact_metadata": false,
+    "caller_supplied_timestamps": false,
+    "caller_supplied_results": false,
+    "global_close_once": true,
+    "global_close_aborts_and_drains_scenario": true,
+    "global_close_drains_remaining_tasks": true
+  },
+  "controls": {
+    "authoritative_state": "fixture_state_expectation",
+    "patched_state": "fixture_set_temperature_21",
+    "initial_call": "call_target_21",
+    "same_relay_reauthenticated": "prepare_only",
+    "relay_handoff_stale": "fixture_rotate_relay_to_b",
+    "relay_b_ready": "prepare_only",
+    "relay_b_state": "fixture_state_expectation",
+    "relay_b_call": "call_target_22",
+    "failed_call": "call_target_23",
+    "uncertain_call": "call_target_24",
+    "relay_b_recovered": "fixture_set_temperature_23"
+  },
+  "trust_boundary": {
+    "ready_fixture_trusted": true,
+    "page_provider_trusted": true,
+    "phase_preparer_trusted": true,
+    "remaining_adapter_trusted": true,
+    "same_realm_hostile_code_supported": false,
+    "isolated_process_present": false,
+    "validated_ipc_present": false,
+    "isolated_process_required_before_untrusted_live_wiring": true,
+    "validated_ipc_required_before_untrusted_live_wiring": true
+  },
+  "compatibility": {
+    "case_scheduler_composed": true,
+    "evidence_session_composed_by_scheduler": true,
+    "scenario_fixture_interface_composed": true,
+    "complete_chromium_page_scenario_composed": true,
+    "native_chromium_bfcache_composed": true,
+    "chromium_page_closure_proven": true,
+    "independent_live_source_adapters_present": false,
+    "secondary_live_browser_drivers_present": false,
+    "durable_claim_binding_present": false,
+    "live_operation_wired": false,
+    "hosting_publication_wired": false
+  },
+  "output": {
+    "runner_result_schema": "miakapp.staging-browser-relay-runner-result/1",
+    "partial_results_exposed": false,
+    "raw_facts_exposed": false,
+    "raw_browser_diagnostics_exposed": false,
+    "private_inputs_exposed": false,
+    "fixture_identity_exposed": false,
+    "underlying_errors_exposed": false
+  },
+  "authority": {
+    "cloud_mutation_authorized": false,
+    "hosting_publication_authorized": false,
+    "iam_binding_mutation_authorized": false,
+    "public_ingress_authorized": false,
+    "live_execution_authorized": false
+  },
+  "evidence": {
+    "state": "offline_only",
+    "offline_complete_compositions": 1,
+    "offline_chromium_page_projections": 18,
+    "offline_closed_runner_results": 1,
+    "live_source_facts": 0,
+    "cloud_requests": 0,
+    "cloud_mutations": 0,
+    "hosting_publications": 0,
+    "live_execution_count": 0,
+    "credentials_committed": false,
+    "raw_facts_committed": false
+  }
+}

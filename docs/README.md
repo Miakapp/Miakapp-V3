@@ -88,7 +88,18 @@ implemented across several repositories.
   — dormant case scheduler that runs the exact 11-stage `LIVE-02..LIVE-11`
   topology, attenuates all 67 page/source projections to their owning case,
   awaits browser start and page/browser/global closure, and returns only the
-  closed runner result. It has no claim binding, concrete adapter or live authority.
+  closed runner result. Its concrete Chromium adapter is the separate dormant
+  package below; claim binding, the secondary-browser adapters and live
+  authority remain absent.
+- [`../infrastructure/staging/browser-relay-chromium-case-adapter/`](../infrastructure/staging/browser-relay-chromium-case-adapter/)
+  — dormant source-only composition of a ready-only four-method fixture facade, native
+  two-page Chromium scenario and fixed case scheduler. It maps all 18 page
+  projections and 11 fixture controls onto their exact `LIVE-04..LIVE-09`
+  stages, holds fact 12 until `LIVE-09` before BFCache work can begin, delegates
+  every independent source and secondary browser, and aborts and drains the
+  scenario plus delegated work before one global close. Its offline integration closes all 40
+  runner assertions without granting fixture lifecycle, cloud, Hosting,
+  operation or live-execution authority.
 - [`../infrastructure/staging/browser-relay-chromium-scenario/`](../infrastructure/staging/browser-relay-chromium-scenario/)
   — dormant two-page Chromium driver that owns the complete 18-fact page
   scenario and closes the existing receipt producer offline. Its pinned CDP
@@ -109,7 +120,8 @@ implemented across several repositories.
   protocol methods and transport hooks fail before
   token acquisition. Cleanup bypasses caller-owned close methods and accepts a
   close only after native state plus Page/Frame connection removal agree.
-  Fixture/scheduler composition and live authority remain absent.
+  Its awaited five-field projection port is now consumed by the dormant case
+  adapter above. Live source acquisition and execution authority remain absent.
 - [`../infrastructure/staging/browser-relay-playwright-bridge/`](../infrastructure/staging/browser-relay-playwright-bridge/)
   — dormant fail-closed Playwright page-to-receipt bridge with lazy private
   input acquisition and owned page cleanup; real Firefox and WebKit engines
@@ -120,8 +132,9 @@ implemented across several repositories.
   — dormant browser-owned receipt producer that reduces exact cumulative page,
   state, call and native lifecycle facts without accepting assertion booleans;
   revision 2 is digest-bound to the adjacent bridge and combines with every
-  independent source offline. The standalone driver now closes its full
-  Chromium input; live cross-source composition remains open.
+  independent source offline. The standalone driver and case adapter now close
+  its full Chromium input through the scheduler; genuine live cross-source
+  acquisition remains open.
 - [`../infrastructure/staging/browser-relay-scenario-fixture/`](../infrastructure/staging/browser-relay-scenario-fixture/)
   — dormant composition around the immutable fixture that supplies four exact
   page inputs across two genuine synthetic Firebase identities, extends the one
@@ -228,7 +241,7 @@ byte-for-byte and pins the merged revision-2 page profile plus its independent
 three-engine offline CI proof. The archived `profile-v2.json` preserves that
 claim, while current page revision 3 pins unchanged plan 15. The staging manifest
 bundle uses a small canonical index and four fixed, size- and digest-bound
-fragments while assembling the current revision-94 semantic object. It
+fragments while assembling the current revision-95 semantic object. It
 retains the byte-exact earlier zero-relay plan used
 by the image build, revision 9 used by the runner, revision 10 used by
 monitoring, revision 11 used by rollback and revision 12 used by the

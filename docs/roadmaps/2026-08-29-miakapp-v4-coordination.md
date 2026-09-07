@@ -820,7 +820,7 @@ current consumer.
     capacity prerequisite is now closed: the stable entry point indexes four
     fixed canonical fragments with exact path, mount, byte-length and SHA-256
     bindings, per-file ceilings and one aggregate ceiling while reconstructing
-    the revision-94 semantic object. The immutable original
+    the revision-95 semantic object. The immutable original
     fixture still has three private page inputs, but a separate closed scenario fixture now
     supplies the fourth from a second genuine synthetic Firebase identity,
     extends the unique coordinator's state access to both identities and
@@ -855,9 +855,13 @@ current consumer.
     ownership of the in-process Playwright connection; its leases are defense in
     depth, not a same-realm sandbox. Dedicated-process browser ownership with
     validated IPC is required before any untrusted or shared live composition.
-    No live wiring or execution is present. Compose the fixture/controller and Chromium driver into the case
-    scheduler, then implement the independent live source adapters and
-    aggregator wiring before executing the matrix once.
+    No live wiring or execution is present. The dormant Chromium case adapter
+    now composes a ready-only four-method fixture facade and native driver into
+    the fixed scheduler, maps all 18 projections and 11 controls to their exact
+    stages, and closes all 40 runner assertions offline. Next implement genuine
+    independent source adapters plus Firefox/WebKit live drivers, isolate the
+    browser behind validated IPC, and bind the scheduler/session to the durable
+    operation claim before executing the matrix once.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform
     no-change plan. Its fresh post-merge preflight is complete and the rollback
