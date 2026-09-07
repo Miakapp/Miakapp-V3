@@ -89,6 +89,19 @@ import {
   validateBrowserRelayAggregatorProfile,
 } from './browser-relay-aggregator/contract.mjs';
 import {
+  FACT_ORDER_BY_BROWSER as INDEPENDENT_OBSERVER_FACT_ORDER,
+  INDEPENDENT_DISTINCT_FACT_KINDS,
+  INDEPENDENT_FACTS_PER_MATRIX,
+  INDEPENDENT_OBSERVERS_DEPENDENCY_CONTRACTS_SHA256,
+  INDEPENDENT_OBSERVERS_IMPLEMENTATION_BASE_COMMIT,
+  INDEPENDENT_OBSERVERS_PROFILE_PATH,
+  INDEPENDENT_OBSERVERS_PROFILE_SHA256,
+  INDEPENDENT_SOURCE_RECEIPTS_PER_MATRIX,
+  INDEPENDENT_OBSERVERS_SOURCE_SHA256,
+  INDEPENDENT_SOURCES_BY_BROWSER,
+  validateBrowserRelayIndependentObserversProfile,
+} from './browser-relay-independent-observers/contract.mjs';
+import {
   PLAYWRIGHT_BRIDGE_BROWSER_SMOKE_SHA256,
   PLAYWRIGHT_BRIDGE_IMPLEMENTATION_BASE_COMMIT,
   PLAYWRIGHT_BRIDGE_OFFLINE_ENTRY_SHA256,
@@ -124,6 +137,7 @@ import {
   SCENARIO_FIXTURE_CLOUD_SOURCE_SHA256,
   validateBrowserRelayScenarioFixtureCloudProfile,
 } from './browser-relay-scenario-fixture-cloud/contract.mjs';
+
 import {
   ROLLBACK_IMPLEMENTATION_COMMIT,
   ROLLBACK_PREFLIGHT_RESULT_PATH,
@@ -216,6 +230,8 @@ import { validateProbeEvidence } from './probe/evidence.mjs';
 import { validateSigningOverlapEvidence } from './signing-overlap/evidence.mjs';
 import { validateWorkloadEvidence } from './workload/evidence.mjs';
 
+const INDEPENDENT_OBSERVERS_CONTRACT_SHA256 =
+  '685ab657e1fcd3348a6fc5c20e44c8071d9b2fa75ffd86188a4157f720d42e23';
 const MAX_MANIFEST_BYTES = 128 * 1024;
 
 const SERVICE_IDS = [
@@ -3045,6 +3061,7 @@ function validateEvidence(value) {
     'browser_relay_fixture_cloud',
     'browser_relay_fixture_miakapi',
     'browser_relay_aggregator',
+    'browser_relay_independent_observers',
     'browser_relay_playwright_bridge',
     'browser_relay_page_receipt',
     'browser_relay_scenario_fixture',
@@ -5259,10 +5276,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 90, 'manifest.revision');
+  exact(manifest.revision, 91, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_playwright_bridge_closed_secondary_receipts_chromium_bfcache_blocked_not_wired_not_executed_browser_relay_page_receipt_closed_bridge_bound_not_aggregated_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_independent_observers_closed_source_fact_producers_implemented_not_wired_not_executed_browser_relay_playwright_bridge_closed_secondary_receipts_chromium_bfcache_blocked_not_wired_not_executed_browser_relay_page_receipt_closed_bridge_bound_not_aggregated_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -6344,6 +6361,173 @@ export function validateCommittedEvidence(
     raw_receipts_committed:
       browserRelayAggregatorProfile.evidence.raw_receipts_committed,
   }, 'evidence.browser_relay_aggregator');
+  const browserRelayIndependentObserversManifest =
+    manifest.evidence.browser_relay_independent_observers;
+  const browserRelayIndependentObserversProfilePath = committedEvidencePath(
+    stagingRoot,
+    browserRelayIndependentObserversManifest.profile_path,
+    INDEPENDENT_OBSERVERS_PROFILE_PATH,
+    'evidence.browser_relay_independent_observers.profile_path',
+  );
+  const browserRelayIndependentObserversProfile = validatedEvidenceFile(
+    browserRelayIndependentObserversProfilePath,
+    validateBrowserRelayIndependentObserversProfile,
+    'evidence.browser_relay_independent_observers.profile_path',
+  );
+  exact(
+    fileSha256(browserRelayIndependentObserversProfilePath),
+    INDEPENDENT_OBSERVERS_PROFILE_SHA256,
+    'evidence.browser_relay_independent_observers.profile_sha256',
+  );
+  exact(
+    fileSha256(resolve(stagingRoot, 'browser-relay-independent-observers/observers.mjs')),
+    INDEPENDENT_OBSERVERS_SOURCE_SHA256,
+    'evidence.browser_relay_independent_observers.observers_source_sha256',
+  );
+  exact(
+    fileSha256(resolve(stagingRoot, 'browser-relay-independent-observers/contract.mjs')),
+    INDEPENDENT_OBSERVERS_CONTRACT_SHA256,
+    'evidence.browser_relay_independent_observers.contract_source_sha256',
+  );
+  const independentObserverSources = new Set(
+    Object.values(INDEPENDENT_SOURCES_BY_BROWSER).flat(),
+  );
+  const independentObserverReceiptCount = Object.values(INDEPENDENT_SOURCES_BY_BROWSER)
+    .reduce((total, sources) => total + sources.length, 0);
+  const independentObserverAssertionCount = Object.values(
+    browserRelayIndependentObserversProfile.output.assertion_owners,
+  ).flatMap((sources) => Object.values(sources))
+    .reduce((total, assertions) => total + assertions.length, 0);
+  const independentObserverFactCount = Object.values(INDEPENDENT_OBSERVER_FACT_ORDER)
+    .flatMap((sources) => Object.values(sources))
+    .reduce((total, facts) => total + facts.length, 0);
+  const independentObserverDistinctFactKinds = new Set(
+    Object.values(INDEPENDENT_OBSERVER_FACT_ORDER)
+      .flatMap((sources) => Object.values(sources).flat()),
+  ).size;
+  exact(
+    independentObserverReceiptCount,
+    INDEPENDENT_SOURCE_RECEIPTS_PER_MATRIX,
+    'evidence.browser_relay_independent_observers.source_receipts_per_matrix',
+  );
+  exact(
+    independentObserverFactCount,
+    INDEPENDENT_FACTS_PER_MATRIX,
+    'evidence.browser_relay_independent_observers.facts_per_matrix',
+  );
+  exact(
+    independentObserverDistinctFactKinds,
+    INDEPENDENT_DISTINCT_FACT_KINDS,
+    'evidence.browser_relay_independent_observers.distinct_fact_kinds',
+  );
+  const browserRelayIndependentObserversExpected = {
+    state: browserRelayIndependentObserversProfile.state,
+    profile_sha256: INDEPENDENT_OBSERVERS_PROFILE_SHA256,
+    implementation_base_commit: INDEPENDENT_OBSERVERS_IMPLEMENTATION_BASE_COMMIT,
+    browser_relay_plan_sha256:
+      browserRelayIndependentObserversProfile.pins.browser_relay_plan_sha256,
+    browser_relay_aggregator_profile_sha256:
+      browserRelayIndependentObserversProfile.pins.browser_relay_aggregator_profile_sha256,
+    browser_relay_page_receipt_profile_sha256:
+      browserRelayIndependentObserversProfile.pins.browser_relay_page_receipt_profile_sha256,
+    dependency_contracts_sha256:
+      INDEPENDENT_OBSERVERS_DEPENDENCY_CONTRACTS_SHA256,
+    contract_source_sha256: INDEPENDENT_OBSERVERS_CONTRACT_SHA256,
+    observers_source_sha256: INDEPENDENT_OBSERVERS_SOURCE_SHA256,
+    source_fact_schema:
+      browserRelayIndependentObserversProfile.observers.source_fact_schema,
+    source_receipt_schema:
+      browserRelayIndependentObserversProfile.observers.source_receipt_schema,
+    source_receipts_per_matrix: independentObserverReceiptCount,
+    facts_per_matrix: independentObserverFactCount,
+    distinct_fact_kinds: independentObserverDistinctFactKinds,
+    matrix_scope: browserRelayIndependentObserversProfile.observers.matrix_scope,
+    browser_start_offsets_required:
+      browserRelayIndependentObserversProfile.observers.browser_start_offsets_required,
+    page_receipt_close_offsets_required:
+      browserRelayIndependentObserversProfile.observers
+        .page_receipt_close_offsets_required,
+    independent_sources: independentObserverSources.size,
+    assertions_owned: independentObserverAssertionCount,
+    single_use: browserRelayIndependentObserversProfile.observers.single_use,
+    fact_order_exact: browserRelayIndependentObserversProfile.observers.fact_order_exact,
+    fact_retries: browserRelayIndependentObserversProfile.observers.fact_retries,
+    assertion_boolean_inputs:
+      browserRelayIndependentObserversProfile.observers.assertion_boolean_inputs,
+    raw_facts_retained:
+      browserRelayIndependentObserversProfile.observers.raw_facts_retained,
+    source_ownership_exact:
+      browserRelayIndependentObserversProfile.observers.source_ownership_exact,
+    cross_source_counter_parity_exact:
+      browserRelayIndependentObserversProfile.observers.cross_source_counter_parity_exact,
+    cross_browser_revision_lineage_exact:
+      browserRelayIndependentObserversProfile.observers
+        .cross_browser_revision_lineage_exact,
+    cross_browser_timeline_exact:
+      browserRelayIndependentObserversProfile.observers.cross_browser_timeline_exact,
+    independent_receipts_exposed:
+      browserRelayIndependentObserversProfile.observers.independent_receipts_exposed,
+    transport_adapters_present:
+      browserRelayIndependentObserversProfile.observers.transport_adapters_present,
+    runner_result_schema:
+      browserRelayIndependentObserversProfile.output.runner_result_schema,
+    complete_receipt_count:
+      browserRelayIndependentObserversProfile.compatibility.complete_receipt_count,
+    offline_aggregator_integration_present:
+      browserRelayIndependentObserversProfile.compatibility
+        .offline_aggregator_integration_present,
+    runner_result_producer_present:
+      browserRelayIndependentObserversProfile.compatibility.runner_result_producer_present,
+    live_aggregator_wired:
+      browserRelayIndependentObserversProfile.compatibility.live_aggregator_wired,
+    live_source_adapters_present:
+      browserRelayIndependentObserversProfile.compatibility.live_source_adapters_present,
+    common_operation_clock_shape_present:
+      browserRelayIndependentObserversProfile.compatibility
+        .common_operation_clock_shape_present,
+    common_operation_provenance_present:
+      browserRelayIndependentObserversProfile.compatibility.common_operation_provenance_present,
+    cross_source_timeline_bound:
+      browserRelayIndependentObserversProfile.compatibility.cross_source_timeline_bound,
+    canonical_live_case_order_preserved:
+      browserRelayIndependentObserversProfile.compatibility
+        .canonical_live_case_order_preserved,
+    current_sequential_runner_compatible:
+      browserRelayIndependentObserversProfile.compatibility
+        .current_sequential_runner_compatible,
+    cloud_compute_resources:
+      browserRelayIndependentObserversProfile.target.cloud_compute_resources,
+    cloud_mutation_authorized:
+      browserRelayIndependentObserversProfile.authority.cloud_mutation_authorized,
+    hosting_publication_authorized:
+      browserRelayIndependentObserversProfile.authority.hosting_publication_authorized,
+    public_ingress_authorized:
+      browserRelayIndependentObserversProfile.authority.public_ingress_authorized,
+    live_execution_authorized:
+      browserRelayIndependentObserversProfile.authority.live_execution_authorized,
+    live_source_facts:
+      browserRelayIndependentObserversProfile.evidence.live_source_facts,
+    live_source_receipts:
+      browserRelayIndependentObserversProfile.evidence.live_source_receipts,
+    cloud_requests: browserRelayIndependentObserversProfile.evidence.cloud_requests,
+    cloud_mutations: browserRelayIndependentObserversProfile.evidence.cloud_mutations,
+    live_execution_count:
+      browserRelayIndependentObserversProfile.evidence.live_execution_count,
+    credentials_committed:
+      browserRelayIndependentObserversProfile.evidence.credentials_committed,
+    raw_facts_committed:
+      browserRelayIndependentObserversProfile.evidence.raw_facts_committed,
+  };
+  record(
+    browserRelayIndependentObserversManifest,
+    'evidence.browser_relay_independent_observers',
+    ['profile_path', ...Object.keys(browserRelayIndependentObserversExpected)],
+  );
+  exactFields(
+    browserRelayIndependentObserversManifest,
+    browserRelayIndependentObserversExpected,
+    'evidence.browser_relay_independent_observers',
+  );
   const browserRelayPlaywrightBridgeManifest = record(
     manifest.evidence.browser_relay_playwright_bridge,
     'evidence.browser_relay_playwright_bridge',
@@ -8264,6 +8448,7 @@ export function validateCommittedEvidence(
     browserRelayPageProfile,
     browserRelayPageV2Profile,
     browserRelayAggregatorProfile,
+    browserRelayIndependentObserversProfile,
     browserRelayPlaywrightBridgeProfile,
     browserRelayPageReceiptProfile,
     browserRelayScenarioFixtureCloudProfile,
@@ -8311,7 +8496,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; the dormant page, two-identity scenario fixture, replacement-identity cloud adapter, independent-source aggregator, Playwright bridge and browser-page receipt producer are digest-pinned without live authority, the Chromium BFCache path remains blocked before private input, the single-use operation remains privately preflighted and unexecuted, both exact-audience relays remain private-ready, unauthenticated invocation remains absent, and App Check enforcement is disabled.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; the dormant page, two-identity scenario fixture, replacement-identity cloud adapter, independent-source aggregator and observers, Playwright bridge and browser-page receipt producer are digest-pinned without live authority, the Chromium BFCache path remains blocked before private input, the single-use operation remains privately preflighted and unexecuted, both exact-audience relays remain private-ready, unauthenticated invocation remains absent, and App Check enforcement is disabled.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';

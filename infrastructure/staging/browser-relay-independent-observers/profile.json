@@ -1,0 +1,265 @@
+{
+  "schema": "miakapp.staging-browser-relay-independent-observers-profile/1",
+  "revision": 1,
+  "state": "closed_independent_source_receipt_producers_implemented_not_wired_not_executed",
+  "target": {
+    "project_id": "miakapp-v4-staging",
+    "project_number": "1072737219170",
+    "region": "europe-west9",
+    "data_policy": "synthetic_only",
+    "cloud_compute_resources": 0,
+    "unscheduled": true
+  },
+  "pins": {
+    "implementation_base_commit": "7d2822d170df6849971b4748922fd1a459da6699",
+    "browser_relay_plan_sha256": "6c7661d9be861e4f8d13ccd5d2fd0f3eaa34ea2b4d7af2e9b41d1867d6c37211",
+    "browser_relay_aggregator_profile_sha256": "2f78e09655d26af993d1c5885114b1740aaa32e13ced14c5d8d774a9e40a7851",
+    "browser_relay_page_receipt_profile_sha256": "740d21178e963fb82a3cd923a1adf6cbf6af2b62a633f0b97058fbda4f1e906a",
+    "dependency_contracts_sha256": "2942c96d56dbf9732675f06b86cd0911bb7cd39a92ad32d4cc830796834754f7",
+    "observers_source_sha256": "f13a22c22e4953b3baee9d98b828f1e0b76997d49a8e066c98297557b9d35785"
+  },
+  "observers": {
+    "source_fact_schema": "miakapp.staging-browser-relay-independent-source-fact/1",
+    "source_receipt_schema": "miakapp.staging-browser-relay-source-receipt/1",
+    "browser_order": [
+      "chromium",
+      "firefox",
+      "webkit"
+    ],
+    "independent_sources_by_browser": {
+      "chromium": [
+        "firebase_app_check",
+        "hosting",
+        "control_plane",
+        "relay",
+        "coordinator",
+        "kms",
+        "firestore"
+      ],
+      "firefox": [
+        "firebase_app_check",
+        "control_plane",
+        "relay",
+        "kms"
+      ],
+      "webkit": [
+        "firebase_app_check",
+        "control_plane",
+        "relay",
+        "kms"
+      ]
+    },
+    "fact_order_by_browser": {
+      "chromium": {
+        "firebase_app_check": [
+          "provider_assessment",
+          "valid_verification",
+          "missing_token_denial",
+          "invalid_token_denial",
+          "verification_mode"
+        ],
+        "hosting": [
+          "management_site_configuration",
+          "served_sdk_configuration"
+        ],
+        "control_plane": [
+          "cors_preflight",
+          "foreign_origin_denial",
+          "source_uid_admission",
+          "authenticated_cache_policy",
+          "version_2_jwk_published",
+          "version_1_last_issuance",
+          "version_2_first_issuance",
+          "atomic_credential_reuse",
+          "version_1_jwk_retained",
+          "version_1_jwk_removed",
+          "exchange_summary"
+        ],
+        "relay": [
+          "version_2_existing_socket",
+          "wrong_audience_denial",
+          "wrong_home_denial",
+          "wrong_role_denial",
+          "unknown_kid_refresh",
+          "disconnect_reconnect_resync",
+          "new_session_version_2",
+          "revision_summary"
+        ],
+        "coordinator": [
+          "physical_call_delivery"
+        ],
+        "kms": [
+          "signature_summary",
+          "version_1_lifecycle"
+        ],
+        "firestore": [
+          "authoritative_route_transition",
+          "operation_write_summary"
+        ]
+      },
+      "firefox": {
+        "firebase_app_check": [
+          "provider_assessment",
+          "valid_verification"
+        ],
+        "control_plane": [
+          "exchange_summary"
+        ],
+        "relay": [
+          "version_2_session",
+          "revision_summary"
+        ],
+        "kms": [
+          "signature_summary"
+        ]
+      },
+      "webkit": {
+        "firebase_app_check": [
+          "provider_assessment",
+          "valid_verification"
+        ],
+        "control_plane": [
+          "exchange_summary"
+        ],
+        "relay": [
+          "version_2_session",
+          "revision_summary"
+        ],
+        "kms": [
+          "signature_summary"
+        ]
+      }
+    },
+    "source_receipts_per_matrix": 15,
+    "facts_per_matrix": 43,
+    "distinct_fact_kinds": 32,
+    "matrix_scope": "three_browser",
+    "browser_start_offsets_required": true,
+    "page_receipt_close_offsets_required": true,
+    "single_use": true,
+    "fact_order_exact": true,
+    "fact_retries": 0,
+    "assertion_boolean_inputs": false,
+    "raw_facts_retained": false,
+    "arbitrary_errors_propagated": false,
+    "source_ownership_exact": true,
+    "cross_source_counter_parity_exact": true,
+    "cross_browser_revision_lineage_exact": true,
+    "cross_browser_timeline_exact": true,
+    "independent_receipts_exposed": false,
+    "transport_adapters_present": false
+  },
+  "compatibility": {
+    "browser_page_receipt_producer_present": true,
+    "independent_source_receipt_producers_present": true,
+    "complete_receipt_count": 18,
+    "offline_aggregator_integration_present": true,
+    "runner_result_producer_present": true,
+    "live_aggregator_wired": false,
+    "live_source_adapters_present": false,
+    "common_operation_clock_shape_present": true,
+    "common_operation_provenance_present": false,
+    "cross_source_timeline_bound": true,
+    "canonical_live_case_order_preserved": true,
+    "current_sequential_runner_compatible": false,
+    "complete_chromium_page_scenario": false,
+    "bfcache_capable_automation": false
+  },
+  "output": {
+    "runner_result_schema": "miakapp.staging-browser-relay-runner-result/1",
+    "assertion_owners": {
+      "chromium": {
+        "firebase_app_check": [
+          "real_browser_provider_attestation",
+          "missing_and_invalid_app_check_denied",
+          "no_token_consumption_mode"
+        ],
+        "hosting": [
+          "exact_firebase_app_id"
+        ],
+        "control_plane": [
+          "exact_origin_cors_and_preflight",
+          "foreign_origin_denied",
+          "source_and_uid_admission_observed",
+          "no_authenticated_response_cache",
+          "already_issued_atomic_credential_is_reused",
+          "version_2_jwk_prepublished_for_at_least_sixty_seconds",
+          "version_1_jwk_retained_for_three_hundred_thirty_seconds",
+          "version_1_jwk_removed_after_lease_bound"
+        ],
+        "relay": [
+          "version_2_kid_accepted_on_existing_socket",
+          "wrong_relay_audience_denied",
+          "wrong_home_denied",
+          "wrong_role_denied",
+          "unknown_kid_refresh_is_bounded",
+          "disconnect_reconnect_and_resync_are_bounded",
+          "new_sessions_continue_on_version_2"
+        ],
+        "coordinator": [
+          "no_physical_call_replay"
+        ],
+        "kms": [
+          "kms_version_1_disabled_not_destroyed"
+        ],
+        "firestore": [
+          "authoritative_route_changes_to_relay_b"
+        ]
+      },
+      "firefox": {
+        "firebase_app_check": [],
+        "control_plane": [],
+        "relay": [],
+        "kms": []
+      },
+      "webkit": {
+        "firebase_app_check": [],
+        "control_plane": [],
+        "relay": [],
+        "kms": []
+      }
+    },
+    "allowed_observations": [
+      "bounded_counts",
+      "durations",
+      "public_key_ids",
+      "revision_ids",
+      "source_and_configuration_digests",
+      "stable_enum_outcomes"
+    ],
+    "forbidden_observations": [
+      "browser_storage",
+      "email",
+      "execution_identifier",
+      "firebase_uid",
+      "har",
+      "home_id",
+      "home_traffic",
+      "raw_cloud_response",
+      "raw_document",
+      "raw_log_entry",
+      "raw_request_or_response",
+      "token",
+      "trace_context",
+      "video",
+      "websocket_frame"
+    ]
+  },
+  "authority": {
+    "cloud_mutation_authorized": false,
+    "hosting_publication_authorized": false,
+    "iam_binding_mutation_authorized": false,
+    "public_ingress_authorized": false,
+    "live_execution_authorized": false
+  },
+  "evidence": {
+    "state": "absent",
+    "live_source_facts": 0,
+    "live_source_receipts": 0,
+    "cloud_requests": 0,
+    "cloud_mutations": 0,
+    "live_execution_count": 0,
+    "credentials_committed": false,
+    "raw_facts_committed": false
+  }
+}

@@ -41,7 +41,8 @@ Native persisted BFCache restoration remains blocked by pinned Playwright
 unit events are not native proof. The Playwright bridge now closes real
 browser-page receipts for the Firefox and WebKit triples and returns a distinct
 pre-input Chromium blocker. The complete Chromium page scenario, a
-BFCache-capable automation path and independent cloud observers remain open.
+BFCache-capable automation path, independent live source adapters and
+aggregator wiring remain open.
 Neither package grants cloud mutation, Hosting publication, public ingress or
 live execution authority.
 

@@ -24,7 +24,7 @@ export const MAXIMUM_PRIVATE_INPUT_BYTES = 65_536;
 const MAXIMUM_PROFILE_BYTES = 20 * 1024;
 const SHA256 = /^[0-9a-f]{64}$/u;
 const COMMIT = /^[0-9a-f]{40}$/u;
-const REVISION_ID = /^(?:control-plane|miakapp-staging-relay-[ab])-[0-9]{5}-[a-z]{3}$/u;
+const REVISION_ID = /^(?:control-plane|miakapp-staging-relay-[ab])-[0-9]{5}-[a-z0-9]{3}$/u;
 const PRIVATE_MATERIAL = [
   /-----BEGIN [A-Z ]*PRIVATE KEY-----/u,
   /\bBearer\s+[A-Za-z0-9._~+\/-]+=*/iu,
