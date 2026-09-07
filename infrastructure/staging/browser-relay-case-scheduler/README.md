@@ -65,9 +65,10 @@ future live import graph.
 This directory contains no browser launcher, network or cloud client, credential
 source, environment reader, CLI, durable-claim binding, operation adapter,
 publication or mutation path. Importing it performs no live work. Genuine source
-adapters and operation/claim binding remain required before the single live
+transports and operation/claim binding remain required before the single live
 matrix can be authorized. Separate layered adapters now compose the native
-Chromium scenario and both Playwright secondary scenarios into this scheduler
-offline, close all 40 assertions and preserve the scheduler as the sole owner
-of case order and result closure. Those adapters remain trusted, source-only
-implementation evidence rather than live wiring.
+Chromium scenario, both Playwright secondary scenarios and seven deterministic
+independent-source observers into this scheduler offline, close all 40
+assertions and preserve the scheduler as the sole owner of case order and result
+closure. Those adapters remain trusted, source-only implementation evidence
+rather than live wiring.
