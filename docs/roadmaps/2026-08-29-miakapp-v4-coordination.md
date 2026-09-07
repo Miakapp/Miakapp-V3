@@ -821,7 +821,7 @@ current consumer.
     fixed canonical fragments, with separate browser-relay scenario and
     operations owners, exact path, mount, byte-length and SHA-256 bindings,
     per-file ceilings and one aggregate ceiling while reconstructing the
-    revision-95 semantic object. The immutable original
+    revision-96 semantic object. The immutable original
     fixture still has three private page inputs, but a separate closed scenario fixture now
     supplies the fourth from a second genuine synthetic Firebase identity,
     extends the unique coordinator's state access to both identities and
@@ -859,10 +859,15 @@ current consumer.
     No live wiring or execution is present. The dormant Chromium case adapter
     now composes a ready-only four-method fixture facade and native driver into
     the fixed scheduler, maps all 18 projections and 11 controls to their exact
-    stages, and closes all 40 runner assertions offline. Next implement genuine
-    independent source adapters plus Firefox/WebKit live drivers, isolate the
-    browser behind validated IPC, and bind the scheduler/session to the durable
-    operation claim before executing the matrix once.
+    stages, and closes all 40 runner assertions offline. A new layered secondary
+    case adapter now consumes the unchanged Playwright bridge for Firefox and
+    WebKit, validates all six complete facts before five-field projection into
+    the two `LIVE-10` stages, treats the bridge receipts only as page-closure
+    proof and closes the same 40 assertions with both real engines offline.
+    Next implement genuine independent source adapters plus trusted live page
+    providers, isolate browser ownership behind validated IPC, and bind the
+    scheduler/session to the durable operation claim before executing the matrix
+    once.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform
     no-change plan. Its fresh post-merge preflight is complete and the rollback

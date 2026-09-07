@@ -190,7 +190,9 @@ driver now closes that standalone automation gap offline: it combines the
 trusted persisted page lifecycle sequence with the exact CDP
 `BackForwardCacheRestore` event while serving the reviewed Hosting cache and
 security headers. It is not yet composed with the scenario fixture or case
-scheduler and grants no live authority. The page package
+scheduler in its own package; the later Chromium and secondary case adapters
+now compose it with both through one complete offline schedule. That composition
+still grants no live authority. The page package
 contains no publisher or live authority. Revision 15 retains its exact
 revision-2 profile and merged CI implementation pins; `profile-v2.json` preserves
 those page bytes. This plan still records every `LIVE-*` case as pending.

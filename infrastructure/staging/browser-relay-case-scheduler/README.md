@@ -1,7 +1,7 @@
 # Dormant browser-relay case scheduler
 
 Status: exact case interleaving and closure ownership implemented offline; not
-wired to the durable claim, live operation, browsers or source adapters
+wired to the durable claim, live operation, live browsers or live source adapters
 
 This package composes the production browser-relay evidence session into one
 fixed execution of `LIVE-02` through `LIVE-11`. Chromium anchors the session and
@@ -66,6 +66,8 @@ This directory contains no browser launcher, network or cloud client, credential
 source, environment reader, CLI, durable-claim binding, operation adapter,
 publication or mutation path. Importing it performs no live work. Genuine source
 adapters and operation/claim binding remain required before the single live
-matrix can be authorized. The separate Chromium scenario package now proves
-the complete 18-fact page path and native BFCache restoration offline, but it
-has not yet been composed as this scheduler's concrete page adapter.
+matrix can be authorized. Separate layered adapters now compose the native
+Chromium scenario and both Playwright secondary scenarios into this scheduler
+offline, close all 40 assertions and preserve the scheduler as the sole owner
+of case order and result closure. Those adapters remain trusted, source-only
+implementation evidence rather than live wiring.

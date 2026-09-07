@@ -32,10 +32,11 @@ facts are never retried or retained. Successful closure emits only the existing
 `miakapp.staging-browser-relay-source-receipt/1` shape and delegates final
 validation to the aggregator contract.
 
-This is intentionally not wired yet. A complete matrix needs four private page
-inputs: two Chromium page instances plus Firefox and WebKit. The current fixture
-allows three; the separate scenario fixture supplies the fourth. Current page
-revision 3 provides the required 600-second Chromium budget, serialized native
+This remains intentionally absent from live wiring. The complete matrix needs
+four private page inputs: two Chromium page instances plus Firefox and WebKit.
+The original fixture allows three; the separate scenario fixture supplies the
+fourth, and the layered case adapters now consume all four in one closed offline
+schedule. Current page revision 3 provides the required 600-second Chromium budget, serialized native
 lifecycle handling and typed call outcomes. The separate Chromium scenario
 driver now owns both Chromium pages and closes this producer from all 18 facts
 offline. The adjacent Playwright bridge drives the
