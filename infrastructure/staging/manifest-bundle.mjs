@@ -96,6 +96,7 @@ const BROWSER_RELAY_SCENARIO_EVIDENCE_KEYS = Object.freeze([
   'browser_relay_chromium_case_adapter',
   'browser_relay_secondary_case_adapter',
   'browser_relay_independent_case_adapter',
+  'browser_relay_source_transports',
   'chromium_scenario_automation',
   'browser_relay_playwright_bridge',
   'browser_relay_page_receipt',

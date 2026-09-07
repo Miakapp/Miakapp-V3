@@ -116,10 +116,19 @@ implemented across several repositories.
   seven source-owned observer capabilities and one browser-lifecycle owner. It
   derives source kind and sequence, projects observations only, preserves
   concurrent cross-source acquisition and closes all 43 independent facts plus
-  the complete 40-assertion schedule offline. Genuine source transports, live
-  page/browser providers, process isolation and every live/cloud authority
-  remain absent from this layer; the complete graph's claim binding is supplied
+  the complete 40-assertion schedule offline. The adjacent transport layer now
+  supplies the acquisition protocol; authenticated readers, live page/browser
+  providers, process isolation and every live/cloud authority remain absent
+  from this layer, while the complete graph's claim binding is supplied
   separately.
+- [`../infrastructure/staging/browser-relay-source-transports/`](../infrastructure/staging/browser-relay-source-transports/)
+  — dormant genuine transport layer for the seven independent sources. It pulls
+  the exact 22 stages and 43 observations from trusted source-specific readers,
+  requires explicit EOF, awaits downstream backpressure, binds provider and
+  reader identities to one operation/stage, drains bounded late settlements and
+  poisons every protocol violation permanently. No authenticated reader,
+  network implementation, credential acquisition, case-adapter wiring,
+  dedicated-process IPC or live/cloud authority is present.
 - [`../infrastructure/staging/browser-relay-chromium-scenario/`](../infrastructure/staging/browser-relay-chromium-scenario/)
   — dormant two-page Chromium driver that owns the complete 18-fact page
   scenario and closes the existing receipt producer offline. Its pinned CDP
@@ -267,7 +276,7 @@ three-engine offline CI proof. The archived `profile-v2.json` preserves that
 claim, while current page revision 3 pins unchanged plan 15. The staging manifest
 bundle uses a small bundle-revision-2 canonical index and five fixed, size- and
 digest-bound fragments, with browser-relay scenario and operations evidence
-separated physically, while assembling the current revision-98 semantic object. It
+separated physically, while assembling the current revision-99 semantic object. It
 retains the byte-exact earlier zero-relay plan used
 by the image build, revision 9 used by the runner, revision 10 used by
 monitoring, revision 11 used by rollback and revision 12 used by the
@@ -341,13 +350,15 @@ restoration. The dedicated Chromium driver closes the complete page scenario
 and BFCache automation gap offline without weakening that blocker. Its native
 witness records Chromium's visible `pagehide` dispatch, later trusted hidden
 transition and visible `pageshow` separately, under the reviewed Hosting
-`no-store` and security-header policy. The layered case adapters now compose
-all three complete page scenarios and seven deterministic independent-source
-observers into the scheduler/session offline. A separate dormant composition
-root now binds that complete schedule to the unchanged operation after one
-canonical durable claim and forwards only the exact edge abort signal. None of
-these packages grants Hosting publication or live authority; genuine source
-transports and live page/browser providers, dedicated-process IPC and fixture
+`no-store` and security-header policy. The layered case adapters now compose all
+three complete page scenarios and seven deterministic independent-source
+observers into the scheduler/session offline. A separate dormant boundary
+implements the seven genuine source transport protocols but is not yet wired to
+those observer slots. Another dormant composition root binds the complete
+schedule to the unchanged operation after one canonical durable claim and
+forwards only the exact edge abort signal. None of these packages grants Hosting
+publication or live authority; authenticated source readers, live page/browser
+providers, dedicated-process IPC, case-adapter transport wiring and fixture
 lifecycle wiring must close before the one allowed live matrix can execute.
 
 Repository-specific implementation plans must link back to these documents and

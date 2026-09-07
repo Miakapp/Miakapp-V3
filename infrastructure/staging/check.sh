@@ -232,6 +232,14 @@ node --check infrastructure/staging/browser-relay-independent-case-adapter/testi
 node --check infrastructure/staging/test/browser-relay-independent-case-adapter-browser.mjs
 node --check infrastructure/staging/test/helpers/browser-relay-independent-source-harness.mjs
 node -e "import('./infrastructure/staging/browser-relay-independent-case-adapter/contract.mjs').then(({ validateBrowserRelayIndependentCaseAdapterProfile }) => validateBrowserRelayIndependentCaseAdapterProfile())"
+node infrastructure/staging/browser-relay-source-transports/guard.mjs \
+  "${repository_root}/infrastructure/staging/browser-relay-source-transports"
+node --check infrastructure/staging/browser-relay-source-transports/contract.mjs
+node --check infrastructure/staging/browser-relay-source-transports/guard.mjs
+node --check infrastructure/staging/browser-relay-source-transports/internal.mjs
+node --check infrastructure/staging/browser-relay-source-transports/testing.mjs
+node --check infrastructure/staging/browser-relay-source-transports/transports.mjs
+node -e "import('./infrastructure/staging/browser-relay-source-transports/contract.mjs').then(({ validateBrowserRelaySourceTransportsProfile }) => validateBrowserRelaySourceTransportsProfile())"
 node infrastructure/staging/browser-relay-page-receipt/guard.mjs \
   "${repository_root}/infrastructure/staging/browser-relay-page-receipt"
 node --check infrastructure/staging/browser-relay-page-receipt/contract.mjs
@@ -456,6 +464,7 @@ node --test \
   infrastructure/staging/test/browser-relay-chromium-case-adapter.test.mjs \
   infrastructure/staging/test/browser-relay-secondary-case-adapter.test.mjs \
   infrastructure/staging/test/browser-relay-independent-case-adapter.test.mjs \
+  infrastructure/staging/test/browser-relay-source-transports.test.mjs \
   infrastructure/staging/test/browser-relay-chromium-scenario.test.mjs \
   infrastructure/staging/test/browser-relay-playwright-bridge.test.mjs \
   infrastructure/staging/test/browser-relay-page-receipt.test.mjs \

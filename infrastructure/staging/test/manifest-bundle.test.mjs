@@ -135,6 +135,7 @@ test('assembles the canonical committed bundle into the current semantic manifes
     'browser_relay_chromium_case_adapter',
     'browser_relay_secondary_case_adapter',
     'browser_relay_independent_case_adapter',
+    'browser_relay_source_transports',
     'chromium_scenario_automation',
     'browser_relay_playwright_bridge',
     'browser_relay_page_receipt',
@@ -211,6 +212,7 @@ test('assembles the canonical committed bundle into the current semantic manifes
     'browser_relay_chromium_case_adapter',
     'browser_relay_secondary_case_adapter',
     'browser_relay_independent_case_adapter',
+    'browser_relay_source_transports',
     'chromium_scenario_automation',
     'browser_relay_playwright_bridge',
     'browser_relay_page_receipt',
@@ -233,7 +235,7 @@ test('assembles the canonical committed bundle into the current semantic manifes
     'environment_decision',
   ]);
   assert.equal(manifest.schema, 'miakapp.staging-intent/1');
-  assert.equal(manifest.revision, 98);
+  assert.equal(manifest.revision, 99);
   assert.equal(manifest.project.project_id, 'miakapp-v4-staging');
   assert.equal(manifest.terraform.bootstrap_execution.bootstrap_completed, true);
   assert.equal(
@@ -249,6 +251,25 @@ test('assembles the canonical committed bundle into the current semantic manifes
     manifest.evidence.browser_relay_independent_case_adapter
       .compatibility.independent_source_composition_present,
     true,
+  );
+  assert.equal(
+    manifest.evidence.browser_relay_source_transports.profile_sha256,
+    '9628f2dbe63713da3f4777908e036155c8c7852f3ac110d3efc162266a933ad4',
+  );
+  assert.equal(manifest.evidence.browser_relay_source_transports.transport.sources, 7);
+  assert.equal(manifest.evidence.browser_relay_source_transports.transport.stages, 22);
+  assert.equal(
+    manifest.evidence.browser_relay_source_transports.transport.observations_per_matrix,
+    43,
+  );
+  assert.equal(
+    manifest.evidence.browser_relay_source_transports
+      .compatibility.trusted_live_source_readers_present,
+    false,
+  );
+  assert.ok(
+    Object.values(manifest.evidence.browser_relay_source_transports.authority)
+      .every((value) => value === false),
   );
   assert.equal(manifest.teardown.automated, false);
 });
