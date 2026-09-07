@@ -817,10 +817,11 @@ current consumer.
     browser-start and page/browser/global-close boundaries, and emits only the
     closed session result. Live wiring must still bind the scheduler/session to
     the durable claim and add genuine source adapters. The manifest
-    capacity prerequisite is now closed: the stable entry point indexes four
-    fixed canonical fragments with exact path, mount, byte-length and SHA-256
-    bindings, per-file ceilings and one aggregate ceiling while reconstructing
-    the revision-95 semantic object. The immutable original
+    capacity prerequisite is now closed: the stable entry point indexes five
+    fixed canonical fragments, with separate browser-relay scenario and
+    operations owners, exact path, mount, byte-length and SHA-256 bindings,
+    per-file ceilings and one aggregate ceiling while reconstructing the
+    revision-95 semantic object. The immutable original
     fixture still has three private page inputs, but a separate closed scenario fixture now
     supplies the fourth from a second genuine synthetic Firebase identity,
     extends the unique coordinator's state access to both identities and

@@ -1,6 +1,6 @@
 {
   "schema": "miakapp.staging-manifest-bundle/1",
-  "bundle_revision": 1,
+  "bundle_revision": 2,
   "manifest_schema": "miakapp.staging-intent/1",
   "manifest_revision": 95,
   "fragments": [
@@ -9,28 +9,35 @@
       "path": "manifest/core.json",
       "mount": "manifest",
       "size_bytes": 17069,
-      "sha256": "4063db7dcf58c894d61eca4dba55c0f78d0f76917e315125a2438c8c96f153f7"
+      "sha256": "150cdc09a367ef412ded787c93b634310211e379d3b93368a372a529b2193507"
     },
     {
       "id": "terraform",
       "path": "manifest/terraform.json",
       "mount": "manifest",
       "size_bytes": 38998,
-      "sha256": "4362a158804245b893ff716d547ae163bf339faf33aedcac1fcfd3b5a254843f"
+      "sha256": "9f49af97e73b683ff7c33bca19f788fb17be27999f51488f9ad3a29c9fa77679"
     },
     {
       "id": "evidence-platform",
       "path": "manifest/evidence-platform.json",
       "mount": "evidence",
       "size_bytes": 21240,
-      "sha256": "1342bb3bb3612bd71704a9068dd4765e6cddf8a4a0813283be7ee3df668b9325"
+      "sha256": "54ed62673b92e69d590bdeffbe297fdc75927161fe93f91c3c69d608b91d590a"
     },
     {
-      "id": "evidence-browser-relay",
-      "path": "manifest/evidence-browser-relay.json",
+      "id": "evidence-browser-relay-scenario",
+      "path": "manifest/evidence-browser-relay-scenario.json",
       "mount": "evidence",
-      "size_bytes": 84020,
-      "sha256": "0b83e4afd7987d2e541cb2fa8c0402da9bbfe238f817e71e42f8ed47af0040f7"
+      "size_bytes": 56363,
+      "sha256": "22f20d78691e722db2c3030a2f3454e3816a9b2028d8403aa39077986081766d"
+    },
+    {
+      "id": "evidence-browser-relay-operations",
+      "path": "manifest/evidence-browser-relay-operations.json",
+      "mount": "evidence",
+      "size_bytes": 27830,
+      "sha256": "2197706f99bc2be45c2e279b0b3a878cb9b591972be2b6e843d2fb478687536b"
     }
   ]
 }

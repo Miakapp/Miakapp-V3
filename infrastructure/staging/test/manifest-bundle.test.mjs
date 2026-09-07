@@ -84,6 +84,75 @@ function rejectsFixture(mutator, pattern) {
 }
 
 test('assembles the canonical committed bundle into the current semantic manifest', () => {
+  const index = readJson(committedIndexPath);
+  assert.equal(index.bundle_revision, 2);
+  assert.deepEqual(
+    index.fragments.map(({ id, path, mount }) => ({ id, path, mount })),
+    [
+      { id: 'core', path: 'manifest/core.json', mount: 'manifest' },
+      { id: 'terraform', path: 'manifest/terraform.json', mount: 'manifest' },
+      {
+        id: 'evidence-platform',
+        path: 'manifest/evidence-platform.json',
+        mount: 'evidence',
+      },
+      {
+        id: 'evidence-browser-relay-scenario',
+        path: 'manifest/evidence-browser-relay-scenario.json',
+        mount: 'evidence',
+      },
+      {
+        id: 'evidence-browser-relay-operations',
+        path: 'manifest/evidence-browser-relay-operations.json',
+        mount: 'evidence',
+      },
+    ],
+  );
+  for (const entry of index.fragments) {
+    assert.equal(readJson(join(stagingRoot, entry.path)).bundle_revision, 2);
+  }
+  assert.ok(index.fragments.every(({ size_bytes: size }) => size < 96 * 1024));
+  assert.ok(
+    readFileSync(committedIndexPath).byteLength
+      + index.fragments.reduce((total, { size_bytes: size }) => total + size, 0)
+      < 192 * 1024,
+  );
+
+  const scenarioEvidence = readJson(
+    join(committedFragmentRoot, 'evidence-browser-relay-scenario.json'),
+  );
+  assert.deepEqual(Object.keys(scenarioEvidence.values), [
+    'browser_relay_plan',
+    'browser_relay_runner',
+    'browser_relay_page',
+    'browser_relay_fixture',
+    'browser_relay_fixture_cloud',
+    'browser_relay_fixture_miakapi',
+    'browser_relay_aggregator',
+    'browser_relay_independent_observers',
+    'browser_relay_evidence_session',
+    'browser_relay_case_scheduler',
+    'browser_relay_chromium_case_adapter',
+    'chromium_scenario_automation',
+    'browser_relay_playwright_bridge',
+    'browser_relay_page_receipt',
+    'browser_relay_scenario_fixture',
+    'browser_relay_scenario_fixture_cloud',
+  ]);
+  const operationsEvidence = readJson(
+    join(committedFragmentRoot, 'evidence-browser-relay-operations.json'),
+  );
+  assert.deepEqual(Object.keys(operationsEvidence.values), [
+    'browser_relay_monitoring',
+    'browser_relay_rollback',
+    'browser_relay_orchestrator',
+    'browser_relay_operation',
+    'browser_relay_image',
+    'browser_app_check_prerequisite',
+    'browser_app_check_attestation',
+    'signing_key_overlap_prerequisite',
+  ]);
+
   const manifest = loadStagingManifestBundle(committedIndexPath);
   assert.deepEqual(Object.keys(manifest), [
     'schema',
@@ -245,6 +314,16 @@ test('rejects fragment path, mount, size and digest drift from the fixed index',
 });
 
 test('rejects index/core revision, identity and owned-key drift after digest reconciliation', () => {
+  rejectsFixture(({ indexPath }) => {
+    const index = readJson(indexPath);
+    index.bundle_revision -= 1;
+    writeCanonical(indexPath, index);
+  }, /bundle revision has drifted/u);
+  rejectsFixture((fixture) => {
+    mutateFragment(fixture, 'core', (fragment) => {
+      fragment.bundle_revision -= 1;
+    });
+  }, /core bundle revision has drifted/u);
   rejectsFixture((fixture) => {
     mutateFragment(fixture, 'core', (fragment) => {
       fragment.values.revision -= 1;
@@ -262,12 +341,32 @@ test('rejects index/core revision, identity and owned-key drift after digest rec
   }, /evidence-platform values fields or field order have drifted/u);
 });
 
+test('rejects reassigned or duplicated browser-relay evidence ownership', () => {
+  rejectsFixture((fixture) => {
+    let reassigned;
+    mutateFragment(fixture, 'evidence-browser-relay-scenario', (fragment) => {
+      reassigned = fragment.values.browser_relay_scenario_fixture_cloud;
+      delete fragment.values.browser_relay_scenario_fixture_cloud;
+    });
+    mutateFragment(fixture, 'evidence-browser-relay-operations', (fragment) => {
+      fragment.values.browser_relay_scenario_fixture_cloud = reassigned;
+    });
+  }, /evidence-browser-relay-scenario values fields or field order have drifted/u);
+  rejectsFixture((fixture) => {
+    mutateFragment(fixture, 'evidence-browser-relay-operations', (fragment) => {
+      fragment.values.browser_relay_plan = readJson(
+        join(fixture.fragmentRoot, 'evidence-browser-relay-scenario.json'),
+      ).values.browser_relay_plan;
+    });
+  }, /evidence-browser-relay-operations values fields or field order have drifted/u);
+});
+
 test('rejects a bundle whose individually bounded fragments exceed the aggregate cap', () => {
   rejectsFixture((fixture) => {
     mutateFragment(fixture, 'core', (fragment) => {
       fragment.values.status += 'x'.repeat(50 * 1024);
     });
-    mutateFragment(fixture, 'evidence-browser-relay', (fragment) => {
+    mutateFragment(fixture, 'evidence-browser-relay-scenario', (fragment) => {
       fragment.values.browser_relay_plan.state += 'x'.repeat(10 * 1024);
     });
   }, /bundle exceeds 196608 bytes/u);
