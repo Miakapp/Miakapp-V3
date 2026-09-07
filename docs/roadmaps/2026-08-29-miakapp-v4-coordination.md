@@ -817,12 +817,13 @@ current consumer.
     browser-start and page/browser/global-close boundaries, and emits only the
     closed session result. A separate dormant operation case adapter now binds
     that scheduler/session to the durable claim and unchanged operation
-    envelope offline; genuine source adapters remain absent. The manifest
+    envelope offline; generic source transports are now implemented separately,
+    while authenticated readers and live wiring remain absent. The manifest
     capacity prerequisite is now closed: the stable entry point indexes five
     fixed canonical fragments, with separate browser-relay scenario and
     operations owners, exact path, mount, byte-length and SHA-256 bindings,
     per-file ceilings and one aggregate ceiling while reconstructing the
-    revision-98 semantic object. The immutable original
+    revision-99 semantic object. The immutable original
     fixture still has three private page inputs, but a separate closed scenario fixture now
     supplies the fourth from a second genuine synthetic Firebase identity,
     extends the unique coordinator's state access to both identities and
@@ -876,9 +877,19 @@ current consumer.
     non-serializable capability; one matrix may enter wholly within the claim
     lifetime and receives only the exact edge abort signal. Its hostile offline
     tests exercise the real operation and both cleanup levels without exposing
-    lineage or granting authority. Next implement genuine source transports and
-    trusted live page providers, then isolate browser ownership behind validated
-    IPC before executing the matrix once.
+    lineage or granting authority. A following dormant source-transport package
+    now implements the genuine acquisition lifecycle for all seven independent
+    owners: 22 fixed provider acquisitions yield exactly 43 sanitized
+    observations and explicit EOF under downstream backpressure, linked abort,
+    single-operation provider identity, single-stage reader identity, exact
+    per-source order, non-overlap, bounded late-settlement drain, exact close and
+    permanent protocol poison. Its production entrypoint uses intrinsic timers
+    and grants no network, credential, cloud, Hosting, browser or execution
+    authority. Authenticated source-specific readers, case-adapter transport
+    wiring and trusted live page providers remain absent. Next implement those
+    trusted readers and providers, but first revise or compact the 192-KiB
+    aggregate manifest boundary: only 2,308 bytes remain. Then isolate browser
+    ownership behind validated IPC before executing the matrix once.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform
     no-change plan. Its fresh post-merge preflight is complete and the rollback

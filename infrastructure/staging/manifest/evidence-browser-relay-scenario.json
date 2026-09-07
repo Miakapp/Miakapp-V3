@@ -1208,6 +1208,97 @@
         "raw_facts_committed": false
       }
     },
+    "browser_relay_source_transports": {
+      "state": "closed_genuine_source_transport_adapters_implemented_not_wired_not_executed",
+      "profile_path": "browser-relay-source-transports/profile.json",
+      "profile_sha256": "9628f2dbe63713da3f4777908e036155c8c7852f3ac110d3efc162266a933ad4",
+      "profile_schema": "miakapp.staging-browser-relay-source-transports-profile/1",
+      "profile_revision": 1,
+      "contract_source_sha256": "57f98c932d1f32fef22f37de5dd3ed315585cb8fcdcd02878282efab8091553a",
+      "target": {
+        "project_id": "miakapp-v4-staging",
+        "project_number": "1072737219170",
+        "region": "europe-west9",
+        "data_policy": "synthetic_only",
+        "cloud_compute_resources": 0,
+        "unscheduled": true
+      },
+      "pins": {
+        "implementation_base_commit": "859bdf72b31639ced839c842f00b6e89e5b8bf72",
+        "browser_relay_plan_sha256": "6c7661d9be861e4f8d13ccd5d2fd0f3eaa34ea2b4d7af2e9b41d1867d6c37211",
+        "independent_observers_profile_sha256": "adb1755f60466da5babb4aa3527445f6423c0dfee6b0927e73eee041e25e3969",
+        "independent_case_adapter_profile_sha256": "e228eee9e27b2cf411beee979bdbd69b44e62248cb65997636c87134912508d6",
+        "dependency_contracts_sha256": "fa2c14c5a88d3015d278fe2aa6e1be2ffb105980588a1f65d6c217bb88c82e30",
+        "internal_source_sha256": "486078eadef5e02847f4489e2df593b07744f717d31a741465cfa8053713d9e6",
+        "production_source_sha256": "602e34e9eae57212c7899a41e06a7673e7f3a04f7c9504c6388ad54913ede396",
+        "testing_source_sha256": "bd7a74c4b3bdf0e37cabeaa16ad4ee27c1617e34a435429d7f61b572187462e5",
+        "guard_source_sha256": "46f4bcb41edecd13b67c5df4ec781665ec3ccdfec4728b2877138a3378adc21d",
+        "unit_test_sha256": "3229825d54edb3f5fbb2bfa3ccfa9ef55a6b3344cc272e548c568a2db19ab2f6",
+        "workflow_sha256": "b26911a4afc4cf895f7d1165d55517c7f64aa4d427abe4b3262e31fff6c1686c"
+      },
+      "transport": {
+        "sources": 7,
+        "stages": 22,
+        "observations_per_matrix": 43,
+        "provider_methods": [
+          "openStage",
+          "close"
+        ],
+        "reader_methods": [
+          "next",
+          "close"
+        ],
+        "expected_eof_required": true,
+        "downstream_backpressure_awaited": true,
+        "operation_capability_noncloneable": true,
+        "provider_identity_single_operation": true,
+        "reader_identity_single_stage": true,
+        "source_execution_nonoverlapping": true,
+        "source_invocation_order_exact": true,
+        "late_records_suppressed": true,
+        "abort_before_drain": true,
+        "finite_late_settlements_drained": true,
+        "stage_reader_close_exact": true,
+        "provider_close_exact": true,
+        "protocol_poison_permanent": true,
+        "raw_observations_retained": false,
+        "arbitrary_errors_propagated": false
+      },
+      "compatibility": {
+        "independent_source_observers_present": true,
+        "independent_case_adapter_compatible": true,
+        "complete_source_count": 7,
+        "complete_observation_capacity": 43,
+        "genuine_source_transport_adapters_present": true,
+        "trusted_live_source_readers_present": false,
+        "operation_case_adapter_wired": false,
+        "common_operation_clock_owned_here": false,
+        "dedicated_process_ipc_present": false,
+        "network_implementation_present": false
+      },
+      "authority": {
+        "credential_acquisition_authorized": false,
+        "network_requests_authorized": false,
+        "cloud_mutation_authorized": false,
+        "public_ingress_authorized": false,
+        "hosting_publication_authorized": false,
+        "browser_launch_authorized": false,
+        "live_execution_authorized": false
+      },
+      "evidence": {
+        "state": "absent",
+        "live_source_readers": 0,
+        "live_source_observations": 0,
+        "live_source_receipts": 0,
+        "cloud_requests": 0,
+        "cloud_mutations": 0,
+        "public_ingress_changes": 0,
+        "live_execution_count": 0,
+        "incremental_monthly_cost_eur": 0,
+        "credentials_committed": false,
+        "raw_source_material_committed": false
+      }
+    },
     "chromium_scenario_automation": {
       "state": "closed_complete_chromium_page_scenario_projected_with_backpressure_offline_proven_not_wired_not_live_executed",
       "profile_path": "browser-relay-chromium-scenario/profile.json",
