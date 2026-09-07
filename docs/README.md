@@ -106,8 +106,16 @@ implemented across several repositories.
   validates each complete page fact before projecting only the five semantic
   fields into `LIVE-10`, preserves the evidence session as envelope and receipt
   owner, proves both page closures and closes the same 40-assertion schedule.
-  Live page providers, independent source acquisition, process isolation,
+  Genuine live page providers and source acquisition, process isolation,
   durable-claim binding and every live/cloud authority remain absent.
+- [`../infrastructure/staging/browser-relay-independent-case-adapter/`](../infrastructure/staging/browser-relay-independent-case-adapter/)
+  — dormant source-only layer that fills the final scheduler adapter slot with
+  seven source-owned observer capabilities and one browser-lifecycle owner. It
+  derives source kind and sequence, projects observations only, preserves
+  concurrent cross-source acquisition and closes all 43 independent facts plus
+  the complete 40-assertion schedule offline. Genuine source transports, live
+  page/browser providers, process isolation, durable-claim binding and every
+  live/cloud authority remain absent.
 - [`../infrastructure/staging/browser-relay-chromium-scenario/`](../infrastructure/staging/browser-relay-chromium-scenario/)
   — dormant two-page Chromium driver that owns the complete 18-fact page
   scenario and closes the existing receipt producer offline. Its pinned CDP
@@ -250,7 +258,7 @@ three-engine offline CI proof. The archived `profile-v2.json` preserves that
 claim, while current page revision 3 pins unchanged plan 15. The staging manifest
 bundle uses a small bundle-revision-2 canonical index and five fixed, size- and
 digest-bound fragments, with browser-relay scenario and operations evidence
-separated physically, while assembling the current revision-96 semantic object. It
+separated physically, while assembling the current revision-97 semantic object. It
 retains the byte-exact earlier zero-relay plan used
 by the image build, revision 9 used by the runner, revision 10 used by
 monitoring, revision 11 used by rollback and revision 12 used by the
@@ -326,11 +334,12 @@ and BFCache automation gap offline without weakening that blocker. Its native
 witness records Chromium's visible `pagehide` dispatch, later trusted hidden
 transition and visible `pageshow` separately, under the reviewed Hosting
 `no-store` and security-header policy. The layered case adapters now compose
-all three complete page scenarios into the scheduler/session offline. None of
-these packages grants Hosting publication or live authority; genuine live page
-providers and independent source adapters, dedicated-process IPC, fixture
-lifecycle wiring and durable operation-claim binding must close before the one
-allowed live matrix can execute.
+all three complete page scenarios and seven deterministic independent-source
+observers into the scheduler/session offline. None of these packages grants
+Hosting publication or live authority; genuine source transports and live
+page/browser providers, dedicated-process IPC, fixture lifecycle wiring and
+durable operation-claim binding must close before the one allowed live matrix
+can execute.
 
 Repository-specific implementation plans must link back to these documents and
 must not redefine a shared contract locally.

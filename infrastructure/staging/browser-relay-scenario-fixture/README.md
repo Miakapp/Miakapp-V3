@@ -41,7 +41,7 @@ WebKit triples and retains its distinct pre-input Chromium blocker. A separate
 pinned-CDP driver now closes the complete Chromium page scenario and proves one
 native BFCache restore with trusted page and browser witnesses offline. It uses
 an injected synthetic controller: composing this fixture and its cloud adapter
-into that driver, plus genuine independent source adapters and aggregator
+into that driver, plus genuine independent source transports and aggregator
 wiring, remains open.
 Neither package grants cloud mutation, Hosting publication, public ingress or
 live execution authority.
