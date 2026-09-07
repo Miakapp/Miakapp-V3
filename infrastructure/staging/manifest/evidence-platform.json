@@ -1,6 +1,6 @@
 {
   "schema": "miakapp.staging-manifest-fragment/1",
-  "bundle_revision": 1,
+  "bundle_revision": 2,
   "id": "evidence-platform",
   "mount": "evidence",
   "values": {
