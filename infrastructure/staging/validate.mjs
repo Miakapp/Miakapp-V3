@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { readFileSync, statSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
@@ -229,10 +229,13 @@ import { validateFirebaseAuthEvidence } from './firebase-auth/evidence.mjs';
 import { validateProbeEvidence } from './probe/evidence.mjs';
 import { validateSigningOverlapEvidence } from './signing-overlap/evidence.mjs';
 import { validateWorkloadEvidence } from './workload/evidence.mjs';
+import {
+  loadCanonicalJsonFile,
+  loadStagingManifestBundle,
+} from './manifest-bundle.mjs';
 
 const INDEPENDENT_OBSERVERS_CONTRACT_SHA256 =
   '685ab657e1fcd3348a6fc5c20e44c8071d9b2fa75ffd86188a4157f720d42e23';
-const MAX_MANIFEST_BYTES = 128 * 1024;
 
 const SERVICE_IDS = [
   'firebase-auth',
@@ -5305,18 +5308,6 @@ export function validateFirebaseRc(value) {
   return firebaseRc;
 }
 
-function readBoundedJson(path, maximumBytes) {
-  const size = statSync(path).size;
-  if (size > maximumBytes) throw new StagingManifestError(`${path} exceeds ${maximumBytes} bytes`);
-  let parsed;
-  try {
-    parsed = JSON.parse(readFileSync(path, 'utf8'));
-  } catch {
-    throw new StagingManifestError(`${path} is not valid JSON`);
-  }
-  return parsed;
-}
-
 function validatedEvidenceFile(path, validator, manifestPath) {
   try {
     return validator(path);
@@ -5826,7 +5817,10 @@ export function validateCommittedEvidence(
     browserRelayV9Plan.budgets.maximum_firestore_writes,
     'evidence.browser_relay_runner Firestore budget',
   );
-  const rootPackage = readBoundedJson(resolve(stagingRoot, '../../package.json'), 8 * 1024);
+  const rootPackage = loadCanonicalJsonFile(
+    resolve(stagingRoot, '../../package.json'),
+    8 * 1024,
+  );
   exact(
     rootPackage.devDependencies?.playwright,
     browserRelayRunnerProfile.pins.playwright_version,
@@ -8479,8 +8473,15 @@ export function validateCommittedEvidence(
 
 export function validateStagingManifestFile(manifestPath, firebaseRcPath = fileURLToPath(new URL('../../.firebaserc', import.meta.url))) {
   const resolvedManifestPath = resolve(manifestPath);
-  const manifest = readBoundedJson(resolvedManifestPath, MAX_MANIFEST_BYTES);
-  const firebaseRc = readBoundedJson(firebaseRcPath, 4 * 1024);
+  let manifest;
+  let firebaseRc;
+  try {
+    manifest = loadStagingManifestBundle(resolvedManifestPath);
+    firebaseRc = loadCanonicalJsonFile(firebaseRcPath, 4 * 1024);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Staging manifest bundle is invalid';
+    throw new StagingManifestError(message);
+  }
   validateStagingManifest(manifest);
   validateFirebaseRc(firebaseRc);
   validateCommittedEvidence(manifest, dirname(resolvedManifestPath));
