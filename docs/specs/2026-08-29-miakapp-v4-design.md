@@ -919,10 +919,11 @@ vertical-slice exit gates.
    offline fakes. The later trusted non-persisted native pagehide proves
    synchronous terminal fencing, not completion of asynchronous Firebase
    cleanup. Playwright 1.62.1 explicitly
-   does not support BFCache testing, so native persisted restoration remains
+   does not support high-level BFCache testing, so that bridge retains
    `blocked_by_pinned_playwright`; simulated trusted persisted unit events are
-   not native BFCache proof. None of these checks is cloud, publication or
-   live acceptance. A separate dormant controller now closes the
+   not native BFCache proof. A separate pinned-CDP driver now supplies native
+   offline proof without weakening that blocker. None of these checks is cloud,
+   publication or live acceptance. A separate dormant controller now closes the
    single synthetic-Home
    lifecycle: initial absence gates all mutation and cleanup authority, one
    exact MiakAPI coordinator owns the synthetic state/function surface, browser
@@ -951,6 +952,29 @@ vertical-slice exit gates.
    `pinned_playwright_bfcache_unsupported` before either dependency is called.
    The blocked result is not an engine result and cannot stand in for native
    persisted lifecycle evidence.
+   A dedicated dormant Chromium driver now owns two page instances and two
+   private inputs, executes the complete 18-fact page scenario and closes the
+   existing receipt producer offline. It navigates outbound through Playwright,
+   restores the exact prior history entry through pinned Chromium CDP and reads
+   the restored page through `Runtime.evaluate`. A restore is accepted only
+   when the trusted persisted page sequence records `pagehide` dispatch while
+   visible, the later trusted hidden transition, and `pageshow` dispatch and
+   completion while visible. That witness must agree with exactly one main-frame
+   `BackForwardCacheRestore` and no
+   `Page.backForwardCacheNotUsed` event. The full-browser smoke satisfies both
+   positive witnesses without contacting staging and serves the reviewed
+   Hosting `no-store` and security-header policy. Its production path records
+   the exact Page, Frame and channel created by the pinned Playwright factories,
+   invokes the pinned Frame implementation through leased channel, ChannelOwner
+   and connection-transport methods, and rejects substituted runtime identities
+   before private input acquisition. Cleanup invokes the captured native Page
+   channel close and requires native closed state plus removal of both Page and
+   Frame identities from the trusted connection. This dormant proof explicitly
+   trusts the injected providers, page navigation/content/init scripts and
+   exclusive ownership of that in-process Playwright connection. The mutable
+   same-realm leases are defense in depth, not a confidentiality sandbox;
+   untrusted or shared live wiring requires a dedicated browser process and a
+   narrow validated IPC contract.
    A separate closed independent-source package now produces the remaining 15
    receipts from 43 exact ordered App Check, Hosting, control-plane, relay,
    coordinator, KMS and Firestore facts. It accepts no assertion maps and
@@ -987,9 +1011,12 @@ vertical-slice exit gates.
    ephemeral-session and HTTP boundary. Its profile closes only the
    second-identity cloud implementation gap. Original fixture capacity limits
    remain explicit, current page timing capacity is satisfied, and nothing is
-   live wired or executed. The complete Chromium page scenario, a BFCache-capable
-   automation path, independent live source adapters and durable operation
-   binding remain open before the one allowed execution.
+   live wired or executed. The standalone Chromium scenario and BFCache
+   automation gaps are closed offline behind a pinned no-capture boundary that
+   rejects diagnostics, trace, HAR, video and API logging before private input;
+   fixture/controller composition, genuine independent source adapters,
+   scheduler wiring and durable operation binding remain open before the one
+   allowed execution.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain

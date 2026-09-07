@@ -76,12 +76,14 @@ credential or relay connection. These are offline implementation checks, not
 cloud, publication or live-matrix acceptance.
 
 Playwright 1.62.1 explicitly does not support BFCache testing. Native persisted
-BFCache restoration therefore remains unproven with state
-`blocked_by_pinned_playwright`; the trusted persisted unit test simulates its
-events and is not native BFCache proof. The `offline_validation` profile section
-keeps that distinction separate from both implemented lifecycle capabilities
-and the absent live evidence. The complete page scenario and receipt bridge
-remain unwired.
+BFCache restoration therefore remains unproven by this package's high-level
+Playwright smoke, whose `blocked_by_pinned_playwright` state and simulated
+trusted persisted unit events are not native proof. The separate
+[`browser-relay-chromium-scenario`](../browser-relay-chromium-scenario/)
+driver now exercises this same host through pinned Chromium CDP and closes one
+complete 18-fact receipt with trusted page and browser restore witnesses. That
+is offline composition evidence only: the concrete fixture, scheduler and live
+source adapters remain unwired.
 
 The execution envelope permits 720 seconds for all three engines
 (600 + 60 + 60), followed by a 180-second callback cleanup reserve and a

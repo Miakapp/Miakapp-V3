@@ -13,8 +13,8 @@
   "pins": {
     "implementation_base_commit": "17a21138e4deccfb175354ae81aad9e52fc3edb2",
     "browser_relay_plan_sha256": "6c7661d9be861e4f8d13ccd5d2fd0f3eaa34ea2b4d7af2e9b41d1867d6c37211",
-    "browser_relay_evidence_session_profile_sha256": "4936834d01d81f0cd4053ef3bd7c505e3d4f8139c381b28ab918248bd187a544",
-    "dependency_contracts_sha256": "a9a2518da655f43ff1fd843013a85a150d706b1b90be38d2cf84b68550337d38",
+    "browser_relay_evidence_session_profile_sha256": "c51cbba4c3dc2f771e48f8d9e3e3f9908d48cc7e1c7eea0e6f3fa1835ed3024f",
+    "dependency_contracts_sha256": "c475be35607042b3cee432e261a3dcce35fbd6cd01d40943aa834865e98f2c13",
     "scheduler_source_sha256": "d2b6d3e7c0364241c5916b166dae8be9a34a60095b72dfe3a9e0d5bb39df4efb",
     "internal_source_sha256": "d4db6014afd559689b9cf90b462ce324502a43eae578f00f6e5a7bbb1aa29275",
     "testing_source_sha256": "11659d0c63067e9e8af8ab298c4bc5d073f17f84da86f8c64f652dad62ccdd69"

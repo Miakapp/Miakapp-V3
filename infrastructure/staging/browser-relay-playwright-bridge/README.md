@@ -16,8 +16,13 @@ Chromium deliberately returns
 private-input provider or receipt-producer factory. Playwright 1.62.1 disables
 BFCache and documents its navigation state as incompatible with BFCache restore
 testing. The required native persisted `pagehide`/`pageshow` evidence therefore
-remains strict and absent. The blocked bridge result has a different schema
-from an engine result and cannot close Chromium acceptance.
+remains strict and absent from this legacy bridge. The blocked bridge result has
+a different schema from an engine result and cannot close Chromium acceptance.
+The adjacent
+[`browser-relay-chromium-scenario`](../browser-relay-chromium-scenario/)
+package now supplies a separate pinned-CDP Chromium path and proves a native
+restore with dual positive witnesses offline; this bridge intentionally remains
+unchanged and blocked.
 
 This package does not produce any App Check, hosting, control-plane, relay,
 coordinator, KMS or Firestore receipt. It is not connected to the independent

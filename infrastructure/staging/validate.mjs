@@ -129,6 +129,11 @@ import {
   validateBrowserRelayCaseSchedulerProfile,
 } from './browser-relay-case-scheduler/contract.mjs';
 import {
+  CHROMIUM_SCENARIO_PROFILE_PATH,
+  CHROMIUM_SCENARIO_PROFILE_SHA256,
+  validateBrowserRelayChromiumScenarioProfile,
+} from './browser-relay-chromium-scenario/contract.mjs';
+import {
   PLAYWRIGHT_BRIDGE_BROWSER_SMOKE_SHA256,
   PLAYWRIGHT_BRIDGE_IMPLEMENTATION_BASE_COMMIT,
   PLAYWRIGHT_BRIDGE_OFFLINE_ENTRY_SHA256,
@@ -142,6 +147,7 @@ import {
 } from './browser-relay-playwright-bridge/contract.mjs';
 import {
   PAGE_FACT_ORDER_BY_BROWSER,
+  PAGE_LIFECYCLE_EVENT_SCHEMA,
   PAGE_RECEIPT_IMPLEMENTATION_BASE_COMMIT,
   PAGE_RECEIPT_PROFILE_PATH,
   PAGE_RECEIPT_PROFILE_SHA256,
@@ -262,11 +268,13 @@ import {
 } from './manifest-bundle.mjs';
 
 const INDEPENDENT_OBSERVERS_CONTRACT_SHA256 =
-  '21b3430d6e2ce1227641e9a92d3277853aa0aa61c8ebeeef41ab7a99fa0631d8';
+  '44a63fc2a6ab196dcf9579579c24396caa346c13e48f434e1b3dfe6d7930b0dd';
 const EVIDENCE_SESSION_CONTRACT_SHA256 =
-  '6704df3b2986f654ef0aa2cc3849bcc0036ae65648199ca3a922d91ab0e955f4';
+  '4a32e8963a3cd881407f801cb1ea68b275cabaa1f670c52a1343a440806c6b35';
 const CASE_SCHEDULER_CONTRACT_SHA256 =
-  '69fa300eb301ba5adb1b4b76e59e788bd1a8c9b6464e91bfbd2a087f11b8e9ce';
+  '1665dd419dfe5e4d601a70e4f7de9935ef254b6b2a5b4c6577f87d5fda2a5187';
+const CHROMIUM_SCENARIO_CONTRACT_SHA256 =
+  '34b21cdd891aaf5821de5afb8a6facb608d58d47f8c161b6abf11a154d5f5302';
 
 const SERVICE_IDS = [
   'firebase-auth',
@@ -3098,6 +3106,7 @@ function validateEvidence(value) {
     'browser_relay_independent_observers',
     'browser_relay_evidence_session',
     'browser_relay_case_scheduler',
+    'chromium_scenario_automation',
     'browser_relay_playwright_bridge',
     'browser_relay_page_receipt',
     'browser_relay_scenario_fixture',
@@ -5312,10 +5321,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 93, 'manifest.revision');
+  exact(manifest.revision, 94, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_independent_observers_closed_source_fact_producers_interleaved_runner_result_supported_not_wired_not_executed_browser_relay_evidence_session_closed_operation_local_capability_monotonic_epoch_implemented_not_wired_not_executed_browser_relay_case_scheduler_closed_case_interleaving_implemented_not_wired_not_executed_browser_relay_playwright_bridge_closed_secondary_receipts_chromium_bfcache_blocked_not_wired_not_executed_browser_relay_page_receipt_closed_bridge_bound_not_aggregated_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_independent_observers_closed_source_fact_producers_interleaved_runner_result_supported_not_wired_not_executed_browser_relay_evidence_session_closed_operation_local_capability_monotonic_epoch_implemented_not_wired_not_executed_browser_relay_case_scheduler_closed_case_interleaving_implemented_not_wired_not_executed_browser_relay_chromium_scenario_closed_complete_page_cdp_bfcache_offline_proven_not_wired_not_live_executed_browser_relay_playwright_bridge_closed_secondary_receipts_chromium_bfcache_blocked_not_wired_not_executed_browser_relay_page_receipt_closed_bridge_bound_not_aggregated_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -5356,6 +5365,12 @@ function fileSha256(path) {
 function exactFields(value, expected, path) {
   for (const [field, expectedValue] of Object.entries(expected)) {
     exact(value[field], expectedValue, `${path}.${field}`);
+  }
+}
+
+function exactStructured(value, expected, path) {
+  if (JSON.stringify(value) !== JSON.stringify(expected)) {
+    reject(path, 'must equal its exact committed profile projection');
   }
 }
 
@@ -6881,6 +6896,107 @@ export function validateCommittedEvidence(
     browserRelayCaseSchedulerExpected,
     'evidence.browser_relay_case_scheduler',
   );
+  const chromiumScenarioManifest = manifest.evidence.chromium_scenario_automation;
+  const chromiumScenarioProfilePath = committedEvidencePath(
+    stagingRoot,
+    chromiumScenarioManifest.profile_path,
+    CHROMIUM_SCENARIO_PROFILE_PATH,
+    'evidence.chromium_scenario_automation.profile_path',
+  );
+  const browserRelayChromiumScenarioProfile = validatedEvidenceFile(
+    chromiumScenarioProfilePath,
+    validateBrowserRelayChromiumScenarioProfile,
+    'evidence.chromium_scenario_automation.profile_path',
+  );
+  exact(
+    fileSha256(chromiumScenarioProfilePath),
+    CHROMIUM_SCENARIO_PROFILE_SHA256,
+    'evidence.chromium_scenario_automation.profile_sha256',
+  );
+  exact(
+    fileSha256(resolve(stagingRoot, 'browser-relay-chromium-scenario/contract.mjs')),
+    CHROMIUM_SCENARIO_CONTRACT_SHA256,
+    'evidence.chromium_scenario_automation.contract_source_sha256',
+  );
+  const chromiumScenarioExpected = {
+    state: browserRelayChromiumScenarioProfile.state,
+    profile_path: CHROMIUM_SCENARIO_PROFILE_PATH,
+    profile_sha256: CHROMIUM_SCENARIO_PROFILE_SHA256,
+    profile_schema: browserRelayChromiumScenarioProfile.schema,
+    profile_revision: browserRelayChromiumScenarioProfile.revision,
+    contract_source_sha256: CHROMIUM_SCENARIO_CONTRACT_SHA256,
+    target: browserRelayChromiumScenarioProfile.target,
+    pins: browserRelayChromiumScenarioProfile.pins,
+    scenario: browserRelayChromiumScenarioProfile.scenario,
+    bfcache: browserRelayChromiumScenarioProfile.bfcache,
+    timing: browserRelayChromiumScenarioProfile.timing,
+    trust_boundary: browserRelayChromiumScenarioProfile.trust_boundary,
+    lifecycle: browserRelayChromiumScenarioProfile.lifecycle,
+    compatibility: browserRelayChromiumScenarioProfile.compatibility,
+    output: browserRelayChromiumScenarioProfile.output,
+    authority: browserRelayChromiumScenarioProfile.authority,
+    evidence: browserRelayChromiumScenarioProfile.evidence,
+  };
+  record(
+    chromiumScenarioManifest,
+    'evidence.chromium_scenario_automation',
+    Object.keys(chromiumScenarioExpected),
+  );
+  exactStructured(
+    chromiumScenarioManifest,
+    chromiumScenarioExpected,
+    'evidence.chromium_scenario_automation',
+  );
+  exact(
+    browserRelayChromiumScenarioProfile.pins.browser_relay_page_profile_sha256,
+    BROWSER_RELAY_PAGE_PROFILE_SHA256,
+    'evidence.chromium_scenario_automation.pins.browser_relay_page_profile_sha256',
+  );
+  exact(
+    browserRelayChromiumScenarioProfile.pins.browser_relay_page_receipt_profile_sha256,
+    PAGE_RECEIPT_PROFILE_SHA256,
+    'evidence.chromium_scenario_automation.pins.browser_relay_page_receipt_profile_sha256',
+  );
+  exact(
+    browserRelayChromiumScenarioProfile.pins.browser_relay_scenario_fixture_profile_sha256,
+    SCENARIO_FIXTURE_PROFILE_SHA256,
+    'evidence.chromium_scenario_automation.pins.browser_relay_scenario_fixture_profile_sha256',
+  );
+  exact(
+    browserRelayChromiumScenarioProfile.pins.browser_relay_playwright_bridge_profile_sha256,
+    PLAYWRIGHT_BRIDGE_PROFILE_SHA256,
+    'evidence.chromium_scenario_automation.pins.browser_relay_playwright_bridge_profile_sha256',
+  );
+  exact(
+    browserRelayChromiumScenarioProfile.pins.browser_relay_case_scheduler_profile_sha256,
+    CASE_SCHEDULER_PROFILE_SHA256,
+    'evidence.chromium_scenario_automation.pins.browser_relay_case_scheduler_profile_sha256',
+  );
+  exact(
+    browserRelayChromiumScenarioProfile.pins.playwright_types_sha256,
+    PLAYWRIGHT_TYPES_SHA256,
+    'evidence.chromium_scenario_automation.pins.playwright_types_sha256',
+  );
+  exact(
+    browserRelayChromiumScenarioProfile.compatibility.complete_chromium_page_scenario,
+    true,
+    'evidence.chromium_scenario_automation.compatibility.complete_chromium_page_scenario',
+  );
+  exact(
+    browserRelayChromiumScenarioProfile.compatibility.bfcache_capable_automation,
+    true,
+    'evidence.chromium_scenario_automation.compatibility.bfcache_capable_automation',
+  );
+  exact(
+    browserRelayCaseSchedulerProfile.compatibility.complete_chromium_page_scenario,
+    false,
+    'evidence.browser_relay_case_scheduler.compatibility.complete_chromium_page_scenario',
+  );
+  exact(
+    browserRelayCaseSchedulerProfile.compatibility.bfcache_capable_automation,
+    false,
+    'evidence.browser_relay_case_scheduler.compatibility.bfcache_capable_automation',
+  );
   const browserRelayPlaywrightBridgeManifest = record(
     manifest.evidence.browser_relay_playwright_bridge,
     'evidence.browser_relay_playwright_bridge',
@@ -7054,6 +7170,17 @@ export function validateCommittedEvidence(
     raw_page_diagnostics_committed:
       browserRelayPlaywrightBridgeProfile.evidence.raw_page_diagnostics_committed,
   }, 'evidence.browser_relay_playwright_bridge');
+  exact(
+    browserRelayChromiumScenarioProfile.compatibility.legacy_playwright_bridge_chromium_blocked,
+    browserRelayPlaywrightBridgeProfile.compatibility
+      .chromium_blocked_before_page_or_private_input,
+    'evidence.chromium_scenario_automation.compatibility.legacy_playwright_bridge_chromium_blocked',
+  );
+  exact(
+    browserRelayChromiumScenarioProfile.bfcache.playwright_high_level_supported,
+    browserRelayPlaywrightBridgeProfile.compatibility.playwright_bfcache_testing_supported,
+    'evidence.chromium_scenario_automation.bfcache.playwright_high_level_supported',
+  );
   const browserRelayPageReceiptManifest = manifest.evidence.browser_relay_page_receipt;
   const browserRelayPageReceiptProfilePath = committedEvidencePath(
     stagingRoot,
@@ -7098,6 +7225,7 @@ export function validateCommittedEvidence(
       browserRelayPageReceiptProfile.pins.browser_relay_playwright_bridge_profile_sha256,
     producer_source_sha256: PAGE_RECEIPT_SOURCE_SHA256,
     page_fact_schema: browserRelayPageReceiptProfile.producer.page_fact_schema,
+    page_lifecycle_event_schema: PAGE_LIFECYCLE_EVENT_SCHEMA,
     page_lifecycle_observation_schema:
       browserRelayPageReceiptProfile.producer.page_lifecycle_observation_schema,
     source_receipt_schema: browserRelayPageReceiptProfile.producer.source_receipt_schema,
@@ -8804,6 +8932,7 @@ export function validateCommittedEvidence(
     browserRelayIndependentObserversProfile,
     browserRelayEvidenceSessionProfile,
     browserRelayCaseSchedulerProfile,
+    browserRelayChromiumScenarioProfile,
     browserRelayPlaywrightBridgeProfile,
     browserRelayPageReceiptProfile,
     browserRelayScenarioFixtureCloudProfile,
@@ -8858,7 +8987,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; the dormant page, two-identity scenario fixture, replacement-identity cloud adapter, independent-source aggregator and observers, evidence session, case scheduler, Playwright bridge and browser-page receipt producer are digest-pinned without live authority, the Chromium BFCache path remains blocked before private input, the single-use operation remains privately preflighted and unexecuted, both exact-audience relays remain private-ready, unauthenticated invocation remains absent, and App Check enforcement is disabled.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; the dormant page, two-identity scenario fixture, replacement-identity cloud adapter, independent-source aggregator and observers, evidence session, case scheduler, native Chromium scenario, legacy Playwright bridge and browser-page receipt producer are digest-pinned without live authority, the native driver closes the complete offline Chromium page scenario with dual-positive BFCache evidence while live wiring remains absent and the legacy bridge stays blocked, the single-use operation remains privately preflighted and unexecuted, both exact-audience relays remain private-ready, unauthenticated invocation remains absent, and App Check enforcement is disabled.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';
