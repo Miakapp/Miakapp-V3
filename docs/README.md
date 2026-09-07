@@ -72,6 +72,11 @@ implemented across several repositories.
   — dormant single-use evidence aggregator assigning every runner assertion,
   counter and public identifier to one exact browser or independent cloud
   source; invalid, missing, duplicated or out-of-order receipts fail closed.
+- [`../infrastructure/staging/browser-relay-independent-observers/`](../infrastructure/staging/browser-relay-independent-observers/)
+  — dormant closed producers for all 15 non-page receipts; exact source facts,
+  common-clock browser windows and revision/signing lineage combine offline
+  with the page receipts into one closed runner result, while authenticated
+  live acquisition remains absent.
 - [`../infrastructure/staging/browser-relay-playwright-bridge/`](../infrastructure/staging/browser-relay-playwright-bridge/)
   — dormant fail-closed Playwright page-to-receipt bridge with lazy private
   input acquisition and owned page cleanup; real Firefox and WebKit engines
@@ -80,8 +85,8 @@ implemented across several repositories.
 - [`../infrastructure/staging/browser-relay-page-receipt/`](../infrastructure/staging/browser-relay-page-receipt/)
   — dormant browser-owned receipt producer that reduces exact cumulative page,
   state, call and native lifecycle facts without accepting assertion booleans;
-  revision 2 is digest-bound to the adjacent bridge, while the complete
-  Chromium scenario and independent-source aggregation remain explicitly open.
+  revision 2 is digest-bound to the adjacent bridge and combines with every
+  independent source offline, while the complete live Chromium scenario remains open.
 - [`../infrastructure/staging/browser-relay-scenario-fixture/`](../infrastructure/staging/browser-relay-scenario-fixture/)
   — dormant composition around the immutable fixture that supplies four exact
   page inputs across two genuine synthetic Firebase identities, extends the one
@@ -215,8 +220,13 @@ and cloud assertions, counters and public identifiers to non-overlapping source
 owners. The first source producer now derives the complete `browser_page`
 receipt from 18 ordered Chromium facts and three facts in each secondary
 browser, including scheduled renewal intervals, serialized handoff, persisted
-page lifecycle and a fresh identity generation. It retains no raw fact and
-the original three-input fixture remains byte-exact. A separate scenario
+page lifecycle and a fresh identity generation. A separate independent-source
+package now closes the other 15 receipt producers from 43 ordered App Check,
+Hosting, control-plane, relay, coordinator, KMS and Firestore facts. It accepts
+no assertion maps, raw cloud responses, private identifiers or credentials, and the
+18 receipt classes reduce offline to all 40 runner assertions. Both producer
+boundaries retain no raw fact, and the original three-input fixture remains
+byte-exact. A separate scenario
 fixture now supplies the required fourth input from a second exact synthetic
 Firebase identity and grants both identities state access through the same
 coordinator. A separate dormant Google/Firebase adapter now implements that
@@ -230,7 +240,7 @@ page-to-receipt transport with lazy private inputs and owned cleanup. Chromium
 still fails closed before page or private-input acquisition because pinned
 Playwright cannot prove native persisted BFCache restoration. None of these
 packages grants Hosting publication or live authority; the complete Chromium
-scenario, a BFCache-capable automation path, independent cloud observers and
+scenario, a BFCache-capable automation path, live source adapters and
 aggregator wiring must close before the one allowed live matrix can execute.
 
 Repository-specific implementation plans must link back to these documents and

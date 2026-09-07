@@ -533,8 +533,13 @@ now reduces the browser-owned portion from exact cumulative page facts. It
 requires 18 facts in Chromium and three in each secondary browser, validates
 the two scheduled renewal intervals, serialized handoff, native persisted page
 lifecycle, prior-identity teardown and a fresh identity generation, then emits
-only the aggregator receipt. The immutable three-input fixture remains pinned;
-a separate scenario controller now composes it with one replacement synthetic
+only the aggregator receipt. A separate source-only package now produces the
+remaining 15 App Check, Hosting, control-plane, relay, coordinator, KMS and
+Firestore receipts from 43 ordered sanitized facts. Together, the 18 receipt
+classes close all 40 runner assertions offline without accepting assertion
+maps or retaining raw evidence. No live source transport or execution authority
+is present. The immutable three-input fixture remains pinned; a separate
+scenario controller now composes it with one replacement synthetic
 Firebase identity, provides the four exact ordered page inputs, extends the
 single coordinator's state access to both identities and requires both cleanup
 domains to converge. The replacement-identity cloud adapter now implements the
@@ -550,7 +555,7 @@ BFCache testing: native persisted restoration remains
 `blocked_by_pinned_playwright`, and simulated trusted persisted unit events
 are not native BFCache proof. Plan 15 and its archived page-2 CI profile
 remain byte-exact historical evidence. Complete page-scenario/Playwright wiring
-and independent cloud observers remain required before the matrix can run;
+and independent live source adapters remain required before the matrix can run;
 no package grants Hosting publication or live execution authority.
 
 The guarded relay-image increment bound the exact merged Miakapp-Server tree to a deterministic

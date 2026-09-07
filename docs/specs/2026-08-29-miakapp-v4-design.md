@@ -951,6 +951,18 @@ vertical-slice exit gates.
    `pinned_playwright_bfcache_unsupported` before either dependency is called.
    The blocked result is not an engine result and cannot stand in for native
    persisted lifecycle evidence.
+   A separate closed independent-source package now produces the remaining 15
+   receipts from 43 exact ordered App Check, Hosting, control-plane, relay,
+   coordinator, KMS and Firestore facts. It accepts no assertion maps and
+   retains no raw cloud response, log entry, document, private identifier or
+   credential. Its receipts combine offline with the three page receipts into
+   all 40 runner assertions, while live source acquisition remains absent.
+   Before live wiring, one non-exportable operation capability and common
+   monotonic epoch must bind every source and reject replayed, persisted or
+   cross-operation evidence. The current whole-engine sequential runner is not
+   compatible with the canonical case order: live orchestration must run the
+   Firefox/WebKit case after V2 activation and before V1 retirement, then close
+   the engine aggregates.
    A separate closed scenario fixture now supplies the required fourth page
    input from a second exact synthetic Firebase identity, extends the one
    coordinator's state access to both identities and requires both cleanup
@@ -961,8 +973,8 @@ vertical-slice exit gates.
    second-identity cloud implementation gap. Original fixture capacity limits
    remain explicit, current page timing capacity is satisfied, and nothing is
    live wired or executed. The complete Chromium page scenario, a BFCache-capable
-   automation path, independent cloud observers and aggregator wiring remain
-   open before the one allowed execution.
+   automation path, independent live source adapters and aggregator wiring
+   remain open before the one allowed execution.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain

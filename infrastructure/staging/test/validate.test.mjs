@@ -30,6 +30,13 @@ import {
   validateBrowserRelayPlaywrightBridgeProfile,
 } from '../browser-relay-playwright-bridge/contract.mjs';
 import {
+  INDEPENDENT_OBSERVERS_DEPENDENCY_CONTRACTS_SHA256,
+  INDEPENDENT_OBSERVERS_PROFILE_PATH,
+  INDEPENDENT_OBSERVERS_PROFILE_SHA256,
+  INDEPENDENT_OBSERVERS_SOURCE_SHA256,
+  validateBrowserRelayIndependentObserversProfile,
+} from '../browser-relay-independent-observers/contract.mjs';
+import {
   SCENARIO_FIXTURE_CLOUD_IMPLEMENTATION_BASE_COMMIT,
   SCENARIO_FIXTURE_CLOUD_PROFILE_PATH,
   SCENARIO_FIXTURE_CLOUD_PROFILE_SHA256,
@@ -75,10 +82,10 @@ test('rejects a staging manifest above the bounded 128-KiB envelope', () => {
 
 test('accepts the successful and retired private user-relay probe', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 90);
+  assert.equal(validated.revision, 91);
   assert.equal(
     validated.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_playwright_bridge_closed_secondary_receipts_chromium_bfcache_blocked_not_wired_not_executed_browser_relay_page_receipt_closed_bridge_bound_not_aggregated_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_independent_observers_closed_source_fact_producers_implemented_not_wired_not_executed_browser_relay_playwright_bridge_closed_secondary_receipts_chromium_bfcache_blocked_not_wired_not_executed_browser_relay_page_receipt_closed_bridge_bound_not_aggregated_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
@@ -1060,6 +1067,67 @@ test('accepts the successful and retired private user-relay probe', () => {
     credentials_committed: false,
     raw_receipts_committed: false,
   });
+  assert.deepEqual(validated.evidence.browser_relay_independent_observers, {
+    state: 'closed_independent_source_receipt_producers_implemented_not_wired_not_executed',
+    profile_path: 'browser-relay-independent-observers/profile.json',
+    profile_sha256: 'dccfa34e8243e546c5c7e58d314da912f1c59e63410580773912dab2137f2acb',
+    implementation_base_commit: '7d2822d170df6849971b4748922fd1a459da6699',
+    browser_relay_plan_sha256:
+      '6c7661d9be861e4f8d13ccd5d2fd0f3eaa34ea2b4d7af2e9b41d1867d6c37211',
+    browser_relay_aggregator_profile_sha256:
+      '2f78e09655d26af993d1c5885114b1740aaa32e13ced14c5d8d774a9e40a7851',
+    browser_relay_page_receipt_profile_sha256:
+      '740d21178e963fb82a3cd923a1adf6cbf6af2b62a633f0b97058fbda4f1e906a',
+    dependency_contracts_sha256:
+      '2942c96d56dbf9732675f06b86cd0911bb7cd39a92ad32d4cc830796834754f7',
+    contract_source_sha256: '685ab657e1fcd3348a6fc5c20e44c8071d9b2fa75ffd86188a4157f720d42e23',
+    observers_source_sha256:
+      'f13a22c22e4953b3baee9d98b828f1e0b76997d49a8e066c98297557b9d35785',
+    source_fact_schema: 'miakapp.staging-browser-relay-independent-source-fact/1',
+    source_receipt_schema: 'miakapp.staging-browser-relay-source-receipt/1',
+    source_receipts_per_matrix: 15,
+    facts_per_matrix: 43,
+    distinct_fact_kinds: 32,
+    matrix_scope: 'three_browser',
+    browser_start_offsets_required: true,
+    page_receipt_close_offsets_required: true,
+    independent_sources: 7,
+    assertions_owned: 22,
+    single_use: true,
+    fact_order_exact: true,
+    fact_retries: 0,
+    assertion_boolean_inputs: false,
+    raw_facts_retained: false,
+    source_ownership_exact: true,
+    cross_source_counter_parity_exact: true,
+    cross_browser_revision_lineage_exact: true,
+    cross_browser_timeline_exact: true,
+    independent_receipts_exposed: false,
+    transport_adapters_present: false,
+    runner_result_schema: 'miakapp.staging-browser-relay-runner-result/1',
+    complete_receipt_count: 18,
+    offline_aggregator_integration_present: true,
+    runner_result_producer_present: true,
+    live_aggregator_wired: false,
+    live_source_adapters_present: false,
+    common_operation_clock_shape_present: true,
+    common_operation_provenance_present: false,
+    cross_source_timeline_bound: true,
+    canonical_live_case_order_preserved: true,
+    current_sequential_runner_compatible: false,
+    cloud_compute_resources: 0,
+    cloud_mutation_authorized: false,
+    hosting_publication_authorized: false,
+    public_ingress_authorized: false,
+    live_execution_authorized: false,
+    live_source_facts: 0,
+    live_source_receipts: 0,
+    cloud_requests: 0,
+    cloud_mutations: 0,
+    live_execution_count: 0,
+    credentials_committed: false,
+    raw_facts_committed: false,
+  });
   assert.deepEqual(validated.evidence.browser_relay_monitoring, {
     state: 'allowlisted_monitoring_observed_at_private_boundary',
     profile_path: 'browser-relay-monitoring/profile.json',
@@ -1689,6 +1757,123 @@ test('rejects missing or unreviewed page evidence fields', () => {
   assert.throws(() => validateCommittedEvidence(candidate),
     (error) => error instanceof StagingManifestError
       && /evidence\.browser_relay_page/u.test(error.message));
+});
+
+test('pins all fifteen dormant independent-source receipt producers', () => {
+  const candidate = manifest();
+  const profile = validateBrowserRelayIndependentObserversProfile();
+  const evidence = candidate.evidence.browser_relay_independent_observers;
+  const committed = validateCommittedEvidence(candidate);
+  assert.deepEqual(committed.browserRelayIndependentObserversProfile, profile);
+  assert.equal(evidence.profile_path, INDEPENDENT_OBSERVERS_PROFILE_PATH);
+  assert.equal(evidence.profile_sha256, INDEPENDENT_OBSERVERS_PROFILE_SHA256);
+  assert.equal(
+    evidence.browser_relay_page_receipt_profile_sha256,
+    profile.pins.browser_relay_page_receipt_profile_sha256,
+  );
+  assert.equal(
+    evidence.dependency_contracts_sha256,
+    INDEPENDENT_OBSERVERS_DEPENDENCY_CONTRACTS_SHA256,
+  );
+  assert.equal(evidence.observers_source_sha256, INDEPENDENT_OBSERVERS_SOURCE_SHA256);
+  assert.equal(evidence.source_receipts_per_matrix, 15);
+  assert.equal(evidence.facts_per_matrix, 43);
+  assert.equal(evidence.distinct_fact_kinds, 32);
+  assert.equal(evidence.matrix_scope, 'three_browser');
+  assert.equal(evidence.browser_start_offsets_required, true);
+  assert.equal(evidence.page_receipt_close_offsets_required, true);
+  assert.equal(evidence.independent_sources, 7);
+  assert.equal(evidence.assertions_owned, 22);
+  assert.equal(evidence.complete_receipt_count, 18);
+  assert.equal(evidence.transport_adapters_present, false);
+  assert.equal(evidence.cross_source_counter_parity_exact, true);
+  assert.equal(evidence.cross_browser_revision_lineage_exact, true);
+  assert.equal(evidence.cross_browser_timeline_exact, true);
+  assert.equal(evidence.independent_receipts_exposed, false);
+  assert.equal(evidence.runner_result_schema, 'miakapp.staging-browser-relay-runner-result/1');
+  assert.equal(evidence.offline_aggregator_integration_present, true);
+  assert.equal(evidence.runner_result_producer_present, true);
+  assert.equal(evidence.live_aggregator_wired, false);
+  assert.equal(evidence.live_source_adapters_present, false);
+  assert.equal(evidence.common_operation_clock_shape_present, true);
+  assert.equal(evidence.common_operation_provenance_present, false);
+  assert.equal(evidence.cross_source_timeline_bound, true);
+  assert.equal(evidence.canonical_live_case_order_preserved, true);
+  assert.equal(evidence.current_sequential_runner_compatible, false);
+  assert.equal(evidence.live_execution_authorized, false);
+  assert.equal(evidence.live_source_receipts, 0);
+});
+
+test('rejects independent-observer capability, evidence and authority drift', () => {
+  for (const [field, value] of [
+    ['profile_path', '../../unreviewed.json'],
+    ['profile_sha256', '0'.repeat(64)],
+    ['browser_relay_page_receipt_profile_sha256', '0'.repeat(64)],
+    ['dependency_contracts_sha256', '0'.repeat(64)],
+    ['contract_source_sha256', '0'.repeat(64)],
+    ['observers_source_sha256', '0'.repeat(64)],
+    ['source_receipts_per_matrix', 14],
+    ['facts_per_matrix', 41],
+    ['distinct_fact_kinds', 30],
+    ['matrix_scope', 'one_browser'],
+    ['browser_start_offsets_required', false],
+    ['page_receipt_close_offsets_required', false],
+    ['independent_sources', 6],
+    ['assertions_owned', 21],
+    ['single_use', false],
+    ['fact_order_exact', false],
+    ['fact_retries', 1],
+    ['assertion_boolean_inputs', true],
+    ['raw_facts_retained', true],
+    ['source_ownership_exact', false],
+    ['cross_source_counter_parity_exact', false],
+    ['cross_browser_revision_lineage_exact', false],
+    ['cross_browser_timeline_exact', false],
+    ['independent_receipts_exposed', true],
+    ['transport_adapters_present', true],
+    ['runner_result_schema', 'unreviewed/1'],
+    ['complete_receipt_count', 17],
+    ['offline_aggregator_integration_present', false],
+    ['runner_result_producer_present', false],
+    ['live_aggregator_wired', true],
+    ['live_source_adapters_present', true],
+    ['common_operation_clock_shape_present', false],
+    ['common_operation_provenance_present', true],
+    ['cross_source_timeline_bound', false],
+    ['canonical_live_case_order_preserved', false],
+    ['current_sequential_runner_compatible', true],
+    ['cloud_mutation_authorized', true],
+    ['hosting_publication_authorized', true],
+    ['public_ingress_authorized', true],
+    ['live_execution_authorized', true],
+    ['live_source_facts', 1],
+    ['live_source_receipts', 1],
+    ['cloud_requests', 1],
+    ['cloud_mutations', 1],
+    ['live_execution_count', 1],
+    ['credentials_committed', true],
+    ['raw_facts_committed', true],
+  ]) {
+    const candidate = manifest();
+    candidate.evidence.browser_relay_independent_observers[field] = value;
+    assert.throws(
+      () => validateCommittedEvidence(candidate),
+      (error) => error instanceof StagingManifestError
+        && error.message.includes(`evidence.browser_relay_independent_observers.${field}`),
+      `Expected rejection of ${field} drift`,
+    );
+  }
+});
+
+test('rejects unreviewed independent-observer manifest fields', () => {
+  const candidate = manifest();
+  candidate.evidence.browser_relay_independent_observers.unreviewed_authority = true;
+  assert.throws(
+    () => validateCommittedEvidence(candidate),
+    (error) => error instanceof StagingManifestError
+      && error.message.includes('evidence.browser_relay_independent_observers')
+      && error.message.includes('must contain exactly'),
+  );
 });
 
 test('pins the offline Playwright bridge while keeping Chromium and cloud wiring blocked', () => {
