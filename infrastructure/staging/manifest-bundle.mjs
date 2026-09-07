@@ -92,6 +92,7 @@ const BROWSER_RELAY_EVIDENCE_KEYS = Object.freeze([
   'browser_relay_aggregator',
   'browser_relay_independent_observers',
   'browser_relay_evidence_session',
+  'browser_relay_case_scheduler',
   'browser_relay_playwright_bridge',
   'browser_relay_page_receipt',
   'browser_relay_scenario_fixture',

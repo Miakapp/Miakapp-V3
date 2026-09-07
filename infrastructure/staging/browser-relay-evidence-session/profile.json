@@ -93,7 +93,7 @@
     "durable_claim_binding_present": false,
     "live_operation_wired": false,
     "live_source_adapters_present": false,
-    "interleaving_scheduler_present": false,
+    "interleaving_scheduler_present": true,
     "complete_chromium_page_scenario": false,
     "bfcache_capable_automation": false
   },
