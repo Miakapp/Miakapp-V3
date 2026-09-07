@@ -815,13 +815,14 @@ current consumer.
     scheduler now runs the exact 11-stage `LIVE-02..LIVE-11` topology, partitions
     all 67 projections into revoked case/browser scopes, awaits explicit adapter
     browser-start and page/browser/global-close boundaries, and emits only the
-    closed session result. Live wiring must still bind the scheduler/session to
-    the durable claim and add genuine source adapters. The manifest
+    closed session result. A separate dormant operation case adapter now binds
+    that scheduler/session to the durable claim and unchanged operation
+    envelope offline; genuine source adapters remain absent. The manifest
     capacity prerequisite is now closed: the stable entry point indexes five
     fixed canonical fragments, with separate browser-relay scenario and
     operations owners, exact path, mount, byte-length and SHA-256 bindings,
     per-file ceilings and one aggregate ceiling while reconstructing the
-    revision-97 semantic object. The immutable original
+    revision-98 semantic object. The immutable original
     fixture still has three private page inputs, but a separate closed scenario fixture now
     supplies the fourth from a second genuine synthetic Firebase identity,
     extends the unique coordinator's state access to both identities and
@@ -869,10 +870,15 @@ current consumer.
     source only a revocable observation-recording scope, derives source kind and
     sequence, and closes all 43 independent observations plus the same result in
     a complete offline schedule smoke with real pinned Firefox and WebKit pages
-    and the separately proven Chromium scenario. Next implement genuine source
-    transports plus trusted live page providers, isolate browser ownership
-    behind validated IPC, and bind the scheduler/session to the durable
-    operation claim before executing the matrix once.
+    and the separately proven Chromium scenario. The following dormant
+    composition root hard-wires the unchanged single-use operation to that
+    complete schedule. One direct canonical claim receipt creates a private
+    non-serializable capability; one matrix may enter wholly within the claim
+    lifetime and receives only the exact edge abort signal. Its hostile offline
+    tests exercise the real operation and both cleanup levels without exposing
+    lineage or granting authority. Next implement genuine source transports and
+    trusted live page providers, then isolate browser ownership behind validated
+    IPC before executing the matrix once.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform
     no-change plan. Its fresh post-merge preflight is complete and the rollback

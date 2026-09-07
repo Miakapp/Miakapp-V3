@@ -82,15 +82,17 @@ implemented across several repositories.
   — dormant operation-local capability that owns one monotonic epoch and issues
   browser/source-attenuated ports. Callers provide projections only; the session
   derives fact ownership, order and time, revokes on every terminal path and
-  closes one interleaved runner result. Durable-claim binding and live adapters
-  remain absent; scheduling is supplied by the separate dormant package below.
+  closes one interleaved runner result. This primitive itself contains no claim
+  or live adapter; scheduling and the graph-level claim binding are supplied by
+  separate dormant packages below.
 - [`../infrastructure/staging/browser-relay-case-scheduler/`](../infrastructure/staging/browser-relay-case-scheduler/)
   — dormant case scheduler that runs the exact 11-stage `LIVE-02..LIVE-11`
   topology, attenuates all 67 page/source projections to their owning case,
   awaits browser start and page/browser/global closure, and returns only the
   closed runner result. Its concrete Chromium adapter is the separate dormant
   package below, and the secondary page paths are composed by the following
-  layered adapter; claim binding and live authority remain absent.
+  layered adapter. This package contains no claim or live authority; the complete
+  graph is claim-bound by the later operation case adapter.
 - [`../infrastructure/staging/browser-relay-chromium-case-adapter/`](../infrastructure/staging/browser-relay-chromium-case-adapter/)
   — dormant source-only composition of a ready-only four-method fixture facade, native
   two-page Chromium scenario and fixed case scheduler. It maps all 18 page
@@ -106,16 +108,18 @@ implemented across several repositories.
   validates each complete page fact before projecting only the five semantic
   fields into `LIVE-10`, preserves the evidence session as envelope and receipt
   owner, proves both page closures and closes the same 40-assertion schedule.
-  Genuine live page providers and source acquisition, process isolation,
-  durable-claim binding and every live/cloud authority remain absent.
+  Genuine live page providers and source acquisition, process isolation and
+  every live/cloud authority remain absent from this layer; the complete graph's
+  claim binding is supplied separately.
 - [`../infrastructure/staging/browser-relay-independent-case-adapter/`](../infrastructure/staging/browser-relay-independent-case-adapter/)
   — dormant source-only layer that fills the final scheduler adapter slot with
   seven source-owned observer capabilities and one browser-lifecycle owner. It
   derives source kind and sequence, projects observations only, preserves
   concurrent cross-source acquisition and closes all 43 independent facts plus
   the complete 40-assertion schedule offline. Genuine source transports, live
-  page/browser providers, process isolation, durable-claim binding and every
-  live/cloud authority remain absent.
+  page/browser providers, process isolation and every live/cloud authority
+  remain absent from this layer; the complete graph's claim binding is supplied
+  separately.
 - [`../infrastructure/staging/browser-relay-chromium-scenario/`](../infrastructure/staging/browser-relay-chromium-scenario/)
   — dormant two-page Chromium driver that owns the complete 18-fact page
   scenario and closes the existing receipt producer offline. Its pinned CDP
@@ -176,6 +180,11 @@ implemented across several repositories.
   two-level cleanup order around the edge orchestrator; its post-merge
   read-only preflight succeeded, but no live adapter or execution authority is
   present.
+- [`../infrastructure/staging/browser-relay-operation-case-adapter/`](../infrastructure/staging/browser-relay-operation-case-adapter/)
+  — dormant composition root that binds the unchanged single-use operation to
+  the complete three-browser schedule behind one canonical durable claim. It
+  forwards only the edge abort signal and exposes no claim lineage, provider,
+  cloud authority or live execution path.
 - [`../infrastructure/staging/browser-relay-services/`](../infrastructure/staging/browser-relay-services/)
   — applied four-phase Terraform model holding two private-ready, scale-to-zero
   relays with immutable image selection, finite process admission and public-last
@@ -258,7 +267,7 @@ three-engine offline CI proof. The archived `profile-v2.json` preserves that
 claim, while current page revision 3 pins unchanged plan 15. The staging manifest
 bundle uses a small bundle-revision-2 canonical index and five fixed, size- and
 digest-bound fragments, with browser-relay scenario and operations evidence
-separated physically, while assembling the current revision-97 semantic object. It
+separated physically, while assembling the current revision-98 semantic object. It
 retains the byte-exact earlier zero-relay plan used
 by the image build, revision 9 used by the runner, revision 10 used by
 monitoring, revision 11 used by rollback and revision 12 used by the
@@ -309,8 +318,7 @@ boundaries retain no raw fact. A separate dormant evidence session now gives
 all 18 sources one opaque operation-local capability and monotonic epoch. Its
 attenuated ports accept projections only, derive envelopes and timing, enforce
 Firefox then WebKit between Chromium LIVE-09 and LIVE-11, and revoke/clear on
-close, abort or failure. It is not yet bound to the durable orchestrator claim,
-the live operation or source adapters. A separate dormant scheduler now composes
+close, abort or failure. A separate dormant scheduler now composes
 that production session into 11 fixed stages: Chromium `LIVE-02..LIVE-09`,
 Firefox then WebKit for `LIVE-10`, and Chromium `LIVE-11`. Its non-serializable
 case scopes admit exactly the 67 reviewed projections, and it awaits explicit
@@ -335,11 +343,12 @@ witness records Chromium's visible `pagehide` dispatch, later trusted hidden
 transition and visible `pageshow` separately, under the reviewed Hosting
 `no-store` and security-header policy. The layered case adapters now compose
 all three complete page scenarios and seven deterministic independent-source
-observers into the scheduler/session offline. None of these packages grants
-Hosting publication or live authority; genuine source transports and live
-page/browser providers, dedicated-process IPC, fixture lifecycle wiring and
-durable operation-claim binding must close before the one allowed live matrix
-can execute.
+observers into the scheduler/session offline. A separate dormant composition
+root now binds that complete schedule to the unchanged operation after one
+canonical durable claim and forwards only the exact edge abort signal. None of
+these packages grants Hosting publication or live authority; genuine source
+transports and live page/browser providers, dedicated-process IPC and fixture
+lifecycle wiring must close before the one allowed live matrix can execute.
 
 Repository-specific implementation plans must link back to these documents and
 must not redefine a shared contract locally.

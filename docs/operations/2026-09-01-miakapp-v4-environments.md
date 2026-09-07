@@ -192,7 +192,7 @@ on 2026-09-03. Its sanitized inventory now lives under
 [`../../infrastructure/staging/`](../../infrastructure/staging/).
 Its stable `manifest.json` entry point is now a bundle-revision-2 canonical
 index over five fixed, digest-pinned fragments, with separate browser-relay
-scenario and operations owners. The loader reconstructs the current revision-97
+scenario and operations owners. The loader reconstructs the current revision-98
 semantic manifest only after verifying each fragment's path, mount, bundle
 schema, owned fields, exact byte length, SHA-256 and bounded aggregate size,
 plus index/core agreement on the semantic schema and revision.
@@ -587,10 +587,13 @@ the remaining adapter's one global close. The secondary case adapter now fills
 the Firefox/WebKit page paths, and the independent case adapter fills the final
 slot with seven source-owned observers. Its offline smoke uses real secondary
 browsers, projects all 43 deterministic independent observations and closes the
-same result. Genuine live source transports and page/browser providers,
-dedicated-process IPC and durable operation/claim binding remain required before
-the matrix can run. No package grants Hosting publication or live execution
-authority.
+same result. A separate dormant composition root now hard-wires that full
+schedule to the unchanged operation behind one validated durable claim. Its
+private non-serializable capability permits one matrix wholly within the claim
+lifetime and forwards only the exact edge abort signal. Genuine live source
+transports and page/browser providers plus dedicated-process IPC remain required
+before the matrix can run. No package grants Hosting publication or live
+execution authority.
 
 The guarded relay-image increment bound the exact merged Miakapp-Server tree to a deterministic
 53,098-byte archive, one digest-pinned Cloud Build Docker builder, verified

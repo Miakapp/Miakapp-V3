@@ -51,6 +51,9 @@ The immutable profile pins browser-relay plan revision 13, the merged edge-orche
 preflight, runner, monitoring and rollback evidence, and the private-ready relay
 result. Current browser-relay plan revision 14 preserves that input byte for
 byte and pins the successful operation preflight. The package still grants no
-live authority. A later separately reviewed adapter and
-exact authorization must supply the page artifact, synthetic coordinator,
-short-lived credentials and cloud clients before this envelope can execute.
+live authority. The adjacent `browser-relay-operation-case-adapter` now supplies
+the reviewed code-level binding to the complete three-browser scheduler: one
+canonical receipt creates one private claim capability, and one matrix may enter
+within that claim's lifetime. It does not supply page/source providers,
+credentials, cloud clients or execution authorization; those remain required
+before this envelope can execute against staging.
