@@ -1,0 +1,502 @@
+{
+  "schema": "miakapp.staging-browser-relay-case-scheduler-profile/1",
+  "revision": 1,
+  "state": "closed_case_interleaving_implemented_not_wired_not_executed",
+  "target": {
+    "project_id": "miakapp-v4-staging",
+    "project_number": "1072737219170",
+    "region": "europe-west9",
+    "data_policy": "synthetic_only",
+    "cloud_compute_resources": 0,
+    "unscheduled": true
+  },
+  "pins": {
+    "implementation_base_commit": "17a21138e4deccfb175354ae81aad9e52fc3edb2",
+    "browser_relay_plan_sha256": "6c7661d9be861e4f8d13ccd5d2fd0f3eaa34ea2b4d7af2e9b41d1867d6c37211",
+    "browser_relay_evidence_session_profile_sha256": "4936834d01d81f0cd4053ef3bd7c505e3d4f8139c381b28ab918248bd187a544",
+    "dependency_contracts_sha256": "a9a2518da655f43ff1fd843013a85a150d706b1b90be38d2cf84b68550337d38",
+    "scheduler_source_sha256": "d2b6d3e7c0364241c5916b166dae8be9a34a60095b72dfe3a9e0d5bb39df4efb",
+    "internal_source_sha256": "d4db6014afd559689b9cf90b462ce324502a43eae578f00f6e5a7bbb1aa29275",
+    "testing_source_sha256": "11659d0c63067e9e8af8ab298c4bc5d073f17f84da86f8c64f652dad62ccdd69"
+  },
+  "schedule": {
+    "case_order": [
+      "LIVE-02",
+      "LIVE-03",
+      "LIVE-04",
+      "LIVE-05",
+      "LIVE-06",
+      "LIVE-07",
+      "LIVE-08",
+      "LIVE-09",
+      "LIVE-10",
+      "LIVE-11"
+    ],
+    "stage_order": [
+      {
+        "case_id": "LIVE-02",
+        "browser": "chromium"
+      },
+      {
+        "case_id": "LIVE-03",
+        "browser": "chromium"
+      },
+      {
+        "case_id": "LIVE-04",
+        "browser": "chromium"
+      },
+      {
+        "case_id": "LIVE-05",
+        "browser": "chromium"
+      },
+      {
+        "case_id": "LIVE-06",
+        "browser": "chromium"
+      },
+      {
+        "case_id": "LIVE-07",
+        "browser": "chromium"
+      },
+      {
+        "case_id": "LIVE-08",
+        "browser": "chromium"
+      },
+      {
+        "case_id": "LIVE-09",
+        "browser": "chromium"
+      },
+      {
+        "case_id": "LIVE-10",
+        "browser": "firefox"
+      },
+      {
+        "case_id": "LIVE-10",
+        "browser": "webkit"
+      },
+      {
+        "case_id": "LIVE-11",
+        "browser": "chromium"
+      }
+    ],
+    "fact_kinds_by_stage": {
+      "LIVE-02/chromium": {
+        "firebase_app_check": [
+          "provider_assessment",
+          "valid_verification",
+          "missing_token_denial",
+          "invalid_token_denial",
+          "verification_mode"
+        ],
+        "hosting": [
+          "management_site_configuration",
+          "served_sdk_configuration"
+        ]
+      },
+      "LIVE-03/chromium": {
+        "control_plane": [
+          "cors_preflight",
+          "foreign_origin_denial",
+          "source_uid_admission",
+          "authenticated_cache_policy"
+        ]
+      },
+      "LIVE-04/chromium": {
+        "browser_page": [
+          "initial_initialized",
+          "initial_ready",
+          "authoritative_state",
+          "patched_state",
+          "initial_call"
+        ]
+      },
+      "LIVE-05/chromium": {
+        "browser_page": [
+          "same_relay_reauthenticated"
+        ],
+        "control_plane": [
+          "version_2_jwk_published",
+          "version_1_last_issuance",
+          "version_2_first_issuance"
+        ],
+        "relay": [
+          "version_2_existing_socket"
+        ]
+      },
+      "LIVE-06/chromium": {
+        "browser_page": [
+          "relay_handoff_stale",
+          "relay_b_ready",
+          "relay_b_state",
+          "relay_b_call"
+        ],
+        "control_plane": [
+          "atomic_credential_reuse"
+        ],
+        "firestore": [
+          "authoritative_route_transition"
+        ]
+      },
+      "LIVE-07/chromium": {
+        "relay": [
+          "wrong_audience_denial",
+          "wrong_home_denial",
+          "wrong_role_denial",
+          "unknown_kid_refresh"
+        ]
+      },
+      "LIVE-08/chromium": {
+        "browser_page": [
+          "failed_and_uncertain_calls",
+          "relay_b_recovered"
+        ],
+        "relay": [
+          "disconnect_reconnect_resync"
+        ],
+        "coordinator": [
+          "physical_call_delivery"
+        ]
+      },
+      "LIVE-09/chromium": {
+        "browser_page": [
+          "pagehide_suspended",
+          "pageshow_restored",
+          "signed_out_stopped",
+          "replacement_initialized",
+          "replacement_ready",
+          "replacement_stopped"
+        ]
+      },
+      "LIVE-10/firefox": {
+        "browser_page": [
+          "initial_initialized",
+          "initial_ready",
+          "signed_out_stopped"
+        ],
+        "firebase_app_check": [
+          "provider_assessment",
+          "valid_verification"
+        ],
+        "control_plane": [
+          "exchange_summary"
+        ],
+        "relay": [
+          "version_2_session",
+          "revision_summary"
+        ],
+        "kms": [
+          "signature_summary"
+        ]
+      },
+      "LIVE-10/webkit": {
+        "browser_page": [
+          "initial_initialized",
+          "initial_ready",
+          "signed_out_stopped"
+        ],
+        "firebase_app_check": [
+          "provider_assessment",
+          "valid_verification"
+        ],
+        "control_plane": [
+          "exchange_summary"
+        ],
+        "relay": [
+          "version_2_session",
+          "revision_summary"
+        ],
+        "kms": [
+          "signature_summary"
+        ]
+      },
+      "LIVE-11/chromium": {
+        "control_plane": [
+          "version_1_jwk_retained",
+          "version_1_jwk_removed",
+          "exchange_summary"
+        ],
+        "relay": [
+          "new_session_version_2",
+          "revision_summary"
+        ],
+        "kms": [
+          "signature_summary",
+          "version_1_lifecycle"
+        ],
+        "firestore": [
+          "operation_write_summary"
+        ]
+      }
+    },
+    "record_counts_by_stage": {
+      "LIVE-02/chromium": {
+        "firebase_app_check": 5,
+        "hosting": 2
+      },
+      "LIVE-03/chromium": {
+        "control_plane": 4
+      },
+      "LIVE-04/chromium": {
+        "browser_page": 5
+      },
+      "LIVE-05/chromium": {
+        "browser_page": 1,
+        "control_plane": 3,
+        "relay": 1
+      },
+      "LIVE-06/chromium": {
+        "browser_page": 4,
+        "control_plane": 1,
+        "firestore": 1
+      },
+      "LIVE-07/chromium": {
+        "relay": 4
+      },
+      "LIVE-08/chromium": {
+        "browser_page": 2,
+        "relay": 1,
+        "coordinator": 1
+      },
+      "LIVE-09/chromium": {
+        "browser_page": 6
+      },
+      "LIVE-10/firefox": {
+        "browser_page": 3,
+        "firebase_app_check": 2,
+        "control_plane": 1,
+        "relay": 2,
+        "kms": 1
+      },
+      "LIVE-10/webkit": {
+        "browser_page": 3,
+        "firebase_app_check": 2,
+        "control_plane": 1,
+        "relay": 2,
+        "kms": 1
+      },
+      "LIVE-11/chromium": {
+        "control_plane": 3,
+        "relay": 2,
+        "kms": 2,
+        "firestore": 1
+      }
+    },
+    "action_plan": [
+      {
+        "type": "start_browser",
+        "browser": "chromium",
+        "starts_session_span": false
+      },
+      {
+        "type": "create_session"
+      },
+      {
+        "type": "execute_stage",
+        "stage": {
+          "case_id": "LIVE-02",
+          "browser": "chromium"
+        }
+      },
+      {
+        "type": "execute_stage",
+        "stage": {
+          "case_id": "LIVE-03",
+          "browser": "chromium"
+        }
+      },
+      {
+        "type": "execute_stage",
+        "stage": {
+          "case_id": "LIVE-04",
+          "browser": "chromium"
+        }
+      },
+      {
+        "type": "execute_stage",
+        "stage": {
+          "case_id": "LIVE-05",
+          "browser": "chromium"
+        }
+      },
+      {
+        "type": "execute_stage",
+        "stage": {
+          "case_id": "LIVE-06",
+          "browser": "chromium"
+        }
+      },
+      {
+        "type": "execute_stage",
+        "stage": {
+          "case_id": "LIVE-07",
+          "browser": "chromium"
+        }
+      },
+      {
+        "type": "execute_stage",
+        "stage": {
+          "case_id": "LIVE-08",
+          "browser": "chromium"
+        }
+      },
+      {
+        "type": "execute_stage",
+        "stage": {
+          "case_id": "LIVE-09",
+          "browser": "chromium"
+        }
+      },
+      {
+        "type": "close_page",
+        "browser": "chromium"
+      },
+      {
+        "type": "start_browser",
+        "browser": "firefox",
+        "starts_session_span": true
+      },
+      {
+        "type": "execute_stage",
+        "stage": {
+          "case_id": "LIVE-10",
+          "browser": "firefox"
+        }
+      },
+      {
+        "type": "close_page",
+        "browser": "firefox"
+      },
+      {
+        "type": "close_browser",
+        "browser": "firefox"
+      },
+      {
+        "type": "start_browser",
+        "browser": "webkit",
+        "starts_session_span": true
+      },
+      {
+        "type": "execute_stage",
+        "stage": {
+          "case_id": "LIVE-10",
+          "browser": "webkit"
+        }
+      },
+      {
+        "type": "close_page",
+        "browser": "webkit"
+      },
+      {
+        "type": "close_browser",
+        "browser": "webkit"
+      },
+      {
+        "type": "execute_stage",
+        "stage": {
+          "case_id": "LIVE-11",
+          "browser": "chromium"
+        }
+      },
+      {
+        "type": "close_browser",
+        "browser": "chromium"
+      },
+      {
+        "type": "close_adapter"
+      },
+      {
+        "type": "close_session"
+      }
+    ],
+    "adapter_methods": [
+      "startBrowser",
+      "execute",
+      "closePage",
+      "closeBrowser",
+      "close"
+    ],
+    "case_scope_fields": [
+      "case_id",
+      "browser",
+      "signal",
+      "record"
+    ],
+    "browser_start_order": [
+      "chromium",
+      "firefox",
+      "webkit"
+    ],
+    "page_close_order": [
+      "chromium",
+      "firefox",
+      "webkit"
+    ],
+    "browser_close_order": [
+      "firefox",
+      "webkit",
+      "chromium"
+    ],
+    "secondary_browser_order": [
+      "firefox",
+      "webkit"
+    ],
+    "adapter_start_precedes_session_boundary": true,
+    "chromium_starts_at_common_epoch": true,
+    "chromium_page_closes_after_live_09": true,
+    "chromium_browser_closes_after_live_11": true,
+    "adapter_global_close_precedes_session_close": true,
+    "exact_fact_kind_partition": true,
+    "exact_record_partition": true,
+    "cross_source_total_order_imposed": false,
+    "adapter_completion_value": "undefined",
+    "case_scopes_serializable": false,
+    "case_scopes_revoked_after_stage": true,
+    "caller_supplied_case_order": false,
+    "caller_supplied_evidence_envelopes": false,
+    "caller_supplied_timestamps": false,
+    "caller_supplied_results": false,
+    "internal_abort_signal": true,
+    "external_abort_cooperative": true,
+    "external_abort_listener_protected": true,
+    "adapter_methods_receive_internal_abort_signal": true,
+    "adapter_close_once": true,
+    "adapter_close_after_invoked_work_settles": true,
+    "invoked_work_awaited_before_rejection": true
+  },
+  "compatibility": {
+    "evidence_session_composed": true,
+    "evidence_session_production_entrypoint_only": true,
+    "case_level_interleaving_scheduler_present": true,
+    "durable_claim_binding_present": false,
+    "live_operation_wired": false,
+    "live_source_adapters_present": false,
+    "playwright_bridge_wired": false,
+    "scenario_fixture_wired": false,
+    "complete_chromium_page_scenario": false,
+    "bfcache_capable_automation": false,
+    "callback_resolution_proves_resource_closure": false
+  },
+  "output": {
+    "runner_result_schema": "miakapp.staging-browser-relay-runner-result/1",
+    "partial_results_exposed": false,
+    "raw_facts_exposed": false,
+    "capability_identifiers_exposed": false,
+    "adapter_errors_exposed": false
+  },
+  "authority": {
+    "cloud_mutation_authorized": false,
+    "hosting_publication_authorized": false,
+    "iam_binding_mutation_authorized": false,
+    "public_ingress_authorized": false,
+    "live_execution_authorized": false
+  },
+  "evidence": {
+    "state": "absent",
+    "offline_complete_schedules": 0,
+    "live_source_facts": 0,
+    "cloud_requests": 0,
+    "cloud_mutations": 0,
+    "live_execution_count": 0,
+    "credentials_committed": false,
+    "raw_facts_committed": false
+  }
+}

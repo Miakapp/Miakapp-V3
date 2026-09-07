@@ -81,8 +81,13 @@ implemented across several repositories.
   — dormant operation-local capability that owns one monotonic epoch and issues
   browser/source-attenuated ports. Callers provide projections only; the session
   derives fact ownership, order and time, revokes on every terminal path and
-  closes one interleaved runner result. Durable-claim binding, scheduling and
-  live adapters remain absent.
+  closes one interleaved runner result. Durable-claim binding and live adapters
+  remain absent; scheduling is supplied by the separate dormant package below.
+- [`../infrastructure/staging/browser-relay-case-scheduler/`](../infrastructure/staging/browser-relay-case-scheduler/)
+  — dormant case scheduler that runs the exact 11-stage `LIVE-02..LIVE-11`
+  topology, attenuates all 67 page/source projections to their owning case,
+  awaits browser start and page/browser/global closure, and returns only the
+  closed runner result. It has no claim binding, concrete adapter or live authority.
 - [`../infrastructure/staging/browser-relay-playwright-bridge/`](../infrastructure/staging/browser-relay-playwright-bridge/)
   — dormant fail-closed Playwright page-to-receipt bridge with lazy private
   input acquisition and owned page cleanup; real Firefox and WebKit engines
@@ -199,7 +204,7 @@ byte-for-byte and pins the merged revision-2 page profile plus its independent
 three-engine offline CI proof. The archived `profile-v2.json` preserves that
 claim, while current page revision 3 pins unchanged plan 15. The staging manifest
 bundle uses a small canonical index and four fixed, size- and digest-bound
-fragments while assembling the current revision-92 semantic object. It
+fragments while assembling the current revision-93 semantic object. It
 retains the byte-exact earlier zero-relay plan used
 by the image build, revision 9 used by the runner, revision 10 used by
 monitoring, revision 11 used by rollback and revision 12 used by the
@@ -238,8 +243,13 @@ all 18 sources one opaque operation-local capability and monotonic epoch. Its
 attenuated ports accept projections only, derive envelopes and timing, enforce
 Firefox then WebKit between Chromium LIVE-09 and LIVE-11, and revoke/clear on
 close, abort or failure. It is not yet bound to the durable orchestrator claim,
-the live operation or source adapters. The original three-input fixture remains
-byte-exact. A separate scenario
+the live operation or source adapters. A separate dormant scheduler now composes
+that production session into 11 fixed stages: Chromium `LIVE-02..LIVE-09`,
+Firefox then WebKit for `LIVE-10`, and Chromium `LIVE-11`. Its non-serializable
+case scopes admit exactly the 67 reviewed projections, and it awaits explicit
+browser start, page/browser close and global adapter close boundaries before
+returning only the closed result. It remains unwired and gives no live authority.
+The original three-input fixture remains byte-exact. A separate scenario
 fixture now supplies the required fourth input from a second exact synthetic
 Firebase identity and grants both identities state access through the same
 coordinator. A separate dormant Google/Firebase adapter now implements that
@@ -253,8 +263,9 @@ page-to-receipt transport with lazy private inputs and owned cleanup. Chromium
 still fails closed before page or private-input acquisition because pinned
 Playwright cannot prove native persisted BFCache restoration. None of these
 packages grants Hosting publication or live authority; the complete Chromium
-scenario, a BFCache-capable automation path, live source adapters and
-aggregator wiring must close before the one allowed live matrix can execute.
+scenario, a BFCache-capable automation path, genuine source adapters and binding
+the scheduler/session to the durable operation claim must close before the one
+allowed live matrix can execute.
 
 Repository-specific implementation plans must link back to these documents and
 must not redefine a shared contract locally.
