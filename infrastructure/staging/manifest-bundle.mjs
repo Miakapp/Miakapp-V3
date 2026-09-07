@@ -108,6 +108,7 @@ const BROWSER_RELAY_OPERATIONS_EVIDENCE_KEYS = Object.freeze([
   'browser_relay_rollback',
   'browser_relay_orchestrator',
   'browser_relay_operation',
+  'browser_relay_operation_case_adapter',
   'browser_relay_image',
   'browser_app_check_prerequisite',
   'browser_app_check_attestation',

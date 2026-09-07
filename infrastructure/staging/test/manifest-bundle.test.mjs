@@ -149,6 +149,7 @@ test('assembles the canonical committed bundle into the current semantic manifes
     'browser_relay_rollback',
     'browser_relay_orchestrator',
     'browser_relay_operation',
+    'browser_relay_operation_case_adapter',
     'browser_relay_image',
     'browser_app_check_prerequisite',
     'browser_app_check_attestation',
@@ -219,6 +220,7 @@ test('assembles the canonical committed bundle into the current semantic manifes
     'browser_relay_rollback',
     'browser_relay_orchestrator',
     'browser_relay_operation',
+    'browser_relay_operation_case_adapter',
     'browser_relay_image',
     'browser_app_check_prerequisite',
     'browser_app_check_attestation',
@@ -231,7 +233,7 @@ test('assembles the canonical committed bundle into the current semantic manifes
     'environment_decision',
   ]);
   assert.equal(manifest.schema, 'miakapp.staging-intent/1');
-  assert.equal(manifest.revision, 97);
+  assert.equal(manifest.revision, 98);
   assert.equal(manifest.project.project_id, 'miakapp-v4-staging');
   assert.equal(manifest.terraform.bootstrap_execution.bootstrap_completed, true);
   assert.equal(

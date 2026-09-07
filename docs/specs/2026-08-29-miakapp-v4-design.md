@@ -1000,8 +1000,9 @@ vertical-slice exit gates.
    External abort uses a protected listener to signal active work; that work is
    awaited before one final global-close drain barrier rather than treated as
    cancelled by Promise settlement. This remains
-   offline implementation evidence only: live orchestration must still bind the
-   scheduler/session to the durable claim and connect genuine source adapters.
+   offline implementation evidence only. A separate composition root now binds
+   the scheduler/session to the durable claim and unchanged operation envelope;
+   genuine source adapters remain absent.
    A separate closed scenario fixture now supplies the required fourth page
    input from a second exact synthetic Firebase identity, extends the one
    coordinator's state access to both identities and requires both cleanup
@@ -1044,9 +1045,15 @@ vertical-slice exit gates.
    pages with the separately proven Chromium scenario, closes all 43 source
    observations and the same 40-assertion result without creating a transport
    or live authority.
-   Genuine independent source transports, trusted live-browser providers,
-   dedicated-process IPC, durable operation/claim binding, Hosting publication
-   and live authority remain open before the one allowed execution.
+   A final dormant operation case adapter now hard-wires the unchanged
+   single-use operation to that complete schedule. It intercepts one canonical
+   receipt, retains only a private non-serializable capability, admits exactly
+   one matrix callback within the claim lifetime, forwards only the exact edge
+   abort signal and returns the unchanged closed operation result. Claim lineage
+   never reaches a provider or result, and both operation cleanup levels are
+   exercised offline. Genuine independent source transports, trusted
+   live-browser providers, dedicated-process IPC, Hosting publication and live
+   authority remain open before the one allowed execution.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain
