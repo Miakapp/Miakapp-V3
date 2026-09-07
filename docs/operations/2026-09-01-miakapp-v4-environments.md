@@ -184,12 +184,17 @@ successful Firestore import.
 
 ## Staging activation gate
 
-The local fault matrix and reviewable staging manifest preceded the one-shot
+The local fault matrix and reviewable staging manifest bundle preceded the one-shot
 creation of `miakapp-v4-staging`. The 2026-09-02 bootstrap claimed the permanent
 project ID and enabled Firebase without selecting an immutable resource
 location. A separately authorized operation linked the approved billing account
 on 2026-09-03. Its sanitized inventory now lives under
 [`../../infrastructure/staging/`](../../infrastructure/staging/).
+Its stable `manifest.json` entry point is now a canonical index over four fixed,
+digest-pinned fragments. The loader reconstructs the unchanged revision-91
+semantic manifest only after verifying each fragment's path, mount, bundle
+schema, owned fields, exact byte length, SHA-256 and bounded aggregate size,
+plus index/core agreement on the semantic schema and revision.
 
 The location and billing-account selection are reviewed inputs. Separate
 apply-capable Terraform roots now describe (1) the circular bootstrap for

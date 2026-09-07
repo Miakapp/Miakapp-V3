@@ -807,9 +807,11 @@ current consumer.
     have no live source adapters or execution authority. Live wiring must first
     add a single non-replayable operation capability and common monotonic epoch
     across every source, and replace the current whole-engine sequential runner
-    with case-level interleaving so LIVE-10 remains before LIVE-11. It must also
-    split or compact the nearly full bounded
-    staging manifest before adding another evidence block. The immutable original
+    with case-level interleaving so LIVE-10 remains before LIVE-11. The manifest
+    capacity prerequisite is now closed: the stable entry point indexes four
+    fixed canonical fragments with exact path, mount, byte-length and SHA-256
+    bindings, per-file ceilings and one aggregate ceiling while reconstructing
+    the unchanged revision-91 semantic object. The immutable original
     fixture still has three private page inputs, but a separate closed scenario fixture now
     supplies the fourth from a second genuine synthetic Firebase identity,
     extends the unique coordinator's state access to both identities and

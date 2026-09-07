@@ -621,7 +621,16 @@ Node.js 22 and Terraform 1.11.3 are required:
 npm run test:staging-manifest
 ```
 
-The gate validates bounded closed manifests, all reviewed inventories,
+The gate first resolves `manifest.json` as a canonical index over exactly four
+fixed fragments under `manifest/`: core intent, Terraform history, platform
+evidence and browser-relay evidence. The index is limited to 16 KiB, each
+fragment to 96 KiB and the complete bundle to 192 KiB. Every file must be a
+regular non-symlink, non-executable file using exact two-space JSON plus one
+terminal newline; the loader binds the fixed path, mount, byte length, SHA-256,
+fragment schema, owned fields and aggregate size, and requires the index and
+core fragment to agree on the semantic schema and revision before assembling
+the unchanged manifest. The gate then validates that bounded closed
+manifest, all reviewed inventories,
 the retired recovery policy and historical blueprint, pinned actions and providers,
 exact locks for macOS
 ARM64 and Linux AMD64, all eight Terraform roots with mock providers, script syntax,
@@ -631,6 +640,12 @@ complete simulated migration-only recovery state
 machine, the simulated guarded foundation-state initializer, and hostile
 environment inputs. It initializes Terraform with `-backend=false` and never
 reads credentials or contacts staging.
+
+The validator assumes a trusted, quiescent checkout. A process allowed to
+rewrite the checkout concurrently could also replace the validator itself, so
+concurrent local writers are outside this validation boundary. Within that
+boundary, descriptor identity, directory inventory and path containment are
+checked before and after every bounded non-blocking file read.
 
 The active validation workflow has only `contents: read`; it has no OIDC or
 secret permission. With both recovery providers disabled, the reviewed GitHub
@@ -829,9 +844,11 @@ blocked until one adapter binds every source to a non-replayable common
 operation capability and authenticated monotonic epoch. It must also replace the current
 whole-engine sequential runner with case-level interleaving so Firefox and
 WebKit run after Chromium closes LIVE-09 but before version 1 retirement, as
-the canonical plan requires. Before adding that next evidence
-block, the staging manifest must also be split or compacted because its bounded
-128-KiB envelope now has little structural headroom.
+the canonical plan requires. The former manifest-capacity blocker is closed:
+the same revision-91 semantic object is now assembled from a small index and
+four independently bounded, digest-pinned canonical fragments. Each fragment
+must remain below its 96-KiB ceiling and the complete bundle below its 192-KiB
+aggregate ceiling without sacrificing line-oriented review.
 The adjacent
 [`browser-relay-page-receipt/`](browser-relay-page-receipt/) package implements
 the first exact source producer. It accepts no assertion map: Chromium must
