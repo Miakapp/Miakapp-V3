@@ -1002,7 +1002,8 @@ vertical-slice exit gates.
    cancelled by Promise settlement. This remains
    offline implementation evidence only. A separate composition root now binds
    the scheduler/session to the durable claim and unchanged operation envelope;
-   genuine source adapters remain absent.
+   the generic source transports are implemented separately, while authenticated
+   readers and live wiring remain absent.
    A separate closed scenario fixture now supplies the required fourth page
    input from a second exact synthetic Firebase identity, extends the one
    coordinator's state access to both identities and requires both cleanup
@@ -1045,15 +1046,30 @@ vertical-slice exit gates.
    pages with the separately proven Chromium scenario, closes all 43 source
    observations and the same 40-assertion result without creating a transport
    or live authority.
+   A separate dormant source-transport package now supplies that missing generic
+   transport boundary for all seven source owners. Across 22 fixed stage
+   acquisitions it passes only the source, browser, case, exact expected kinds
+   and count, a linked abort signal and one opaque operation capability to a
+   trusted source-specific provider. Each returned reader must yield exactly 43
+   sanitized observations in aggregate followed by explicit EOF, with every
+   downstream record awaited. Provider identity is single-operation, reader
+   identity is single-stage, per-source stage order is exact and non-overlapping,
+   all finite late settlements are drained, closure is exact and every protocol
+   violation poisons the transport set permanently. The production entrypoint
+   owns intrinsic timers and exposes no runtime injection. This is a cooperative
+   lifecycle boundary rather than a same-process sandbox: authenticated
+   Firebase/Google/relay readers, network and credential acquisition, wiring to
+   the independent case adapter, dedicated-process IPC and live authority remain
+   absent.
    A final dormant operation case adapter now hard-wires the unchanged
    single-use operation to that complete schedule. It intercepts one canonical
    receipt, retains only a private non-serializable capability, admits exactly
    one matrix callback within the claim lifetime, forwards only the exact edge
    abort signal and returns the unchanged closed operation result. Claim lineage
    never reaches a provider or result, and both operation cleanup levels are
-   exercised offline. Genuine independent source transports, trusted
-   live-browser providers, dedicated-process IPC, Hosting publication and live
-   authority remain open before the one allowed execution.
+   exercised offline. Authenticated source readers, their case-adapter wiring,
+   trusted live-browser providers, dedicated-process IPC, Hosting publication
+   and live authority remain open before the one allowed execution.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain
