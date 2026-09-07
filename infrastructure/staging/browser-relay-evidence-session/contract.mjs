@@ -24,7 +24,7 @@ import {
 
 export const EVIDENCE_SESSION_PROFILE_PATH = 'browser-relay-evidence-session/profile.json';
 export const EVIDENCE_SESSION_PROFILE_SHA256 =
-  '789337b80485316c1d488d1f1831e65efc4084b9ee801f8d4fa18130ad23f717';
+  '4936834d01d81f0cd4053ef3bd7c505e3d4f8139c381b28ab918248bd187a544';
 export const EVIDENCE_SESSION_IMPLEMENTATION_BASE_COMMIT =
   '7f208f25254e9ba28991f286fd3ec1e5517fede8';
 export const EVIDENCE_SESSION_SOURCE_SHA256 =
@@ -194,7 +194,7 @@ function validateProfileValue(value) {
     durable_claim_binding_present: false,
     live_operation_wired: false,
     live_source_adapters_present: false,
-    interleaving_scheduler_present: false,
+    interleaving_scheduler_present: true,
     complete_chromium_page_scenario: false,
     bfcache_capable_automation: false,
   }, 'profile.compatibility');
