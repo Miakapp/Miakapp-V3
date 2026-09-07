@@ -35,7 +35,7 @@ import {
 export const SCENARIO_FIXTURE_PROFILE_PATH =
   'browser-relay-scenario-fixture/profile.json';
 export const SCENARIO_FIXTURE_PROFILE_SHA256 =
-  'f3ea91d418d8d1d0cece842dac924891c05e37d423120107b8882deed4eb9fd4';
+  '6403bd381d04134e5a7725a4083b5aa74c27706dd56b53fe8a2925c67b0ce386';
 export const SCENARIO_FIXTURE_IMPLEMENTATION_BASE_COMMIT =
   '168d9ae8d1cf6e31af92fce220a77ab2878effd4';
 export const SCENARIO_FIXTURE_SOURCE_SHA256 =

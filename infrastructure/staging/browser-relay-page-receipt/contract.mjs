@@ -33,14 +33,14 @@ import {
 
 export const PAGE_RECEIPT_PROFILE_PATH = 'browser-relay-page-receipt/profile.json';
 export const PAGE_RECEIPT_PROFILE_SHA256 =
-  '740d21178e963fb82a3cd923a1adf6cbf6af2b62a633f0b97058fbda4f1e906a';
+  '13c5329ae85e06f0e50f6a73c187918767bbac64edee9e0ff24e60142b671c95';
 export const PAGE_RECEIPT_IMPLEMENTATION_BASE_COMMIT =
   '509a25fc65764b9bbe4fa7c823e263feed24a8ff';
 export const PAGE_RECEIPT_SOURCE_SHA256 =
   '94e6a74480de6f93745ffcea5ad0b7c4006c1bfcc8c717d3a3fbf963dbdb78c6';
 export const PAGE_FACT_SCHEMA = 'miakapp.staging-browser-relay-page-fact/2';
 export const PAGE_LIFECYCLE_EVENT_SCHEMA =
-  'miakapp.staging-browser-relay-page-lifecycle-event/1';
+  'miakapp.staging-browser-relay-page-lifecycle-event/2';
 export const PAGE_STATE_OBSERVATION_SCHEMA =
   'miakapp.staging-browser-relay-page-state-observation/1';
 export const PAGE_CALL_OBSERVATION_SCHEMA =
@@ -234,18 +234,31 @@ export function validatePageLifecycleEvent(value) {
   const event = exactKeys(value, [
     'schema',
     'type',
-    'visibility_state',
+    'dispatch_visibility_state',
+    'completed_visibility_state',
     'persisted',
   ], 'page_fact.lifecycle_event');
   exact(event.schema, PAGE_LIFECYCLE_EVENT_SCHEMA, 'page_fact.lifecycle_event.schema');
   const expected = event.type === 'pagehide'
-    ? { visibility_state: 'hidden', persisted: true }
+    ? {
+      dispatch_visibility_state: 'visible',
+      completed_visibility_state: 'hidden',
+      persisted: true,
+    }
     : (event.type === 'pageshow'
-      ? { visibility_state: 'visible', persisted: true }
+      ? {
+        dispatch_visibility_state: 'visible',
+        completed_visibility_state: 'visible',
+        persisted: true,
+      }
       : null);
   if (expected === null) reject('page_fact.lifecycle_event.type is invalid');
   exact(
-    { visibility_state: event.visibility_state, persisted: event.persisted },
+    {
+      dispatch_visibility_state: event.dispatch_visibility_state,
+      completed_visibility_state: event.completed_visibility_state,
+      persisted: event.persisted,
+    },
     expected,
     'page_fact.lifecycle_event',
   );
@@ -379,6 +392,7 @@ function validateProfileValue(value) {
   }
   exact(profile.producer, {
     page_fact_schema: PAGE_FACT_SCHEMA,
+    page_lifecycle_event_schema: PAGE_LIFECYCLE_EVENT_SCHEMA,
     page_lifecycle_observation_schema: PAGE_LIFECYCLE_OBSERVATION_SCHEMA,
     source_receipt_schema: SOURCE_RECEIPT_SCHEMA,
     source: 'browser_page',

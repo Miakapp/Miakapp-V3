@@ -20,6 +20,7 @@
   },
   "producer": {
     "page_fact_schema": "miakapp.staging-browser-relay-page-fact/2",
+    "page_lifecycle_event_schema": "miakapp.staging-browser-relay-page-lifecycle-event/2",
     "page_lifecycle_observation_schema": "miakapp.staging-browser-relay-page-lifecycle-observation/1",
     "source_receipt_schema": "miakapp.staging-browser-relay-source-receipt/1",
     "source": "browser_page",
