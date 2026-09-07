@@ -48,8 +48,9 @@ Every scheduler scope passed to the remaining adapter is separately frozen,
 non-serializable and revoked after that stage. For Chromium it rejects
 `browser_page`, so only the native scenario can fill that source. All independent
 Chromium sources, all secondary page sources and the Firefox/WebKit lifecycle
-remain delegated. Browser start/close is also delegated, including the outer
-Chromium browser span.
+remain delegated. The adjacent secondary case adapter now fills both secondary
+page paths offline while preserving this boundary. Browser start/close remains
+delegated, including the outer Chromium browser span.
 
 The adapter owns one protected cancellation controller. Global `close()` wakes
 all stage gates, aborts and drains the native scenario and every delegated stage
@@ -62,6 +63,6 @@ This is still a trusted same-realm composition, not a sandbox. The ready fixture
 page provider, phase hook and remaining adapter are trusted and must cooperate
 with cancellation. A dedicated browser process with validated IPC is still
 required before shared or untrusted live wiring. Genuine independent-source
-adapters, Firefox/WebKit drivers, durable claim and operation binding, Hosting
-publication and live execution remain absent. The profile authorizes no cloud,
-IAM, ingress, publication or live mutation.
+adapters, trusted live page providers, durable claim and operation binding,
+Hosting publication and live execution remain absent. The profile authorizes
+no cloud, IAM, ingress, publication or live mutation.

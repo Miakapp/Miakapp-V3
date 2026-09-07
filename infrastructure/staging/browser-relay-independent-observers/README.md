@@ -62,10 +62,9 @@ live provenance guarantee.
 
 This directory contains no HTTP client, credential loader, CLI, scheduler,
 browser automation, cloud mutation or publication path. Importing it initiates
-no network, browser or cloud work. The separate native Chromium scenario now
-closes its 18-fact page receipt offline, but is not composed with these source
-producers. A later adapter must acquire the reviewed
-facts from their named live sources, discard private material before crossing
-this boundary, supply the three closed page receipts outside the page context,
-and call this one runner-result boundary inside the existing single-use
-operation and rollback envelope.
+no network, browser or cloud work. Layered case adapters now compose the native
+Chromium scenario and both secondary page scenarios with deterministic facts
+from these producers into one closed offline scheduler result. A later adapter
+must still acquire the reviewed facts from their named live sources, discard
+private material before crossing this boundary and call this runner-result
+boundary inside the existing single-use operation and rollback envelope.

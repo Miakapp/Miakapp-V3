@@ -33,9 +33,10 @@ This is an offline composition primitive, not live provenance yet. It is not
 bound to the durable orchestrator claim, is not passed into the operation
 envelope, and this directory contains no scheduler or source adapter. The
 separate `browser-relay-case-scheduler` package now composes the production
-session entrypoint without granting live authority. A separate native Chromium
-driver closes the complete page receipt offline, but is not yet connected to
-the scheduler or this session. This directory contains no
+session entrypoint without granting live authority. Layered Chromium and
+secondary-browser adapters now feed all 24 page projections through that
+scheduler into this session offline and close its 40-assertion result. This
+directory contains no
 HTTP client, browser launcher, credential loader, CLI, environment reader,
 cloud mutation or publication path. Importing it performs no browser, network
 or cloud work. Those remaining bindings require a later reviewed integration.

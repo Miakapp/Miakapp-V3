@@ -1023,7 +1023,19 @@ vertical-slice exit gates.
    source and Firefox/WebKit path, aborts and drains the scenario plus delegated
    callbacks before one global close, and closes all 40 runner assertions using
    offline evidence.
-   Genuine independent source adapters, secondary live-browser drivers,
+   A separate dormant secondary case adapter now fills those delegated page
+   paths with the unchanged Playwright bridge. For Firefox then WebKit it lazily
+   acquires one trusted offline page and private input in the owning `LIVE-10`
+   stage, validates each complete fact through the page-receipt reducer, projects
+   only the five reviewed semantic fields into the active scheduler scope and
+   discards the bridge receipt after using it as page-closure proof. The evidence
+   session remains the sole owner of authoritative envelopes, timing, receipts
+   and the final result. A real offline dual-engine smoke closes both pages and
+   the same complete 40-assertion schedule. Abort cleanup separately drains
+   page/private-input acquisitions that can outlive the bridge result and closes
+   a late page before downstream teardown. This is source-only implementation
+   evidence, not a live browser provider or provenance boundary.
+   Genuine independent source adapters, trusted live-browser providers,
    dedicated-process IPC, durable operation/claim binding, Hosting publication
    and live authority remain open before the one allowed execution.
    Arbitrary self-hosted relay selection remains disabled until
