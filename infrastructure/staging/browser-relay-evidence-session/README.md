@@ -35,11 +35,14 @@ envelope, and this directory contains no scheduler or source adapter. The
 separate `browser-relay-case-scheduler` package now composes the production
 session entrypoint without granting live authority. Layered Chromium and
 secondary-browser adapters now feed all 24 page projections through that
-scheduler into this session offline and close its 40-assertion result. This
-directory contains no
+scheduler into this session offline and close its 40-assertion result. The final
+independent case adapter also projects all 43 deterministic non-page
+observations through source-owned scopes without receiving envelopes or
+timestamps. Genuine live transports remain absent. This directory contains no
 HTTP client, browser launcher, credential loader, CLI, environment reader,
 cloud mutation or publication path. Importing it performs no browser, network
-or cloud work. Those remaining bindings require a later reviewed integration.
+or cloud work. Live transport, claim and operation bindings require a later
+reviewed integration.
 
 Deterministic unit tests use the separate `testing.mjs` entrypoint and its
 explicit injected-clock factory. That entrypoint and the shared `internal.mjs`

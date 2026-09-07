@@ -134,6 +134,7 @@ test('assembles the canonical committed bundle into the current semantic manifes
     'browser_relay_case_scheduler',
     'browser_relay_chromium_case_adapter',
     'browser_relay_secondary_case_adapter',
+    'browser_relay_independent_case_adapter',
     'chromium_scenario_automation',
     'browser_relay_playwright_bridge',
     'browser_relay_page_receipt',
@@ -208,6 +209,7 @@ test('assembles the canonical committed bundle into the current semantic manifes
     'browser_relay_case_scheduler',
     'browser_relay_chromium_case_adapter',
     'browser_relay_secondary_case_adapter',
+    'browser_relay_independent_case_adapter',
     'chromium_scenario_automation',
     'browser_relay_playwright_bridge',
     'browser_relay_page_receipt',
@@ -229,7 +231,7 @@ test('assembles the canonical committed bundle into the current semantic manifes
     'environment_decision',
   ]);
   assert.equal(manifest.schema, 'miakapp.staging-intent/1');
-  assert.equal(manifest.revision, 96);
+  assert.equal(manifest.revision, 97);
   assert.equal(manifest.project.project_id, 'miakapp-v4-staging');
   assert.equal(manifest.terraform.bootstrap_execution.bootstrap_completed, true);
   assert.equal(
@@ -239,6 +241,11 @@ test('assembles the canonical committed bundle into the current semantic manifes
   assert.equal(
     manifest.evidence.browser_relay_secondary_case_adapter
       .compatibility.complete_three_browser_page_scenarios_composed,
+    true,
+  );
+  assert.equal(
+    manifest.evidence.browser_relay_independent_case_adapter
+      .compatibility.independent_source_composition_present,
     true,
   );
   assert.equal(manifest.teardown.automated, false);

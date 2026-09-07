@@ -52,8 +52,10 @@ engine spans and requires WebKit to finish before Chromium begins LIVE-11.
 Live orchestration must still interleave the global cases and close engine
 aggregates afterward.
 
-These pure producers do not yet authenticate source provenance. A later live
-adapter must acquire every fact, browser-start offset and page-receipt-close
+These pure producers do not yet authenticate source provenance. The adjacent
+independent case adapter now provides the reviewed capability boundary and
+deterministic offline wiring, but a later live transport must acquire every
+fact, browser-start offset and page-receipt-close
 offset behind a single non-exportable, operation-local capability, derive them
 from one common monotonic epoch, and reject
 persisted, replayed or cross-operation evidence. Structural reconciliation in
@@ -63,8 +65,8 @@ live provenance guarantee.
 This directory contains no HTTP client, credential loader, CLI, scheduler,
 browser automation, cloud mutation or publication path. Importing it initiates
 no network, browser or cloud work. Layered case adapters now compose the native
-Chromium scenario and both secondary page scenarios with deterministic facts
-from these producers into one closed offline scheduler result. A later adapter
+Chromium scenario, both secondary page scenarios and deterministic facts from
+these producers into one closed offline scheduler result. A later transport
 must still acquire the reviewed facts from their named live sources, discard
 private material before crossing this boundary and call this runner-result
 boundary inside the existing single-use operation and rollback envelope.
