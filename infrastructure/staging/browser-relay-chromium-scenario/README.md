@@ -13,6 +13,16 @@ and terminal sign-out. That page and its CDP session are closed before identity
 generation 2 may initialize, reach relay B, stop, and close. Only then may the
 existing 18-fact Chromium receipt producer close.
 
+The legacy standalone entry point still returns only that closed receipt. A
+second explicit entry point additionally projects the five already-reviewed
+browser-page observation fields after each internally constructed fact. Its
+non-serializable `{ record, toJSON }` capability is trusted, receives no token,
+identity, timestamp, sequence, assertion or raw CDP material, and must return
+exactly `true`. Every call is awaited before the next browser action, so a case
+scheduler can apply real backpressure instead of buffering facts across physical
+stage boundaries. Rejection, cancellation or any other acknowledgement fails the
+scenario closed and runs the same terminal cleanup.
+
 The injected controller has exactly eleven ordered steps:
 `authoritative_state`, `patched_state`, `initial_call`,
 `same_relay_reauthenticated`, `relay_handoff_stale`, `relay_b_ready`,
@@ -38,10 +48,11 @@ accidental diagnostics, public-API observer transitions and wrapper drift; they
 do not make a hostile injected provider confidential.
 
 `private_inputs_exposed: false` is deliberately limited to this package's
-result, receipt and retained diagnostics. Before any untrusted or shared live
-wiring, browser ownership must move to a dedicated process with a narrow,
-validated IPC boundary. Until then this source-only package remains offline and
-dormant.
+result, explicit page-projection port and retained diagnostics. The projection
+port is part of the same trusted realm; it is not an IPC or confidentiality
+boundary. Before any untrusted or shared live wiring, browser ownership must
+move to a dedicated process with a narrow, validated IPC boundary. Until then
+this source-only package remains offline and dormant.
 
 Playwright 1.62.1 still explicitly does not support BFCache through its
 high-level navigation abstraction, so the adjacent Playwright bridge correctly
@@ -51,7 +62,10 @@ pinned Chromium CDP surface. The smoke serves the same `no-store` cache policy
 and security headers as the reviewed Hosting artifact. It navigates outbound
 through `page.goto`, restores
 the exact prior entry with `Page.navigateToHistoryEntry`, and reads the restored
-page only through `Runtime.evaluate`.
+page only through `Runtime.evaluate`. The same native smoke now uses the
+projection entry point, withholds fact 12's acknowledgement, and proves the
+first page remains on the target entry with no replacement page before releasing
+the BFCache path; all 18 projections then close.
 
 A restore is accepted only when two independent positive witnesses agree:
 
@@ -99,8 +113,11 @@ interrupted by CDP detachment and page closure; any dependency that still does
 not settle or resource that remains open makes cleanup fail closed after the
 reviewed bound and remains one reason this package cannot be wired live yet.
 
-The inert `away.html` file is test input only. Hosting publication, the concrete
-scenario fixture/controller composition, case scheduler wiring, independent
-source adapters, durable claim binding, aggregation, and live execution all
-remain absent. The profile authorizes no cloud, Hosting, IAM, public-ingress, or
-live mutation.
+The inert `away.html` file is test input only. `profile-v1.json` preserves the
+exact pre-projection contract. The adjacent Chromium case adapter now composes
+this projection port, the ready scenario-fixture interface and the scheduler
+offline; this package itself remains independently reusable and grants no such
+authority. Hosting publication, genuine source adapters, secondary live-browser
+drivers, durable claim/operation binding, dedicated-process IPC, and live
+execution remain absent. The profile authorizes no cloud, Hosting, IAM,
+public-ingress, or live mutation.

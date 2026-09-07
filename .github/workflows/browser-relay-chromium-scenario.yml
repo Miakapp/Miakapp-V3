@@ -11,6 +11,7 @@ on:
       - 'infrastructure/staging/browser-relay/**'
       - 'infrastructure/staging/browser-relay-aggregator/**'
       - 'infrastructure/staging/browser-relay-case-scheduler/**'
+      - 'infrastructure/staging/browser-relay-chromium-case-adapter/**'
       - 'infrastructure/staging/browser-relay-chromium-scenario/**'
       - 'infrastructure/staging/browser-relay-evidence-session/**'
       - 'infrastructure/staging/browser-relay-independent-observers/**'
@@ -19,6 +20,7 @@ on:
       - 'infrastructure/staging/browser-relay-playwright-bridge/**'
       - 'infrastructure/staging/browser-relay-runner/**'
       - 'infrastructure/staging/browser-relay-scenario-fixture/**'
+      - 'infrastructure/staging/test/browser-relay-chromium-case-adapter.test.mjs'
       - 'infrastructure/staging/test/browser-relay-chromium-scenario*.mjs'
       - 'infrastructure/staging/test/helpers/browser-relay-chromium-scenario-entry.mjs'
       - 'infrastructure/staging/test/helpers/browser-relay-evidence-fixture.mjs'
@@ -30,6 +32,7 @@ on:
       - 'infrastructure/staging/browser-relay/**'
       - 'infrastructure/staging/browser-relay-aggregator/**'
       - 'infrastructure/staging/browser-relay-case-scheduler/**'
+      - 'infrastructure/staging/browser-relay-chromium-case-adapter/**'
       - 'infrastructure/staging/browser-relay-chromium-scenario/**'
       - 'infrastructure/staging/browser-relay-evidence-session/**'
       - 'infrastructure/staging/browser-relay-independent-observers/**'
@@ -38,6 +41,7 @@ on:
       - 'infrastructure/staging/browser-relay-playwright-bridge/**'
       - 'infrastructure/staging/browser-relay-runner/**'
       - 'infrastructure/staging/browser-relay-scenario-fixture/**'
+      - 'infrastructure/staging/test/browser-relay-chromium-case-adapter.test.mjs'
       - 'infrastructure/staging/test/browser-relay-chromium-scenario*.mjs'
       - 'infrastructure/staging/test/helpers/browser-relay-chromium-scenario-entry.mjs'
       - 'infrastructure/staging/test/helpers/browser-relay-evidence-fixture.mjs'
@@ -68,6 +72,8 @@ jobs:
       - name: Validate source boundary and unit scenarios
         run: |
           node infrastructure/staging/browser-relay-chromium-scenario/guard.mjs infrastructure/staging/browser-relay-chromium-scenario
+          node infrastructure/staging/browser-relay-chromium-case-adapter/guard.mjs infrastructure/staging/browser-relay-chromium-case-adapter
           node --test infrastructure/staging/test/browser-relay-chromium-scenario.test.mjs
+          node --test infrastructure/staging/test/browser-relay-chromium-case-adapter.test.mjs
       - name: Exercise native Chromium BFCache restoration
         run: node infrastructure/staging/test/browser-relay-chromium-scenario-browser.mjs

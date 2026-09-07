@@ -43,10 +43,11 @@ function monotonicMilliseconds() {
   return Number(elapsed);
 }
 
-export function runBrowserRelayChromiumScenario(dependencies, options) {
+function run(dependencies, pageProjectionPort, options) {
   validateBrowserRelayChromiumScenarioProfile();
   const reviewed = validateOptions(options);
   return runBrowserRelayChromiumScenarioInternal(dependencies, {
+    pageProjectionPort,
     signal: reviewed.signal,
     timing: Object.freeze({
       clock: monotonicMilliseconds,
@@ -55,4 +56,19 @@ export function runBrowserRelayChromiumScenario(dependencies, options) {
       maximumMilliseconds: MAXIMUM_CHROMIUM_SCENARIO_MILLISECONDS,
     }),
   });
+}
+
+export function runBrowserRelayChromiumScenario(dependencies, options) {
+  return run(dependencies, undefined, options);
+}
+
+export function runBrowserRelayChromiumScenarioWithPageProjectionPort(
+  dependencies,
+  pageProjectionPort,
+  options,
+) {
+  if (arguments.length < 2 || arguments.length > 3) {
+    reject('Chromium scenario projection entry point has invalid arguments');
+  }
+  return run(dependencies, pageProjectionPort, options);
 }

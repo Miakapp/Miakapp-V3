@@ -56,3 +56,21 @@ export function runBrowserRelayChromiumScenarioForTesting(dependencies, options)
     validateTestingOptions(options),
   );
 }
+
+export function runBrowserRelayChromiumScenarioWithPageProjectionPortForTesting(
+  dependencies,
+  pageProjectionPort,
+  options,
+) {
+  if (arguments.length !== 3) {
+    reject('Chromium scenario projection testing entry point has invalid arguments');
+  }
+  validateBrowserRelayChromiumScenarioProfile();
+  return runBrowserRelayChromiumScenarioInternalForTesting(
+    dependencies,
+    Object.freeze({
+      ...validateTestingOptions(options),
+      pageProjectionPort,
+    }),
+  );
+}

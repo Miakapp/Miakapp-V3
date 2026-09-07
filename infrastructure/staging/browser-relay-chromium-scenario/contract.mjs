@@ -39,30 +39,32 @@ import {
 
 export const CHROMIUM_SCENARIO_PROFILE_PATH =
   'browser-relay-chromium-scenario/profile.json';
-export const CHROMIUM_SCENARIO_PROFILE_SHA256 =
+export const CHROMIUM_SCENARIO_V1_PROFILE_SHA256 =
   '5d35e5bb0a4873f5b0336d64a649b06b49b112081b5897ba238115c4333af8dd';
+export const CHROMIUM_SCENARIO_PROFILE_SHA256 =
+  '7c7ccfba00f3755c15f2533aa09048d35de39400ba1bfdf310898b5d7112f290';
 export const CHROMIUM_SCENARIO_IMPLEMENTATION_BASE_COMMIT =
-  '326c30e7fcbf49954bc63e3db71c8575faf2130f';
+  '04037dfd9b15a328a03611c80256589844fc2a1d';
 export const CHROMIUM_SCENARIO_DEPENDENCY_CONTRACTS_SHA256 =
   'f4c5ecae34d612b6b0bccfddea21bf8a723da18aa6fce2f88ce1fc090eac36b3';
 export const CHROMIUM_SCENARIO_INTERNAL_SOURCE_SHA256 =
-  'f879a1eaefe8a6c977332788087b5a7428754a0ada17fc4bec6fc7522789a0ea';
+  'aadbb184a8fc34026cb5b4ff44f9bf9e3844823b156e26ff97cdb78171f86a04';
 export const CHROMIUM_SCENARIO_GUARD_SOURCE_SHA256 =
-  '7ceb35b9d68af39363745c8f435044a84428f7f8c029bcf10c98df7a9807e337';
+  'd04b2032ab369d1da9d2e1a796c31e4ed3d2985561649841c1605a384dc0e65d';
 export const CHROMIUM_SCENARIO_UNIT_TEST_SHA256 =
-  '460cf84141750999bd97718b9a3cf1519065f596d44c25340933a2e2e8315e26';
+  '621c747616f9250c3fa66df5db546f4e43936069ba5d3c9101b47af7318e669a';
 export const CHROMIUM_SCENARIO_SOURCE_SHA256 =
-  '9643da47aaf2eafa16e430753ad9215eba5ed8dac1aa8a371239a32f69c719ed';
+  '51326c6e4bde25b004b31b1cafe35c408382e393155d333ec9c4a35e0f9814cd';
 export const CHROMIUM_SCENARIO_TESTING_SOURCE_SHA256 =
-  'b0435097b26d27d123801c144c6e7d432da06b00671b8388d98b084564efd1cd';
+  '0059bfccaaf41667114d1c4146302ef6afc78a101284a4df68b673e34cdc7826';
 export const CHROMIUM_SCENARIO_AWAY_SHA256 =
   '3717b56d02833f7021e4aa03c2de4456e00e98fb0dd6db0b1552d15e736c979e';
 export const CHROMIUM_SCENARIO_OFFLINE_HELPER_SHA256 =
   '907e3f4962f64749d2157b05eeea75b1497abba39bd0b03e17dfde6faa1fe169';
 export const CHROMIUM_SCENARIO_BROWSER_SMOKE_SHA256 =
-  '59e558cc4ca9d736942c92201c5c23fa93c85b2ccf450e9016ef8ee3392431fe';
+  '0274cc1d855e6fb9013106aecd9fbc0fc6e7d465f056519c8182b9c74574dc71';
 export const CHROMIUM_SCENARIO_WORKFLOW_SHA256 =
-  'eb6fed3c538c256c9ec0df4f041bbfbdaee6e4ed188e2673d2a2f736beb26586';
+  'f4b0f6b60b0fa4c311ed4228d9b196ec6fce00ed4bc4196e3cbf6fdea5c7a02b';
 export const BROWSER_RELAY_RUNNER_DRIVER_SHA256 =
   '9863c8a6b311c1fedfa08e866cb42204bf5fd993ab5d8fdb8e5e7efcad455219';
 export const PLAYWRIGHT_PROTOCOL_TYPES_SHA256 =
@@ -114,6 +116,7 @@ const expectedProfile = JSON.parse(
   readFileSync(new URL('profile.json', import.meta.url), 'utf8'),
 );
 const profilePath = new URL('profile.json', import.meta.url);
+const v1ProfilePath = new URL('profile-v1.json', import.meta.url);
 const internalPath = new URL('internal.mjs', import.meta.url);
 const guardPath = new URL('guard.mjs', import.meta.url);
 const scenarioPath = new URL('scenario.mjs', import.meta.url);
@@ -341,10 +344,10 @@ function validateProfileValue(profile) {
   exact(profile, expectedProfile, 'profile');
   exact(profile.schema, 'miakapp.staging-browser-relay-chromium-scenario-profile/1',
     'profile.schema');
-  exact(profile.revision, 1, 'profile.revision');
+  exact(profile.revision, 2, 'profile.revision');
   exact(
     profile.state,
-    'closed_complete_chromium_page_scenario_cdp_bfcache_offline_proven_not_wired_not_live_executed',
+    'closed_complete_chromium_page_scenario_projected_with_backpressure_offline_proven_not_wired_not_live_executed',
     'profile.state',
   );
   exact(profile.target, {
@@ -359,6 +362,7 @@ function validateProfileValue(profile) {
   }, 'profile.target');
   exact(profile.pins, {
     implementation_base_commit: CHROMIUM_SCENARIO_IMPLEMENTATION_BASE_COMMIT,
+    profile_v1_sha256: CHROMIUM_SCENARIO_V1_PROFILE_SHA256,
     browser_relay_page_profile_sha256:
       'c57e53dfeb25a0b5169854c535a535072151387b91ec4c07f889cac60bf83539',
     browser_relay_page_receipt_profile_sha256: PAGE_RECEIPT_PROFILE_SHA256,
@@ -395,6 +399,16 @@ function validateProfileValue(profile) {
     control_phase_order: CONTROL_PHASE_ORDER,
     control_phase_outputs: CONTROL_PHASE_OUTPUTS,
     dependency_methods: ['openPage', 'privateInputProvider', 'controlPhase'],
+    page_projection_entrypoint:
+      'runBrowserRelayChromiumScenarioWithPageProjectionPort',
+    page_projection_port_fields: ['record', 'toJSON'],
+    page_projection_fields: [
+      'call_observation', 'lifecycle_event', 'lifecycle_observation',
+      'observation', 'state_observation',
+    ],
+    page_projection_acknowledgement: 'exact_true',
+    page_projection_port_nonserializable: true,
+    page_projection_record_awaited: true,
     page_api_methods: [
       'initialize', 'start', 'observe', 'observeLifecycle', 'observeState',
       'call', 'suspend', 'resume', 'stop',
@@ -450,6 +464,7 @@ function validateProfileValue(profile) {
     open_page_provider_trusted: true,
     private_input_provider_trusted: true,
     control_phase_provider_trusted: true,
+    page_projection_port_trusted: true,
     page_navigation_trusted: true,
     page_content_and_init_scripts_trusted: true,
     playwright_connection_exclusive_during_run: true,
@@ -493,6 +508,9 @@ function validateProfileValue(profile) {
     cdp_detached_before_page_close: true,
     page_cleanup_independent_of_cdp_cleanup: true,
     producer_abort_once: true,
+    page_projection_backpressure_required: true,
+    page_projection_abort_race: true,
+    page_projection_failure_closed: true,
     raw_dependency_errors_propagated: false,
     raw_browser_diagnostics_retained: false,
     safe_page_witness_non_enumerable: true,
@@ -505,6 +523,7 @@ function validateProfileValue(profile) {
     bfcache_capable_automation: true,
     legacy_playwright_bridge_chromium_blocked: true,
     scenario_fixture_wired: false,
+    case_scheduler_projection_port_compatible: true,
     case_scheduler_wired: false,
     independent_live_source_adapters_present: false,
     live_aggregator_wired: false,
@@ -521,10 +540,12 @@ function validateProfileValue(profile) {
     raw_facts_exposed: false,
     raw_cdp_events_exposed: false,
     private_inputs_exposed: false,
-    confidentiality_scope: 'scenario_output_and_diagnostics_only',
+    reviewed_page_projections_exposed_to_explicit_port: true,
+    confidentiality_scope: 'scenario_output_projection_port_and_diagnostics_only',
     controller_errors_exposed: false,
     allowed_observations: [
-      'closed_browser_page_receipt', 'native_bfcache_restore_count',
+      'closed_browser_page_receipt', 'reviewed_page_projection',
+      'native_bfcache_restore_count',
       'page_instance_count', 'private_input_request_count',
     ],
   }, 'profile.output');
@@ -540,6 +561,7 @@ function validateProfileValue(profile) {
     offline_chromium_engines: 1,
     offline_complete_scenarios: 1,
     offline_closed_page_receipts: 1,
+    offline_projected_page_facts: 18,
     offline_native_persisted_bfcache_restores: 1,
     live_page_facts: 0,
     live_receipts: 0,
@@ -610,6 +632,8 @@ export function validateBrowserRelayChromiumScenarioProfile() {
   validatePinnedPlaywrightContract();
   for (const [path, maximum, digest, description] of [
     [profilePath, 32 * 1024, CHROMIUM_SCENARIO_PROFILE_SHA256, 'Chromium scenario profile'],
+    [v1ProfilePath, 32 * 1024, CHROMIUM_SCENARIO_V1_PROFILE_SHA256,
+      'Chromium scenario archived v1 profile'],
     [internalPath, 192 * 1024, CHROMIUM_SCENARIO_INTERNAL_SOURCE_SHA256, 'Chromium scenario internal source'],
     [guardPath, 16 * 1024, CHROMIUM_SCENARIO_GUARD_SOURCE_SHA256, 'Chromium scenario guard source'],
     [unitTestPath, 64 * 1024, CHROMIUM_SCENARIO_UNIT_TEST_SHA256, 'Chromium scenario unit test'],
