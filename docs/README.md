@@ -77,6 +77,12 @@ implemented across several repositories.
   common-clock browser windows and revision/signing lineage combine offline
   with the page receipts into one closed runner result, while authenticated
   live acquisition remains absent.
+- [`../infrastructure/staging/browser-relay-evidence-session/`](../infrastructure/staging/browser-relay-evidence-session/)
+  — dormant operation-local capability that owns one monotonic epoch and issues
+  browser/source-attenuated ports. Callers provide projections only; the session
+  derives fact ownership, order and time, revokes on every terminal path and
+  closes one interleaved runner result. Durable-claim binding, scheduling and
+  live adapters remain absent.
 - [`../infrastructure/staging/browser-relay-playwright-bridge/`](../infrastructure/staging/browser-relay-playwright-bridge/)
   — dormant fail-closed Playwright page-to-receipt bridge with lazy private
   input acquisition and owned page cleanup; real Firefox and WebKit engines
@@ -193,7 +199,7 @@ byte-for-byte and pins the merged revision-2 page profile plus its independent
 three-engine offline CI proof. The archived `profile-v2.json` preserves that
 claim, while current page revision 3 pins unchanged plan 15. The staging manifest
 bundle uses a small canonical index and four fixed, size- and digest-bound
-fragments while assembling the unchanged revision-91 semantic object. It
+fragments while assembling the current revision-92 semantic object. It
 retains the byte-exact earlier zero-relay plan used
 by the image build, revision 9 used by the runner, revision 10 used by
 monitoring, revision 11 used by rollback and revision 12 used by the
@@ -227,7 +233,12 @@ package now closes the other 15 receipt producers from 43 ordered App Check,
 Hosting, control-plane, relay, coordinator, KMS and Firestore facts. It accepts
 no assertion maps, raw cloud responses, private identifiers or credentials, and the
 18 receipt classes reduce offline to all 40 runner assertions. Both producer
-boundaries retain no raw fact, and the original three-input fixture remains
+boundaries retain no raw fact. A separate dormant evidence session now gives
+all 18 sources one opaque operation-local capability and monotonic epoch. Its
+attenuated ports accept projections only, derive envelopes and timing, enforce
+Firefox then WebKit between Chromium LIVE-09 and LIVE-11, and revoke/clear on
+close, abort or failure. It is not yet bound to the durable orchestrator claim,
+the live operation or source adapters. The original three-input fixture remains
 byte-exact. A separate scenario
 fixture now supplies the required fourth input from a second exact synthetic
 Firebase identity and grants both identities state access through the same

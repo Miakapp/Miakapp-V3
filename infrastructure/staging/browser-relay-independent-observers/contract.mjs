@@ -30,13 +30,13 @@ import {
 export const INDEPENDENT_OBSERVERS_PROFILE_PATH =
   'browser-relay-independent-observers/profile.json';
 export const INDEPENDENT_OBSERVERS_PROFILE_SHA256 =
-  'dccfa34e8243e546c5c7e58d314da912f1c59e63410580773912dab2137f2acb';
+  '497755bd6d037f587e8f8c5cad98ca7f93495887922dd34dd4230f12d8437f59';
 export const INDEPENDENT_OBSERVERS_IMPLEMENTATION_BASE_COMMIT =
-  '7d2822d170df6849971b4748922fd1a459da6699';
+  '7f208f25254e9ba28991f286fd3ec1e5517fede8';
 export const INDEPENDENT_OBSERVERS_SOURCE_SHA256 =
-  'f13a22c22e4953b3baee9d98b828f1e0b76997d49a8e066c98297557b9d35785';
+  '7f072b8a6e1dd2996d7994d1e4b131fccfa48da69f43450259073ed2c50627ab';
 export const INDEPENDENT_OBSERVERS_DEPENDENCY_CONTRACTS_SHA256 =
-  '2942c96d56dbf9732675f06b86cd0911bb7cd39a92ad32d4cc830796834754f7';
+  '54de4888729db7f94e0ae849ab0e453a387dd4e07a92cc537c36a492f365114c';
 export const INDEPENDENT_SOURCE_FACT_SCHEMA =
   'miakapp.staging-browser-relay-independent-source-fact/1';
 export const MINIMUM_CHROMIUM_ENGINE_DURATION_MILLISECONDS =
@@ -1217,10 +1217,10 @@ function validateProfileValue(value) {
     'miakapp.staging-browser-relay-independent-observers-profile/1',
     'profile.schema',
   );
-  exact(profile.revision, 1, 'profile.revision');
+  exact(profile.revision, 2, 'profile.revision');
   exact(
     profile.state,
-    'closed_independent_source_receipt_producers_implemented_not_wired_not_executed',
+    'closed_independent_source_receipt_producers_interleaved_runner_result_supported_not_wired_not_executed',
     'profile.state',
   );
   exact(profile.target, {
@@ -1274,6 +1274,7 @@ function validateProfileValue(value) {
     complete_receipt_count: 18,
     offline_aggregator_integration_present: true,
     runner_result_producer_present: true,
+    interleaved_runner_result_supported: true,
     live_aggregator_wired: false,
     live_source_adapters_present: false,
     common_operation_clock_shape_present: true,

@@ -34,6 +34,7 @@ import {
   validateBrowserRelayV9Plan,
 } from './browser-relay/contract.mjs';
 import {
+  BROWSER_ORDER,
   BROWSER_RELAY_RUNNER_PROFILE_PATH,
   BROWSER_RELAY_RUNNER_PROFILE_SHA256,
   validateBrowserRelayRunnerProfile,
@@ -101,6 +102,18 @@ import {
   INDEPENDENT_SOURCES_BY_BROWSER,
   validateBrowserRelayIndependentObserversProfile,
 } from './browser-relay-independent-observers/contract.mjs';
+import {
+  EVIDENCE_SESSION_DEPENDENCY_CONTRACTS_SHA256,
+  EVIDENCE_SESSION_IMPLEMENTATION_BASE_COMMIT,
+  EVIDENCE_SESSION_INTERNAL_SOURCE_SHA256,
+  EVIDENCE_SESSION_PROFILE_PATH,
+  EVIDENCE_SESSION_PROFILE_SHA256,
+  EVIDENCE_SESSION_SOURCE_SHA256,
+  EVIDENCE_SESSION_TESTING_SOURCE_SHA256,
+  INDEPENDENT_PORT_PAYLOAD_FIELDS,
+  PAGE_PORT_PAYLOAD_FIELDS,
+  validateBrowserRelayEvidenceSessionProfile,
+} from './browser-relay-evidence-session/contract.mjs';
 import {
   PLAYWRIGHT_BRIDGE_BROWSER_SMOKE_SHA256,
   PLAYWRIGHT_BRIDGE_IMPLEMENTATION_BASE_COMMIT,
@@ -235,7 +248,9 @@ import {
 } from './manifest-bundle.mjs';
 
 const INDEPENDENT_OBSERVERS_CONTRACT_SHA256 =
-  '685ab657e1fcd3348a6fc5c20e44c8071d9b2fa75ffd86188a4157f720d42e23';
+  '21b3430d6e2ce1227641e9a92d3277853aa0aa61c8ebeeef41ab7a99fa0631d8';
+const EVIDENCE_SESSION_CONTRACT_SHA256 =
+  '5d71a129d868e0bcfd216deed8758abe08cc6ea3e1d0cbba43cd056519352110';
 
 const SERVICE_IDS = [
   'firebase-auth',
@@ -3065,6 +3080,7 @@ function validateEvidence(value) {
     'browser_relay_fixture_miakapi',
     'browser_relay_aggregator',
     'browser_relay_independent_observers',
+    'browser_relay_evidence_session',
     'browser_relay_playwright_bridge',
     'browser_relay_page_receipt',
     'browser_relay_scenario_fixture',
@@ -5279,10 +5295,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 91, 'manifest.revision');
+  exact(manifest.revision, 92, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_independent_observers_closed_source_fact_producers_implemented_not_wired_not_executed_browser_relay_playwright_bridge_closed_secondary_receipts_chromium_bfcache_blocked_not_wired_not_executed_browser_relay_page_receipt_closed_bridge_bound_not_aggregated_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_independent_observers_closed_source_fact_producers_interleaved_runner_result_supported_not_wired_not_executed_browser_relay_evidence_session_closed_operation_local_capability_monotonic_epoch_implemented_not_wired_not_executed_browser_relay_playwright_bridge_closed_secondary_receipts_chromium_bfcache_blocked_not_wired_not_executed_browser_relay_page_receipt_closed_bridge_bound_not_aggregated_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -6472,6 +6488,9 @@ export function validateCommittedEvidence(
         .offline_aggregator_integration_present,
     runner_result_producer_present:
       browserRelayIndependentObserversProfile.compatibility.runner_result_producer_present,
+    interleaved_runner_result_supported:
+      browserRelayIndependentObserversProfile.compatibility
+        .interleaved_runner_result_supported,
     live_aggregator_wired:
       browserRelayIndependentObserversProfile.compatibility.live_aggregator_wired,
     live_source_adapters_present:
@@ -6521,6 +6540,152 @@ export function validateCommittedEvidence(
     browserRelayIndependentObserversManifest,
     browserRelayIndependentObserversExpected,
     'evidence.browser_relay_independent_observers',
+  );
+  const browserRelayEvidenceSessionManifest =
+    manifest.evidence.browser_relay_evidence_session;
+  const browserRelayEvidenceSessionProfilePath = committedEvidencePath(
+    stagingRoot,
+    browserRelayEvidenceSessionManifest.profile_path,
+    EVIDENCE_SESSION_PROFILE_PATH,
+    'evidence.browser_relay_evidence_session.profile_path',
+  );
+  const browserRelayEvidenceSessionProfile = validatedEvidenceFile(
+    browserRelayEvidenceSessionProfilePath,
+    validateBrowserRelayEvidenceSessionProfile,
+    'evidence.browser_relay_evidence_session.profile_path',
+  );
+  exact(
+    fileSha256(browserRelayEvidenceSessionProfilePath),
+    EVIDENCE_SESSION_PROFILE_SHA256,
+    'evidence.browser_relay_evidence_session.profile_sha256',
+  );
+  exact(
+    fileSha256(resolve(stagingRoot, 'browser-relay-evidence-session/session.mjs')),
+    EVIDENCE_SESSION_SOURCE_SHA256,
+    'evidence.browser_relay_evidence_session.session_source_sha256',
+  );
+  exact(
+    fileSha256(resolve(stagingRoot, 'browser-relay-evidence-session/internal.mjs')),
+    EVIDENCE_SESSION_INTERNAL_SOURCE_SHA256,
+    'evidence.browser_relay_evidence_session.internal_source_sha256',
+  );
+  exact(
+    fileSha256(resolve(stagingRoot, 'browser-relay-evidence-session/testing.mjs')),
+    EVIDENCE_SESSION_TESTING_SOURCE_SHA256,
+    'evidence.browser_relay_evidence_session.testing_source_sha256',
+  );
+  exact(
+    fileSha256(resolve(stagingRoot, 'browser-relay-evidence-session/contract.mjs')),
+    EVIDENCE_SESSION_CONTRACT_SHA256,
+    'evidence.browser_relay_evidence_session.contract_source_sha256',
+  );
+  const evidenceSessionIndependentPorts = Object.values(INDEPENDENT_SOURCES_BY_BROWSER)
+    .reduce((total, sources) => total + sources.length, 0);
+  const browserRelayEvidenceSessionExpected = {
+    state: browserRelayEvidenceSessionProfile.state,
+    profile_sha256: EVIDENCE_SESSION_PROFILE_SHA256,
+    implementation_base_commit: EVIDENCE_SESSION_IMPLEMENTATION_BASE_COMMIT,
+    browser_relay_plan_sha256:
+      browserRelayEvidenceSessionProfile.pins.browser_relay_plan_sha256,
+    browser_relay_runner_profile_sha256:
+      browserRelayEvidenceSessionProfile.pins.browser_relay_runner_profile_sha256,
+    browser_relay_page_receipt_profile_sha256:
+      browserRelayEvidenceSessionProfile.pins.browser_relay_page_receipt_profile_sha256,
+    browser_relay_independent_observers_profile_sha256:
+      browserRelayEvidenceSessionProfile.pins
+        .browser_relay_independent_observers_profile_sha256,
+    dependency_contracts_sha256: EVIDENCE_SESSION_DEPENDENCY_CONTRACTS_SHA256,
+    contract_source_sha256: EVIDENCE_SESSION_CONTRACT_SHA256,
+    session_source_sha256: EVIDENCE_SESSION_SOURCE_SHA256,
+    internal_source_sha256: EVIDENCE_SESSION_INTERNAL_SOURCE_SHA256,
+    testing_source_sha256: EVIDENCE_SESSION_TESTING_SOURCE_SHA256,
+    page_source_ports: BROWSER_ORDER.length,
+    independent_source_ports: evidenceSessionIndependentPorts,
+    page_port_payload_fields: PAGE_PORT_PAYLOAD_FIELDS.length,
+    independent_port_payload_fields: INDEPENDENT_PORT_PAYLOAD_FIELDS.length,
+    monotonic_clock: browserRelayEvidenceSessionProfile.session.monotonic_clock,
+    production_clock_captured_at_module_initialization:
+      browserRelayEvidenceSessionProfile.session
+        .production_clock_captured_at_module_initialization,
+    test_clock_factory_present:
+      browserRelayEvidenceSessionProfile.session.test_clock_factory_present,
+    test_clock_factory_live_import_authorized:
+      browserRelayEvidenceSessionProfile.session.test_clock_factory_live_import_authorized,
+    common_operation_epoch:
+      browserRelayEvidenceSessionProfile.session.common_operation_epoch,
+    caller_supplied_timestamps:
+      browserRelayEvidenceSessionProfile.session.caller_supplied_timestamps,
+    caller_supplied_sequences:
+      browserRelayEvidenceSessionProfile.session.caller_supplied_sequences,
+    caller_supplied_fact_envelopes:
+      browserRelayEvidenceSessionProfile.session.caller_supplied_fact_envelopes,
+    caller_supplied_receipts:
+      browserRelayEvidenceSessionProfile.session.caller_supplied_receipts,
+    opaque_root_capability:
+      browserRelayEvidenceSessionProfile.session.opaque_root_capability,
+    ports_attenuated_to_browser_source:
+      browserRelayEvidenceSessionProfile.session.ports_attenuated_to_browser_source,
+    single_use: browserRelayEvidenceSessionProfile.session.single_use,
+    fail_closed: browserRelayEvidenceSessionProfile.session.fail_closed,
+    retained_evidence_cleared_on_terminal_state:
+      browserRelayEvidenceSessionProfile.session
+        .retained_evidence_cleared_on_terminal_state,
+    root_and_ports_serializable:
+      browserRelayEvidenceSessionProfile.session.root_and_ports_serializable,
+    chromium_anchors_epoch:
+      browserRelayEvidenceSessionProfile.session.chromium_anchors_epoch,
+    secondary_browser_order:
+      browserRelayEvidenceSessionProfile.session.secondary_browser_order.join('_then_'),
+    chromium_finishes_last:
+      browserRelayEvidenceSessionProfile.session.chromium_finishes_last,
+    interleaved_runner_result_supported:
+      browserRelayEvidenceSessionProfile.session.interleaved_runner_result_supported,
+    strict_millisecond_boundaries:
+      browserRelayEvidenceSessionProfile.session.strict_millisecond_boundaries,
+    operation_local_provenance_primitive_present:
+      browserRelayEvidenceSessionProfile.compatibility
+        .operation_local_provenance_primitive_present,
+    durable_claim_binding_present:
+      browserRelayEvidenceSessionProfile.compatibility.durable_claim_binding_present,
+    live_operation_wired:
+      browserRelayEvidenceSessionProfile.compatibility.live_operation_wired,
+    live_source_adapters_present:
+      browserRelayEvidenceSessionProfile.compatibility.live_source_adapters_present,
+    interleaving_scheduler_present:
+      browserRelayEvidenceSessionProfile.compatibility.interleaving_scheduler_present,
+    cloud_compute_resources:
+      browserRelayEvidenceSessionProfile.target.cloud_compute_resources,
+    cloud_mutation_authorized:
+      browserRelayEvidenceSessionProfile.authority.cloud_mutation_authorized,
+    hosting_publication_authorized:
+      browserRelayEvidenceSessionProfile.authority.hosting_publication_authorized,
+    public_ingress_authorized:
+      browserRelayEvidenceSessionProfile.authority.public_ingress_authorized,
+    live_execution_authorized:
+      browserRelayEvidenceSessionProfile.authority.live_execution_authorized,
+    offline_complete_sessions:
+      browserRelayEvidenceSessionProfile.evidence.offline_complete_sessions,
+    live_source_facts: browserRelayEvidenceSessionProfile.evidence.live_source_facts,
+    live_source_receipts:
+      browserRelayEvidenceSessionProfile.evidence.live_source_receipts,
+    cloud_requests: browserRelayEvidenceSessionProfile.evidence.cloud_requests,
+    cloud_mutations: browserRelayEvidenceSessionProfile.evidence.cloud_mutations,
+    live_execution_count:
+      browserRelayEvidenceSessionProfile.evidence.live_execution_count,
+    credentials_committed:
+      browserRelayEvidenceSessionProfile.evidence.credentials_committed,
+    raw_facts_committed:
+      browserRelayEvidenceSessionProfile.evidence.raw_facts_committed,
+  };
+  record(
+    browserRelayEvidenceSessionManifest,
+    'evidence.browser_relay_evidence_session',
+    ['profile_path', ...Object.keys(browserRelayEvidenceSessionExpected)],
+  );
+  exactFields(
+    browserRelayEvidenceSessionManifest,
+    browserRelayEvidenceSessionExpected,
+    'evidence.browser_relay_evidence_session',
   );
   const browserRelayPlaywrightBridgeManifest = record(
     manifest.evidence.browser_relay_playwright_bridge,
@@ -8443,6 +8608,7 @@ export function validateCommittedEvidence(
     browserRelayPageV2Profile,
     browserRelayAggregatorProfile,
     browserRelayIndependentObserversProfile,
+    browserRelayEvidenceSessionProfile,
     browserRelayPlaywrightBridgeProfile,
     browserRelayPageReceiptProfile,
     browserRelayScenarioFixtureCloudProfile,
