@@ -839,13 +839,24 @@ Only their closed runner-result producer is public; the 15 independent receipts
 never escape before aggregation with the three page receipts. It checks
 control-plane/KMS ledger parity, cross-browser revision lineage, digest-pinned
 dependency contracts and browser start/receipt-close offsets on one structural
-operation clock. Live wiring remains
-blocked until one adapter binds every source to a non-replayable common
-operation capability and authenticated monotonic epoch. It must also replace the current
-whole-engine sequential runner with case-level interleaving so Firefox and
-WebKit run after Chromium closes LIVE-09 but before version 1 retirement, as
-the canonical plan requires. The former manifest-capacity blocker is closed:
-the same revision-91 semantic object is now assembled from a small index and
+operation clock. Its runner-result boundary now accepts reviewed overlapping
+engine spans with explicit offsets while preserving the historical sequential
+call contract.
+The adjacent
+[`browser-relay-evidence-session/`](browser-relay-evidence-session/) package
+now implements the missing operation-local primitive offline. One opaque root
+owns a `process.hrtime.bigint()` epoch and issues only browser/source-attenuated
+ports. Those ports accept page or source projections, never fact envelopes,
+timestamps, sequences or receipts; the session derives that metadata, enforces
+Chromium/LIVE-09, Firefox, WebKit, Chromium/LIVE-11 ordering, and revokes and
+clears everything on success, abort or failure. It emits only the closed runner
+result. Its production entrypoint captures the system monotonic clock at module
+initialization and accepts no injection; the separate test-clock entrypoint and
+shared implementation are explicitly forbidden from any future live import
+graph. Live provenance remains blocked until this primitive is bound to the
+durable orchestrator claim, the case-level scheduler and genuine source
+adapters. No live wiring or authority is claimed. The former manifest-capacity
+blocker is closed: the revision-92 semantic object is assembled from a small index and
 four independently bounded, digest-pinned canonical fragments. Each fragment
 must remain below its 96-KiB ceiling and the complete bundle below its 192-KiB
 aggregate ceiling without sacrificing line-oriented review.

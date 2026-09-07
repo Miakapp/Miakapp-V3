@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-browser-relay-independent-observers-profile/1",
-  "revision": 1,
-  "state": "closed_independent_source_receipt_producers_implemented_not_wired_not_executed",
+  "revision": 2,
+  "state": "closed_independent_source_receipt_producers_interleaved_runner_result_supported_not_wired_not_executed",
   "target": {
     "project_id": "miakapp-v4-staging",
     "project_number": "1072737219170",
@@ -11,12 +11,12 @@
     "unscheduled": true
   },
   "pins": {
-    "implementation_base_commit": "7d2822d170df6849971b4748922fd1a459da6699",
+    "implementation_base_commit": "7f208f25254e9ba28991f286fd3ec1e5517fede8",
     "browser_relay_plan_sha256": "6c7661d9be861e4f8d13ccd5d2fd0f3eaa34ea2b4d7af2e9b41d1867d6c37211",
     "browser_relay_aggregator_profile_sha256": "2f78e09655d26af993d1c5885114b1740aaa32e13ced14c5d8d774a9e40a7851",
     "browser_relay_page_receipt_profile_sha256": "740d21178e963fb82a3cd923a1adf6cbf6af2b62a633f0b97058fbda4f1e906a",
-    "dependency_contracts_sha256": "2942c96d56dbf9732675f06b86cd0911bb7cd39a92ad32d4cc830796834754f7",
-    "observers_source_sha256": "f13a22c22e4953b3baee9d98b828f1e0b76997d49a8e066c98297557b9d35785"
+    "dependency_contracts_sha256": "54de4888729db7f94e0ae849ab0e453a387dd4e07a92cc537c36a492f365114c",
+    "observers_source_sha256": "7f072b8a6e1dd2996d7994d1e4b131fccfa48da69f43450259073ed2c50627ab"
   },
   "observers": {
     "source_fact_schema": "miakapp.staging-browser-relay-independent-source-fact/1",
@@ -155,6 +155,7 @@
     "complete_receipt_count": 18,
     "offline_aggregator_integration_present": true,
     "runner_result_producer_present": true,
+    "interleaved_runner_result_supported": true,
     "live_aggregator_wired": false,
     "live_source_adapters_present": false,
     "common_operation_clock_shape_present": true,
