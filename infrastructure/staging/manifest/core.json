@@ -1,0 +1,419 @@
+{
+  "schema": "miakapp.staging-manifest-fragment/1",
+  "bundle_revision": 1,
+  "id": "core",
+  "mount": "manifest",
+  "values": {
+    "schema": "miakapp.staging-intent/1",
+    "revision": 91,
+    "status": "private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_independent_observers_closed_source_fact_producers_implemented_not_wired_not_executed_browser_relay_playwright_bridge_closed_secondary_receipts_chromium_bfcache_blocked_not_wired_not_executed_browser_relay_page_receipt_closed_bridge_bound_not_aggregated_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled",
+    "environment": "staging",
+    "project": {
+      "project_id": "miakapp-v4-staging",
+      "project_number": "1072737219170",
+      "display_name": "Miakapp V4 Staging",
+      "lifecycle": "firebase_auth_initialized_private_control_plane_signing_key_version_1_rehearsal_entry_user_relay_acceptance_succeeded_private_relays_ready",
+      "creation_authorized": false,
+      "billing_link_authorized": false,
+      "deployment_authorized": true,
+      "public_ingress_authorized": false,
+      "explicit_project_required": true,
+      "firebase_alias_allowed": false,
+      "data_policy": "synthetic_only",
+      "forbidden_project_ids": [
+        "miakapp-3",
+        "miakapp-v4",
+        "demo-miakapp-v4"
+      ]
+    },
+    "bootstrap": {
+      "observed_on": "2026-09-04",
+      "billing_enabled": true,
+      "firebase_apps": 1,
+      "hosting_site": "miakapp-v4-staging",
+      "app_engine_application": false,
+      "firestore_databases": [
+        "(default)"
+      ],
+      "storage_buckets": [
+        "miakapp-v4-staging-components",
+        "miakapp-v4-staging-tfstate-1072737219170"
+      ],
+      "cloud_functions": [],
+      "cloud_run_services": [],
+      "kms_key_rings": [
+        "projects/miakapp-v4-staging/locations/europe-west9/keyRings/miakapp-v4-staging"
+      ],
+      "secrets": [
+        "miakapp-audit-hmac",
+        "miakapp-component-hmac",
+        "miakapp-home-key-pepper",
+        "miakapp-network-hmac",
+        "miakapp-push-hmac"
+      ],
+      "project_service_accounts": [
+        "firebase-adminsdk-fbsvc@miakapp-v4-staging.iam.gserviceaccount.com",
+        "miakapp-control-plane@miakapp-v4-staging.iam.gserviceaccount.com",
+        "miakapp-tf-apply@miakapp-v4-staging.iam.gserviceaccount.com",
+        "miakapp-tf-plan@miakapp-v4-staging.iam.gserviceaccount.com"
+      ],
+      "budget_display_names": [
+        "Miakapp V4 staging monthly"
+      ],
+      "workload_identity_pools": [
+        "projects/1072737219170/locations/global/workloadIdentityPools/miakapp-github"
+      ],
+      "workload_identity_providers": [
+        "projects/1072737219170/locations/global/workloadIdentityPools/miakapp-github/providers/staging-apply",
+        "projects/1072737219170/locations/global/workloadIdentityPools/miakapp-github/providers/staging-plan"
+      ],
+      "workload_identity_provider_states": {
+        "staging-apply": "disabled",
+        "staging-plan": "disabled"
+      },
+      "enabled_service_apis": [
+        "analyticshub.googleapis.com",
+        "appengine.googleapis.com",
+        "artifactregistry.googleapis.com",
+        "bigquery.googleapis.com",
+        "bigqueryconnection.googleapis.com",
+        "bigquerydatapolicy.googleapis.com",
+        "bigquerydatatransfer.googleapis.com",
+        "bigquerymigration.googleapis.com",
+        "bigqueryreservation.googleapis.com",
+        "bigquerystorage.googleapis.com",
+        "billingbudgets.googleapis.com",
+        "cloudapis.googleapis.com",
+        "cloudbilling.googleapis.com",
+        "cloudbuild.googleapis.com",
+        "cloudfunctions.googleapis.com",
+        "cloudkms.googleapis.com",
+        "cloudresourcemanager.googleapis.com",
+        "cloudtrace.googleapis.com",
+        "containeranalysis.googleapis.com",
+        "containerregistry.googleapis.com",
+        "dataform.googleapis.com",
+        "dataplex.googleapis.com",
+        "datastore.googleapis.com",
+        "eventarc.googleapis.com",
+        "fcm.googleapis.com",
+        "firebase.googleapis.com",
+        "firebaseappcheck.googleapis.com",
+        "firebasehosting.googleapis.com",
+        "firebaseinstallations.googleapis.com",
+        "firebaseremoteconfig.googleapis.com",
+        "firebaseremoteconfigrealtime.googleapis.com",
+        "firebaserules.googleapis.com",
+        "firestore.googleapis.com",
+        "identitytoolkit.googleapis.com",
+        "iam.googleapis.com",
+        "iamcredentials.googleapis.com",
+        "logging.googleapis.com",
+        "monitoring.googleapis.com",
+        "pubsub.googleapis.com",
+        "run.googleapis.com",
+        "runtimeconfig.googleapis.com",
+        "secretmanager.googleapis.com",
+        "securetoken.googleapis.com",
+        "servicemanagement.googleapis.com",
+        "serviceusage.googleapis.com",
+        "source.googleapis.com",
+        "sql-component.googleapis.com",
+        "storage-api.googleapis.com",
+        "storage-component.googleapis.com",
+        "storage.googleapis.com",
+        "sts.googleapis.com",
+        "telemetry.googleapis.com",
+        "testing.googleapis.com"
+      ]
+    },
+    "locations": {
+      "topology": "regional",
+      "primary": "europe-west9",
+      "functions": "europe-west9",
+      "firestore": "europe-west9",
+      "storage": "europe-west9",
+      "kms": "europe-west9",
+      "immutable_choice_reviewed": true
+    },
+    "services": [
+      {
+        "id": "firebase-auth",
+        "state": "initialized_closed_custom_token_lifecycle_validated"
+      },
+      {
+        "id": "firebase-app-check",
+        "state": "admin_custom_provider_and_system_browser_attestation_validated_enforcement_disabled"
+      },
+      {
+        "id": "firestore",
+        "state": "private_fixture_lifecycle_validated_no_persistent_application_data"
+      },
+      {
+        "id": "cloud-functions-gen2",
+        "state": "private_schema_2_two_key_version_1_rehearsal_entry_edge_profile_runtime_active_user_relay_acceptance_succeeded"
+      },
+      {
+        "id": "cloud-storage",
+        "state": "private_bucket_created_no_application_mutation"
+      },
+      {
+        "id": "cloud-kms",
+        "state": "two_signing_key_versions_enabled_runtime_two_keys_published_version_1_rehearsal_entry"
+      },
+      {
+        "id": "secret-manager",
+        "state": "five_initial_versions_enabled_runtime_access_validated"
+      },
+      {
+        "id": "firebase-cloud-messaging",
+        "state": "api_enabled_one_permission_runtime_role_applied_uninvoked"
+      },
+      {
+        "id": "cloud-logging",
+        "state": "api_enabled_runtime_deployed_no_application_log_validation"
+      },
+      {
+        "id": "cloud-monitoring",
+        "state": "api_enabled_runtime_deployed_no_metric_validation"
+      },
+      {
+        "id": "cloud-workflows",
+        "state": "api_enabled_user_relay_probe_succeeded_and_retired"
+      }
+    ],
+    "runtime": {
+      "function_name": "controlPlane",
+      "resource_name": "projects/miakapp-v4-staging/locations/europe-west9/functions/control-plane",
+      "generation": 2,
+      "region": "europe-west9",
+      "deployment_state": "ACTIVE",
+      "service": "projects/miakapp-v4-staging/locations/europe-west9/services/control-plane",
+      "revision": "control-plane-00010-vop",
+      "uri": "https://control-plane-aczhngqraq-od.a.run.app",
+      "minimum_instances": 0,
+      "maximum_instances": 1,
+      "concurrency": 16,
+      "timeout_seconds": 30,
+      "dedicated_service_account": "miakapp-control-plane@miakapp-v4-staging.iam.gserviceaccount.com",
+      "allow_unauthenticated": false,
+      "ingress": "ALLOW_INTERNAL_ONLY",
+      "source_archive_sha256": "3e94305e17ee4df07f54f13560dac0a9491de3f89fb3ddbf4ab745c62dce8c7e",
+      "runtime_config_sha256": "c018708786fc23a15f7701093b5148c0e415a2df8045af8e170e4308c2deae37",
+      "runtime_schema": "miakapp.production-runtime/2",
+      "security_schema": "miakapp.production-security/2",
+      "published_signing_keys": 2,
+      "current_signing_key_version": 1,
+      "user_managed_keys": 0,
+      "live_request_performed": false
+    },
+    "data": {
+      "firestore": {
+        "database_id": "(default)",
+        "edition": "STANDARD",
+        "location": "europe-west9",
+        "deletion_protection": true,
+        "point_in_time_recovery": false,
+        "scheduled_backups": false,
+        "ttl_fields": [
+          "pushChallenges.expires_at",
+          "controlAdmissionBuckets.expires_at",
+          "controlAudit.expires_at"
+        ]
+      },
+      "storage": {
+        "bucket_name": "miakapp-v4-staging-components",
+        "firebase_default_bucket": false,
+        "location": "europe-west9",
+        "uniform_bucket_level_access": true,
+        "public_access_prevention": "enforced",
+        "public_read": false,
+        "cors_origins": [],
+        "soft_delete_days": 0,
+        "object_versioning": false,
+        "retention_policy_locked": false,
+        "staging_object_ttl_days": 1
+      }
+    },
+    "security": {
+      "kms": {
+        "state": "two_versions_enabled_runtime_both_published_version_1_rehearsal_entry",
+        "location": "europe-west9",
+        "key_ring": "miakapp-v4-staging",
+        "key": "access-token-signing",
+        "protection_level": "SOFTWARE",
+        "purpose": "ASYMMETRIC_SIGN",
+        "algorithm": "EC_SIGN_ED25519",
+        "automatic_rotation": false,
+        "enabled_versions": [
+          1,
+          2
+        ],
+        "maximum_active_versions": 2,
+        "runtime_published_versions": [
+          1,
+          2
+        ],
+        "current_runtime_version": 1,
+        "key_ring_deletion_supported": false
+      },
+      "secrets": [
+        {
+          "id": "miakapp-home-key-pepper",
+          "state": "initial_version_1_enabled",
+          "enabled_versions": [
+            1
+          ],
+          "replication": "automatic",
+          "version_policy_state": "initialized_rotation_not_implemented",
+          "maximum_active_versions": 2,
+          "consumer": "control-plane-runtime"
+        },
+        {
+          "id": "miakapp-component-hmac",
+          "state": "initial_version_1_enabled",
+          "enabled_versions": [
+            1
+          ],
+          "replication": "automatic",
+          "version_policy_state": "initialized_rotation_not_implemented",
+          "maximum_active_versions": 2,
+          "consumer": "control-plane-runtime"
+        },
+        {
+          "id": "miakapp-push-hmac",
+          "state": "initial_version_1_enabled",
+          "enabled_versions": [
+            1
+          ],
+          "replication": "automatic",
+          "version_policy_state": "initialized_rotation_not_implemented",
+          "maximum_active_versions": 2,
+          "consumer": "control-plane-runtime"
+        },
+        {
+          "id": "miakapp-audit-hmac",
+          "state": "initial_version_1_enabled",
+          "enabled_versions": [
+            1
+          ],
+          "replication": "automatic",
+          "version_policy_state": "initialized_rotation_not_implemented",
+          "maximum_active_versions": 2,
+          "consumer": "control-plane-runtime"
+        },
+        {
+          "id": "miakapp-network-hmac",
+          "state": "initial_version_1_enabled",
+          "enabled_versions": [
+            1
+          ],
+          "replication": "automatic",
+          "version_policy_state": "initialized_rotation_not_implemented",
+          "maximum_active_versions": 2,
+          "consumer": "control-plane-runtime"
+        }
+      ],
+      "iam": {
+        "runtime_identity_state": "private_runtime_deployed_zero_user_managed_keys",
+        "foundation_resource_bindings_state": "complete_eight_recovery_bindings_present",
+        "broad_project_roles_forbidden": true,
+        "human_runtime_bindings_forbidden": true,
+        "resource_bindings": [
+          {
+            "resource": "firestore/(default)",
+            "access": "roles/datastore.user"
+          },
+          {
+            "resource": "storage/miakapp-v4-staging-components",
+            "access": "roles/storage.objectCreator"
+          },
+          {
+            "resource": "storage/miakapp-v4-staging-components",
+            "access": "roles/storage.objectViewer"
+          },
+          {
+            "resource": "kms/miakapp-v4-staging/access-token-signing",
+            "access": "roles/cloudkms.signerVerifier"
+          },
+          {
+            "resource": "secret-manager/declared-secrets-only",
+            "access": "roles/secretmanager.secretAccessor"
+          },
+          {
+            "resource": "firebase-app-check/miakapp-v4-staging",
+            "access": "roles/firebaseappcheck.tokenVerifier"
+          },
+          {
+            "resource": "project/miakapp-v4-staging",
+            "access": "roles/logging.logWriter"
+          },
+          {
+            "resource": "project/miakapp-v4-staging",
+            "access": "roles/monitoring.metricWriter"
+          }
+        ],
+        "unresolved_permissions": []
+      }
+    },
+    "cost": {
+      "billing_account": {
+        "selection_state": "approved",
+        "identifier_sha256": "4557923f1be719b78ee844b14bfa4654be3eb3fa785a2cb5a2624c3f85d12270",
+        "raw_identifier_committed": false,
+        "link_state": "linked_to_approved_account",
+        "terraform_management_state": "managed_in_reconciled_remote_bootstrap_state"
+      },
+      "currency": "EUR",
+      "alert_thresholds": [
+        2,
+        5,
+        10
+      ],
+      "alerts_are_not_hard_caps": true,
+      "operator_approval_required": true,
+      "free_tier_assumed": false,
+      "preview_cloud_run_spend_cap_enabled": false,
+      "fixed_cost_services": {
+        "minimum_function_instances": false,
+        "external_load_balancer": false,
+        "forwarding_rule": false,
+        "cloud_armor": false,
+        "vpc_connector": false,
+        "cloud_nat": false,
+        "analytics": false
+      }
+    },
+    "readiness": {
+      "manual_read_only_cloud_plan_authorized": true,
+      "foundation_apply_authorized": false,
+      "required_blockers": [
+        "relay-token-refresh-integration",
+        "trusted-source-and-edge-admission",
+        "live-managed-service-fault-matrix",
+        "monitoring-and-billing-alert-validation",
+        "secret-and-signing-key-rotation-rehearsal",
+        "migration-rehearsal"
+      ]
+    },
+    "teardown": {
+      "runbook": "TEARDOWN.md",
+      "automated": false,
+      "manual_project_id_confirmation": true,
+      "inventory_after_teardown": [
+        "cloud-functions-and-cloud-run-revisions",
+        "eventarc-triggers",
+        "workflows-probe-executions-schedules-and-api",
+        "firebase-app-registrations-and-app-check-providers",
+        "artifact-registry-images",
+        "firestore-database-and-ttl-policies",
+        "component-storage-live-and-soft-deleted-objects",
+        "terraform-state-plan-lock-and-soft-deleted-objects",
+        "secret-manager-versions",
+        "kms-key-versions-and-non-deletable-key-ring",
+        "iam-bindings-service-accounts-and-workload-identity",
+        "billing-export-and-late-charges"
+      ]
+    }
+  }
+}
