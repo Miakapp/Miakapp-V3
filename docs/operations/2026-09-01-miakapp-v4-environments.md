@@ -190,8 +190,9 @@ project ID and enabled Firebase without selecting an immutable resource
 location. A separately authorized operation linked the approved billing account
 on 2026-09-03. Its sanitized inventory now lives under
 [`../../infrastructure/staging/`](../../infrastructure/staging/).
-Its stable `manifest.json` entry point is now a canonical index over four fixed,
-digest-pinned fragments. The loader reconstructs the current revision-93
+Its stable `manifest.json` entry point is now a bundle-revision-2 canonical
+index over five fixed, digest-pinned fragments, with separate browser-relay
+scenario and operations owners. The loader reconstructs the current revision-95
 semantic manifest only after verifying each fragment's path, mount, bundle
 schema, owned fields, exact byte length, SHA-256 and bounded aggregate size,
 plus index/core agreement on the semantic schema and revision.

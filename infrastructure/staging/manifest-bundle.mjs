@@ -19,7 +19,7 @@ import {
 } from 'node:path';
 
 const BUNDLE_SCHEMA = 'miakapp.staging-manifest-bundle/1';
-const BUNDLE_REVISION = 1;
+const BUNDLE_REVISION = 2;
 const FRAGMENT_SCHEMA = 'miakapp.staging-manifest-fragment/1';
 const MAXIMUM_INDEX_BYTES = 16 * 1024;
 const MAXIMUM_FRAGMENT_BYTES = 96 * 1024;
@@ -82,7 +82,7 @@ const PLATFORM_EVIDENCE_KEYS = Object.freeze([
   ...PLATFORM_EVIDENCE_SUFFIX_KEYS,
 ]);
 
-const BROWSER_RELAY_EVIDENCE_KEYS = Object.freeze([
+const BROWSER_RELAY_SCENARIO_EVIDENCE_KEYS = Object.freeze([
   'browser_relay_plan',
   'browser_relay_runner',
   'browser_relay_page',
@@ -99,6 +99,9 @@ const BROWSER_RELAY_EVIDENCE_KEYS = Object.freeze([
   'browser_relay_page_receipt',
   'browser_relay_scenario_fixture',
   'browser_relay_scenario_fixture_cloud',
+]);
+
+const BROWSER_RELAY_OPERATIONS_EVIDENCE_KEYS = Object.freeze([
   'browser_relay_monitoring',
   'browser_relay_rollback',
   'browser_relay_orchestrator',
@@ -107,6 +110,11 @@ const BROWSER_RELAY_EVIDENCE_KEYS = Object.freeze([
   'browser_app_check_prerequisite',
   'browser_app_check_attestation',
   'signing_key_overlap_prerequisite',
+]);
+
+const BROWSER_RELAY_EVIDENCE_KEYS = Object.freeze([
+  ...BROWSER_RELAY_SCENARIO_EVIDENCE_KEYS,
+  ...BROWSER_RELAY_OPERATIONS_EVIDENCE_KEYS,
 ]);
 
 const EVIDENCE_KEY_ORDER = Object.freeze([
@@ -135,10 +143,16 @@ const FRAGMENT_SPECS = Object.freeze([
     keys: PLATFORM_EVIDENCE_KEYS,
   }),
   Object.freeze({
-    id: 'evidence-browser-relay',
-    path: 'manifest/evidence-browser-relay.json',
+    id: 'evidence-browser-relay-scenario',
+    path: 'manifest/evidence-browser-relay-scenario.json',
     mount: 'evidence',
-    keys: BROWSER_RELAY_EVIDENCE_KEYS,
+    keys: BROWSER_RELAY_SCENARIO_EVIDENCE_KEYS,
+  }),
+  Object.freeze({
+    id: 'evidence-browser-relay-operations',
+    path: 'manifest/evidence-browser-relay-operations.json',
+    mount: 'evidence',
+    keys: BROWSER_RELAY_OPERATIONS_EVIDENCE_KEYS,
   }),
 ]);
 
@@ -410,13 +424,18 @@ function validateFragment(value, spec) {
 function assembleManifest(fragments) {
   const core = fragments.get('core').values;
   const terraform = fragments.get('terraform').values;
-  const platformEvidence = fragments.get('evidence-platform').values;
-  const browserRelayEvidence = fragments.get('evidence-browser-relay').values;
+  const evidenceSources = [
+    fragments.get('evidence-platform').values,
+    fragments.get('evidence-browser-relay-scenario').values,
+    fragments.get('evidence-browser-relay-operations').values,
+  ];
   const evidence = {};
   for (const key of EVIDENCE_KEY_ORDER) {
-    evidence[key] = Object.hasOwn(platformEvidence, key)
-      ? platformEvidence[key]
-      : browserRelayEvidence[key];
+    const owners = evidenceSources.filter((source) => Object.hasOwn(source, key));
+    if (owners.length !== 1) {
+      reject(`Staging manifest evidence ${key} must have exactly one fragment owner`);
+    }
+    evidence[key] = owners[0][key];
   }
   return {
     schema: core.schema,
