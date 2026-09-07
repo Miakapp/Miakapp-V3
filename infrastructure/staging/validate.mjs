@@ -115,6 +115,20 @@ import {
   validateBrowserRelayEvidenceSessionProfile,
 } from './browser-relay-evidence-session/contract.mjs';
 import {
+  CASE_ORDER as CASE_SCHEDULER_CASE_ORDER,
+  CASE_SCHEDULER_DEPENDENCY_CONTRACTS_SHA256,
+  CASE_SCHEDULER_IMPLEMENTATION_BASE_COMMIT,
+  CASE_SCHEDULER_INTERNAL_SOURCE_SHA256,
+  CASE_SCHEDULER_PROFILE_PATH,
+  CASE_SCHEDULER_PROFILE_SHA256,
+  CASE_SCHEDULER_SOURCE_SHA256,
+  CASE_SCHEDULER_TESTING_SOURCE_SHA256,
+  RECORD_COUNTS_BY_STAGE as CASE_SCHEDULER_RECORD_COUNTS_BY_STAGE,
+  SCHEDULE_ACTIONS as CASE_SCHEDULER_ACTIONS,
+  STAGE_ORDER as CASE_SCHEDULER_STAGE_ORDER,
+  validateBrowserRelayCaseSchedulerProfile,
+} from './browser-relay-case-scheduler/contract.mjs';
+import {
   PLAYWRIGHT_BRIDGE_BROWSER_SMOKE_SHA256,
   PLAYWRIGHT_BRIDGE_IMPLEMENTATION_BASE_COMMIT,
   PLAYWRIGHT_BRIDGE_OFFLINE_ENTRY_SHA256,
@@ -250,7 +264,9 @@ import {
 const INDEPENDENT_OBSERVERS_CONTRACT_SHA256 =
   '21b3430d6e2ce1227641e9a92d3277853aa0aa61c8ebeeef41ab7a99fa0631d8';
 const EVIDENCE_SESSION_CONTRACT_SHA256 =
-  '5d71a129d868e0bcfd216deed8758abe08cc6ea3e1d0cbba43cd056519352110';
+  '6704df3b2986f654ef0aa2cc3849bcc0036ae65648199ca3a922d91ab0e955f4';
+const CASE_SCHEDULER_CONTRACT_SHA256 =
+  '69fa300eb301ba5adb1b4b76e59e788bd1a8c9b6464e91bfbd2a087f11b8e9ce';
 
 const SERVICE_IDS = [
   'firebase-auth',
@@ -3081,6 +3097,7 @@ function validateEvidence(value) {
     'browser_relay_aggregator',
     'browser_relay_independent_observers',
     'browser_relay_evidence_session',
+    'browser_relay_case_scheduler',
     'browser_relay_playwright_bridge',
     'browser_relay_page_receipt',
     'browser_relay_scenario_fixture',
@@ -5295,10 +5312,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 92, 'manifest.revision');
+  exact(manifest.revision, 93, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_independent_observers_closed_source_fact_producers_interleaved_runner_result_supported_not_wired_not_executed_browser_relay_evidence_session_closed_operation_local_capability_monotonic_epoch_implemented_not_wired_not_executed_browser_relay_playwright_bridge_closed_secondary_receipts_chromium_bfcache_blocked_not_wired_not_executed_browser_relay_page_receipt_closed_bridge_bound_not_aggregated_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_independent_observers_closed_source_fact_producers_interleaved_runner_result_supported_not_wired_not_executed_browser_relay_evidence_session_closed_operation_local_capability_monotonic_epoch_implemented_not_wired_not_executed_browser_relay_case_scheduler_closed_case_interleaving_implemented_not_wired_not_executed_browser_relay_playwright_bridge_closed_secondary_receipts_chromium_bfcache_blocked_not_wired_not_executed_browser_relay_page_receipt_closed_bridge_bound_not_aggregated_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -6686,6 +6703,183 @@ export function validateCommittedEvidence(
     browserRelayEvidenceSessionManifest,
     browserRelayEvidenceSessionExpected,
     'evidence.browser_relay_evidence_session',
+  );
+  const browserRelayCaseSchedulerManifest =
+    manifest.evidence.browser_relay_case_scheduler;
+  const browserRelayCaseSchedulerProfilePath = committedEvidencePath(
+    stagingRoot,
+    browserRelayCaseSchedulerManifest.profile_path,
+    CASE_SCHEDULER_PROFILE_PATH,
+    'evidence.browser_relay_case_scheduler.profile_path',
+  );
+  const browserRelayCaseSchedulerProfile = validatedEvidenceFile(
+    browserRelayCaseSchedulerProfilePath,
+    validateBrowserRelayCaseSchedulerProfile,
+    'evidence.browser_relay_case_scheduler.profile_path',
+  );
+  exact(
+    fileSha256(browserRelayCaseSchedulerProfilePath),
+    CASE_SCHEDULER_PROFILE_SHA256,
+    'evidence.browser_relay_case_scheduler.profile_sha256',
+  );
+  for (const [name, expectedSha256] of [
+    ['contract.mjs', CASE_SCHEDULER_CONTRACT_SHA256],
+    ['scheduler.mjs', CASE_SCHEDULER_SOURCE_SHA256],
+    ['internal.mjs', CASE_SCHEDULER_INTERNAL_SOURCE_SHA256],
+    ['testing.mjs', CASE_SCHEDULER_TESTING_SOURCE_SHA256],
+  ]) {
+    exact(
+      fileSha256(resolve(stagingRoot, `browser-relay-case-scheduler/${name}`)),
+      expectedSha256,
+      `evidence.browser_relay_case_scheduler.${name.replace('.mjs', '_source_sha256')}`,
+    );
+  }
+  const caseSchedulerProjectionCount = Object.values(
+    CASE_SCHEDULER_RECORD_COUNTS_BY_STAGE,
+  ).flatMap((counts) => Object.values(counts))
+    .reduce((total, count) => total + count, 0);
+  const browserRelayCaseSchedulerExpected = {
+    state: browserRelayCaseSchedulerProfile.state,
+    profile_sha256: CASE_SCHEDULER_PROFILE_SHA256,
+    implementation_base_commit: CASE_SCHEDULER_IMPLEMENTATION_BASE_COMMIT,
+    browser_relay_plan_sha256:
+      browserRelayCaseSchedulerProfile.pins.browser_relay_plan_sha256,
+    browser_relay_evidence_session_profile_sha256:
+      browserRelayCaseSchedulerProfile.pins
+        .browser_relay_evidence_session_profile_sha256,
+    dependency_contracts_sha256: CASE_SCHEDULER_DEPENDENCY_CONTRACTS_SHA256,
+    contract_source_sha256: CASE_SCHEDULER_CONTRACT_SHA256,
+    scheduler_source_sha256: CASE_SCHEDULER_SOURCE_SHA256,
+    internal_source_sha256: CASE_SCHEDULER_INTERNAL_SOURCE_SHA256,
+    testing_source_sha256: CASE_SCHEDULER_TESTING_SOURCE_SHA256,
+    scheduled_cases: CASE_SCHEDULER_CASE_ORDER.length,
+    scheduled_stages: CASE_SCHEDULER_STAGE_ORDER.length,
+    scheduled_actions: CASE_SCHEDULER_ACTIONS.length,
+    reviewed_projections: caseSchedulerProjectionCount,
+    adapter_methods: browserRelayCaseSchedulerProfile.schedule.adapter_methods.length,
+    case_scope_fields: browserRelayCaseSchedulerProfile.schedule.case_scope_fields.length,
+    browser_start_order:
+      browserRelayCaseSchedulerProfile.schedule.browser_start_order.join('_then_'),
+    page_close_order:
+      browserRelayCaseSchedulerProfile.schedule.page_close_order.join('_then_'),
+    browser_close_order:
+      browserRelayCaseSchedulerProfile.schedule.browser_close_order.join('_then_'),
+    secondary_browser_order:
+      browserRelayCaseSchedulerProfile.schedule.secondary_browser_order.join('_then_'),
+    adapter_start_precedes_session_boundary:
+      browserRelayCaseSchedulerProfile.schedule.adapter_start_precedes_session_boundary,
+    chromium_starts_at_common_epoch:
+      browserRelayCaseSchedulerProfile.schedule.chromium_starts_at_common_epoch,
+    chromium_page_closes_after_live_09:
+      browserRelayCaseSchedulerProfile.schedule.chromium_page_closes_after_live_09,
+    chromium_browser_closes_after_live_11:
+      browserRelayCaseSchedulerProfile.schedule.chromium_browser_closes_after_live_11,
+    adapter_global_close_precedes_session_close:
+      browserRelayCaseSchedulerProfile.schedule
+        .adapter_global_close_precedes_session_close,
+    exact_fact_kind_partition:
+      browserRelayCaseSchedulerProfile.schedule.exact_fact_kind_partition,
+    exact_record_partition:
+      browserRelayCaseSchedulerProfile.schedule.exact_record_partition,
+    cross_source_total_order_imposed:
+      browserRelayCaseSchedulerProfile.schedule.cross_source_total_order_imposed,
+    adapter_completion_value:
+      browserRelayCaseSchedulerProfile.schedule.adapter_completion_value,
+    case_scopes_serializable:
+      browserRelayCaseSchedulerProfile.schedule.case_scopes_serializable,
+    case_scopes_revoked_after_stage:
+      browserRelayCaseSchedulerProfile.schedule.case_scopes_revoked_after_stage,
+    caller_supplied_case_order:
+      browserRelayCaseSchedulerProfile.schedule.caller_supplied_case_order,
+    caller_supplied_evidence_envelopes:
+      browserRelayCaseSchedulerProfile.schedule.caller_supplied_evidence_envelopes,
+    caller_supplied_timestamps:
+      browserRelayCaseSchedulerProfile.schedule.caller_supplied_timestamps,
+    caller_supplied_results:
+      browserRelayCaseSchedulerProfile.schedule.caller_supplied_results,
+    internal_abort_signal:
+      browserRelayCaseSchedulerProfile.schedule.internal_abort_signal,
+    external_abort_cooperative:
+      browserRelayCaseSchedulerProfile.schedule.external_abort_cooperative,
+    external_abort_listener_protected:
+      browserRelayCaseSchedulerProfile.schedule.external_abort_listener_protected,
+    adapter_methods_receive_internal_abort_signal:
+      browserRelayCaseSchedulerProfile.schedule
+        .adapter_methods_receive_internal_abort_signal,
+    adapter_close_once:
+      browserRelayCaseSchedulerProfile.schedule.adapter_close_once,
+    adapter_close_after_invoked_work_settles:
+      browserRelayCaseSchedulerProfile.schedule
+        .adapter_close_after_invoked_work_settles,
+    invoked_work_awaited_before_rejection:
+      browserRelayCaseSchedulerProfile.schedule.invoked_work_awaited_before_rejection,
+    evidence_session_composed:
+      browserRelayCaseSchedulerProfile.compatibility.evidence_session_composed,
+    evidence_session_production_entrypoint_only:
+      browserRelayCaseSchedulerProfile.compatibility
+        .evidence_session_production_entrypoint_only,
+    case_level_interleaving_scheduler_present:
+      browserRelayCaseSchedulerProfile.compatibility
+        .case_level_interleaving_scheduler_present,
+    durable_claim_binding_present:
+      browserRelayCaseSchedulerProfile.compatibility.durable_claim_binding_present,
+    live_operation_wired:
+      browserRelayCaseSchedulerProfile.compatibility.live_operation_wired,
+    live_source_adapters_present:
+      browserRelayCaseSchedulerProfile.compatibility.live_source_adapters_present,
+    playwright_bridge_wired:
+      browserRelayCaseSchedulerProfile.compatibility.playwright_bridge_wired,
+    scenario_fixture_wired:
+      browserRelayCaseSchedulerProfile.compatibility.scenario_fixture_wired,
+    complete_chromium_page_scenario:
+      browserRelayCaseSchedulerProfile.compatibility.complete_chromium_page_scenario,
+    bfcache_capable_automation:
+      browserRelayCaseSchedulerProfile.compatibility.bfcache_capable_automation,
+    callback_resolution_proves_resource_closure:
+      browserRelayCaseSchedulerProfile.compatibility
+        .callback_resolution_proves_resource_closure,
+    runner_result_schema: browserRelayCaseSchedulerProfile.output.runner_result_schema,
+    partial_results_exposed:
+      browserRelayCaseSchedulerProfile.output.partial_results_exposed,
+    raw_facts_exposed: browserRelayCaseSchedulerProfile.output.raw_facts_exposed,
+    capability_identifiers_exposed:
+      browserRelayCaseSchedulerProfile.output.capability_identifiers_exposed,
+    adapter_errors_exposed:
+      browserRelayCaseSchedulerProfile.output.adapter_errors_exposed,
+    cloud_compute_resources:
+      browserRelayCaseSchedulerProfile.target.cloud_compute_resources,
+    cloud_mutation_authorized:
+      browserRelayCaseSchedulerProfile.authority.cloud_mutation_authorized,
+    hosting_publication_authorized:
+      browserRelayCaseSchedulerProfile.authority.hosting_publication_authorized,
+    iam_binding_mutation_authorized:
+      browserRelayCaseSchedulerProfile.authority.iam_binding_mutation_authorized,
+    public_ingress_authorized:
+      browserRelayCaseSchedulerProfile.authority.public_ingress_authorized,
+    live_execution_authorized:
+      browserRelayCaseSchedulerProfile.authority.live_execution_authorized,
+    offline_complete_schedules:
+      browserRelayCaseSchedulerProfile.evidence.offline_complete_schedules,
+    live_source_facts:
+      browserRelayCaseSchedulerProfile.evidence.live_source_facts,
+    cloud_requests: browserRelayCaseSchedulerProfile.evidence.cloud_requests,
+    cloud_mutations: browserRelayCaseSchedulerProfile.evidence.cloud_mutations,
+    live_execution_count:
+      browserRelayCaseSchedulerProfile.evidence.live_execution_count,
+    credentials_committed:
+      browserRelayCaseSchedulerProfile.evidence.credentials_committed,
+    raw_facts_committed:
+      browserRelayCaseSchedulerProfile.evidence.raw_facts_committed,
+  };
+  record(
+    browserRelayCaseSchedulerManifest,
+    'evidence.browser_relay_case_scheduler',
+    ['profile_path', ...Object.keys(browserRelayCaseSchedulerExpected)],
+  );
+  exactFields(
+    browserRelayCaseSchedulerManifest,
+    browserRelayCaseSchedulerExpected,
+    'evidence.browser_relay_case_scheduler',
   );
   const browserRelayPlaywrightBridgeManifest = record(
     manifest.evidence.browser_relay_playwright_bridge,
@@ -8609,6 +8803,7 @@ export function validateCommittedEvidence(
     browserRelayAggregatorProfile,
     browserRelayIndependentObserversProfile,
     browserRelayEvidenceSessionProfile,
+    browserRelayCaseSchedulerProfile,
     browserRelayPlaywrightBridgeProfile,
     browserRelayPageReceiptProfile,
     browserRelayScenarioFixtureCloudProfile,
@@ -8663,7 +8858,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; the dormant page, two-identity scenario fixture, replacement-identity cloud adapter, independent-source aggregator and observers, Playwright bridge and browser-page receipt producer are digest-pinned without live authority, the Chromium BFCache path remains blocked before private input, the single-use operation remains privately preflighted and unexecuted, both exact-audience relays remain private-ready, unauthenticated invocation remains absent, and App Check enforcement is disabled.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; the dormant page, two-identity scenario fixture, replacement-identity cloud adapter, independent-source aggregator and observers, evidence session, case scheduler, Playwright bridge and browser-page receipt producer are digest-pinned without live authority, the Chromium BFCache path remains blocked before private input, the single-use operation remains privately preflighted and unexecuted, both exact-audience relays remain private-ready, unauthenticated invocation remains absent, and App Check enforcement is disabled.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';

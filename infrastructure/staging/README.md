@@ -854,9 +854,22 @@ result. Its production entrypoint captures the system monotonic clock at module
 initialization and accepts no injection; the separate test-clock entrypoint and
 shared implementation are explicitly forbidden from any future live import
 graph. Live provenance remains blocked until this primitive is bound to the
-durable orchestrator claim, the case-level scheduler and genuine source
-adapters. No live wiring or authority is claimed. The former manifest-capacity
-blocker is closed: the revision-92 semantic object is assembled from a small index and
+durable orchestrator claim and genuine source adapters. No live wiring or
+authority is claimed. The adjacent
+[`browser-relay-case-scheduler/`](browser-relay-case-scheduler/) package now
+implements the missing case-level topology offline. It composes only the
+production evidence-session entrypoint and executes 11 fixed stages: Chromium
+`LIVE-02..LIVE-09`, Firefox then WebKit `LIVE-10`, and Chromium `LIVE-11`.
+Fresh non-serializable scopes limit each adapter callback to its exact share of
+all 67 projections; the exact ordered fact kinds are independently pinned to
+their `LIVE-*` cases and every scope is revoked on settlement. The scheduler awaits explicit
+adapter browser starts, page and browser closures, and one global close before
+advancing the matching evidence boundary or returning the closed result.
+Cancellation uses a protected listener to signal active work, deliberately
+waits for that invoked work to settle, then performs global close exactly once
+as the final drain barrier. The package has no concrete adapter, claim binding, browser,
+network, credential or live authority. The former manifest-capacity blocker is
+closed: the revision-93 semantic object is assembled from a small index and
 four independently bounded, digest-pinned canonical fragments. Each fragment
 must remain below its 96-KiB ceiling and the complete bundle below its 192-KiB
 aggregate ceiling without sacrificing line-oriented review.

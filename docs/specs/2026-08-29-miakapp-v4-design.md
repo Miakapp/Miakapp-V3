@@ -967,9 +967,17 @@ vertical-slice exit gates.
    mode. The production entrypoint captures its system clock at module
    initialization and accepts no injected clock; the explicit testing
    entrypoint and its shared internal implementation are not authorized in a
-   future live import graph. This is offline implementation evidence only:
-   live orchestration must still bind the session to the durable claim and
-   connect the case scheduler and genuine source adapters.
+   future live import graph. A separate dormant case scheduler now composes only
+   that production entrypoint. It owns the exact 11-stage sequence from Chromium
+   `LIVE-02..LIVE-09` through Firefox then WebKit `LIVE-10` and Chromium
+   `LIVE-11`, partitions all 67 reviewed projections into non-serializable
+   case/browser scopes with exact fact-kind ownership pinned per case, and awaits explicit adapter browser-start,
+   page/browser-close and global-close boundaries before closing the session.
+   External abort uses a protected listener to signal active work; that work is
+   awaited before one final global-close drain barrier rather than treated as
+   cancelled by Promise settlement. This remains
+   offline implementation evidence only: live orchestration must still bind the
+   scheduler/session to the durable claim and connect genuine source adapters.
    A separate closed scenario fixture now supplies the required fourth page
    input from a second exact synthetic Firebase identity, extends the one
    coordinator's state access to both identities and requires both cleanup
@@ -980,8 +988,8 @@ vertical-slice exit gates.
    second-identity cloud implementation gap. Original fixture capacity limits
    remain explicit, current page timing capacity is satisfied, and nothing is
    live wired or executed. The complete Chromium page scenario, a BFCache-capable
-   automation path, independent live source adapters and aggregator wiring
-   remain open before the one allowed execution.
+   automation path, independent live source adapters and durable operation
+   binding remain open before the one allowed execution.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain

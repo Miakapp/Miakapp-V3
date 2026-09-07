@@ -212,6 +212,7 @@ test('pins a dormant operation-local evidence session with no live authority', (
   assert.equal(profile.compatibility.durable_claim_binding_present, false);
   assert.equal(profile.compatibility.live_operation_wired, false);
   assert.equal(profile.compatibility.live_source_adapters_present, false);
+  assert.equal(profile.compatibility.interleaving_scheduler_present, true);
   assert.equal(profile.authority.live_execution_authorized, false);
   assert.equal(profile.evidence.live_execution_count, 0);
   assert.match(EVIDENCE_SESSION_PROFILE_SHA256, /^[0-9a-f]{64}$/u);
