@@ -602,11 +602,31 @@ An adjacent dormant package now adapts seven exact fixed-scope, at-most-30-minut
 source sessions into all 32 kind-specific authorities. It binds the opaque
 operation capability on first use, bounds each read and public-close wrapper,
 revalidates every projected observation and releases a session only after its
-started callbacks settle. This implementation increment made zero staging
-requests, mutations or executions and added zero staging cost. Source-session
-producers, transport-to-case wiring, page/browser providers and
-dedicated-process IPC remain required before the matrix can run. No package
-grants Hosting publication or live execution authority.
+started callbacks settle. The next two dormant packages create those sessions
+from trusted clients and bind every client acquisition to one immutable staging
+target. The trusted-source composition root now accepts seven exact named
+provider capabilities, constructs the unchanged five-layer chain only on its
+single `execute()` and inserts all 22 stages/43 observations into the
+claim-bound matrix. Differential conformance, pre-matrix fallback cleanup and
+close-once provider release are proven offline. The hardened terminal path
+tracks the highest completed source owner, dispatches cleanup outside callback
+context, waits for the operation task and blocks new forward mutations after
+root abort while leaving rollback callable.
+
+Validate this dormant boundary without staging access:
+
+```sh
+node infrastructure/staging/browser-relay-trusted-source-composition/guard.mjs \
+  infrastructure/staging/browser-relay-trusted-source-composition
+node --test \
+  infrastructure/staging/test/browser-relay-trusted-source-composition.test.mjs
+```
+
+This implementation increment made zero staging requests, mutations or
+executions and added zero staging cost. Concrete source-truth implementations,
+page/browser providers and dedicated-process IPC remain required before the
+matrix can run. No package grants Hosting publication or live execution
+authority.
 
 The guarded relay-image increment bound the exact merged Miakapp-Server tree to a deterministic
 53,098-byte archive, one digest-pinned Cloud Build Docker builder, verified

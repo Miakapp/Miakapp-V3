@@ -918,8 +918,21 @@ current consumer.
     client. Proxy records are rejected before traps, active signals expire on an
     absolute timer, and receipt validation shares the descendant callback
     context. Pre-existing async resources remain an explicit trusted
-    same-process limitation pending IPC. Trusted live authority providers,
-    case-adapter transport wiring and trusted live page providers remain absent.
+    same-process limitation pending IPC. A following dormant composition root
+    now accepts seven exact named provider capabilities and builds the existing
+    client/session/authority/reader/transport chain only on its single
+    `execute()`. Provider calls receive only browser, case and signal; fixed
+    targets and request capabilities never cross that boundary. The resulting
+    observer map fills the claim-bound matrix for all 22 stages and 43
+    observations. Scheduler and fallback cleanup converge on one provider close,
+    including operation failure before matrix entry. The hardened path carries
+    cleanup ownership across partial factory construction, rejects
+    callback-reentrant close without abandoning cleanup, waits for true operation
+    settlement and prevents new forward mutations after root abort while keeping
+    rollback available. Differential conformance
+    was selected over a shared-kernel refactor and proves the composed trace
+    against the same five factories offline. Concrete source-truth
+    implementations and trusted live page providers remain absent.
     The earlier revision-99 representation-only capacity baseline is complete:
     its six fixed shards consumed 194,718 of the bounded 262,144 bytes, leaving
     67,426 bytes while reconstructing its byte-identical semantic object.
@@ -929,12 +942,14 @@ current consumer.
     contract and totals 219,900 bytes, leaving 42,244 bytes. Revision 103 adds
     the fixed-target source-client boundary and totals 236,065 bytes, leaving
     26,079 bytes under the same fixed six-fragment 262,144-byte ceiling.
-    Next implement the seven trusted live authority providers and the
-    transport-to-case wiring, then isolate browser ownership behind validated
-    IPC before executing the matrix once. Before adding another similarly sized
-    lifecycle layer, decide whether to extract a digest-pinned shared lifecycle
-    kernel or add differential conformance tests, and redesign the evidence
-    representation if the fixed bundle headroom is insufficient.
+    Revision 104 adds the named trusted-provider composition and exact
+    transport-to-case wiring. Its six fragments total 243,585 bytes, leaving
+    18,559 bytes under the unchanged ceiling, with zero cloud requests,
+    mutations, public windows, live executions or added cost.
+    Next isolate browser ownership behind validated narrow process IPC, then
+    implement the concrete source-truth and live page providers before executing
+    the matrix exactly once. Redesign the evidence representation before another
+    similarly sized lifecycle record consumes the remaining fixed headroom.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform
     no-change plan. Its fresh post-merge preflight is complete and the rollback

@@ -128,9 +128,10 @@ implemented across several repositories.
   reader identities to one operation/stage, drains bounded late settlements and
   poisons every protocol violation permanently. Its adjacent reader package now
   supplies compatible dormant providers, followed by concrete
-  session-to-authority adapters and trusted-client session producers. Concrete
-  network clients, credential acquisition, case-adapter wiring,
-  dedicated-process IPC and live/cloud authority remain absent.
+  session-to-authority adapters, trusted-client session producers and the
+  fixed-target clients. The adjacent trusted-provider composition now wires the
+  complete source chain into the claim-bound matrix; concrete source-truth
+  implementations, dedicated-process IPC and live/cloud authority remain absent.
 - [`../infrastructure/staging/browser-relay-authenticated-source-readers/`](../infrastructure/staging/browser-relay-authenticated-source-readers/)
   — dormant reader/provider protocol for seven injected,
   already-authenticated source capabilities. Each capability is attenuated to
@@ -139,8 +140,9 @@ implemented across several repositories.
   validated before crossing the provider boundary. The package accepts and
   retains no raw credential or source material and performs no network or cloud
   I/O. Its concrete session-to-authority adapters and dormant trusted-client
-  session producers are implemented separately; concrete client acquisition,
-  case wiring, IPC and live authority remain absent.
+  session producers and the complete dormant matrix wiring are implemented
+  separately; concrete source-truth implementations, IPC and live authority
+  remain absent.
 - [`../infrastructure/staging/browser-relay-source-authority-adapters/`](../infrastructure/staging/browser-relay-source-authority-adapters/)
   — dormant concrete bridge from seven explicit ephemeral source sessions to
   the exact 32 kind-specific authority methods. It fixes every staging source
@@ -167,8 +169,17 @@ implemented across several repositories.
   expiry, and descendant authority jobs cannot reenter peer clients. This is a
   trusted same-process boundary, not hard isolation for pre-existing async
   resources. The package forbids ambient credentials, consuming App Check
-  verification, delayed-metric inference, built-in network access, case wiring
-  and live execution.
+  verification, delayed-metric inference, built-in network access and live
+  execution; the adjacent composition owns the now-complete case wiring.
+- [`../infrastructure/staging/browser-relay-trusted-source-composition/`](../infrastructure/staging/browser-relay-trusted-source-composition/)
+  — dormant root for seven exact named trusted-provider capabilities. It lazily
+  composes source clients, sessions, authority adapters, authenticated readers
+  and transports into the claim-bound operation's seven observer slots. Provider
+  contexts expose only browser, case and signal; fixed targets and request
+  capabilities remain inside the reviewed chain. Single-use execution,
+  pre-matrix fallback cleanup and differential 22-stage/43-observation
+  conformance are proven offline. The package contains no credentials, network
+  implementation, browser IPC, Hosting publication or live execution.
 - [`../infrastructure/staging/browser-relay-chromium-scenario/`](../infrastructure/staging/browser-relay-chromium-scenario/)
   — dormant two-page Chromium driver that owns the complete 18-fact page
   scenario and closes the existing receipt producer offline. Its pinned CDP
@@ -393,20 +404,17 @@ witness records Chromium's visible `pagehide` dispatch, later trusted hidden
 transition and visible `pageshow` separately, under the reviewed Hosting
 `no-store` and security-header policy. The layered case adapters now compose all
 three complete page scenarios and seven deterministic independent-source
-observers into the scheduler/session offline. A separate dormant boundary
-implements the seven genuine source transport protocols, an adjacent dormant
-boundary turns seven injected, already-authenticated, kind-attenuated
-capabilities into their exact compatible providers, and a third boundary now
-  adapts seven fixed-scope ephemeral sessions into those capabilities. A fourth
-  dormant boundary creates the sessions from explicit trusted clients while
-  accepting no credential field or raw source material; client closures remain
-  captured only until actual terminal settlement. None is wired to those
-  observer slots. Another dormant composition root binds the complete
-schedule to the unchanged operation after one canonical durable claim and
-forwards only the exact edge abort signal. None of these packages grants Hosting
-publication or live authority; concrete live source clients, live page/browser
-providers, dedicated-process IPC, case-adapter transport wiring and fixture
-lifecycle wiring must close before the one allowed live matrix can execute.
+observers into the scheduler/session offline. The five dormant source layers now
+span genuine transports, kind-attenuated authenticated readers, fixed-scope
+ephemeral sessions, trusted clients and immutable-target authorities. A new
+composition root accepts seven named trusted-provider capabilities and connects
+that entire chain to the observer slots, while the existing claim-bound root
+admits the complete schedule only after one canonical durable claim. Both roots
+forward attenuated signals and expose no claim or request-capability lineage.
+None of these packages grants Hosting publication or live authority; concrete
+source-truth implementations, live page/browser providers, dedicated-process
+IPC and fixture lifecycle wiring must close before the one allowed live matrix
+can execute.
 
 Repository-specific implementation plans must link back to these documents and
 must not redefine a shared contract locally.
