@@ -908,20 +908,33 @@ current consumer.
     operation capability from client descriptors, independently validates all
     projected observations, sanitizes cancellation and releases client
     references only after actual callback settlement. It intentionally leaves
-    the public timeout to the authority adapter. Concrete network/credential
-    clients, case-adapter transport wiring and trusted live page providers
-    remain absent.
+    the public timeout to the authority adapter. A following dormant package now
+    creates those seven clients from explicit at-most-30-minute source
+    authorities. It maps every canonical kind to one immutable reviewed staging
+    target, binds each descriptor and exact receipt to a fresh non-serializable
+    capability, rejects consuming App Check verification and refuses to infer
+    operation-local facts from delayed metrics or absent logs. It accepts no
+    credential bytes, ambient discovery, arbitrary endpoint or built-in network
+    client. Proxy records are rejected before traps, active signals expire on an
+    absolute timer, and receipt validation shares the descendant callback
+    context. Pre-existing async resources remain an explicit trusted
+    same-process limitation pending IPC. Trusted live authority providers,
+    case-adapter transport wiring and trusted live page providers remain absent.
     The earlier revision-99 representation-only capacity baseline is complete:
     its six fixed shards consumed 194,718 of the bounded 262,144 bytes, leaving
     67,426 bytes while reconstructing its byte-identical semantic object.
     Revision 100 and six fragments totalled 202,086 bytes. The current
     revision-101 bundle added the dormant source-authority adapter evidence and
     totalled 211,303 bytes. Revision 102 adds the trusted source-session producer
-    contract and totals 219,900 bytes, leaving 42,244 bytes under the same fixed
-    six-fragment 262,144-byte ceiling.
-    Next implement the seven concrete source clients and transport-to-case
-    wiring, then isolate browser ownership behind validated IPC before executing
-    the matrix once.
+    contract and totals 219,900 bytes, leaving 42,244 bytes. Revision 103 adds
+    the fixed-target source-client boundary and totals 236,065 bytes, leaving
+    26,079 bytes under the same fixed six-fragment 262,144-byte ceiling.
+    Next implement the seven trusted live authority providers and the
+    transport-to-case wiring, then isolate browser ownership behind validated
+    IPC before executing the matrix once. Before adding another similarly sized
+    lifecycle layer, decide whether to extract a digest-pinned shared lifecycle
+    kernel or add differential conformance tests, and redesign the evidence
+    representation if the fixed bundle headroom is insufficient.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform
     no-change plan. Its fresh post-merge preflight is complete and the rollback

@@ -264,6 +264,14 @@ node --check infrastructure/staging/browser-relay-source-session-producers/inter
 node --check infrastructure/staging/browser-relay-source-session-producers/producers.mjs
 node --check infrastructure/staging/browser-relay-source-session-producers/testing.mjs
 node -e "import('./infrastructure/staging/browser-relay-source-session-producers/contract.mjs').then(({ validateBrowserRelaySourceSessionProducersProfile }) => validateBrowserRelaySourceSessionProducersProfile())"
+node infrastructure/staging/browser-relay-source-clients/guard.mjs \
+  "${repository_root}/infrastructure/staging/browser-relay-source-clients"
+node --check infrastructure/staging/browser-relay-source-clients/clients.mjs
+node --check infrastructure/staging/browser-relay-source-clients/contract.mjs
+node --check infrastructure/staging/browser-relay-source-clients/guard.mjs
+node --check infrastructure/staging/browser-relay-source-clients/internal.mjs
+node --check infrastructure/staging/browser-relay-source-clients/testing.mjs
+node -e "import('./infrastructure/staging/browser-relay-source-clients/contract.mjs').then(({ validateBrowserRelaySourceClientsProfile }) => validateBrowserRelaySourceClientsProfile())"
 node infrastructure/staging/browser-relay-page-receipt/guard.mjs \
   "${repository_root}/infrastructure/staging/browser-relay-page-receipt"
 node --check infrastructure/staging/browser-relay-page-receipt/contract.mjs
@@ -492,6 +500,7 @@ node --test \
   infrastructure/staging/test/browser-relay-authenticated-source-readers.test.mjs \
   infrastructure/staging/test/browser-relay-source-authority-adapters.test.mjs \
   infrastructure/staging/test/browser-relay-source-session-producers.test.mjs \
+  infrastructure/staging/test/browser-relay-source-clients.test.mjs \
   infrastructure/staging/test/browser-relay-chromium-scenario.test.mjs \
   infrastructure/staging/test/browser-relay-playwright-bridge.test.mjs \
   infrastructure/staging/test/browser-relay-page-receipt.test.mjs \
