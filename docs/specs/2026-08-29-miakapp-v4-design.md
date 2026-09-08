@@ -1002,8 +1002,9 @@ vertical-slice exit gates.
    cancelled by Promise settlement. This remains
    offline implementation evidence only. A separate composition root now binds
    the scheduler/session to the durable claim and unchanged operation envelope;
-   the generic source transports are implemented separately, while authenticated
-   readers and live wiring remain absent.
+   the generic source transports and their dormant authenticated-capability
+   reader/provider protocol are implemented separately, while concrete source
+   authority adapters and live wiring remain absent.
    A separate closed scenario fixture now supplies the required fourth page
    input from a second exact synthetic Firebase identity, extends the one
    coordinator's state access to both identities and requires both cleanup
@@ -1057,9 +1058,20 @@ vertical-slice exit gates.
    all finite late settlements are drained, closure is exact and every protocol
    violation poisons the transport set permanently. The production entrypoint
    owns intrinsic timers and exposes no runtime injection. This is a cooperative
-   lifecycle boundary rather than a same-process sandbox: authenticated
-   Firebase/Google/relay readers, network and credential acquisition, wiring to
-   the independent case adapter, dedicated-process IPC and live authority remain
+   lifecycle boundary rather than a same-process sandbox. An adjacent dormant
+   reader/provider package now accepts exactly seven distinct source
+   capabilities for App Check, Hosting, the control plane, relays, the
+   coordinator, KMS and Firestore. Those injected closures are assumed already
+   authenticated and are attenuated to the canonical fact-kind methods for their
+   source; no generic request or credential surface exists. The first canonical
+   request binds all providers to one opaque operation capability and a bounded
+   absolute expiry. Each lazy read invokes only its next expected kind, then
+   semantically validates and returns only the sanitized observation. Abort,
+   expiry, ordering, semantic or authority failures poison the shared operation,
+   and terminal closure clears every retained capability reference. Import and
+   construction perform no source, network, browser or cloud I/O. Concrete
+   OAuth, Firebase, relay-protocol and operation-ledger adapters, wiring to the
+   independent case adapter, dedicated-process IPC and live authority remain
    absent.
    A final dormant operation case adapter now hard-wires the unchanged
    single-use operation to that complete schedule. It intercepts one canonical
@@ -1067,9 +1079,9 @@ vertical-slice exit gates.
    one matrix callback within the claim lifetime, forwards only the exact edge
    abort signal and returns the unchanged closed operation result. Claim lineage
    never reaches a provider or result, and both operation cleanup levels are
-   exercised offline. Authenticated source readers, their case-adapter wiring,
-   trusted live-browser providers, dedicated-process IPC, Hosting publication
-   and live authority remain open before the one allowed execution.
+   exercised offline. Concrete source authority adapters, their case-adapter
+   wiring, trusted live-browser providers, dedicated-process IPC, Hosting
+   publication and live authority remain open before the one allowed execution.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain

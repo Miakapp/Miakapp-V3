@@ -193,7 +193,7 @@ on 2026-09-03. Its sanitized inventory now lives under
 Its stable `manifest.json` entry point is now a bundle-revision-3 canonical
 index over six fixed, digest-pinned fragments, with separate browser-relay
 scenario, reader-boundary and operations owners. The loader reconstructs the
-current revision-99 semantic manifest only after verifying each fragment's
+current revision-100 semantic manifest only after verifying each fragment's
 path, mount, bundle schema, owned fields, exact byte length, SHA-256 and bounded
 aggregate size, plus index/core agreement on the semantic schema and revision.
 
@@ -543,9 +543,9 @@ only the aggregator receipt. A separate source-only package now produces the
 remaining 15 App Check, Hosting, control-plane, relay, coordinator, KMS and
 Firestore receipts from 43 ordered sanitized facts. Together, the 18 receipt
 classes close all 40 runner assertions offline without accepting assertion
-maps or retaining raw evidence. No live source transport or execution authority
-is present. The immutable three-input fixture remains pinned; a separate
-scenario controller now composes it with one replacement synthetic
+maps or retaining raw evidence. Those reducers contain no source acquisition or
+execution authority. The immutable three-input fixture remains pinned; a
+separate scenario controller now composes it with one replacement synthetic
 Firebase identity, provides the four exact ordered page inputs, extends the
 single coordinator's state access to both identities and requires both cleanup
 domains to converge. The replacement-identity cloud adapter now implements the
@@ -590,10 +590,19 @@ browsers, projects all 43 deterministic independent observations and closes the
 same result. A separate dormant composition root now hard-wires that full
 schedule to the unchanged operation behind one validated durable claim. Its
 private non-serializable capability permits one matrix wholly within the claim
-lifetime and forwards only the exact edge abort signal. Genuine live source
-transports and page/browser providers plus dedicated-process IPC remain required
-before the matrix can run. No package grants Hosting publication or live
-execution authority.
+lifetime and forwards only the exact edge abort signal. A separate dormant
+transport package now owns the exact 22-stage/43-observation provider/reader
+lifecycle. Its adjacent authenticated-capability package converts exactly seven
+injected, already-authenticated, kind-attenuated authorities into that provider
+surface. One opaque operation capability and a bounded absolute expiry bind the
+stages; each lazy read is semantically validated and only its sanitized
+observation can cross the boundary. The package accepts no raw credential or
+source material and includes no concrete source adapter, network client,
+case-adapter wiring or IPC. This implementation increment made zero staging
+requests, mutations or executions and added zero staging cost. Concrete source
+authority adapters, transport-to-case wiring, page/browser providers and
+dedicated-process IPC remain required before the matrix can run. No package
+grants Hosting publication or live execution authority.
 
 The guarded relay-image increment bound the exact merged Miakapp-Server tree to a deterministic
 53,098-byte archive, one digest-pinned Cloud Build Docker builder, verified
