@@ -159,6 +159,7 @@ test('assembles the canonical committed bundle into the current semantic manifes
     'browser_relay_authenticated_source_readers',
     'browser_relay_source_authority_adapters',
     'browser_relay_source_session_producers',
+    'browser_relay_source_clients',
   ]);
   const operationsEvidence = readJson(
     join(committedFragmentRoot, 'evidence-browser-relay-operations.json'),
@@ -177,10 +178,10 @@ test('assembles the canonical committed bundle into the current semantic manifes
 
   const manifest = loadStagingManifestBundle(committedIndexPath);
   const semanticBytes = canonical(manifest);
-  assert.equal(semanticBytes.byteLength, 214841);
+  assert.equal(semanticBytes.byteLength, 231006);
   assert.equal(
     sha256(semanticBytes),
-    'b04d0c0656191a9f762c559212c71cf2cb280a5ce2a32a2c0ab75265e53d40a2',
+    '3d60723c5a9ea7932952290a37bba972819f2a69bda4025a840cc019c3ef348c',
   );
   assert.deepEqual(Object.keys(manifest), [
     'schema',
@@ -240,6 +241,7 @@ test('assembles the canonical committed bundle into the current semantic manifes
     'browser_relay_authenticated_source_readers',
     'browser_relay_source_authority_adapters',
     'browser_relay_source_session_producers',
+    'browser_relay_source_clients',
     'chromium_scenario_automation',
     'browser_relay_playwright_bridge',
     'browser_relay_page_receipt',
@@ -262,7 +264,7 @@ test('assembles the canonical committed bundle into the current semantic manifes
     'environment_decision',
   ]);
   assert.equal(manifest.schema, 'miakapp.staging-intent/1');
-  assert.equal(manifest.revision, 102);
+  assert.equal(manifest.revision, 103);
   assert.equal(manifest.project.project_id, 'miakapp-v4-staging');
   assert.equal(manifest.terraform.bootstrap_execution.bootstrap_completed, true);
   assert.equal(
