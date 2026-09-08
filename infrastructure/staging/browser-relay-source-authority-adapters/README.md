@@ -71,13 +71,15 @@ cannot forcibly terminate an uncooperative same-process callback, which is one
 reason validated process IPC remains a later boundary.
 
 “Concrete” here describes the implemented session-to-authority adapter and its
-complete canonical dispatch/lifecycle behavior. It does not claim that a source
-session producer exists. OAuth/Firebase/Cloud Run acquisition, HTTP or
-WebSocket clients, control-plane/relay/coordinator/KMS/Firestore ledgers,
-transport-to-case wiring, trusted browser ownership, validated process IPC,
-Hosting publication, and live matrix execution remain absent. Same-process
-sessions are trusted dependencies until the later IPC boundary can forcibly
-isolate uncooperative implementations.
+complete canonical dispatch/lifecycle behavior. The sibling
+`browser-relay-source-session-producers` package can now create these sessions
+from seven explicit trusted client closures. OAuth/Firebase/Cloud Run
+acquisition, HTTP or WebSocket clients,
+control-plane/relay/coordinator/KMS/Firestore ledgers, transport-to-case wiring,
+trusted browser ownership, validated process IPC, Hosting publication, and live
+matrix execution remain absent. Same-process sessions and clients are trusted
+dependencies until the later IPC boundary can forcibly isolate uncooperative
+implementations.
 
 Validate the package offline with:
 

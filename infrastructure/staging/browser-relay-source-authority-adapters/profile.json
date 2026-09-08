@@ -1,7 +1,7 @@
 {
   "schema": "miakapp.staging-browser-relay-source-authority-adapters-profile/1",
   "revision": 1,
-  "state": "closed_concrete_source_authority_adapters_ephemeral_sessions_implemented_not_sourced_not_wired_not_executed",
+  "state": "closed_concrete_source_authority_adapters_trusted_session_producers_implemented_not_live_not_wired_not_executed",
   "target": {
     "project_id": "miakapp-v4-staging",
     "project_number": "1072737219170",
@@ -18,7 +18,7 @@
     "production_source_sha256": "96099451f1e1eb84895337c332d609403ea1d97c87cab405fde33401626bd6b0",
     "testing_source_sha256": "937edcccbc3c9f55bdf2b310f9bcbfeaa8e64aa68d3b0d8bb2a4559ddf82ebe2",
     "guard_source_sha256": "6e6292c57bb816dcaa3111542e20fdf7d10c99c32e7135323f5f4a7ae4dffd23",
-    "unit_test_sha256": "4ea1b976e1bfa288102ea2cd2b77bac96b28a8de125ded1a0bd5337a8777ae9e",
+    "unit_test_sha256": "bba3a91a8f3ee5566f8eea9e34ee9fa963ed607eb2a415c1ded39fb5cdbd7bc6",
     "workflow_sha256": "baf66af60725df0a5b90a14df7fca449290260a99f95a6fb7307eee50628dc27"
   },
   "adapter": {
@@ -189,7 +189,7 @@
     "complete_source_count": 7,
     "complete_stage_count": 22,
     "complete_observation_capacity": 43,
-    "source_session_producers_present": false,
+    "source_session_producers_present": true,
     "network_implementation_present": false,
     "operation_case_adapter_wired": false,
     "trusted_live_page_providers_present": false,

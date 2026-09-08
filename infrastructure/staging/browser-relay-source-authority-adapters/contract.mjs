@@ -18,7 +18,7 @@ import {
 export const SOURCE_AUTHORITY_ADAPTERS_PROFILE_PATH =
   'browser-relay-source-authority-adapters/profile.json';
 export const SOURCE_AUTHORITY_ADAPTERS_PROFILE_SHA256 =
-  '1648e635091be7f83ead3b0739dc2ad2624d34c2bc161a26d03639872df9a568';
+  'e8d7190d543e5342fe7f504d8f50b1ac51ea3a87de814850661b82846edec14f';
 export const SOURCE_AUTHORITY_ADAPTERS_IMPLEMENTATION_BASE_COMMIT =
   'a6d99142228fffbfdc5a9ce9fe9b77b435d65a60';
 export const SOURCE_AUTHORITY_ADAPTERS_DEPENDENCY_CONTRACTS_SHA256 =
@@ -32,7 +32,7 @@ export const SOURCE_AUTHORITY_ADAPTERS_TESTING_SOURCE_SHA256 =
 export const SOURCE_AUTHORITY_ADAPTERS_GUARD_SOURCE_SHA256 =
   '6e6292c57bb816dcaa3111542e20fdf7d10c99c32e7135323f5f4a7ae4dffd23';
 export const SOURCE_AUTHORITY_ADAPTERS_UNIT_TEST_SHA256 =
-  '4ea1b976e1bfa288102ea2cd2b77bac96b28a8de125ded1a0bd5337a8777ae9e';
+  'bba3a91a8f3ee5566f8eea9e34ee9fa963ed607eb2a415c1ded39fb5cdbd7bc6';
 export const SOURCE_AUTHORITY_ADAPTERS_WORKFLOW_SHA256 =
   'baf66af60725df0a5b90a14df7fca449290260a99f95a6fb7307eee50628dc27';
 
@@ -493,7 +493,7 @@ function validateProfileValue(value) {
   exact(profile.revision, 1);
   exact(
     profile.state,
-    'closed_concrete_source_authority_adapters_ephemeral_sessions_implemented_not_sourced_not_wired_not_executed',
+    'closed_concrete_source_authority_adapters_trusted_session_producers_implemented_not_live_not_wired_not_executed',
   );
   exact(profile.target, {
     project_id: 'miakapp-v4-staging',
@@ -566,7 +566,7 @@ function validateProfileValue(value) {
     complete_source_count: SOURCE_AUTHORITY_ADAPTERS_SOURCE_ORDER.length,
     complete_stage_count: SOURCE_AUTHORITY_ADAPTERS_STAGE_COUNT,
     complete_observation_capacity: SOURCE_AUTHORITY_ADAPTERS_OBSERVATIONS_PER_MATRIX,
-    source_session_producers_present: false,
+    source_session_producers_present: true,
     network_implementation_present: false,
     operation_case_adapter_wired: false,
     trusted_live_page_providers_present: false,

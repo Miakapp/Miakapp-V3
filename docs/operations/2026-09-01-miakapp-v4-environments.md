@@ -193,7 +193,7 @@ on 2026-09-03. Its sanitized inventory now lives under
 Its stable `manifest.json` entry point is now a bundle-revision-3 canonical
 index over six fixed, digest-pinned fragments, with separate browser-relay
 scenario, reader-boundary and operations owners. The loader reconstructs the
-current revision-101 semantic manifest only after verifying each fragment's
+current revision-102 semantic manifest only after verifying each fragment's
 path, mount, bundle schema, owned fields, exact byte length, SHA-256 and bounded
 aggregate size, plus index/core agreement on the semantic schema and revision.
 

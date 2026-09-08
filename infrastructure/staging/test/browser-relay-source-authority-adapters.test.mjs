@@ -1186,7 +1186,7 @@ test('profile, dependency pins, guard, and CLI validate the dormant package', ()
   const profile = validateBrowserRelaySourceAuthorityAdaptersProfile();
   assert.equal(
     profile.state,
-    'closed_concrete_source_authority_adapters_ephemeral_sessions_implemented_not_sourced_not_wired_not_executed',
+    'closed_concrete_source_authority_adapters_trusted_session_producers_implemented_not_live_not_wired_not_executed',
   );
   assert.equal(profile.adapter.stage_count, 22);
   assert.equal(profile.adapter.observations_per_matrix, 43);
@@ -1198,7 +1198,7 @@ test('profile, dependency pins, guard, and CLI validate the dormant package', ()
   assert.equal(profile.adapter.terminal_started_callbacks_settled, true);
   assert.equal(profile.adapter.terminal_adapter_session_references_cleared, true);
   assert.equal(profile.compatibility.concrete_source_authority_adapters_present, true);
-  assert.equal(profile.compatibility.source_session_producers_present, false);
+  assert.equal(profile.compatibility.source_session_producers_present, true);
   assert.equal(profile.compatibility.network_implementation_present, false);
   assert.equal(profile.compatibility.operation_case_adapter_wired, false);
   assert.equal(

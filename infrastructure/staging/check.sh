@@ -256,6 +256,14 @@ node --check infrastructure/staging/browser-relay-source-authority-adapters/guar
 node --check infrastructure/staging/browser-relay-source-authority-adapters/internal.mjs
 node --check infrastructure/staging/browser-relay-source-authority-adapters/testing.mjs
 node -e "import('./infrastructure/staging/browser-relay-source-authority-adapters/contract.mjs').then(({ validateBrowserRelaySourceAuthorityAdaptersProfile }) => validateBrowserRelaySourceAuthorityAdaptersProfile())"
+node infrastructure/staging/browser-relay-source-session-producers/guard.mjs \
+  "${repository_root}/infrastructure/staging/browser-relay-source-session-producers"
+node --check infrastructure/staging/browser-relay-source-session-producers/contract.mjs
+node --check infrastructure/staging/browser-relay-source-session-producers/guard.mjs
+node --check infrastructure/staging/browser-relay-source-session-producers/internal.mjs
+node --check infrastructure/staging/browser-relay-source-session-producers/producers.mjs
+node --check infrastructure/staging/browser-relay-source-session-producers/testing.mjs
+node -e "import('./infrastructure/staging/browser-relay-source-session-producers/contract.mjs').then(({ validateBrowserRelaySourceSessionProducersProfile }) => validateBrowserRelaySourceSessionProducersProfile())"
 node infrastructure/staging/browser-relay-page-receipt/guard.mjs \
   "${repository_root}/infrastructure/staging/browser-relay-page-receipt"
 node --check infrastructure/staging/browser-relay-page-receipt/contract.mjs
@@ -483,6 +491,7 @@ node --test \
   infrastructure/staging/test/browser-relay-source-transports.test.mjs \
   infrastructure/staging/test/browser-relay-authenticated-source-readers.test.mjs \
   infrastructure/staging/test/browser-relay-source-authority-adapters.test.mjs \
+  infrastructure/staging/test/browser-relay-source-session-producers.test.mjs \
   infrastructure/staging/test/browser-relay-chromium-scenario.test.mjs \
   infrastructure/staging/test/browser-relay-playwright-bridge.test.mjs \
   infrastructure/staging/test/browser-relay-page-receipt.test.mjs \

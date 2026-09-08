@@ -1069,19 +1069,29 @@ vertical-slice exit gates.
    semantically validates and returns only the sanitized observation. Abort,
    expiry, ordering, semantic or authority failures poison the shared operation,
    and terminal closure clears every retained capability reference. Import and
-   construction perform no source, network, browser or cloud I/O. Concrete
-   OAuth, Firebase, relay-protocol and operation-ledger adapters, wiring to the
-   independent case adapter, dedicated-process IPC and live authority remain
-   absent.
+   construction perform no source, network, browser or cloud I/O. A following
+   dormant authority adapter converts seven exact fixed-scope ephemeral sessions
+   into all 32 kind methods, binds the opaque operation capability on first use,
+   preserves canonical order, applies bounded public read/close wrappers and
+   drains started callbacks before releasing each session. A following trusted
+   client producer now creates those sessions from seven distinct frozen
+   `{ observe, close }` closures. It owns source/scope/expiry, passes only a
+   non-serializable attenuated descriptor, independently validates the projected
+   observation, sanitizes cancellation and clears client references only after
+   actual terminal settlement. It deliberately has no inner timeout race: the
+   authority adapter owns the public deadline, while an uncooperative
+   same-process client remains quarantined. Concrete OAuth, Firebase,
+   relay-protocol and operation-ledger clients, wiring to the independent case
+   adapter, dedicated-process IPC and live authority remain absent.
    A final dormant operation case adapter now hard-wires the unchanged
    single-use operation to that complete schedule. It intercepts one canonical
    receipt, retains only a private non-serializable capability, admits exactly
    one matrix callback within the claim lifetime, forwards only the exact edge
    abort signal and returns the unchanged closed operation result. Claim lineage
    never reaches a provider or result, and both operation cleanup levels are
-   exercised offline. Concrete source authority adapters, their case-adapter
-   wiring, trusted live-browser providers, dedicated-process IPC, Hosting
-   publication and live authority remain open before the one allowed execution.
+   exercised offline. Concrete live source clients, case-adapter wiring, trusted
+   live-browser providers, dedicated-process IPC, Hosting publication and live
+   authority remain open before the one allowed execution.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain
