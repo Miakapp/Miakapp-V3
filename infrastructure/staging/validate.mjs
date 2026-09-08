@@ -173,6 +173,22 @@ import {
   validateBrowserRelayAuthenticatedSourceReadersProfile,
 } from './browser-relay-authenticated-source-readers/contract.mjs';
 import {
+  SOURCE_AUTHORITY_ADAPTERS_DISTINCT_KIND_COUNT,
+  SOURCE_AUTHORITY_ADAPTERS_MAXIMUM_CLOSE_MILLISECONDS,
+  SOURCE_AUTHORITY_ADAPTERS_MAXIMUM_READ_MILLISECONDS,
+  SOURCE_AUTHORITY_ADAPTERS_MAXIMUM_SESSION_LIFETIME_MILLISECONDS,
+  SOURCE_AUTHORITY_ADAPTERS_OBSERVATIONS_PER_MATRIX,
+  SOURCE_AUTHORITY_ADAPTERS_OPTIONS_FIELDS,
+  SOURCE_AUTHORITY_ADAPTERS_PROFILE_PATH,
+  SOURCE_AUTHORITY_ADAPTERS_PROFILE_SHA256,
+  SOURCE_AUTHORITY_ADAPTERS_READ_DESCRIPTOR_FIELDS,
+  SOURCE_AUTHORITY_ADAPTERS_SCOPES_BY_SOURCE,
+  SOURCE_AUTHORITY_ADAPTERS_SESSION_FIELDS,
+  SOURCE_AUTHORITY_ADAPTERS_SOURCE_ORDER,
+  SOURCE_AUTHORITY_ADAPTERS_STAGE_COUNT,
+  validateBrowserRelaySourceAuthorityAdaptersProfile,
+} from './browser-relay-source-authority-adapters/contract.mjs';
+import {
   CHROMIUM_SCENARIO_PROFILE_PATH,
   CHROMIUM_SCENARIO_PROFILE_SHA256,
   validateBrowserRelayChromiumScenarioProfile,
@@ -337,6 +353,8 @@ const SOURCE_TRANSPORTS_CONTRACT_SHA256 =
   '57f98c932d1f32fef22f37de5dd3ed315585cb8fcdcd02878282efab8091553a';
 const AUTHENTICATED_SOURCE_READERS_CONTRACT_SHA256 =
   'fe85ef942d679139ab7a5ea7a3ca707b7358cffca73edd9031c6a84fe54d7ef6';
+const SOURCE_AUTHORITY_ADAPTERS_CONTRACT_SHA256 =
+  '295818de8d0d5328e7253591067a37955efe628d2d36e838c89154b88ec393fb';
 const OPERATION_CASE_ADAPTER_CONTRACT_SHA256 =
   '75c33c7e8c3408132fd9083d715f59bcea4b27a210c940a236d13017968c31bf';
 
@@ -3175,6 +3193,7 @@ function validateEvidence(value) {
     'browser_relay_independent_case_adapter',
     'browser_relay_source_transports',
     'browser_relay_authenticated_source_readers',
+    'browser_relay_source_authority_adapters',
     'chromium_scenario_automation',
     'browser_relay_playwright_bridge',
     'browser_relay_page_receipt',
@@ -5391,10 +5410,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 100, 'manifest.revision');
+  exact(manifest.revision, 101, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_independent_observers_closed_source_fact_producers_interleaved_runner_result_supported_not_wired_not_executed_browser_relay_evidence_session_closed_operation_local_capability_monotonic_epoch_implemented_not_wired_not_executed_browser_relay_case_scheduler_closed_case_interleaving_implemented_not_wired_not_executed_browser_relay_chromium_case_adapter_closed_native_scenario_scheduler_composed_offline_proven_not_live_wired_not_executed_browser_relay_secondary_case_adapter_closed_secondary_page_case_scheduler_composition_offline_proven_not_live_wired_not_executed_browser_relay_independent_case_adapter_closed_independent_source_case_composition_offline_proven_not_live_wired_not_executed_browser_relay_source_transports_closed_genuine_adapters_implemented_not_wired_not_executed_browser_relay_authenticated_source_readers_closed_kind_attenuated_ephemeral_authority_protocol_implemented_not_live_adapted_not_wired_not_executed_browser_relay_chromium_scenario_closed_complete_page_projected_with_backpressure_offline_proven_not_wired_not_live_executed_browser_relay_playwright_bridge_closed_secondary_receipts_chromium_bfcache_blocked_not_wired_not_executed_browser_relay_page_receipt_closed_bridge_bound_not_aggregated_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_browser_relay_operation_case_adapter_closed_durable_claim_matrix_composition_offline_proven_not_live_executed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_independent_observers_closed_source_fact_producers_interleaved_runner_result_supported_not_wired_not_executed_browser_relay_evidence_session_closed_operation_local_capability_monotonic_epoch_implemented_not_wired_not_executed_browser_relay_case_scheduler_closed_case_interleaving_implemented_not_wired_not_executed_browser_relay_chromium_case_adapter_closed_native_scenario_scheduler_composed_offline_proven_not_live_wired_not_executed_browser_relay_secondary_case_adapter_closed_secondary_page_case_scheduler_composition_offline_proven_not_live_wired_not_executed_browser_relay_independent_case_adapter_closed_independent_source_case_composition_offline_proven_not_live_wired_not_executed_browser_relay_source_transports_closed_genuine_adapters_implemented_not_wired_not_executed_browser_relay_authenticated_source_readers_closed_kind_attenuated_ephemeral_authority_protocol_implemented_not_live_adapted_not_wired_not_executed_browser_relay_source_authority_adapters_closed_concrete_ephemeral_session_bridge_implemented_not_sourced_not_wired_not_executed_browser_relay_chromium_scenario_closed_complete_page_projected_with_backpressure_offline_proven_not_wired_not_live_executed_browser_relay_playwright_bridge_closed_secondary_receipts_chromium_bfcache_blocked_not_wired_not_executed_browser_relay_page_receipt_closed_bridge_bound_not_aggregated_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_browser_relay_operation_case_adapter_closed_durable_claim_matrix_composition_offline_proven_not_live_executed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -7618,6 +7637,213 @@ export function validateCommittedEvidence(
     0,
     `evidence.browser_relay_authenticated_source_readers.evidence.${path}`,
   );
+  const sourceAuthorityAdaptersManifest =
+    manifest.evidence.browser_relay_source_authority_adapters;
+  const sourceAuthorityAdaptersProfilePath = committedEvidencePath(
+    stagingRoot,
+    sourceAuthorityAdaptersManifest.profile_path,
+    SOURCE_AUTHORITY_ADAPTERS_PROFILE_PATH,
+    'evidence.browser_relay_source_authority_adapters.profile_path',
+  );
+  const sourceAuthorityAdaptersProfile = validatedEvidenceFile(
+    sourceAuthorityAdaptersProfilePath,
+    validateBrowserRelaySourceAuthorityAdaptersProfile,
+    'evidence.browser_relay_source_authority_adapters.profile_path',
+  );
+  exact(
+    fileSha256(sourceAuthorityAdaptersProfilePath),
+    SOURCE_AUTHORITY_ADAPTERS_PROFILE_SHA256,
+    'evidence.browser_relay_source_authority_adapters.profile_sha256',
+  );
+  exact(
+    fileSha256(resolve(
+      stagingRoot,
+      'browser-relay-source-authority-adapters/contract.mjs',
+    )),
+    SOURCE_AUTHORITY_ADAPTERS_CONTRACT_SHA256,
+    'evidence.browser_relay_source_authority_adapters.contract_source_sha256',
+  );
+  const sourceAuthorityAdaptersExpected = {
+    state: sourceAuthorityAdaptersProfile.state,
+    profile_path: SOURCE_AUTHORITY_ADAPTERS_PROFILE_PATH,
+    profile_sha256: SOURCE_AUTHORITY_ADAPTERS_PROFILE_SHA256,
+    profile_schema: sourceAuthorityAdaptersProfile.schema,
+    profile_revision: sourceAuthorityAdaptersProfile.revision,
+    contract_source_sha256: SOURCE_AUTHORITY_ADAPTERS_CONTRACT_SHA256,
+    target: sourceAuthorityAdaptersProfile.target,
+    pins: sourceAuthorityAdaptersProfile.pins,
+    adapter: {
+      sources: sourceAuthorityAdaptersProfile.adapter.source_order.length,
+      stages: sourceAuthorityAdaptersProfile.adapter.stage_count,
+      observations_per_matrix:
+        sourceAuthorityAdaptersProfile.adapter.observations_per_matrix,
+      distinct_kind_count: sourceAuthorityAdaptersProfile.adapter.distinct_kind_count,
+      scopes_by_source: sourceAuthorityAdaptersProfile.adapter.scopes_by_source,
+      options_fields: sourceAuthorityAdaptersProfile.adapter.options_fields,
+      session_fields: sourceAuthorityAdaptersProfile.adapter.session_fields,
+      read_descriptor_fields:
+        sourceAuthorityAdaptersProfile.adapter.read_descriptor_fields,
+      maximum_session_lifetime_milliseconds:
+        sourceAuthorityAdaptersProfile.adapter.maximum_session_lifetime_milliseconds,
+      maximum_read_milliseconds:
+        sourceAuthorityAdaptersProfile.adapter.maximum_read_milliseconds,
+      maximum_close_milliseconds:
+        sourceAuthorityAdaptersProfile.adapter.maximum_close_milliseconds,
+      expiry_is_absolute_unix_epoch_milliseconds:
+        sourceAuthorityAdaptersProfile.adapter.expiry_is_absolute_unix_epoch_milliseconds,
+      explicit_source_sessions:
+        sourceAuthorityAdaptersProfile.adapter.explicit_source_sessions,
+      source_scope_exact: sourceAuthorityAdaptersProfile.adapter.source_scope_exact,
+      session_identity_single_operation:
+        sourceAuthorityAdaptersProfile.adapter.session_identity_single_operation,
+      operation_capability_identity_bound:
+        sourceAuthorityAdaptersProfile.adapter.operation_capability_identity_bound,
+      authority_surface_exact:
+        sourceAuthorityAdaptersProfile.adapter.authority_surface_exact,
+      context_order_revalidated:
+        sourceAuthorityAdaptersProfile.adapter.context_order_revalidated,
+      source_calls_ordered_nonoverlapping:
+        sourceAuthorityAdaptersProfile.adapter.source_calls_ordered_nonoverlapping,
+      call_reserved_before_await:
+        sourceAuthorityAdaptersProfile.adapter.call_reserved_before_await,
+      read_descriptor_attenuated:
+        sourceAuthorityAdaptersProfile.adapter.read_descriptor_attenuated,
+      operation_capability_omitted_from_read_descriptor:
+        sourceAuthorityAdaptersProfile.adapter
+          .operation_capability_omitted_from_read_descriptor,
+      abort_checked_before_and_after_call:
+        sourceAuthorityAdaptersProfile.adapter.abort_checked_before_and_after_call,
+      expiry_checked_before_and_after_call:
+        sourceAuthorityAdaptersProfile.adapter.expiry_checked_before_and_after_call,
+      abort_and_expiry_rechecked_at_dispatch:
+        sourceAuthorityAdaptersProfile.adapter.abort_and_expiry_rechecked_at_dispatch,
+      bounded_read_and_close_wrapper_settlement:
+        sourceAuthorityAdaptersProfile.adapter.bounded_read_and_close_wrapper_settlement,
+      caller_abort_reason_sanitized:
+        sourceAuthorityAdaptersProfile.adapter.caller_abort_reason_sanitized,
+      callback_close_reentrancy_rejected:
+        sourceAuthorityAdaptersProfile.adapter.callback_close_reentrancy_rejected,
+      shared_poison_permanent:
+        sourceAuthorityAdaptersProfile.adapter.shared_poison_permanent,
+      session_close_deadline_signal_bounded:
+        sourceAuthorityAdaptersProfile.adapter.session_close_deadline_signal_bounded,
+      close_cleanup_independent_of_operation_cancellation:
+        sourceAuthorityAdaptersProfile.adapter
+          .close_cleanup_independent_of_operation_cancellation,
+      session_close_invoked_at_most_once:
+        sourceAuthorityAdaptersProfile.adapter.session_close_invoked_at_most_once,
+      terminal_started_callbacks_settled:
+        sourceAuthorityAdaptersProfile.adapter.terminal_started_callbacks_settled,
+      terminal_adapter_session_references_cleared:
+        sourceAuthorityAdaptersProfile.adapter
+          .terminal_adapter_session_references_cleared,
+      testing_session_release_probe_present:
+        sourceAuthorityAdaptersProfile.adapter.testing_session_release_probe_present,
+      production_runtime_intrinsic:
+        sourceAuthorityAdaptersProfile.adapter.production_runtime_intrinsic,
+    },
+    compatibility: sourceAuthorityAdaptersProfile.compatibility,
+    output: sourceAuthorityAdaptersProfile.output,
+    authority: sourceAuthorityAdaptersProfile.authority,
+    evidence: sourceAuthorityAdaptersProfile.evidence,
+  };
+  record(
+    sourceAuthorityAdaptersManifest,
+    'evidence.browser_relay_source_authority_adapters',
+    Object.keys(sourceAuthorityAdaptersExpected),
+  );
+  exactStructured(
+    sourceAuthorityAdaptersManifest,
+    sourceAuthorityAdaptersExpected,
+    'evidence.browser_relay_source_authority_adapters',
+  );
+  exactStructured(
+    sourceAuthorityAdaptersProfile.adapter.source_order,
+    SOURCE_AUTHORITY_ADAPTERS_SOURCE_ORDER,
+    'evidence.browser_relay_source_authority_adapters.adapter.source_order',
+  );
+  exactStructured(
+    sourceAuthorityAdaptersProfile.adapter.scopes_by_source,
+    SOURCE_AUTHORITY_ADAPTERS_SCOPES_BY_SOURCE,
+    'evidence.browser_relay_source_authority_adapters.adapter.scopes_by_source',
+  );
+  exactStructured(
+    sourceAuthorityAdaptersProfile.adapter.options_fields,
+    SOURCE_AUTHORITY_ADAPTERS_OPTIONS_FIELDS,
+    'evidence.browser_relay_source_authority_adapters.adapter.options_fields',
+  );
+  exactStructured(
+    sourceAuthorityAdaptersProfile.adapter.session_fields,
+    SOURCE_AUTHORITY_ADAPTERS_SESSION_FIELDS,
+    'evidence.browser_relay_source_authority_adapters.adapter.session_fields',
+  );
+  exactStructured(
+    sourceAuthorityAdaptersProfile.adapter.read_descriptor_fields,
+    SOURCE_AUTHORITY_ADAPTERS_READ_DESCRIPTOR_FIELDS,
+    'evidence.browser_relay_source_authority_adapters.adapter.read_descriptor_fields',
+  );
+  for (const [path, actual, expected] of [
+    ['stage_count', sourceAuthorityAdaptersProfile.adapter.stage_count,
+      SOURCE_AUTHORITY_ADAPTERS_STAGE_COUNT],
+    ['observations_per_matrix',
+      sourceAuthorityAdaptersProfile.adapter.observations_per_matrix,
+      SOURCE_AUTHORITY_ADAPTERS_OBSERVATIONS_PER_MATRIX],
+    ['distinct_kind_count', sourceAuthorityAdaptersProfile.adapter.distinct_kind_count,
+      SOURCE_AUTHORITY_ADAPTERS_DISTINCT_KIND_COUNT],
+    ['maximum_session_lifetime_milliseconds',
+      sourceAuthorityAdaptersProfile.adapter.maximum_session_lifetime_milliseconds,
+      SOURCE_AUTHORITY_ADAPTERS_MAXIMUM_SESSION_LIFETIME_MILLISECONDS],
+    ['maximum_read_milliseconds',
+      sourceAuthorityAdaptersProfile.adapter.maximum_read_milliseconds,
+      SOURCE_AUTHORITY_ADAPTERS_MAXIMUM_READ_MILLISECONDS],
+    ['maximum_close_milliseconds',
+      sourceAuthorityAdaptersProfile.adapter.maximum_close_milliseconds,
+      SOURCE_AUTHORITY_ADAPTERS_MAXIMUM_CLOSE_MILLISECONDS],
+  ]) exact(
+    actual,
+    expected,
+    `evidence.browser_relay_source_authority_adapters.adapter.${path}`,
+  );
+  for (const path of [
+    'authenticated_source_readers_compatible',
+    'independent_observation_validation_present',
+    'concrete_source_authority_adapters_present',
+    'explicit_ephemeral_source_sessions_present',
+  ]) exact(
+    sourceAuthorityAdaptersProfile.compatibility[path],
+    true,
+    `evidence.browser_relay_source_authority_adapters.compatibility.${path}`,
+  );
+  for (const path of [
+    'source_session_producers_present',
+    'network_implementation_present',
+    'operation_case_adapter_wired',
+    'trusted_live_page_providers_present',
+    'dedicated_process_ipc_present',
+  ]) exact(
+    sourceAuthorityAdaptersProfile.compatibility[path],
+    false,
+    `evidence.browser_relay_source_authority_adapters.compatibility.${path}`,
+  );
+  if (Object.values(sourceAuthorityAdaptersProfile.authority)
+    .some((entry) => entry !== false)) {
+    reject('evidence.browser_relay_source_authority_adapters.authority',
+      'must remain closed');
+  }
+  for (const path of [
+    'live_source_sessions',
+    'live_source_observations',
+    'live_source_receipts',
+    'cloud_requests',
+    'cloud_mutations',
+    'public_ingress_changes',
+    'live_execution_count',
+    'incremental_monthly_cost_eur',
+  ]) exact(
+    sourceAuthorityAdaptersProfile.evidence[path],
+    0,
+    `evidence.browser_relay_source_authority_adapters.evidence.${path}`,
+  );
   const chromiumScenarioManifest = manifest.evidence.chromium_scenario_automation;
   const chromiumScenarioProfilePath = committedEvidencePath(
     stagingRoot,
@@ -9784,6 +10010,7 @@ export function validateCommittedEvidence(
     browserRelayIndependentCaseAdapterProfile: independentCaseAdapterProfile,
     browserRelaySourceTransportsProfile: sourceTransportsProfile,
     browserRelayAuthenticatedSourceReadersProfile: authenticatedReadersProfile,
+    browserRelaySourceAuthorityAdaptersProfile: sourceAuthorityAdaptersProfile,
     browserRelayChromiumScenarioProfile,
     browserRelayPlaywrightBridgeProfile,
     browserRelayPageReceiptProfile,
@@ -9840,7 +10067,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; the dormant page, two-identity scenario fixture, replacement-identity cloud adapter, independent-source aggregator and observers, evidence session, case scheduler, layered page and independent-source case adapters, seven genuine source transports, kind-attenuated authenticated-capability readers, native Chromium scenario, legacy Playwright bridge and browser-page receipt producer are digest-pinned without live authority, the adapters close the complete offline 40-assertion schedule with all 43 deterministic source observations, dual-positive Chromium BFCache evidence and real offline Firefox and WebKit pages, and the claim-bound composition root admits that matrix exactly once behind the durable operation claim while exposing no lineage; concrete live source authority adapters, their case wiring and live page providers remain absent, the single-use operation remains privately preflighted and unexecuted, both exact-audience relays remain private-ready, unauthenticated invocation remains absent, and App Check enforcement is disabled.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; the dormant page, two-identity scenario fixture, replacement-identity cloud adapter, independent-source aggregator and observers, evidence session, case scheduler, layered page and independent-source case adapters, seven genuine source transports, kind-attenuated authenticated-capability readers, fixed-scope ephemeral-session authority adapters, native Chromium scenario, legacy Playwright bridge and browser-page receipt producer are digest-pinned without live authority, the adapters close the complete offline 40-assertion schedule with all 43 deterministic source observations, dual-positive Chromium BFCache evidence and real offline Firefox and WebKit pages, and the claim-bound composition root admits that matrix exactly once behind the durable operation claim while exposing no lineage; source-session producers, case wiring, dedicated-process IPC and live page providers remain absent, the single-use operation remains privately preflighted and unexecuted, both exact-audience relays remain private-ready, unauthenticated invocation remains absent, and App Check enforcement is disabled.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';

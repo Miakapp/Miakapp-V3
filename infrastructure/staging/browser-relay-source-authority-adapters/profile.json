@@ -1,0 +1,289 @@
+{
+  "schema": "miakapp.staging-browser-relay-source-authority-adapters-profile/1",
+  "revision": 1,
+  "state": "closed_concrete_source_authority_adapters_ephemeral_sessions_implemented_not_sourced_not_wired_not_executed",
+  "target": {
+    "project_id": "miakapp-v4-staging",
+    "project_number": "1072737219170",
+    "region": "europe-west9",
+    "data_policy": "synthetic_only",
+    "cloud_compute_resources": 0,
+    "unscheduled": true
+  },
+  "pins": {
+    "implementation_base_commit": "a6d99142228fffbfdc5a9ce9fe9b77b435d65a60",
+    "authenticated_source_readers_profile_sha256": "1f2afc28a71eb61183f5927043fb6ccd3c9c305eec9dda71b452bd0106cdbfd6",
+    "dependency_contracts_sha256": "146a005a7e82aee89a6b2b19df31502a8d928081551cd3c69ff5028c4602a0da",
+    "internal_source_sha256": "ed04b584d732325eefa4b4b39856b31e4b9ea8dfa659018c2dbdb1f796326e96",
+    "production_source_sha256": "96099451f1e1eb84895337c332d609403ea1d97c87cab405fde33401626bd6b0",
+    "testing_source_sha256": "937edcccbc3c9f55bdf2b310f9bcbfeaa8e64aa68d3b0d8bb2a4559ddf82ebe2",
+    "guard_source_sha256": "6e6292c57bb816dcaa3111542e20fdf7d10c99c32e7135323f5f4a7ae4dffd23",
+    "unit_test_sha256": "4ea1b976e1bfa288102ea2cd2b77bac96b28a8de125ded1a0bd5337a8777ae9e",
+    "workflow_sha256": "baf66af60725df0a5b90a14df7fca449290260a99f95a6fb7307eee50628dc27"
+  },
+  "adapter": {
+    "source_order": [
+      "firebase_app_check",
+      "hosting",
+      "control_plane",
+      "relay",
+      "coordinator",
+      "kms",
+      "firestore"
+    ],
+    "authority_methods_by_source": {
+      "firebase_app_check": [
+        "provider_assessment",
+        "valid_verification",
+        "missing_token_denial",
+        "invalid_token_denial",
+        "verification_mode",
+        "close"
+      ],
+      "hosting": [
+        "management_site_configuration",
+        "served_sdk_configuration",
+        "close"
+      ],
+      "control_plane": [
+        "cors_preflight",
+        "foreign_origin_denial",
+        "source_uid_admission",
+        "authenticated_cache_policy",
+        "version_2_jwk_published",
+        "version_1_last_issuance",
+        "version_2_first_issuance",
+        "atomic_credential_reuse",
+        "exchange_summary",
+        "version_1_jwk_retained",
+        "version_1_jwk_removed",
+        "close"
+      ],
+      "relay": [
+        "version_2_existing_socket",
+        "wrong_audience_denial",
+        "wrong_home_denial",
+        "wrong_role_denial",
+        "unknown_kid_refresh",
+        "disconnect_reconnect_resync",
+        "version_2_session",
+        "revision_summary",
+        "new_session_version_2",
+        "close"
+      ],
+      "coordinator": [
+        "physical_call_delivery",
+        "close"
+      ],
+      "kms": [
+        "signature_summary",
+        "version_1_lifecycle",
+        "close"
+      ],
+      "firestore": [
+        "authoritative_route_transition",
+        "operation_write_summary",
+        "close"
+      ]
+    },
+    "scopes_by_source": {
+      "firebase_app_check": {
+        "project_id": "miakapp-v4-staging",
+        "project_number": "1072737219170",
+        "firebase_app_id": "1:1072737219170:web:5053ca93bf25d7373cd73b",
+        "provider_type": "recaptcha_enterprise"
+      },
+      "hosting": {
+        "project_id": "miakapp-v4-staging",
+        "site_id": "miakapp-v4-staging",
+        "origin": "https://miakapp-v4-staging.web.app"
+      },
+      "control_plane": {
+        "project_id": "miakapp-v4-staging",
+        "region": "europe-west9",
+        "service_name": "control-plane",
+        "origin": "https://control-plane-aczhngqraq-od.a.run.app"
+      },
+      "relay": {
+        "project_id": "miakapp-v4-staging",
+        "region": "europe-west9",
+        "service_names": [
+          "miakapp-staging-relay-a",
+          "miakapp-staging-relay-b"
+        ],
+        "websocket_audiences": [
+          "wss://miakapp-staging-relay-a-aczhngqraq-od.a.run.app/ws",
+          "wss://miakapp-staging-relay-b-aczhngqraq-od.a.run.app/ws"
+        ]
+      },
+      "coordinator": {
+        "execution_location": "operator_local",
+        "data_policy": "synthetic_only"
+      },
+      "kms": {
+        "project_id": "miakapp-v4-staging",
+        "region": "europe-west9",
+        "crypto_key": "projects/miakapp-v4-staging/locations/europe-west9/keyRings/miakapp-v4-staging/cryptoKeys/access-token-signing"
+      },
+      "firestore": {
+        "project_id": "miakapp-v4-staging",
+        "database_id": "(default)",
+        "data_policy": "synthetic_only"
+      }
+    },
+    "options_fields": [
+      "signal",
+      "expires_at_milliseconds"
+    ],
+    "session_fields": [
+      "source",
+      "scope",
+      "expires_at_milliseconds",
+      "read",
+      "close"
+    ],
+    "read_descriptor_fields": [
+      "source",
+      "browser",
+      "case_id",
+      "kind",
+      "signal"
+    ],
+    "stage_count": 22,
+    "observations_per_matrix": 43,
+    "distinct_kind_count": 32,
+    "maximum_session_lifetime_milliseconds": 1800000,
+    "maximum_read_milliseconds": 30000,
+    "maximum_close_milliseconds": 30000,
+    "expiry_is_absolute_unix_epoch_milliseconds": true,
+    "explicit_source_sessions": true,
+    "source_scope_exact": true,
+    "session_identity_single_operation": true,
+    "operation_capability_identity_bound": true,
+    "authority_surface_exact": true,
+    "context_order_revalidated": true,
+    "source_calls_ordered_nonoverlapping": true,
+    "call_reserved_before_await": true,
+    "read_descriptor_attenuated": true,
+    "operation_capability_omitted_from_read_descriptor": true,
+    "abort_checked_before_and_after_call": true,
+    "expiry_checked_before_and_after_call": true,
+    "abort_and_expiry_rechecked_at_dispatch": true,
+    "bounded_read_and_close_wrapper_settlement": true,
+    "caller_abort_reason_sanitized": true,
+    "callback_close_reentrancy_rejected": true,
+    "shared_poison_permanent": true,
+    "session_close_deadline_signal_bounded": true,
+    "close_cleanup_independent_of_operation_cancellation": true,
+    "session_close_invoked_at_most_once": true,
+    "terminal_started_callbacks_settled": true,
+    "terminal_adapter_session_references_cleared": true,
+    "testing_session_release_probe_present": true,
+    "production_runtime_intrinsic": true
+  },
+  "compatibility": {
+    "authenticated_source_readers_compatible": true,
+    "independent_observation_validation_present": true,
+    "concrete_source_authority_adapters_present": true,
+    "explicit_ephemeral_source_sessions_present": true,
+    "complete_source_count": 7,
+    "complete_stage_count": 22,
+    "complete_observation_capacity": 43,
+    "source_session_producers_present": false,
+    "network_implementation_present": false,
+    "operation_case_adapter_wired": false,
+    "trusted_live_page_providers_present": false,
+    "dedicated_process_ipc_present": false,
+    "uncooperative_same_process_session_forced_termination": false
+  },
+  "output": {
+    "authority_fields": {
+      "firebase_app_check": [
+        "provider_assessment",
+        "valid_verification",
+        "missing_token_denial",
+        "invalid_token_denial",
+        "verification_mode",
+        "close"
+      ],
+      "hosting": [
+        "management_site_configuration",
+        "served_sdk_configuration",
+        "close"
+      ],
+      "control_plane": [
+        "cors_preflight",
+        "foreign_origin_denial",
+        "source_uid_admission",
+        "authenticated_cache_policy",
+        "version_2_jwk_published",
+        "version_1_last_issuance",
+        "version_2_first_issuance",
+        "atomic_credential_reuse",
+        "exchange_summary",
+        "version_1_jwk_retained",
+        "version_1_jwk_removed",
+        "close"
+      ],
+      "relay": [
+        "version_2_existing_socket",
+        "wrong_audience_denial",
+        "wrong_home_denial",
+        "wrong_role_denial",
+        "unknown_kid_refresh",
+        "disconnect_reconnect_resync",
+        "version_2_session",
+        "revision_summary",
+        "new_session_version_2",
+        "close"
+      ],
+      "coordinator": [
+        "physical_call_delivery",
+        "close"
+      ],
+      "kms": [
+        "signature_summary",
+        "version_1_lifecycle",
+        "close"
+      ],
+      "firestore": [
+        "authoritative_route_transition",
+        "operation_write_summary",
+        "close"
+      ]
+    },
+    "submitted_fields": [
+      "observation"
+    ],
+    "semantic_validation_before_output": true,
+    "raw_source_material_accepted": false,
+    "raw_source_material_retained": false,
+    "session_references_exposed": false,
+    "operation_capability_exposed": false,
+    "arbitrary_errors_propagated": false
+  },
+  "authority": {
+    "ambient_credentials_authorized": false,
+    "credential_strings_accepted": false,
+    "built_in_network_clients_authorized": false,
+    "arbitrary_targets_authorized": false,
+    "source_session_creation_authorized": false,
+    "cloud_mutations_authorized": false,
+    "case_adapter_wiring_authorized": false,
+    "live_execution_authorized": false,
+    "public_ingress_changes_authorized": false
+  },
+  "evidence": {
+    "state": "absent",
+    "live_source_sessions": 0,
+    "live_source_observations": 0,
+    "live_source_receipts": 0,
+    "cloud_requests": 0,
+    "cloud_mutations": 0,
+    "public_ingress_changes": 0,
+    "live_execution_count": 0,
+    "incremental_monthly_cost_eur": 0,
+    "credentials_committed": false,
+    "raw_source_material_committed": false
+  }
+}
