@@ -193,7 +193,7 @@ on 2026-09-03. Its sanitized inventory now lives under
 Its stable `manifest.json` entry point is now a bundle-revision-3 canonical
 index over six fixed, digest-pinned fragments, with separate browser-relay
 scenario, reader-boundary and operations owners. The loader reconstructs the
-current revision-100 semantic manifest only after verifying each fragment's
+current revision-101 semantic manifest only after verifying each fragment's
 path, mount, bundle schema, owned fields, exact byte length, SHA-256 and bounded
 aggregate size, plus index/core agreement on the semantic schema and revision.
 
@@ -597,10 +597,14 @@ injected, already-authenticated, kind-attenuated authorities into that provider
 surface. One opaque operation capability and a bounded absolute expiry bind the
 stages; each lazy read is semantically validated and only its sanitized
 observation can cross the boundary. The package accepts no raw credential or
-source material and includes no concrete source adapter, network client,
-case-adapter wiring or IPC. This implementation increment made zero staging
-requests, mutations or executions and added zero staging cost. Concrete source
-authority adapters, transport-to-case wiring, page/browser providers and
+source material and includes no network client, case-adapter wiring or IPC.
+An adjacent dormant package now adapts seven exact fixed-scope, at-most-30-minute
+source sessions into all 32 kind-specific authorities. It binds the opaque
+operation capability on first use, bounds each read and public-close wrapper,
+revalidates every projected observation and releases a session only after its
+started callbacks settle. This implementation increment made zero staging
+requests, mutations or executions and added zero staging cost. Source-session
+producers, transport-to-case wiring, page/browser providers and
 dedicated-process IPC remain required before the matrix can run. No package
 grants Hosting publication or live execution authority.
 
