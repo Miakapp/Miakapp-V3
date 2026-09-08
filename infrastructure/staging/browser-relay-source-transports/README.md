@@ -4,7 +4,11 @@ This dormant package fills the transport slot between seven trusted
 source-specific readers and the existing
 [`browser-relay-independent-case-adapter`](../browser-relay-independent-case-adapter/).
 It replaces the shape of the deterministic source harness with production code;
-it does not implement or authenticate a live reader.
+it does not itself implement or authenticate a live reader. The adjacent
+[`browser-relay-authenticated-source-readers`](../browser-relay-authenticated-source-readers/)
+package now supplies compatible dormant providers from seven injected,
+already-authenticated capabilities that are attenuated to their exact fact
+kinds.
 
 The production factory accepts exactly seven distinct providers:
 
@@ -56,9 +60,11 @@ entrypoint.
 
 This is still a cooperative in-process boundary. JavaScript cannot terminate a
 provider that ignores cancellation and never settles, and the opaque capability
-does not prove that a provider's semantic claims are true. Authenticated readers
-for App Check, Hosting, the control plane, relays, the coordinator, KMS and
-Firestore remain absent. Untrusted or shared readers require the planned
+does not prove that a provider's semantic claims are true. The adjacent reader
+package enforces the capability, stage, kind, expiry and semantic-projection
+protocol without accepting credential bytes or performing I/O. Concrete App
+Check, Hosting, control-plane, relay, coordinator, KMS and Firestore authority
+adapters remain absent. Untrusted or shared capabilities require the planned
 dedicated process and validated IPC before live execution.
 
 Import performs only the repository's local immutable audit-profile reads; it
