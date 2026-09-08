@@ -1,0 +1,213 @@
+{
+  "schema": "miakapp.staging-browser-relay-source-session-producers-profile/1",
+  "revision": 1,
+  "state": "closed_trusted_source_session_producers_injected_clients_implemented_not_live_not_wired_not_executed",
+  "target": {
+    "project_id": "miakapp-v4-staging",
+    "project_number": "1072737219170",
+    "region": "europe-west9",
+    "data_policy": "synthetic_only",
+    "cloud_compute_resources": 0,
+    "unscheduled": true
+  },
+  "pins": {
+    "implementation_base_commit": "88aacf517ee4417732656805e811ca040bca5e46",
+    "source_authority_adapters_profile_sha256": "e8d7190d543e5342fe7f504d8f50b1ac51ea3a87de814850661b82846edec14f",
+    "dependency_contracts_sha256": "e98f89b68a69f52254816f2837244e51643188b819bf04b63283994d001fa2f9",
+    "internal_source_sha256": "c0e1467c3e697adb4a05f6723d887a8beb587bc7fb33975d886f01d06da2518c",
+    "production_source_sha256": "c3d0dfdfe9828b64f2921ed390e1d5f8564d5f936af68820ff5797d664af3a4c",
+    "testing_source_sha256": "599e101dc4447f0658a26f2601fe02f7374e33ff96e3dafa427ae7d1ff2ae238",
+    "guard_source_sha256": "024a53751f3508abb6d617f38207059c84a05ef7db46a44af671b5a2489d9ca1",
+    "unit_test_sha256": "840847c6f195500d4bea1600d632c4e1e97c7a5cecf6655c4d584519900398ce",
+    "workflow_sha256": "7d28ec1bfcfba19010b51f33c6b8f2ba89248954203e2e2a738424ee2e34b51d"
+  },
+  "producer": {
+    "source_order": [
+      "firebase_app_check",
+      "hosting",
+      "control_plane",
+      "relay",
+      "coordinator",
+      "kms",
+      "firestore"
+    ],
+    "scopes_by_source": {
+      "firebase_app_check": {
+        "project_id": "miakapp-v4-staging",
+        "project_number": "1072737219170",
+        "firebase_app_id": "1:1072737219170:web:5053ca93bf25d7373cd73b",
+        "provider_type": "recaptcha_enterprise"
+      },
+      "hosting": {
+        "project_id": "miakapp-v4-staging",
+        "site_id": "miakapp-v4-staging",
+        "origin": "https://miakapp-v4-staging.web.app"
+      },
+      "control_plane": {
+        "project_id": "miakapp-v4-staging",
+        "region": "europe-west9",
+        "service_name": "control-plane",
+        "origin": "https://control-plane-aczhngqraq-od.a.run.app"
+      },
+      "relay": {
+        "project_id": "miakapp-v4-staging",
+        "region": "europe-west9",
+        "service_names": [
+          "miakapp-staging-relay-a",
+          "miakapp-staging-relay-b"
+        ],
+        "websocket_audiences": [
+          "wss://miakapp-staging-relay-a-aczhngqraq-od.a.run.app/ws",
+          "wss://miakapp-staging-relay-b-aczhngqraq-od.a.run.app/ws"
+        ]
+      },
+      "coordinator": {
+        "execution_location": "operator_local",
+        "data_policy": "synthetic_only"
+      },
+      "kms": {
+        "project_id": "miakapp-v4-staging",
+        "region": "europe-west9",
+        "crypto_key": "projects/miakapp-v4-staging/locations/europe-west9/keyRings/miakapp-v4-staging/cryptoKeys/access-token-signing"
+      },
+      "firestore": {
+        "project_id": "miakapp-v4-staging",
+        "database_id": "(default)",
+        "data_policy": "synthetic_only"
+      }
+    },
+    "client_fields": [
+      "observe",
+      "close"
+    ],
+    "client_descriptor_fields": [
+      "source",
+      "scope",
+      "browser",
+      "case_id",
+      "kind",
+      "signal"
+    ],
+    "options_fields": [
+      "signal",
+      "expires_at_milliseconds"
+    ],
+    "session_fields": [
+      "source",
+      "scope",
+      "expires_at_milliseconds",
+      "read",
+      "close"
+    ],
+    "read_descriptor_fields": [
+      "source",
+      "browser",
+      "case_id",
+      "kind",
+      "signal"
+    ],
+    "runtime_fields": [
+      "clock",
+      "set_timer",
+      "clear_timer",
+      "client_released"
+    ],
+    "stage_count": 22,
+    "observations_per_matrix": 43,
+    "distinct_kind_count": 32,
+    "maximum_session_lifetime_milliseconds": 1800000,
+    "expiry_is_absolute_unix_epoch_milliseconds": true,
+    "explicit_injected_clients": true,
+    "client_map_frozen": true,
+    "options_snapshotted_once": true,
+    "client_claim_after_output_validation": true,
+    "client_identity_single_operation": true,
+    "session_identity_single_operation": true,
+    "producer_owns_source_scope_and_expiry": true,
+    "canonical_order_revalidated": true,
+    "source_calls_ordered_nonoverlapping": true,
+    "call_reserved_before_await": true,
+    "abort_checked_before_and_after_call": true,
+    "expiry_checked_before_and_after_call": true,
+    "abort_and_expiry_rechecked_at_dispatch": true,
+    "active_request_abort_poisons_shared": true,
+    "active_expiry_aborts_client_signal": true,
+    "expiry_timer_races_callback_settlement": false,
+    "client_descriptor_attenuated": true,
+    "operation_capability_omitted_from_client_descriptor": true,
+    "semantic_validation_before_session_output": true,
+    "caller_abort_reason_sanitized": true,
+    "callback_read_reentrancy_rejected": true,
+    "callback_close_reentrancy_rejected": true,
+    "foreign_thenable_context_preserved": true,
+    "shared_poison_permanent": true,
+    "client_close_invoked_at_most_once": true,
+    "close_cleanup_independent_of_operation_cancellation": true,
+    "close_started_before_cleanup_abort_invoked_exactly_once": true,
+    "terminal_started_callbacks_settled": true,
+    "terminal_client_references_cleared": true,
+    "testing_client_release_probe_present": true,
+    "production_clock_intrinsic": true,
+    "production_timers_intrinsic": true,
+    "public_read_and_close_deadlines_owned_by_source_authority_adapter": true,
+    "inner_timeout_race_present": false
+  },
+  "compatibility": {
+    "source_authority_adapters_compatible": true,
+    "independent_observation_validation_present": true,
+    "trusted_source_session_producers_present": true,
+    "explicit_injected_source_clients_present": true,
+    "complete_source_count": 7,
+    "complete_stage_count": 22,
+    "complete_observation_capacity": 43,
+    "concrete_live_source_clients_present": false,
+    "built_in_network_implementation_present": false,
+    "operation_case_adapter_wired": false,
+    "trusted_live_page_providers_present": false,
+    "dedicated_process_ipc_present": false,
+    "uncooperative_same_process_client_forced_termination": false
+  },
+  "output": {
+    "session_fields": [
+      "source",
+      "scope",
+      "expires_at_milliseconds",
+      "read",
+      "close"
+    ],
+    "submitted_fields": [
+      "observation"
+    ],
+    "semantic_validation_before_output": true,
+    "raw_source_material_accepted": false,
+    "raw_source_material_retained": false,
+    "client_references_exposed": false,
+    "operation_capability_exposed": false,
+    "arbitrary_errors_propagated": false
+  },
+  "authority": {
+    "ambient_credentials_authorized": false,
+    "credential_strings_accepted": false,
+    "built_in_network_clients_authorized": false,
+    "arbitrary_targets_authorized": false,
+    "concrete_live_source_clients_authorized": false,
+    "cloud_mutations_authorized": false,
+    "case_adapter_wiring_authorized": false,
+    "live_execution_authorized": false,
+    "public_ingress_changes_authorized": false
+  },
+  "evidence": {
+    "state": "absent",
+    "live_source_clients": 0,
+    "live_source_sessions": 0,
+    "live_source_observations": 0,
+    "live_source_receipts": 0,
+    "cloud_requests": 0,
+    "cloud_mutations": 0,
+    "public_ingress_changes": 0,
+    "live_execution_count": 0,
+    "incremental_monthly_cost_eur": 0,
+    "credentials_committed": false,
+    "raw_source_material_committed": false
+  }
+}

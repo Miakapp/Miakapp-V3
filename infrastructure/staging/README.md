@@ -391,9 +391,10 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`browser-relay-chromium-case-adapter/`](browser-relay-chromium-case-adapter/) | Dormant Chromium scenario/scheduler composition | Maps the ready four-input fixture, native two-page driver and all 18 page projections into their exact scheduler stages, then closes all 40 assertions offline; independent live sources, secondary drivers, operation binding and live authority remain absent |
 | [`browser-relay-secondary-case-adapter/`](browser-relay-secondary-case-adapter/) | Dormant secondary page/scheduler composition | Layers the unchanged Firefox/WebKit Playwright bridge beneath the Chromium adapter, validates and projects six complete page facts into the two `LIVE-10` stages, proves page closure and closes the same 40 assertions offline; live providers, independent sources, process IPC and authority remain absent from this layer, while graph-level claim binding is separate |
 | [`browser-relay-independent-case-adapter/`](browser-relay-independent-case-adapter/) | Dormant independent-source/scheduler composition | Fills the final adapter slot with seven source-owned observer capabilities, derives kind and sequence, projects 43 observations into their exact stages and closes all 40 assertions offline; genuine transports, live providers, process IPC and authority remain absent from this layer, while graph-level claim binding is separate |
-| [`browser-relay-source-transports/`](browser-relay-source-transports/) | Dormant seven-source transport protocol | Pulls the exact 22 stages and 43 observations from trusted source-specific readers with required EOF, downstream backpressure, operation/stage identity binding, bounded drain, exact close and permanent poison; adjacent dormant capability readers and concrete session adapters are present, while session producers, network, credentials, case-adapter wiring, process IPC and authority remain absent |
+| [`browser-relay-source-transports/`](browser-relay-source-transports/) | Dormant seven-source transport protocol | Pulls the exact 22 stages and 43 observations from trusted source-specific readers with required EOF, downstream backpressure, operation/stage identity binding, bounded drain, exact close and permanent poison; adjacent dormant capability readers, concrete session adapters and trusted-client producers are present, while concrete network clients, credentials, case-adapter wiring, process IPC and authority remain absent |
 | [`browser-relay-authenticated-source-readers/`](browser-relay-authenticated-source-readers/) | Dormant authenticated-capability reader/provider protocol | Converts seven injected, already-authenticated and kind-attenuated source capabilities into the exact 22-stage/43-observation provider surface, binds one expiring operation capability and semantically validates every observation; credential bytes, network, wiring, process IPC and live authority remain absent, while concrete session adapters are separate |
-| [`browser-relay-source-authority-adapters/`](browser-relay-source-authority-adapters/) | Dormant concrete ephemeral-session adapters | Converts seven exact fixed-scope, at-most-30-minute source sessions into all 32 authority methods, binds the transport's opaque capability on first use, revalidates order and semantic output, bounds read/public-close wrappers and releases terminal sessions after their callbacks settle; session producers, built-in network/credentials, wiring, IPC and live execution remain absent |
+| [`browser-relay-source-authority-adapters/`](browser-relay-source-authority-adapters/) | Dormant concrete ephemeral-session adapters | Converts seven exact fixed-scope, at-most-30-minute source sessions into all 32 authority methods, binds the transport's opaque capability on first use, revalidates order and semantic output, bounds read/public-close wrappers and releases terminal sessions after their callbacks settle; dormant producers are present, while built-in network/credentials, wiring, IPC and live execution remain absent |
+| [`browser-relay-source-session-producers/`](browser-relay-source-session-producers/) | Dormant trusted-client session producers | Converts seven exact frozen `{ observe, close }` clients into the fixed-scope ephemeral sessions, enforces canonical order and semantic projection, sanitizes cancellation, drains every started callback and releases client references only at real terminal settlement; concrete clients, credentials, network, case wiring, IPC and live execution remain absent |
 | [`browser-relay-chromium-scenario/`](browser-relay-chromium-scenario/) | Dormant complete Chromium page-scenario driver | Owns two pages and inputs, closes the real 18-fact receipt, and proves one native BFCache restore through trusted persisted page events plus exact CDP navigation; its projection port is composed offline, while live authority remains absent |
 | [`browser-relay-playwright-bridge/`](browser-relay-playwright-bridge/) | Dormant page-to-receipt Playwright bridge | Lazily drives the phased host and real receipt producer for Firefox/WebKit; its legacy Chromium path stays blocked before page or private-input acquisition because high-level Playwright cannot prove native BFCache restoration |
 | [`browser-relay-page-receipt/`](browser-relay-page-receipt/) | Dormant browser-owned source receipt producer | Revision 2 reduces 18 exact Chromium page facts or three secondary-browser facts, cross-checks cumulative host lifecycle evidence, typed call outcomes and terminal cleanup, is bound to the bridge and now combines offline with every independent source |
@@ -895,9 +896,10 @@ below its reviewed 256-KiB aggregate ceiling. That representation-only revision
 reconstructs the byte-identical semantic object and grants no authenticated
 reader, credential, network, browser, deployment or cloud authority.
 After adding the authenticated-capability reader evidence, revision 100 used
-202,086 bytes. The current revision-101 bundle additionally records the
-concrete dormant source-session adapters and totals 211,303 bytes, leaving
-50,841 bytes below the same six-fragment 262,144-byte ceiling.
+202,086 bytes. Revision 101 additionally recorded the concrete dormant
+source-session adapters and totalled 211,303 bytes. The current revision-102
+bundle adds the trusted-client source-session producers and totals 219,900
+bytes, leaving 42,244 bytes below the same six-fragment 262,144-byte ceiling.
 The adjacent
 [`browser-relay-chromium-scenario/`](browser-relay-chromium-scenario/) package
 now closes the standalone Chromium page path offline. It owns two page
@@ -991,9 +993,16 @@ ephemeral sessions to those kind-specific authorities. It binds the opaque
 operation capability on first use, independently revalidates all 32 methods in
 canonical order, bounds reads and the public-close wrapper, sanitizes
 cancellation and releases each session only after its started callbacks settle.
-This remains a trusted same-process contract: source-session producers,
-transport-to-case wiring and validated IPC remain open before any live
-execution.
+The adjacent
+[`browser-relay-source-session-producers/`](browser-relay-source-session-producers/)
+package now creates those sessions from seven explicit trusted client closures.
+It owns the fixed source scopes and canonical order, independently validates
+every projected observation, sanitizes abort reasons and drains real callback
+settlement before clearing client references. It deliberately leaves the
+30-second public deadline to the authority adapter, so an uncooperative
+same-process client remains quarantined rather than being falsely released.
+Concrete source clients, transport-to-case wiring and validated IPC remain open
+before any live execution.
 The adjacent
 [`browser-relay-operation-case-adapter/`](browser-relay-operation-case-adapter/)
 now hard-wires that complete schedule into the unchanged single-use operation.
@@ -1025,9 +1034,10 @@ lifecycle/outcome APIs. The dedicated CDP package plus all three layered case
 adapters now close every page scenario and deterministic independent-source
 projection through the fixed scheduler offline. The generic source transports
 and their dormant authenticated-capability reader/provider protocol are
-implemented separately. Concrete ephemeral-session authority adapters now
-close the next boundary, but source-session producers, case-adapter wiring and
-trusted live page providers remain absent. These offline
+implemented separately. Concrete ephemeral-session authority adapters and
+trusted-client session producers now close the next two boundaries, but
+concrete live clients, case-adapter wiring and trusted live page providers
+remain absent. These offline
 capabilities are not acceptance evidence. The adjacent
 [`browser-relay-scenario-fixture/`](browser-relay-scenario-fixture/) composes the
 immutable three-input fixture with a second exact synthetic Firebase identity.
@@ -1046,9 +1056,9 @@ closes only the second-identity cloud implementation gap. The standalone
 Chromium page scenario, BFCache path, three-browser ready-fixture/scheduler
 composition and deterministic source-observer wiring are now complete offline,
 and operation/claim binding is now closed offline. The generic source transport
-and dormant authenticated-capability reader/provider protocols and concrete
-fixed-scope ephemeral-session adapters are present; source-session producers,
-case-adapter wiring, trusted live page providers and dedicated-process
+and dormant authenticated-capability reader/provider protocols, concrete
+fixed-scope ephemeral-session adapters and trusted-client producers are present;
+concrete source clients, case-adapter wiring, trusted live page providers and dedicated-process
 isolation remain open.
 All mutation, IAM, Hosting, public-ingress and execution authority remains
 closed.
