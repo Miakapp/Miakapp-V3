@@ -155,8 +155,20 @@ implemented across several repositories.
   sessions from seven explicit frozen `{ observe, close }` clients. It enforces
   canonical dispatch, sanitized cancellation, independent semantic validation,
   shared poison, started-callback drain and terminal client release without an
-  inner timeout race. It contains no concrete network or credential client,
-  operation/case wiring, browser ownership, process IPC or live authority.
+  inner timeout race. Its adjacent fixed-target clients are now implemented,
+  while credential discovery, network transport, operation/case wiring, browser
+  ownership, process IPC and live authority remain absent.
+- [`../infrastructure/staging/browser-relay-source-clients/`](../infrastructure/staging/browser-relay-source-clients/)
+  — dormant seven-source acquisition boundary over explicit ephemeral
+  authorities. Each canonical call receives one immutable staging target and a
+  fresh non-serializable request capability; only an identity-bound exact receipt
+  can return one independently validated observation. Proxy protocol records are
+  rejected before traps, active calls are aborted at their shared absolute
+  expiry, and descendant authority jobs cannot reenter peer clients. This is a
+  trusted same-process boundary, not hard isolation for pre-existing async
+  resources. The package forbids ambient credentials, consuming App Check
+  verification, delayed-metric inference, built-in network access, case wiring
+  and live execution.
 - [`../infrastructure/staging/browser-relay-chromium-scenario/`](../infrastructure/staging/browser-relay-chromium-scenario/)
   — dormant two-page Chromium driver that owns the complete 18-fact page
   scenario and closes the existing receipt producer offline. Its pinned CDP

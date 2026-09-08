@@ -1080,18 +1080,29 @@ vertical-slice exit gates.
    observation, sanitizes cancellation and clears client references only after
    actual terminal settlement. It deliberately has no inner timeout race: the
    authority adapter owns the public deadline, while an uncooperative
-   same-process client remains quarantined. Concrete OAuth, Firebase,
-   relay-protocol and operation-ledger clients, wiring to the independent case
-   adapter, dedicated-process IPC and live authority remain absent.
+   same-process client remains quarantined. A following dormant source-client
+   boundary now accepts seven explicit ephemeral authorities, fixes all 32
+   acquisition targets, binds each request and exact receipt to a fresh
+   non-serializable capability and independently validates the projected
+   observation. It explicitly requires non-consuming App Check verification
+   and operation-local ledgers where delayed metrics or missing logs cannot prove
+   an exact fact. Proxy protocol records are rejected before traps, receipt
+   validation remains inside the descendant callback context and an absolute
+   timer aborts active authority signals without falsely settling their
+   callbacks. Pre-existing async resources are explicitly outside this trusted
+   same-process boundary and require the later dedicated-process IPC boundary
+   for hard isolation. Credential discovery, built-in
+   OAuth/Firebase/HTTP/WebSocket access, live authority providers and wiring to
+   the independent case adapter remain absent.
    A final dormant operation case adapter now hard-wires the unchanged
    single-use operation to that complete schedule. It intercepts one canonical
    receipt, retains only a private non-serializable capability, admits exactly
    one matrix callback within the claim lifetime, forwards only the exact edge
    abort signal and returns the unchanged closed operation result. Claim lineage
    never reaches a provider or result, and both operation cleanup levels are
-   exercised offline. Concrete live source clients, case-adapter wiring, trusted
-   live-browser providers, dedicated-process IPC, Hosting publication and live
-   authority remain open before the one allowed execution.
+   exercised offline. Trusted live source-authority providers, case-adapter
+   wiring, trusted live-browser providers, dedicated-process IPC, Hosting
+   publication and live authority remain open before the one allowed execution.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain
