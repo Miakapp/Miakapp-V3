@@ -819,13 +819,13 @@ current consumer.
     that scheduler/session to the durable claim and unchanged operation
     envelope offline; generic source transports are now implemented separately,
     while authenticated readers and live wiring remain absent. The manifest
-    capacity prerequisite is now closed: the stable entry point indexes five
-    fixed canonical fragments, with separate browser-relay scenario and
-    operations owners, exact path, mount, byte-length and SHA-256 bindings,
-    per-file ceilings and one aggregate ceiling while reconstructing the
-    revision-99 semantic object. The immutable original
-    fixture still has three private page inputs, but a separate closed scenario fixture now
-    supplies the fourth from a second genuine synthetic Firebase identity,
+    capacity prerequisite is now closed: the stable bundle-revision-3 entry
+    point indexes six fixed canonical fragments, with separate browser-relay
+    scenario, reader-boundary and operations owners, exact path, mount,
+    byte-length and SHA-256 bindings, per-file ceilings and one aggregate
+    ceiling while reconstructing the revision-99 semantic object. The immutable
+    original fixture still has three private page inputs, but a separate closed
+    scenario fixture now supplies the fourth from a second genuine synthetic Firebase identity,
     extends the unique coordinator's state access to both identities and
     requires both cleanup domains to reach absence. The separate dormant
     replacement-identity cloud adapter is now implemented: injected ephemeral
@@ -886,10 +886,12 @@ current consumer.
     permanent protocol poison. Its production entrypoint uses intrinsic timers
     and grants no network, credential, cloud, Hosting, browser or execution
     authority. Authenticated source-specific readers, case-adapter transport
-    wiring and trusted live page providers remain absent. Next implement those
-    trusted readers and providers, but first revise or compact the 192-KiB
-    aggregate manifest boundary: only 2,308 bytes remain. Then isolate browser
-    ownership behind validated IPC before executing the matrix once.
+    wiring and trusted live page providers remain absent. The representation-only
+    capacity revision is complete: six fixed shards consume 194,718 of the
+    bounded 262,144 bytes, leaving 67,426 bytes while reconstructing the
+    byte-identical semantic object. Next implement the trusted readers and
+    providers, then isolate browser ownership behind validated IPC before
+    executing the matrix once.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform
     no-change plan. Its fresh post-merge preflight is complete and the rollback
