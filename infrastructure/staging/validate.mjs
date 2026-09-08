@@ -189,6 +189,23 @@ import {
   validateBrowserRelaySourceAuthorityAdaptersProfile,
 } from './browser-relay-source-authority-adapters/contract.mjs';
 import {
+  SOURCE_SESSION_PRODUCERS_CLIENT_DESCRIPTOR_FIELDS,
+  SOURCE_SESSION_PRODUCERS_CLIENT_FIELDS,
+  SOURCE_SESSION_PRODUCERS_DISTINCT_KIND_COUNT,
+  SOURCE_SESSION_PRODUCERS_MAXIMUM_SESSION_LIFETIME_MILLISECONDS,
+  SOURCE_SESSION_PRODUCERS_OBSERVATIONS_PER_MATRIX,
+  SOURCE_SESSION_PRODUCERS_OPTIONS_FIELDS,
+  SOURCE_SESSION_PRODUCERS_PROFILE_PATH,
+  SOURCE_SESSION_PRODUCERS_PROFILE_SHA256,
+  SOURCE_SESSION_PRODUCERS_READ_DESCRIPTOR_FIELDS,
+  SOURCE_SESSION_PRODUCERS_RUNTIME_FIELDS,
+  SOURCE_SESSION_PRODUCERS_SCOPES_BY_SOURCE,
+  SOURCE_SESSION_PRODUCERS_SESSION_FIELDS,
+  SOURCE_SESSION_PRODUCERS_SOURCE_ORDER,
+  SOURCE_SESSION_PRODUCERS_STAGE_COUNT,
+  validateBrowserRelaySourceSessionProducersProfile,
+} from './browser-relay-source-session-producers/contract.mjs';
+import {
   CHROMIUM_SCENARIO_PROFILE_PATH,
   CHROMIUM_SCENARIO_PROFILE_SHA256,
   validateBrowserRelayChromiumScenarioProfile,
@@ -354,7 +371,9 @@ const SOURCE_TRANSPORTS_CONTRACT_SHA256 =
 const AUTHENTICATED_SOURCE_READERS_CONTRACT_SHA256 =
   'fe85ef942d679139ab7a5ea7a3ca707b7358cffca73edd9031c6a84fe54d7ef6';
 const SOURCE_AUTHORITY_ADAPTERS_CONTRACT_SHA256 =
-  '295818de8d0d5328e7253591067a37955efe628d2d36e838c89154b88ec393fb';
+  'a0f114e355ac323f8946b9a5c31951f4d5a53f9d5d556491a8f9004f95a04413';
+const SOURCE_SESSION_PRODUCERS_CONTRACT_SHA256 =
+  '2d981d687438d2ee1aed65dbb3c80e7761a7f7f0884ea8ff83ad8e3b45f1e0c8';
 const OPERATION_CASE_ADAPTER_CONTRACT_SHA256 =
   '75c33c7e8c3408132fd9083d715f59bcea4b27a210c940a236d13017968c31bf';
 
@@ -3194,6 +3213,7 @@ function validateEvidence(value) {
     'browser_relay_source_transports',
     'browser_relay_authenticated_source_readers',
     'browser_relay_source_authority_adapters',
+    'browser_relay_source_session_producers',
     'chromium_scenario_automation',
     'browser_relay_playwright_bridge',
     'browser_relay_page_receipt',
@@ -5410,10 +5430,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 101, 'manifest.revision');
+  exact(manifest.revision, 102, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_independent_observers_closed_source_fact_producers_interleaved_runner_result_supported_not_wired_not_executed_browser_relay_evidence_session_closed_operation_local_capability_monotonic_epoch_implemented_not_wired_not_executed_browser_relay_case_scheduler_closed_case_interleaving_implemented_not_wired_not_executed_browser_relay_chromium_case_adapter_closed_native_scenario_scheduler_composed_offline_proven_not_live_wired_not_executed_browser_relay_secondary_case_adapter_closed_secondary_page_case_scheduler_composition_offline_proven_not_live_wired_not_executed_browser_relay_independent_case_adapter_closed_independent_source_case_composition_offline_proven_not_live_wired_not_executed_browser_relay_source_transports_closed_genuine_adapters_implemented_not_wired_not_executed_browser_relay_authenticated_source_readers_closed_kind_attenuated_ephemeral_authority_protocol_implemented_not_live_adapted_not_wired_not_executed_browser_relay_source_authority_adapters_closed_concrete_ephemeral_session_bridge_implemented_not_sourced_not_wired_not_executed_browser_relay_chromium_scenario_closed_complete_page_projected_with_backpressure_offline_proven_not_wired_not_live_executed_browser_relay_playwright_bridge_closed_secondary_receipts_chromium_bfcache_blocked_not_wired_not_executed_browser_relay_page_receipt_closed_bridge_bound_not_aggregated_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_browser_relay_operation_case_adapter_closed_durable_claim_matrix_composition_offline_proven_not_live_executed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_independent_observers_closed_source_fact_producers_interleaved_runner_result_supported_not_wired_not_executed_browser_relay_evidence_session_closed_operation_local_capability_monotonic_epoch_implemented_not_wired_not_executed_browser_relay_case_scheduler_closed_case_interleaving_implemented_not_wired_not_executed_browser_relay_chromium_case_adapter_closed_native_scenario_scheduler_composed_offline_proven_not_live_wired_not_executed_browser_relay_secondary_case_adapter_closed_secondary_page_case_scheduler_composition_offline_proven_not_live_wired_not_executed_browser_relay_independent_case_adapter_closed_independent_source_case_composition_offline_proven_not_live_wired_not_executed_browser_relay_source_transports_closed_genuine_adapters_implemented_not_wired_not_executed_browser_relay_authenticated_source_readers_closed_kind_attenuated_ephemeral_authority_protocol_implemented_not_live_adapted_not_wired_not_executed_browser_relay_source_authority_adapters_closed_concrete_trusted_session_bridge_implemented_not_live_not_wired_not_executed_browser_relay_source_session_producers_closed_trusted_injected_clients_implemented_not_live_not_wired_not_executed_browser_relay_chromium_scenario_closed_complete_page_projected_with_backpressure_offline_proven_not_wired_not_live_executed_browser_relay_playwright_bridge_closed_secondary_receipts_chromium_bfcache_blocked_not_wired_not_executed_browser_relay_page_receipt_closed_bridge_bound_not_aggregated_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_browser_relay_operation_case_adapter_closed_durable_claim_matrix_composition_offline_proven_not_live_executed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -7809,13 +7829,13 @@ export function validateCommittedEvidence(
     'independent_observation_validation_present',
     'concrete_source_authority_adapters_present',
     'explicit_ephemeral_source_sessions_present',
+    'source_session_producers_present',
   ]) exact(
     sourceAuthorityAdaptersProfile.compatibility[path],
     true,
     `evidence.browser_relay_source_authority_adapters.compatibility.${path}`,
   );
   for (const path of [
-    'source_session_producers_present',
     'network_implementation_present',
     'operation_case_adapter_wired',
     'trusted_live_page_providers_present',
@@ -7843,6 +7863,236 @@ export function validateCommittedEvidence(
     sourceAuthorityAdaptersProfile.evidence[path],
     0,
     `evidence.browser_relay_source_authority_adapters.evidence.${path}`,
+  );
+  const sourceSessionProducersManifest =
+    manifest.evidence.browser_relay_source_session_producers;
+  const sourceSessionProducersProfilePath = committedEvidencePath(
+    stagingRoot,
+    sourceSessionProducersManifest.profile_path,
+    SOURCE_SESSION_PRODUCERS_PROFILE_PATH,
+    'evidence.browser_relay_source_session_producers.profile_path',
+  );
+  const sourceSessionProducersProfile = validatedEvidenceFile(
+    sourceSessionProducersProfilePath,
+    validateBrowserRelaySourceSessionProducersProfile,
+    'evidence.browser_relay_source_session_producers.profile_path',
+  );
+  exact(
+    fileSha256(sourceSessionProducersProfilePath),
+    SOURCE_SESSION_PRODUCERS_PROFILE_SHA256,
+    'evidence.browser_relay_source_session_producers.profile_sha256',
+  );
+  exact(
+    fileSha256(resolve(
+      stagingRoot,
+      'browser-relay-source-session-producers/contract.mjs',
+    )),
+    SOURCE_SESSION_PRODUCERS_CONTRACT_SHA256,
+    'evidence.browser_relay_source_session_producers.contract_source_sha256',
+  );
+  const sourceSessionProducersExpected = {
+    state: sourceSessionProducersProfile.state,
+    profile_path: SOURCE_SESSION_PRODUCERS_PROFILE_PATH,
+    profile_sha256: SOURCE_SESSION_PRODUCERS_PROFILE_SHA256,
+    profile_schema: sourceSessionProducersProfile.schema,
+    profile_revision: sourceSessionProducersProfile.revision,
+    contract_source_sha256: SOURCE_SESSION_PRODUCERS_CONTRACT_SHA256,
+    target: sourceSessionProducersProfile.target,
+    pins: sourceSessionProducersProfile.pins,
+    producer: {
+      sources: sourceSessionProducersProfile.producer.source_order.length,
+      stages: sourceSessionProducersProfile.producer.stage_count,
+      observations_per_matrix:
+        sourceSessionProducersProfile.producer.observations_per_matrix,
+      distinct_kind_count: sourceSessionProducersProfile.producer.distinct_kind_count,
+      scopes_by_source: sourceSessionProducersProfile.producer.scopes_by_source,
+      client_fields: sourceSessionProducersProfile.producer.client_fields,
+      client_descriptor_fields:
+        sourceSessionProducersProfile.producer.client_descriptor_fields,
+      options_fields: sourceSessionProducersProfile.producer.options_fields,
+      session_fields: sourceSessionProducersProfile.producer.session_fields,
+      read_descriptor_fields:
+        sourceSessionProducersProfile.producer.read_descriptor_fields,
+      runtime_fields: sourceSessionProducersProfile.producer.runtime_fields,
+      maximum_session_lifetime_milliseconds:
+        sourceSessionProducersProfile.producer.maximum_session_lifetime_milliseconds,
+      expiry_is_absolute_unix_epoch_milliseconds:
+        sourceSessionProducersProfile.producer.expiry_is_absolute_unix_epoch_milliseconds,
+      explicit_injected_clients:
+        sourceSessionProducersProfile.producer.explicit_injected_clients,
+      client_map_frozen:
+        sourceSessionProducersProfile.producer.client_map_frozen,
+      options_snapshotted_once:
+        sourceSessionProducersProfile.producer.options_snapshotted_once,
+      client_claim_after_output_validation:
+        sourceSessionProducersProfile.producer.client_claim_after_output_validation,
+      client_identity_single_operation:
+        sourceSessionProducersProfile.producer.client_identity_single_operation,
+      session_identity_single_operation:
+        sourceSessionProducersProfile.producer.session_identity_single_operation,
+      producer_owns_source_scope_and_expiry:
+        sourceSessionProducersProfile.producer.producer_owns_source_scope_and_expiry,
+      canonical_order_revalidated:
+        sourceSessionProducersProfile.producer.canonical_order_revalidated,
+      source_calls_ordered_nonoverlapping:
+        sourceSessionProducersProfile.producer.source_calls_ordered_nonoverlapping,
+      call_reserved_before_await:
+        sourceSessionProducersProfile.producer.call_reserved_before_await,
+      abort_checked_before_and_after_call:
+        sourceSessionProducersProfile.producer.abort_checked_before_and_after_call,
+      expiry_checked_before_and_after_call:
+        sourceSessionProducersProfile.producer.expiry_checked_before_and_after_call,
+      abort_and_expiry_rechecked_at_dispatch:
+        sourceSessionProducersProfile.producer.abort_and_expiry_rechecked_at_dispatch,
+      active_request_abort_poisons_shared:
+        sourceSessionProducersProfile.producer.active_request_abort_poisons_shared,
+      active_expiry_aborts_client_signal:
+        sourceSessionProducersProfile.producer.active_expiry_aborts_client_signal,
+      expiry_timer_races_callback_settlement:
+        sourceSessionProducersProfile.producer.expiry_timer_races_callback_settlement,
+      client_descriptor_attenuated:
+        sourceSessionProducersProfile.producer.client_descriptor_attenuated,
+      operation_capability_omitted_from_client_descriptor:
+        sourceSessionProducersProfile.producer
+          .operation_capability_omitted_from_client_descriptor,
+      semantic_validation_before_session_output:
+        sourceSessionProducersProfile.producer.semantic_validation_before_session_output,
+      caller_abort_reason_sanitized:
+        sourceSessionProducersProfile.producer.caller_abort_reason_sanitized,
+      callback_read_reentrancy_rejected:
+        sourceSessionProducersProfile.producer.callback_read_reentrancy_rejected,
+      callback_close_reentrancy_rejected:
+        sourceSessionProducersProfile.producer.callback_close_reentrancy_rejected,
+      foreign_thenable_context_preserved:
+        sourceSessionProducersProfile.producer.foreign_thenable_context_preserved,
+      shared_poison_permanent:
+        sourceSessionProducersProfile.producer.shared_poison_permanent,
+      client_close_invoked_at_most_once:
+        sourceSessionProducersProfile.producer.client_close_invoked_at_most_once,
+      close_cleanup_independent_of_operation_cancellation:
+        sourceSessionProducersProfile.producer
+          .close_cleanup_independent_of_operation_cancellation,
+      close_started_before_cleanup_abort_invoked_exactly_once:
+        sourceSessionProducersProfile.producer
+          .close_started_before_cleanup_abort_invoked_exactly_once,
+      terminal_started_callbacks_settled:
+        sourceSessionProducersProfile.producer.terminal_started_callbacks_settled,
+      terminal_client_references_cleared:
+        sourceSessionProducersProfile.producer.terminal_client_references_cleared,
+      testing_client_release_probe_present:
+        sourceSessionProducersProfile.producer.testing_client_release_probe_present,
+      production_clock_intrinsic:
+        sourceSessionProducersProfile.producer.production_clock_intrinsic,
+      production_timers_intrinsic:
+        sourceSessionProducersProfile.producer.production_timers_intrinsic,
+      public_read_and_close_deadlines_owned_by_source_authority_adapter:
+        sourceSessionProducersProfile.producer
+          .public_read_and_close_deadlines_owned_by_source_authority_adapter,
+      inner_timeout_race_present:
+        sourceSessionProducersProfile.producer.inner_timeout_race_present,
+    },
+    compatibility: sourceSessionProducersProfile.compatibility,
+    output: sourceSessionProducersProfile.output,
+    authority: sourceSessionProducersProfile.authority,
+    evidence: sourceSessionProducersProfile.evidence,
+  };
+  record(
+    sourceSessionProducersManifest,
+    'evidence.browser_relay_source_session_producers',
+    Object.keys(sourceSessionProducersExpected),
+  );
+  exactStructured(
+    sourceSessionProducersManifest,
+    sourceSessionProducersExpected,
+    'evidence.browser_relay_source_session_producers',
+  );
+  exactStructured(
+    sourceSessionProducersProfile.producer.source_order,
+    SOURCE_SESSION_PRODUCERS_SOURCE_ORDER,
+    'evidence.browser_relay_source_session_producers.producer.source_order',
+  );
+  exactStructured(
+    sourceSessionProducersProfile.producer.scopes_by_source,
+    SOURCE_SESSION_PRODUCERS_SCOPES_BY_SOURCE,
+    'evidence.browser_relay_source_session_producers.producer.scopes_by_source',
+  );
+  for (const [path, actual, expected] of [
+    ['client_fields', sourceSessionProducersProfile.producer.client_fields,
+      SOURCE_SESSION_PRODUCERS_CLIENT_FIELDS],
+    ['client_descriptor_fields',
+      sourceSessionProducersProfile.producer.client_descriptor_fields,
+      SOURCE_SESSION_PRODUCERS_CLIENT_DESCRIPTOR_FIELDS],
+    ['options_fields', sourceSessionProducersProfile.producer.options_fields,
+      SOURCE_SESSION_PRODUCERS_OPTIONS_FIELDS],
+    ['session_fields', sourceSessionProducersProfile.producer.session_fields,
+      SOURCE_SESSION_PRODUCERS_SESSION_FIELDS],
+    ['read_descriptor_fields',
+      sourceSessionProducersProfile.producer.read_descriptor_fields,
+      SOURCE_SESSION_PRODUCERS_READ_DESCRIPTOR_FIELDS],
+    ['runtime_fields', sourceSessionProducersProfile.producer.runtime_fields,
+      SOURCE_SESSION_PRODUCERS_RUNTIME_FIELDS],
+  ]) exactStructured(
+    actual,
+    expected,
+    `evidence.browser_relay_source_session_producers.producer.${path}`,
+  );
+  for (const [path, actual, expected] of [
+    ['stage_count', sourceSessionProducersProfile.producer.stage_count,
+      SOURCE_SESSION_PRODUCERS_STAGE_COUNT],
+    ['observations_per_matrix',
+      sourceSessionProducersProfile.producer.observations_per_matrix,
+      SOURCE_SESSION_PRODUCERS_OBSERVATIONS_PER_MATRIX],
+    ['distinct_kind_count', sourceSessionProducersProfile.producer.distinct_kind_count,
+      SOURCE_SESSION_PRODUCERS_DISTINCT_KIND_COUNT],
+    ['maximum_session_lifetime_milliseconds',
+      sourceSessionProducersProfile.producer.maximum_session_lifetime_milliseconds,
+      SOURCE_SESSION_PRODUCERS_MAXIMUM_SESSION_LIFETIME_MILLISECONDS],
+  ]) exact(
+    actual,
+    expected,
+    `evidence.browser_relay_source_session_producers.producer.${path}`,
+  );
+  for (const path of [
+    'source_authority_adapters_compatible',
+    'independent_observation_validation_present',
+    'trusted_source_session_producers_present',
+    'explicit_injected_source_clients_present',
+  ]) exact(
+    sourceSessionProducersProfile.compatibility[path],
+    true,
+    `evidence.browser_relay_source_session_producers.compatibility.${path}`,
+  );
+  for (const path of [
+    'concrete_live_source_clients_present',
+    'built_in_network_implementation_present',
+    'operation_case_adapter_wired',
+    'trusted_live_page_providers_present',
+    'dedicated_process_ipc_present',
+    'uncooperative_same_process_client_forced_termination',
+  ]) exact(
+    sourceSessionProducersProfile.compatibility[path],
+    false,
+    `evidence.browser_relay_source_session_producers.compatibility.${path}`,
+  );
+  if (Object.values(sourceSessionProducersProfile.authority)
+    .some((entry) => entry !== false)) {
+    reject('evidence.browser_relay_source_session_producers.authority',
+      'must remain closed');
+  }
+  for (const path of [
+    'live_source_clients',
+    'live_source_sessions',
+    'live_source_observations',
+    'live_source_receipts',
+    'cloud_requests',
+    'cloud_mutations',
+    'public_ingress_changes',
+    'live_execution_count',
+    'incremental_monthly_cost_eur',
+  ]) exact(
+    sourceSessionProducersProfile.evidence[path],
+    0,
+    `evidence.browser_relay_source_session_producers.evidence.${path}`,
   );
   const chromiumScenarioManifest = manifest.evidence.chromium_scenario_automation;
   const chromiumScenarioProfilePath = committedEvidencePath(
@@ -10011,6 +10261,7 @@ export function validateCommittedEvidence(
     browserRelaySourceTransportsProfile: sourceTransportsProfile,
     browserRelayAuthenticatedSourceReadersProfile: authenticatedReadersProfile,
     browserRelaySourceAuthorityAdaptersProfile: sourceAuthorityAdaptersProfile,
+    browserRelaySourceSessionProducersProfile: sourceSessionProducersProfile,
     browserRelayChromiumScenarioProfile,
     browserRelayPlaywrightBridgeProfile,
     browserRelayPageReceiptProfile,
@@ -10067,7 +10318,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; the dormant page, two-identity scenario fixture, replacement-identity cloud adapter, independent-source aggregator and observers, evidence session, case scheduler, layered page and independent-source case adapters, seven genuine source transports, kind-attenuated authenticated-capability readers, fixed-scope ephemeral-session authority adapters, native Chromium scenario, legacy Playwright bridge and browser-page receipt producer are digest-pinned without live authority, the adapters close the complete offline 40-assertion schedule with all 43 deterministic source observations, dual-positive Chromium BFCache evidence and real offline Firefox and WebKit pages, and the claim-bound composition root admits that matrix exactly once behind the durable operation claim while exposing no lineage; source-session producers, case wiring, dedicated-process IPC and live page providers remain absent, the single-use operation remains privately preflighted and unexecuted, both exact-audience relays remain private-ready, unauthenticated invocation remains absent, and App Check enforcement is disabled.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; the dormant page, two-identity scenario fixture, replacement-identity cloud adapter, independent-source aggregator and observers, evidence session, case scheduler, layered page and independent-source case adapters, seven genuine source transports, kind-attenuated authenticated-capability readers, fixed-scope ephemeral-session authority adapters, trusted injected-client session producers, native Chromium scenario, legacy Playwright bridge and browser-page receipt producer are digest-pinned without live authority, the adapters close the complete offline 40-assertion schedule with all 43 deterministic source observations, dual-positive Chromium BFCache evidence and real offline Firefox and WebKit pages, and the claim-bound composition root admits that matrix exactly once behind the durable operation claim while exposing no lineage; concrete live source clients, case wiring, dedicated-process IPC and live page providers remain absent, the single-use operation remains privately preflighted and unexecuted, both exact-audience relays remain private-ready, unauthenticated invocation remains absent, and App Check enforcement is disabled.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';

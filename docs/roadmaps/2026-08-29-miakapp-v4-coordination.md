@@ -819,14 +819,15 @@ current consumer.
     that scheduler/session to the durable claim and unchanged operation
     envelope offline; generic source transports, their dormant
     authenticated-capability reader/provider protocol and concrete fixed-scope
-    ephemeral-session adapters are now implemented separately, while trusted
-    session producers and live wiring remain absent. The manifest capacity
+    ephemeral-session adapters and trusted-client session producers are now
+    implemented separately, while concrete clients and live wiring remain
+    absent. The manifest capacity
     prerequisite is now closed: the stable
     bundle-revision-3 entry
     point indexes six fixed canonical fragments, with separate browser-relay
     scenario, reader-boundary and operations owners, exact path, mount,
     byte-length and SHA-256 bindings, per-file ceilings and one aggregate
-    ceiling while reconstructing the revision-101 semantic object. The immutable
+    ceiling while reconstructing the revision-102 semantic object. The immutable
     original fixture still has three private page inputs, but a separate closed
     scenario fixture now supplies the fourth from a second genuine synthetic Firebase identity,
     extends the unique coordinator's state access to both identities and
@@ -901,19 +902,26 @@ current consumer.
     capability on first use, revalidates canonical order and semantic output,
     bounds read and public-close wrappers to 30 seconds, sanitizes cancellation,
     enforces global single-use session identity and releases a session only
-    after every started callback settles. Source-session producers,
-    case-adapter transport wiring and trusted
-    live page providers remain absent.
+    after every started callback settles. A following dormant package now
+    creates those sessions from seven exact trusted `{ observe, close }`
+    clients. It owns fixed scope, expiry and canonical dispatch, omits the
+    operation capability from client descriptors, independently validates all
+    projected observations, sanitizes cancellation and releases client
+    references only after actual callback settlement. It intentionally leaves
+    the public timeout to the authority adapter. Concrete network/credential
+    clients, case-adapter transport wiring and trusted live page providers
+    remain absent.
     The earlier revision-99 representation-only capacity baseline is complete:
     its six fixed shards consumed 194,718 of the bounded 262,144 bytes, leaving
     67,426 bytes while reconstructing its byte-identical semantic object.
     Revision 100 and six fragments totalled 202,086 bytes. The current
-    revision-101 bundle adds the dormant source-authority adapter evidence and
-    totals 211,303 bytes, leaving 50,841 bytes under the same fixed six-fragment
-    262,144-byte ceiling. Next implement the
-    seven trusted source-session producers and transport-to-case wiring, then
-    isolate browser ownership behind validated IPC before executing the matrix
-    once.
+    revision-101 bundle added the dormant source-authority adapter evidence and
+    totalled 211,303 bytes. Revision 102 adds the trusted source-session producer
+    contract and totals 219,900 bytes, leaving 42,244 bytes under the same fixed
+    six-fragment 262,144-byte ceiling.
+    Next implement the seven concrete source clients and transport-to-case
+    wiring, then isolate browser ownership behind validated IPC before executing
+    the matrix once.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform
     no-change plan. Its fresh post-merge preflight is complete and the rollback
