@@ -156,6 +156,7 @@ test('assembles the canonical committed bundle into the current semantic manifes
   );
   assert.deepEqual(Object.keys(readerEvidence.values), [
     'browser_relay_source_transports',
+    'browser_relay_authenticated_source_readers',
   ]);
   const operationsEvidence = readJson(
     join(committedFragmentRoot, 'evidence-browser-relay-operations.json'),
@@ -174,10 +175,10 @@ test('assembles the canonical committed bundle into the current semantic manifes
 
   const manifest = loadStagingManifestBundle(committedIndexPath);
   const semanticBytes = canonical(manifest);
-  assert.equal(semanticBytes.byteLength, 189661);
+  assert.equal(semanticBytes.byteLength, 197027);
   assert.equal(
     sha256(semanticBytes),
-    '8dfb093846bd305262208a9adf7f549f77b5706435e549fbfe259d827567bd8c',
+    '9e03e8be5a808c36bdacbafd7ce70aadf37244b2a7e20cb6073b9ca2fe65ed19',
   );
   assert.deepEqual(Object.keys(manifest), [
     'schema',
@@ -234,6 +235,7 @@ test('assembles the canonical committed bundle into the current semantic manifes
     'browser_relay_secondary_case_adapter',
     'browser_relay_independent_case_adapter',
     'browser_relay_source_transports',
+    'browser_relay_authenticated_source_readers',
     'chromium_scenario_automation',
     'browser_relay_playwright_bridge',
     'browser_relay_page_receipt',
@@ -256,7 +258,7 @@ test('assembles the canonical committed bundle into the current semantic manifes
     'environment_decision',
   ]);
   assert.equal(manifest.schema, 'miakapp.staging-intent/1');
-  assert.equal(manifest.revision, 99);
+  assert.equal(manifest.revision, 100);
   assert.equal(manifest.project.project_id, 'miakapp-v4-staging');
   assert.equal(manifest.terraform.bootstrap_execution.bootstrap_completed, true);
   assert.equal(
@@ -435,6 +437,21 @@ test('rejects missing, reassigned or duplicated reader evidence ownership', () =
       fragment.values.browser_relay_source_transports = readJson(
         join(fixture.fragmentRoot, 'evidence-browser-relay-readers.json'),
       ).values.browser_relay_source_transports;
+    });
+  }, /evidence-browser-relay-scenario values fields or field order have drifted/u);
+  rejectsFixture((fixture) => {
+    mutateFragment(fixture, 'evidence-browser-relay-readers', (fragment) => {
+      delete fragment.values.browser_relay_authenticated_source_readers;
+    });
+  }, /evidence-browser-relay-readers values fields or field order have drifted/u);
+  rejectsFixture((fixture) => {
+    let reassigned;
+    mutateFragment(fixture, 'evidence-browser-relay-readers', (fragment) => {
+      reassigned = fragment.values.browser_relay_authenticated_source_readers;
+      delete fragment.values.browser_relay_authenticated_source_readers;
+    });
+    mutateFragment(fixture, 'evidence-browser-relay-scenario', (fragment) => {
+      fragment.values.browser_relay_authenticated_source_readers = reassigned;
     });
   }, /evidence-browser-relay-scenario values fields or field order have drifted/u);
 });

@@ -116,19 +116,28 @@ implemented across several repositories.
   seven source-owned observer capabilities and one browser-lifecycle owner. It
   derives source kind and sequence, projects observations only, preserves
   concurrent cross-source acquisition and closes all 43 independent facts plus
-  the complete 40-assertion schedule offline. The adjacent transport layer now
-  supplies the acquisition protocol; authenticated readers, live page/browser
-  providers, process isolation and every live/cloud authority remain absent
-  from this layer, while the complete graph's claim binding is supplied
-  separately.
+  the complete 40-assertion schedule offline. The adjacent transport and
+  authenticated-capability reader layers now supply the acquisition protocols;
+  concrete source authority adapters, live page/browser providers, process
+  isolation and every live/cloud authority remain absent from this layer, while
+  the complete graph's claim binding is supplied separately.
 - [`../infrastructure/staging/browser-relay-source-transports/`](../infrastructure/staging/browser-relay-source-transports/)
   — dormant genuine transport layer for the seven independent sources. It pulls
   the exact 22 stages and 43 observations from trusted source-specific readers,
   requires explicit EOF, awaits downstream backpressure, binds provider and
   reader identities to one operation/stage, drains bounded late settlements and
-  poisons every protocol violation permanently. No authenticated reader,
-  network implementation, credential acquisition, case-adapter wiring,
+  poisons every protocol violation permanently. Its adjacent reader package now
+  supplies compatible dormant providers, but no concrete source authority
+  adapter, network implementation, credential acquisition, case-adapter wiring,
   dedicated-process IPC or live/cloud authority is present.
+- [`../infrastructure/staging/browser-relay-authenticated-source-readers/`](../infrastructure/staging/browser-relay-authenticated-source-readers/)
+  — dormant reader/provider protocol for seven injected,
+  already-authenticated source capabilities. Each capability is attenuated to
+  its canonical fact kinds; one bounded operation capability and absolute
+  expiry bind all 22 stages, and all 43 sanitized observations are semantically
+  validated before crossing the provider boundary. The package accepts and
+  retains no raw credential or source material, performs no network or cloud
+  I/O and has no concrete source adapter, case wiring, IPC or live authority.
 - [`../infrastructure/staging/browser-relay-chromium-scenario/`](../infrastructure/staging/browser-relay-chromium-scenario/)
   — dormant two-page Chromium driver that owns the complete 18-fact page
   scenario and closes the existing receipt producer offline. Its pinned CDP
@@ -277,7 +286,7 @@ claim, while current page revision 3 pins unchanged plan 15. The staging manifes
 bundle uses a small bundle-revision-3 canonical index and six fixed, size- and
 digest-bound fragments, with browser-relay scenario, reader-boundary and
 operations evidence separated physically, while assembling the current
-revision-99 semantic object. It
+revision-100 semantic object. It
 retains the byte-exact earlier zero-relay plan used
 by the image build, revision 9 used by the runner, revision 10 used by
 monitoring, revision 11 used by rollback and revision 12 used by the
@@ -354,13 +363,16 @@ transition and visible `pageshow` separately, under the reviewed Hosting
 `no-store` and security-header policy. The layered case adapters now compose all
 three complete page scenarios and seven deterministic independent-source
 observers into the scheduler/session offline. A separate dormant boundary
-implements the seven genuine source transport protocols but is not yet wired to
-those observer slots. Another dormant composition root binds the complete
+implements the seven genuine source transport protocols, and an adjacent
+dormant boundary turns seven injected, already-authenticated, kind-attenuated
+capabilities into their exact compatible providers. Neither boundary is wired
+to those observer slots. Another dormant composition root binds the complete
 schedule to the unchanged operation after one canonical durable claim and
 forwards only the exact edge abort signal. None of these packages grants Hosting
-publication or live authority; authenticated source readers, live page/browser
-providers, dedicated-process IPC, case-adapter transport wiring and fixture
-lifecycle wiring must close before the one allowed live matrix can execute.
+publication or live authority; concrete source authority adapters, live
+page/browser providers, dedicated-process IPC, case-adapter transport wiring and
+fixture lifecycle wiring must close before the one allowed live matrix can
+execute.
 
 Repository-specific implementation plans must link back to these documents and
 must not redefine a shared contract locally.
