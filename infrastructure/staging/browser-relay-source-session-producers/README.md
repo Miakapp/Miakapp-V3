@@ -89,11 +89,13 @@ a later dedicated-process IPC boundary.
 ## Deliberately absent
 
 No Firebase, Google Cloud, HTTP, WebSocket, OAuth, browser, ledger, or
-credential-acquisition client is implemented here. There is no operation-case
-or transport wiring, trusted live-page provider, process IPC, deployment,
-public ingress, scheduled execution, cloud request, or live evidence. The next
-separate milestone may compose concrete clients into this producer, but must
-preserve these fixed scopes and lifecycle guarantees.
+credential-acquisition client is implemented here. The adjacent
+`browser-relay-source-clients` package now supplies compatible dormant clients
+over explicit ephemeral authorities and fixed staging targets while preserving
+these scopes and lifecycle guarantees. Live authority providers, operation-case
+and transport wiring, trusted live-page providers, process IPC, deployment,
+public ingress, scheduled execution, cloud requests and live evidence remain
+absent.
 
 Validate the package offline with:
 
