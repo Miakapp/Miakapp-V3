@@ -1,0 +1,117 @@
+name: Browser relay trusted source composition
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/browser-relay-trusted-source-composition.yml'
+      - 'package.json'
+      - 'bun.lock'
+      - 'infrastructure/staging/browser-relay/**'
+      - 'infrastructure/staging/browser-relay-edge/**'
+      - 'infrastructure/staging/browser-relay-operation/**'
+      - 'infrastructure/staging/browser-relay-orchestrator/**'
+      - 'infrastructure/staging/browser-relay-runner/**'
+      - 'infrastructure/staging/browser-relay-case-scheduler/**'
+      - 'infrastructure/staging/browser-relay-chromium-case-adapter/**'
+      - 'infrastructure/staging/browser-relay-chromium-scenario/**'
+      - 'infrastructure/staging/browser-relay-evidence-session/**'
+      - 'infrastructure/staging/browser-relay-independent-case-adapter/**'
+      - 'infrastructure/staging/browser-relay-independent-observers/**'
+      - 'infrastructure/staging/browser-relay-operation-case-adapter/**'
+      - 'infrastructure/staging/browser-relay-page/**'
+      - 'infrastructure/staging/browser-relay-page-receipt/**'
+      - 'infrastructure/staging/browser-relay-playwright-bridge/**'
+      - 'infrastructure/staging/browser-relay-secondary-case-adapter/**'
+      - 'infrastructure/staging/browser-relay-source-transports/**'
+      - 'infrastructure/staging/browser-relay-authenticated-source-readers/**'
+      - 'infrastructure/staging/browser-relay-source-authority-adapters/**'
+      - 'infrastructure/staging/browser-relay-source-session-producers/**'
+      - 'infrastructure/staging/browser-relay-source-clients/**'
+      - 'infrastructure/staging/browser-relay-trusted-source-composition/**'
+      - 'infrastructure/staging/manifest/**'
+      - 'infrastructure/staging/manifest.json'
+      - 'infrastructure/staging/manifest-bundle.mjs'
+      - 'infrastructure/staging/check.sh'
+      - 'infrastructure/staging/validate.mjs'
+      - 'infrastructure/staging/test/browser-relay-trusted-source-composition.test.mjs'
+      - 'infrastructure/staging/test/helpers/browser-relay-evidence-fixture.mjs'
+      - 'docs/README.md'
+      - 'docs/specs/2026-08-29-miakapp-v4-design.md'
+      - 'docs/operations/2026-09-01-miakapp-v4-environments.md'
+      - 'docs/roadmaps/2026-08-29-miakapp-v4-coordination.md'
+  pull_request:
+    paths:
+      - '.github/workflows/browser-relay-trusted-source-composition.yml'
+      - 'package.json'
+      - 'bun.lock'
+      - 'infrastructure/staging/browser-relay/**'
+      - 'infrastructure/staging/browser-relay-edge/**'
+      - 'infrastructure/staging/browser-relay-operation/**'
+      - 'infrastructure/staging/browser-relay-orchestrator/**'
+      - 'infrastructure/staging/browser-relay-runner/**'
+      - 'infrastructure/staging/browser-relay-case-scheduler/**'
+      - 'infrastructure/staging/browser-relay-chromium-case-adapter/**'
+      - 'infrastructure/staging/browser-relay-chromium-scenario/**'
+      - 'infrastructure/staging/browser-relay-evidence-session/**'
+      - 'infrastructure/staging/browser-relay-independent-case-adapter/**'
+      - 'infrastructure/staging/browser-relay-independent-observers/**'
+      - 'infrastructure/staging/browser-relay-operation-case-adapter/**'
+      - 'infrastructure/staging/browser-relay-page/**'
+      - 'infrastructure/staging/browser-relay-page-receipt/**'
+      - 'infrastructure/staging/browser-relay-playwright-bridge/**'
+      - 'infrastructure/staging/browser-relay-secondary-case-adapter/**'
+      - 'infrastructure/staging/browser-relay-source-transports/**'
+      - 'infrastructure/staging/browser-relay-authenticated-source-readers/**'
+      - 'infrastructure/staging/browser-relay-source-authority-adapters/**'
+      - 'infrastructure/staging/browser-relay-source-session-producers/**'
+      - 'infrastructure/staging/browser-relay-source-clients/**'
+      - 'infrastructure/staging/browser-relay-trusted-source-composition/**'
+      - 'infrastructure/staging/manifest/**'
+      - 'infrastructure/staging/manifest.json'
+      - 'infrastructure/staging/manifest-bundle.mjs'
+      - 'infrastructure/staging/check.sh'
+      - 'infrastructure/staging/validate.mjs'
+      - 'infrastructure/staging/test/browser-relay-trusted-source-composition.test.mjs'
+      - 'infrastructure/staging/test/helpers/browser-relay-evidence-fixture.mjs'
+      - 'docs/README.md'
+      - 'docs/specs/2026-08-29-miakapp-v4-design.md'
+      - 'docs/operations/2026-09-01-miakapp-v4-environments.md'
+      - 'docs/roadmaps/2026-08-29-miakapp-v4-coordination.md'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: browser-relay-trusted-source-composition-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Browser relay trusted source composition / validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      DEBUG: ''
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22.22.0
+          package-manager-cache: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: 1.2.23
+      - name: Install locked dependencies
+        run: bun install --frozen-lockfile
+      - name: Validate dormant trusted source composition
+        run: |
+          node --check infrastructure/staging/browser-relay-trusted-source-composition/contract.mjs
+          node --check infrastructure/staging/browser-relay-trusted-source-composition/internal.mjs
+          node --check infrastructure/staging/browser-relay-trusted-source-composition/composition.mjs
+          node --check infrastructure/staging/browser-relay-trusted-source-composition/testing.mjs
+          node infrastructure/staging/browser-relay-trusted-source-composition/guard.mjs infrastructure/staging/browser-relay-trusted-source-composition
+          node --test infrastructure/staging/test/browser-relay-trusted-source-composition.test.mjs
+          node infrastructure/staging/validate.mjs infrastructure/staging/manifest.json
+          git diff --check

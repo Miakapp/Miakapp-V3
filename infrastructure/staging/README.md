@@ -396,6 +396,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`browser-relay-source-authority-adapters/`](browser-relay-source-authority-adapters/) | Dormant concrete ephemeral-session adapters | Converts seven exact fixed-scope, at-most-30-minute source sessions into all 32 authority methods, binds the transport's opaque capability on first use, revalidates order and semantic output, bounds read/public-close wrappers and releases terminal sessions after their callbacks settle; dormant producers are present, while built-in network/credentials, wiring, IPC and live execution remain absent |
 | [`browser-relay-source-session-producers/`](browser-relay-source-session-producers/) | Dormant trusted-client session producers | Converts seven exact frozen `{ observe, close }` clients into the fixed-scope ephemeral sessions, enforces canonical order and semantic projection, sanitizes cancellation, drains every started callback and releases client references only at real terminal settlement; the adjacent fixed-target clients are now present, while live authority providers, credentials, network, case wiring, IPC and execution remain absent |
 | [`browser-relay-source-clients/`](browser-relay-source-clients/) | Dormant fixed-target source clients | Converts seven explicit at-most-30-minute source authorities into the exact trusted client map, binds every acquisition and receipt to a fresh non-serializable capability and one immutable reviewed target, rejects consuming App Check and delayed-metric inference, and releases authority references only after actual callback settlement; it discovers no credential, owns no network transport and remains unwired and unexecuted |
+| [`browser-relay-trusted-source-composition/`](browser-relay-trusted-source-composition/) | Dormant trusted-provider composition root | Accepts seven exact named provider capabilities, composes the five fixed source layers and inserts all 22 stages/43 observations into the claim-bound operation matrix; construction is inert, differential conformance and close-once cleanup are proven offline, and built-in live providers, browser IPC and execution remain absent |
 | [`browser-relay-chromium-scenario/`](browser-relay-chromium-scenario/) | Dormant complete Chromium page-scenario driver | Owns two pages and inputs, closes the real 18-fact receipt, and proves one native BFCache restore through trusted persisted page events plus exact CDP navigation; its projection port is composed offline, while live authority remains absent |
 | [`browser-relay-playwright-bridge/`](browser-relay-playwright-bridge/) | Dormant page-to-receipt Playwright bridge | Lazily drives the phased host and real receipt producer for Firefox/WebKit; its legacy Chromium path stays blocked before page or private-input acquisition because high-level Playwright cannot prove native BFCache restoration |
 | [`browser-relay-page-receipt/`](browser-relay-page-receipt/) | Dormant browser-owned source receipt producer | Revision 2 reduces 18 exact Chromium page facts or three secondary-browser facts, cross-checks cumulative host lifecycle evidence, typed call outcomes and terminal cleanup, is bound to the bridge and now combines offline with every independent source |
@@ -631,6 +632,16 @@ Node.js 22 and Terraform 1.11.3 are required:
 
 ```sh
 npm run test:staging-manifest
+```
+
+The trusted-source composition can also be checked in isolation without any
+staging access:
+
+```sh
+node infrastructure/staging/browser-relay-trusted-source-composition/guard.mjs \
+  infrastructure/staging/browser-relay-trusted-source-composition
+node --test \
+  infrastructure/staging/test/browser-relay-trusted-source-composition.test.mjs
 ```
 
 The gate first resolves `manifest.json` as a bundle-revision-3 canonical index
@@ -1017,9 +1028,27 @@ settling or releasing the callback. Pre-existing async resources remain outside
 this cooperative same-process boundary, so untrusted providers still require
 validated IPC. The standalone guard scans the whole local production graph
 before loading its contract. The package does not discover credentials or
-implement HTTP, WebSocket, Firebase or Google Cloud access. Trusted live
-authority providers, transport-to-case wiring and validated IPC remain open
-before any live execution.
+implement HTTP, WebSocket, Firebase or Google Cloud access. The adjacent
+[`browser-relay-trusted-source-composition/`](browser-relay-trusted-source-composition/)
+now closes the transport-to-case wiring gap. It accepts exactly seven frozen,
+named provider capabilities with one shared at-most-30-minute expiry; provider
+methods receive only `{ browser, case_id, signal }`. On the first and only
+`execute()`, it lazily builds the unchanged client/session/authority/reader/
+transport chain, inserts the resulting seven observers into a fresh matrix and
+enters the claim-bound operation. Scheduler cleanup and root fallback share one
+close settlement per observer. Cleanup ownership advances after each completed
+factory, callback-reentrant close requests are rejected while an independently
+dispatched cleanup continues, and external close waits for the real operation
+task as well as all source releases. Root cancellation blocks later forward
+operation mutations and exposure-increasing edge transitions while preserving
+every rollback callback. Providers are therefore also released if the operation
+fails before matrix entry. Differential tests compare this root against the
+same five factories assembled manually across all 22 stages and 43 observations,
+and a separate production smoke traverses the six hard-wired factories through
+the real claim-bound adapter.
+Construction, validation and import remain inert. Concrete source-truth
+implementations, validated dedicated-process IPC and live page/browser providers
+remain open before any live execution.
 The adjacent
 [`browser-relay-operation-case-adapter/`](browser-relay-operation-case-adapter/)
 now hard-wires that complete schedule into the unchanged single-use operation.
@@ -1049,13 +1078,13 @@ not an engine result and cannot satisfy the persisted lifecycle facts. Current
 page revision 3 supplies the required 600-second Chromium budget and local
 lifecycle/outcome APIs. The dedicated CDP package plus all three layered case
 adapters now close every page scenario and deterministic independent-source
-projection through the fixed scheduler offline. The generic source transports
-and their dormant authenticated-capability reader/provider protocol are
-implemented separately. Concrete ephemeral-session authority adapters and
-trusted-client session producers now close the next two boundaries, but
-concrete live clients, case-adapter wiring and trusted live page providers
-remain absent. These offline
-capabilities are not acceptance evidence. The adjacent
+projection through the fixed scheduler offline. The generic source transports,
+authenticated-capability readers, concrete ephemeral-session adapters,
+trusted-client producers and fixed-target clients are now composed end to end
+with the claim-bound matrix. Named provider capabilities are accepted, but their
+concrete source-truth implementations, dedicated-process isolation and trusted
+live page providers remain absent. These offline capabilities are not acceptance
+evidence. The adjacent
 [`browser-relay-scenario-fixture/`](browser-relay-scenario-fixture/) composes the
 immutable three-input fixture with a second exact synthetic Firebase identity.
 It provides the fourth Chromium input, extends the one coordinator's state
@@ -1072,11 +1101,11 @@ observed absence after cleanup without retrying uncertain mutations. This
 closes only the second-identity cloud implementation gap. The standalone
 Chromium page scenario, BFCache path, three-browser ready-fixture/scheduler
 composition and deterministic source-observer wiring are now complete offline,
-and operation/claim binding is now closed offline. The generic source transport
-and dormant authenticated-capability reader/provider protocols, concrete
-fixed-scope ephemeral-session adapters, trusted-client producers and fixed-target
-source clients are present; trusted live authority providers, case-adapter
-wiring, trusted live page providers and dedicated-process isolation remain open.
+and operation/claim binding is now closed offline. The generic source transport,
+authenticated-capability reader/provider protocols, fixed-scope ephemeral-session
+adapters, trusted-client producers, fixed-target clients and named-provider
+composition are connected; concrete source-truth implementations, trusted live
+page providers and dedicated-process isolation remain open.
 All mutation, IAM, Hosting, public-ingress and execution authority remains
 closed.
 The adjacent [`browser-relay-operation/`](browser-relay-operation/) package now

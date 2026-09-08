@@ -1,0 +1,211 @@
+{
+  "schema": "miakapp.staging-browser-relay-trusted-source-composition-profile/1",
+  "revision": 1,
+  "state": "closed_named_trusted_source_provider_composition_wired_offline_not_live_executed",
+  "target": {
+    "project_id": "miakapp-v4-staging",
+    "project_number": "1072737219170",
+    "region": "europe-west9",
+    "data_policy": "synthetic_only",
+    "cloud_compute_resources": 0,
+    "unscheduled": true
+  },
+  "pins": {
+    "implementation_base_commit": "e2c3a5e64eff05571f92962fe4df924b581bca57",
+    "source_clients_profile_sha256": "75357c6dc8b863d08a6c131edbd1222e389c20882fda5a574b5581e840b15724",
+    "source_session_producers_profile_sha256": "22cee3ddd347b979ad804e9b886972cdb78f9f15390f13679a4b6f229ccb026e",
+    "source_authority_adapters_profile_sha256": "e8d7190d543e5342fe7f504d8f50b1ac51ea3a87de814850661b82846edec14f",
+    "authenticated_source_readers_profile_sha256": "1f2afc28a71eb61183f5927043fb6ccd3c9c305eec9dda71b452bd0106cdbfd6",
+    "source_transports_profile_sha256": "9628f2dbe63713da3f4777908e036155c8c7852f3ac110d3efc162266a933ad4",
+    "operation_case_adapter_profile_sha256": "bd9daca428611bf2b4d0623fbd218e69d69cbe3805008a83733fe47f93330085",
+    "dependency_contracts_sha256": "8f325dc9c460b65ead4d1b07cd8cffb307c2d42fe2548a2e550aa98482f8d8dd",
+    "internal_source_sha256": "4737be64f66867cf00dee18be189ffac06a60ab8b5c78bc5b50426ffee85a24f",
+    "production_source_sha256": "fb9db75bc25c732bad51bb8b39b3350ae35829ebf5bd560f19990fcb915e44ce",
+    "testing_source_sha256": "f5d5fb1bc398246c404a02c4b3f84082197bf33c21a1e5b870d47dc320aa4e60",
+    "guard_source_sha256": "3425afe1adcaefcdaa67fb651291c8a840b38bcdfb67d9926532e19503025420",
+    "unit_test_sha256": "cf5cffb6ffa0d0ff3db6942cde56c1759006e057e0259cd0ed85562a906a17f9",
+    "workflow_sha256": "ae3ec22c2a6247ace69cb7e74352b6e5b5947355bc80a8e4de9d280ec3f0365f"
+  },
+  "composition": {
+    "root_fields": ["providers", "operation", "matrix"],
+    "matrix_component_fields": [
+      "fixture",
+      "openChromiumPage",
+      "openSecondaryPage",
+      "prepareChromiumPhase",
+      "browserLifecycle"
+    ],
+    "options_fields": ["signal"],
+    "output_fields": ["execute", "close"],
+    "stage_count": 22,
+    "observations_per_matrix": 43
+  },
+  "providers": {
+    "source_order": [
+      "firebase_app_check",
+      "hosting",
+      "control_plane",
+      "relay",
+      "coordinator",
+      "kms",
+      "firestore"
+    ],
+    "scopes_by_source": {
+      "firebase_app_check": {
+        "project_id": "miakapp-v4-staging",
+        "project_number": "1072737219170",
+        "firebase_app_id": "1:1072737219170:web:5053ca93bf25d7373cd73b",
+        "provider_type": "recaptcha_enterprise"
+      },
+      "hosting": {
+        "project_id": "miakapp-v4-staging",
+        "site_id": "miakapp-v4-staging",
+        "origin": "https://miakapp-v4-staging.web.app"
+      },
+      "control_plane": {
+        "project_id": "miakapp-v4-staging",
+        "region": "europe-west9",
+        "service_name": "control-plane",
+        "origin": "https://control-plane-aczhngqraq-od.a.run.app"
+      },
+      "relay": {
+        "project_id": "miakapp-v4-staging",
+        "region": "europe-west9",
+        "service_names": ["miakapp-staging-relay-a", "miakapp-staging-relay-b"],
+        "websocket_audiences": [
+          "wss://miakapp-staging-relay-a-aczhngqraq-od.a.run.app/ws",
+          "wss://miakapp-staging-relay-b-aczhngqraq-od.a.run.app/ws"
+        ]
+      },
+      "coordinator": {
+        "execution_location": "operator_local",
+        "data_policy": "synthetic_only"
+      },
+      "kms": {
+        "project_id": "miakapp-v4-staging",
+        "region": "europe-west9",
+        "crypto_key": "projects/miakapp-v4-staging/locations/europe-west9/keyRings/miakapp-v4-staging/cryptoKeys/access-token-signing"
+      },
+      "firestore": {
+        "project_id": "miakapp-v4-staging",
+        "database_id": "(default)",
+        "data_policy": "synthetic_only"
+      }
+    },
+    "methods_by_source": {
+      "firebase_app_check": [
+        "provider_assessment",
+        "valid_verification",
+        "missing_token_denial",
+        "invalid_token_denial",
+        "verification_mode"
+      ],
+      "hosting": ["management_site_configuration", "served_sdk_configuration"],
+      "control_plane": [
+        "cors_preflight",
+        "foreign_origin_denial",
+        "source_uid_admission",
+        "authenticated_cache_policy",
+        "version_2_jwk_published",
+        "version_1_last_issuance",
+        "version_2_first_issuance",
+        "atomic_credential_reuse",
+        "exchange_summary",
+        "version_1_jwk_retained",
+        "version_1_jwk_removed"
+      ],
+      "relay": [
+        "version_2_existing_socket",
+        "wrong_audience_denial",
+        "wrong_home_denial",
+        "wrong_role_denial",
+        "unknown_kid_refresh",
+        "disconnect_reconnect_resync",
+        "version_2_session",
+        "revision_summary",
+        "new_session_version_2"
+      ],
+      "coordinator": ["physical_call_delivery"],
+      "kms": ["signature_summary", "version_1_lifecycle"],
+      "firestore": ["authoritative_route_transition", "operation_write_summary"]
+    },
+    "context_fields": ["browser", "case_id", "signal"],
+    "maximum_lifetime_milliseconds": 1800000,
+    "invariants": {
+      "provider_map_frozen": true,
+      "provider_records_frozen": true,
+      "provider_identity_distinct": true,
+      "provider_identity_single_composition": true,
+      "provider_scope_exact": true,
+      "provider_expiry_shared": true,
+      "named_method_fixes_source_and_kind": true,
+      "target_revalidated_before_provider_call": true,
+      "request_capability_hidden_from_provider": true,
+      "provider_context_nonserializable": true,
+      "receipt_bound_to_request_capability": true,
+      "semantic_validation_before_receipt": true,
+      "provider_errors_sanitized": true,
+      "caller_abort_reason_sanitized": true,
+      "provider_references_cleared_after_close": true
+    }
+  },
+  "lifecycle": {
+    "strategy": "differential_conformance",
+    "invariants": {
+      "composition_single_use": true,
+      "source_chain_created_only_for_execute": true,
+      "same_root_signal_shared_by_all_layers": true,
+      "source_observer_close_once_wrapped": true,
+      "scheduler_and_root_close_converge": true,
+      "reentrant_close_rejected_cleanup_continues": true,
+      "root_close_waits_operation_settlement": true,
+      "root_abort_blocks_forward_operation_mutations": true,
+      "pre_matrix_failure_closes_all_providers": true,
+      "partial_chain_cleanup_uses_highest_owner": true,
+      "finite_callbacks_drained_before_release": true,
+      "terminal_component_references_cleared": true,
+      "cooperative_same_process_cancellation_only": true,
+      "production_runtime_injection_absent": true
+    }
+  },
+  "compatibility": {
+    "fixed_target_source_clients_composed": true,
+    "source_sessions_composed": true,
+    "source_authority_adapters_composed": true,
+    "authenticated_source_readers_composed": true,
+    "source_transports_composed": true,
+    "operation_case_adapter_wired": true,
+    "named_trusted_live_provider_capabilities_present": true,
+    "built_in_live_source_implementations_present": false,
+    "trusted_live_browser_providers_present": false,
+    "dedicated_process_ipc_present": false,
+    "hosting_publication_wired": false,
+    "live_operation_wired": false
+  },
+  "authority": {
+    "explicit_ephemeral_provider_capabilities_accepted": true,
+    "fixed_staging_targets_authorized": true,
+    "ambient_credentials_authorized": false,
+    "credential_bytes_accepted": false,
+    "arbitrary_targets_authorized": false,
+    "direct_network_implementation_authorized": false,
+    "cloud_mutations_authorized": false,
+    "live_execution_authorized": false,
+    "public_ingress_changes_authorized": false
+  },
+  "evidence": {
+    "state": "offline_only",
+    "offline_composed_matrices": 1,
+    "offline_differential_conformance_runs": 1,
+    "complete_source_count": 7,
+    "complete_stage_count": 22,
+    "complete_observation_count": 43,
+    "cloud_requests": 0,
+    "cloud_mutations": 0,
+    "public_ingress_changes": 0,
+    "live_execution_count": 0,
+    "incremental_monthly_cost_eur": 0,
+    "credentials_committed": false,
+    "raw_source_material_committed": false
+  }
+}

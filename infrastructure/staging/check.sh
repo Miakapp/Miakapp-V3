@@ -272,6 +272,14 @@ node --check infrastructure/staging/browser-relay-source-clients/guard.mjs
 node --check infrastructure/staging/browser-relay-source-clients/internal.mjs
 node --check infrastructure/staging/browser-relay-source-clients/testing.mjs
 node -e "import('./infrastructure/staging/browser-relay-source-clients/contract.mjs').then(({ validateBrowserRelaySourceClientsProfile }) => validateBrowserRelaySourceClientsProfile())"
+node infrastructure/staging/browser-relay-trusted-source-composition/guard.mjs \
+  "${repository_root}/infrastructure/staging/browser-relay-trusted-source-composition"
+node --check infrastructure/staging/browser-relay-trusted-source-composition/composition.mjs
+node --check infrastructure/staging/browser-relay-trusted-source-composition/contract.mjs
+node --check infrastructure/staging/browser-relay-trusted-source-composition/guard.mjs
+node --check infrastructure/staging/browser-relay-trusted-source-composition/internal.mjs
+node --check infrastructure/staging/browser-relay-trusted-source-composition/testing.mjs
+node -e "import('./infrastructure/staging/browser-relay-trusted-source-composition/contract.mjs').then(({ validateBrowserRelayTrustedSourceCompositionProfile }) => validateBrowserRelayTrustedSourceCompositionProfile())"
 node infrastructure/staging/browser-relay-page-receipt/guard.mjs \
   "${repository_root}/infrastructure/staging/browser-relay-page-receipt"
 node --check infrastructure/staging/browser-relay-page-receipt/contract.mjs
@@ -501,6 +509,7 @@ node --test \
   infrastructure/staging/test/browser-relay-source-authority-adapters.test.mjs \
   infrastructure/staging/test/browser-relay-source-session-producers.test.mjs \
   infrastructure/staging/test/browser-relay-source-clients.test.mjs \
+  infrastructure/staging/test/browser-relay-trusted-source-composition.test.mjs \
   infrastructure/staging/test/browser-relay-chromium-scenario.test.mjs \
   infrastructure/staging/test/browser-relay-playwright-bridge.test.mjs \
   infrastructure/staging/test/browser-relay-page-receipt.test.mjs \

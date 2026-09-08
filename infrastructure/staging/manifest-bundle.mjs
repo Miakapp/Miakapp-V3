@@ -104,6 +104,7 @@ const BROWSER_RELAY_READER_EVIDENCE_KEYS = Object.freeze([
   'browser_relay_source_authority_adapters',
   'browser_relay_source_session_producers',
   'browser_relay_source_clients',
+  'browser_relay_trusted_source_composition',
 ]);
 
 const BROWSER_RELAY_SCENARIO_EVIDENCE_SUFFIX_KEYS = Object.freeze([

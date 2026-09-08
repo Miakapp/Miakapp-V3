@@ -160,6 +160,7 @@ test('assembles the canonical committed bundle into the current semantic manifes
     'browser_relay_source_authority_adapters',
     'browser_relay_source_session_producers',
     'browser_relay_source_clients',
+    'browser_relay_trusted_source_composition',
   ]);
   const operationsEvidence = readJson(
     join(committedFragmentRoot, 'evidence-browser-relay-operations.json'),
@@ -178,10 +179,10 @@ test('assembles the canonical committed bundle into the current semantic manifes
 
   const manifest = loadStagingManifestBundle(committedIndexPath);
   const semanticBytes = canonical(manifest);
-  assert.equal(semanticBytes.byteLength, 231006);
+  assert.equal(semanticBytes.byteLength, 238526);
   assert.equal(
     sha256(semanticBytes),
-    '3d60723c5a9ea7932952290a37bba972819f2a69bda4025a840cc019c3ef348c',
+    'b03b99d3d848ab107b881985a8181560b340152bb5ac4b871ca1e6e03506695e',
   );
   assert.deepEqual(Object.keys(manifest), [
     'schema',
@@ -242,6 +243,7 @@ test('assembles the canonical committed bundle into the current semantic manifes
     'browser_relay_source_authority_adapters',
     'browser_relay_source_session_producers',
     'browser_relay_source_clients',
+    'browser_relay_trusted_source_composition',
     'chromium_scenario_automation',
     'browser_relay_playwright_bridge',
     'browser_relay_page_receipt',
@@ -264,7 +266,7 @@ test('assembles the canonical committed bundle into the current semantic manifes
     'environment_decision',
   ]);
   assert.equal(manifest.schema, 'miakapp.staging-intent/1');
-  assert.equal(manifest.revision, 103);
+  assert.equal(manifest.revision, 104);
   assert.equal(manifest.project.project_id, 'miakapp-v4-staging');
   assert.equal(manifest.terraform.bootstrap_execution.bootstrap_completed, true);
   assert.equal(
@@ -299,6 +301,15 @@ test('assembles the canonical committed bundle into the current semantic manifes
   assert.ok(
     Object.values(manifest.evidence.browser_relay_source_transports.authority)
       .every((value) => value === false),
+  );
+  assert.equal(
+    manifest.evidence.browser_relay_trusted_source_composition
+      .compatibility.operation_case_adapter_wired,
+    true,
+  );
+  assert.equal(
+    manifest.evidence.browser_relay_trusted_source_composition.evidence.live_execution_count,
+    0,
   );
   assert.equal(manifest.teardown.automated, false);
 });
@@ -492,6 +503,21 @@ test('rejects missing, reassigned or duplicated reader evidence ownership', () =
       fragment.values.browser_relay_source_authority_adapters = authority;
     });
   }, /evidence-browser-relay-readers values fields or field order have drifted/u);
+  rejectsFixture((fixture) => {
+    mutateFragment(fixture, 'evidence-browser-relay-readers', (fragment) => {
+      delete fragment.values.browser_relay_trusted_source_composition;
+    });
+  }, /evidence-browser-relay-readers values fields or field order have drifted/u);
+  rejectsFixture((fixture) => {
+    let reassigned;
+    mutateFragment(fixture, 'evidence-browser-relay-readers', (fragment) => {
+      reassigned = fragment.values.browser_relay_trusted_source_composition;
+      delete fragment.values.browser_relay_trusted_source_composition;
+    });
+    mutateFragment(fixture, 'evidence-browser-relay-scenario', (fragment) => {
+      fragment.values.browser_relay_trusted_source_composition = reassigned;
+    });
+  }, /evidence-browser-relay-scenario values fields or field order have drifted/u);
 });
 
 test('accepts the exact aggregate cap and rejects cap plus one with bounded fragments', () => {
