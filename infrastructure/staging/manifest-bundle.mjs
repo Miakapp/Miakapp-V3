@@ -19,11 +19,11 @@ import {
 } from 'node:path';
 
 const BUNDLE_SCHEMA = 'miakapp.staging-manifest-bundle/1';
-const BUNDLE_REVISION = 2;
+const BUNDLE_REVISION = 3;
 const FRAGMENT_SCHEMA = 'miakapp.staging-manifest-fragment/1';
 const MAXIMUM_INDEX_BYTES = 16 * 1024;
 const MAXIMUM_FRAGMENT_BYTES = 96 * 1024;
-const MAXIMUM_BUNDLE_BYTES = 192 * 1024;
+const MAXIMUM_BUNDLE_BYTES = 256 * 1024;
 const SHA256 = /^[a-f0-9]{64}$/u;
 
 const CORE_KEYS = Object.freeze([
@@ -82,7 +82,7 @@ const PLATFORM_EVIDENCE_KEYS = Object.freeze([
   ...PLATFORM_EVIDENCE_SUFFIX_KEYS,
 ]);
 
-const BROWSER_RELAY_SCENARIO_EVIDENCE_KEYS = Object.freeze([
+const BROWSER_RELAY_SCENARIO_EVIDENCE_PREFIX_KEYS = Object.freeze([
   'browser_relay_plan',
   'browser_relay_runner',
   'browser_relay_page',
@@ -96,12 +96,23 @@ const BROWSER_RELAY_SCENARIO_EVIDENCE_KEYS = Object.freeze([
   'browser_relay_chromium_case_adapter',
   'browser_relay_secondary_case_adapter',
   'browser_relay_independent_case_adapter',
+]);
+
+const BROWSER_RELAY_READER_EVIDENCE_KEYS = Object.freeze([
   'browser_relay_source_transports',
+]);
+
+const BROWSER_RELAY_SCENARIO_EVIDENCE_SUFFIX_KEYS = Object.freeze([
   'chromium_scenario_automation',
   'browser_relay_playwright_bridge',
   'browser_relay_page_receipt',
   'browser_relay_scenario_fixture',
   'browser_relay_scenario_fixture_cloud',
+]);
+
+const BROWSER_RELAY_SCENARIO_EVIDENCE_KEYS = Object.freeze([
+  ...BROWSER_RELAY_SCENARIO_EVIDENCE_PREFIX_KEYS,
+  ...BROWSER_RELAY_SCENARIO_EVIDENCE_SUFFIX_KEYS,
 ]);
 
 const BROWSER_RELAY_OPERATIONS_EVIDENCE_KEYS = Object.freeze([
@@ -117,7 +128,9 @@ const BROWSER_RELAY_OPERATIONS_EVIDENCE_KEYS = Object.freeze([
 ]);
 
 const BROWSER_RELAY_EVIDENCE_KEYS = Object.freeze([
-  ...BROWSER_RELAY_SCENARIO_EVIDENCE_KEYS,
+  ...BROWSER_RELAY_SCENARIO_EVIDENCE_PREFIX_KEYS,
+  ...BROWSER_RELAY_READER_EVIDENCE_KEYS,
+  ...BROWSER_RELAY_SCENARIO_EVIDENCE_SUFFIX_KEYS,
   ...BROWSER_RELAY_OPERATIONS_EVIDENCE_KEYS,
 ]);
 
@@ -151,6 +164,12 @@ const FRAGMENT_SPECS = Object.freeze([
     path: 'manifest/evidence-browser-relay-scenario.json',
     mount: 'evidence',
     keys: BROWSER_RELAY_SCENARIO_EVIDENCE_KEYS,
+  }),
+  Object.freeze({
+    id: 'evidence-browser-relay-readers',
+    path: 'manifest/evidence-browser-relay-readers.json',
+    mount: 'evidence',
+    keys: BROWSER_RELAY_READER_EVIDENCE_KEYS,
   }),
   Object.freeze({
     id: 'evidence-browser-relay-operations',
@@ -431,6 +450,7 @@ function assembleManifest(fragments) {
   const evidenceSources = [
     fragments.get('evidence-platform').values,
     fragments.get('evidence-browser-relay-scenario').values,
+    fragments.get('evidence-browser-relay-readers').values,
     fragments.get('evidence-browser-relay-operations').values,
   ];
   const evidence = {};
