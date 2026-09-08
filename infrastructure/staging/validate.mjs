@@ -225,6 +225,22 @@ import {
   validateBrowserRelaySourceClientsProfile,
 } from './browser-relay-source-clients/contract.mjs';
 import {
+  TRUSTED_SOURCE_COMPOSITION_DEPENDENCY_CONTRACTS_SHA256,
+  TRUSTED_SOURCE_COMPOSITION_MATRIX_COMPONENT_FIELDS,
+  TRUSTED_SOURCE_COMPOSITION_MAXIMUM_PROVIDER_LIFETIME_MILLISECONDS,
+  TRUSTED_SOURCE_COMPOSITION_OBSERVATIONS_PER_MATRIX,
+  TRUSTED_SOURCE_COMPOSITION_OPTIONS_FIELDS,
+  TRUSTED_SOURCE_COMPOSITION_OUTPUT_FIELDS,
+  TRUSTED_SOURCE_COMPOSITION_PROFILE_PATH,
+  TRUSTED_SOURCE_COMPOSITION_PROFILE_SHA256,
+  TRUSTED_SOURCE_COMPOSITION_PROVIDER_CONTEXT_FIELDS,
+  TRUSTED_SOURCE_COMPOSITION_PROVIDER_METHODS_BY_SOURCE,
+  TRUSTED_SOURCE_COMPOSITION_ROOT_FIELDS,
+  TRUSTED_SOURCE_COMPOSITION_SOURCE_ORDER,
+  TRUSTED_SOURCE_COMPOSITION_STAGE_COUNT,
+  validateBrowserRelayTrustedSourceCompositionProfile,
+} from './browser-relay-trusted-source-composition/contract.mjs';
+import {
   CHROMIUM_SCENARIO_PROFILE_PATH,
   CHROMIUM_SCENARIO_PROFILE_SHA256,
   validateBrowserRelayChromiumScenarioProfile,
@@ -395,6 +411,8 @@ const SOURCE_SESSION_PRODUCERS_CONTRACT_SHA256 =
   '2d981d687438d2ee1aed65dbb3c80e7761a7f7f0884ea8ff83ad8e3b45f1e0c8';
 const SOURCE_CLIENTS_CONTRACT_SHA256 =
   '02a2ab32f735521c0d619e9524672ea1a1613ed6154666d05fbefa904729434c';
+const TRUSTED_SOURCE_COMPOSITION_CONTRACT_SHA256 =
+  '5074eaedcd9115f401bbf17f95d9600bff682928b77e4bb30f8c49d985571851';
 const OPERATION_CASE_ADAPTER_CONTRACT_SHA256 =
   '75c33c7e8c3408132fd9083d715f59bcea4b27a210c940a236d13017968c31bf';
 
@@ -3236,6 +3254,7 @@ function validateEvidence(value) {
     'browser_relay_source_authority_adapters',
     'browser_relay_source_session_producers',
     'browser_relay_source_clients',
+    'browser_relay_trusted_source_composition',
     'chromium_scenario_automation',
     'browser_relay_playwright_bridge',
     'browser_relay_page_receipt',
@@ -5452,10 +5471,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 103, 'manifest.revision');
+  exact(manifest.revision, 104, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_independent_observers_closed_source_fact_producers_interleaved_runner_result_supported_not_wired_not_executed_browser_relay_evidence_session_closed_operation_local_capability_monotonic_epoch_implemented_not_wired_not_executed_browser_relay_case_scheduler_closed_case_interleaving_implemented_not_wired_not_executed_browser_relay_chromium_case_adapter_closed_native_scenario_scheduler_composed_offline_proven_not_live_wired_not_executed_browser_relay_secondary_case_adapter_closed_secondary_page_case_scheduler_composition_offline_proven_not_live_wired_not_executed_browser_relay_independent_case_adapter_closed_independent_source_case_composition_offline_proven_not_live_wired_not_executed_browser_relay_source_transports_closed_genuine_adapters_implemented_not_wired_not_executed_browser_relay_authenticated_source_readers_closed_kind_attenuated_ephemeral_authority_protocol_implemented_not_live_adapted_not_wired_not_executed_browser_relay_source_authority_adapters_closed_concrete_trusted_session_bridge_implemented_not_live_not_wired_not_executed_browser_relay_source_session_producers_closed_trusted_injected_clients_implemented_not_live_not_wired_not_executed_browser_relay_source_clients_closed_fixed_target_ephemeral_authority_implemented_not_live_not_wired_not_executed_browser_relay_chromium_scenario_closed_complete_page_projected_with_backpressure_offline_proven_not_wired_not_live_executed_browser_relay_playwright_bridge_closed_secondary_receipts_chromium_bfcache_blocked_not_wired_not_executed_browser_relay_page_receipt_closed_bridge_bound_not_aggregated_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_browser_relay_operation_case_adapter_closed_durable_claim_matrix_composition_offline_proven_not_live_executed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_independent_observers_closed_source_fact_producers_interleaved_runner_result_supported_not_wired_not_executed_browser_relay_evidence_session_closed_operation_local_capability_monotonic_epoch_implemented_not_wired_not_executed_browser_relay_case_scheduler_closed_case_interleaving_implemented_not_wired_not_executed_browser_relay_chromium_case_adapter_closed_native_scenario_scheduler_composed_offline_proven_not_live_wired_not_executed_browser_relay_secondary_case_adapter_closed_secondary_page_case_scheduler_composition_offline_proven_not_live_wired_not_executed_browser_relay_independent_case_adapter_closed_independent_source_case_composition_offline_proven_not_live_wired_not_executed_browser_relay_source_transports_closed_genuine_adapters_implemented_not_wired_not_executed_browser_relay_authenticated_source_readers_closed_kind_attenuated_ephemeral_authority_protocol_implemented_not_live_adapted_not_wired_not_executed_browser_relay_source_authority_adapters_closed_concrete_trusted_session_bridge_implemented_not_live_not_wired_not_executed_browser_relay_source_session_producers_closed_trusted_injected_clients_implemented_not_live_not_wired_not_executed_browser_relay_source_clients_closed_fixed_target_ephemeral_authority_implemented_not_live_not_wired_not_executed_browser_relay_trusted_source_composition_closed_named_trusted_source_provider_composition_wired_offline_not_live_executed_browser_relay_chromium_scenario_closed_complete_page_projected_with_backpressure_offline_proven_not_wired_not_live_executed_browser_relay_playwright_bridge_closed_secondary_receipts_chromium_bfcache_blocked_not_wired_not_executed_browser_relay_page_receipt_closed_bridge_bound_not_aggregated_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_browser_relay_operation_case_adapter_closed_durable_claim_matrix_composition_offline_proven_not_live_executed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -8294,6 +8313,232 @@ export function validateCommittedEvidence(
     0,
     `evidence.browser_relay_source_clients.evidence.${path}`,
   );
+  const trustedSourceCompositionManifest =
+    manifest.evidence.browser_relay_trusted_source_composition;
+  const trustedSourceCompositionProfilePath = committedEvidencePath(
+    stagingRoot,
+    trustedSourceCompositionManifest.profile_path,
+    TRUSTED_SOURCE_COMPOSITION_PROFILE_PATH,
+    'evidence.browser_relay_trusted_source_composition.profile_path',
+  );
+  const trustedSourceCompositionProfile = validatedEvidenceFile(
+    trustedSourceCompositionProfilePath,
+    validateBrowserRelayTrustedSourceCompositionProfile,
+    'evidence.browser_relay_trusted_source_composition.profile_path',
+  );
+  exact(
+    fileSha256(trustedSourceCompositionProfilePath),
+    TRUSTED_SOURCE_COMPOSITION_PROFILE_SHA256,
+    'evidence.browser_relay_trusted_source_composition.profile_sha256',
+  );
+  exact(
+    fileSha256(resolve(
+      stagingRoot,
+      'browser-relay-trusted-source-composition/contract.mjs',
+    )),
+    TRUSTED_SOURCE_COMPOSITION_CONTRACT_SHA256,
+    'evidence.browser_relay_trusted_source_composition.contract_source_sha256',
+  );
+  const trustedSourceDistinctKindCount = Object.values(
+    trustedSourceCompositionProfile.providers.methods_by_source,
+  ).reduce((total, methods) => total + methods.length, 0);
+  const trustedSourceCompositionExpected = {
+    state: trustedSourceCompositionProfile.state,
+    profile_path: TRUSTED_SOURCE_COMPOSITION_PROFILE_PATH,
+    profile_sha256: TRUSTED_SOURCE_COMPOSITION_PROFILE_SHA256,
+    profile_schema: trustedSourceCompositionProfile.schema,
+    profile_revision: trustedSourceCompositionProfile.revision,
+    contract_source_sha256: TRUSTED_SOURCE_COMPOSITION_CONTRACT_SHA256,
+    target: trustedSourceCompositionProfile.target,
+    pins: trustedSourceCompositionProfile.pins,
+    composition: {
+      source_order: trustedSourceCompositionProfile.providers.source_order,
+      methods_by_source: trustedSourceCompositionProfile.providers.methods_by_source,
+      root_fields: trustedSourceCompositionProfile.composition.root_fields,
+      matrix_component_fields:
+        trustedSourceCompositionProfile.composition.matrix_component_fields,
+      options_fields: trustedSourceCompositionProfile.composition.options_fields,
+      output_fields: trustedSourceCompositionProfile.composition.output_fields,
+      provider_context_fields: trustedSourceCompositionProfile.providers.context_fields,
+      source_factories: [
+        'source_clients',
+        'source_sessions',
+        'source_authority_adapters',
+        'authenticated_source_readers',
+        'source_transports',
+      ],
+      complete_source_count: trustedSourceCompositionProfile.providers.source_order.length,
+      distinct_kind_count: trustedSourceDistinctKindCount,
+      complete_stage_count: trustedSourceCompositionProfile.composition.stage_count,
+      complete_observation_count:
+        trustedSourceCompositionProfile.composition.observations_per_matrix,
+      maximum_provider_lifetime_milliseconds:
+        trustedSourceCompositionProfile.providers.maximum_lifetime_milliseconds,
+      lifecycle_strategy: trustedSourceCompositionProfile.lifecycle.strategy,
+      provider_identity_single_composition:
+        trustedSourceCompositionProfile.providers.invariants.provider_identity_single_composition,
+      provider_scope_and_expiry_exact:
+        trustedSourceCompositionProfile.providers.invariants.provider_scope_exact
+          && trustedSourceCompositionProfile.providers.invariants.provider_expiry_shared,
+      named_method_source_and_kind_fixed:
+        trustedSourceCompositionProfile.providers.invariants.named_method_fixes_source_and_kind,
+      target_revalidated_before_provider_call:
+        trustedSourceCompositionProfile.providers.invariants
+          .target_revalidated_before_provider_call,
+      request_capability_hidden_from_provider:
+        trustedSourceCompositionProfile.providers.invariants
+          .request_capability_hidden_from_provider,
+      semantic_validation_before_receipt:
+        trustedSourceCompositionProfile.providers.invariants.semantic_validation_before_receipt,
+      source_chain_created_only_for_execute:
+        trustedSourceCompositionProfile.lifecycle.invariants
+          .source_chain_created_only_for_execute,
+      composition_single_use:
+        trustedSourceCompositionProfile.lifecycle.invariants.composition_single_use,
+      scheduler_and_root_close_converge:
+        trustedSourceCompositionProfile.lifecycle.invariants.scheduler_and_root_close_converge,
+      pre_matrix_failure_closes_all_providers:
+        trustedSourceCompositionProfile.lifecycle.invariants
+          .pre_matrix_failure_closes_all_providers,
+      finite_callbacks_drained_before_release:
+        trustedSourceCompositionProfile.lifecycle.invariants
+          .finite_callbacks_drained_before_release,
+      terminal_component_references_cleared:
+        trustedSourceCompositionProfile.lifecycle.invariants
+          .terminal_component_references_cleared,
+      same_process_cooperative_cancellation_only:
+        trustedSourceCompositionProfile.lifecycle.invariants
+          .cooperative_same_process_cancellation_only,
+    },
+    compatibility: trustedSourceCompositionProfile.compatibility,
+    authority: trustedSourceCompositionProfile.authority,
+    evidence: trustedSourceCompositionProfile.evidence,
+  };
+  record(
+    trustedSourceCompositionManifest,
+    'evidence.browser_relay_trusted_source_composition',
+    Object.keys(trustedSourceCompositionExpected),
+  );
+  exactStructured(
+    trustedSourceCompositionManifest,
+    trustedSourceCompositionExpected,
+    'evidence.browser_relay_trusted_source_composition',
+  );
+  exact(
+    trustedSourceCompositionProfile.pins.dependency_contracts_sha256,
+    TRUSTED_SOURCE_COMPOSITION_DEPENDENCY_CONTRACTS_SHA256,
+    'evidence.browser_relay_trusted_source_composition.pins.dependency_contracts_sha256',
+  );
+  for (const [path, actual, expected] of [
+    ['source_order', trustedSourceCompositionProfile.providers.source_order,
+      TRUSTED_SOURCE_COMPOSITION_SOURCE_ORDER],
+    ['methods_by_source', trustedSourceCompositionProfile.providers.methods_by_source,
+      TRUSTED_SOURCE_COMPOSITION_PROVIDER_METHODS_BY_SOURCE],
+    ['context_fields', trustedSourceCompositionProfile.providers.context_fields,
+      TRUSTED_SOURCE_COMPOSITION_PROVIDER_CONTEXT_FIELDS],
+    ['root_fields', trustedSourceCompositionProfile.composition.root_fields,
+      TRUSTED_SOURCE_COMPOSITION_ROOT_FIELDS],
+    ['matrix_component_fields',
+      trustedSourceCompositionProfile.composition.matrix_component_fields,
+      TRUSTED_SOURCE_COMPOSITION_MATRIX_COMPONENT_FIELDS],
+    ['options_fields', trustedSourceCompositionProfile.composition.options_fields,
+      TRUSTED_SOURCE_COMPOSITION_OPTIONS_FIELDS],
+    ['output_fields', trustedSourceCompositionProfile.composition.output_fields,
+      TRUSTED_SOURCE_COMPOSITION_OUTPUT_FIELDS],
+  ]) exactStructured(
+    actual,
+    expected,
+    `evidence.browser_relay_trusted_source_composition.${path}`,
+  );
+  for (const [path, actual, expected] of [
+    ['complete_source_count',
+      trustedSourceCompositionProfile.providers.source_order.length,
+      TRUSTED_SOURCE_COMPOSITION_SOURCE_ORDER.length],
+    ['distinct_kind_count', trustedSourceDistinctKindCount, SOURCE_CLIENTS_DISTINCT_KIND_COUNT],
+    ['complete_stage_count', trustedSourceCompositionProfile.composition.stage_count,
+      TRUSTED_SOURCE_COMPOSITION_STAGE_COUNT],
+    ['complete_observation_count',
+      trustedSourceCompositionProfile.composition.observations_per_matrix,
+      TRUSTED_SOURCE_COMPOSITION_OBSERVATIONS_PER_MATRIX],
+    ['maximum_provider_lifetime_milliseconds',
+      trustedSourceCompositionProfile.providers.maximum_lifetime_milliseconds,
+      TRUSTED_SOURCE_COMPOSITION_MAXIMUM_PROVIDER_LIFETIME_MILLISECONDS],
+  ]) exact(
+    actual,
+    expected,
+    `evidence.browser_relay_trusted_source_composition.composition.${path}`,
+  );
+  if (Object.values(trustedSourceCompositionProfile.providers.invariants)
+    .some((entry) => entry !== true)
+    || Object.values(trustedSourceCompositionProfile.lifecycle.invariants)
+      .some((entry) => entry !== true)) {
+    reject('evidence.browser_relay_trusted_source_composition.composition',
+      'must retain every reviewed provider and lifecycle invariant');
+  }
+  for (const path of [
+    'fixed_target_source_clients_composed',
+    'source_sessions_composed',
+    'source_authority_adapters_composed',
+    'authenticated_source_readers_composed',
+    'source_transports_composed',
+    'operation_case_adapter_wired',
+    'named_trusted_live_provider_capabilities_present',
+  ]) exact(
+    trustedSourceCompositionProfile.compatibility[path],
+    true,
+    `evidence.browser_relay_trusted_source_composition.compatibility.${path}`,
+  );
+  for (const path of [
+    'built_in_live_source_implementations_present',
+    'trusted_live_browser_providers_present',
+    'dedicated_process_ipc_present',
+    'hosting_publication_wired',
+    'live_operation_wired',
+  ]) exact(
+    trustedSourceCompositionProfile.compatibility[path],
+    false,
+    `evidence.browser_relay_trusted_source_composition.compatibility.${path}`,
+  );
+  for (const path of [
+    'explicit_ephemeral_provider_capabilities_accepted',
+    'fixed_staging_targets_authorized',
+  ]) exact(
+    trustedSourceCompositionProfile.authority[path],
+    true,
+    `evidence.browser_relay_trusted_source_composition.authority.${path}`,
+  );
+  for (const path of [
+    'ambient_credentials_authorized',
+    'credential_bytes_accepted',
+    'arbitrary_targets_authorized',
+    'direct_network_implementation_authorized',
+    'cloud_mutations_authorized',
+    'live_execution_authorized',
+    'public_ingress_changes_authorized',
+  ]) exact(
+    trustedSourceCompositionProfile.authority[path],
+    false,
+    `evidence.browser_relay_trusted_source_composition.authority.${path}`,
+  );
+  for (const path of [
+    'cloud_requests',
+    'cloud_mutations',
+    'public_ingress_changes',
+    'live_execution_count',
+    'incremental_monthly_cost_eur',
+  ]) exact(
+    trustedSourceCompositionProfile.evidence[path],
+    0,
+    `evidence.browser_relay_trusted_source_composition.evidence.${path}`,
+  );
+  for (const path of [
+    'credentials_committed',
+    'raw_source_material_committed',
+  ]) exact(
+    trustedSourceCompositionProfile.evidence[path],
+    false,
+    `evidence.browser_relay_trusted_source_composition.evidence.${path}`,
+  );
   const chromiumScenarioManifest = manifest.evidence.chromium_scenario_automation;
   const chromiumScenarioProfilePath = committedEvidencePath(
     stagingRoot,
@@ -10463,6 +10708,7 @@ export function validateCommittedEvidence(
     browserRelaySourceAuthorityAdaptersProfile: sourceAuthorityAdaptersProfile,
     browserRelaySourceSessionProducersProfile: sourceSessionProducersProfile,
     browserRelaySourceClientsProfile: sourceClientsProfile,
+    browserRelayTrustedSourceCompositionProfile: trustedSourceCompositionProfile,
     browserRelayChromiumScenarioProfile,
     browserRelayPlaywrightBridgeProfile,
     browserRelayPageReceiptProfile,
@@ -10519,7 +10765,7 @@ if (invokedPath === import.meta.url) {
     try {
       const manifest = validateStagingManifestFile(resolve(process.argv[2]));
       process.stdout.write(
-        `Validated ${manifest.schema} for ${manifest.project.project_id}; the dormant page, two-identity scenario fixture, replacement-identity cloud adapter, independent-source aggregator and observers, evidence session, case scheduler, layered page and independent-source case adapters, seven genuine source transports, kind-attenuated authenticated-capability readers, fixed-scope ephemeral-session authority adapters, trusted injected-client session producers, fixed-target ephemeral-authority source clients, native Chromium scenario, legacy Playwright bridge and browser-page receipt producer are digest-pinned without live authority, the adapters close the complete offline 40-assertion schedule with all 43 deterministic source observations, dual-positive Chromium BFCache evidence and real offline Firefox and WebKit pages, and the claim-bound composition root admits that matrix exactly once behind the durable operation claim while exposing no lineage; trusted live source-authority providers, case wiring, dedicated-process IPC and live page providers remain absent, the single-use operation remains privately preflighted and unexecuted, both exact-audience relays remain private-ready, unauthenticated invocation remains absent, and App Check enforcement is disabled.\n`,
+        `Validated ${manifest.schema} for ${manifest.project.project_id}; the dormant page, two-identity scenario fixture, replacement-identity cloud adapter, independent-source aggregator and observers, evidence session, case scheduler, layered page and independent-source case adapters, seven genuine source transports, kind-attenuated authenticated-capability readers, fixed-scope ephemeral-session authority adapters, trusted injected-client session producers, fixed-target ephemeral-authority source clients, named trusted-provider composition, native Chromium scenario, legacy Playwright bridge and browser-page receipt producer are digest-pinned without live authority. The adapters close the complete offline 40-assertion schedule with all 43 deterministic source observations, dual-positive Chromium BFCache evidence and real offline Firefox and WebKit pages; the new composition connects all seven provider capabilities through the five source layers to the claim-bound operation with differential conformance. Built-in live source implementations, live page providers and dedicated-process IPC remain absent; the single-use operation remains privately preflighted and unexecuted, both exact-audience relays remain private-ready, unauthenticated invocation remains absent, and App Check enforcement is disabled.\n`,
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown validation error';

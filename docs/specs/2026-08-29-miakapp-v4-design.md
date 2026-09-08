@@ -1091,18 +1091,32 @@ vertical-slice exit gates.
    timer aborts active authority signals without falsely settling their
    callbacks. Pre-existing async resources are explicitly outside this trusted
    same-process boundary and require the later dedicated-process IPC boundary
-   for hard isolation. Credential discovery, built-in
-   OAuth/Firebase/HTTP/WebSocket access, live authority providers and wiring to
-   the independent case adapter remain absent.
+   for hard isolation. Credential discovery and built-in
+   OAuth/Firebase/HTTP/WebSocket access remain absent. A following dormant
+   trusted-source composition root now accepts seven exact frozen provider
+   capabilities whose named methods fix source and kind. It passes providers
+   only a non-serializable `{ browser, case_id, signal }` context, revalidates
+   every immutable source-client target before dispatch and constructs the five
+   existing source layers only on its single `execute()`. The resulting exact
+   seven-observer map fills the independent case adapter and enters the
+   claim-bound operation. Scheduler cleanup and root fallback share each close
+   settlement, including failure before matrix entry. Cleanup ownership follows
+   the highest completed source layer; reentrant close is rejected while cleanup
+   continues outside source callback context, and external close waits for the
+   operation's post-matrix cleanup. Root abort prevents later forward mutations
+   or exposure increases without disabling rollback. Differential conformance
+   against the same five factories proves all 22 stages and 43 observations
+   offline without modifying their reviewed lifecycle implementations.
    A final dormant operation case adapter now hard-wires the unchanged
    single-use operation to that complete schedule. It intercepts one canonical
    receipt, retains only a private non-serializable capability, admits exactly
    one matrix callback within the claim lifetime, forwards only the exact edge
    abort signal and returns the unchanged closed operation result. Claim lineage
    never reaches a provider or result, and both operation cleanup levels are
-   exercised offline. Trusted live source-authority providers, case-adapter
-   wiring, trusted live-browser providers, dedicated-process IPC, Hosting
-   publication and live authority remain open before the one allowed execution.
+   exercised offline. Named provider/case wiring is now complete; concrete live
+   source-truth implementations, trusted live-browser providers,
+   dedicated-process IPC, Hosting publication and live authority remain open
+   before the one allowed execution.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain
