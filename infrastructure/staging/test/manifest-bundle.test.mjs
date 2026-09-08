@@ -70,6 +70,15 @@ function mutateFragment(fixture, id, mutator, updateIndex = true) {
   if (updateIndex) updateIndexEntry(fixture, id, bytes);
 }
 
+function bundleBytes(fixture) {
+  const index = readJson(fixture.indexPath);
+  return readFileSync(fixture.indexPath).byteLength
+    + index.fragments.reduce(
+      (total, entry) => total + readFileSync(join(fixture.root, entry.path)).byteLength,
+      0,
+    );
+}
+
 function rejectsFixture(mutator, pattern) {
   const fixture = createFixture();
   try {
@@ -85,7 +94,7 @@ function rejectsFixture(mutator, pattern) {
 
 test('assembles the canonical committed bundle into the current semantic manifest', () => {
   const index = readJson(committedIndexPath);
-  assert.equal(index.bundle_revision, 2);
+  assert.equal(index.bundle_revision, 3);
   assert.deepEqual(
     index.fragments.map(({ id, path, mount }) => ({ id, path, mount })),
     [
@@ -102,6 +111,11 @@ test('assembles the canonical committed bundle into the current semantic manifes
         mount: 'evidence',
       },
       {
+        id: 'evidence-browser-relay-readers',
+        path: 'manifest/evidence-browser-relay-readers.json',
+        mount: 'evidence',
+      },
+      {
         id: 'evidence-browser-relay-operations',
         path: 'manifest/evidence-browser-relay-operations.json',
         mount: 'evidence',
@@ -109,14 +123,10 @@ test('assembles the canonical committed bundle into the current semantic manifes
     ],
   );
   for (const entry of index.fragments) {
-    assert.equal(readJson(join(stagingRoot, entry.path)).bundle_revision, 2);
+    assert.equal(readJson(join(stagingRoot, entry.path)).bundle_revision, 3);
   }
   assert.ok(index.fragments.every(({ size_bytes: size }) => size < 96 * 1024));
-  assert.ok(
-    readFileSync(committedIndexPath).byteLength
-      + index.fragments.reduce((total, { size_bytes: size }) => total + size, 0)
-      < 192 * 1024,
-  );
+  assert.ok(bundleBytes({ indexPath: committedIndexPath, root: stagingRoot }) < 256 * 1024);
 
   const scenarioEvidence = readJson(
     join(committedFragmentRoot, 'evidence-browser-relay-scenario.json'),
@@ -135,12 +145,17 @@ test('assembles the canonical committed bundle into the current semantic manifes
     'browser_relay_chromium_case_adapter',
     'browser_relay_secondary_case_adapter',
     'browser_relay_independent_case_adapter',
-    'browser_relay_source_transports',
     'chromium_scenario_automation',
     'browser_relay_playwright_bridge',
     'browser_relay_page_receipt',
     'browser_relay_scenario_fixture',
     'browser_relay_scenario_fixture_cloud',
+  ]);
+  const readerEvidence = readJson(
+    join(committedFragmentRoot, 'evidence-browser-relay-readers.json'),
+  );
+  assert.deepEqual(Object.keys(readerEvidence.values), [
+    'browser_relay_source_transports',
   ]);
   const operationsEvidence = readJson(
     join(committedFragmentRoot, 'evidence-browser-relay-operations.json'),
@@ -158,6 +173,12 @@ test('assembles the canonical committed bundle into the current semantic manifes
   ]);
 
   const manifest = loadStagingManifestBundle(committedIndexPath);
+  const semanticBytes = canonical(manifest);
+  assert.equal(semanticBytes.byteLength, 189661);
+  assert.equal(
+    sha256(semanticBytes),
+    '8dfb093846bd305262208a9adf7f549f77b5706435e549fbfe259d827567bd8c',
+  );
   assert.deepEqual(Object.keys(manifest), [
     'schema',
     'revision',
@@ -340,6 +361,16 @@ test('rejects fragment path, mount, size and digest drift from the fixed index',
   }, /fragment evidence-platform mount has drifted/u);
   rejectsFixture(({ indexPath }) => {
     const index = readJson(indexPath);
+    index.fragments[4].path = 'manifest/evidence-browser-relay-scenario.json';
+    writeCanonical(indexPath, index);
+  }, /fragment evidence-browser-relay-readers path has drifted/u);
+  rejectsFixture(({ indexPath }) => {
+    const index = readJson(indexPath);
+    index.fragments[4].mount = 'manifest';
+    writeCanonical(indexPath, index);
+  }, /fragment evidence-browser-relay-readers mount has drifted/u);
+  rejectsFixture(({ indexPath }) => {
+    const index = readJson(indexPath);
     index.fragments[0].size_bytes += 1;
     writeCanonical(indexPath, index);
   }, /core fragment size has drifted/u);
@@ -372,39 +403,65 @@ test('rejects index/core revision, identity and owned-key drift after digest rec
     });
   }, /terraform identifier has drifted/u);
   rejectsFixture((fixture) => {
+    mutateFragment(fixture, 'evidence-browser-relay-readers', (fragment) => {
+      fragment.id = 'evidence-browser-relay-scenario';
+    });
+  }, /evidence-browser-relay-readers identifier has drifted/u);
+  rejectsFixture((fixture) => {
     mutateFragment(fixture, 'evidence-platform', (fragment) => {
       fragment.values.unreviewed = true;
     });
   }, /evidence-platform values fields or field order have drifted/u);
 });
 
-test('rejects reassigned or duplicated browser-relay evidence ownership', () => {
+test('rejects missing, reassigned or duplicated reader evidence ownership', () => {
+  rejectsFixture((fixture) => {
+    mutateFragment(fixture, 'evidence-browser-relay-readers', (fragment) => {
+      delete fragment.values.browser_relay_source_transports;
+    });
+  }, /evidence-browser-relay-readers values fields or field order have drifted/u);
   rejectsFixture((fixture) => {
     let reassigned;
-    mutateFragment(fixture, 'evidence-browser-relay-scenario', (fragment) => {
-      reassigned = fragment.values.browser_relay_scenario_fixture_cloud;
-      delete fragment.values.browser_relay_scenario_fixture_cloud;
+    mutateFragment(fixture, 'evidence-browser-relay-readers', (fragment) => {
+      reassigned = fragment.values.browser_relay_source_transports;
+      delete fragment.values.browser_relay_source_transports;
     });
-    mutateFragment(fixture, 'evidence-browser-relay-operations', (fragment) => {
-      fragment.values.browser_relay_scenario_fixture_cloud = reassigned;
+    mutateFragment(fixture, 'evidence-browser-relay-scenario', (fragment) => {
+      fragment.values.browser_relay_source_transports = reassigned;
     });
   }, /evidence-browser-relay-scenario values fields or field order have drifted/u);
   rejectsFixture((fixture) => {
-    mutateFragment(fixture, 'evidence-browser-relay-operations', (fragment) => {
-      fragment.values.browser_relay_plan = readJson(
-        join(fixture.fragmentRoot, 'evidence-browser-relay-scenario.json'),
-      ).values.browser_relay_plan;
+    mutateFragment(fixture, 'evidence-browser-relay-scenario', (fragment) => {
+      fragment.values.browser_relay_source_transports = readJson(
+        join(fixture.fragmentRoot, 'evidence-browser-relay-readers.json'),
+      ).values.browser_relay_source_transports;
     });
-  }, /evidence-browser-relay-operations values fields or field order have drifted/u);
+  }, /evidence-browser-relay-scenario values fields or field order have drifted/u);
 });
 
-test('rejects a bundle whose individually bounded fragments exceed the aggregate cap', () => {
-  rejectsFixture((fixture) => {
+test('accepts the exact aggregate cap and rejects cap plus one with bounded fragments', () => {
+  const fixture = createFixture();
+  try {
+    const maximumBytes = 256 * 1024;
+    const padding = maximumBytes - bundleBytes(fixture);
+    assert.ok(padding > 0);
     mutateFragment(fixture, 'core', (fragment) => {
-      fragment.values.status += 'x'.repeat(50 * 1024);
+      fragment.values.status += 'x'.repeat(padding);
     });
-    mutateFragment(fixture, 'evidence-browser-relay-scenario', (fragment) => {
-      fragment.values.browser_relay_plan.state += 'x'.repeat(10 * 1024);
+    assert.equal(bundleBytes(fixture), maximumBytes);
+    assert.ok(readFileSync(join(fixture.fragmentRoot, 'core.json')).byteLength < 96 * 1024);
+    assert.doesNotThrow(() => loadStagingManifestBundle(fixture.indexPath));
+
+    mutateFragment(fixture, 'core', (fragment) => {
+      fragment.values.status += 'x';
     });
-  }, /bundle exceeds 196608 bytes/u);
+    assert.equal(bundleBytes(fixture), maximumBytes + 1);
+    assert.throws(
+      () => loadStagingManifestBundle(fixture.indexPath),
+      (error) => error instanceof StagingManifestBundleError
+        && /bundle exceeds 262144 bytes/u.test(error.message),
+    );
+  } finally {
+    rmSync(fixture.root, { recursive: true, force: true });
+  }
 });

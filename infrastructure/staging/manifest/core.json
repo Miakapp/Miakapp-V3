@@ -1,6 +1,6 @@
 {
   "schema": "miakapp.staging-manifest-fragment/1",
-  "bundle_revision": 2,
+  "bundle_revision": 3,
   "id": "core",
   "mount": "manifest",
   "values": {

@@ -629,11 +629,12 @@ Node.js 22 and Terraform 1.11.3 are required:
 npm run test:staging-manifest
 ```
 
-The gate first resolves `manifest.json` as a bundle-revision-2 canonical index
-over exactly five fixed fragments under `manifest/`: core intent, Terraform
-history, platform evidence, browser-relay scenario evidence and browser-relay
-operations evidence. The index is limited to 16 KiB, each fragment to 96 KiB
-and the complete bundle to 192 KiB. Every file must be a
+The gate first resolves `manifest.json` as a bundle-revision-3 canonical index
+over exactly six fixed fragments under `manifest/`: core intent, Terraform
+history, platform evidence, browser-relay scenario evidence, browser-relay
+reader-boundary evidence and browser-relay operations evidence. The index is
+limited to 16 KiB, each fragment to 96 KiB and the complete bundle to 256 KiB.
+Every file must be a
 regular non-symlink, non-executable file using exact two-space JSON plus one
 terminal newline; the loader binds the fixed path, mount, byte length, SHA-256,
 fragment schema, owned fields and aggregate size, and requires the index and
@@ -884,13 +885,13 @@ offline, while the later operation case adapter supplies graph-level claim
 binding. Trusted live page providers, network, credentials and live authority
 remain absent. The former manifest-capacity
 blocker is closed: the revision-99 semantic object is assembled from a small
-index and five independently bounded, digest-pinned canonical fragments.
-Browser-relay scenario and operations evidence have separate physical owners;
-each retains substantial room below the unchanged 96-KiB ceiling. The complete
-bundle is now 194,300 bytes, leaving only 2,308 bytes below its unchanged
-192-KiB aggregate ceiling. Before the next authenticated-reader evidence entry,
-the bundle must therefore receive a reviewed aggregate-capacity revision or
-content compaction without sacrificing line-oriented review.
+revision-3 index and six independently bounded, digest-pinned canonical
+fragments. Browser-relay scenario, reader-boundary and operations evidence have
+separate physical owners; every fragment retains room below the unchanged
+96-KiB ceiling. The complete bundle is now 194,718 bytes, leaving 67,426 bytes
+below its reviewed 256-KiB aggregate ceiling. This representation-only revision
+reconstructs the byte-identical semantic object and grants no authenticated
+reader, credential, network, browser, deployment or cloud authority.
 The adjacent
 [`browser-relay-chromium-scenario/`](browser-relay-chromium-scenario/) package
 now closes the standalone Chromium page path offline. It owns two page
