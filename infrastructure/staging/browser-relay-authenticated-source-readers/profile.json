@@ -1,0 +1,192 @@
+{
+  "schema": "miakapp.staging-browser-relay-authenticated-source-readers-profile/1",
+  "revision": 1,
+  "state": "closed_authenticated_kind_attenuated_source_readers_implemented_not_live_adapted_not_wired_not_executed",
+  "target": {
+    "project_id": "miakapp-v4-staging",
+    "project_number": "1072737219170",
+    "region": "europe-west9",
+    "data_policy": "synthetic_only",
+    "cloud_compute_resources": 0,
+    "unscheduled": true
+  },
+  "pins": {
+    "implementation_base_commit": "d79438c511770b8f5cdb0dbd70dd14684b688c2e",
+    "source_transports_profile_sha256": "9628f2dbe63713da3f4777908e036155c8c7852f3ac110d3efc162266a933ad4",
+    "independent_observers_profile_sha256": "adb1755f60466da5babb4aa3527445f6423c0dfee6b0927e73eee041e25e3969",
+    "dependency_contracts_sha256": "e941ff3da6bab9f2a09b76262a8e38b3fbe4daab55397a944e5c7a02295e1493",
+    "internal_source_sha256": "ea9677112b2cd71ec9413fbed29b8f4241ad66b3e7c5d7db8895c83b0c790f4c",
+    "production_source_sha256": "e0381cc53e6c2ffdecdd7db350d7712fb3b2ceb064bd0a468e6cd2a33e358a7b",
+    "testing_source_sha256": "1af12b76b5aaf3a42e9170d60fc7022f219f16d723f6743cca78334129e3ecd6",
+    "guard_source_sha256": "2fde09a313b3f29737779be02ad46fb241096e943d16b6f8a2e6f97dbeab8ac7",
+    "unit_test_sha256": "8fdfb26e6581c20f9183478a2a38344d16118b818809c879ac62e2bbee33cd34",
+    "workflow_sha256": "92ddd3210db61fb69e9f8c34751589959b0b8e03bf348ab0237129a938464880"
+  },
+  "reader": {
+    "source_order": [
+      "firebase_app_check",
+      "hosting",
+      "control_plane",
+      "relay",
+      "coordinator",
+      "kms",
+      "firestore"
+    ],
+    "authority_methods_by_source": {
+      "firebase_app_check": [
+        "provider_assessment",
+        "valid_verification",
+        "missing_token_denial",
+        "invalid_token_denial",
+        "verification_mode",
+        "close"
+      ],
+      "hosting": [
+        "management_site_configuration",
+        "served_sdk_configuration",
+        "close"
+      ],
+      "control_plane": [
+        "cors_preflight",
+        "foreign_origin_denial",
+        "source_uid_admission",
+        "authenticated_cache_policy",
+        "version_2_jwk_published",
+        "version_1_last_issuance",
+        "version_2_first_issuance",
+        "atomic_credential_reuse",
+        "exchange_summary",
+        "version_1_jwk_retained",
+        "version_1_jwk_removed",
+        "close"
+      ],
+      "relay": [
+        "version_2_existing_socket",
+        "wrong_audience_denial",
+        "wrong_home_denial",
+        "wrong_role_denial",
+        "unknown_kid_refresh",
+        "disconnect_reconnect_resync",
+        "version_2_session",
+        "revision_summary",
+        "new_session_version_2",
+        "close"
+      ],
+      "coordinator": [
+        "physical_call_delivery",
+        "close"
+      ],
+      "kms": [
+        "signature_summary",
+        "version_1_lifecycle",
+        "close"
+      ],
+      "firestore": [
+        "authoritative_route_transition",
+        "operation_write_summary",
+        "close"
+      ]
+    },
+    "provider_methods": [
+      "openStage",
+      "close"
+    ],
+    "reader_methods": [
+      "next",
+      "close"
+    ],
+    "options_fields": [
+      "signal",
+      "expires_at_milliseconds"
+    ],
+    "request_fields": [
+      "source",
+      "browser",
+      "case_id",
+      "expected_kinds",
+      "expected_observation_count",
+      "signal",
+      "operation_capability"
+    ],
+    "context_fields": [
+      "source",
+      "browser",
+      "case_id",
+      "kind",
+      "signal",
+      "operation_capability"
+    ],
+    "stage_count": 22,
+    "observations_per_matrix": 43,
+    "maximum_authority_lifetime_milliseconds": 1800000,
+    "expiry_is_absolute_unix_epoch_milliseconds": true,
+    "kind_attenuation_exact": true,
+    "operation_capability_identity_bound": true,
+    "authority_identity_single_operation": true,
+    "provider_identity_single_operation": true,
+    "reader_identity_single_stage": true,
+    "source_stages_ordered_nonoverlapping": true,
+    "authority_calls_lazy_ordered_nonoverlapping": true,
+    "call_reserved_before_await": true,
+    "abort_checked_before_and_after_call": true,
+    "expiry_checked_before_and_after_call": true,
+    "abort_checked_before_and_after_close": true,
+    "expiry_checked_before_and_after_close": true,
+    "caller_abort_reason_sanitized": true,
+    "callback_close_reentrancy_rejected": true,
+    "expected_eof_exact": true,
+    "reader_close_exact": true,
+    "provider_close_exact": true,
+    "shared_poison_permanent": true,
+    "terminal_authority_references_cleared": true,
+    "testing_authority_release_probe_present": true,
+    "production_clock_intrinsic": true
+  },
+  "compatibility": {
+    "generic_source_transports_compatible": true,
+    "independent_observation_validation_present": true,
+    "authenticated_reader_protocol_present": true,
+    "kind_attenuated_authority_boundary_present": true,
+    "complete_source_count": 7,
+    "complete_stage_count": 22,
+    "complete_observation_capacity": 43,
+    "concrete_live_source_authority_adapters_present": false,
+    "network_implementation_present": false,
+    "operation_case_adapter_wired": false,
+    "trusted_live_page_providers_present": false,
+    "dedicated_process_ipc_present": false
+  },
+  "output": {
+    "submitted_fields": [
+      "observation"
+    ],
+    "semantic_validation_before_output": true,
+    "raw_source_material_accepted": false,
+    "raw_source_material_retained": false,
+    "authority_references_exposed": false,
+    "operation_capability_exposed": false,
+    "arbitrary_errors_propagated": false
+  },
+  "authority": {
+    "ambient_credentials_authorized": false,
+    "credential_strings_accepted": false,
+    "network_requests_authorized": false,
+    "cloud_mutations_authorized": false,
+    "case_adapter_wiring_authorized": false,
+    "live_execution_authorized": false,
+    "public_ingress_changes_authorized": false
+  },
+  "evidence": {
+    "state": "absent",
+    "live_source_readers": 0,
+    "live_source_observations": 0,
+    "live_source_receipts": 0,
+    "cloud_requests": 0,
+    "cloud_mutations": 0,
+    "public_ingress_changes": 0,
+    "live_execution_count": 0,
+    "incremental_monthly_cost_eur": 0,
+    "credentials_committed": false,
+    "raw_source_material_committed": false
+  }
+}

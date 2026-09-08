@@ -817,13 +817,15 @@ current consumer.
     browser-start and page/browser/global-close boundaries, and emits only the
     closed session result. A separate dormant operation case adapter now binds
     that scheduler/session to the durable claim and unchanged operation
-    envelope offline; generic source transports are now implemented separately,
-    while authenticated readers and live wiring remain absent. The manifest
-    capacity prerequisite is now closed: the stable bundle-revision-3 entry
+    envelope offline; generic source transports and their dormant
+    authenticated-capability reader/provider protocol are now implemented
+    separately, while concrete source authority adapters and live wiring remain
+    absent. The manifest capacity prerequisite is now closed: the stable
+    bundle-revision-3 entry
     point indexes six fixed canonical fragments, with separate browser-relay
     scenario, reader-boundary and operations owners, exact path, mount,
     byte-length and SHA-256 bindings, per-file ceilings and one aggregate
-    ceiling while reconstructing the revision-99 semantic object. The immutable
+    ceiling while reconstructing the revision-100 semantic object. The immutable
     original fixture still has three private page inputs, but a separate closed
     scenario fixture now supplies the fourth from a second genuine synthetic Firebase identity,
     extends the unique coordinator's state access to both identities and
@@ -885,13 +887,23 @@ current consumer.
     per-source order, non-overlap, bounded late-settlement drain, exact close and
     permanent protocol poison. Its production entrypoint uses intrinsic timers
     and grants no network, credential, cloud, Hosting, browser or execution
-    authority. Authenticated source-specific readers, case-adapter transport
-    wiring and trusted live page providers remain absent. The representation-only
-    capacity revision is complete: six fixed shards consume 194,718 of the
-    bounded 262,144 bytes, leaving 67,426 bytes while reconstructing the
-    byte-identical semantic object. Next implement the trusted readers and
-    providers, then isolate browser ownership behind validated IPC before
-    executing the matrix once.
+    authority. A following dormant reader/provider package now accepts seven
+    distinct, already-authenticated source capabilities whose method sets are
+    attenuated to their canonical fact kinds. It binds the exact 22 stages to
+    one opaque operation capability and a maximum 30-minute absolute expiry,
+    invokes only the next expected kind, semantically validates all 43 sanitized
+    observations and clears every retained authority reference at terminal
+    close. It accepts no raw credential or source material and performs no
+    network, browser or cloud I/O. Concrete source authority adapters,
+    case-adapter transport wiring and trusted live page providers remain absent.
+    The earlier revision-99 representation-only capacity baseline is complete:
+    its six fixed shards consumed 194,718 of the bounded 262,144 bytes, leaving
+    67,426 bytes while reconstructing its byte-identical semantic object.
+    The current revision-100 index and six fragments total 202,086 bytes,
+    leaving 60,058 bytes under the same ceiling. Next implement the concrete
+    source authority adapters and transport-to-case wiring, then isolate browser
+    ownership behind validated IPC before executing
+    the matrix once.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform
     no-change plan. Its fresh post-merge preflight is complete and the rollback

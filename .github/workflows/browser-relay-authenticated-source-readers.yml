@@ -1,0 +1,65 @@
+name: Browser relay authenticated source readers
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/browser-relay-authenticated-source-readers.yml'
+      - 'package.json'
+      - 'bun.lock'
+      - 'infrastructure/staging/browser-relay/**'
+      - 'infrastructure/staging/browser-relay-independent-observers/**'
+      - 'infrastructure/staging/browser-relay-source-transports/**'
+      - 'infrastructure/staging/browser-relay-authenticated-source-readers/**'
+      - 'infrastructure/staging/manifest/**'
+      - 'infrastructure/staging/manifest-bundle.mjs'
+      - 'infrastructure/staging/validate.mjs'
+      - 'infrastructure/staging/test/browser-relay-authenticated-source-readers.test.mjs'
+      - 'infrastructure/staging/test/helpers/browser-relay-evidence-fixture.mjs'
+  pull_request:
+    paths:
+      - '.github/workflows/browser-relay-authenticated-source-readers.yml'
+      - 'package.json'
+      - 'bun.lock'
+      - 'infrastructure/staging/browser-relay/**'
+      - 'infrastructure/staging/browser-relay-independent-observers/**'
+      - 'infrastructure/staging/browser-relay-source-transports/**'
+      - 'infrastructure/staging/browser-relay-authenticated-source-readers/**'
+      - 'infrastructure/staging/manifest/**'
+      - 'infrastructure/staging/manifest-bundle.mjs'
+      - 'infrastructure/staging/validate.mjs'
+      - 'infrastructure/staging/test/browser-relay-authenticated-source-readers.test.mjs'
+      - 'infrastructure/staging/test/helpers/browser-relay-evidence-fixture.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Browser relay authenticated source readers / validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      DEBUG: ''
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22.22.0
+          package-manager-cache: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: 1.2.23
+      - name: Install locked dependencies
+        run: bun install --frozen-lockfile
+      - name: Validate dormant authenticated source readers
+        run: |
+          node --check infrastructure/staging/browser-relay-authenticated-source-readers/contract.mjs
+          node --check infrastructure/staging/browser-relay-authenticated-source-readers/internal.mjs
+          node --check infrastructure/staging/browser-relay-authenticated-source-readers/readers.mjs
+          node --check infrastructure/staging/browser-relay-authenticated-source-readers/testing.mjs
+          node infrastructure/staging/browser-relay-authenticated-source-readers/guard.mjs infrastructure/staging/browser-relay-authenticated-source-readers
+          node --test infrastructure/staging/test/browser-relay-authenticated-source-readers.test.mjs
+          node infrastructure/staging/validate.mjs infrastructure/staging/manifest.json
+          git diff --check
