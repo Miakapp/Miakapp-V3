@@ -646,11 +646,12 @@ node --test \
 bash infrastructure/staging/browser-relay-trusted-provider-process/check.sh
 ```
 
-The gate first resolves `manifest.json` as a bundle-revision-3 canonical index
-over exactly six fixed fragments under `manifest/`: core intent, Terraform
+The gate first resolves `manifest.json` as a bundle-revision-4 canonical index
+over exactly seven fixed fragments under `manifest/`: core intent, Terraform
 history, platform evidence, browser-relay scenario evidence, browser-relay
-reader-boundary evidence and browser-relay operations evidence. The index is
-limited to 16 KiB, each fragment to 96 KiB and the complete bundle to 256 KiB.
+reader-boundary evidence, trusted-provider evidence and browser-relay operations
+evidence. The index is limited to 16 KiB, each fragment to 96 KiB and the
+complete bundle to 512 KiB.
 Every file must be a
 regular non-symlink, non-executable file using exact two-space JSON plus one
 terminal newline; the loader binds the fixed path, mount, byte length, SHA-256,
@@ -915,10 +916,14 @@ source-session adapters and totalled 211,303 bytes. Revision 102 added the
 trusted-client source-session producers and totalled 219,900 bytes. Revision
 103 added the fixed-target source clients and totalled 236,065 bytes. Revision
 104 added the named trusted-provider composition and totalled 243,585 bytes.
-The current revision 105 adds its dedicated-process ownership boundary and
-totals 250,028 bytes, leaving 12,116 bytes below the same fixed six-fragment
-262,144-byte ceiling. The representation must be redesigned before another
-similarly sized lifecycle record is admitted.
+Revision 105 added its dedicated-process ownership boundary and totalled
+250,343 bytes, leaving 11,801 bytes below the same fixed six-fragment
+262,144-byte ceiling. The current representation-only bundle revision 4 moves
+the three provider-facing records into a seventh fixed shard and raises only the
+aggregate ceiling to 524,288 bytes. Its canonical index and seven fragments
+total 250,768 bytes, leaving 273,520 bytes while reconstructing the
+byte-identical revision-105 semantic object. It grants no credential, network,
+browser, deployment, live execution or cloud authority.
 The adjacent
 [`browser-relay-chromium-scenario/`](browser-relay-chromium-scenario/) package
 now closes the standalone Chromium page path offline. It owns two page

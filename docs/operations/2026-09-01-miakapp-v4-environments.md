@@ -190,12 +190,13 @@ project ID and enabled Firebase without selecting an immutable resource
 location. A separately authorized operation linked the approved billing account
 on 2026-09-03. Its sanitized inventory now lives under
 [`../../infrastructure/staging/`](../../infrastructure/staging/).
-Its stable `manifest.json` entry point is now a bundle-revision-3 canonical
-index over six fixed, digest-pinned fragments, with separate browser-relay
-scenario, reader-boundary and operations owners. The loader reconstructs the
-current revision-102 semantic manifest only after verifying each fragment's
-path, mount, bundle schema, owned fields, exact byte length, SHA-256 and bounded
-aggregate size, plus index/core agreement on the semantic schema and revision.
+Its stable `manifest.json` entry point is now a bundle-revision-4 canonical
+index over seven fixed, digest-pinned fragments, with separate browser-relay
+scenario, reader-boundary, trusted-provider and operations owners. The loader
+reconstructs the current revision-105 semantic manifest only after verifying
+each fragment's path, mount, bundle schema, owned fields, exact byte length,
+SHA-256 and 512-KiB aggregate bound, plus index/core agreement on the semantic
+schema and revision.
 
 The location and billing-account selection are reviewed inputs. Separate
 apply-capable Terraform roots now describe (1) the circular bootstrap for

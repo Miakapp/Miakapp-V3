@@ -1,6 +1,6 @@
 {
   "schema": "miakapp.staging-manifest-bundle/1",
-  "bundle_revision": 3,
+  "bundle_revision": 4,
   "manifest_schema": "miakapp.staging-intent/1",
   "manifest_revision": 105,
   "fragments": [
@@ -9,42 +9,49 @@
       "path": "manifest/core.json",
       "mount": "manifest",
       "size_bytes": 18259,
-      "sha256": "74d38af53baaba7c22bf1a83f74382ca001cee0156dbc16ed3636cad7702cd99"
+      "sha256": "0629601c035d132cad97271d998bfd96ab344c0fe29215cd35ee76a5594ef525"
     },
     {
       "id": "terraform",
       "path": "manifest/terraform.json",
       "mount": "manifest",
       "size_bytes": 38998,
-      "sha256": "ec250ae3caa24cb9a00b11b3e5e747a2abadbdb4d7f08b996785d4a2bd139e3f"
+      "sha256": "ea0923be7a67904ff9e47a1892e536891a60398fdf92c47de825046cab1c835f"
     },
     {
       "id": "evidence-platform",
       "path": "manifest/evidence-platform.json",
       "mount": "evidence",
       "size_bytes": 21240,
-      "sha256": "0a19b46dc022b1667532078f3ffa609c055442398e1419b39b03eef5fc4c0420"
+      "sha256": "84dcb4d8d2500bca7640fdb0b4257ad461500524763e959ebb040dbb4cc0f824"
     },
     {
       "id": "evidence-browser-relay-scenario",
       "path": "manifest/evidence-browser-relay-scenario.json",
       "mount": "evidence",
       "size_bytes": 76405,
-      "sha256": "8663cdb625e4285907b67a14ed7498a1ee2d53071fd66d9c9b7a6125ea426ed1"
+      "sha256": "fdf5d4a8ae4beefc28ad13d078ad7fc315559212b44ac61371cc0c2a80ba9f84"
     },
     {
       "id": "evidence-browser-relay-readers",
       "path": "manifest/evidence-browser-relay-readers.json",
       "mount": "evidence",
-      "size_bytes": 59219,
-      "sha256": "4cde5a5e7cc171077558eb803d9747d9ff7b5e8a3ef2b75c383d37a0d56042bd"
+      "size_bytes": 29125,
+      "sha256": "9d0659a930e5c980dc4e5c3b7ea65818a1ca07796a68464307e6fe91cfe0cb57"
+    },
+    {
+      "id": "evidence-browser-relay-providers",
+      "path": "manifest/evidence-browser-relay-providers.json",
+      "mount": "evidence",
+      "size_bytes": 30257,
+      "sha256": "a0a9ae8914cae22bd9e5c0962d242677542936e4bb9ea4efc454ce86b3504bd0"
     },
     {
       "id": "evidence-browser-relay-operations",
       "path": "manifest/evidence-browser-relay-operations.json",
       "mount": "evidence",
       "size_bytes": 34612,
-      "sha256": "c137776247c3b1910602e053b6de8b951075c1e639a7ccba6d2bd8858ae0f360"
+      "sha256": "4745e16afb7694bc1038d086c1066c23a92baac468077ce2e6f438d9f3cbb416"
     }
   ]
 }

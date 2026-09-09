@@ -325,10 +325,10 @@ Terraform had no change. Plan revision 14 pins that closed result; every
 byte-for-byte and pins the merged revision-2 page profile plus its independent
 three-engine offline CI proof. The archived `profile-v2.json` preserves that
 claim, while current page revision 3 pins unchanged plan 15. The staging manifest
-bundle uses a small bundle-revision-3 canonical index and six fixed, size- and
-digest-bound fragments, with browser-relay scenario, reader-boundary and
-operations evidence separated physically, while assembling the current
-revision-102 semantic object. It
+bundle uses a small bundle-revision-4 canonical index and seven fixed, size- and
+digest-bound fragments, with browser-relay scenario, reader-boundary,
+trusted-provider and operations evidence separated physically, while assembling
+the current revision-105 semantic object. It
 retains the byte-exact earlier zero-relay plan used
 by the image build, revision 9 used by the runner, revision 10 used by
 monitoring, revision 11 used by rollback and revision 12 used by the
