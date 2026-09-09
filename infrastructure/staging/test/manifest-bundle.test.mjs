@@ -79,6 +79,68 @@ function bundleBytes(fixture) {
     );
 }
 
+function appendPadding(value, padding) {
+  for (const key of Object.keys(value)) {
+    if (key === 'schema') continue;
+    if (typeof value[key] === 'string') {
+      value[key] += padding;
+      return true;
+    }
+    if (value[key] !== null && typeof value[key] === 'object'
+      && appendPadding(value[key], padding)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function paddedFragmentBytes(fixture, id, paddingBytes) {
+  const fragment = readJson(join(fixture.fragmentRoot, `${id}.json`));
+  assert.equal(appendPadding(fragment.values, 'x'.repeat(paddingBytes)), true);
+  return canonical(fragment);
+}
+
+function bundleBytesWithReplacement(fixture, id, replacementBytes) {
+  const currentIndexBytes = readFileSync(fixture.indexPath).byteLength;
+  const index = readJson(fixture.indexPath);
+  const entry = index.fragments.find((candidate) => candidate.id === id);
+  assert.notEqual(entry, undefined);
+  const currentFragmentBytes = readFileSync(join(fixture.root, entry.path)).byteLength;
+  entry.size_bytes = replacementBytes.byteLength;
+  entry.sha256 = sha256(replacementBytes);
+  return bundleBytes(fixture) - currentIndexBytes - currentFragmentBytes
+    + canonical(index).byteLength + replacementBytes.byteLength;
+}
+
+function padBundleTo(fixture, targetBytes) {
+  assert.ok(targetBytes >= bundleBytes(fixture));
+  const index = readJson(fixture.indexPath);
+  for (const { id, path } of index.fragments) {
+    const currentBundleBytes = bundleBytes(fixture);
+    if (currentBundleBytes === targetBytes) break;
+    const currentBytes = readFileSync(join(fixture.root, path)).byteLength;
+    let lower = 0;
+    let upper = Math.min(
+      targetBytes - currentBundleBytes,
+      (96 * 1024) - currentBytes,
+    );
+    while (lower < upper) {
+      const candidate = Math.ceil((lower + upper) / 2);
+      const candidateBytes = paddedFragmentBytes(fixture, id, candidate);
+      if (bundleBytesWithReplacement(fixture, id, candidateBytes) <= targetBytes) {
+        lower = candidate;
+      } else {
+        upper = candidate - 1;
+      }
+    }
+    if (lower === 0) continue;
+    mutateFragment(fixture, id, (fragment) => {
+      assert.equal(appendPadding(fragment.values, 'x'.repeat(lower)), true);
+    });
+  }
+  assert.equal(bundleBytes(fixture), targetBytes);
+}
+
 function rejectsFixture(mutator, pattern) {
   const fixture = createFixture();
   try {
@@ -94,7 +156,7 @@ function rejectsFixture(mutator, pattern) {
 
 test('assembles the canonical committed bundle into the current semantic manifest', () => {
   const index = readJson(committedIndexPath);
-  assert.equal(index.bundle_revision, 3);
+  assert.equal(index.bundle_revision, 4);
   assert.deepEqual(
     index.fragments.map(({ id, path, mount }) => ({ id, path, mount })),
     [
@@ -116,6 +178,11 @@ test('assembles the canonical committed bundle into the current semantic manifes
         mount: 'evidence',
       },
       {
+        id: 'evidence-browser-relay-providers',
+        path: 'manifest/evidence-browser-relay-providers.json',
+        mount: 'evidence',
+      },
+      {
         id: 'evidence-browser-relay-operations',
         path: 'manifest/evidence-browser-relay-operations.json',
         mount: 'evidence',
@@ -123,10 +190,10 @@ test('assembles the canonical committed bundle into the current semantic manifes
     ],
   );
   for (const entry of index.fragments) {
-    assert.equal(readJson(join(stagingRoot, entry.path)).bundle_revision, 3);
+    assert.equal(readJson(join(stagingRoot, entry.path)).bundle_revision, 4);
   }
   assert.ok(index.fragments.every(({ size_bytes: size }) => size < 96 * 1024));
-  assert.ok(bundleBytes({ indexPath: committedIndexPath, root: stagingRoot }) < 256 * 1024);
+  assert.ok(bundleBytes({ indexPath: committedIndexPath, root: stagingRoot }) < 512 * 1024);
 
   const scenarioEvidence = readJson(
     join(committedFragmentRoot, 'evidence-browser-relay-scenario.json'),
@@ -159,6 +226,11 @@ test('assembles the canonical committed bundle into the current semantic manifes
     'browser_relay_authenticated_source_readers',
     'browser_relay_source_authority_adapters',
     'browser_relay_source_session_producers',
+  ]);
+  const providerEvidence = readJson(
+    join(committedFragmentRoot, 'evidence-browser-relay-providers.json'),
+  );
+  assert.deepEqual(Object.keys(providerEvidence.values), [
     'browser_relay_source_clients',
     'browser_relay_trusted_source_composition',
     'browser_relay_trusted_provider_process',
@@ -406,6 +478,16 @@ test('rejects fragment path, mount, size and digest drift from the fixed index',
   }, /fragment evidence-browser-relay-readers mount has drifted/u);
   rejectsFixture(({ indexPath }) => {
     const index = readJson(indexPath);
+    index.fragments[5].path = 'manifest/evidence-browser-relay-readers.json';
+    writeCanonical(indexPath, index);
+  }, /fragment evidence-browser-relay-providers path has drifted/u);
+  rejectsFixture(({ indexPath }) => {
+    const index = readJson(indexPath);
+    index.fragments[5].mount = 'manifest';
+    writeCanonical(indexPath, index);
+  }, /fragment evidence-browser-relay-providers mount has drifted/u);
+  rejectsFixture(({ indexPath }) => {
+    const index = readJson(indexPath);
     index.fragments[0].size_bytes += 1;
     writeCanonical(indexPath, index);
   }, /core fragment size has drifted/u);
@@ -443,13 +525,18 @@ test('rejects index/core revision, identity and owned-key drift after digest rec
     });
   }, /evidence-browser-relay-readers identifier has drifted/u);
   rejectsFixture((fixture) => {
+    mutateFragment(fixture, 'evidence-browser-relay-providers', (fragment) => {
+      fragment.id = 'evidence-browser-relay-readers';
+    });
+  }, /evidence-browser-relay-providers identifier has drifted/u);
+  rejectsFixture((fixture) => {
     mutateFragment(fixture, 'evidence-platform', (fragment) => {
       fragment.values.unreviewed = true;
     });
   }, /evidence-platform values fields or field order have drifted/u);
 });
 
-test('rejects missing, reassigned or duplicated reader evidence ownership', () => {
+test('rejects missing, reassigned or duplicated reader and provider evidence ownership', () => {
   rejectsFixture((fixture) => {
     mutateFragment(fixture, 'evidence-browser-relay-readers', (fragment) => {
       delete fragment.values.browser_relay_source_transports;
@@ -520,13 +607,35 @@ test('rejects missing, reassigned or duplicated reader evidence ownership', () =
     });
   }, /evidence-browser-relay-readers values fields or field order have drifted/u);
   rejectsFixture((fixture) => {
+    mutateFragment(fixture, 'evidence-browser-relay-providers', (fragment) => {
+      delete fragment.values.browser_relay_source_clients;
+    });
+  }, /evidence-browser-relay-providers values fields or field order have drifted/u);
+  rejectsFixture((fixture) => {
+    let reassigned;
+    mutateFragment(fixture, 'evidence-browser-relay-providers', (fragment) => {
+      reassigned = fragment.values.browser_relay_source_clients;
+      delete fragment.values.browser_relay_source_clients;
+    });
     mutateFragment(fixture, 'evidence-browser-relay-readers', (fragment) => {
-      delete fragment.values.browser_relay_trusted_source_composition;
+      fragment.values.browser_relay_source_clients = reassigned;
     });
   }, /evidence-browser-relay-readers values fields or field order have drifted/u);
   rejectsFixture((fixture) => {
-    let reassigned;
     mutateFragment(fixture, 'evidence-browser-relay-readers', (fragment) => {
+      fragment.values.browser_relay_trusted_source_composition = readJson(
+        join(fixture.fragmentRoot, 'evidence-browser-relay-providers.json'),
+      ).values.browser_relay_trusted_source_composition;
+    });
+  }, /evidence-browser-relay-readers values fields or field order have drifted/u);
+  rejectsFixture((fixture) => {
+    mutateFragment(fixture, 'evidence-browser-relay-providers', (fragment) => {
+      delete fragment.values.browser_relay_trusted_source_composition;
+    });
+  }, /evidence-browser-relay-providers values fields or field order have drifted/u);
+  rejectsFixture((fixture) => {
+    let reassigned;
+    mutateFragment(fixture, 'evidence-browser-relay-providers', (fragment) => {
       reassigned = fragment.values.browser_relay_trusted_source_composition;
       delete fragment.values.browser_relay_trusted_source_composition;
     });
@@ -535,43 +644,40 @@ test('rejects missing, reassigned or duplicated reader evidence ownership', () =
     });
   }, /evidence-browser-relay-scenario values fields or field order have drifted/u);
   rejectsFixture((fixture) => {
-    mutateFragment(fixture, 'evidence-browser-relay-readers', (fragment) => {
+    mutateFragment(fixture, 'evidence-browser-relay-providers', (fragment) => {
       delete fragment.values.browser_relay_trusted_provider_process;
     });
-  }, /evidence-browser-relay-readers values fields or field order have drifted/u);
+  }, /evidence-browser-relay-providers values fields or field order have drifted/u);
   rejectsFixture((fixture) => {
-    let reassigned;
-    mutateFragment(fixture, 'evidence-browser-relay-readers', (fragment) => {
-      reassigned = fragment.values.browser_relay_trusted_provider_process;
+    mutateFragment(fixture, 'evidence-browser-relay-providers', (fragment) => {
+      const process = fragment.values.browser_relay_trusted_provider_process;
       delete fragment.values.browser_relay_trusted_provider_process;
+      const composition = fragment.values.browser_relay_trusted_source_composition;
+      delete fragment.values.browser_relay_trusted_source_composition;
+      fragment.values.browser_relay_trusted_provider_process = process;
+      fragment.values.browser_relay_trusted_source_composition = composition;
     });
-    mutateFragment(fixture, 'evidence-browser-relay-scenario', (fragment) => {
-      fragment.values.browser_relay_trusted_provider_process = reassigned;
-    });
-  }, /evidence-browser-relay-scenario values fields or field order have drifted/u);
+  }, /evidence-browser-relay-providers values fields or field order have drifted/u);
 });
 
 test('accepts the exact aggregate cap and rejects cap plus one with bounded fragments', () => {
   const fixture = createFixture();
   try {
-    const maximumBytes = 256 * 1024;
-    const padding = maximumBytes - bundleBytes(fixture);
-    assert.ok(padding > 0);
-    mutateFragment(fixture, 'core', (fragment) => {
-      fragment.values.status += 'x'.repeat(padding);
-    });
+    const maximumBytes = 512 * 1024;
+    padBundleTo(fixture, maximumBytes);
     assert.equal(bundleBytes(fixture), maximumBytes);
-    assert.ok(readFileSync(join(fixture.fragmentRoot, 'core.json')).byteLength < 96 * 1024);
+    const index = readJson(fixture.indexPath);
+    assert.ok(index.fragments.every(({ path }) => (
+      readFileSync(join(fixture.root, path)).byteLength <= 96 * 1024
+    )));
     assert.doesNotThrow(() => loadStagingManifestBundle(fixture.indexPath));
 
-    mutateFragment(fixture, 'core', (fragment) => {
-      fragment.values.status += 'x';
-    });
+    padBundleTo(fixture, maximumBytes + 1);
     assert.equal(bundleBytes(fixture), maximumBytes + 1);
     assert.throws(
       () => loadStagingManifestBundle(fixture.indexPath),
       (error) => error instanceof StagingManifestBundleError
-        && /bundle exceeds 262144 bytes/u.test(error.message),
+        && /bundle exceeds 524288 bytes/u.test(error.message),
     );
   } finally {
     rmSync(fixture.root, { recursive: true, force: true });
