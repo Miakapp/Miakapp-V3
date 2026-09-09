@@ -3,6 +3,7 @@ import {
   rejectTrustedProviderOwner,
   validateTrustedProviderBrowserOwner,
   validateTrustedProviderOperationOwner,
+  validateTrustedProviderOwnerAuthorityBytes,
   validateTrustedProviderOwnerExecuteInput,
   validateTrustedProviderOwnerResult,
   validateTrustedProviderOwnerRuntime,
@@ -32,9 +33,13 @@ function ownerSurface(execute, close) {
   return Object.freeze(owner);
 }
 
-export function createBrowserRelayTrustedProviderOwnerInternal(runtimeValue) {
-  if (arguments.length !== 1) reject();
+export function createBrowserRelayTrustedProviderOwnerInternal(
+  runtimeValue,
+  consumeAuthorityValue,
+) {
+  if (arguments.length !== 2 || typeof consumeAuthorityValue !== 'function') reject();
   const runtime = validateTrustedProviderOwnerRuntime(runtimeValue);
+  let consumeAuthority = consumeAuthorityValue;
   let state = 'ready';
   let sourceOwner;
   let operationOwner;
@@ -77,6 +82,7 @@ export function createBrowserRelayTrustedProviderOwnerInternal(runtimeValue) {
     sourceOwner = undefined;
     browserOwner = undefined;
     operationOwner = undefined;
+    consumeAuthority = undefined;
     if (failed) reject();
     return undefined;
   }
@@ -85,30 +91,36 @@ export function createBrowserRelayTrustedProviderOwnerInternal(runtimeValue) {
     const input = validateTrustedProviderOwnerExecuteInput(inputValue);
     const localController = input.signal === undefined ? new AbortController() : undefined;
     const signal = input.signal ?? localController.signal;
+    const consume = consumeAuthority;
+    consumeAuthority = undefined;
     try {
-      sourceOwner = validateTrustedProviderSourceOwner(await runtime.createSourceTruth(
-        Object.freeze({ clock: runtime.clock, delay: runtime.delay, signal }),
-      ));
-      operationOwner = validateTrustedProviderOperationOwner(await runtime.createOperation(
-        Object.freeze({ authority: sourceOwner.authority }),
-      ));
-      browserOwner = validateTrustedProviderBrowserOwner(await runtime.createBrowser(
-        Object.freeze({ authority: sourceOwner.authority }),
-      ));
-      composition = await runtime.createComposition(Object.freeze({
-        providers: sourceOwner.providers,
-        operation: operationOwner.components,
-        matrix: browserOwner.components,
-      }), Object.freeze({ signal }));
-      if (composition === null || typeof composition !== 'object'
-        || !Object.isFrozen(composition)
-        || JSON.stringify(Reflect.ownKeys(composition).sort())
-          !== JSON.stringify(['close', 'execute'])
-        || typeof composition.execute !== 'function'
-        || typeof composition.close !== 'function') reject();
-      const result = validateTrustedProviderOwnerResult(await composition.execute());
-      state = 'executed';
-      return result;
+      if (typeof consume !== 'function') reject();
+      return await consume(async (authorityValue) => {
+        validateTrustedProviderOwnerAuthorityBytes(authorityValue);
+        sourceOwner = validateTrustedProviderSourceOwner(await runtime.createSourceTruth(
+          Object.freeze({ clock: runtime.clock, delay: runtime.delay, signal }),
+        ));
+        operationOwner = validateTrustedProviderOperationOwner(await runtime.createOperation(
+          Object.freeze({ authority: sourceOwner.authority }),
+        ));
+        browserOwner = validateTrustedProviderBrowserOwner(await runtime.createBrowser(
+          Object.freeze({ authority: sourceOwner.authority }),
+        ));
+        composition = await runtime.createComposition(Object.freeze({
+          providers: sourceOwner.providers,
+          operation: operationOwner.components,
+          matrix: browserOwner.components,
+        }), Object.freeze({ signal }));
+        if (composition === null || typeof composition !== 'object'
+          || !Object.isFrozen(composition)
+          || JSON.stringify(Reflect.ownKeys(composition).sort())
+            !== JSON.stringify(['close', 'execute'])
+          || typeof composition.execute !== 'function'
+          || typeof composition.close !== 'function') reject();
+        const result = validateTrustedProviderOwnerResult(await composition.execute());
+        state = 'executed';
+        return result;
+      });
     } catch {
       state = 'failed';
       throw new Error('Trusted provider owner execution failed');

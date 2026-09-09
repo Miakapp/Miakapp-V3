@@ -5,8 +5,12 @@ import {
   TRUSTED_PROVIDER_PROCESS_MAXIMUM_FRAME_BYTES,
   TRUSTED_PROVIDER_PROCESS_PROTOCOL_SCHEMA,
   TRUSTED_PROVIDER_PROCESS_PROTOCOL_VERSION,
+  buildTrustedProviderProcessAuthorityReady,
   buildTrustedProviderProcessReady,
 } from '../../contract.mjs';
+import {
+  readTrustedProviderEphemeralAuthority,
+} from '../../authority-channel.mjs';
 import {
   createTrustedProviderProcessFrameWriter,
   encodeTrustedProviderProcessFrame,
@@ -75,11 +79,48 @@ if (configuration.mode === 'noncanonical') {
 } else {
   const requestStream = createReadStream(null, { autoClose: true, fd: 3 });
   const responseStream = createWriteStream(null, { autoClose: true, fd: 4 });
+  const authorityStream = createReadStream(null, { autoClose: true, fd: 5 });
   const writer = createTrustedProviderProcessFrameWriter(responseStream);
   if (configuration.mode === 'hang_ready') {
     requestStream.resume();
   } else {
     await writer.write(buildTrustedProviderProcessReady(ownerSha256));
+    if (configuration.mode === 'authority_partial_read') {
+      authorityStream.once('data', (chunk) => {
+        chunk.fill(0);
+        authorityStream.destroy();
+      });
+      authorityStream.resume();
+    } else {
+      const authority = await readTrustedProviderEphemeralAuthority(authorityStream);
+      authority.fill(0);
+      if (configuration.mode === 'authority_result_before_ack') {
+        await writer.write({
+          schema: TRUSTED_PROVIDER_PROCESS_PROTOCOL_SCHEMA,
+          protocol_version: TRUSTED_PROVIDER_PROCESS_PROTOCOL_VERSION,
+          type: 'result',
+          request_id: 'A'.repeat(43),
+          result: configuration.result,
+        });
+        await writer.end();
+      } else if (configuration.mode === 'authority_missing_ack') {
+        if (typeof configuration.observation_path === 'string') {
+          writeFileSync(configuration.observation_path, 'authority_received');
+        }
+        requestStream.resume();
+      } else {
+        await writer.write(buildTrustedProviderProcessAuthorityReady());
+        if (configuration.mode === 'authority_duplicate_ack') {
+          await writer.write(buildTrustedProviderProcessAuthorityReady());
+        }
+      }
+    }
+    if (configuration.mode.startsWith('authority_')) {
+      if (configuration.mode === 'authority_partial_read'
+        || configuration.mode === 'authority_missing_ack') {
+        setInterval(() => {}, 1_000);
+      }
+    } else {
     let cancelCount = 0;
     const requestReader = readTrustedProviderProcessFrames(requestStream, {
       async onMessage(message) {
@@ -152,5 +193,6 @@ if (configuration.mode === 'noncanonical') {
         if (configuration.mode !== 'result_then_hang') process.exitCode = 0;
       },
     });
+    }
   }
 }

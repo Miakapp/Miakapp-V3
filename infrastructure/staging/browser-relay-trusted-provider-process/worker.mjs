@@ -12,6 +12,7 @@ import { URL, fileURLToPath } from 'node:url';
 import {
   StagingBrowserRelayTrustedProviderProcessError,
   TRUSTED_PROVIDER_PROCESS_PROTOCOL_VERSION,
+  buildTrustedProviderProcessAuthorityReady,
   buildTrustedProviderProcessFailure,
   buildTrustedProviderProcessReady,
   buildTrustedProviderProcessResult,
@@ -25,6 +26,10 @@ import {
   validateTrustedProviderProcessExecute,
 } from './contract.mjs';
 import {
+  createTrustedProviderEphemeralAuthorityCapability,
+  readTrustedProviderEphemeralAuthority,
+} from './authority-channel.mjs';
+import {
   createTrustedProviderProcessFrameWriter,
   readTrustedProviderProcessFrames,
 } from './framed-channel.mjs';
@@ -32,6 +37,7 @@ import { materializeTrustedProviderOwnerBundle } from './owner-bundle.mjs';
 
 let requestStream;
 let responseStream;
+let authorityStream;
 let writer;
 let reader;
 let state = 'starting';
@@ -40,6 +46,8 @@ let ownerAbortController;
 let terminalStarted = false;
 let operationTask;
 let forcedFailureCode;
+let authoritySettlement;
+const INTRINSIC_BUFFER_FILL = Buffer.prototype.fill;
 
 function registerOwnerModuleBoundary(workspace) {
   const workspacePrefix = `${workspace}${sep}`;
@@ -97,6 +105,9 @@ async function finish(message, exitCode) {
   state = 'closing';
   reader?.stop();
   requestStream.destroy();
+  authorityStream.destroy();
+  authoritySettlement?.settle();
+  authoritySettlement = undefined;
   try {
     await writer.write(message);
     await writer.end();
@@ -117,7 +128,10 @@ async function runOwner(createOwner) {
   let result;
   let code;
   try {
-    owner = validateTrustedProviderOwner(await createOwner());
+    const context = Object.freeze(Object.assign(Object.create(null), {
+      authority: authoritySettlement.capability,
+    }));
+    owner = validateTrustedProviderOwner(await createOwner(context));
   } catch (error) {
     code = failureCode(error, 'owner_contract_failed');
   }
@@ -140,6 +154,8 @@ async function runOwner(createOwner) {
       code = 'owner_close_failed';
     }
   }
+  if (!authoritySettlement?.settle()) code = 'authority_contract_failed';
+  authoritySettlement = undefined;
   if (forcedFailureCode !== undefined) code = forcedFailureCode;
   if (code !== undefined) {
     await finish(buildTrustedProviderProcessFailure(requestIdentifier, code), 1);
@@ -274,16 +290,40 @@ async function start() {
     onEnd() {
       if (state === 'closing') return;
       ownerAbortController?.abort();
+      authorityStream.destroy();
+      if (operationTask === undefined && state === 'ready') {
+        authoritySettlement?.settle();
+        authoritySettlement = undefined;
+      }
       process.exitCode = 1;
     },
   });
-  state = 'ready';
+  state = 'awaiting_authority';
   await writer.write(buildTrustedProviderProcessReady(ownerBundleSha256));
+  let authority;
+  try {
+    authority = await readTrustedProviderEphemeralAuthority(authorityStream);
+    authoritySettlement = createTrustedProviderEphemeralAuthorityCapability(authority);
+    authority = undefined;
+  } catch {
+    if (authority !== undefined) {
+      try {
+        Reflect.apply(INTRINSIC_BUFFER_FILL, authority, [0]);
+      } catch {
+        // The authority channel already owns the same buffer on this path.
+      }
+    }
+    await finishStartupFailure('authority_transfer_failed');
+    return;
+  }
+  state = 'ready';
+  await writer.write(buildTrustedProviderProcessAuthorityReady());
 }
 
 export async function runBrowserRelayTrustedProviderWorker() {
   requestStream = createReadStream(null, { autoClose: true, fd: 3 });
   responseStream = createWriteStream(null, { autoClose: true, fd: 4 });
+  authorityStream = createReadStream(null, { autoClose: true, fd: 5 });
   writer = createTrustedProviderProcessFrameWriter(responseStream);
   try {
     await start();

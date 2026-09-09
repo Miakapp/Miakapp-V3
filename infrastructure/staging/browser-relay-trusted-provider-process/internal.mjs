@@ -18,6 +18,7 @@ import {
   buildTrustedProviderProcessCancel,
   buildTrustedProviderProcessExecute,
   rejectTrustedProviderProcess,
+  validateTrustedProviderProcessAuthorityReady,
   validateTrustedProviderProcessExecuteInput,
   validateTrustedProviderProcessFailure,
   validateTrustedProviderProcessOptions,
@@ -25,6 +26,9 @@ import {
   validateTrustedProviderProcessResult,
   validateTrustedProviderProcessStartupFailure,
 } from './contract.mjs';
+import {
+  writeTrustedProviderEphemeralAuthority,
+} from './authority-channel.mjs';
 import {
   createTrustedProviderProcessFrameWriter,
   readTrustedProviderProcessFrames,
@@ -34,6 +38,7 @@ const WORKER_PATH = fileURLToPath(new URL('worker.mjs', import.meta.url));
 const PACKAGE_ROOT = fileURLToPath(new URL('.', import.meta.url));
 const INTRINSIC_ADD_EVENT_LISTENER = EventTarget.prototype.addEventListener;
 const INTRINSIC_REMOVE_EVENT_LISTENER = EventTarget.prototype.removeEventListener;
+const INTRINSIC_BUFFER_FILL = Buffer.prototype.fill;
 const ABORTED_GETTER = Object.getOwnPropertyDescriptor(
   AbortSignal.prototype,
   'aborted',
@@ -43,6 +48,14 @@ const PROCESS_GROUP_SETTLEMENT_POLL_MILLISECONDS = 10;
 
 function processFailure(code) {
   return new StagingBrowserRelayTrustedProviderProcessError(code);
+}
+
+function overwriteAuthority(authority) {
+  try {
+    Reflect.apply(INTRINSIC_BUFFER_FILL, authority, [0]);
+  } catch {
+    // Every caller receives only the fixed process outcome.
+  }
 }
 
 function createOwnerWorkspace() {
@@ -128,7 +141,13 @@ function deferred() {
   return Object.freeze({ promise, resolve: resolvePromise });
 }
 
-async function executeInDedicatedProcess(options, callerSignal, workerPath, exposeCancel) {
+async function executeInDedicatedProcess(
+  options,
+  authority,
+  callerSignal,
+  workerPath,
+  exposeCancel,
+) {
   if (process.platform === 'win32' || !supportedNodeRuntime()) {
     rejectTrustedProviderProcess('unsupported_platform');
   }
@@ -157,7 +176,7 @@ async function executeInDedicatedProcess(options, callerSignal, workerPath, expo
       detached: true,
       env: Object.create(null),
       shell: false,
-      stdio: ['ignore', 'ignore', 'ignore', 'pipe', 'pipe'],
+      stdio: ['ignore', 'ignore', 'ignore', 'pipe', 'pipe', 'pipe'],
       windowsHide: true,
     });
   } catch {
@@ -166,7 +185,10 @@ async function executeInDedicatedProcess(options, callerSignal, workerPath, expo
 
   const requestStream = child.stdio[3];
   const responseStream = child.stdio[4];
-  if (requestStream === null || responseStream === null) {
+  const authorityStream = child.stdio[5];
+  if (requestStream === null || requestStream === undefined
+    || responseStream === null || responseStream === undefined
+    || authorityStream === null || authorityStream === undefined) {
     const groupClosed = await terminateAndVerifyProcessGroup(child);
     const workspaceRemoved = groupClosed && removeOwnerWorkspace(ownerWorkspace);
     throw processFailure(groupClosed && workspaceRemoved ? 'peer_failed' : 'cleanup_failed');
@@ -174,10 +196,12 @@ async function executeInDedicatedProcess(options, callerSignal, workerPath, expo
 
   const writer = createTrustedProviderProcessFrameWriter(requestStream);
   const ready = deferred();
+  const authorityReady = deferred();
   const processClosed = deferred();
   const responseSettled = deferred();
   const requestClosed = deferred();
   const responseClosed = deferred();
+  const authorityClosed = deferred();
   let phase = 'starting';
   let failureCode;
   let result;
@@ -191,9 +215,11 @@ async function executeInDedicatedProcess(options, callerSignal, workerPath, expo
   let reader;
   let requestSent = false;
   let cancelSent = false;
+  let authorityTransferTask;
 
   requestStream.once('close', requestClosed.resolve);
   responseStream.once('close', responseClosed.resolve);
+  authorityStream.once('close', authorityClosed.resolve);
 
   const clearTimers = () => {
     clearTimeout(cancellationTimer);
@@ -215,6 +241,7 @@ async function executeInDedicatedProcess(options, callerSignal, workerPath, expo
     phase = 'cancelling';
     clearTimeout(readyTimer);
     clearTimeout(operationTimer);
+    authorityStream.destroy();
     if (cooperative && requestSent && !terminalReceived && !cancelSent) {
       cancelSent = true;
       void writer.write(buildTrustedProviderProcessCancel(requestIdentifier)).catch(() => {});
@@ -226,6 +253,7 @@ async function executeInDedicatedProcess(options, callerSignal, workerPath, expo
       );
     }
     ready.resolve();
+    authorityReady.resolve();
   };
 
   exposeCancel((code = 'closed') => beginShutdown(code, true));
@@ -248,9 +276,19 @@ async function executeInDedicatedProcess(options, callerSignal, workerPath, expo
           return;
         }
         validateTrustedProviderProcessReady(message, options.owner_bundle_sha256);
-        phase = 'ready';
-        clearTimeout(readyTimer);
+        phase = 'transferring_authority';
         ready.resolve();
+        return;
+      }
+      if (phase === 'transferring_authority') {
+        if (message?.type === 'startup_failure') {
+          terminalReceived = true;
+          beginShutdown(validateTrustedProviderProcessStartupFailure(message), true);
+          return;
+        }
+        validateTrustedProviderProcessAuthorityReady(message);
+        phase = 'authority_ready';
+        authorityReady.resolve();
         return;
       }
       if (phase !== 'executing' && phase !== 'cancelling') {
@@ -302,6 +340,7 @@ async function executeInDedicatedProcess(options, callerSignal, workerPath, expo
     childExitSignal = signal;
     processClosed.resolve();
     ready.resolve();
+    authorityReady.resolve();
   });
 
   readyTimer = setTimeout(
@@ -321,7 +360,21 @@ async function executeInDedicatedProcess(options, callerSignal, workerPath, expo
   }
   await ready.promise;
 
-  if (failureCode === undefined && phase === 'ready') {
+  if (failureCode === undefined && phase === 'transferring_authority') {
+    authorityTransferTask = writeTrustedProviderEphemeralAuthority(
+      authorityStream,
+      authority,
+    );
+    try {
+      await authorityTransferTask;
+    } catch {
+      beginShutdown('authority_transfer_failed', false);
+    }
+    await authorityReady.promise;
+  }
+
+  if (failureCode === undefined && phase === 'authority_ready') {
+    clearTimeout(readyTimer);
     phase = 'executing';
     requestSent = true;
     try {
@@ -352,10 +405,17 @@ async function executeInDedicatedProcess(options, callerSignal, workerPath, expo
   reader.stop();
   writer.destroy();
   responseStream.destroy();
-  await Promise.all([requestClosed.promise, responseClosed.promise]);
+  authorityStream.destroy();
+  await Promise.all([
+    requestClosed.promise,
+    responseClosed.promise,
+    authorityClosed.promise,
+    authorityTransferTask?.catch(() => {}),
+  ]);
   const processGroupClosed = await terminateAndVerifyProcessGroup(child);
   requestStream.unref?.();
   responseStream.unref?.();
+  authorityStream.unref?.();
   child.unref();
   const workspaceRemoved = processGroupClosed && removeOwnerWorkspace(ownerWorkspace);
   if (!processGroupClosed || !workspaceRemoved) failureCode = 'cleanup_failed';
@@ -381,21 +441,27 @@ export function createBrowserRelayTrustedProviderProcessInternal(
   let operationTask;
   let cancelOperation;
 
-  const execute = (inputValue = {}) => {
+  const execute = (inputValue) => {
     if (closed) return Promise.reject(processFailure('closed'));
     if (used) return Promise.reject(processFailure('already_executed'));
-    const { signal } = validateTrustedProviderProcessExecuteInput(inputValue);
+    const { authority, signal } = validateTrustedProviderProcessExecuteInput(inputValue);
     used = true;
     if (signal !== undefined && signalAborted(signal)) {
+      overwriteAuthority(authority);
       return Promise.reject(processFailure('aborted'));
     }
     operationTask = executeInDedicatedProcess(
       options,
+      authority,
       signal,
       workerPath,
       (cancel) => {
         cancelOperation = cancel;
       },
+    );
+    void operationTask.then(
+      () => overwriteAuthority(authority),
+      () => overwriteAuthority(authority),
     );
     return operationTask;
   };

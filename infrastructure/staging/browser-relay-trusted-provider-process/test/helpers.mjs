@@ -29,6 +29,21 @@ const PLAYWRIGHT_CORE_ROOT = realpathSync.native(fileURLToPath(
   new URL('../../../../node_modules/playwright-core/', import.meta.url),
 ));
 
+export function syntheticAuthority() {
+  const authority = Buffer.alloc(32);
+  for (let index = 0; index < authority.byteLength; index += 1) {
+    authority[index] = (index * 29 + 17) % 256;
+  }
+  return authority;
+}
+
+export function processExecuteInput(signal) {
+  return Object.freeze({
+    authority: syntheticAuthority(),
+    ...(signal === undefined ? {} : { signal }),
+  });
+}
+
 function windowBaseline() {
   return {
     schema: 'miakapp.staging-browser-relay-operation-window-baseline/1',
@@ -236,8 +251,13 @@ export function createBundle(source, additionalFiles = []) {
 
 export function hostilePeerBundle(configuration) {
   return createBundle(`
-export function createBrowserRelayTrustedProviderOwner() {
-  return { async execute() {}, async close() {} };
+export function createBrowserRelayTrustedProviderOwner(bootstrap) {
+  return {
+    async execute() {
+      return bootstrap.authority.consume(async () => undefined);
+    },
+    async close() {}
+  };
 }
 `, [{
     path: 'configuration.json',
@@ -288,14 +308,19 @@ const require = createRequire(import.meta.url);
 const packageMetadata = require('playwright-core/package.json');
 const RESULT = ${result};
 
-export function createBrowserRelayTrustedProviderOwner() {
+export function createBrowserRelayTrustedProviderOwner(bootstrap) {
   return {
     async execute() {
-      const executablePath = chromium.executablePath();
-      if (packageMetadata.version !== '1.62.1' || chromium.name() !== 'chromium'
-        || typeof playwrightDebug !== 'function' || typeof executablePath !== 'string'
-        || executablePath.length < 1) throw new Error('Playwright-core package tree is incomplete');
-      return RESULT;
+      return bootstrap.authority.consume(async (authority) => {
+        if (!Buffer.isBuffer(authority) || authority.byteLength < 1) {
+          throw new Error('Ephemeral authority is unavailable');
+        }
+        const executablePath = chromium.executablePath();
+        if (packageMetadata.version !== '1.62.1' || chromium.name() !== 'chromium'
+          || typeof playwrightDebug !== 'function' || typeof executablePath !== 'string'
+          || executablePath.length < 1) throw new Error('Playwright-core package tree is incomplete');
+        return RESULT;
+      });
     },
     async close() {}
   };
@@ -324,6 +349,15 @@ export function ownerBundle({ mode = 'success', observationPath, descendantPath 
         exec_argv: process.execArgv,
         process_send: process.send === undefined,
         process_channel: process.channel === undefined,
+        factory_context_keys: Object.keys(bootstrap),
+        factory_context_frozen: Object.isFrozen(bootstrap),
+        factory_context_prototype_null: Object.getPrototypeOf(bootstrap) === null,
+        authority_capability_keys: Object.keys(bootstrap.authority),
+        authority_capability_frozen: Object.isFrozen(bootstrap.authority),
+        authority_capability_prototype_null:
+          Object.getPrototypeOf(bootstrap.authority) === null,
+        authority_is_buffer: Buffer.isBuffer(authority),
+        authority_bytes: authority.byteLength,
         context_keys: Object.keys(context),
         context_frozen: Object.isFrozen(context),
         context_prototype_null: Object.getPrototypeOf(context) === null
@@ -378,6 +412,19 @@ export function ownerBundle({ mode = 'success', observationPath, descendantPath 
     await new Promise((resolve) => setTimeout(resolve, 100));
     return RESULT;`;
     close = `writeFileSync(${JSON.stringify(observationPath)}, 'closed');`;
+  } else if ([
+    'ignore_authority',
+    'ignore_authority_throw',
+    'ignore_authority_close',
+    'double_authority',
+    'double_authority_throw',
+  ].includes(mode)) {
+    execute = mode.endsWith('_throw')
+      ? "throw new Error('Bearer combined-owner-secret');"
+      : 'return RESULT;';
+    if (mode === 'ignore_authority_close') {
+      close = "throw new Error('Bearer ignored-authority-close-secret');";
+    }
   } else {
     throw new Error('unknown owner fixture mode');
   }
@@ -385,10 +432,27 @@ export function ownerBundle({ mode = 'success', observationPath, descendantPath 
   return createBundle(`${imports.join('\n')}
 import { OWNER_FIXTURE_REVISION } from './dependency.mjs';
 const RESULT = ${result};
-export function createBrowserRelayTrustedProviderOwner() {
+export function createBrowserRelayTrustedProviderOwner(bootstrap) {
   if (OWNER_FIXTURE_REVISION !== 1) throw new Error('invalid owner fixture dependency');
   return {
-    async execute(context) { ${execute} },
+    async execute(context) {
+      ${mode.startsWith('ignore_authority') ? `${execute}`
+    : mode.startsWith('double_authority') ? `
+      await bootstrap.authority.consume(async (authority) => {
+        if (!Buffer.isBuffer(authority) || authority.byteLength < 1) {
+          throw new Error('Ephemeral authority is unavailable');
+        }
+      });
+      try {
+        await bootstrap.authority.consume(async () => undefined);
+      } catch {}
+      ${execute}` : `return bootstrap.authority.consume(async (authority) => {
+        if (!Buffer.isBuffer(authority) || authority.byteLength < 1) {
+          throw new Error('Ephemeral authority is unavailable');
+        }
+        ${execute}
+      });`}
+    },
     async close() { ${close} }
   };
 }
