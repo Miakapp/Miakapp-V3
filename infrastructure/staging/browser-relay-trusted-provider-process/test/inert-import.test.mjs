@@ -6,6 +6,7 @@ const MODULES = Object.freeze([
   '../contract.mjs',
   '../framed-channel.mjs',
   '../internal.mjs',
+  '../owner-bundle.mjs',
   '../process.mjs',
   '../worker.mjs',
   '../guard.mjs',
@@ -24,8 +25,8 @@ const deny = (name) => (...args) => {
 };
 childProcess.spawn = deny('spawn');
 for (const name of [
-  'openSync', 'readFileSync', 'writeFileSync', 'createReadStream',
-  'createWriteStream', 'lstatSync'
+      'openSync', 'readFileSync', 'writeFileSync', 'createReadStream',
+      'createWriteStream', 'lstatSync', 'mkdirSync', 'mkdtempSync', 'rmSync'
 ]) {
   const original = fs[name].bind(fs);
   fs[name] = (...args) => {

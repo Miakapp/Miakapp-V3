@@ -1110,35 +1110,51 @@ vertical-slice exit gates.
    offline without modifying their reviewed lifecycle implementations.
    A separate dormant dedicated-process package now owns one future trusted
    provider/browser graph per operation. The public parent accepts only an
-   absolute self-contained ESM bundle path and its SHA-256, starts one fresh
+   absolute deterministic owner-container path and its SHA-256, starts one fresh
    detached POSIX Node process on `execute()`, supplies an empty environment and
    inherits neither stdio, `execArgv`, shell nor Node IPC channel. Two raw
    unidirectional pipes carry a versioned, canonical, length-prefixed and
    structurally bounded JSON protocol: parent-to-child `execute`/`cancel`, and
    child-to-parent `ready`/startup failure/result/failure. No provider context,
    browser object, handle, credential, arbitrary target or generic method can
-   cross. The worker reads a regular non-executable no-follow file once,
-   verifies its digest and imports those exact bytes through a data URL before
-   creating the owner. Ready, operation and cancellation deadlines are bounded;
+   cross. The worker reads a regular non-executable no-follow file once and
+   verifies its digest. The fixed owner-container v1 framing then verifies a
+   canonical manifest and ordered raw payloads: 32 MiB overall, 256 KiB of
+   manifest, 512 files, 8 MiB per file, 256 UTF-8 bytes per safe relative
+   POSIX path and 255 bytes per path segment. Every file has an exact length and
+   SHA-256. The parent owns one
+   empty canonical `0700` temporary workspace; the worker materializes only
+   verified bytes into `0700` directories and `0400` files and imports the entry
+   through its file URL. Synchronous Node 22 hooks permit built-in modules but
+   confine ordinary ESM, CommonJS and `createRequire()` resolutions to canonical
+   files inside that workspace, so reviewed relative and packaged imports are
+   supported without ambient or external fallback.
+   Ready, operation and cancellation deadlines are bounded;
    cooperative cancellation precedes SIGKILL of the complete detached process
    group. The owner closes before the terminal message, both sides validate the
    closed operation result, and the public promise waits for actual child and
    pipe closure. Crash, malformed transport, wrong identity and ambiguous
    disconnect all fail closed without restart or replay. Real synthetic process
    tests include hostile frames, hangs, ignored abort and a SIGTERM-ignoring
-   descendant. This boundary isolates lifecycle and termination, not the
+   descendant. Parent-owned workspace removal follows process-group and pipe
+   settlement and gates the public result; cleanup after a parent crash is not
+   guaranteed. This boundary isolates lifecycle and termination, not the
    operating system: the digest-pinned owner remains trusted same-user code with
-   filesystem and network authority.
+   filesystem and network authority. Semantic revision 106 also proves a real
+   offline `playwright-core` 1.62.1 package-tree import and browser-metadata
+   resolution in the child. No browser binary is packaged, no browser launches,
+   and the proof performs no network, cloud or live request.
    A final dormant operation case adapter now hard-wires the unchanged
    single-use operation to that complete schedule. It intercepts one canonical
    receipt, retains only a private non-serializable capability, admits exactly
    one matrix callback within the claim lifetime, forwards only the exact edge
    abort signal and returns the unchanged closed operation result. Claim lineage
    never reaches a provider or result, and both operation cleanup levels are
-   exercised offline. Named provider/case wiring and the process owner boundary
-   are now complete; the concrete self-contained owner bundle, live
-   source-truth implementations, trusted live-browser providers, Hosting
-   publication and live authority remain open before the one allowed execution.
+   exercised offline. Named provider/case wiring, the process owner boundary and
+   its deterministic dependency-bearing container format are now complete; the
+   concrete complete owner graph, live source-truth implementations, trusted
+   live-browser providers, Hosting publication and live authority remain open
+   before the one allowed execution.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain

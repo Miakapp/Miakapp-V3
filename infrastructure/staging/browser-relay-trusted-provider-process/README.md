@@ -1,14 +1,20 @@
 # Dormant trusted provider process boundary
 
 This package gives one complete browser-relay owner a dedicated Node process and
-one narrow, validated IPC exchange. The future owner bundle will construct the
-Playwright connection, browser pages, seven trusted source providers and the
-existing trusted source composition entirely inside that child. The parent can
-start one operation, cancel it and receive only its closed operation result or a
-fixed failure code.
+one narrow, validated IPC exchange. Its deterministic owner-container format can
+carry a dependency-bearing ESM package tree; the future complete owner will use
+that format to construct the Playwright connection, browser pages, seven trusted
+source providers and the existing trusted source composition entirely inside
+the child. The parent can start one operation, cancel it and receive only its
+closed operation result or a fixed failure code.
 
-The implementation and its tests are offline. No live owner bundle exists yet,
-no browser or source is contacted, and this package schedules no staging work.
+The implementation and its tests are offline. They prove a real installed
+`playwright-core` 1.62.1 package-tree import and browser-metadata resolution, but
+include no browser binary and launch no browser. No live owner, source, network
+or cloud path is contacted, and this package schedules no staging work. The
+byte-identical original process-only profile remains archived as
+`profile-v1.json`; current profile revision 2 records only this added loading
+proof and its unchanged authority boundary.
 
 ## Ownership boundary
 
@@ -26,20 +32,40 @@ child has:
 - a detached POSIX process group that also contains normally spawned browser
   descendants.
 
-The worker first requires the bundle path to equal its native canonical real
-path, then opens one non-executable regular owner bundle with `O_NOFOLLOW`,
-bounds it to 1 MiB, reads it once, verifies its caller-pinned SHA-256, and
-imports those exact bytes through a data URL. Consequently, no symlinked path
-component is admitted and the owner must be a deterministic self-contained ESM
-bundle; relative imports are not allowed.
+Before spawn, the parent creates and owns one canonical empty `0700` temporary
+workspace. The worker first requires the container path to equal its native
+canonical real path, then opens one non-executable regular file with
+`O_NOFOLLOW`, bounds it to 32 MiB, reads it once and verifies its caller-pinned
+SHA-256. The fixed `MIAKOWN1` canonical manifest-plus-payload v1 framing contains
+a canonical JSON manifest followed by its ordered raw payloads. The manifest is
+limited to 256 KiB and an exact inventory of at most 512 files; each file is
+limited to 8 MiB and each safe relative POSIX path to 256 UTF-8 bytes. Every
+inventory entry binds path, byte length and SHA-256. Each segment is additionally
+limited to 255 bytes for supported POSIX filesystems; duplicate, case-colliding,
+prefix-colliding or unsafe paths fail closed.
+
+Only after all framing, inventory and payload checks pass does the worker
+materialize those exact bytes into the still-empty workspace. Directories are
+`0700`; files are created exclusively without following links, independently
+verified and made `0400`. Before the entry module is imported through its file
+URL, the worker installs Node 22 synchronous resolution hooks. Built-in `node:`
+modules remain available, while every ordinary ESM, CommonJS and
+`createRequire()` resolution must end at a canonical `0400` file inside the
+workspace. Reviewed relative imports and packaged dependency trees therefore
+work without falling back to an ancestor package or external file. The
+container remains deterministic and self-contained for ordinary module
+resolution: every non-built-in module required by the owner must appear in its
+exact manifest. This loading boundary does not turn trusted same-user owner code
+into untrusted sandboxed code.
 It exports exactly `createBrowserRelayTrustedProviderOwner()`, whose returned
 object exposes exactly `execute({ signal })` and `close()`.
 
 The owner factory, provider/browser graph, AbortSignal and cleanup hooks never
 cross the process boundary. The worker validates the final closed
 browser-relay-operation result, awaits `owner.close()`, then frames a cloned
-result. The parent parses and validates that clone again and waits for the child
-and both pipes to close before resolving.
+result. The parent parses and validates that clone again, waits for the child,
+both pipes and the process group to settle, and only then removes its workspace.
+Failed removal becomes `cleanup_failed` before a result can be released.
 
 ## Exact protocol
 
@@ -89,7 +115,7 @@ traces, paths, raw frames and owner diagnostics remain private.
 import { createBrowserRelayTrustedProviderProcess } from './process.mjs';
 
 const ownerProcess = createBrowserRelayTrustedProviderProcess({
-  owner_bundle_path: '/absolute/path/to/reviewed-owner-bundle.mjs',
+  owner_bundle_path: '/absolute/path/to/reviewed-owner.bundle',
   owner_bundle_sha256: '0'.repeat(64),
 });
 
@@ -110,12 +136,15 @@ that user's filesystem and network. A malicious owner could attack its own
 process or ambient OS authority; this package does not claim to contain one.
 Provider code therefore remains trusted, while hangs, crashes, retained JS
 references and ordinary descendant cleanup are bounded away from the parent
-realm.
+realm. The private materialization workspace is a verified loading boundary,
+not confinement, and its cleanup is not guaranteed if the parent itself
+crashes.
 
 The runner accepts no URL, target, header, credential, browser handle, generic
 method or cloud client. There is no OAuth/ADC discovery, Playwright launcher,
 Firebase/Google SDK, HTTP/WebSocket implementation, Hosting artifact, ingress or
-IAM change. Concrete source truth, credential acquisition and the single bounded
+IAM change. The offline dependency fixture includes no browser binary and proves
+no launch. Concrete source truth, credential acquisition and the single bounded
 live matrix remain separate future gates.
 
 ## Offline validation
@@ -125,11 +154,16 @@ bash infrastructure/staging/browser-relay-trusted-provider-process/check.sh
 node infrastructure/staging/validate.mjs infrastructure/staging/manifest.json
 ```
 
-The synthetic suite covers strict framing, digest and export failures, secret
+The synthetic suite covers deterministic container construction, manifest and
+payload digests, exact inventory and size/path/segment bounds, relative ESM
+imports, rejected ancestor-package, relative, absolute and CommonJS escapes,
+hostile filesystem inputs, strict IPC framing, export failures, secret
 sanitization, cancellation races, crashes, disconnects, an owner that ignores
 cooperative cancellation, descendants left behind after both success and
-failure, receiver identity, premature stream close and close-before-terminal
-ordering. It performs zero browser, DNS or cloud request.
+failure, workspace removal, receiver identity, premature stream close and
+close-before-terminal ordering. A real child imports the installed
+`playwright-core` 1.62.1 tree and resolves its package and browser metadata. The
+suite performs zero browser launch, network, DNS, cloud or live request.
 
 ## References
 

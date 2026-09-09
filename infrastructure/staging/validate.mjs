@@ -248,6 +248,11 @@ import {
   TRUSTED_PROVIDER_PROCESS_MAXIMUM_JSON_TOKENS,
   TRUSTED_PROVIDER_PROCESS_MAXIMUM_OPERATION_TIMEOUT_MILLISECONDS,
   TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_BYTES,
+  TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_FILE_BYTES,
+  TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_FILES,
+  TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_MANIFEST_BYTES,
+  TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_PATH_BYTES,
+  TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_SEGMENT_BYTES,
   TRUSTED_PROVIDER_PROCESS_MAXIMUM_QUEUED_WRITE_BYTES,
   TRUSTED_PROVIDER_PROCESS_MAXIMUM_READY_TIMEOUT_MILLISECONDS,
   TRUSTED_PROVIDER_PROCESS_MAXIMUM_STRING_BYTES,
@@ -431,7 +436,7 @@ const SOURCE_CLIENTS_CONTRACT_SHA256 =
 const TRUSTED_SOURCE_COMPOSITION_CONTRACT_SHA256 =
   '5074eaedcd9115f401bbf17f95d9600bff682928b77e4bb30f8c49d985571851';
 const TRUSTED_PROVIDER_PROCESS_CONTRACT_SHA256 =
-  '1a8b89c0bac0d44a9533e263d3a2abb3ed22c8e1a3dbce0b52366fafed69672b';
+  '9ef9a30c7273666db6f028618a3b22d160b4a5e823ad9c4fdc89c19c0db4abc3';
 const OPERATION_CASE_ADAPTER_CONTRACT_SHA256 =
   '75c33c7e8c3408132fd9083d715f59bcea4b27a210c940a236d13017968c31bf';
 
@@ -5491,10 +5496,10 @@ export function validateStagingManifest(value) {
     'teardown',
   ]);
   exact(manifest.schema, 'miakapp.staging-intent/1', 'manifest.schema');
-  exact(manifest.revision, 105, 'manifest.revision');
+  exact(manifest.revision, 106, 'manifest.revision');
   exact(
     manifest.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_independent_observers_closed_source_fact_producers_interleaved_runner_result_supported_not_wired_not_executed_browser_relay_evidence_session_closed_operation_local_capability_monotonic_epoch_implemented_not_wired_not_executed_browser_relay_case_scheduler_closed_case_interleaving_implemented_not_wired_not_executed_browser_relay_chromium_case_adapter_closed_native_scenario_scheduler_composed_offline_proven_not_live_wired_not_executed_browser_relay_secondary_case_adapter_closed_secondary_page_case_scheduler_composition_offline_proven_not_live_wired_not_executed_browser_relay_independent_case_adapter_closed_independent_source_case_composition_offline_proven_not_live_wired_not_executed_browser_relay_source_transports_closed_genuine_adapters_implemented_not_wired_not_executed_browser_relay_authenticated_source_readers_closed_kind_attenuated_ephemeral_authority_protocol_implemented_not_live_adapted_not_wired_not_executed_browser_relay_source_authority_adapters_closed_concrete_trusted_session_bridge_implemented_not_live_not_wired_not_executed_browser_relay_source_session_producers_closed_trusted_injected_clients_implemented_not_live_not_wired_not_executed_browser_relay_source_clients_closed_fixed_target_ephemeral_authority_implemented_not_live_not_wired_not_executed_browser_relay_trusted_source_composition_closed_named_trusted_source_provider_composition_wired_offline_not_live_executed_browser_relay_trusted_provider_process_dedicated_process_owner_boundary_implemented_synthetic_only_not_live_wired_browser_relay_chromium_scenario_closed_complete_page_projected_with_backpressure_offline_proven_not_wired_not_live_executed_browser_relay_playwright_bridge_closed_secondary_receipts_chromium_bfcache_blocked_not_wired_not_executed_browser_relay_page_receipt_closed_bridge_bound_not_aggregated_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_browser_relay_operation_case_adapter_closed_durable_claim_matrix_composition_offline_proven_not_live_executed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_independent_observers_closed_source_fact_producers_interleaved_runner_result_supported_not_wired_not_executed_browser_relay_evidence_session_closed_operation_local_capability_monotonic_epoch_implemented_not_wired_not_executed_browser_relay_case_scheduler_closed_case_interleaving_implemented_not_wired_not_executed_browser_relay_chromium_case_adapter_closed_native_scenario_scheduler_composed_offline_proven_not_live_wired_not_executed_browser_relay_secondary_case_adapter_closed_secondary_page_case_scheduler_composition_offline_proven_not_live_wired_not_executed_browser_relay_independent_case_adapter_closed_independent_source_case_composition_offline_proven_not_live_wired_not_executed_browser_relay_source_transports_closed_genuine_adapters_implemented_not_wired_not_executed_browser_relay_authenticated_source_readers_closed_kind_attenuated_ephemeral_authority_protocol_implemented_not_live_adapted_not_wired_not_executed_browser_relay_source_authority_adapters_closed_concrete_trusted_session_bridge_implemented_not_live_not_wired_not_executed_browser_relay_source_session_producers_closed_trusted_injected_clients_implemented_not_live_not_wired_not_executed_browser_relay_source_clients_closed_fixed_target_ephemeral_authority_implemented_not_live_not_wired_not_executed_browser_relay_trusted_source_composition_closed_named_trusted_source_provider_composition_wired_offline_not_live_executed_browser_relay_trusted_provider_process_dependency_bearing_owner_artifact_offline_proven_not_live_wired_browser_relay_chromium_scenario_closed_complete_page_projected_with_backpressure_offline_proven_not_wired_not_live_executed_browser_relay_playwright_bridge_closed_secondary_receipts_chromium_bfcache_blocked_not_wired_not_executed_browser_relay_page_receipt_closed_bridge_bound_not_aggregated_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_browser_relay_operation_case_adapter_closed_durable_claim_matrix_composition_offline_proven_not_live_executed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
     'manifest.status',
   );
   exact(manifest.environment, 'staging', 'manifest.environment');
@@ -8613,7 +8618,7 @@ export function validateCommittedEvidence(
   );
   exact(
     trustedProviderProcessProfile.state,
-    'dedicated_process_owner_boundary_implemented_synthetic_only_not_live_wired',
+    'dependency_bearing_owner_artifact_offline_proven_not_live_wired',
     'evidence.browser_relay_trusted_provider_process.state',
   );
   exactStructured(
@@ -8633,6 +8638,8 @@ export function validateCommittedEvidence(
     'evidence.browser_relay_trusted_provider_process.pins',
     [
       'implementation_base_commit',
+      'profile_v1_sha256',
+      'owner_bundle_source_sha256',
       'framed_channel_source_sha256',
       'internal_source_sha256',
       'process_source_sha256',
@@ -8644,10 +8651,13 @@ export function validateCommittedEvidence(
   );
   exact(
     trustedProviderProcessProfile.pins.implementation_base_commit,
-    '39163b4eec00ee79ca6613cf412affa2ac0dd2ca',
+    '3241711763e52f3a39659dafe0a596ac0540dcfc',
     'evidence.browser_relay_trusted_provider_process.pins.implementation_base_commit',
   );
   for (const [pin, path] of [
+    ['profile_v1_sha256', 'browser-relay-trusted-provider-process/profile-v1.json'],
+    ['owner_bundle_source_sha256',
+      'browser-relay-trusted-provider-process/owner-bundle.mjs'],
     ['framed_channel_source_sha256',
       'browser-relay-trusted-provider-process/framed-channel.mjs'],
     ['internal_source_sha256', 'browser-relay-trusted-provider-process/internal.mjs'],
@@ -8662,13 +8672,14 @@ export function validateCommittedEvidence(
   );
   const trustedProviderProcessTestCorpus = createHash('sha256');
   trustedProviderProcessTestCorpus.update(
-    'miakapp.staging-browser-relay-trusted-provider-process-test-corpus/1\n',
+    'miakapp.staging-browser-relay-trusted-provider-process-test-corpus/2\n',
   );
   for (const path of [
     'browser-relay-trusted-provider-process/test/helpers.mjs',
     'browser-relay-trusted-provider-process/test/contract.test.mjs',
     'browser-relay-trusted-provider-process/test/framed-channel.test.mjs',
     'browser-relay-trusted-provider-process/test/inert-import.test.mjs',
+    'browser-relay-trusted-provider-process/test/owner-bundle.test.mjs',
     'browser-relay-trusted-provider-process/test/process.test.mjs',
     'browser-relay-trusted-provider-process/test/fixtures/hostile-peer.mjs',
     'browser-relay-trusted-provider-process/test/fixtures/uncooperative-descendant.mjs',
@@ -8763,12 +8774,28 @@ export function validateCommittedEvidence(
     [
       'dedicated_process_ipc_present',
       'one_owner_bundle_per_process',
+      'owner_bundle_format',
       'owner_bundle_regular_nonexecutable_file_required',
       'owner_bundle_maximum_bytes',
+      'owner_bundle_manifest_maximum_bytes',
+      'owner_bundle_maximum_files',
+      'owner_bundle_file_maximum_bytes',
+      'owner_bundle_path_maximum_bytes',
+      'owner_bundle_segment_maximum_bytes',
       'owner_bundle_sha256_required',
       'owner_bundle_read_once_without_following_symlinks',
-      'verified_bytes_imported_by_data_url',
-      'self_contained_esm_owner_bundle_required',
+      'owner_bundle_canonical_manifest_required',
+      'owner_bundle_per_file_sha256_required',
+      'owner_bundle_exact_inventory_required',
+      'owner_bundle_unsafe_paths_rejected',
+      'verified_bytes_materialized_to_private_workspace',
+      'verified_entry_imported_by_file_url',
+      'self_contained_owner_artifact_required',
+      'non_builtin_module_resolution_confined_to_workspace',
+      'package_scope_metadata_confined_to_workspace',
+      'node_builtin_module_resolution_allowed',
+      'parent_owned_workspace_cleanup',
+      'parent_crash_workspace_cleanup_guaranteed',
       'provider_and_browser_graph_created_in_child_only',
       'provider_context_or_browser_handle_crosses_ipc',
       'parent_environment_inherited',
@@ -8784,10 +8811,24 @@ export function validateCommittedEvidence(
       'posix_process_group_ownership',
     ],
   );
-  exact(
-    trustedProviderProcessProfile.ownership.owner_bundle_maximum_bytes,
-    TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_BYTES,
-    'evidence.browser_relay_trusted_provider_process.ownership.owner_bundle_maximum_bytes',
+  exactFields(
+    trustedProviderProcessProfile.ownership,
+    {
+      owner_bundle_format: 'canonical_manifest_payload_v1',
+      owner_bundle_maximum_bytes:
+        TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_BYTES,
+      owner_bundle_manifest_maximum_bytes:
+        TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_MANIFEST_BYTES,
+      owner_bundle_maximum_files:
+        TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_FILES,
+      owner_bundle_file_maximum_bytes:
+        TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_FILE_BYTES,
+      owner_bundle_path_maximum_bytes:
+        TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_PATH_BYTES,
+      owner_bundle_segment_maximum_bytes:
+        TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_SEGMENT_BYTES,
+    },
+    'evidence.browser_relay_trusted_provider_process.ownership',
   );
   for (const path of [
     'dedicated_process_ipc_present',
@@ -8795,8 +8836,17 @@ export function validateCommittedEvidence(
     'owner_bundle_regular_nonexecutable_file_required',
     'owner_bundle_sha256_required',
     'owner_bundle_read_once_without_following_symlinks',
-    'verified_bytes_imported_by_data_url',
-    'self_contained_esm_owner_bundle_required',
+    'owner_bundle_canonical_manifest_required',
+    'owner_bundle_per_file_sha256_required',
+    'owner_bundle_exact_inventory_required',
+    'owner_bundle_unsafe_paths_rejected',
+    'verified_bytes_materialized_to_private_workspace',
+    'verified_entry_imported_by_file_url',
+    'self_contained_owner_artifact_required',
+    'non_builtin_module_resolution_confined_to_workspace',
+    'package_scope_metadata_confined_to_workspace',
+    'node_builtin_module_resolution_allowed',
+    'parent_owned_workspace_cleanup',
     'provider_and_browser_graph_created_in_child_only',
     'same_user_filesystem_and_network_authority_retained',
     'trusted_owner_code_required',
@@ -8807,6 +8857,7 @@ export function validateCommittedEvidence(
     `evidence.browser_relay_trusted_provider_process.ownership.${path}`,
   );
   for (const path of [
+    'parent_crash_workspace_cleanup_guaranteed',
     'provider_context_or_browser_handle_crosses_ipc',
     'parent_environment_inherited',
     'parent_exec_argv_inherited',
@@ -8837,6 +8888,7 @@ export function validateCommittedEvidence(
       'hard_termination_uses_detached_process_group_sigkill',
       'parent_verifies_process_group_empty_before_settlement',
       'parent_waits_actual_child_and_pipe_close',
+      'workspace_removed_after_process_group_settlement',
       'owner_close_precedes_terminal_child_message',
       'child_validates_closed_result_before_send',
       'parent_validates_closed_result_after_receive',
@@ -8866,6 +8918,7 @@ export function validateCommittedEvidence(
     'hard_termination_uses_detached_process_group_sigkill',
     'parent_verifies_process_group_empty_before_settlement',
     'parent_waits_actual_child_and_pipe_close',
+    'workspace_removed_after_process_group_settlement',
     'owner_close_precedes_terminal_child_message',
     'child_validates_closed_result_before_send',
     'parent_validates_closed_result_after_receive',
@@ -8894,6 +8947,14 @@ export function validateCommittedEvidence(
       'ci_node_version',
       'posix_supported',
       'windows_supported',
+      'dependency_bearing_owner_bundle_proven',
+      'relative_esm_dependency_proven',
+      'esm_and_commonjs_resolution_boundary_proven',
+      'playwright_core_package_tree_proven',
+      'playwright_core_version',
+      'playwright_browser_metadata_resolution_proven',
+      'browser_binary_packaged',
+      'browser_launch_proven',
       'trusted_source_composition_can_be_bundled_by_future_owner',
       'trusted_source_composition_live_wired',
       'live_owner_bundle_present',
@@ -8913,8 +8974,18 @@ export function validateCommittedEvidence(
     '22.22.0',
     'evidence.browser_relay_trusted_provider_process.compatibility.ci_node_version',
   );
+  exact(
+    trustedProviderProcessProfile.compatibility.playwright_core_version,
+    '1.62.1',
+    'evidence.browser_relay_trusted_provider_process.compatibility.playwright_core_version',
+  );
   for (const path of [
     'posix_supported',
+    'dependency_bearing_owner_bundle_proven',
+    'relative_esm_dependency_proven',
+    'esm_and_commonjs_resolution_boundary_proven',
+    'playwright_core_package_tree_proven',
+    'playwright_browser_metadata_resolution_proven',
     'trusted_source_composition_can_be_bundled_by_future_owner',
   ]) exact(
     trustedProviderProcessProfile.compatibility[path],
@@ -8923,6 +8994,8 @@ export function validateCommittedEvidence(
   );
   for (const path of [
     'windows_supported',
+    'browser_binary_packaged',
+    'browser_launch_proven',
     'trusted_source_composition_live_wired',
     'live_owner_bundle_present',
     'concrete_source_truth_providers_present',
@@ -8979,8 +9052,13 @@ export function validateCommittedEvidence(
       'state',
       'focused_contract_runs',
       'synthetic_owner_process_runs',
+      'dependency_owner_process_runs',
+      'playwright_core_load_runs',
       'hostile_protocol_regression_runs',
       'uncooperative_process_group_regression_runs',
+      'external_module_resolution_regression_runs',
+      'browser_launches',
+      'network_requests',
       'cloud_requests',
       'cloud_mutations',
       'public_ingress_changes',
@@ -8992,20 +9070,25 @@ export function validateCommittedEvidence(
   );
   exact(
     trustedProviderProcessProfile.evidence.state,
-    'offline_synthetic_only',
+    'offline_dependency_load_only',
     'evidence.browser_relay_trusted_provider_process.evidence.state',
   );
   for (const path of [
     'focused_contract_runs',
     'synthetic_owner_process_runs',
+    'dependency_owner_process_runs',
+    'playwright_core_load_runs',
     'hostile_protocol_regression_runs',
     'uncooperative_process_group_regression_runs',
+    'external_module_resolution_regression_runs',
   ]) exact(
     trustedProviderProcessProfile.evidence[path],
     1,
     `evidence.browser_relay_trusted_provider_process.evidence.${path}`,
   );
   for (const path of [
+    'browser_launches',
+    'network_requests',
     'cloud_requests',
     'cloud_mutations',
     'public_ingress_changes',
