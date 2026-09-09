@@ -12,14 +12,27 @@ import {
   encodeTrustedProviderProcessFrame,
   readTrustedProviderProcessFrames,
 } from '../../framed-channel.mjs';
+import { materializeTrustedProviderOwnerBundle } from '../../owner-bundle.mjs';
 import { createReadStream, createWriteStream } from 'node:fs';
 
 const arguments_ = process.argv.slice(2);
 const ownerPath = arguments_[3];
 const ownerSha256 = arguments_[5];
+const ownerWorkspacePath = arguments_[7];
 let configuration;
 try {
-  configuration = JSON.parse(readFileSync(ownerPath, 'utf8'));
+  if (arguments_.length !== 8
+    || arguments_[0] !== '--protocol-version'
+    || arguments_[1] !== String(TRUSTED_PROVIDER_PROCESS_PROTOCOL_VERSION)
+    || arguments_[2] !== '--owner-bundle-path'
+    || arguments_[4] !== '--owner-bundle-sha256'
+    || arguments_[6] !== '--owner-workspace-path') throw new Error('invalid arguments');
+  materializeTrustedProviderOwnerBundle({
+    owner_bundle_path: ownerPath,
+    owner_bundle_sha256: ownerSha256,
+    owner_workspace_path: ownerWorkspacePath,
+  });
+  configuration = JSON.parse(readFileSync(`${ownerWorkspacePath}/configuration.json`, 'utf8'));
 } catch {
   configuration = { mode: 'invalid_configuration' };
 }

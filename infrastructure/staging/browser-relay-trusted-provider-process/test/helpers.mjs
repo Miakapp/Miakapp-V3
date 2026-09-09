@@ -1,14 +1,17 @@
 import { createHash } from 'node:crypto';
 import {
   chmodSync,
+  lstatSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   realpathSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import {
   MAXIMUM_PUBLIC_WINDOW_MILLISECONDS,
@@ -20,6 +23,11 @@ import {
   validateOperationResult,
 } from '../../browser-relay-operation/contract.mjs';
 import { RUNNER_RESULT_SCHEMA } from '../../browser-relay-runner/contract.mjs';
+import { buildTrustedProviderOwnerBundle } from '../owner-bundle.mjs';
+
+const PLAYWRIGHT_CORE_ROOT = realpathSync.native(fileURLToPath(
+  new URL('../../../../node_modules/playwright-core/', import.meta.url),
+));
 
 function windowBaseline() {
   return {
@@ -202,14 +210,20 @@ export function closedOperationResult() {
   });
 }
 
-export function createBundle(source) {
+export function createBundle(source, additionalFiles = []) {
   const directory = realpathSync.native(
     mkdtempSync(join(tmpdir(), 'miakapp-provider-owner-')),
   );
-  const path = join(directory, 'owner.mjs');
-  writeFileSync(path, source, { encoding: 'utf8', mode: 0o600 });
+  const path = join(directory, 'owner.bundle');
+  const bytes = buildTrustedProviderOwnerBundle({
+    entry_path: 'owner.mjs',
+    files: [
+      { path: 'owner.mjs', bytes: Buffer.from(source, 'utf8') },
+      ...additionalFiles,
+    ],
+  });
+  writeFileSync(path, bytes, { mode: 0o600 });
   chmodSync(path, 0o600);
-  const bytes = readFileSync(path);
   return Object.freeze({
     directory,
     path,
@@ -218,6 +232,75 @@ export function createBundle(source) {
       rmSync(directory, { force: true, recursive: true });
     },
   });
+}
+
+export function hostilePeerBundle(configuration) {
+  return createBundle(`
+export function createBrowserRelayTrustedProviderOwner() {
+  return { async execute() {}, async close() {} };
+}
+`, [{
+    path: 'configuration.json',
+    bytes: Buffer.from(JSON.stringify(configuration), 'utf8'),
+  }]);
+}
+
+function collectRegularFiles(rootPath, prefix, relativePath = '') {
+  const directoryPath = relativePath === '' ? rootPath : join(rootPath, ...relativePath.split('/'));
+  const directory = lstatSync(directoryPath);
+  if (!directory.isDirectory() || directory.isSymbolicLink()) {
+    throw new Error('Playwright-core fixture root must be a real directory');
+  }
+  const files = [];
+  for (const entry of readdirSync(directoryPath, { withFileTypes: true })
+    .sort((left, right) => left.name < right.name ? -1 : left.name > right.name ? 1 : 0)) {
+    const childRelativePath = relativePath === ''
+      ? entry.name
+      : `${relativePath}/${entry.name}`;
+    const childPath = join(rootPath, ...childRelativePath.split('/'));
+    const child = lstatSync(childPath);
+    if (entry.isSymbolicLink() || child.isSymbolicLink()
+      || (!entry.isFile() && !entry.isDirectory())) {
+      throw new Error('Playwright-core fixture contains an unsupported entry');
+    }
+    if (entry.isDirectory()) {
+      files.push(...collectRegularFiles(rootPath, prefix, childRelativePath));
+    } else if (entry.isFile() && child.isFile()) {
+      files.push({
+        path: `${prefix}/${childRelativePath}`,
+        bytes: readFileSync(childPath),
+      });
+    } else {
+      throw new Error('Playwright-core fixture entry changed during collection');
+    }
+  }
+  return files;
+}
+
+export function playwrightCoreOwnerBundle() {
+  const result = JSON.stringify(closedOperationResult());
+  return createBundle(`
+import { createRequire } from 'node:module';
+import { chromium } from 'playwright-core';
+import { debug as playwrightDebug } from 'playwright-core/lib/utilsBundle';
+
+const require = createRequire(import.meta.url);
+const packageMetadata = require('playwright-core/package.json');
+const RESULT = ${result};
+
+export function createBrowserRelayTrustedProviderOwner() {
+  return {
+    async execute() {
+      const executablePath = chromium.executablePath();
+      if (packageMetadata.version !== '1.62.1' || chromium.name() !== 'chromium'
+        || typeof playwrightDebug !== 'function' || typeof executablePath !== 'string'
+        || executablePath.length < 1) throw new Error('Playwright-core package tree is incomplete');
+      return RESULT;
+    },
+    async close() {}
+  };
+}
+`, collectRegularFiles(PLAYWRIGHT_CORE_ROOT, 'node_modules/playwright-core'));
 }
 
 export function ownerBundle({ mode = 'success', observationPath, descendantPath } = {}) {
@@ -236,6 +319,7 @@ export function ownerBundle({ mode = 'success', observationPath, descendantPath 
     execute = observationPath === undefined ? 'return RESULT;' : `
       writeFileSync(${JSON.stringify(observationPath)}, JSON.stringify({
         pid: process.pid,
+        entry_url: import.meta.url,
         env_keys: Object.keys(process.env),
         exec_argv: process.execArgv,
         process_send: process.send === undefined,
@@ -299,14 +383,19 @@ export function ownerBundle({ mode = 'success', observationPath, descendantPath 
   }
 
   return createBundle(`${imports.join('\n')}
+import { OWNER_FIXTURE_REVISION } from './dependency.mjs';
 const RESULT = ${result};
 export function createBrowserRelayTrustedProviderOwner() {
+  if (OWNER_FIXTURE_REVISION !== 1) throw new Error('invalid owner fixture dependency');
   return {
     async execute(context) { ${execute} },
     async close() { ${close} }
   };
 }
-`);
+`, [{
+    path: 'dependency.mjs',
+    bytes: Buffer.from('export const OWNER_FIXTURE_REVISION = 1;\n', 'utf8'),
+  }]);
 }
 
 export function processExists(pid) {

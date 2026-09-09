@@ -1,26 +1,24 @@
-import { createHash } from 'node:crypto';
 import {
-  closeSync,
-  constants as fsConstants,
   createReadStream,
   createWriteStream,
-  fstatSync,
-  openSync,
-  readSync,
+  lstatSync,
   realpathSync,
 } from 'node:fs';
+import { findPackageJSON, registerHooks } from 'node:module';
+import { sep } from 'node:path';
 import process from 'node:process';
-import { fileURLToPath } from 'node:url';
+import { URL, fileURLToPath } from 'node:url';
 
 import {
   StagingBrowserRelayTrustedProviderProcessError,
-  TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_BYTES,
   TRUSTED_PROVIDER_PROCESS_PROTOCOL_VERSION,
   buildTrustedProviderProcessFailure,
   buildTrustedProviderProcessReady,
   buildTrustedProviderProcessResult,
   buildTrustedProviderProcessStartupFailure,
   cloneValidatedTrustedProviderProcessResult,
+  preloadTrustedProviderProcessResultContract,
+  rejectTrustedProviderProcess,
   validateTrustedProviderOwner,
   validateTrustedProviderOwnerModule,
   validateTrustedProviderProcessCancel,
@@ -30,6 +28,7 @@ import {
   createTrustedProviderProcessFrameWriter,
   readTrustedProviderProcessFrames,
 } from './framed-channel.mjs';
+import { materializeTrustedProviderOwnerBundle } from './owner-bundle.mjs';
 
 let requestStream;
 let responseStream;
@@ -41,6 +40,43 @@ let ownerAbortController;
 let terminalStarted = false;
 let operationTask;
 let forcedFailureCode;
+
+function registerOwnerModuleBoundary(workspace) {
+  const workspacePrefix = `${workspace}${sep}`;
+  const requireWorkspaceFile = (path) => {
+    const canonicalPath = realpathSync.native(path);
+    const entry = lstatSync(path);
+    if (canonicalPath !== path || !path.startsWith(workspacePrefix)
+      || !entry.isFile() || entry.isSymbolicLink()
+      || (entry.mode & 0o777) !== 0o400) {
+      rejectTrustedProviderProcess('owner_integrity_failed');
+    }
+  };
+  registerHooks({
+    resolve(specifier, context, nextResolve) {
+      const resolution = nextResolve(specifier, context);
+      if (typeof resolution?.url === 'string' && resolution.url.startsWith('node:')) {
+        return resolution;
+      }
+      try {
+        if (typeof resolution?.url !== 'string' || !resolution.url.startsWith('file:')) {
+          rejectTrustedProviderProcess('owner_integrity_failed');
+        }
+        const moduleUrl = new URL(resolution.url);
+        if (moduleUrl.search !== '' || moduleUrl.hash !== '') {
+          rejectTrustedProviderProcess('owner_integrity_failed');
+        }
+        const modulePath = fileURLToPath(moduleUrl);
+        requireWorkspaceFile(modulePath);
+        const packageManifestPath = findPackageJSON(resolution.url);
+        if (packageManifestPath !== undefined) requireWorkspaceFile(packageManifestPath);
+      } catch {
+        rejectTrustedProviderProcess('owner_integrity_failed');
+      }
+      return resolution;
+    },
+  });
+}
 
 function failureCode(error, fallback) {
   if (error instanceof StagingBrowserRelayTrustedProviderProcessError) return error.code;
@@ -74,35 +110,6 @@ async function finish(message, exitCode) {
 
 async function finishStartupFailure(code) {
   await finish(buildTrustedProviderProcessStartupFailure(code), 1);
-}
-
-function readOwnerBundle(path, expectedSha256) {
-  if (typeof fsConstants.O_NOFOLLOW !== 'number') {
-    throw new StagingBrowserRelayTrustedProviderProcessError('unsupported_platform');
-  }
-  let descriptor;
-  try {
-    if (realpathSync.native(path) !== path) throw new Error('owner path is not canonical');
-    descriptor = openSync(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
-    const entry = fstatSync(descriptor);
-    if (!entry.isFile() || (entry.mode & 0o111) !== 0
-      || entry.size < 1 || entry.size > TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_BYTES) {
-      throw new Error('invalid owner bundle');
-    }
-    const bytes = Buffer.allocUnsafe(entry.size);
-    let offset = 0;
-    while (offset < bytes.byteLength) {
-      const read = readSync(descriptor, bytes, offset, bytes.byteLength - offset, offset);
-      if (read < 1) throw new Error('truncated owner bundle');
-      offset += read;
-    }
-    if (fstatSync(descriptor).size !== entry.size) throw new Error('owner bundle changed');
-    const digest = createHash('sha256').update(bytes).digest('hex');
-    if (digest !== expectedSha256) throw new Error('owner digest mismatch');
-    return bytes;
-  } finally {
-    if (descriptor !== undefined) closeSync(descriptor);
-  }
 }
 
 async function runOwner(createOwner) {
@@ -199,6 +206,8 @@ async function start() {
     ownerBundlePath,
     ownerSha256Flag,
     ownerBundleSha256,
+    ownerWorkspaceFlag,
+    ownerWorkspacePath,
     ...extraArguments
   ] = process.argv.slice(2);
   if (protocolFlag !== '--protocol-version'
@@ -207,6 +216,8 @@ async function start() {
     || typeof ownerBundlePath !== 'string'
     || ownerSha256Flag !== '--owner-bundle-sha256'
     || typeof ownerBundleSha256 !== 'string'
+    || ownerWorkspaceFlag !== '--owner-workspace-path'
+    || typeof ownerWorkspacePath !== 'string'
     || extraArguments.length !== 0
     || process.send !== undefined
     || process.channel !== undefined
@@ -217,9 +228,20 @@ async function start() {
     return;
   }
 
-  let bytes;
   try {
-    bytes = readOwnerBundle(ownerBundlePath, ownerBundleSha256);
+    await preloadTrustedProviderProcessResultContract();
+  } catch {
+    await finishStartupFailure('peer_failed');
+    return;
+  }
+
+  let materialized;
+  try {
+    materialized = materializeTrustedProviderOwnerBundle({
+      owner_bundle_path: ownerBundlePath,
+      owner_bundle_sha256: ownerBundleSha256,
+      owner_workspace_path: ownerWorkspacePath,
+    });
   } catch (error) {
     await finishStartupFailure(failureCode(error, 'owner_integrity_failed'));
     return;
@@ -227,14 +249,13 @@ async function start() {
 
   let ownerModule;
   try {
-    ownerModule = await import(`data:text/javascript;base64,${bytes.toString('base64')}`);
+    registerOwnerModuleBoundary(ownerWorkspacePath);
+    ownerModule = await import(materialized.entry_url);
   } catch {
     await finishStartupFailure('owner_import_failed');
     return;
-  } finally {
-    bytes.fill(0);
-    bytes = undefined;
   }
+  materialized = undefined;
 
   let createOwner;
   try {
