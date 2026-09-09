@@ -827,7 +827,7 @@ current consumer.
     point indexes seven fixed canonical fragments, with separate browser-relay
     scenario, reader-boundary, trusted-provider and operations owners, exact path, mount,
     byte-length and SHA-256 bindings, per-file ceilings and one aggregate
-    ceiling while reconstructing the current revision-106 semantic object. The
+    ceiling while reconstructing the current revision-107 semantic object. The
     immutable
     original fixture still has three private page inputs, but a separate closed
     scenario fixture now supplies the fourth from a second genuine synthetic Firebase identity,
@@ -902,7 +902,7 @@ current consumer.
     the concrete bridge from seven exact fixed-scope ephemeral source sessions
     to all 32 kind-specific authorities. It binds the transport-created opaque
     capability on first use, revalidates canonical order and semantic output,
-    bounds read and public-close wrappers to 30 seconds, sanitizes cancellation,
+    bounds reads to 75 seconds and public-close wrappers to 30 seconds, sanitizes cancellation,
     enforces global single-use session identity and releases a session only
     after every started callback settles. A following dormant package now
     creates those sessions from seven exact trusted `{ observe, close }`
@@ -989,16 +989,34 @@ current consumer.
     initial canonical index and seven fragments totalled 250,768 bytes, leaving
     273,520 bytes under the new 524,288-byte aggregate ceiling while
     reconstructing the byte-identical revision-105 semantic object with
-    unchanged safety boundaries. Current semantic revision 106 records the
+    unchanged safety boundaries. Semantic revision 106 recorded the
     deterministic dependency-bearing owner-container proof without changing
     bundle revision 4. Its index and seven fragments total 252,525 bytes,
     leaving 271,763 bytes under that ceiling with the same zero-live,
-    zero-network, zero-cloud and zero-cost posture. Next assemble concrete
-    source-truth and live page providers into the complete owner graph behind
-    the proven container and process boundary, prove that composition offline,
-    then execute the matrix exactly once. The evidence-representation capacity
-    prerequisite remains closed before another similarly sized lifecycle record
-    is admitted.
+    zero-network, zero-cloud and zero-cost posture. Current semantic revision 107
+    records the complete synthetic source-truth and real-page owner graph behind
+    that process boundary. One deterministic 218-file artifact includes 204 exact
+    repository dependency/validation files, a 13-file `playwright-core`
+    runtime/licence/type-contract subset and one generated module allowlist. Required
+    dependency validation assets—including the exact relay-service Terraform and edge
+    README bytes re-hashed by transitive validators—remain inert
+    data, while only 87 reviewed runtime modules are importable. It remains below
+    32 MiB and excludes browser binaries, unreferenced package files, unrelated
+    documentation and the controlled owner testing entry. Its dedicated
+    credential-free proof launches Chromium, Firefox and
+    WebKit, preserves both real 240-second renewal boundaries and closes all 22
+    stages, 43 observations and 40 assertions once. Chromium uses one ephemeral
+    loopback-only TLS listener with erased key files, a catch-all DNS-resolution
+    failure rule and a strict offline content-security policy; secondary browsers use
+    exact-origin interception. Every opened page proves a fixed external request is
+    blocked. The index and seven fragments now total 263,746
+    bytes, leaving 260,542 bytes under the 524,288-byte ceiling with zero DNS,
+    external network, cloud, publication, live execution or incremental cost.
+    Next design and preflight the external source-truth/Hosting adapters, then
+    execute the complete staging matrix exactly once through the already closed
+    claim, rollback, process and owner boundaries. The evidence-representation
+    capacity prerequisite remains closed before another similarly sized
+    lifecycle record is admitted.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform
     no-change plan. Its fresh post-merge preflight is complete and the rollback

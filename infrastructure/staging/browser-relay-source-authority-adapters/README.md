@@ -46,8 +46,11 @@ projected candidate observation. The adapter copies, sanitizes, and applies the
 existing source-and-kind semantic validator before that observation can cross
 the authority boundary.
 
-Read wrappers and the public `close()` wrapper are bounded to 30 seconds. Calls
-are reserved before awaiting, ordered, and non-overlapping per source.
+Read wrappers are bounded to 75 seconds. This admits the reviewed 60-second JWK
+publication observation window with finite scheduling headroom while remaining
+below the transport's 120-second bound. The public `close()` wrapper remains
+bounded to 30 seconds. Calls are reserved before awaiting, ordered, and
+non-overlapping per source.
 Root/session expiry and cancellation are checked before dispatch and after every
 read. Package-owned aborts carry only the fixed adapter error, so caller-owned
 secret-bearing abort reasons do not cross the boundary. Descriptor, order,

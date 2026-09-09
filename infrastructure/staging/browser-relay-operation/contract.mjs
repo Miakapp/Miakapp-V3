@@ -77,7 +77,7 @@ const MAXIMUM_RESULT_BYTES = 64 * 1024;
 const SHA256 = /^[0-9a-f]{64}$/u;
 const COMMIT = /^[0-9a-f]{40}$/u;
 const TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u;
-const REVISION = /^(?:control-plane|miakapp-staging-relay-[ab])-[0-9]{5}-[a-z]{3}$/u;
+const REVISION = /^(?:control-plane|miakapp-staging-relay-[ab])-[0-9]{5}-[a-z0-9]{3}$/u;
 const PRIVATE_MATERIAL = Object.freeze([
   /-----BEGIN [A-Z ]*PRIVATE KEY-----/u,
   /\bBearer\s+[A-Za-z0-9._~+/-]+=*/iu,

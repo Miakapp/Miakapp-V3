@@ -193,7 +193,7 @@ on 2026-09-03. Its sanitized inventory now lives under
 Its stable `manifest.json` entry point is now a bundle-revision-4 canonical
 index over seven fixed, digest-pinned fragments, with separate browser-relay
 scenario, reader-boundary, trusted-provider and operations owners. The loader
-reconstructs the current revision-106 semantic manifest only after verifying
+reconstructs the current revision-107 semantic manifest only after verifying
 each fragment's path, mount, bundle schema, owned fields, exact byte length,
 SHA-256 and 512-KiB aggregate bound, plus index/core agreement on the semantic
 schema and revision.
@@ -623,11 +623,13 @@ node --test \
   infrastructure/staging/test/browser-relay-trusted-source-composition.test.mjs
 ```
 
-This implementation increment made zero staging requests, mutations or
-executions and added zero staging cost. Concrete source-truth implementations,
-page/browser providers and dedicated-process IPC remain required before the
-matrix can run. No package grants Hosting publication or live execution
-authority.
+This composition increment made zero staging requests, mutations or executions
+and added zero staging cost. Semantic revision 107 subsequently added a
+dedicated-process owner with deterministic synthetic source truth and real
+offline Chromium, Firefox and WebKit providers, so the complete matrix now runs
+offline. External live source truth and temporary Hosting publication remain
+required before the staging matrix can run. No package grants Hosting
+publication or live execution authority.
 
 The guarded relay-image increment bound the exact merged Miakapp-Server tree to a deterministic
 53,098-byte archive, one digest-pinned Cloud Build Docker builder, verified
