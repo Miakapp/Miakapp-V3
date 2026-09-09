@@ -9,7 +9,9 @@ const ROOT_ENTRIES = Object.freeze([
   'framed-channel.mjs',
   'guard.mjs',
   'internal.mjs',
+  'owner-bundle.mjs',
   'process.mjs',
+  'profile-v1.json',
   'profile.json',
   'test',
   'worker.mjs',
@@ -20,6 +22,7 @@ const TEST_ENTRIES = Object.freeze([
   'framed-channel.test.mjs',
   'helpers.mjs',
   'inert-import.test.mjs',
+  'owner-bundle.test.mjs',
   'process.test.mjs',
 ]);
 const FIXTURE_ENTRIES = Object.freeze([
@@ -33,12 +36,15 @@ const STATIC_IMPORTS = Object.freeze({
   'framed-channel.mjs': Object.freeze(['./contract.mjs', 'node:util']),
   'internal.mjs': Object.freeze([
     './contract.mjs', './framed-channel.mjs', 'node:child_process',
-    'node:crypto', 'node:process', 'node:url',
+    'node:crypto', 'node:fs', 'node:os', 'node:path', 'node:process', 'node:url',
+  ]),
+  'owner-bundle.mjs': Object.freeze([
+    './contract.mjs', 'node:crypto', 'node:fs', 'node:path', 'node:url', 'node:util',
   ]),
   'process.mjs': Object.freeze(['./contract.mjs', './internal.mjs']),
   'worker.mjs': Object.freeze([
-    './contract.mjs', './framed-channel.mjs', 'node:crypto', 'node:fs',
-    'node:process', 'node:url',
+    './contract.mjs', './framed-channel.mjs', './owner-bundle.mjs', 'node:fs',
+    'node:module', 'node:path', 'node:process', 'node:url',
   ]),
 });
 
@@ -108,7 +114,7 @@ export async function validateBrowserRelayTrustedProviderProcessRoot(rootUrl) {
         && sources[name].includes("import('../browser-relay-operation/contract.mjs')"))
       || (name === 'worker.mjs'
         && dynamicImports.length === 1
-        && sources[name].includes("import(`data:text/javascript;base64,${bytes.toString('base64')}`)"));
+        && sources[name].includes('import(materialized.entry_url)'));
     if (!exactNames(imports(sources[name]), expected)
       || /^\s*import\s*['"]/mu.test(sources[name])
       || !dynamicImportsAllowed) {
@@ -118,6 +124,7 @@ export async function validateBrowserRelayTrustedProviderProcessRoot(rootUrl) {
 
   const internal = sources['internal.mjs'];
   const worker = sources['worker.mjs'];
+  const ownerBundle = sources['owner-bundle.mjs'];
   const processEntry = sources['process.mjs'];
   const framing = sources['framed-channel.mjs'];
   for (const marker of [
@@ -136,19 +143,25 @@ export async function validateBrowserRelayTrustedProviderProcessRoot(rootUrl) {
     'processGroupExists',
     'cancelSent',
     'supportedNodeRuntime',
+    'createOwnerWorkspace',
+    'removeOwnerWorkspace',
+    "'--owner-workspace-path'",
   ]) {
     if (!internal.includes(marker)) reject('Trusted provider process lifecycle has drifted');
   }
   for (const marker of [
     'fd: 3',
     'fd: 4',
-    'fsConstants.O_NOFOLLOW',
-    'realpathSync.native(path) !== path',
     "process.send !== undefined",
     'process.execArgv.length !== 0',
     'sanitizeWorkerEnvironment',
     'Object.keys(process.env).length === 0',
-    'data:text/javascript;base64',
+    'materializeTrustedProviderOwnerBundle',
+    'preloadTrustedProviderProcessResultContract',
+    'registerOwnerModuleBoundary',
+    'registerHooks',
+    'import(materialized.entry_url)',
+    "ownerWorkspaceFlag !== '--owner-workspace-path'",
     'validateTrustedProviderOwnerModule',
     'cloneValidatedTrustedProviderProcessResult',
     'await owner.close()',
@@ -156,6 +169,22 @@ export async function validateBrowserRelayTrustedProviderProcessRoot(rootUrl) {
     'runBrowserRelayTrustedProviderWorker',
   ]) {
     if (!worker.includes(marker)) reject('Trusted provider owner worker has drifted');
+  }
+  for (const marker of [
+    "Buffer.from('MIAKOWN1', 'ascii')",
+    'TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_MANIFEST_BYTES',
+    'TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_FILES',
+    'TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_FILE_BYTES',
+    'TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_PATH_BYTES',
+    'TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_SEGMENT_BYTES',
+    'fsConstants.O_NOFOLLOW',
+    'fsConstants.O_EXCL',
+    'realpathSync.native(path) !== path',
+    'canonicalManifest(manifest)',
+    'sha256(payload)',
+    'pathToFileURL(entryPath).href',
+  ]) {
+    if (!ownerBundle.includes(marker)) reject('Trusted provider owner bundle has drifted');
   }
   for (const marker of [
     'createBrowserRelayTrustedProviderProcess',
@@ -193,18 +222,28 @@ export async function validateBrowserRelayTrustedProviderProcessRoot(rootUrl) {
       .test(productionBoundary)
     || /\b(?:access_token|authorization|id_token|private_key|refresh_token|secret_value)\b/u
       .test(productionBoundary)
-    || /\b(?:retry|restart|respawn|replay)\b/u.test(productionBoundary)) {
+    || /\b(?:retry|restart|respawn|replay)\b/u.test(productionBoundary)
+    || /data:text\/javascript/u.test(productionBoundary)) {
     reject('Trusted provider process exceeds the reviewed narrow authority');
   }
 
   const { validateBrowserRelayTrustedProviderProcessProfile } = await import('./contract.mjs');
   const profile = validateBrowserRelayTrustedProviderProcessProfile();
   if (profile.ownership.dedicated_process_ipc_present !== true
+    || profile.ownership.non_builtin_module_resolution_confined_to_workspace !== true
+    || profile.ownership.package_scope_metadata_confined_to_workspace !== true
+    || profile.ownership.node_builtin_module_resolution_allowed !== true
     || profile.ownership.operating_system_sandbox_present !== false
+    || profile.compatibility.dependency_bearing_owner_bundle_proven !== true
+    || profile.compatibility.esm_and_commonjs_resolution_boundary_proven !== true
+    || profile.compatibility.playwright_core_package_tree_proven !== true
+    || profile.compatibility.browser_launch_proven !== false
     || profile.compatibility.live_owner_bundle_present !== false
     || profile.compatibility.live_operation_wired !== false
     || profile.evidence.cloud_requests !== 0
     || profile.evidence.cloud_mutations !== 0
+    || profile.evidence.browser_launches !== 0
+    || profile.evidence.network_requests !== 0
     || profile.evidence.live_execution_count !== 0
     || profile.evidence.incremental_monthly_cost_eur !== 0) {
     reject('Trusted provider process profile exceeds its dormant authority');

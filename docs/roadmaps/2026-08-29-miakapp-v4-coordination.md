@@ -827,7 +827,8 @@ current consumer.
     point indexes seven fixed canonical fragments, with separate browser-relay
     scenario, reader-boundary, trusted-provider and operations owners, exact path, mount,
     byte-length and SHA-256 bindings, per-file ceilings and one aggregate
-    ceiling while reconstructing the revision-105 semantic object. The immutable
+    ceiling while reconstructing the current revision-106 semantic object. The
+    immutable
     original fixture still has three private page inputs, but a separate closed
     scenario fixture now supplies the fourth from a second genuine synthetic Firebase identity,
     extends the unique coordinator's state access to both identities and
@@ -934,23 +935,40 @@ current consumer.
     rollback available. Differential conformance
     was selected over a shared-kernel refactor and proves the composed trace
     against the same five factories offline. A following dormant owner boundary
-    now accepts only an absolute path and SHA-256 for one self-contained trusted
-    ESM bundle, then creates one fresh detached POSIX process per operation with
-    an empty environment, no inherited stdio or Node IPC channel, and two
+    now accepts only an absolute path and SHA-256 for one deterministic trusted
+    owner container, then creates one fresh detached POSIX process per operation
+    with an empty environment, no inherited stdio or Node IPC channel, and two
     bounded raw pipes. Its exact versioned canonical-JSON protocol carries only
     execute/cancel and ready/failure/closed-result messages; no provider context,
     browser handle, credential or arbitrary method crosses it. Ready, operation
     and cancellation deadlines are bounded. Cooperative abort precedes SIGKILL
     of the complete process group, the parent waits for actual process and pipe
     closure, and ambiguous crashes or disconnects are never restarted or
-    replayed. The worker verifies and imports the exact bundle bytes, owns
-    execute/close and validates the closed result before send; the parent
-    validates it again before release. Synthetic real-process tests cover
-    hostile framing, crash, hang, ignored abort and a SIGTERM-ignoring
-    descendant. This is not an operating-system sandbox: trusted child code
+    replayed. The worker reads the regular non-executable no-follow container
+    once and verifies its whole-file digest. Its fixed v1 framing binds a
+    canonical manifest and ordered raw payloads with ceilings of 32 MiB overall,
+    256 KiB of manifest, 512 files, 8 MiB per file, 256 UTF-8 bytes per safe
+    relative POSIX path and 255 bytes per path segment; each inventory entry
+    carries exact length and SHA-256.
+    The parent creates an empty canonical `0700` temporary workspace, the worker
+    materializes only verified bytes into `0700` directories and `0400` files,
+    and the entry is imported through a file URL. Synchronous Node 22 resolution
+    hooks retain built-in modules while confining ordinary ESM, CommonJS and
+    `createRequire()` results to canonical `0400` files in that workspace, so
+    relative and packaged imports cannot fall through to ambient ancestors or
+    external files. The worker owns execute/close and validates the closed
+    result before send; the parent validates it again before release. Parent
+    cleanup removes the workspace only after process-group and pipe settlement,
+    and a removal failure gates the public result; cleanup after parent crash is
+    not guaranteed. Synthetic real-process tests cover hostile containers and
+    framing, crash, hang, ignored abort and a SIGTERM-ignoring descendant. A real
+    offline child loads the installed `playwright-core` 1.62.1 package tree and
+    resolves package/browser metadata without packaging a browser binary or
+    launching one. This is not an operating-system sandbox: trusted child code
     retains same-user filesystem and network authority. Concrete source-truth
-    implementations, the real owner bundle and trusted live page providers
-    remain absent.
+    implementations, the complete owner graph and trusted live page providers
+    remain absent; the proof performs no network, cloud or live request and uses
+    no credential.
     The earlier revision-99 representation-only capacity baseline is complete:
     its six fixed shards consumed 194,718 of the bounded 262,144 bytes, leaving
     67,426 bytes while reconstructing its byte-identical semantic object.
@@ -967,14 +985,20 @@ current consumer.
     the dedicated-process owner boundary and totalled 250,343 bytes, leaving
     11,801 bytes under the same ceiling with the same zero-live, zero-cloud and
     zero-cost posture. The following representation-only bundle revision 4
-    moves the three provider-facing records into a seventh fixed shard. Its
-    canonical index and seven fragments total 250,768 bytes, leaving 273,520
-    bytes under the new 524,288-byte aggregate ceiling while reconstructing the
-    byte-identical revision-105 semantic object with unchanged safety boundaries.
-    Next build the self-contained owner bundle with concrete source-truth and
-    live page providers behind this boundary, prove it offline, then execute the
-    matrix exactly once. The evidence-representation capacity prerequisite is
-    now closed before another similarly sized lifecycle record is admitted.
+    moved the three provider-facing records into a seventh fixed shard. Its
+    initial canonical index and seven fragments totalled 250,768 bytes, leaving
+    273,520 bytes under the new 524,288-byte aggregate ceiling while
+    reconstructing the byte-identical revision-105 semantic object with
+    unchanged safety boundaries. Current semantic revision 106 records the
+    deterministic dependency-bearing owner-container proof without changing
+    bundle revision 4. Its index and seven fragments total 252,525 bytes,
+    leaving 271,763 bytes under that ceiling with the same zero-live,
+    zero-network, zero-cloud and zero-cost posture. Next assemble concrete
+    source-truth and live page providers into the complete owner graph behind
+    the proven container and process boundary, prove that composition offline,
+    then execute the matrix exactly once. The evidence-representation capacity
+    prerequisite remains closed before another similarly sized lifecycle record
+    is admitted.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform
     no-change plan. Its fresh post-merge preflight is complete and the rollback

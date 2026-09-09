@@ -252,10 +252,10 @@ test('assembles the canonical committed bundle into the current semantic manifes
 
   const manifest = loadStagingManifestBundle(committedIndexPath);
   const semanticBytes = canonical(manifest);
-  assert.equal(semanticBytes.byteLength, 245284);
+  assert.equal(semanticBytes.byteLength, 247041);
   assert.equal(
     sha256(semanticBytes),
-    '36460bb43d3bb8fda6e88263003d259581a93e86d068090f9b03f5bfc4dcfb56',
+    'f8f324b6d61e3bb8ef210c679a948d364f84e58c4910e8874fea24219f454c83',
   );
   assert.deepEqual(Object.keys(manifest), [
     'schema',
@@ -340,7 +340,7 @@ test('assembles the canonical committed bundle into the current semantic manifes
     'environment_decision',
   ]);
   assert.equal(manifest.schema, 'miakapp.staging-intent/1');
-  assert.equal(manifest.revision, 105);
+  assert.equal(manifest.revision, 106);
   assert.equal(manifest.project.project_id, 'miakapp-v4-staging');
   assert.equal(manifest.terraform.bootstrap_execution.bootstrap_completed, true);
   assert.equal(
