@@ -116,8 +116,11 @@ already reviewed lifecycle implementations remain unchanged.
 
 Same-process providers are trusted. An uncooperative callback can ignore abort
 and prevent real settlement; this package does not falsely report release or
-claim hard termination. Shared or untrusted providers and browser ownership
-still require the planned dedicated process and validated IPC boundary.
+claim hard termination. The adjacent
+[`browser-relay-trusted-provider-process/`](../browser-relay-trusted-provider-process/)
+package now supplies the dedicated-process ownership boundary for a future
+self-contained bundle of this graph. This composition remains deliberately
+unchanged and cooperative when used directly.
 
 ## Deliberately absent
 
@@ -125,8 +128,9 @@ This package contains no OAuth or ADC discovery, Firebase/Google client
 construction, HTTP or WebSocket implementation, arbitrary endpoint, browser
 launcher, child process, CLI or deployment command. It publishes no Hosting
 artifact, changes no ingress or IAM policy, mutates no cloud resource and records
-no live source evidence. Trusted live page/browser providers, validated process
-IPC and the single bounded live matrix execution remain separate gates.
+no live source evidence. A concrete digest-pinned owner bundle, trusted live
+page/browser providers and the single bounded live matrix execution remain
+separate gates.
 
 ## Offline validation
 

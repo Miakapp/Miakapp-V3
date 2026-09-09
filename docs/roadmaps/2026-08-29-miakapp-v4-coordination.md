@@ -860,9 +860,10 @@ current consumer.
     leaves the legacy bridge blocker intact. The driver explicitly trusts its
     three injected providers, page navigation/content/init scripts and exclusive
     ownership of the in-process Playwright connection; its leases are defense in
-    depth, not a same-realm sandbox. Dedicated-process browser ownership with
-    validated IPC is required before any untrusted or shared live composition.
-    No live wiring or execution is present. The dormant Chromium case adapter
+    depth, not a same-realm sandbox. The dedicated-process boundary described
+    below is now available for future shared live ownership; this direct driver
+    remains trusted and is not yet bundled through it. No live wiring or
+    execution is present. The dormant Chromium case adapter
     now composes a ready-only four-method fixture facade and native driver into
     the fixed scheduler, maps all 18 projections and 11 controls to their exact
     stages, and closes all 40 runner assertions offline. A new layered secondary
@@ -918,7 +919,8 @@ current consumer.
     client. Proxy records are rejected before traps, active signals expire on an
     absolute timer, and receipt validation shares the descendant callback
     context. Pre-existing async resources remain an explicit trusted
-    same-process limitation pending IPC. A following dormant composition root
+    limitation of the direct same-process path; the following process owner is
+    the hard-termination boundary. A following dormant composition root
     now accepts seven exact named provider capabilities and builds the existing
     client/session/authority/reader/transport chain only on its single
     `execute()`. Provider calls receive only browser, case and signal; fixed
@@ -931,8 +933,24 @@ current consumer.
     settlement and prevents new forward mutations after root abort while keeping
     rollback available. Differential conformance
     was selected over a shared-kernel refactor and proves the composed trace
-    against the same five factories offline. Concrete source-truth
-    implementations and trusted live page providers remain absent.
+    against the same five factories offline. A following dormant owner boundary
+    now accepts only an absolute path and SHA-256 for one self-contained trusted
+    ESM bundle, then creates one fresh detached POSIX process per operation with
+    an empty environment, no inherited stdio or Node IPC channel, and two
+    bounded raw pipes. Its exact versioned canonical-JSON protocol carries only
+    execute/cancel and ready/failure/closed-result messages; no provider context,
+    browser handle, credential or arbitrary method crosses it. Ready, operation
+    and cancellation deadlines are bounded. Cooperative abort precedes SIGKILL
+    of the complete process group, the parent waits for actual process and pipe
+    closure, and ambiguous crashes or disconnects are never restarted or
+    replayed. The worker verifies and imports the exact bundle bytes, owns
+    execute/close and validates the closed result before send; the parent
+    validates it again before release. Synthetic real-process tests cover
+    hostile framing, crash, hang, ignored abort and a SIGTERM-ignoring
+    descendant. This is not an operating-system sandbox: trusted child code
+    retains same-user filesystem and network authority. Concrete source-truth
+    implementations, the real owner bundle and trusted live page providers
+    remain absent.
     The earlier revision-99 representation-only capacity baseline is complete:
     its six fixed shards consumed 194,718 of the bounded 262,144 bytes, leaving
     67,426 bytes while reconstructing its byte-identical semantic object.
@@ -942,13 +960,16 @@ current consumer.
     contract and totals 219,900 bytes, leaving 42,244 bytes. Revision 103 adds
     the fixed-target source-client boundary and totals 236,065 bytes, leaving
     26,079 bytes under the same fixed six-fragment 262,144-byte ceiling.
-    Revision 104 adds the named trusted-provider composition and exact
+    Revision 104 added the named trusted-provider composition and exact
     transport-to-case wiring. Its six fragments total 243,585 bytes, leaving
     18,559 bytes under the unchanged ceiling, with zero cloud requests,
-    mutations, public windows, live executions or added cost.
-    Next isolate browser ownership behind validated narrow process IPC, then
-    implement the concrete source-truth and live page providers before executing
-    the matrix exactly once. Redesign the evidence representation before another
+    mutations, public windows, live executions or added cost. Revision 105 adds
+    the dedicated-process owner boundary and totals 250,028 bytes, leaving
+    12,116 bytes under the same ceiling with the same zero-live, zero-cloud and
+    zero-cost posture.
+    Next build the self-contained owner bundle with concrete source-truth and
+    live page providers behind this boundary, prove it offline, then execute the
+    matrix exactly once. Redesign the evidence representation before another
     similarly sized lifecycle record consumes the remaining fixed headroom.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform

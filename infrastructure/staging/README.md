@@ -396,7 +396,8 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`browser-relay-source-authority-adapters/`](browser-relay-source-authority-adapters/) | Dormant concrete ephemeral-session adapters | Converts seven exact fixed-scope, at-most-30-minute source sessions into all 32 authority methods, binds the transport's opaque capability on first use, revalidates order and semantic output, bounds read/public-close wrappers and releases terminal sessions after their callbacks settle; dormant producers are present, while built-in network/credentials, wiring, IPC and live execution remain absent |
 | [`browser-relay-source-session-producers/`](browser-relay-source-session-producers/) | Dormant trusted-client session producers | Converts seven exact frozen `{ observe, close }` clients into the fixed-scope ephemeral sessions, enforces canonical order and semantic projection, sanitizes cancellation, drains every started callback and releases client references only at real terminal settlement; the adjacent fixed-target clients are now present, while live authority providers, credentials, network, case wiring, IPC and execution remain absent |
 | [`browser-relay-source-clients/`](browser-relay-source-clients/) | Dormant fixed-target source clients | Converts seven explicit at-most-30-minute source authorities into the exact trusted client map, binds every acquisition and receipt to a fresh non-serializable capability and one immutable reviewed target, rejects consuming App Check and delayed-metric inference, and releases authority references only after actual callback settlement; it discovers no credential, owns no network transport and remains unwired and unexecuted |
-| [`browser-relay-trusted-source-composition/`](browser-relay-trusted-source-composition/) | Dormant trusted-provider composition root | Accepts seven exact named provider capabilities, composes the five fixed source layers and inserts all 22 stages/43 observations into the claim-bound operation matrix; construction is inert, differential conformance and close-once cleanup are proven offline, and built-in live providers, browser IPC and execution remain absent |
+| [`browser-relay-trusted-source-composition/`](browser-relay-trusted-source-composition/) | Dormant trusted-provider composition root | Accepts seven exact named provider capabilities, composes the five fixed source layers and inserts all 22 stages/43 observations into the claim-bound operation matrix; its direct API remains same-process and trusted, while the adjacent process owner provides the isolation boundary |
+| [`browser-relay-trusted-provider-process/`](browser-relay-trusted-provider-process/) | Dormant dedicated-process owner boundary | Loads one self-contained owner bundle by exact SHA-256 in a fresh Node process with an empty ambient environment, two bounded raw pipes, closed messages/results, cooperative cancellation followed by whole-group termination, and no replay; synthetic hostile-process tests pass while a real owner bundle, live providers and execution remain absent |
 | [`browser-relay-chromium-scenario/`](browser-relay-chromium-scenario/) | Dormant complete Chromium page-scenario driver | Owns two pages and inputs, closes the real 18-fact receipt, and proves one native BFCache restore through trusted persisted page events plus exact CDP navigation; its projection port is composed offline, while live authority remains absent |
 | [`browser-relay-playwright-bridge/`](browser-relay-playwright-bridge/) | Dormant page-to-receipt Playwright bridge | Lazily drives the phased host and real receipt producer for Firefox/WebKit; its legacy Chromium path stays blocked before page or private-input acquisition because high-level Playwright cannot prove native BFCache restoration |
 | [`browser-relay-page-receipt/`](browser-relay-page-receipt/) | Dormant browser-owned source receipt producer | Revision 2 reduces 18 exact Chromium page facts or three secondary-browser facts, cross-checks cumulative host lifecycle evidence, typed call outcomes and terminal cleanup, is bound to the bridge and now combines offline with every independent source |
@@ -642,6 +643,7 @@ node infrastructure/staging/browser-relay-trusted-source-composition/guard.mjs \
   infrastructure/staging/browser-relay-trusted-source-composition
 node --test \
   infrastructure/staging/test/browser-relay-trusted-source-composition.test.mjs
+bash infrastructure/staging/browser-relay-trusted-provider-process/check.sh
 ```
 
 The gate first resolves `manifest.json` as a bundle-revision-3 canonical index
@@ -909,9 +911,14 @@ reconstructs the byte-identical semantic object and grants no authenticated
 reader, credential, network, browser, deployment or cloud authority.
 After adding the authenticated-capability reader evidence, revision 100 used
 202,086 bytes. Revision 101 additionally recorded the concrete dormant
-source-session adapters and totalled 211,303 bytes. The current revision-102
-bundle adds the trusted-client source-session producers and totals 219,900
-bytes, leaving 42,244 bytes below the same six-fragment 262,144-byte ceiling.
+source-session adapters and totalled 211,303 bytes. Revision 102 added the
+trusted-client source-session producers and totalled 219,900 bytes. Revision
+103 added the fixed-target source clients and totalled 236,065 bytes. Revision
+104 added the named trusted-provider composition and totalled 243,585 bytes.
+The current revision 105 adds its dedicated-process ownership boundary and
+totals 250,028 bytes, leaving 12,116 bytes below the same fixed six-fragment
+262,144-byte ceiling. The representation must be redesigned before another
+similarly sized lifecycle record is admitted.
 The adjacent
 [`browser-relay-chromium-scenario/`](browser-relay-chromium-scenario/) package
 now closes the standalone Chromium page path offline. It owns two page
@@ -933,9 +940,10 @@ sandbox: all three injected providers, page navigation/content/init scripts and
 the quiescent connection are trusted. Within that boundary, a protocol lease
 remains installed until token-bearing pages close; a separate main-frame
 instrumentation lease keeps ordinary Playwright test listeners and caller-owned
-page wrappers off the serialized argument path. Any future untrusted or shared
-live wiring requires a dedicated browser process and validated narrow IPC. The
-production path also observes the pinned Page and Frame factories,
+page wrappers off the serialized argument path. Any future shared live wiring
+must enter through the adjacent digest-pinned dedicated-process boundary; the
+current direct Chromium path remains explicitly trusted. The production path
+also observes the pinned Page and Frame factories,
 retains the exact page/frame/channel provenance and locks the trusted channel
 evaluation method, its underlying ChannelOwner helpers and the connection
 transport callback. Cleanup invokes the captured native Page-channel close and
@@ -988,8 +996,9 @@ production entrypoint captures intrinsic timers and accepts no runtime
 injection; controlled timers exist only in the isolated testing entrypoint.
 This remains a cooperative same-process boundary, not a sandbox. Authenticated
 Firebase/Google/relay source implementations, network and credential
-acquisition, case-adapter wiring, dedicated-process IPC, live observers and page
-providers, Hosting publication and live execution remain absent. The adjacent
+acquisition, case-adapter wiring, live observers and page providers, Hosting
+publication and live execution remain absent. The separate dedicated-process
+owner boundary is now implemented but not wired to this package. The adjacent
 [`browser-relay-authenticated-source-readers/`](browser-relay-authenticated-source-readers/)
 package now supplies the dormant provider side of this protocol from seven
 injected, already-authenticated capabilities. Each capability exposes only the
@@ -1025,9 +1034,10 @@ metrics or missing logs. Proxy records are rejected before traps; receipt
 validation and descendant callbacks share one reentrancy context, and every
 active authority signal is aborted at its absolute expiry without falsely
 settling or releasing the callback. Pre-existing async resources remain outside
-this cooperative same-process boundary, so untrusted providers still require
-validated IPC. The standalone guard scans the whole local production graph
-before loading its contract. The package does not discover credentials or
+this cooperative same-process boundary; future shared live providers must be
+bundled behind the adjacent dedicated-process owner. The standalone guard scans
+the whole local production graph before loading its contract. The package does
+not discover credentials or
 implement HTTP, WebSocket, Firebase or Google Cloud access. The adjacent
 [`browser-relay-trusted-source-composition/`](browser-relay-trusted-source-composition/)
 now closes the transport-to-case wiring gap. It accepts exactly seven frozen,
@@ -1046,9 +1056,22 @@ fails before matrix entry. Differential tests compare this root against the
 same five factories assembled manually across all 22 stages and 43 observations,
 and a separate production smoke traverses the six hard-wired factories through
 the real claim-bound adapter.
-Construction, validation and import remain inert. Concrete source-truth
-implementations, validated dedicated-process IPC and live page/browser providers
-remain open before any live execution.
+Construction, validation and import remain inert. The adjacent
+[`browser-relay-trusted-provider-process/`](browser-relay-trusted-provider-process/)
+now owns one operation in one fresh detached POSIX process. The parent passes
+only a digest-pinned absolute path and receives one closed operation result over
+two length-prefixed raw pipes; no provider, browser handle, environment,
+credential or arbitrary IPC method crosses the boundary. Ready, operation and
+cancellation deadlines are bounded. Abort is forwarded cooperatively and then
+terminates the complete process group, while crashes, malformed frames and
+ambiguous disconnects fail closed without restart or replay. The worker imports
+the verified bytes as a self-contained ESM data URL and closes the owner before
+its terminal message. Both child and parent validate the result, and the public
+promise resolves only after the real process and pipes close. This is process
+and lifecycle isolation for trusted same-user code, not an operating-system
+sandbox: the child retains the account's filesystem and network authority.
+Concrete source-truth implementations, the actual owner bundle and live
+page/browser providers remain open before any live execution.
 The adjacent
 [`browser-relay-operation-case-adapter/`](browser-relay-operation-case-adapter/)
 now hard-wires that complete schedule into the unchanged single-use operation.

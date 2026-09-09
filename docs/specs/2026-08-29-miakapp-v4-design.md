@@ -973,8 +973,9 @@ vertical-slice exit gates.
    trusts the injected providers, page navigation/content/init scripts and
    exclusive ownership of that in-process Playwright connection. The mutable
    same-realm leases are defense in depth, not a confidentiality sandbox;
-   untrusted or shared live wiring requires a dedicated browser process and a
-   narrow validated IPC contract.
+   future shared live wiring must enter through the dedicated-process boundary
+   described below. The current direct Chromium driver remains trusted and is
+   not yet bundled through that boundary.
    A separate closed independent-source package now produces the remaining 15
    receipts from 43 exact ordered App Check, Hosting, control-plane, relay,
    coordinator, KMS and Firestore facts. It accepts no assertion maps and
@@ -1090,8 +1091,8 @@ vertical-slice exit gates.
    validation remains inside the descendant callback context and an absolute
    timer aborts active authority signals without falsely settling their
    callbacks. Pre-existing async resources are explicitly outside this trusted
-   same-process boundary and require the later dedicated-process IPC boundary
-   for hard isolation. Credential discovery and built-in
+   same-process boundary; the dedicated owner below supplies hard termination
+   for its future bundled graph. Credential discovery and built-in
    OAuth/Firebase/HTTP/WebSocket access remain absent. A following dormant
    trusted-source composition root now accepts seven exact frozen provider
    capabilities whose named methods fix source and kind. It passes providers
@@ -1107,16 +1108,37 @@ vertical-slice exit gates.
    or exposure increases without disabling rollback. Differential conformance
    against the same five factories proves all 22 stages and 43 observations
    offline without modifying their reviewed lifecycle implementations.
+   A separate dormant dedicated-process package now owns one future trusted
+   provider/browser graph per operation. The public parent accepts only an
+   absolute self-contained ESM bundle path and its SHA-256, starts one fresh
+   detached POSIX Node process on `execute()`, supplies an empty environment and
+   inherits neither stdio, `execArgv`, shell nor Node IPC channel. Two raw
+   unidirectional pipes carry a versioned, canonical, length-prefixed and
+   structurally bounded JSON protocol: parent-to-child `execute`/`cancel`, and
+   child-to-parent `ready`/startup failure/result/failure. No provider context,
+   browser object, handle, credential, arbitrary target or generic method can
+   cross. The worker reads a regular non-executable no-follow file once,
+   verifies its digest and imports those exact bytes through a data URL before
+   creating the owner. Ready, operation and cancellation deadlines are bounded;
+   cooperative cancellation precedes SIGKILL of the complete detached process
+   group. The owner closes before the terminal message, both sides validate the
+   closed operation result, and the public promise waits for actual child and
+   pipe closure. Crash, malformed transport, wrong identity and ambiguous
+   disconnect all fail closed without restart or replay. Real synthetic process
+   tests include hostile frames, hangs, ignored abort and a SIGTERM-ignoring
+   descendant. This boundary isolates lifecycle and termination, not the
+   operating system: the digest-pinned owner remains trusted same-user code with
+   filesystem and network authority.
    A final dormant operation case adapter now hard-wires the unchanged
    single-use operation to that complete schedule. It intercepts one canonical
    receipt, retains only a private non-serializable capability, admits exactly
    one matrix callback within the claim lifetime, forwards only the exact edge
    abort signal and returns the unchanged closed operation result. Claim lineage
    never reaches a provider or result, and both operation cleanup levels are
-   exercised offline. Named provider/case wiring is now complete; concrete live
-   source-truth implementations, trusted live-browser providers,
-   dedicated-process IPC, Hosting publication and live authority remain open
-   before the one allowed execution.
+   exercised offline. Named provider/case wiring and the process owner boundary
+   are now complete; the concrete self-contained owner bundle, live
+   source-truth implementations, trusted live-browser providers, Hosting
+   publication and live authority remain open before the one allowed execution.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain
