@@ -823,11 +823,11 @@ current consumer.
     implemented separately, while concrete clients and live wiring remain
     absent. The manifest capacity
     prerequisite is now closed: the stable
-    bundle-revision-3 entry
-    point indexes six fixed canonical fragments, with separate browser-relay
-    scenario, reader-boundary and operations owners, exact path, mount,
+    bundle-revision-4 entry
+    point indexes seven fixed canonical fragments, with separate browser-relay
+    scenario, reader-boundary, trusted-provider and operations owners, exact path, mount,
     byte-length and SHA-256 bindings, per-file ceilings and one aggregate
-    ceiling while reconstructing the revision-102 semantic object. The immutable
+    ceiling while reconstructing the revision-105 semantic object. The immutable
     original fixture still has three private page inputs, but a separate closed
     scenario fixture now supplies the fourth from a second genuine synthetic Firebase identity,
     extends the unique coordinator's state access to both identities and
@@ -963,14 +963,18 @@ current consumer.
     Revision 104 added the named trusted-provider composition and exact
     transport-to-case wiring. Its six fragments total 243,585 bytes, leaving
     18,559 bytes under the unchanged ceiling, with zero cloud requests,
-    mutations, public windows, live executions or added cost. Revision 105 adds
-    the dedicated-process owner boundary and totals 250,028 bytes, leaving
-    12,116 bytes under the same ceiling with the same zero-live, zero-cloud and
-    zero-cost posture.
+    mutations, public windows, live executions or added cost. Revision 105 added
+    the dedicated-process owner boundary and totalled 250,343 bytes, leaving
+    11,801 bytes under the same ceiling with the same zero-live, zero-cloud and
+    zero-cost posture. The following representation-only bundle revision 4
+    moves the three provider-facing records into a seventh fixed shard. Its
+    canonical index and seven fragments total 250,768 bytes, leaving 273,520
+    bytes under the new 524,288-byte aggregate ceiling while reconstructing the
+    byte-identical revision-105 semantic object with unchanged safety boundaries.
     Next build the self-contained owner bundle with concrete source-truth and
     live page providers behind this boundary, prove it offline, then execute the
-    matrix exactly once. Redesign the evidence representation before another
-    similarly sized lifecycle record consumes the remaining fixed headroom.
+    matrix exactly once. The evidence-representation capacity prerequisite is
+    now closed before another similarly sized lifecycle record is admitted.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform
     no-change plan. Its fresh post-merge preflight is complete and the rollback

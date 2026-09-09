@@ -19,11 +19,11 @@ import {
 } from 'node:path';
 
 const BUNDLE_SCHEMA = 'miakapp.staging-manifest-bundle/1';
-const BUNDLE_REVISION = 3;
+const BUNDLE_REVISION = 4;
 const FRAGMENT_SCHEMA = 'miakapp.staging-manifest-fragment/1';
 const MAXIMUM_INDEX_BYTES = 16 * 1024;
 const MAXIMUM_FRAGMENT_BYTES = 96 * 1024;
-const MAXIMUM_BUNDLE_BYTES = 256 * 1024;
+const MAXIMUM_BUNDLE_BYTES = 512 * 1024;
 const SHA256 = /^[a-f0-9]{64}$/u;
 
 const CORE_KEYS = Object.freeze([
@@ -103,6 +103,9 @@ const BROWSER_RELAY_READER_EVIDENCE_KEYS = Object.freeze([
   'browser_relay_authenticated_source_readers',
   'browser_relay_source_authority_adapters',
   'browser_relay_source_session_producers',
+]);
+
+const BROWSER_RELAY_PROVIDER_EVIDENCE_KEYS = Object.freeze([
   'browser_relay_source_clients',
   'browser_relay_trusted_source_composition',
   'browser_relay_trusted_provider_process',
@@ -136,6 +139,7 @@ const BROWSER_RELAY_OPERATIONS_EVIDENCE_KEYS = Object.freeze([
 const BROWSER_RELAY_EVIDENCE_KEYS = Object.freeze([
   ...BROWSER_RELAY_SCENARIO_EVIDENCE_PREFIX_KEYS,
   ...BROWSER_RELAY_READER_EVIDENCE_KEYS,
+  ...BROWSER_RELAY_PROVIDER_EVIDENCE_KEYS,
   ...BROWSER_RELAY_SCENARIO_EVIDENCE_SUFFIX_KEYS,
   ...BROWSER_RELAY_OPERATIONS_EVIDENCE_KEYS,
 ]);
@@ -176,6 +180,12 @@ const FRAGMENT_SPECS = Object.freeze([
     path: 'manifest/evidence-browser-relay-readers.json',
     mount: 'evidence',
     keys: BROWSER_RELAY_READER_EVIDENCE_KEYS,
+  }),
+  Object.freeze({
+    id: 'evidence-browser-relay-providers',
+    path: 'manifest/evidence-browser-relay-providers.json',
+    mount: 'evidence',
+    keys: BROWSER_RELAY_PROVIDER_EVIDENCE_KEYS,
   }),
   Object.freeze({
     id: 'evidence-browser-relay-operations',
@@ -453,12 +463,9 @@ function validateFragment(value, spec) {
 function assembleManifest(fragments) {
   const core = fragments.get('core').values;
   const terraform = fragments.get('terraform').values;
-  const evidenceSources = [
-    fragments.get('evidence-platform').values,
-    fragments.get('evidence-browser-relay-scenario').values,
-    fragments.get('evidence-browser-relay-readers').values,
-    fragments.get('evidence-browser-relay-operations').values,
-  ];
+  const evidenceSources = FRAGMENT_SPECS
+    .filter(({ mount }) => mount === 'evidence')
+    .map(({ id }) => fragments.get(id).values);
   const evidence = {};
   for (const key of EVIDENCE_KEY_ORDER) {
     const owners = evidenceSources.filter((source) => Object.hasOwn(source, key));
