@@ -1,0 +1,47 @@
+name: Browser relay trusted provider owner
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/browser-relay-trusted-provider-owner.yml'
+      - 'package.json'
+      - 'bun.lock'
+      - 'infrastructure/staging/browser-relay*/**'
+      - 'infrastructure/staging/test/browser-relay-trusted-provider-owner*.mjs'
+  pull_request:
+    paths:
+      - '.github/workflows/browser-relay-trusted-provider-owner.yml'
+      - 'package.json'
+      - 'bun.lock'
+      - 'infrastructure/staging/browser-relay*/**'
+      - 'infrastructure/staging/test/browser-relay-trusted-provider-owner*.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Browser relay trusted provider owner / validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      DEBUG: ''
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22.22.0
+          package-manager-cache: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: 1.2.23
+      - name: Install locked dependencies
+        run: bun install --frozen-lockfile
+      - name: Install pinned browser engines and system dependencies
+        run: ./node_modules/.bin/playwright install --with-deps chromium firefox webkit
+      - name: Validate the complete offline owner and real browser process
+        env:
+          MIAKAPP_RUN_TRUSTED_PROVIDER_OWNER_BROWSER: '1'
+        run: sh infrastructure/staging/browser-relay-trusted-provider-owner/check.sh

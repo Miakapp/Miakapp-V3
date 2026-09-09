@@ -18,7 +18,7 @@
     "production_source_sha256": "96099451f1e1eb84895337c332d609403ea1d97c87cab405fde33401626bd6b0",
     "testing_source_sha256": "937edcccbc3c9f55bdf2b310f9bcbfeaa8e64aa68d3b0d8bb2a4559ddf82ebe2",
     "guard_source_sha256": "6e6292c57bb816dcaa3111542e20fdf7d10c99c32e7135323f5f4a7ae4dffd23",
-    "unit_test_sha256": "bba3a91a8f3ee5566f8eea9e34ee9fa963ed607eb2a415c1ded39fb5cdbd7bc6",
+    "unit_test_sha256": "f0bb577e169a61306322956a33757679cfe31aa542a4880f8b3287fb9e79828c",
     "workflow_sha256": "baf66af60725df0a5b90a14df7fca449290260a99f95a6fb7307eee50628dc27"
   },
   "adapter": {
@@ -153,7 +153,7 @@
     "observations_per_matrix": 43,
     "distinct_kind_count": 32,
     "maximum_session_lifetime_milliseconds": 1800000,
-    "maximum_read_milliseconds": 30000,
+    "maximum_read_milliseconds": 75000,
     "maximum_close_milliseconds": 30000,
     "expiry_is_absolute_unix_epoch_milliseconds": true,
     "explicit_source_sessions": true,

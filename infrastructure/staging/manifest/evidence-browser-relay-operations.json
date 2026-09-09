@@ -185,10 +185,10 @@
     "browser_relay_operation_case_adapter": {
       "state": "closed_claim_bound_operation_case_composition_offline_proven_not_live_executed",
       "profile_path": "browser-relay-operation-case-adapter/profile.json",
-      "profile_sha256": "bd9daca428611bf2b4d0623fbd218e69d69cbe3805008a83733fe47f93330085",
+      "profile_sha256": "dc4634f9b6f69d96a574ae04e4b66bd932c7fad7742a18ec3b1afb65e00487d5",
       "profile_schema": "miakapp.staging-browser-relay-operation-case-adapter-profile/1",
       "profile_revision": 1,
-      "contract_source_sha256": "75c33c7e8c3408132fd9083d715f59bcea4b27a210c940a236d13017968c31bf",
+      "contract_source_sha256": "38342b3150fc0292fca0125783fad34707e2c2e15a627b75f7c403af796d66d3",
       "target": {
         "project_id": "miakapp-v4-staging",
         "project_number": "1072737219170",
@@ -203,7 +203,7 @@
         "browser_relay_independent_case_adapter_profile_sha256": "e228eee9e27b2cf411beee979bdbd69b44e62248cb65997636c87134912508d6",
         "browser_relay_operation_profile_sha256": "d1ff776c48c0aade724fc31a8d44c7e68fe5c81919eab7030998962017801a73",
         "browser_relay_orchestrator_claim_source_sha256": "b67a42998df291ece0ea6575442c803cbee04535e657ea814c6a1d9eeb221013",
-        "dependency_contracts_sha256": "be3399ca2b2bebee8739b480cf40ffcf26cb9946a1a6dd65bae8fcec813b38c9",
+        "dependency_contracts_sha256": "e3961465babc0b4c54af1fc976eae5c83d32fe273bc1d5f28dc4e29bad24951a",
         "adapter_source_sha256": "19d159a996cab1ddda60f6be3cd1349814bb768e5ce925ad47763adff9aa6aec",
         "internal_source_sha256": "46ac5aa4aa21ec0ee505c1a549afe258530c46a346f7a41399cf17fa98de33a6",
         "testing_source_sha256": "d764135b16bbb8abf2418d50cce3f326313cfab872c1a8b6cf3243ce4534f58c",

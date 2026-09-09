@@ -109,6 +109,7 @@ const BROWSER_RELAY_PROVIDER_EVIDENCE_KEYS = Object.freeze([
   'browser_relay_source_clients',
   'browser_relay_trusted_source_composition',
   'browser_relay_trusted_provider_process',
+  'browser_relay_trusted_provider_owner',
 ]);
 
 const BROWSER_RELAY_SCENARIO_EVIDENCE_SUFFIX_KEYS = Object.freeze([

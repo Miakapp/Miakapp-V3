@@ -29,6 +29,7 @@ import {
   SOURCE_AUTHORITY_ADAPTERS_CALLS_BY_SOURCE,
   SOURCE_AUTHORITY_ADAPTERS_DISTINCT_KIND_COUNT,
   SOURCE_AUTHORITY_ADAPTERS_MAXIMUM_CLOSE_MILLISECONDS,
+  SOURCE_AUTHORITY_ADAPTERS_MAXIMUM_READ_MILLISECONDS,
   SOURCE_AUTHORITY_ADAPTERS_MAXIMUM_SESSION_LIFETIME_MILLISECONDS,
   SOURCE_AUTHORITY_ADAPTERS_OBSERVATIONS_PER_MATRIX,
   SOURCE_AUTHORITY_ADAPTERS_SCOPES_BY_SOURCE,
@@ -1191,6 +1192,9 @@ test('profile, dependency pins, guard, and CLI validate the dormant package', ()
   assert.equal(profile.adapter.stage_count, 22);
   assert.equal(profile.adapter.observations_per_matrix, 43);
   assert.equal(profile.adapter.distinct_kind_count, 32);
+  assert.equal(SOURCE_AUTHORITY_ADAPTERS_MAXIMUM_READ_MILLISECONDS, 75_000);
+  assert.equal(profile.adapter.maximum_read_milliseconds, 75_000);
+  assert.equal(SOURCE_AUTHORITY_ADAPTERS_MAXIMUM_CLOSE_MILLISECONDS, 30_000);
   assert.equal(profile.adapter.operation_capability_omitted_from_read_descriptor, true);
   assert.equal(profile.adapter.abort_and_expiry_rechecked_at_dispatch, true);
   assert.equal(profile.adapter.bounded_read_and_close_wrapper_settlement, true);
