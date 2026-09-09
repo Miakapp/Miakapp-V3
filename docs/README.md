@@ -183,17 +183,26 @@ implemented across several repositories.
 - [`../infrastructure/staging/browser-relay-trusted-provider-process/`](../infrastructure/staging/browser-relay-trusted-provider-process/)
   — dormant dedicated-process boundary for one digest-pinned `MIAKOWN1`
   owner artifact. It materializes only verified bytes in a private workspace,
-  confines ordinary module resolution to that workspace, uses bounded raw-pipe
-  messages and closes or terminates the complete process group without replay.
-  The child remains trusted same-user code with Node built-in authority; this is
-  a lifecycle and module boundary, not an operating-system sandbox.
+  confines ordinary module resolution to that workspace, and uses protocol v2:
+  bounded JSON control/results on fd3/fd4 plus one mandatory opaque 1..16,384-byte
+  authority envelope on fd5. The child validates EOF and descriptor close before
+  acknowledging readiness to execute, exposes only one `consume(callback)`
+  capability to the owner, and closes or terminates the complete process group
+  without replay. Caller, parent, chunk and child buffers receive best-effort
+  overwrite; deliberate copies and secure erasure are not claimed. The child
+  remains trusted same-user code with Node built-in authority; this is a lifecycle
+  and module boundary, not an operating-system sandbox.
 - [`../infrastructure/staging/browser-relay-trusted-provider-owner/`](../infrastructure/staging/browser-relay-trusted-provider-owner/)
   — complete offline owner for the seven deterministic synthetic source-truth
   providers, all 17 operation callbacks and real Chromium, Firefox and WebKit
-  pages. Its deterministic 218-file artifact admits only 87 reviewed modules,
-  blocks each page's fixed external-request probe and closes all 22 stages, 43
-  observations and 40 assertions inside the child. External live source truth,
-  Hosting publication and live staging authority remain absent.
+  pages. Its factory requires the worker-created frozen authority capability and
+  wraps the whole graph in exactly one synthetic consume callback without parsing,
+  copying, persisting, observing or returning the bytes. Its deterministic
+  218-file artifact admits only 87 reviewed modules, blocks each page's fixed
+  external-request probe and closes all 22 stages, 43 observations and 40
+  assertions inside the child. Real credential acquisition and attenuation,
+  external live source truth, Hosting publication and live staging authority
+  remain absent.
 - [`../infrastructure/staging/browser-relay-chromium-scenario/`](../infrastructure/staging/browser-relay-chromium-scenario/)
   — dormant two-page Chromium driver that owns the complete 18-fact page
   scenario and closes the existing receipt producer offline. Its pinned CDP
@@ -427,9 +436,11 @@ admits the complete schedule only after one canonical durable claim. Both roots
 forward attenuated signals and expose no claim or request-capability lineage.
 None of these packages grants Hosting publication or live authority. The
 complete owner now supplies deterministic synthetic source truth, real offline
-page/browser providers and dedicated-process IPC; external live source truth,
-temporary Hosting publication and live fixture lifecycle wiring must still
-close before the one allowed staging matrix can execute.
+page/browser providers, dedicated-process IPC and a synthetic-only one-use
+authority transport. A short-lived audience-restricted real authority source,
+its attenuation into the seven external providers, external live source truth,
+temporary Hosting publication and live fixture lifecycle wiring must still close
+before the one allowed staging matrix can execute.
 
 Repository-specific implementation plans must link back to these documents and
 must not redefine a shared contract locally.

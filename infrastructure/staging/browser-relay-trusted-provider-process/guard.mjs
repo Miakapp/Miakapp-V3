@@ -4,6 +4,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT_ENTRIES = Object.freeze([
   'README.md',
+  'authority-channel.mjs',
   'check.sh',
   'contract.mjs',
   'framed-channel.mjs',
@@ -12,11 +13,13 @@ const ROOT_ENTRIES = Object.freeze([
   'owner-bundle.mjs',
   'process.mjs',
   'profile-v1.json',
+  'profile-v2.json',
   'profile.json',
   'test',
   'worker.mjs',
 ]);
 const TEST_ENTRIES = Object.freeze([
+  'authority-channel.test.mjs',
   'contract.test.mjs',
   'fixtures',
   'framed-channel.test.mjs',
@@ -30,21 +33,25 @@ const FIXTURE_ENTRIES = Object.freeze([
   'uncooperative-descendant.mjs',
 ]);
 const STATIC_IMPORTS = Object.freeze({
+  'authority-channel.mjs': Object.freeze(['./contract.mjs', 'node:util']),
   'contract.mjs': Object.freeze([
     'node:crypto', 'node:fs', 'node:path', 'node:util',
   ]),
   'framed-channel.mjs': Object.freeze(['./contract.mjs', 'node:util']),
   'internal.mjs': Object.freeze([
-    './contract.mjs', './framed-channel.mjs', 'node:child_process',
+    './authority-channel.mjs', './contract.mjs', './framed-channel.mjs', 'node:child_process',
     'node:crypto', 'node:fs', 'node:os', 'node:path', 'node:process', 'node:url',
   ]),
   'owner-bundle.mjs': Object.freeze([
     './contract.mjs', 'node:crypto', 'node:fs', 'node:path', 'node:url', 'node:util',
   ]),
-  'process.mjs': Object.freeze(['./contract.mjs', './internal.mjs']),
+  'process.mjs': Object.freeze([
+    './authority-channel.mjs', './contract.mjs', './internal.mjs',
+  ]),
   'worker.mjs': Object.freeze([
-    './contract.mjs', './framed-channel.mjs', './owner-bundle.mjs', 'node:fs',
-    'node:module', 'node:path', 'node:process', 'node:url',
+    './authority-channel.mjs', './contract.mjs', './framed-channel.mjs',
+    './owner-bundle.mjs', 'node:fs', 'node:module', 'node:path', 'node:process',
+    'node:url',
   ]),
 });
 
@@ -127,12 +134,13 @@ export async function validateBrowserRelayTrustedProviderProcessRoot(rootUrl) {
   const ownerBundle = sources['owner-bundle.mjs'];
   const processEntry = sources['process.mjs'];
   const framing = sources['framed-channel.mjs'];
+  const authorityChannel = sources['authority-channel.mjs'];
   for (const marker of [
     'spawn(process.execPath',
     'detached: true',
     'env: Object.create(null)',
     'shell: false',
-    "stdio: ['ignore', 'ignore', 'ignore', 'pipe', 'pipe']",
+    "stdio: ['ignore', 'ignore', 'ignore', 'pipe', 'pipe', 'pipe']",
     "process.kill(-child.pid, 'SIGKILL')",
     'ready_timeout_milliseconds',
     'operation_timeout_milliseconds',
@@ -146,12 +154,17 @@ export async function validateBrowserRelayTrustedProviderProcessRoot(rootUrl) {
     'createOwnerWorkspace',
     'removeOwnerWorkspace',
     "'--owner-workspace-path'",
+    'writeTrustedProviderEphemeralAuthority',
+    "phase = 'transferring_authority'",
+    "phase = 'authority_ready'",
+    'authorityClosed.promise',
   ]) {
     if (!internal.includes(marker)) reject('Trusted provider process lifecycle has drifted');
   }
   for (const marker of [
     'fd: 3',
     'fd: 4',
+    'fd: 5',
     "process.send !== undefined",
     'process.execArgv.length !== 0',
     'sanitizeWorkerEnvironment',
@@ -165,6 +178,10 @@ export async function validateBrowserRelayTrustedProviderProcessRoot(rootUrl) {
     'validateTrustedProviderOwnerModule',
     'cloneValidatedTrustedProviderProcessResult',
     'await owner.close()',
+    'readTrustedProviderEphemeralAuthority',
+    'createTrustedProviderEphemeralAuthorityCapability',
+    'buildTrustedProviderProcessAuthorityReady',
+    'authoritySettlement?.settle()',
     "forcedFailureCode = 'invalid_protocol'",
     'runBrowserRelayTrustedProviderWorker',
   ]) {
@@ -188,6 +205,7 @@ export async function validateBrowserRelayTrustedProviderProcessRoot(rootUrl) {
   }
   for (const marker of [
     'createBrowserRelayTrustedProviderProcess',
+    'claimTrustedProviderEphemeralAuthority',
     'cloneValidatedTrustedProviderProcessResult',
     "StagingBrowserRelayTrustedProviderProcessError('peer_failed')",
     'Object.create(null)',
@@ -211,6 +229,23 @@ export async function validateBrowserRelayTrustedProviderProcessRoot(rootUrl) {
   ]) {
     if (!framing.includes(marker)) reject('Trusted provider framed channel has drifted');
   }
+  for (const marker of [
+    "Buffer.from('MIAKAUT1', 'ascii')",
+    'TRUSTED_PROVIDER_PROCESS_MAXIMUM_AUTHORITY_BYTES',
+    'CLAIMED_AUTHORITY_BUFFERS',
+    'SharedArrayBuffer',
+    'writeUInt32BE',
+    'readUInt32BE',
+    "stream.once('drain', onDrain)",
+    "stream.once('finish', onFinish)",
+    'createTrustedProviderEphemeralAuthorityCapability',
+    'INTRINSIC_TYPED_ARRAY_BYTE_LENGTH_GETTER',
+    'index < length; index += 1) bytes[index] = 0',
+  ]) {
+    if (!authorityChannel.includes(marker)) {
+      reject('Trusted provider ephemeral authority channel has drifted');
+    }
+  }
 
   const productionBoundary = Object.values(sources).join('\n');
   if (/\b(?:fork|exec|execFile|spawnSync|execSync)\s*\(/u.test(productionBoundary)
@@ -222,7 +257,8 @@ export async function validateBrowserRelayTrustedProviderProcessRoot(rootUrl) {
       .test(productionBoundary)
     || /\b(?:access_token|authorization|id_token|private_key|refresh_token|secret_value)\b/u
       .test(productionBoundary)
-    || /\b(?:retry|restart|respawn|replay)\b/u.test(productionBoundary)
+    || /\b(?:retry|restart|respawn)\b/u.test(productionBoundary)
+    || /\b(?:replayOperation|replayRequest|replayExecution)\b/u.test(productionBoundary)
     || /data:text\/javascript/u.test(productionBoundary)) {
     reject('Trusted provider process exceeds the reviewed narrow authority');
   }
@@ -240,6 +276,20 @@ export async function validateBrowserRelayTrustedProviderProcessRoot(rootUrl) {
     || profile.compatibility.browser_launch_proven !== false
     || profile.compatibility.live_owner_bundle_present !== false
     || profile.compatibility.live_operation_wired !== false
+    || profile.protocol.version !== 2
+    || profile.protocol.authority_transport !== 'single_use_binary_pipe_fd5'
+    || profile.protocol.authority_bytes_in_json_protocol !== false
+    || profile.ownership.caller_authority_buffer_claimed_once !== true
+    || profile.ownership.caller_authority_buffer_overwritten_on_claim !== true
+    || profile.ownership.authority_secure_erasure_claimed !== false
+    || profile.lifecycle.authority_required_per_execute !== true
+    || profile.lifecycle.owner_authority_consume_required !== true
+    || profile.lifecycle.owner_authority_consume_at_most_once !== true
+    || profile.authority.ephemeral_authority_bytes_accepted_by_parent !== true
+    || profile.authority.credential_persistence_authorized !== false
+    || profile.evidence.synthetic_authority_process_runs !== 1
+    || profile.evidence.real_credentials_used !== 0
+    || profile.evidence.authority_persistence_events !== 0
     || profile.evidence.cloud_requests !== 0
     || profile.evidence.cloud_mutations !== 0
     || profile.evidence.browser_launches !== 0

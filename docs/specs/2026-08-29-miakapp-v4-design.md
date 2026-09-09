@@ -1108,16 +1108,22 @@ vertical-slice exit gates.
    or exposure increases without disabling rollback. Differential conformance
    against the same five factories proves all 22 stages and 43 observations
    offline without modifying their reviewed lifecycle implementations.
-   A separate dormant dedicated-process package now owns one future trusted
+   A separate dormant dedicated-process package owns one future trusted
    provider/browser graph per operation. The public parent accepts only an
-   absolute deterministic owner-container path and its SHA-256, starts one fresh
-   detached POSIX Node process on `execute()`, supplies an empty environment and
-   inherits neither stdio, `execArgv`, shell nor Node IPC channel. Two raw
-   unidirectional pipes carry a versioned, canonical, length-prefixed and
-   structurally bounded JSON protocol: parent-to-child `execute`/`cancel`, and
-   child-to-parent `ready`/startup failure/result/failure. No provider context,
-   browser object, handle, credential, arbitrary target or generic method can
-   cross. The worker reads a regular non-executable no-follow file once and
+   absolute deterministic owner-container path and its SHA-256 at construction,
+   starts one fresh detached POSIX Node process on `execute()`, supplies an empty
+   environment and inherits neither stdio, `execArgv`, shell nor Node IPC channel.
+   Protocol v2 uses three raw unidirectional pipes. fd3/fd4 carry canonical,
+   length-prefixed and structurally bounded JSON: parent-to-child
+   `execute`/`cancel`, and child-to-parent `ready`/startup failure/
+   `authority_ready`/result/failure. fd5 carries exactly one binary envelope with
+   1..16,384 opaque bytes. The parent claims the mandatory caller Buffer and
+   immediately overwrites that view; transfer starts only after `ready`. The child
+   validates the envelope, exact EOF and fd5 close before acknowledging authority,
+   and the parent sends `execute` only after both ends have observed closure. No
+   authority byte enters JSON, argv, environment, bundle or workspace, and no
+   provider context, browser object, handle, arbitrary target or generic method
+   can cross. The worker reads a regular non-executable no-follow file once and
    verifies its digest. The fixed owner-container v1 framing then verifies a
    canonical manifest and ordered raw payloads: 32 MiB overall, 256 KiB of
    manifest, 512 files, 8 MiB per file, 256 UTF-8 bytes per safe relative
@@ -1131,7 +1137,11 @@ vertical-slice exit gates.
    supported without ambient or external fallback.
    Ready, operation and cancellation deadlines are bounded;
    cooperative cancellation precedes SIGKILL of the complete detached process
-   group. The owner closes before the terminal message, both sides validate the
+   group. The worker constructs a frozen null-prototype factory context exposing
+   only a frozen null-prototype `{consume}` capability. The owner must invoke one
+   asynchronous callback; ignoring it or attempting a second invocation fails
+   closed, and the worker overwrites the reachable child Buffer after settlement.
+   The owner closes before the terminal message, both sides validate the
    closed operation result, and the public promise waits for actual child and
    pipe closure. Crash, malformed transport, wrong identity and ambiguous
    disconnect all fail closed without restart or replay. Real synthetic process
@@ -1140,14 +1150,19 @@ vertical-slice exit gates.
    settlement and gates the public result; cleanup after a parent crash is not
    guaranteed. This boundary isolates lifecycle and termination, not the
    operating system: the digest-pinned owner remains trusted same-user code with
-   filesystem and network authority. Semantic revision 106 proved a real
+   filesystem and network authority. Buffer overwrite is best-effort hygiene,
+   not secure erasure; it does not cover deliberate copies, kernel buffers, swap,
+   heap dumps, hard-killed memory or same-user/privileged observation. Same-object
+   replay is rejected, while caller-made independent copies are not globally
+   detectable without a persistent external issuer or ledger. Semantic revision
+   106 proved a real
    offline `playwright-core` 1.62.1 package-tree import and browser-metadata
    resolution in the child. No browser binary is packaged, no browser launches,
    and the proof performs no network, cloud or live request. Semantic revision
    107 adds a complete offline owner artifact that fills that verified container
    with the seven concrete synthetic source-truth providers, all 17 operation callbacks
    and the real Chromium, Firefox and WebKit page providers. Construction begins
-   only on the child-owned `execute`; the existing trusted-source composition
+   only after the fd5 handshake and child-owned `execute`; the existing trusted-source composition
    then closes all 22 stages, 43 observations and 40 assertions into one
    validated operation result before every provider, page, context and browser
    is released. Chromium installs no route interception and instead reaches the
@@ -1169,8 +1184,14 @@ vertical-slice exit gates.
    all three installed engines. It records zero DNS, external network, cloud,
    Hosting publication or live staging execution. The child still has same-user
    Node built-in authority and is therefore trusted code rather than an OS
-   sandbox. External live source-truth implementations, temporary staging
-   publication and the exactly-once live operation remain separate gates.
+   sandbox. Semantic revision 108 adds the synthetic-only ephemeral authority
+   channel and wraps the complete owner graph in exactly one consume callback.
+   The owner validates only Buffer identity and bounds and never parses, copies,
+   stringifies, persists, observes or returns the opaque bytes. It acquires no real
+   credential and grants no external provider, network, cloud, Hosting or live
+   execution capability. A short-lived audience-restricted real authority source
+   and seven-provider attenuation remain separate gates alongside external live
+   source truth, temporary staging publication and the exactly-once live operation.
    A final dormant operation case adapter now hard-wires the unchanged
    single-use operation to that complete schedule. It intercepts one canonical
    receipt, retains only a private non-serializable capability, admits exactly
@@ -1178,8 +1199,9 @@ vertical-slice exit gates.
    abort signal and returns the unchanged closed operation result. Claim lineage
    never reaches a provider or result, and both operation cleanup levels are
    exercised offline. Named provider/case wiring, the process owner boundary,
-   its deterministic dependency-bearing container format and the complete
-   synthetic owner graph are now closed offline. External live source-truth
+   its deterministic dependency-bearing container format, one-use synthetic
+   authority channel and complete synthetic owner graph are now closed offline.
+   Real authority acquisition/attenuation, external live source-truth
    implementations, staging Hosting publication and live authority remain open
    before the one allowed execution.
    Arbitrary self-hosted relay selection remains disabled until

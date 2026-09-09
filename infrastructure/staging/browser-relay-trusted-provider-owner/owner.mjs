@@ -6,6 +6,7 @@ import {
 } from './browser.mjs';
 import {
   validateTrustedProviderOwnerSchedule,
+  validateTrustedProviderOwnerBootstrap,
   rejectTrustedProviderOwner,
 } from './contract.mjs';
 import {
@@ -28,8 +29,9 @@ const productionRuntime = Object.freeze({
   createComposition: createBrowserRelayTrustedSourceComposition,
 });
 
-export function createBrowserRelayTrustedProviderOwner() {
-  if (arguments.length !== 0) rejectTrustedProviderOwner();
+export function createBrowserRelayTrustedProviderOwner(bootstrapValue) {
+  if (arguments.length !== 1) rejectTrustedProviderOwner();
+  const consumeAuthority = validateTrustedProviderOwnerBootstrap(bootstrapValue);
   validateTrustedProviderOwnerSchedule();
-  return createBrowserRelayTrustedProviderOwnerInternal(productionRuntime);
+  return createBrowserRelayTrustedProviderOwnerInternal(productionRuntime, consumeAuthority);
 }

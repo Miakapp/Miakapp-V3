@@ -5,6 +5,7 @@ package_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repository_root=$(CDPATH= cd -- "${package_root}/../../.." && pwd)
 
 for source in \
+  authority-channel.mjs \
   contract.mjs \
   framed-channel.mjs \
   guard.mjs \
@@ -12,6 +13,7 @@ for source in \
   owner-bundle.mjs \
   process.mjs \
   worker.mjs \
+  test/authority-channel.test.mjs \
   test/helpers.mjs \
   test/contract.test.mjs \
   test/framed-channel.test.mjs \
@@ -26,6 +28,7 @@ done
 
 node "${package_root}/guard.mjs" "${package_root}"
 node --test \
+  "${package_root}/test/authority-channel.test.mjs" \
   "${package_root}/test/contract.test.mjs" \
   "${package_root}/test/framed-channel.test.mjs" \
   "${package_root}/test/inert-import.test.mjs" \

@@ -6,10 +6,13 @@ import { isDeepStrictEqual, types } from 'node:util';
 export const TRUSTED_PROVIDER_PROCESS_PROFILE_PATH =
   'browser-relay-trusted-provider-process/profile.json';
 export const TRUSTED_PROVIDER_PROCESS_PROFILE_SHA256 =
-  '7612f032ba778c157a533dfedb26c50bd4b9f665b1b4effefded477beb746446';
+  '187e8c69b5e72b04895d0c299c1bf3d534b178323a7e65d9a628c870e534ad7d';
 export const TRUSTED_PROVIDER_PROCESS_PROTOCOL_SCHEMA =
   'miakapp.staging-browser-relay-trusted-provider-process-ipc/1';
-export const TRUSTED_PROVIDER_PROCESS_PROTOCOL_VERSION = 1;
+export const TRUSTED_PROVIDER_PROCESS_PROTOCOL_VERSION = 2;
+export const TRUSTED_PROVIDER_PROCESS_AUTHORITY_SCHEMA =
+  'miakapp.staging-browser-relay-ephemeral-authority/1';
+export const TRUSTED_PROVIDER_PROCESS_MAXIMUM_AUTHORITY_BYTES = 16_384;
 export const TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_BYTES = 33_554_432;
 export const TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_MANIFEST_BYTES = 262_144;
 export const TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_FILES = 512;
@@ -32,6 +35,8 @@ export const TRUSTED_PROVIDER_PROCESS_MAXIMUM_CANCELLATION_GRACE_MILLISECONDS = 
 export const TRUSTED_PROVIDER_PROCESS_ERROR_CODES = Object.freeze([
   'aborted',
   'already_executed',
+  'authority_contract_failed',
+  'authority_transfer_failed',
   'cleanup_failed',
   'closed',
   'invalid_configuration',
@@ -56,6 +61,17 @@ const CONTROL_OR_SURROGATE = /[\p{Cc}\p{Cs}]/u;
 const PROFILE_PATH = new URL('profile.json', import.meta.url);
 const MAXIMUM_PROFILE_BYTES = 24 * 1024;
 const INTRINSIC_IS_PROXY = types.isProxy;
+const INTRINSIC_IS_BUFFER = Buffer.isBuffer;
+const INTRINSIC_IS_SHARED_ARRAY_BUFFER = types.isSharedArrayBuffer;
+const TYPED_ARRAY_PROTOTYPE = Object.getPrototypeOf(Uint8Array.prototype);
+const INTRINSIC_TYPED_ARRAY_BUFFER_GETTER = Object.getOwnPropertyDescriptor(
+  TYPED_ARRAY_PROTOTYPE,
+  'buffer',
+).get;
+const INTRINSIC_TYPED_ARRAY_BYTE_LENGTH_GETTER = Object.getOwnPropertyDescriptor(
+  TYPED_ARRAY_PROTOTYPE,
+  'byteLength',
+).get;
 let operationContractTask;
 const ABORTED_GETTER = Object.getOwnPropertyDescriptor(
   AbortSignal.prototype,
@@ -246,7 +262,7 @@ export function normalizeTrustedProviderProcessOptions(value) {
   return rejectTrustedProviderProcess('invalid_configuration');
 }
 
-export function validateTrustedProviderProcessExecuteInput(value = {}) {
+export function validateTrustedProviderProcessExecuteInput(value) {
   if (!plainObject(value)) rejectTrustedProviderProcess('invalid_configuration');
   let ownKeys;
   try {
@@ -254,11 +270,36 @@ export function validateTrustedProviderProcessExecuteInput(value = {}) {
   } catch {
     return rejectTrustedProviderProcess('invalid_configuration');
   }
-  const fields = ownKeys.length === 0
-    ? []
-    : (ownKeys.length === 1 && ownKeys[0] === 'signal' ? ['signal'] : undefined);
+  const stringKeys = ownKeys.every((key) => typeof key === 'string')
+    ? [...ownKeys].sort()
+    : [];
+  const fields = isDeepStrictEqual(stringKeys, ['authority'])
+    ? ['authority']
+    : (isDeepStrictEqual(stringKeys, ['authority', 'signal'])
+      ? ['authority', 'signal']
+      : undefined);
   if (fields === undefined) rejectTrustedProviderProcess('invalid_configuration');
   const input = exactKeys(value, fields, 'invalid_configuration');
+  try {
+    const authorityByteLength = Reflect.apply(
+      INTRINSIC_TYPED_ARRAY_BYTE_LENGTH_GETTER,
+      input.authority,
+      [],
+    );
+    const authorityBackingStore = Reflect.apply(
+      INTRINSIC_TYPED_ARRAY_BUFFER_GETTER,
+      input.authority,
+      [],
+    );
+    if (!INTRINSIC_IS_BUFFER(input.authority) || INTRINSIC_IS_PROXY(input.authority)
+      || INTRINSIC_IS_SHARED_ARRAY_BUFFER(authorityBackingStore)
+      || authorityByteLength < 1
+      || authorityByteLength > TRUSTED_PROVIDER_PROCESS_MAXIMUM_AUTHORITY_BYTES) {
+      rejectTrustedProviderProcess('invalid_configuration');
+    }
+  } catch {
+    return rejectTrustedProviderProcess('invalid_configuration');
+  }
   if (input.signal !== undefined) {
     const signal = input.signal;
     let aborted;
@@ -269,7 +310,10 @@ export function validateTrustedProviderProcessExecuteInput(value = {}) {
     }
     if (typeof aborted !== 'boolean') rejectTrustedProviderProcess('invalid_configuration');
   }
-  return Object.freeze({ ...(input.signal === undefined ? {} : { signal: input.signal }) });
+  return Object.freeze({
+    authority: input.authority,
+    ...(input.signal === undefined ? {} : { signal: input.signal }),
+  });
 }
 
 export function validateTrustedProviderOwnerModule(value) {
@@ -357,6 +401,18 @@ export function validateTrustedProviderProcessReady(value, expectedSha256) {
     rejectTrustedProviderProcess('invalid_protocol');
   }
   return message;
+}
+
+export function buildTrustedProviderProcessAuthorityReady() {
+  return Object.freeze({
+    schema: TRUSTED_PROVIDER_PROCESS_PROTOCOL_SCHEMA,
+    protocol_version: TRUSTED_PROVIDER_PROCESS_PROTOCOL_VERSION,
+    type: 'authority_ready',
+  });
+}
+
+export function validateTrustedProviderProcessAuthorityReady(value) {
+  return exactEnvelope(value, 'authority_ready', []);
 }
 
 export function buildTrustedProviderProcessStartupFailure(code) {
@@ -471,11 +527,20 @@ export function validateBrowserRelayTrustedProviderProcessProfile(
     'compatibility', 'authority', 'evidence', 'pins',
   ], 'invalid_configuration');
   if (root.schema !== 'miakapp.staging-browser-relay-trusted-provider-process-profile/1'
-    || root.revision !== 2
+    || root.revision !== 3
     || root.target?.project_id !== 'miakapp-v4-staging'
     || root.target?.data_policy !== 'synthetic_only'
     || root.target?.cloud_compute_resources !== 0
     || root.protocol?.version !== TRUSTED_PROVIDER_PROCESS_PROTOCOL_VERSION
+    || root.protocol?.transport
+      !== 'three_unidirectional_raw_posix_pipes_fd3_fd4_fd5'
+    || root.protocol?.authority_transport !== 'single_use_binary_pipe_fd5'
+    || root.protocol?.authority_envelope_schema
+      !== TRUSTED_PROVIDER_PROCESS_AUTHORITY_SCHEMA
+    || root.protocol?.authority_maximum_bytes
+      !== TRUSTED_PROVIDER_PROCESS_MAXIMUM_AUTHORITY_BYTES
+    || root.protocol?.authority_bytes_in_json_protocol !== false
+    || root.protocol?.authority_ready_acknowledges_validated_eof_and_child_fd_close !== true
     || root.protocol?.maximum_frame_bytes !== TRUSTED_PROVIDER_PROCESS_MAXIMUM_FRAME_BYTES
     || root.protocol?.maximum_frames_per_direction
       !== TRUSTED_PROVIDER_PROCESS_MAXIMUM_FRAMES_PER_DIRECTION
@@ -502,7 +567,19 @@ export function validateBrowserRelayTrustedProviderProcessProfile(
     || root.ownership?.parent_crash_workspace_cleanup_guaranteed !== false
     || root.ownership?.operating_system_sandbox_present !== false
     || root.ownership?.same_user_filesystem_and_network_authority_retained !== true
+    || root.ownership?.caller_authority_buffer_claimed_once !== true
+    || root.ownership?.caller_authority_buffer_overwritten_on_claim !== true
+    || root.ownership?.authority_in_arguments_environment_bundle_or_workspace !== false
+    || root.ownership?.authority_secure_erasure_claimed !== false
     || root.lifecycle?.single_use_process_per_operation !== true
+    || root.lifecycle?.authority_required_per_execute !== true
+    || root.lifecycle?.authority_write_begins_after_ready !== true
+    || root.lifecycle?.authority_pipe_closed_before_execute !== true
+    || root.lifecycle?.authority_ready_precedes_execute !== true
+    || root.lifecycle?.owner_authority_consume_required !== true
+    || root.lifecycle?.owner_authority_consume_at_most_once !== true
+    || root.lifecycle?.same_buffer_object_replay_rejected !== true
+    || root.lifecycle?.copied_authority_replay_prevention_claimed !== false
     || root.lifecycle?.cooperative_cancel_sent_at_most_once !== true
     || root.lifecycle?.parent_verifies_process_group_empty_before_settlement !== true
     || root.lifecycle?.automatic_restart_or_replay !== false
@@ -519,9 +596,18 @@ export function validateBrowserRelayTrustedProviderProcessProfile(
     || root.compatibility?.live_owner_bundle_present !== false
     || root.compatibility?.live_operation_wired !== false
     || root.authority?.cloud_mutations_authorized !== false
-    || root.authority?.credentials_accepted_by_parent !== false
+    || root.authority?.credentials_accepted_by_parent !== true
+    || root.authority?.ephemeral_authority_bytes_accepted_by_parent !== true
+    || root.authority?.ambient_credentials_authorized !== false
+    || root.authority?.credential_persistence_authorized !== false
+    || root.authority?.live_execution_authorized !== false
     || root.evidence?.browser_launches !== 0
     || root.evidence?.network_requests !== 0
+    || root.evidence?.cloud_requests !== 0
+    || root.evidence?.cloud_mutations !== 0
+    || root.evidence?.real_credentials_used !== 0
+    || root.evidence?.authority_persistence_events !== 0
+    || root.evidence?.synthetic_authority_process_runs !== 1
     || root.evidence?.live_execution_count !== 0
     || root.evidence?.external_module_resolution_regression_runs !== 1
     || root.evidence?.incremental_monthly_cost_eur !== 0) {

@@ -48,7 +48,7 @@ if (JSON.stringify(Object.keys(ownerModule))
   || typeof ownerModule.createBrowserRelayTrustedProviderOwner !== 'function') reject();
 const ownerFactory = ownerModule.createBrowserRelayTrustedProviderOwner;
 
-export function createBrowserRelayTrustedProviderOwner() {
-  if (arguments.length !== 0) reject();
-  return Reflect.apply(ownerFactory, undefined, []);
+export function createBrowserRelayTrustedProviderOwner(bootstrap) {
+  if (arguments.length !== 1) reject();
+  return Reflect.apply(ownerFactory, undefined, [bootstrap]);
 }
