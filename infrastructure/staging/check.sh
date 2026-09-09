@@ -281,6 +281,7 @@ node --check infrastructure/staging/browser-relay-trusted-source-composition/int
 node --check infrastructure/staging/browser-relay-trusted-source-composition/testing.mjs
 node -e "import('./infrastructure/staging/browser-relay-trusted-source-composition/contract.mjs').then(({ validateBrowserRelayTrustedSourceCompositionProfile }) => validateBrowserRelayTrustedSourceCompositionProfile())"
 bash infrastructure/staging/browser-relay-trusted-provider-process/check.sh
+sh infrastructure/staging/browser-relay-trusted-provider-owner/check.sh
 node infrastructure/staging/browser-relay-page-receipt/guard.mjs \
   "${repository_root}/infrastructure/staging/browser-relay-page-receipt"
 node --check infrastructure/staging/browser-relay-page-receipt/contract.mjs

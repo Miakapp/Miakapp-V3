@@ -157,6 +157,17 @@ import {
   validateBrowserRelayTrustedProviderProcessProfile,
 } from '../browser-relay-trusted-provider-process/contract.mjs';
 import {
+  TRUSTED_PROVIDER_OWNER_ASSERTION_COUNT,
+  TRUSTED_PROVIDER_OWNER_BROWSER_ORDER,
+  TRUSTED_PROVIDER_OWNER_DEPENDENCY_CONTRACTS_SHA256,
+  TRUSTED_PROVIDER_OWNER_OBSERVATION_COUNT,
+  TRUSTED_PROVIDER_OWNER_PROFILE_PATH,
+  TRUSTED_PROVIDER_OWNER_PROFILE_SHA256,
+  TRUSTED_PROVIDER_OWNER_SOURCE_ORDER,
+  TRUSTED_PROVIDER_OWNER_STAGE_COUNT,
+  validateBrowserRelayTrustedProviderOwnerProfile,
+} from '../browser-relay-trusted-provider-owner/contract.mjs';
+import {
   OPERATION_CASE_ADAPTER_DEPENDENCY_CONTRACTS_SHA256,
   OPERATION_CASE_ADAPTER_PROFILE_PATH,
   OPERATION_CASE_ADAPTER_PROFILE_SHA256,
@@ -204,10 +215,10 @@ function rejects(mutator, pattern) {
 
 test('accepts the successful and retired private user-relay probe', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 106);
+  assert.equal(validated.revision, 107);
   assert.equal(
     validated.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_independent_observers_closed_source_fact_producers_interleaved_runner_result_supported_not_wired_not_executed_browser_relay_evidence_session_closed_operation_local_capability_monotonic_epoch_implemented_not_wired_not_executed_browser_relay_case_scheduler_closed_case_interleaving_implemented_not_wired_not_executed_browser_relay_chromium_case_adapter_closed_native_scenario_scheduler_composed_offline_proven_not_live_wired_not_executed_browser_relay_secondary_case_adapter_closed_secondary_page_case_scheduler_composition_offline_proven_not_live_wired_not_executed_browser_relay_independent_case_adapter_closed_independent_source_case_composition_offline_proven_not_live_wired_not_executed_browser_relay_source_transports_closed_genuine_adapters_implemented_not_wired_not_executed_browser_relay_authenticated_source_readers_closed_kind_attenuated_ephemeral_authority_protocol_implemented_not_live_adapted_not_wired_not_executed_browser_relay_source_authority_adapters_closed_concrete_trusted_session_bridge_implemented_not_live_not_wired_not_executed_browser_relay_source_session_producers_closed_trusted_injected_clients_implemented_not_live_not_wired_not_executed_browser_relay_source_clients_closed_fixed_target_ephemeral_authority_implemented_not_live_not_wired_not_executed_browser_relay_trusted_source_composition_closed_named_trusted_source_provider_composition_wired_offline_not_live_executed_browser_relay_trusted_provider_process_dependency_bearing_owner_artifact_offline_proven_not_live_wired_browser_relay_chromium_scenario_closed_complete_page_projected_with_backpressure_offline_proven_not_wired_not_live_executed_browser_relay_playwright_bridge_closed_secondary_receipts_chromium_bfcache_blocked_not_wired_not_executed_browser_relay_page_receipt_closed_bridge_bound_not_aggregated_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_browser_relay_operation_case_adapter_closed_durable_claim_matrix_composition_offline_proven_not_live_executed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_independent_observers_closed_source_fact_producers_interleaved_runner_result_supported_not_wired_not_executed_browser_relay_evidence_session_closed_operation_local_capability_monotonic_epoch_implemented_not_wired_not_executed_browser_relay_case_scheduler_closed_case_interleaving_implemented_not_wired_not_executed_browser_relay_chromium_case_adapter_closed_native_scenario_scheduler_composed_offline_proven_not_live_wired_not_executed_browser_relay_secondary_case_adapter_closed_secondary_page_case_scheduler_composition_offline_proven_not_live_wired_not_executed_browser_relay_independent_case_adapter_closed_independent_source_case_composition_offline_proven_not_live_wired_not_executed_browser_relay_source_transports_closed_genuine_adapters_implemented_not_wired_not_executed_browser_relay_authenticated_source_readers_closed_kind_attenuated_ephemeral_authority_protocol_implemented_not_live_adapted_not_wired_not_executed_browser_relay_source_authority_adapters_closed_concrete_trusted_session_bridge_implemented_not_live_not_wired_not_executed_browser_relay_source_session_producers_closed_trusted_injected_clients_implemented_not_live_not_wired_not_executed_browser_relay_source_clients_closed_fixed_target_ephemeral_authority_implemented_not_live_not_wired_not_executed_browser_relay_trusted_source_composition_closed_named_trusted_source_provider_composition_wired_offline_not_live_executed_browser_relay_trusted_provider_process_dependency_bearing_owner_artifact_offline_proven_not_live_wired_browser_relay_trusted_provider_owner_complete_process_owned_provider_and_page_graph_offline_proven_not_live_executed_browser_relay_chromium_scenario_closed_complete_page_projected_with_backpressure_offline_proven_not_wired_not_live_executed_browser_relay_playwright_bridge_closed_secondary_receipts_chromium_bfcache_blocked_not_wired_not_executed_browser_relay_page_receipt_closed_bridge_bound_not_aggregated_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_browser_relay_operation_case_adapter_closed_durable_claim_matrix_composition_offline_proven_not_live_executed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
@@ -3545,6 +3556,155 @@ test('rejects trusted provider process provenance, protocol, authority and evide
       () => validateCommittedEvidence(candidate),
       (error) => error instanceof StagingManifestError
         && error.message.includes('evidence.browser_relay_trusted_provider_process'),
+    );
+  }
+});
+
+test('pins the complete provider and real-page graph behind one offline owner process', () => {
+  const candidate = manifest();
+  const profile = validateBrowserRelayTrustedProviderOwnerProfile();
+  const evidence = candidate.evidence.browser_relay_trusted_provider_owner;
+  const committed = validateCommittedEvidence(candidate);
+  assert.deepEqual(committed.browserRelayTrustedProviderOwnerProfile, profile);
+  assert.equal(evidence.state, profile.state);
+  assert.equal(evidence.profile_path, TRUSTED_PROVIDER_OWNER_PROFILE_PATH);
+  assert.equal(evidence.profile_sha256, TRUSTED_PROVIDER_OWNER_PROFILE_SHA256);
+  assert.equal(
+    evidence.pins.dependency_contracts_sha256,
+    TRUSTED_PROVIDER_OWNER_DEPENDENCY_CONTRACTS_SHA256,
+  );
+  assert.deepEqual(evidence.graph.provider_sources, TRUSTED_PROVIDER_OWNER_SOURCE_ORDER);
+  assert.deepEqual(evidence.graph.browser_order, TRUSTED_PROVIDER_OWNER_BROWSER_ORDER);
+  assert.equal(evidence.graph.stage_count, TRUSTED_PROVIDER_OWNER_STAGE_COUNT);
+  assert.equal(evidence.graph.observation_count, TRUSTED_PROVIDER_OWNER_OBSERVATION_COUNT);
+  assert.equal(evidence.graph.assertion_count, TRUSTED_PROVIDER_OWNER_ASSERTION_COUNT);
+  assert.equal(evidence.graph.all_graph_capabilities_created_in_child, true);
+  assert.equal(evidence.graph.provider_or_browser_handle_crosses_process_boundary, false);
+  assert.equal(evidence.source_truth.credential_material_accepted, false);
+  assert.equal(evidence.browsers.real_browser_launch_proven_offline, true);
+  assert.equal(evidence.browsers.browser_binary_packaged, false);
+  assert.equal(evidence.browsers.external_network_allowed, false);
+  assert.equal(evidence.bundle.dependency_bearing, true);
+  assert.equal(evidence.bundle.playwright_core_tree_included, false);
+  assert.equal(evidence.bundle.playwright_core_runtime_subset_included, true);
+  assert.equal(evidence.bundle.owner_testing_entry_included, false);
+  assert.equal(evidence.bundle.dependency_validation_assets_included, true);
+  assert.equal(evidence.bundle.unreferenced_package_files_included, false);
+  assert.equal(evidence.bundle.module_allowlist_included, true);
+  assert.equal(evidence.bundle.unlisted_bundle_modules_importable, false);
+  assert.equal(evidence.bundle.validation_only_assets_importable, false);
+  assert.equal(evidence.bundle.repository_files, 204);
+  assert.equal(evidence.bundle.playwright_files, 13);
+  assert.equal(evidence.bundle.generated_data_files, 1);
+  assert.equal(evidence.bundle.module_files, 87);
+  assert.equal(evidence.lifecycle.concurrent_close_coalesced, true);
+  assert.equal(evidence.lifecycle.repeated_close_idempotent, true);
+  assert.equal(evidence.lifecycle.owner_closes_before_process_result, true);
+  assert.equal(evidence.lifecycle.automatic_retry_or_replay, false);
+  assert.equal(evidence.compatibility.complete_offline_owner_bundle_present, true);
+  assert.equal(evidence.compatibility.staging_live_operation_wired, false);
+  assert.equal(evidence.authority.loopback_listener_authorized_for_offline_proof, true);
+  assert.equal(evidence.authority.external_network_authorized, false);
+  assert.equal(evidence.authority.cloud_requests_authorized, false);
+  assert.equal(evidence.authority.live_execution_authorized, false);
+  assert.equal(evidence.evidence.complete_owner_process_runs, 1);
+  assert.equal(evidence.evidence.real_browser_launches, 3);
+  assert.equal(evidence.evidence.blocked_external_request_probes, 4);
+  assert.equal(evidence.evidence.source_observations, 43);
+  assert.equal(evidence.evidence.assertions_closed, 40);
+  assert.equal(evidence.evidence.external_network_requests, 0);
+  assert.equal(evidence.evidence.cloud_requests, 0);
+  assert.equal(evidence.evidence.live_execution_count, 0);
+  assert.equal(evidence.evidence.incremental_monthly_cost_eur, 0);
+});
+
+test('rejects complete owner provenance, graph, authority and evidence drift', () => {
+  for (const mutate of [
+    (candidate) => {
+      candidate.evidence.browser_relay_trusted_provider_owner.profile_sha256 = '0'.repeat(64);
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_trusted_provider_owner.contract_source_sha256 =
+        '0'.repeat(64);
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_trusted_provider_owner.pins.browser_source_sha256 =
+        '0'.repeat(64);
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_trusted_provider_owner.graph.stage_count += 1;
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_trusted_provider_owner.graph
+        .provider_or_browser_handle_crosses_process_boundary = true;
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_trusted_provider_owner.source_truth
+        .credential_material_accepted = true;
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_trusted_provider_owner.browsers
+        .external_network_allowed = true;
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_trusted_provider_owner.bundle.browser_binary_included =
+        true;
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_trusted_provider_owner.bundle
+        .owner_testing_entry_included = true;
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_trusted_provider_owner.lifecycle
+        .automatic_retry_or_replay = true;
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_trusted_provider_owner.compatibility
+        .staging_live_operation_wired = true;
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_trusted_provider_owner.authority
+        .persistent_tls_material_authorized = true;
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_trusted_provider_owner.authority
+        .external_network_authorized = true;
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_trusted_provider_owner.authority
+        .cloud_requests_authorized = true;
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_trusted_provider_owner.authority
+        .live_execution_authorized = true;
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_trusted_provider_owner.evidence.dns_requests = 1;
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_trusted_provider_owner.evidence
+        .external_network_requests = 1;
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_trusted_provider_owner.evidence.cloud_requests = 1;
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_trusted_provider_owner.evidence.live_execution_count = 1;
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_trusted_provider_owner.evidence
+        .incremental_monthly_cost_eur = 0.01;
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_trusted_provider_owner.unreviewed_authority = true;
+    },
+  ]) {
+    const candidate = manifest();
+    mutate(candidate);
+    assert.throws(
+      () => validateCommittedEvidence(candidate),
+      (error) => error instanceof StagingManifestError
+        && error.message.includes('evidence.browser_relay_trusted_provider_owner'),
     );
   }
 });
