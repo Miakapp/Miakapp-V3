@@ -12,8 +12,8 @@
   },
   "pins": {
     "implementation_base_commit": "88aacf517ee4417732656805e811ca040bca5e46",
-    "source_authority_adapters_profile_sha256": "e8d7190d543e5342fe7f504d8f50b1ac51ea3a87de814850661b82846edec14f",
-    "dependency_contracts_sha256": "e98f89b68a69f52254816f2837244e51643188b819bf04b63283994d001fa2f9",
+    "source_authority_adapters_profile_sha256": "08cb7782d0d17cb517925e618058f95f56a5a79748eaff87649d059ceaf09882",
+    "dependency_contracts_sha256": "e6769b9b3d55840b5a7eae66cd2730cbfe4398006c23ee895b7b198d31c8a96d",
     "internal_source_sha256": "c0e1467c3e697adb4a05f6723d887a8beb587bc7fb33975d886f01d06da2518c",
     "production_source_sha256": "c3d0dfdfe9828b64f2921ed390e1d5f8564d5f936af68820ff5797d664af3a4c",
     "testing_source_sha256": "599e101dc4447f0658a26f2601fe02f7374e33ff96e3dafa427ae7d1ff2ae238",

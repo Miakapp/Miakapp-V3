@@ -180,6 +180,20 @@ implemented across several repositories.
   pre-matrix fallback cleanup and differential 22-stage/43-observation
   conformance are proven offline. The package contains no credentials, network
   implementation, browser IPC, Hosting publication or live execution.
+- [`../infrastructure/staging/browser-relay-trusted-provider-process/`](../infrastructure/staging/browser-relay-trusted-provider-process/)
+  — dormant dedicated-process boundary for one digest-pinned `MIAKOWN1`
+  owner artifact. It materializes only verified bytes in a private workspace,
+  confines ordinary module resolution to that workspace, uses bounded raw-pipe
+  messages and closes or terminates the complete process group without replay.
+  The child remains trusted same-user code with Node built-in authority; this is
+  a lifecycle and module boundary, not an operating-system sandbox.
+- [`../infrastructure/staging/browser-relay-trusted-provider-owner/`](../infrastructure/staging/browser-relay-trusted-provider-owner/)
+  — complete offline owner for the seven deterministic synthetic source-truth
+  providers, all 17 operation callbacks and real Chromium, Firefox and WebKit
+  pages. Its deterministic 218-file artifact admits only 87 reviewed modules,
+  blocks each page's fixed external-request probe and closes all 22 stages, 43
+  observations and 40 assertions inside the child. External live source truth,
+  Hosting publication and live staging authority remain absent.
 - [`../infrastructure/staging/browser-relay-chromium-scenario/`](../infrastructure/staging/browser-relay-chromium-scenario/)
   — dormant two-page Chromium driver that owns the complete 18-fact page
   scenario and closes the existing receipt producer offline. Its pinned CDP
@@ -328,7 +342,7 @@ claim, while current page revision 3 pins unchanged plan 15. The staging manifes
 bundle uses a small bundle-revision-4 canonical index and seven fixed, size- and
 digest-bound fragments, with browser-relay scenario, reader-boundary,
 trusted-provider and operations evidence separated physically, while assembling
-the current revision-106 semantic object. It
+the current revision-107 semantic object. It
 retains the byte-exact earlier zero-relay plan used
 by the image build, revision 9 used by the runner, revision 10 used by
 monitoring, revision 11 used by rollback and revision 12 used by the
@@ -411,10 +425,11 @@ composition root accepts seven named trusted-provider capabilities and connects
 that entire chain to the observer slots, while the existing claim-bound root
 admits the complete schedule only after one canonical durable claim. Both roots
 forward attenuated signals and expose no claim or request-capability lineage.
-None of these packages grants Hosting publication or live authority; concrete
-source-truth implementations, live page/browser providers, dedicated-process
-IPC and fixture lifecycle wiring must close before the one allowed live matrix
-can execute.
+None of these packages grants Hosting publication or live authority. The
+complete owner now supplies deterministic synthetic source truth, real offline
+page/browser providers and dedicated-process IPC; external live source truth,
+temporary Hosting publication and live fixture lifecycle wiring must still
+close before the one allowed staging matrix can execute.
 
 Repository-specific implementation plans must link back to these documents and
 must not redefine a shared contract locally.

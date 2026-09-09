@@ -285,10 +285,10 @@
     "browser_relay_source_authority_adapters": {
       "state": "closed_concrete_source_authority_adapters_trusted_session_producers_implemented_not_live_not_wired_not_executed",
       "profile_path": "browser-relay-source-authority-adapters/profile.json",
-      "profile_sha256": "e8d7190d543e5342fe7f504d8f50b1ac51ea3a87de814850661b82846edec14f",
+      "profile_sha256": "08cb7782d0d17cb517925e618058f95f56a5a79748eaff87649d059ceaf09882",
       "profile_schema": "miakapp.staging-browser-relay-source-authority-adapters-profile/1",
       "profile_revision": 1,
-      "contract_source_sha256": "a0f114e355ac323f8946b9a5c31951f4d5a53f9d5d556491a8f9004f95a04413",
+      "contract_source_sha256": "9ba75de5ac5b19b840a0379b09ce5ede37445ee49fc35520f4bbc152726b27ff",
       "target": {
         "project_id": "miakapp-v4-staging",
         "project_number": "1072737219170",
@@ -305,7 +305,7 @@
         "production_source_sha256": "96099451f1e1eb84895337c332d609403ea1d97c87cab405fde33401626bd6b0",
         "testing_source_sha256": "937edcccbc3c9f55bdf2b310f9bcbfeaa8e64aa68d3b0d8bb2a4559ddf82ebe2",
         "guard_source_sha256": "6e6292c57bb816dcaa3111542e20fdf7d10c99c32e7135323f5f4a7ae4dffd23",
-        "unit_test_sha256": "bba3a91a8f3ee5566f8eea9e34ee9fa963ed607eb2a415c1ded39fb5cdbd7bc6",
+        "unit_test_sha256": "f0bb577e169a61306322956a33757679cfe31aa542a4880f8b3287fb9e79828c",
         "workflow_sha256": "baf66af60725df0a5b90a14df7fca449290260a99f95a6fb7307eee50628dc27"
       },
       "adapter": {
@@ -377,7 +377,7 @@
           "signal"
         ],
         "maximum_session_lifetime_milliseconds": 1800000,
-        "maximum_read_milliseconds": 30000,
+        "maximum_read_milliseconds": 75000,
         "maximum_close_milliseconds": 30000,
         "expiry_is_absolute_unix_epoch_milliseconds": true,
         "explicit_source_sessions": true,
@@ -514,10 +514,10 @@
     "browser_relay_source_session_producers": {
       "state": "closed_trusted_source_session_producers_injected_clients_implemented_not_live_not_wired_not_executed",
       "profile_path": "browser-relay-source-session-producers/profile.json",
-      "profile_sha256": "22cee3ddd347b979ad804e9b886972cdb78f9f15390f13679a4b6f229ccb026e",
+      "profile_sha256": "44d6808bab46b2d55a2fd58689067c180724aa66f8a01b18d082460c132438c9",
       "profile_schema": "miakapp.staging-browser-relay-source-session-producers-profile/1",
       "profile_revision": 1,
-      "contract_source_sha256": "2d981d687438d2ee1aed65dbb3c80e7761a7f7f0884ea8ff83ad8e3b45f1e0c8",
+      "contract_source_sha256": "3f04c05190c79e56b275f06810302d69a368b3d471b36dc7b22355eb3fae0406",
       "target": {
         "project_id": "miakapp-v4-staging",
         "project_number": "1072737219170",
@@ -528,8 +528,8 @@
       },
       "pins": {
         "implementation_base_commit": "88aacf517ee4417732656805e811ca040bca5e46",
-        "source_authority_adapters_profile_sha256": "e8d7190d543e5342fe7f504d8f50b1ac51ea3a87de814850661b82846edec14f",
-        "dependency_contracts_sha256": "e98f89b68a69f52254816f2837244e51643188b819bf04b63283994d001fa2f9",
+        "source_authority_adapters_profile_sha256": "08cb7782d0d17cb517925e618058f95f56a5a79748eaff87649d059ceaf09882",
+        "dependency_contracts_sha256": "e6769b9b3d55840b5a7eae66cd2730cbfe4398006c23ee895b7b198d31c8a96d",
         "internal_source_sha256": "c0e1467c3e697adb4a05f6723d887a8beb587bc7fb33975d886f01d06da2518c",
         "production_source_sha256": "c3d0dfdfe9828b64f2921ed390e1d5f8564d5f936af68820ff5797d664af3a4c",
         "testing_source_sha256": "599e101dc4447f0658a26f2601fe02f7374e33ff96e3dafa427ae7d1ff2ae238",

@@ -330,8 +330,8 @@ function runnerResult() {
     public_key_ids: ['1', '2'],
     revision_ids: [
       'control-plane-00011-opr',
-      'miakapp-staging-relay-a-00002-tst',
-      'miakapp-staging-relay-b-00002-tst',
+      'miakapp-staging-relay-a-00002-s62',
+      'miakapp-staging-relay-b-00002-d8z',
     ],
     stable_outcome_classes: [
       'accepted',
@@ -654,6 +654,17 @@ test('rejects before application cleanup when exact authorization fails', async 
   assert.deepEqual(fixture.edgeClient.calls, []);
 });
 
+test('accepts Cloud Run revision suffixes with digits', () => {
+  assert.deepEqual(
+    validateClosedRunnerResult(runnerResult()).revision_ids,
+    [
+      'control-plane-00011-opr',
+      'miakapp-staging-relay-a-00002-s62',
+      'miakapp-staging-relay-b-00002-d8z',
+    ],
+  );
+});
+
 test('rejects over-budget monitoring, private results and incomplete service evidence', () => {
   assert.throws(
     () => evaluateOperationMonitoringSample(monitoringSample({ recaptcha_assessments: 17 })),
@@ -668,7 +679,7 @@ test('rejects over-budget monitoring, private results and incomplete service evi
     /forbidden/u,
   );
   const missingRelay = runnerResult();
-  missingRelay.revision_ids = ['control-plane-00011-opr', 'miakapp-staging-relay-a-00002-tst'];
+  missingRelay.revision_ids = ['control-plane-00011-opr', 'miakapp-staging-relay-a-00002-s62'];
   assert.throws(() => validateClosedRunnerResult(missingRelay), /all three services/u);
 });
 

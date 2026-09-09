@@ -16,7 +16,7 @@
     "browser_relay_independent_case_adapter_profile_sha256": "e228eee9e27b2cf411beee979bdbd69b44e62248cb65997636c87134912508d6",
     "browser_relay_operation_profile_sha256": "d1ff776c48c0aade724fc31a8d44c7e68fe5c81919eab7030998962017801a73",
     "browser_relay_orchestrator_claim_source_sha256": "b67a42998df291ece0ea6575442c803cbee04535e657ea814c6a1d9eeb221013",
-    "dependency_contracts_sha256": "be3399ca2b2bebee8739b480cf40ffcf26cb9946a1a6dd65bae8fcec813b38c9",
+    "dependency_contracts_sha256": "e3961465babc0b4c54af1fc976eae5c83d32fe273bc1d5f28dc4e29bad24951a",
     "adapter_source_sha256": "19d159a996cab1ddda60f6be3cd1349814bb768e5ce925ad47763adff9aa6aec",
     "internal_source_sha256": "46ac5aa4aa21ec0ee505c1a549afe258530c46a346f7a41399cf17fa98de33a6",
     "testing_source_sha256": "d764135b16bbb8abf2418d50cce3f326313cfab872c1a8b6cf3243ce4534f58c",

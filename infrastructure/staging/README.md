@@ -398,6 +398,7 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`browser-relay-source-clients/`](browser-relay-source-clients/) | Dormant fixed-target source clients | Converts seven explicit at-most-30-minute source authorities into the exact trusted client map, binds every acquisition and receipt to a fresh non-serializable capability and one immutable reviewed target, rejects consuming App Check and delayed-metric inference, and releases authority references only after actual callback settlement; it discovers no credential, owns no network transport and remains unwired and unexecuted |
 | [`browser-relay-trusted-source-composition/`](browser-relay-trusted-source-composition/) | Dormant trusted-provider composition root | Accepts seven exact named provider capabilities, composes the five fixed source layers and inserts all 22 stages/43 observations into the claim-bound operation matrix; its direct API remains same-process and trusted, while the adjacent process owner provides the isolation boundary |
 | [`browser-relay-trusted-provider-process/`](browser-relay-trusted-provider-process/) | Dormant dedicated-process owner boundary | Verifies one deterministic dependency-bearing owner container by exact SHA-256, materializes its canonical manifest and payload into a parent-owned private workspace, confines ordinary ESM/CommonJS resolution to that workspace while retaining Node built-ins, and imports the entry in a fresh Node process with an empty ambient environment, two bounded raw pipes, closed messages/results, cooperative cancellation followed by whole-group termination, and no replay; synthetic hostile-process tests and a real offline `playwright-core` 1.62.1 package-tree load pass, while browser binaries, browser launch, live providers and execution remain absent |
+| [`browser-relay-trusted-provider-owner/`](browser-relay-trusted-provider-owner/) | Complete offline provider/page owner artifact | Creates all seven synthetic source-truth providers, the 17 operation callbacks and three real Playwright engines only inside the digest-pinned child, executes all 22 stages/43 observations/40 assertions once, and physically closes pages, contexts, browsers and providers before the process result; Chromium uses an ephemeral loopback-only TLS page host and Firefox/WebKit use exact-origin interception, with no external network, credential, cloud or live staging authority |
 | [`browser-relay-chromium-scenario/`](browser-relay-chromium-scenario/) | Dormant complete Chromium page-scenario driver | Owns two pages and inputs, closes the real 18-fact receipt, and proves one native BFCache restore through trusted persisted page events plus exact CDP navigation; its projection port is composed offline, while live authority remains absent |
 | [`browser-relay-playwright-bridge/`](browser-relay-playwright-bridge/) | Dormant page-to-receipt Playwright bridge | Lazily drives the phased host and real receipt producer for Firefox/WebKit; its legacy Chromium path stays blocked before page or private-input acquisition because high-level Playwright cannot prove native BFCache restoration |
 | [`browser-relay-page-receipt/`](browser-relay-page-receipt/) | Dormant browser-owned source receipt producer | Revision 2 reduces 18 exact Chromium page facts or three secondary-browser facts, cross-checks cumulative host lifecycle evidence, typed call outcomes and terminal cleanup, is bound to the bridge and now combines offline with every independent source |
@@ -644,7 +645,15 @@ node infrastructure/staging/browser-relay-trusted-source-composition/guard.mjs \
 node --test \
   infrastructure/staging/test/browser-relay-trusted-source-composition.test.mjs
 bash infrastructure/staging/browser-relay-trusted-provider-process/check.sh
+sh infrastructure/staging/browser-relay-trusted-provider-owner/check.sh
+MIAKAPP_RUN_TRUSTED_PROVIDER_OWNER_BROWSER=1 \
+  sh infrastructure/staging/browser-relay-trusted-provider-owner/check.sh
 ```
+
+The last command is the dedicated approximately eight-minute proof. It launches
+Chromium, Firefox and WebKit and preserves the two real 240-second renewal
+boundaries; the ordinary staging gate deliberately runs only the fast owner,
+bundle and lifecycle checks.
 
 The gate first resolves `manifest.json` as a bundle-revision-4 canonical index
 over exactly seven fixed fragments under `manifest/`: core intent, Terraform
@@ -922,15 +931,23 @@ Revision 105 added its dedicated-process ownership boundary and totalled
 the three provider-facing records into a seventh fixed shard and raised only the
 aggregate ceiling to 524,288 bytes. Its first canonical index and seven
 fragments totalled 250,768 bytes, leaving 273,520 bytes while reconstructing the
-byte-identical revision-105 semantic object. Current semantic revision 106 adds
+byte-identical revision-105 semantic object. Semantic revision 106 added
 the deterministic dependency-bearing owner-container proof without changing
 bundle revision 4. Its index and seven fragments total 252,525 bytes, leaving
-271,763 bytes under the same aggregate ceiling. The new evidence covers the
+271,763 bytes under the same aggregate ceiling. That evidence covers the
 canonical manifest-plus-payload v1 format, fixed size, path-segment and inventory
 bounds, workspace-confined ESM/CommonJS resolution, private workspace lifecycle
 and a real offline `playwright-core` 1.62.1
 package-tree load. It packages no browser binary, launches no browser and grants
-no credential, network, deployment, live execution or cloud authority.
+no credential, network, deployment, live execution or cloud authority. Current
+semantic revision 107 adds the complete offline owner artifact and its real
+three-engine process proof. The same seven-fragment bundle now totals 263,746
+bytes, leaving 260,542 bytes below the 524,288-byte ceiling; the enlarged
+trusted-provider shard is 43,129 bytes, still below its 96-KiB limit. The
+semantic manifest itself is 258,262 bytes. The additional evidence grants only
+an ephemeral loopback TLS listener and fixed OpenSSL certificate generation for
+the offline Chromium page; it records zero DNS, external network, cloud,
+publication, live-execution and incremental-cost activity.
 The adjacent
 [`browser-relay-chromium-scenario/`](browser-relay-chromium-scenario/) package
 now closes the standalone Chromium page path offline. It owns two page
@@ -1032,7 +1049,7 @@ package now creates those sessions from seven explicit trusted client closures.
 It owns the fixed source scopes and canonical order, independently validates
 every projected observation, sanitizes abort reasons and drains real callback
 settlement before clearing client references. It deliberately leaves the
-30-second public deadline to the authority adapter, so an uncooperative
+75-second public read deadline to the authority adapter, so an uncooperative
 same-process client remains quarantined rather than being falsely released.
 The adjacent
 [`browser-relay-source-clients/`](browser-relay-source-clients/) package now
@@ -1093,8 +1110,34 @@ account's filesystem and network authority, and parent-crash workspace cleanup
 is not guaranteed. A real offline child now loads the installed
 `playwright-core` 1.62.1 package tree and resolves package/browser metadata.
 That proof includes no browser binary or launch and performs no network, cloud
-or live request. Concrete source-truth implementations, the complete owner graph
-and live page/browser providers remain open before any live execution.
+or live request. The adjacent
+[`browser-relay-trusted-provider-owner/`](browser-relay-trusted-provider-owner/)
+now supplies the complete dependency-bearing artifact that this process was
+designed to own. Its zero-argument production entry constructs seven distinct
+synthetic source-truth providers, all 17 operation callbacks and the full
+Chromium/Firefox/WebKit page graph only after the child receives `execute`.
+All 22 stages, 43 observations and 40 assertions close into the existing single
+operation result before provider, context and browser references are released.
+Chromium deliberately installs no Playwright route handler: an ephemeral
+loopback-only HTTPS listener serves the fixed staging origin through an exact browser
+host-resolver mapping, while a catch-all rule makes unmatched hostnames fail
+resolution; its one-use self-signed key files are erased before the first request.
+Firefox and WebKit use exact-origin in-process interception. Every page receives a
+strict offline content-security policy and must prove one fixed external request is
+blocked. The deterministic container includes 204 exact repository dependency and
+validation files, a 13-file `playwright-core` runtime/licence/type-contract subset
+and one generated module allowlist.
+Required dependency validation assets remain inert data: the allowlist admits only 87
+reviewed runtime modules. The inert closure includes the exact relay-service
+Terraform and edge README bytes re-hashed by transitive validators; browser binaries,
+unreferenced package files, unrelated documentation and the owner testing entrypoint
+are excluded.
+The dedicated workflow proves the graph using three real installed engines and
+the production page runtime while recording zero DNS, external network, cloud,
+Hosting publication and live staging executions. This remains trusted same-user
+code rather than an OS sandbox, and it has no credential-discovery surface.
+Concrete external source-truth transports, staging Hosting publication and the
+single authorized live matrix execution remain open.
 The adjacent
 [`browser-relay-operation-case-adapter/`](browser-relay-operation-case-adapter/)
 now hard-wires that complete schedule into the unchanged single-use operation.
@@ -1128,8 +1171,10 @@ projection through the fixed scheduler offline. The generic source transports,
 authenticated-capability readers, concrete ephemeral-session adapters,
 trusted-client producers and fixed-target clients are now composed end to end
 with the claim-bound matrix. Named provider capabilities are accepted, but their
-concrete source-truth implementations, dedicated-process isolation and trusted
-live page providers remain absent. These offline capabilities are not acceptance
+implementations remain outside that composition layer. The adjacent complete
+owner now supplies deterministic synthetic source truth and trusted offline page
+providers inside the dedicated process; external live source truth and live
+staging authority remain absent. These offline capabilities are not acceptance
 evidence. The adjacent
 [`browser-relay-scenario-fixture/`](browser-relay-scenario-fixture/) composes the
 immutable three-input fixture with a second exact synthetic Firebase identity.
@@ -1150,8 +1195,10 @@ composition and deterministic source-observer wiring are now complete offline,
 and operation/claim binding is now closed offline. The generic source transport,
 authenticated-capability reader/provider protocols, fixed-scope ephemeral-session
 adapters, trusted-client producers, fixed-target clients and named-provider
-composition are connected; concrete source-truth implementations, trusted live
-page providers and dedicated-process isolation remain open.
+composition are connected. The complete offline owner now supplies deterministic
+synthetic source truth, trusted offline page providers and dedicated-process
+isolation. External live source truth, temporary Hosting publication and the live
+fixture lifecycle remain open.
 All mutation, IAM, Hosting, public-ingress and execution authority remains
 closed.
 The adjacent [`browser-relay-operation/`](browser-relay-operation/) package now
