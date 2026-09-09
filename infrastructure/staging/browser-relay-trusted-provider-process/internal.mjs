@@ -1,5 +1,14 @@
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
@@ -34,6 +43,29 @@ const PROCESS_GROUP_SETTLEMENT_POLL_MILLISECONDS = 10;
 
 function processFailure(code) {
   return new StagingBrowserRelayTrustedProviderProcessError(code);
+}
+
+function createOwnerWorkspace() {
+  let workspace;
+  try {
+    const temporaryRoot = realpathSync.native(tmpdir());
+    workspace = mkdtempSync(join(temporaryRoot, 'miakapp-provider-owner-'));
+    chmodSync(workspace, 0o700);
+    if (realpathSync.native(workspace) !== workspace) throw new Error('workspace is not canonical');
+    return workspace;
+  } catch {
+    const removed = workspace === undefined || removeOwnerWorkspace(workspace);
+    throw processFailure(removed ? 'peer_failed' : 'cleanup_failed');
+  }
+}
+
+function removeOwnerWorkspace(workspace) {
+  try {
+    rmSync(workspace, { force: true, recursive: true });
+    return !existsSync(workspace);
+  } catch {
+    return false;
+  }
 }
 
 function signalAborted(signal) {
@@ -107,6 +139,7 @@ async function executeInDedicatedProcess(options, callerSignal, workerPath, expo
   } catch {
     throw processFailure('peer_failed');
   }
+  const ownerWorkspace = createOwnerWorkspace();
   let child;
   try {
     child = spawn(process.execPath, [
@@ -117,6 +150,8 @@ async function executeInDedicatedProcess(options, callerSignal, workerPath, expo
       options.owner_bundle_path,
       '--owner-bundle-sha256',
       options.owner_bundle_sha256,
+      '--owner-workspace-path',
+      ownerWorkspace,
     ], {
       cwd: PACKAGE_ROOT,
       detached: true,
@@ -126,14 +161,15 @@ async function executeInDedicatedProcess(options, callerSignal, workerPath, expo
       windowsHide: true,
     });
   } catch {
-    throw processFailure('peer_failed');
+    throw processFailure(removeOwnerWorkspace(ownerWorkspace) ? 'peer_failed' : 'cleanup_failed');
   }
 
   const requestStream = child.stdio[3];
   const responseStream = child.stdio[4];
   if (requestStream === null || responseStream === null) {
     const groupClosed = await terminateAndVerifyProcessGroup(child);
-    throw processFailure(groupClosed ? 'peer_failed' : 'cleanup_failed');
+    const workspaceRemoved = groupClosed && removeOwnerWorkspace(ownerWorkspace);
+    throw processFailure(groupClosed && workspaceRemoved ? 'peer_failed' : 'cleanup_failed');
   }
 
   const writer = createTrustedProviderProcessFrameWriter(requestStream);
@@ -321,7 +357,8 @@ async function executeInDedicatedProcess(options, callerSignal, workerPath, expo
   requestStream.unref?.();
   responseStream.unref?.();
   child.unref();
-  if (!processGroupClosed) failureCode = 'cleanup_failed';
+  const workspaceRemoved = processGroupClosed && removeOwnerWorkspace(ownerWorkspace);
+  if (!processGroupClosed || !workspaceRemoved) failureCode = 'cleanup_failed';
   if (failureCode === undefined
     && (!terminalReceived || result === undefined
       || childExitCode !== 0 || childExitSignal !== null)) {

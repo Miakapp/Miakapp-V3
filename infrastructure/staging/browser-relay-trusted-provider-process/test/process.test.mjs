@@ -1,18 +1,21 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import {
   chmodSync,
   existsSync,
   mkdtempSync,
+  mkdirSync,
   readFileSync,
   realpathSync,
   rmSync,
   symlinkSync,
+  writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import test from 'node:test';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import {
   StagingBrowserRelayTrustedProviderProcessError,
@@ -32,7 +35,9 @@ import {
 import {
   closedOperationResult,
   createBundle,
+  hostilePeerBundle,
   ownerBundle,
+  playwrightCoreOwnerBundle,
   processExists,
   waitFor,
 } from './helpers.mjs';
@@ -90,6 +95,7 @@ test('owns the complete synthetic owner lifecycle in a separate closed process',
   const observation = JSON.parse(readFileSync(observationPath, 'utf8'));
   assert.equal(result.state, 'completed_once_fully_clean');
   assert.notEqual(observation.pid, process.pid);
+  assert.equal(existsSync(dirname(fileURLToPath(observation.entry_url))), false);
   assert.deepEqual(observation.env_keys, []);
   assert.deepEqual(observation.exec_argv, []);
   assert.equal(observation.process_send, true);
@@ -161,9 +167,25 @@ export function createBrowserRelayTrustedProviderOwner() { return {}; }
     createBrowserRelayTrustedProviderProcess(options(wrongOwner)).execute(),
     errorCode('owner_contract_failed'),
   );
+
+  const observationDirectory = mkdtempSync(join(tmpdir(), 'miakapp-owner-tamper-'));
+  const observationPath = join(observationDirectory, 'evaluated');
+  t.after(() => rmSync(observationDirectory, { force: true, recursive: true }));
+  const tampered = registerBundleCleanup(t, ownerBundle({ observationPath }));
+  const tamperedBytes = readFileSync(tampered.path);
+  tamperedBytes[tamperedBytes.byteLength - 1] ^= 0xff;
+  writeFileSync(tampered.path, tamperedBytes);
+  await assert.rejects(
+    createBrowserRelayTrustedProviderProcess(options({
+      ...tampered,
+      sha256: createHash('sha256').update(tamperedBytes).digest('hex'),
+    })).execute(),
+    errorCode('owner_integrity_failed'),
+  );
+  assert.equal(existsSync(observationPath), false);
 });
 
-test('rejects linked, executable and oversized owner files', async (t) => {
+test('rejects linked and executable owner containers', async (t) => {
   const valid = registerBundleCleanup(t, ownerBundle());
   const linkDirectory = mkdtempSync(join(CANONICAL_TMP_DIRECTORY, 'miakapp-owner-link-'));
   const linkPath = join(linkDirectory, 'linked-owner.mjs');
@@ -194,11 +216,61 @@ test('rejects linked, executable and oversized owner files', async (t) => {
   );
   chmodSync(valid.path, 0o600);
 
-  const oversized = registerBundleCleanup(t, createBundle('a'.repeat(1_048_577)));
-  await assert.rejects(
-    createBrowserRelayTrustedProviderProcess(options(oversized)).execute(),
-    errorCode('owner_integrity_failed'),
-  );
+});
+
+test('loads the pinned Playwright-core package tree without launching a browser', {
+  timeout: 30_000,
+}, async (t) => {
+  const bundle = registerBundleCleanup(t, playwrightCoreOwnerBundle());
+  const ownerProcess = createBrowserRelayTrustedProviderProcess(options(bundle, {
+    ready_timeout_milliseconds: 10_000,
+    operation_timeout_milliseconds: 5_000,
+  }));
+  assert.equal((await ownerProcess.execute()).state, 'completed_once_fully_clean');
+  await ownerProcess.close();
+});
+
+test('rejects ESM and CommonJS module resolution outside the verified workspace', async (t) => {
+  const suffix = `${process.pid}-${Date.now()}`;
+  const packageName = `miakapp-owner-ambient-${suffix}`;
+  const packageDirectory = join(CANONICAL_TMP_DIRECTORY, 'node_modules', packageName);
+  const externalName = `miakapp-owner-external-${suffix}.mjs`;
+  const externalPath = join(CANONICAL_TMP_DIRECTORY, externalName);
+  mkdirSync(packageDirectory, { recursive: true });
+  writeFileSync(join(packageDirectory, 'package.json'), JSON.stringify({
+    name: packageName,
+    main: 'index.cjs',
+  }));
+  writeFileSync(join(packageDirectory, 'index.cjs'), 'module.exports = true;\n');
+  writeFileSync(externalPath, 'export default true;\n');
+  t.after(() => {
+    rmSync(packageDirectory, { force: true, recursive: true });
+    rmSync(externalPath, { force: true });
+  });
+
+  const result = JSON.stringify(closedOperationResult());
+  for (const dependencySource of [
+    `import ${JSON.stringify(packageName)};`,
+    `import ${JSON.stringify(`../${externalName}`)};`,
+    `import ${JSON.stringify(pathToFileURL(externalPath).href)};`,
+    `import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+require(${JSON.stringify(packageName)});`,
+  ]) {
+    const bundle = registerBundleCleanup(t, createBundle(`${dependencySource}
+const RESULT = ${result};
+export function createBrowserRelayTrustedProviderOwner() {
+  return {
+    async execute() { return RESULT; },
+    async close() {}
+  };
+}
+`));
+    await assert.rejects(
+      createBrowserRelayTrustedProviderProcess(options(bundle)).execute(),
+      errorCode('owner_import_failed'),
+    );
+  }
 });
 
 test('sanitizes execute, result and close failures', async (t) => {
@@ -360,10 +432,10 @@ test('sends one cooperative cancel across concurrent abort and close', async (t)
   const observationDirectory = mkdtempSync(join(tmpdir(), 'miakapp-cancel-count-'));
   const observationPath = join(observationDirectory, 'count');
   t.after(() => rmSync(observationDirectory, { force: true, recursive: true }));
-  const bundle = registerBundleCleanup(t, createBundle(JSON.stringify({
+  const bundle = registerBundleCleanup(t, hostilePeerBundle({
     mode: 'count_cancels',
     observation_path: observationPath,
-  })));
+  }));
   const ownerProcess = createBrowserRelayTrustedProviderProcessInternal(
     options(bundle, {
       ready_timeout_milliseconds: 500,
@@ -394,7 +466,7 @@ test('rejects hostile startup frames and early exits', async (t) => {
     ['early_exit', 'peer_closed'],
     ['hang_ready', 'ready_timeout'],
   ]) {
-    const bundle = registerBundleCleanup(t, createBundle(JSON.stringify({ mode })));
+    const bundle = registerBundleCleanup(t, hostilePeerBundle({ mode }));
     const ownerProcess = createBrowserRelayTrustedProviderProcessInternal(
       options(bundle, {
         ready_timeout_milliseconds: mode === 'hang_ready' ? 150 : 500,
@@ -414,10 +486,10 @@ test('rejects hostile terminal identity, code, duplication, crash and hang', asy
     ['crash_after_execute', 'peer_closed'],
     ['result_then_hang', 'operation_timeout'],
   ]) {
-    const bundle = registerBundleCleanup(t, createBundle(JSON.stringify({
+    const bundle = registerBundleCleanup(t, hostilePeerBundle({
       mode,
       result: closedOperationResult(),
-    })));
+    }));
     const ownerProcess = createBrowserRelayTrustedProviderProcessInternal(
       options(bundle, {
         ready_timeout_milliseconds: 500,
@@ -433,10 +505,10 @@ test('rejects hostile terminal identity, code, duplication, crash and hang', asy
 
 test('accepts one valid hostile-peer result only after clean process close', async (t) => {
   const expected = closedOperationResult();
-  const bundle = registerBundleCleanup(t, createBundle(JSON.stringify({
+  const bundle = registerBundleCleanup(t, hostilePeerBundle({
     mode: 'result',
     result: expected,
-  })));
+  }));
   const ownerProcess = createBrowserRelayTrustedProviderProcessInternal(
     options(bundle),
     HOSTILE_PEER,
@@ -455,6 +527,10 @@ test('worker closes the owner before reporting an active protocol failure', {
     mode: 'protocol_failure_order',
     observationPath,
   }));
+  const ownerWorkspacePath = realpathSync.native(
+    mkdtempSync(join(CANONICAL_TMP_DIRECTORY, 'miakapp-worker-owner-')),
+  );
+  t.after(() => rmSync(ownerWorkspacePath, { force: true, recursive: true }));
   const child = spawn(process.execPath, [
     WORKER,
     '--protocol-version',
@@ -463,6 +539,8 @@ test('worker closes the owner before reporting an active protocol failure', {
     bundle.path,
     '--owner-bundle-sha256',
     bundle.sha256,
+    '--owner-workspace-path',
+    ownerWorkspacePath,
   ], {
     detached: true,
     env: Object.create(null),

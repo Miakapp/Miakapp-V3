@@ -6,11 +6,16 @@ import { isDeepStrictEqual, types } from 'node:util';
 export const TRUSTED_PROVIDER_PROCESS_PROFILE_PATH =
   'browser-relay-trusted-provider-process/profile.json';
 export const TRUSTED_PROVIDER_PROCESS_PROFILE_SHA256 =
-  'f62550d44376f48632d7519cb65f0e009bc3594cb0f9f915c6c7cd4074b8c6d3';
+  '7612f032ba778c157a533dfedb26c50bd4b9f665b1b4effefded477beb746446';
 export const TRUSTED_PROVIDER_PROCESS_PROTOCOL_SCHEMA =
   'miakapp.staging-browser-relay-trusted-provider-process-ipc/1';
 export const TRUSTED_PROVIDER_PROCESS_PROTOCOL_VERSION = 1;
-export const TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_BYTES = 1_048_576;
+export const TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_BYTES = 33_554_432;
+export const TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_MANIFEST_BYTES = 262_144;
+export const TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_FILES = 512;
+export const TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_FILE_BYTES = 8_388_608;
+export const TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_PATH_BYTES = 256;
+export const TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_SEGMENT_BYTES = 255;
 export const TRUSTED_PROVIDER_PROCESS_MAXIMUM_FRAME_BYTES = 131_072;
 export const TRUSTED_PROVIDER_PROCESS_MAXIMUM_FRAMES_PER_DIRECTION = 4;
 export const TRUSTED_PROVIDER_PROCESS_MAXIMUM_JSON_DEPTH = 32;
@@ -51,6 +56,7 @@ const CONTROL_OR_SURROGATE = /[\p{Cc}\p{Cs}]/u;
 const PROFILE_PATH = new URL('profile.json', import.meta.url);
 const MAXIMUM_PROFILE_BYTES = 24 * 1024;
 const INTRINSIC_IS_PROXY = types.isProxy;
+let operationContractTask;
 const ABORTED_GETTER = Object.getOwnPropertyDescriptor(
   AbortSignal.prototype,
   'aborted',
@@ -146,6 +152,15 @@ function requestId(value) {
 
 export function sha256(value) {
   return createHash('sha256').update(value).digest('hex');
+}
+
+function loadOperationContract() {
+  operationContractTask ??= import('../browser-relay-operation/contract.mjs');
+  return operationContractTask;
+}
+
+export async function preloadTrustedProviderProcessResultContract() {
+  await loadOperationContract();
 }
 
 export function validateTrustedProviderProcessOptions(value) {
@@ -304,7 +319,7 @@ export async function cloneValidatedTrustedProviderProcessResult(value) {
   let validateOperationResult;
   let serialized;
   try {
-    ({ validateOperationResult } = await import('../browser-relay-operation/contract.mjs'));
+    ({ validateOperationResult } = await loadOperationContract());
     validateOperationResult(value);
     serialized = JSON.stringify(value);
   } catch {
@@ -456,7 +471,7 @@ export function validateBrowserRelayTrustedProviderProcessProfile(
     'compatibility', 'authority', 'evidence', 'pins',
   ], 'invalid_configuration');
   if (root.schema !== 'miakapp.staging-browser-relay-trusted-provider-process-profile/1'
-    || root.revision !== 1
+    || root.revision !== 2
     || root.target?.project_id !== 'miakapp-v4-staging'
     || root.target?.data_policy !== 'synthetic_only'
     || root.target?.cloud_compute_resources !== 0
@@ -465,6 +480,26 @@ export function validateBrowserRelayTrustedProviderProcessProfile(
     || root.protocol?.maximum_frames_per_direction
       !== TRUSTED_PROVIDER_PROCESS_MAXIMUM_FRAMES_PER_DIRECTION
     || root.ownership?.dedicated_process_ipc_present !== true
+    || root.ownership?.owner_bundle_format !== 'canonical_manifest_payload_v1'
+    || root.ownership?.owner_bundle_maximum_bytes
+      !== TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_BYTES
+    || root.ownership?.owner_bundle_manifest_maximum_bytes
+      !== TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_MANIFEST_BYTES
+    || root.ownership?.owner_bundle_maximum_files
+      !== TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_FILES
+    || root.ownership?.owner_bundle_file_maximum_bytes
+      !== TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_FILE_BYTES
+    || root.ownership?.owner_bundle_path_maximum_bytes
+      !== TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_PATH_BYTES
+    || root.ownership?.owner_bundle_segment_maximum_bytes
+      !== TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_SEGMENT_BYTES
+    || root.ownership?.non_builtin_module_resolution_confined_to_workspace !== true
+    || root.ownership?.package_scope_metadata_confined_to_workspace !== true
+    || root.ownership?.node_builtin_module_resolution_allowed !== true
+    || root.ownership?.verified_bytes_materialized_to_private_workspace !== true
+    || root.ownership?.verified_entry_imported_by_file_url !== true
+    || root.ownership?.parent_owned_workspace_cleanup !== true
+    || root.ownership?.parent_crash_workspace_cleanup_guaranteed !== false
     || root.ownership?.operating_system_sandbox_present !== false
     || root.ownership?.same_user_filesystem_and_network_authority_retained !== true
     || root.lifecycle?.single_use_process_per_operation !== true
@@ -473,11 +508,22 @@ export function validateBrowserRelayTrustedProviderProcessProfile(
     || root.lifecycle?.automatic_restart_or_replay !== false
     || root.compatibility?.node_version_range !== '>=22.22.0 <23'
     || root.compatibility?.ci_node_version !== '22.22.0'
+    || root.compatibility?.dependency_bearing_owner_bundle_proven !== true
+    || root.compatibility?.relative_esm_dependency_proven !== true
+    || root.compatibility?.esm_and_commonjs_resolution_boundary_proven !== true
+    || root.compatibility?.playwright_core_package_tree_proven !== true
+    || root.compatibility?.playwright_core_version !== '1.62.1'
+    || root.compatibility?.playwright_browser_metadata_resolution_proven !== true
+    || root.compatibility?.browser_binary_packaged !== false
+    || root.compatibility?.browser_launch_proven !== false
     || root.compatibility?.live_owner_bundle_present !== false
     || root.compatibility?.live_operation_wired !== false
     || root.authority?.cloud_mutations_authorized !== false
     || root.authority?.credentials_accepted_by_parent !== false
+    || root.evidence?.browser_launches !== 0
+    || root.evidence?.network_requests !== 0
     || root.evidence?.live_execution_count !== 0
+    || root.evidence?.external_module_resolution_regression_runs !== 1
     || root.evidence?.incremental_monthly_cost_eur !== 0) {
     rejectTrustedProviderProcess('invalid_configuration');
   }
