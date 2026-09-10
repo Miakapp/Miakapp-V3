@@ -232,6 +232,8 @@ test('assembles the canonical committed bundle into the current semantic manifes
   );
   assert.deepEqual(Object.keys(providerEvidence.values), [
     'browser_relay_source_clients',
+    'browser_relay_operator_authority_source',
+    'browser_relay_hosting_publisher',
     'browser_relay_trusted_source_composition',
     'browser_relay_trusted_provider_process',
     'browser_relay_trusted_provider_owner',
@@ -253,10 +255,10 @@ test('assembles the canonical committed bundle into the current semantic manifes
 
   const manifest = loadStagingManifestBundle(committedIndexPath);
   const semanticBytes = canonical(manifest);
-  assert.equal(semanticBytes.byteLength, 261262);
+  assert.equal(semanticBytes.byteLength, 272035);
   assert.equal(
     sha256(semanticBytes),
-    'e11bba34029c4ea4d81c89b2677e5b9411c8b8952875a30dd308073154e5e33c',
+    '401d55de8eb36d14b1f4124a34fd8f3e7f19c1f7899189022fd1db55dc0ebb0a',
   );
   assert.deepEqual(Object.keys(manifest), [
     'schema',
@@ -317,6 +319,8 @@ test('assembles the canonical committed bundle into the current semantic manifes
     'browser_relay_source_authority_adapters',
     'browser_relay_source_session_producers',
     'browser_relay_source_clients',
+    'browser_relay_operator_authority_source',
+    'browser_relay_hosting_publisher',
     'browser_relay_trusted_source_composition',
     'browser_relay_trusted_provider_process',
     'browser_relay_trusted_provider_owner',
@@ -342,7 +346,7 @@ test('assembles the canonical committed bundle into the current semantic manifes
     'environment_decision',
   ]);
   assert.equal(manifest.schema, 'miakapp.staging-intent/1');
-  assert.equal(manifest.revision, 108);
+  assert.equal(manifest.revision, 109);
   assert.equal(manifest.project.project_id, 'miakapp-v4-staging');
   assert.equal(manifest.terraform.bootstrap_execution.bootstrap_completed, true);
   assert.equal(
@@ -634,6 +638,21 @@ test('rejects missing, reassigned or duplicated reader and provider evidence own
     });
     mutateFragment(fixture, 'evidence-browser-relay-readers', (fragment) => {
       fragment.values.browser_relay_source_clients = reassigned;
+    });
+  }, /evidence-browser-relay-readers values fields or field order have drifted/u);
+  rejectsFixture((fixture) => {
+    mutateFragment(fixture, 'evidence-browser-relay-providers', (fragment) => {
+      delete fragment.values.browser_relay_operator_authority_source;
+    });
+  }, /evidence-browser-relay-providers values fields or field order have drifted/u);
+  rejectsFixture((fixture) => {
+    let reassigned;
+    mutateFragment(fixture, 'evidence-browser-relay-providers', (fragment) => {
+      reassigned = fragment.values.browser_relay_hosting_publisher;
+      delete fragment.values.browser_relay_hosting_publisher;
+    });
+    mutateFragment(fixture, 'evidence-browser-relay-readers', (fragment) => {
+      fragment.values.browser_relay_hosting_publisher = reassigned;
     });
   }, /evidence-browser-relay-readers values fields or field order have drifted/u);
   rejectsFixture((fixture) => {

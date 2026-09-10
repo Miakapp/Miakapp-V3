@@ -396,6 +396,8 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`browser-relay-source-authority-adapters/`](browser-relay-source-authority-adapters/) | Dormant concrete ephemeral-session adapters | Converts seven exact fixed-scope, at-most-30-minute source sessions into all 32 authority methods, binds the transport's opaque capability on first use, revalidates order and semantic output, bounds read/public-close wrappers and releases terminal sessions after their callbacks settle; dormant producers are present, while built-in network/credentials, wiring, IPC and live execution remain absent |
 | [`browser-relay-source-session-producers/`](browser-relay-source-session-producers/) | Dormant trusted-client session producers | Converts seven exact frozen `{ observe, close }` clients into the fixed-scope ephemeral sessions, enforces canonical order and semantic projection, sanitizes cancellation, drains every started callback and releases client references only at real terminal settlement; the adjacent fixed-target clients are now present, while live authority providers, credentials, network, case wiring, IPC and execution remain absent |
 | [`browser-relay-source-clients/`](browser-relay-source-clients/) | Dormant fixed-target source clients | Converts seven explicit at-most-30-minute source authorities into the exact trusted client map, binds every acquisition and receipt to a fresh non-serializable capability and one immutable reviewed target, rejects consuming App Check and delayed-metric inference, and releases authority references only after actual callback settlement; it discovers no credential, owns no network transport and remains unwired and unexecuted |
+| [`browser-relay-operator-authority-source/`](browser-relay-operator-authority-source/) | Dormant verified configured-user OAuth source | Runs one fixed, shell-free configured-user `gcloud` sequence only when consumed, rejects impersonation, verifies the principal by a private SHA-256 pin before invoking one callback with a bounded Buffer and overwrites owned mutable copies best-effort; no real credential or request has been made, and the Google bearer is explicitly not claimed to be audience-restricted |
+| [`browser-relay-hosting-publisher/`](browser-relay-hosting-publisher/) | Dormant fixed-site Hosting publisher | Accepts one explicitly injected ephemeral OAuth token and the exact two-file page artifact, requires the default staging site to be disabled and empty, performs each create/deploy/disable/delete mutation at most once and reconciles cleanup through bounded read-only polling; all tests use injected responses and no Hosting publication has occurred |
 | [`browser-relay-trusted-source-composition/`](browser-relay-trusted-source-composition/) | Dormant trusted-provider composition root | Accepts seven exact named provider capabilities, composes the five fixed source layers and inserts all 22 stages/43 observations into the claim-bound operation matrix; its direct API remains same-process and trusted, while the adjacent process owner provides the isolation boundary |
 | [`browser-relay-trusted-provider-process/`](browser-relay-trusted-provider-process/) | Dormant dedicated-process owner and ephemeral-authority boundary | Verifies one deterministic dependency-bearing owner container, confines its module graph to a parent-owned private workspace, and imports it in a fresh Node process with an empty ambient environment; protocol v2 keeps bounded JSON control/result frames on fd3/fd4 and transfers one mandatory 1..16,384-byte opaque Buffer on fd5 only after child readiness, requiring validated EOF/descriptor close and a non-secret acknowledgement before execute. Caller, parent, stream-chunk and worker buffers receive best-effort overwrite, the owner gets only one `consume(callback)` capability, and hostile-process tests pass; real credentials, network/cloud requests, browser launch in this layer and live execution remain zero |
 | [`browser-relay-trusted-provider-owner/`](browser-relay-trusted-provider-owner/) | Complete offline provider/page owner artifact with synthetic authority consumption | Requires the worker-created frozen `{ authority: { consume } }` bootstrap and wraps the complete graph execution in exactly one callback without parsing, copying, persisting, observing or returning its opaque synthetic bytes. It creates all seven synthetic source-truth providers, 17 operation callbacks and three real Playwright engines only inside the digest-pinned child, executes all 22 stages/43 observations/40 assertions once, and physically closes pages, contexts, browsers and providers before the process result; Chromium uses an ephemeral loopback-only TLS page host and Firefox/WebKit use exact-origin interception, with no external network, real credential, cloud or live staging authority |
@@ -948,6 +950,16 @@ semantic manifest itself is 258,262 bytes. The additional evidence grants only
 an ephemeral loopback TLS listener and fixed OpenSSL certificate generation for
 the offline Chromium page; it records zero DNS, external network, cloud,
 publication, live-execution and incremental-cost activity.
+Semantic revision 108 subsequently added the one-use synthetic authority
+channel. Current semantic revision 109 adds the separate configured-user
+authority source and fixed-site Hosting publisher, together with exhaustive
+injected transcript tests and a keyless CI workflow. The canonical index and
+seven fragments total 277,519 bytes, leaving 246,769 bytes below the 524,288-byte
+ceiling; the provider shard is 56,610 bytes below its 96-KiB ceiling, and the
+assembled semantic manifest is 272,035 bytes. These figures record only dormant
+code and offline synthetic evidence: real credentials, DNS, external requests,
+cloud mutations, public Hosting windows, live executions and incremental cost
+all remain zero.
 The adjacent
 [`browser-relay-chromium-scenario/`](browser-relay-chromium-scenario/) package
 now closes the standalone Chromium page path offline. It owns two page
@@ -1148,11 +1160,14 @@ are excluded.
 The dedicated workflow proves the graph using three real installed engines and
 the production page runtime while recording zero DNS, external network, cloud,
 Hosting publication and live staging executions. This remains trusted same-user
-code rather than an OS sandbox, and it has no credential-discovery surface. A
-short-lived audience-restricted real authority source, its seven-provider
-attenuation, and a zero-trust relay design remain unsolved and separately gated.
-Concrete external source-truth transports, staging Hosting publication and the
-single authorized live matrix execution remain open.
+code rather than an OS sandbox. The adjacent configured-user source now provides
+a bounded, principal-verified one-use OAuth handoff, but the underlying Google
+bearer is not cryptographically audience-restricted and transient JavaScript
+header strings cannot be securely erased. The adjacent Hosting publisher now
+implements the exact reversible staging-site lifecycle, but it has not been
+wired or used. Seven-provider attenuation, concrete external source-truth
+implementations, owner wiring, temporary staging publication, the single
+authorized live matrix execution and a zero-trust relay design remain open.
 The adjacent
 [`browser-relay-operation-case-adapter/`](browser-relay-operation-case-adapter/)
 now hard-wires that complete schedule into the unchanged single-use operation.

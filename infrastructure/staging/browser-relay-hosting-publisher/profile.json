@@ -1,0 +1,115 @@
+{
+  "schema": "miakapp.staging-browser-relay-hosting-publisher-profile/1",
+  "revision": 1,
+  "state": "dormant_fixed_site_browser_relay_hosting_publisher_implemented_not_wired_not_published_not_executed",
+  "target": {
+    "project_id": "miakapp-v4-staging",
+    "site_id": "miakapp-v4-staging",
+    "origin": "https://miakapp-v4-staging.web.app",
+    "acceptance_path": "/__acceptance/browser-relay/",
+    "data_policy": "synthetic_only",
+    "cloud_compute_resources": 0,
+    "unscheduled": true
+  },
+  "pins": {
+    "implementation_base_commit": "353a003a33c4f582eaaee13fedca83a63a85db03",
+    "browser_relay_page_profile_sha256": "c57e53dfeb25a0b5169854c535a535072151387b91ec4c07f889cac60bf83539",
+    "hosting_headers_sha256": "f99234eccb441daf920f773da8f8dc9b96075f7dcd76ce243ad6bbfd8c45a663",
+    "artifact_files": 2,
+    "artifact_maximum_file_bytes": 2097152
+  },
+  "baseline": {
+    "exact_default_site_required": true,
+    "acceptance_route_status": 404,
+    "active_versions": 0,
+    "latest_release_type": "SITE_DISABLE",
+    "complete_inventory_required": true,
+    "historical_deleted_versions_allowed": true
+  },
+  "lifecycle": {
+    "import_and_construction_inert": true,
+    "single_use_publication": true,
+    "operation_methods": [
+      "publishRunner",
+      "verifyRunner",
+      "removeRunner"
+    ],
+    "management_sequence": [
+      "observe_safe_baseline",
+      "create_version",
+      "populate_files",
+      "upload_required_hashes",
+      "finalize_version",
+      "release_version",
+      "verify_public_files",
+      "disable_site",
+      "delete_version",
+      "verify_route_absent",
+      "verify_management_cleanup"
+    ],
+    "mutations_retried": false,
+    "read_only_polling_bounded": true,
+    "cleanup_after_partial_forward_path": true,
+    "unknown_version_recovered_only_by_inventory": true,
+    "repeated_remove_after_verified_cleanup_idempotent": true
+  },
+  "bounds": {
+    "request_timeout_seconds": 30,
+    "maximum_json_response_bytes": 65536,
+    "maximum_public_file_bytes": 2097152,
+    "inventory_page_size": 100,
+    "maximum_public_poll_attempts": 30,
+    "maximum_public_poll_interval_milliseconds": 2000,
+    "maximum_public_window_seconds": 1200,
+    "version_creations": 1,
+    "file_population_mutations": 1,
+    "file_upload_mutations": 2,
+    "version_finalizations": 1,
+    "deploy_releases": 1,
+    "site_disable_releases": 1,
+    "version_deletions": 1,
+    "mutation_retries": 0,
+    "paid_stress_tests": 0
+  },
+  "credential_boundary": {
+    "operator_oauth_access_token": "explicitly_injected_ephemeral_memory_only",
+    "ambient_credentials": false,
+    "application_default_credentials": false,
+    "service_account_private_keys": 0,
+    "persistent_credentials": false,
+    "raw_responses_retained": false,
+    "artifact_bytes_returned": false
+  },
+  "compatibility": {
+    "node_version_range": ">=22.22.0 <23",
+    "ci_node_version": "22.22.0",
+    "browser_relay_page_artifact_compatible": true,
+    "browser_relay_operation_methods_compatible": true,
+    "trusted_provider_owner_wired": false,
+    "external_live_source_truth_wired": false,
+    "staging_live_operation_wired": false
+  },
+  "authority": {
+    "hosting_publisher_code_present": true,
+    "real_credentials_authorized_by_artifact": false,
+    "external_network_authorized_by_artifact": false,
+    "cloud_requests_authorized_by_artifact": false,
+    "cloud_mutations_authorized_by_artifact": false,
+    "hosting_publication_authorized_by_artifact": false,
+    "public_ingress_authorized_by_artifact": false,
+    "live_execution_authorized_by_artifact": false
+  },
+  "evidence": {
+    "state": "offline_synthetic_preflight_only",
+    "synthetic_complete_lifecycles": 1,
+    "real_credentials_used": 0,
+    "dns_requests": 0,
+    "external_network_requests": 0,
+    "cloud_requests": 0,
+    "cloud_mutations": 0,
+    "hosting_publications": 0,
+    "public_ingress_changes": 0,
+    "live_execution_count": 0,
+    "incremental_cost_eur": 0
+  }
+}

@@ -1024,20 +1024,31 @@ current consumer.
     blocked. The index and seven fragments totalled 263,746
     bytes, leaving 260,542 bytes under the 524,288-byte ceiling with zero DNS,
     external network, cloud, publication, live execution or incremental cost.
-    Current semantic revision 108 records the protocol-v2 fd5 authority channel,
+    Semantic revision 108 records the protocol-v2 fd5 authority channel,
     immediate caller ownership transfer, validated close acknowledgement and one
     worker-owned consume callback around that unchanged complete owner graph. The
     archived process revision 2 and owner revision 1 remain byte-exact. Adversarial
     evidence rejects optional or multi-use authority, JSON transport, missing close
     or acknowledgement, inflated bounds, persistence and secure-erasure claims. The
-    index and seven fragments now total 266,746 bytes, leaving 257,542 bytes under
+    index and seven fragments totalled 266,746 bytes, leaving 257,542 bytes under
     the same ceiling with one synthetic consumption and zero real credentials,
     DNS, external network, cloud, publication, live execution or incremental cost.
-    Next design and preflight the external source-truth/Hosting adapters, then
-    execute the complete staging matrix exactly once through the already closed
-    claim, rollback, process and owner boundaries. The evidence-representation
-    capacity prerequisite remains closed before another similarly sized
-    lifecycle record is admitted.
+    Current semantic revision 109 adds a configured-user OAuth source and the
+    fixed-site Hosting publisher as distinct dormant adapters. The first verifies
+    the configured principal and lends one bounded Buffer without claiming true
+    audience restriction; the second verifies the exact two-file artifact,
+    requires a disabled and empty staging site, never retries mutations and owns
+    bounded disable/delete reconciliation. Both are exhaustively preflighted with
+    injected commands and HTTP transcripts. No real credential, DNS lookup,
+    external request, cloud mutation, Hosting publication, public-ingress change,
+    live run or incremental cost occurred. The index and seven fragments total
+    277,519 bytes, leaving 246,769 bytes under the 524,288-byte ceiling, and the
+    provider shard remains below 96 KiB.
+    Next implement the seven concrete external source-truth providers and wire
+    provider-specific attenuation plus both new adapters into the dedicated owner.
+    Only after that offline graph closes should the complete staging matrix run
+    exactly once through the already closed claim, rollback, process and owner
+    boundaries. The evidence-representation capacity prerequisite remains closed.
     A dormant rollback package now pins all six reverse steps, the exact private
     target and ten read-only observations, including a strict Terraform
     no-change plan. Its fresh post-merge preflight is complete and the rollback
