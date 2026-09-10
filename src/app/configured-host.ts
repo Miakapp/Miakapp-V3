@@ -3,7 +3,7 @@ import {
   getAuth,
   GoogleAuthProvider,
   onAuthStateChanged,
-  signInWithRedirect,
+  signInWithPopup,
   type Auth,
 } from 'firebase/auth';
 import {
@@ -26,13 +26,13 @@ interface LiveConfiguration {
   readonly homeDetail: string;
 }
 
-export function requireSameOriginAuthDomain(
+export function requireSameOriginFirebaseAuthDomain(
   authDomain: string,
   pageLocation: Pick<Location, 'hostname' | 'protocol'>,
 ): string {
   if (pageLocation.protocol === 'https:' && authDomain !== pageLocation.hostname) {
     throw new Error(
-      `Firebase authDomain must match the HTTPS host (${pageLocation.hostname}) for redirect sign-in`,
+      `Firebase authDomain must match the HTTPS host (${pageLocation.hostname})`,
     );
   }
   return authDomain;
@@ -52,7 +52,7 @@ function readLiveConfiguration(): LiveConfiguration | undefined {
   if (!exchangeEndpoint.startsWith('https://')) {
     throw new Error('The Miakapp control-plane exchange endpoint must use HTTPS');
   }
-  const authDomain = requireSameOriginAuthDomain(
+  const authDomain = requireSameOriginFirebaseAuthDomain(
     required('VITE_MIAKAPP_FIREBASE_AUTH_DOMAIN'),
     window.location,
   );
@@ -100,7 +100,7 @@ class FirebaseLiveIdentity implements LiveIdentity {
   };
 
   readonly signIn = async (): Promise<void> => {
-    await signInWithRedirect(this.#auth, new GoogleAuthProvider());
+    await signInWithPopup(this.#auth, new GoogleAuthProvider());
   };
 
   readonly getFirebaseIdToken: LiveIdentity['getFirebaseIdToken'] = async ({ signal }) => {
