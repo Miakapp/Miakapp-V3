@@ -2,7 +2,7 @@ import type {
   BrowserClient,
   BrowserLifecycleEvent,
   BrowserStateSnapshot,
-} from 'miakapi/browser';
+} from './miakapi-browser';
 import { waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 

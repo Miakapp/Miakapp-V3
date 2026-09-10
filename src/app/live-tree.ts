@@ -1,4 +1,4 @@
-import type { BrowserClient } from 'miakapi/browser';
+import type { BrowserClient } from './miakapi-browser';
 
 import type { UiNode } from '../../component-runtime/src/contract';
 
