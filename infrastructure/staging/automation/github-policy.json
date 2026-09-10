@@ -1,8 +1,8 @@
 {
   "schema": "miakapp.staging-github-policy/1",
-  "revision": 6,
+  "revision": 7,
   "status": "manual_keyless_partial_foundation_recovery_retired",
-  "observed_on": "2026-09-03",
+  "observed_on": "2026-09-10",
   "observation_context": "default_branch_after_this_change",
   "repository": {
     "name_with_owner": "Miakapp/Miakapp-V3",
@@ -66,9 +66,12 @@
       "verified_allowed": false,
       "allowed_action_patterns": [
         "actions/checkout@*",
+        "actions/configure-pages@*",
+        "actions/deploy-pages@*",
         "actions/setup-go@*",
         "actions/setup-java@*",
         "actions/setup-node@*",
+        "actions/upload-pages-artifact@*",
         "google-github-actions/auth@*",
         "google-github-actions/setup-gcloud@*",
         "hashicorp/setup-terraform@*",
@@ -125,9 +128,12 @@
       "verified_allowed": false,
       "allowed_action_patterns": [
         "actions/checkout@*",
+        "actions/configure-pages@*",
+        "actions/deploy-pages@*",
         "actions/setup-go@*",
         "actions/setup-java@*",
         "actions/setup-node@*",
+        "actions/upload-pages-artifact@*",
         "google-github-actions/auth@*",
         "google-github-actions/setup-gcloud@*",
         "hashicorp/setup-terraform@*",

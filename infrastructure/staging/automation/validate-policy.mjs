@@ -109,9 +109,12 @@ function validateActions(value, path) {
   exact(actions.verified_allowed, false, `${path}.verified_allowed`);
   exactArray(actions.allowed_action_patterns, [
     'actions/checkout@*',
+    'actions/configure-pages@*',
+    'actions/deploy-pages@*',
     'actions/setup-go@*',
     'actions/setup-java@*',
     'actions/setup-node@*',
+    'actions/upload-pages-artifact@*',
     'google-github-actions/auth@*',
     'google-github-actions/setup-gcloud@*',
     'hashicorp/setup-terraform@*',
@@ -132,13 +135,13 @@ export function validateGitHubPolicy(value, options = {}) {
     'activation',
   ]);
   exact(policy.schema, 'miakapp.staging-github-policy/1', 'policy.schema');
-  exact(policy.revision, 6, 'policy.revision');
+  exact(policy.revision, 7, 'policy.revision');
   exact(
     policy.status,
     'manual_keyless_partial_foundation_recovery_retired',
     'policy.status',
   );
-  exact(policy.observed_on, '2026-09-03', 'policy.observed_on');
+  exact(policy.observed_on, '2026-09-10', 'policy.observed_on');
   exact(
     policy.observation_context,
     'default_branch_after_this_change',
