@@ -26,16 +26,11 @@ interface LiveConfiguration {
   readonly homeDetail: string;
 }
 
-export function requireSameOriginFirebaseAuthDomain(
+export function resolveSameOriginFirebaseAuthDomain(
   authDomain: string,
   pageLocation: Pick<Location, 'hostname' | 'protocol'>,
 ): string {
-  if (pageLocation.protocol === 'https:' && authDomain !== pageLocation.hostname) {
-    throw new Error(
-      `Firebase authDomain must match the HTTPS host (${pageLocation.hostname})`,
-    );
-  }
-  return authDomain;
+  return pageLocation.protocol === 'https:' ? pageLocation.hostname : authDomain;
 }
 
 function required(name: string): string {
@@ -52,7 +47,7 @@ function readLiveConfiguration(): LiveConfiguration | undefined {
   if (!exchangeEndpoint.startsWith('https://')) {
     throw new Error('The Miakapp control-plane exchange endpoint must use HTTPS');
   }
-  const authDomain = requireSameOriginFirebaseAuthDomain(
+  const authDomain = resolveSameOriginFirebaseAuthDomain(
     required('VITE_MIAKAPP_FIREBASE_AUTH_DOMAIN'),
     window.location,
   );
