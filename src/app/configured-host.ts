@@ -84,9 +84,7 @@ class FirebaseLiveIdentity implements LiveIdentity {
   };
 
   readonly signIn = async (): Promise<void> => {
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: 'select_account' });
-    await signInWithRedirect(this.#auth, provider);
+    await signInWithRedirect(this.#auth, new GoogleAuthProvider());
   };
 
   readonly getFirebaseIdToken: LiveIdentity['getFirebaseIdToken'] = async ({ signal }) => {
