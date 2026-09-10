@@ -154,6 +154,10 @@ class DemoTrustedHost implements TrustedHost {
       uiTree: createDemoTree(this.#state),
       activity: this.#activity,
       preview: true,
+      modeLabel: 'Preview',
+      noticeTitle: 'Interactive product preview',
+      noticeDetail: 'No cloud, relay, or home is connected.',
+      signInAvailable: false,
     });
   }
 
