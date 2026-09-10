@@ -19,6 +19,17 @@ bun run dev
 
 Open <http://127.0.0.1:5173>. Preview interactions are local and reset on refresh.
 
+The browser host has two explicit modes:
+
+- no `VITE_MIAKAPP_MODE` (default) — fictional, local-only product preview;
+- `VITE_MIAKAPP_MODE=live` — Firebase Auth + App Check → control plane →
+  selected relay → Bun coordinator through `miakapi/browser`.
+
+Copy `.env.staging.example` to a non-committed environment file when operating
+a staging deployment. Firebase web configuration and the reCAPTCHA Enterprise
+site key identify public browser resources; Home Keys and relay access tokens
+must never be added to a Vite environment variable or browser bundle.
+
 ## Validate browser changes
 
 ```sh
