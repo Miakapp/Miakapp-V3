@@ -131,6 +131,16 @@ import {
   validateBrowserRelaySourceClientsProfile,
 } from '../browser-relay-source-clients/contract.mjs';
 import {
+  OPERATOR_AUTHORITY_SOURCE_PROFILE_PATH,
+  OPERATOR_AUTHORITY_SOURCE_PROFILE_SHA256,
+  validateBrowserRelayOperatorAuthoritySourceProfile,
+} from '../browser-relay-operator-authority-source/contract.mjs';
+import {
+  BROWSER_RELAY_HOSTING_PUBLISHER_PROFILE_PATH,
+  BROWSER_RELAY_HOSTING_PUBLISHER_PROFILE_SHA256,
+  validateBrowserRelayHostingPublisherProfile,
+} from '../browser-relay-hosting-publisher/contract.mjs';
+import {
   TRUSTED_SOURCE_COMPOSITION_DEPENDENCY_CONTRACTS_SHA256,
   TRUSTED_SOURCE_COMPOSITION_MATRIX_COMPONENT_FIELDS,
   TRUSTED_SOURCE_COMPOSITION_MAXIMUM_PROVIDER_LIFETIME_MILLISECONDS,
@@ -218,10 +228,10 @@ function rejects(mutator, pattern) {
 
 test('accepts the successful and retired private user-relay probe', () => {
   const validated = validateStagingManifest(manifest());
-  assert.equal(validated.revision, 108);
+  assert.equal(validated.revision, 109);
   assert.equal(
     validated.status,
-    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_independent_observers_closed_source_fact_producers_interleaved_runner_result_supported_not_wired_not_executed_browser_relay_evidence_session_closed_operation_local_capability_monotonic_epoch_implemented_not_wired_not_executed_browser_relay_case_scheduler_closed_case_interleaving_implemented_not_wired_not_executed_browser_relay_chromium_case_adapter_closed_native_scenario_scheduler_composed_offline_proven_not_live_wired_not_executed_browser_relay_secondary_case_adapter_closed_secondary_page_case_scheduler_composition_offline_proven_not_live_wired_not_executed_browser_relay_independent_case_adapter_closed_independent_source_case_composition_offline_proven_not_live_wired_not_executed_browser_relay_source_transports_closed_genuine_adapters_implemented_not_wired_not_executed_browser_relay_authenticated_source_readers_closed_kind_attenuated_ephemeral_authority_protocol_implemented_not_live_adapted_not_wired_not_executed_browser_relay_source_authority_adapters_closed_concrete_trusted_session_bridge_implemented_not_live_not_wired_not_executed_browser_relay_source_session_producers_closed_trusted_injected_clients_implemented_not_live_not_wired_not_executed_browser_relay_source_clients_closed_fixed_target_ephemeral_authority_implemented_not_live_not_wired_not_executed_browser_relay_trusted_source_composition_closed_named_trusted_source_provider_composition_wired_offline_not_live_executed_browser_relay_trusted_provider_process_dependency_bearing_owner_artifact_with_ephemeral_authority_offline_proven_not_live_wired_browser_relay_trusted_provider_owner_complete_process_owned_provider_graph_with_ephemeral_authority_offline_proven_browser_relay_chromium_scenario_closed_complete_page_projected_with_backpressure_offline_proven_not_wired_not_live_executed_browser_relay_playwright_bridge_closed_secondary_receipts_chromium_bfcache_blocked_not_wired_not_executed_browser_relay_page_receipt_closed_bridge_bound_not_aggregated_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_browser_relay_operation_case_adapter_closed_durable_claim_matrix_composition_offline_proven_not_live_executed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
+    'private_control_plane_two_key_version_1_rehearsal_entry_converged_user_relay_acceptance_succeeded_system_browser_app_check_attestation_succeeded_browser_relay_plan_page_ci_pinned_all_preconditions_preflighted_monitoring_observed_runner_implemented_private_relays_ready_rebased_browser_relay_runner_three_engine_implemented_not_executed_browser_relay_page_three_engine_dormant_scenario_host_implemented_not_wired_not_published_not_executed_browser_relay_fixture_closed_single_controller_implemented_not_wired_not_executed_browser_relay_fixture_cloud_closed_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_fixture_miakapi_closed_pinned_factory_binding_implemented_not_wired_not_executed_browser_relay_aggregator_closed_independent_source_implemented_not_wired_not_executed_browser_relay_independent_observers_closed_source_fact_producers_interleaved_runner_result_supported_not_wired_not_executed_browser_relay_evidence_session_closed_operation_local_capability_monotonic_epoch_implemented_not_wired_not_executed_browser_relay_case_scheduler_closed_case_interleaving_implemented_not_wired_not_executed_browser_relay_chromium_case_adapter_closed_native_scenario_scheduler_composed_offline_proven_not_live_wired_not_executed_browser_relay_secondary_case_adapter_closed_secondary_page_case_scheduler_composition_offline_proven_not_live_wired_not_executed_browser_relay_independent_case_adapter_closed_independent_source_case_composition_offline_proven_not_live_wired_not_executed_browser_relay_source_transports_closed_genuine_adapters_implemented_not_wired_not_executed_browser_relay_authenticated_source_readers_closed_kind_attenuated_ephemeral_authority_protocol_implemented_not_live_adapted_not_wired_not_executed_browser_relay_source_authority_adapters_closed_concrete_trusted_session_bridge_implemented_not_live_not_wired_not_executed_browser_relay_source_session_producers_closed_trusted_injected_clients_implemented_not_live_not_wired_not_executed_browser_relay_source_clients_closed_fixed_target_ephemeral_authority_implemented_not_live_not_wired_not_executed_browser_relay_operator_authority_source_dormant_verified_operator_oauth_authority_source_implemented_not_acquired_not_wired_not_executed_browser_relay_hosting_publisher_dormant_fixed_site_browser_relay_hosting_publisher_implemented_not_wired_not_published_not_executed_browser_relay_trusted_source_composition_closed_named_trusted_source_provider_composition_wired_offline_not_live_executed_browser_relay_trusted_provider_process_dependency_bearing_owner_artifact_with_ephemeral_authority_offline_proven_not_live_wired_browser_relay_trusted_provider_owner_complete_process_owned_provider_graph_with_ephemeral_authority_offline_proven_browser_relay_chromium_scenario_closed_complete_page_projected_with_backpressure_offline_proven_not_wired_not_live_executed_browser_relay_playwright_bridge_closed_secondary_receipts_chromium_bfcache_blocked_not_wired_not_executed_browser_relay_page_receipt_closed_bridge_bound_not_aggregated_not_executed_browser_relay_scenario_fixture_closed_four_input_two_identity_controller_implemented_cloud_extension_not_wired_not_executed_browser_relay_scenario_fixture_cloud_closed_replacement_identity_google_firebase_adapter_implemented_not_wired_not_executed_browser_relay_monitoring_allowlisted_preflight_succeeded_browser_relay_rollback_preflight_succeeded_browser_relay_orchestrator_single_use_edge_preflight_succeeded_private_unclaimed_browser_relay_operation_single_use_envelope_preflight_succeeded_private_unclaimed_browser_relay_operation_case_adapter_closed_durable_claim_matrix_composition_offline_proven_not_live_executed_bounded_relay_root_reviewed_private_relay_image_v1_verification_failed_not_deployable_container_analysis_converged_v2_recovery_succeeded_verified_private_relay_services_private_ready_succeeded_verified_entrypoints_retired_public_window_not_authorized_enforcement_disabled',
   );
   assert.equal(validated.project.project_id, 'miakapp-v4-staging');
   assert.equal(validated.project.project_number, '1072737219170');
@@ -3182,6 +3192,125 @@ test('rejects source client provenance, target, authority and evidence drift', (
       () => validateCommittedEvidence(candidate),
       (error) => error instanceof StagingManifestError
         && error.message.includes('evidence.browser_relay_source_clients'),
+    );
+  }
+});
+
+test('pins the dormant configured-user authority source without acquiring credentials', () => {
+  const candidate = manifest();
+  const profile = validateBrowserRelayOperatorAuthoritySourceProfile();
+  const evidence = candidate.evidence.browser_relay_operator_authority_source;
+  const committed = validateCommittedEvidence(candidate);
+  assert.deepEqual(committed.browserRelayOperatorAuthoritySourceProfile, profile);
+  assert.equal(evidence.state, profile.state);
+  assert.equal(evidence.profile_path, OPERATOR_AUTHORITY_SOURCE_PROFILE_PATH);
+  assert.equal(evidence.profile_sha256, OPERATOR_AUTHORITY_SOURCE_PROFILE_SHA256);
+  assert.equal(evidence.commands.binary, 'gcloud');
+  assert.equal(evidence.commands.application_default_credentials, false);
+  assert.equal(evidence.commands.service_account_impersonation, false);
+  assert.equal(evidence.lifecycle.single_use_consume, true);
+  assert.equal(evidence.lifecycle.credential_returned_as_result, false);
+  assert.equal(evidence.limitations.google_bearer_cryptographically_audience_restricted, false);
+  assert.equal(evidence.limitations.seven_provider_attenuation_complete, false);
+  assert.equal(evidence.authority.configured_user_source_code_present, true);
+  assert.equal(evidence.authority.real_credential_acquisition_authorized_by_artifact, false);
+  assert.equal(evidence.evidence.synthetic_source_consumptions, 1);
+  assert.equal(evidence.evidence.real_credentials_acquired, 0);
+  assert.equal(evidence.evidence.cloud_requests, 0);
+  assert.equal(evidence.evidence.incremental_cost_eur, 0);
+});
+
+test('rejects operator-authority source provenance, authority and evidence drift', () => {
+  for (const mutate of [
+    (candidate) => {
+      candidate.evidence.browser_relay_operator_authority_source.profile_sha256 = '0'.repeat(64);
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_operator_authority_source.internal_source_sha256 =
+        '0'.repeat(64);
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_operator_authority_source.limitations
+        .seven_provider_attenuation_complete = true;
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_operator_authority_source.authority
+        .real_credential_acquisition_authorized_by_artifact = true;
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_operator_authority_source.evidence.cloud_requests = 1;
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_operator_authority_source.unreviewed_authority = true;
+    },
+  ]) {
+    const candidate = manifest();
+    mutate(candidate);
+    assert.throws(
+      () => validateCommittedEvidence(candidate),
+      (error) => error instanceof StagingManifestError
+        && error.message.includes('evidence.browser_relay_operator_authority_source'),
+    );
+  }
+});
+
+test('pins the dormant fixed-site Hosting publisher without a publication', () => {
+  const candidate = manifest();
+  const profile = validateBrowserRelayHostingPublisherProfile();
+  const evidence = candidate.evidence.browser_relay_hosting_publisher;
+  const committed = validateCommittedEvidence(candidate);
+  assert.deepEqual(committed.browserRelayHostingPublisherProfile, profile);
+  assert.equal(evidence.state, profile.state);
+  assert.equal(evidence.profile_path, BROWSER_RELAY_HOSTING_PUBLISHER_PROFILE_PATH);
+  assert.equal(evidence.profile_sha256, BROWSER_RELAY_HOSTING_PUBLISHER_PROFILE_SHA256);
+  assert.equal(evidence.target.site_id, 'miakapp-v4-staging');
+  assert.equal(evidence.baseline.acceptance_route_status, 404);
+  assert.equal(evidence.baseline.active_versions, 0);
+  assert.equal(evidence.lifecycle.mutations_retried, false);
+  assert.deepEqual(evidence.lifecycle.operation_methods, [
+    'publishRunner',
+    'verifyRunner',
+    'removeRunner',
+  ]);
+  assert.equal(evidence.credential_boundary.ambient_credentials, false);
+  assert.equal(evidence.authority.hosting_publisher_code_present, true);
+  assert.equal(evidence.authority.hosting_publication_authorized_by_artifact, false);
+  assert.equal(evidence.evidence.synthetic_complete_lifecycles, 1);
+  assert.equal(evidence.evidence.hosting_publications, 0);
+  assert.equal(evidence.evidence.incremental_cost_eur, 0);
+});
+
+test('rejects Hosting publisher provenance, authority and evidence drift', () => {
+  for (const mutate of [
+    (candidate) => {
+      candidate.evidence.browser_relay_hosting_publisher.profile_sha256 = '0'.repeat(64);
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_hosting_publisher.workflow_sha256 = '0'.repeat(64);
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_hosting_publisher.baseline.active_versions = 1;
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_hosting_publisher.lifecycle.mutations_retried = true;
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_hosting_publisher.authority
+        .hosting_publication_authorized_by_artifact = true;
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_hosting_publisher.evidence.hosting_publications = 1;
+    },
+    (candidate) => {
+      candidate.evidence.browser_relay_hosting_publisher.unreviewed_authority = true;
+    },
+  ]) {
+    const candidate = manifest();
+    mutate(candidate);
+    assert.throws(
+      () => validateCommittedEvidence(candidate),
+      (error) => error instanceof StagingManifestError
+        && error.message.includes('evidence.browser_relay_hosting_publisher'),
     );
   }
 });

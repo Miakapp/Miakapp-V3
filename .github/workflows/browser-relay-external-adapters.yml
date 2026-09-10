@@ -1,0 +1,80 @@
+name: Browser relay external adapters
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/browser-relay-external-adapters.yml'
+      - 'package.json'
+      - 'bun.lock'
+      - 'infrastructure/staging/browser-relay-page/**'
+      - 'infrastructure/staging/browser-relay-operation/**'
+      - 'infrastructure/staging/browser-relay-operator-authority-source/**'
+      - 'infrastructure/staging/browser-relay-hosting-publisher/**'
+      - 'infrastructure/staging/manifest/**'
+      - 'infrastructure/staging/manifest.json'
+      - 'infrastructure/staging/manifest-bundle.mjs'
+      - 'infrastructure/staging/validate.mjs'
+      - 'infrastructure/staging/test/browser-relay-operator-authority-source.test.mjs'
+      - 'infrastructure/staging/test/browser-relay-hosting-publisher.test.mjs'
+      - 'infrastructure/staging/test/manifest-bundle.test.mjs'
+      - 'infrastructure/staging/test/validate.test.mjs'
+  pull_request:
+    paths:
+      - '.github/workflows/browser-relay-external-adapters.yml'
+      - 'package.json'
+      - 'bun.lock'
+      - 'infrastructure/staging/browser-relay-page/**'
+      - 'infrastructure/staging/browser-relay-operation/**'
+      - 'infrastructure/staging/browser-relay-operator-authority-source/**'
+      - 'infrastructure/staging/browser-relay-hosting-publisher/**'
+      - 'infrastructure/staging/manifest/**'
+      - 'infrastructure/staging/manifest.json'
+      - 'infrastructure/staging/manifest-bundle.mjs'
+      - 'infrastructure/staging/validate.mjs'
+      - 'infrastructure/staging/test/browser-relay-operator-authority-source.test.mjs'
+      - 'infrastructure/staging/test/browser-relay-hosting-publisher.test.mjs'
+      - 'infrastructure/staging/test/manifest-bundle.test.mjs'
+      - 'infrastructure/staging/test/validate.test.mjs'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: browser-relay-external-adapters-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Browser relay external adapters / offline validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      DEBUG: ''
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22.22.0
+          package-manager-cache: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: 1.2.23
+      - name: Install locked dependencies
+        run: bun install --frozen-lockfile
+      - name: Validate dormant external adapters without credentials
+        run: |
+          node --check infrastructure/staging/browser-relay-operator-authority-source/contract.mjs
+          node --check infrastructure/staging/browser-relay-operator-authority-source/internal.mjs
+          node --check infrastructure/staging/browser-relay-operator-authority-source/source.mjs
+          node --check infrastructure/staging/browser-relay-operator-authority-source/testing.mjs
+          node --check infrastructure/staging/browser-relay-hosting-publisher/contract.mjs
+          node --check infrastructure/staging/browser-relay-hosting-publisher/internal.mjs
+          node --check infrastructure/staging/browser-relay-hosting-publisher/publisher.mjs
+          node --check infrastructure/staging/browser-relay-hosting-publisher/testing.mjs
+          node infrastructure/staging/browser-relay-operator-authority-source/guard.mjs infrastructure/staging/browser-relay-operator-authority-source
+          node infrastructure/staging/browser-relay-hosting-publisher/guard.mjs infrastructure/staging/browser-relay-hosting-publisher
+          node --test infrastructure/staging/test/browser-relay-operator-authority-source.test.mjs infrastructure/staging/test/browser-relay-hosting-publisher.test.mjs
+          node infrastructure/staging/validate.mjs infrastructure/staging/manifest.json
+          git diff --check

@@ -1,0 +1,93 @@
+{
+  "schema": "miakapp.staging-browser-relay-operator-authority-source-profile/1",
+  "revision": 1,
+  "state": "dormant_verified_operator_oauth_authority_source_implemented_not_acquired_not_wired_not_executed",
+  "target": {
+    "project_id": "miakapp-v4-staging",
+    "operator_identity": "sha256_pinned_private_user",
+    "principal_endpoint": "https://openidconnect.googleapis.com/v1/userinfo",
+    "data_policy": "synthetic_only_until_live_authorization",
+    "cloud_compute_resources": 0,
+    "unscheduled": true
+  },
+  "pins": {
+    "implementation_base_commit": "353a003a33c4f582eaaee13fedca83a63a85db03",
+    "trusted_provider_process_protocol_version": 2,
+    "authority_channel_maximum_bytes": 16384,
+    "operator_identity_sha256": "d1c8514ac6eb5c13205cfec40dd6cc2072f33eb4279172df17273aa7c54a181c"
+  },
+  "commands": {
+    "binary": "gcloud",
+    "configured_account_reads": 1,
+    "impersonation_configuration_reads": 1,
+    "access_token_issuances": 1,
+    "shell": false,
+    "stdin": "ignored",
+    "sanitized_environment": true,
+    "application_default_credentials": false,
+    "service_account_impersonation": false
+  },
+  "bounds": {
+    "command_timeout_seconds": 30,
+    "request_timeout_seconds": 30,
+    "maximum_command_output_bytes": 65536,
+    "maximum_principal_response_bytes": 65536,
+    "maximum_authority_bytes": 16384,
+    "maximum_callback_result_bytes": 131072,
+    "maximum_local_authority_window_seconds": 1500,
+    "automatic_retries": 0,
+    "paid_stress_tests": 0
+  },
+  "lifecycle": {
+    "import_and_construction_inert": true,
+    "single_use_consume": true,
+    "concurrent_consume_rejected": true,
+    "principal_verified_before_callback": true,
+    "callback_receives_buffer": true,
+    "caller_abort_forwarded": true,
+    "close_signals_in_flight_work": true,
+    "repeated_close_idempotent": true,
+    "owned_mutable_buffers_overwritten_best_effort": true,
+    "credential_returned_as_result": false,
+    "credential_persisted": false
+  },
+  "limitations": {
+    "google_bearer_cryptographically_audience_restricted": false,
+    "javascript_header_strings_securely_erasable": false,
+    "buffer_overwrite_is_secure_erasure": false,
+    "trusted_callback_can_deliberately_copy_authority": true,
+    "uncooperative_same_process_callback_forced_termination": false,
+    "seven_provider_attenuation_complete": false
+  },
+  "compatibility": {
+    "node_version_range": ">=22.22.0 <23",
+    "ci_node_version": "22.22.0",
+    "trusted_provider_process_buffer_compatible": true,
+    "trusted_provider_owner_wired": false,
+    "external_source_truth_wired": false,
+    "hosting_publisher_wired": false,
+    "live_operation_wired": false
+  },
+  "authority": {
+    "configured_user_source_code_present": true,
+    "real_credential_acquisition_authorized_by_artifact": false,
+    "external_network_authorized_by_artifact": false,
+    "cloud_requests_authorized_by_artifact": false,
+    "cloud_mutations_authorized_by_artifact": false,
+    "hosting_publication_authorized_by_artifact": false,
+    "public_ingress_authorized_by_artifact": false,
+    "live_execution_authorized_by_artifact": false
+  },
+  "evidence": {
+    "state": "offline_synthetic_preflight_only",
+    "synthetic_source_consumptions": 1,
+    "real_credentials_acquired": 0,
+    "live_principal_requests": 0,
+    "cloud_requests": 0,
+    "cloud_mutations": 0,
+    "hosting_publications": 0,
+    "live_execution_count": 0,
+    "credential_persistence_events": 0,
+    "incremental_cost_eur": 0
+  }
+}
