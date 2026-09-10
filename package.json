@@ -26,7 +26,6 @@
   },
   "dependencies": {
     "firebase": "12.18.0",
-    "miakapi": "https://github.com/Miakapp/MiakAPI/releases/download/v4.0.0-alpha.0/miakapi-4.0.0-alpha.0.tgz",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },

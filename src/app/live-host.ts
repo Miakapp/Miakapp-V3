@@ -6,7 +6,7 @@ import {
   type BrowserClientStatus,
   type BrowserRelayCredentialProvider,
   type BrowserRelayCredentialRequest,
-} from 'miakapi/browser';
+} from './miakapi-browser';
 
 import type {
   HomeActivity,
