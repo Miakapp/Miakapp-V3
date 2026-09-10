@@ -666,7 +666,7 @@ Absent in v3; non-negotiable in Miakapp 4.
   a production-shaped semantic renderer and an offline preview adapter; its
   broker lifecycle, delivery path and SDK integration must still pass every
   Section 18 item.
-- **Migration — oracle and shared adapter contract implemented; runtime open**:
+- **Migration — oracle and shared adapter contract implemented; integrations optional**:
   `synthetic-home/` provides a closed, bounded fictional inventory and ten
   deterministic capsules for state, actions, notification intents, persisted
   context, lifecycle and failure behavior. `coordinator-contract/` adds the RFC
@@ -677,8 +677,9 @@ Absent in v3; non-negotiable in Miakapp 4.
   exercise both exported boundaries under Node 22, and the external subject runs
   behind an authenticated, bounded process supervisor. The real MiakAPI session
   SDK now passes that contract and its Home Key provider passes a pinned local
-  control-plane-to-relay `HELLO`/`REAUTH` gate. The Node-RED runtime adapter
-  remains to be implemented and installed as a subject of these harnesses.
+  control-plane-to-relay `HELLO`/`REAUTH` gate. Runtime-specific migration
+  adapters remain optional tooling owned by each installation rather than a
+  dependency of the Miakapp 4 product.
 
 ---
 
@@ -692,23 +693,24 @@ models in parallel — the divergence problem this refactor eliminates.
 That does **not** justify migrating blind. Before the final platform cutover:
 
 1. an isolated beta stack is deployed;
-2. a Miakapp 4-compatible Node-RED adapter publishes representative state to both
-   systems while beta actuation is disabled or recorded;
+2. when an existing installation needs it, a runtime-specific adapter publishes
+   representative state to both systems while beta actuation is disabled or
+   recorded;
 3. synthetic and production-shaped behavior is compared;
 4. backup and restore are rehearsed;
 5. one home canaries the complete stack with explicit rollback criteria.
 
 The migration adapter is temporary coordinator-side tooling, not a legacy
-protocol in the new relay. The public Node-RED package may be deprecated and
-redirect users to the agent-first onboarding while this private/temporary bridge
-protects existing installations.
+protocol in the new relay or part of the agent-authored Bun coordinator. Each
+installation may implement a private bridge for its source system while the
+public platform remains integration-agnostic.
 
 [`RFC 0003`](../rfcs/0003-coordinator-sdk-and-migration.md) makes this boundary
 operationally precise. The default shadow path publishes state only; it declares
 no callable user functions. Recorded-action comparison is allowed only when the
 complete downstream effect path is structurally replaced by the bounded recorder.
 Discarding a mirrored response or passing a conventional `dryRun` flag to
-arbitrary Node-RED code is not a non-actuation guarantee.
+arbitrary source-system code is not a non-actuation guarantee.
 
 The public oracle under `synthetic-home/` is hand-authored from behavior classes,
 not anonymized from an exported installation. It fixes a fictional clock and
@@ -749,7 +751,7 @@ Planned but not implemented in Miakapp 4:
 - End-to-end encryption through a blind relay.
 - Active-active control of the same physical actuator.
 - A third-party component marketplace.
-- Replacing every existing Node-RED flow.
+- Automatically replacing every existing third-party automation configuration.
 
 Each is reachable without breaking the protocol.
 
@@ -774,7 +776,7 @@ Each is reachable without breaking the protocol.
 | Sandboxed home UI | a same-origin dynamic import would grant home-authored code the platform application's ambient authority |
 | Firestore + Storage releases | immutable artifacts plus a live pointer leave room for a later Git publication source |
 | Push in the Function | push identity is necessarily platform-wide; isolating it is what frees the server |
-| Temporary, state-only-by-default Node-RED migration adapter | preserves the working installation as oracle and rollback target without retaining v3 in the relay or mirroring live effects |
+| Optional, state-only-by-default legacy-system migration adapter | preserves a working installation as oracle and rollback target without coupling the public platform to one automation runtime or mirroring live effects |
 | No offline SDK command queue | a reconnect must not turn stale intent into a delayed physical operation |
 
 ---
@@ -840,9 +842,10 @@ vertical-slice exit gates.
    home repository contract, discovery, approvals and deployment remain open.
 5. **Migration adapter architecture — closed 2026-08-30; operational gate open**
    — RFC 0003 and `coordinator-contract/` define state-only shadowing, recorded
-   effects, deterministic comparison and Node-RED lifecycle requirements. The
-   real bridge, beta topology, backup/restore, canary metrics, cutover and rollback
-   runbook remain open.
+   effects, deterministic comparison and generic adapter lifecycle requirements.
+   Installation-specific bridges, beta topology, backup/restore, canary metrics,
+   cutover and rollback runbooks remain outside the public runtime and open where
+   needed.
 6. **Trusted browser relay client — audience-bound local path closed 2026-09-04;
    staging and host gates open** — RFC 0005 defines the isolated browser
    package, lifecycle, immutable state, named calls, reauthentication, reconnect,

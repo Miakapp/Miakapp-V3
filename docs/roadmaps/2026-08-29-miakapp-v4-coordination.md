@@ -20,8 +20,8 @@ home-automation developer.
 
 The initial audience is people who value experimentation and tailored
 interfaces over reproducing a catalogue of prebuilt integrations. Existing
-Node-RED, Home Assistant, Zigbee2MQTT, MQTT, and custom hardware installations
-are starting points, not competitors that must be replaced on day one.
+home-automation runtimes, device brokers and custom hardware installations are
+starting points, not competitors that must be replaced on day one.
 
 ## 2. Confirmed direction
 
@@ -121,10 +121,10 @@ Optimisations stay only when realistic benchmarks demonstrate a material gain.
 The cloud platform may have a final hard cutover, but the real home-automation
 behavior must first be characterized and exercised against the Miakapp 4 stack.
 
-The existing Node-RED package may be deprecated as a public product while a
-Miakapp 4-compatible adapter remains available as a migration bridge. This preserves
-the working installation as an oracle and rollback target without contaminating
-the production relay with a permanent legacy protocol.
+Legacy integration packages may be deprecated independently. An installation
+that needs behavioral comparison may provide its own Miakapp 4-compatible bridge,
+preserving the working installation as an oracle and rollback target without
+contaminating the production relay with a permanent legacy protocol.
 
 ## 4. Repository responsibilities
 
@@ -133,8 +133,8 @@ the production relay with a permanent legacy protocol.
 | `Miakapp-V3` | Canonical ecosystem docs, React platform shell, component host, Firebase rules/configuration, and web onboarding |
 | `Miakapp-Server` | Go relay and protocol-conformance implementation; no persistent platform secrets or product business logic |
 | `MiakAPI` | TypeScript/Bun SDK, browser protocol client where shareable, CLI, coordinator template, and protocol fixtures tooling |
-| `node-red-contrib-MiakAPI` | Migration adapter and deprecation/onboarding path; no new product-specific business logic |
-| `Colmon-Cloud` | Deployment and private migration validation for the reference installation; never the source of public platform contracts |
+| Legacy integration repositories | Maintenance and deprecation/onboarding only; no required Miakapp 4 runtime or product-specific business logic |
+| Installation repositories | Private deployment and migration validation; never the source of public platform contracts |
 | Future agent-pack repository | Skills, MCP/tools, home repository conventions, discovery, safety guidance, and evaluation fixtures |
 
 No implementation repository may invent a frame, claim, permission, component
@@ -179,7 +179,8 @@ Deliverables:
 2. **complete** — replayable synthetic equivalents of representative behavior;
 3. **complete** — shared coordinator/migration subject and effect-recorder
    harness;
-4. a Node-RED runtime adapter test harness;
+4. an optional runtime-specific adapter test harness for each installation that
+   needs one;
 5. a timed restore rehearsal for the local coordinator environment;
 6. an explicit list of behavior intentionally preserved versus fixed.
 
@@ -197,9 +198,9 @@ recorder-owned state and leased effects, stimulus-indexed lifecycle/errors,
 terminal declaration-promise evidence, atomic-declaration rollback and causal
 call-handle checks, plus compiled Node 22 and authenticated process-bounded
 external-subject execution. No production export or private value is part of
-either corpus. The actual Node-RED runtime harness, restore rehearsal and
-deployment-specific
-preserved-versus-fixed list remain open, so the workstream is not complete.
+either corpus. Any required runtime-specific harness, restore rehearsal and
+deployment-specific preserved-versus-fixed list remain open, so the workstream
+is not complete.
 
 ### C. Relay and SDK vertical slice
 
@@ -524,13 +525,14 @@ produce a usable, accessible component without undocumented human intervention.
 Deliverables:
 
 1. a beta stack isolated from v3 production data and routes;
-2. a Node-RED migration adapter capable of shadow publication without actuation;
+2. optional installation-owned adapters capable of shadow publication without
+   actuation;
 3. state and UI comparison reports;
 4. backup plus timed restore rehearsal;
 5. one-home canary with explicit rollback criteria;
 6. final data/rules/server/SDK/web deployment runbook;
-7. public deprecation messaging and acquisition path in the legacy Node-RED
-   package.
+7. public deprecation messaging and an agent-first acquisition path for legacy
+   integration packages where applicable.
 
 Exit gate: the canary meets correctness and availability criteria for a sustained
 period, and rollback has been rehearsed rather than merely documented.
@@ -572,7 +574,7 @@ architectural decisions into separate repositories.
 - embedded in-app agent;
 - third-party component marketplace;
 - general-purpose plugin execution inside the coordinator;
-- replacing every existing Node-RED flow;
+- automatically converting every existing third-party automation configuration;
 - multi-region relay deployment before measured demand.
 
 The protocol may reserve room for a deferred feature, but no deferred feature
@@ -1073,8 +1075,8 @@ rather than a public multi-tenant product. It should become more restrictive if
 third-party bundles or runtime agents can be installed without a home owner's
 explicit approval.
 
-The Node-RED migration adapter may be dropped only after replayable evidence
-shows that the reference installation can move safely without it. Component
+An installation-specific migration adapter may be omitted when replayable
+evidence shows that the installation can move safely without it. Component
 sandboxing may be relaxed only if home bundles are reclassified as audited
 first-party Miakapp releases, not merely code produced for a tenant.
 
@@ -1084,8 +1086,8 @@ control-plane contract is **high** after cross-language conformance, the
 cross-browser hostile subset and the bounded contract corpora. Confidence in the
 trusted browser client's narrow snapshot/patch/call/reauthentication path is
 **high within its synthetic Chromium boundary**. Confidence in complete runtime
-conformance, the real Node-RED adapter, production push delivery, the complete
-React host/broker integration and production Firebase artifact delivery remains
+conformance, any required runtime-specific adapter, production push delivery,
+the complete React host/broker integration and production Firebase artifact delivery remains
 **medium** until their
 vertical slices exercise the accepted contracts end to end. Confidence in the
 now-executed owner/Home-Key/access-token, audience-bound browser relay, synthetic
