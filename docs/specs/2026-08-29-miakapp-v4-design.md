@@ -1204,6 +1204,21 @@ vertical-slice exit gates.
    Real authority acquisition/attenuation, external live source-truth
    implementations, staging Hosting publication and live authority remain open
    before the one allowed execution.
+   Semantic revision 109 implements two additional dormant boundaries. The
+   parent-side configured-user source runs one fixed shell-free `gcloud`
+   sequence, rejects impersonation, verifies the active principal by a private
+   digest and lends a bounded mutable token Buffer to exactly one callback. The
+   trusted-side Hosting publisher accepts that explicitly injected ephemeral
+   authority and the exact two-file browser artifact, requires the fixed default
+   staging site to be disabled and empty, never retries a mutation and proves
+   disable/delete cleanup by bounded reads. Injected transcript tests cover both
+   lifecycles without acquiring a credential, resolving DNS, making an external
+   request or publishing content. The Google user bearer is not claimed to be
+   cryptographically audience-restricted, Buffer overwrite is only best-effort,
+   and immutable JavaScript header strings cannot be securely erased. The two
+   adapters remain unwired; seven-provider attenuation, concrete external source
+   truth, owner integration and the exactly-once live staging operation remain
+   explicit gates.
    Arbitrary self-hosted relay selection remains disabled until
    live relay/browser staging acceptance; the React host foundation now exists,
    while its component bridge integration and the complete fault matrix remain

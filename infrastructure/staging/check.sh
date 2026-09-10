@@ -272,6 +272,22 @@ node --check infrastructure/staging/browser-relay-source-clients/guard.mjs
 node --check infrastructure/staging/browser-relay-source-clients/internal.mjs
 node --check infrastructure/staging/browser-relay-source-clients/testing.mjs
 node -e "import('./infrastructure/staging/browser-relay-source-clients/contract.mjs').then(({ validateBrowserRelaySourceClientsProfile }) => validateBrowserRelaySourceClientsProfile())"
+node infrastructure/staging/browser-relay-operator-authority-source/guard.mjs \
+  "${repository_root}/infrastructure/staging/browser-relay-operator-authority-source"
+node --check infrastructure/staging/browser-relay-operator-authority-source/contract.mjs
+node --check infrastructure/staging/browser-relay-operator-authority-source/guard.mjs
+node --check infrastructure/staging/browser-relay-operator-authority-source/internal.mjs
+node --check infrastructure/staging/browser-relay-operator-authority-source/source.mjs
+node --check infrastructure/staging/browser-relay-operator-authority-source/testing.mjs
+node -e "import('./infrastructure/staging/browser-relay-operator-authority-source/contract.mjs').then(({ validateBrowserRelayOperatorAuthoritySourceProfile }) => validateBrowserRelayOperatorAuthoritySourceProfile())"
+node infrastructure/staging/browser-relay-hosting-publisher/guard.mjs \
+  "${repository_root}/infrastructure/staging/browser-relay-hosting-publisher"
+node --check infrastructure/staging/browser-relay-hosting-publisher/contract.mjs
+node --check infrastructure/staging/browser-relay-hosting-publisher/guard.mjs
+node --check infrastructure/staging/browser-relay-hosting-publisher/internal.mjs
+node --check infrastructure/staging/browser-relay-hosting-publisher/publisher.mjs
+node --check infrastructure/staging/browser-relay-hosting-publisher/testing.mjs
+node -e "import('./infrastructure/staging/browser-relay-hosting-publisher/contract.mjs').then(({ validateBrowserRelayHostingPublisherProfile }) => validateBrowserRelayHostingPublisherProfile())"
 node infrastructure/staging/browser-relay-trusted-source-composition/guard.mjs \
   "${repository_root}/infrastructure/staging/browser-relay-trusted-source-composition"
 node --check infrastructure/staging/browser-relay-trusted-source-composition/composition.mjs
@@ -511,6 +527,8 @@ node --test \
   infrastructure/staging/test/browser-relay-source-authority-adapters.test.mjs \
   infrastructure/staging/test/browser-relay-source-session-producers.test.mjs \
   infrastructure/staging/test/browser-relay-source-clients.test.mjs \
+  infrastructure/staging/test/browser-relay-operator-authority-source.test.mjs \
+  infrastructure/staging/test/browser-relay-hosting-publisher.test.mjs \
   infrastructure/staging/test/browser-relay-trusted-source-composition.test.mjs \
   infrastructure/staging/test/browser-relay-chromium-scenario.test.mjs \
   infrastructure/staging/test/browser-relay-playwright-bridge.test.mjs \
