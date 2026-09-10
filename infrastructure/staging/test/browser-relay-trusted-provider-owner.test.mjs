@@ -9,6 +9,8 @@ import {
   TRUSTED_PROVIDER_OWNER_SOURCE_ORDER,
   TRUSTED_PROVIDER_OWNER_VERSION_TWO_PUBLICATION_MILLISECONDS,
   StagingBrowserRelayTrustedProviderOwnerError,
+  validateTrustedProviderOwnerAuthorityBytes,
+  validateTrustedProviderOwnerBootstrap,
   validateTrustedProviderOwnerSchedule,
 } from '../browser-relay-trusted-provider-owner/contract.mjs';
 import {
@@ -48,6 +50,50 @@ function fakeBrowserOwner(trace) {
   });
 }
 
+function nullRecord(value) {
+  return Object.freeze(Object.assign(Object.create(null), value));
+}
+
+function authorityFixture({ trace, value = Buffer.alloc(32, 0xa5), reject = false } = {}) {
+  let calls = 0;
+  const authority = nullRecord({
+    async consume(callback) {
+      calls += 1;
+      trace?.push('authority:consume');
+      if (reject) {
+        if (Buffer.isBuffer(value)) value.fill(0);
+        throw new Error('Bearer authority-callback-secret');
+      }
+      if (typeof callback !== 'function') throw new Error('invalid callback');
+      try {
+        return await callback(value);
+      } finally {
+        if (Buffer.isBuffer(value)) value.fill(0);
+      }
+    },
+  });
+  return Object.freeze({
+    bootstrap: nullRecord({ authority }),
+    bytes: value,
+    calls: () => calls,
+  });
+}
+
+function allZero(bytes) {
+  return bytes.every((byte) => byte === 0);
+}
+
+function unreachableRuntime() {
+  return Object.freeze({
+    clock: () => 1,
+    async delay() {},
+    createSourceTruth() { assert.fail('source construction must not run'); },
+    createOperation() { assert.fail('operation construction must not run'); },
+    createBrowser() { assert.fail('browser construction must not run'); },
+    createComposition() { assert.fail('composition construction must not run'); },
+  });
+}
+
 test('pins the exact complete graph schedule', () => {
   assert.equal(validateTrustedProviderOwnerSchedule(), true);
   assert.equal(TRUSTED_PROVIDER_OWNER_SOURCE_ORDER.length, 7);
@@ -61,6 +107,61 @@ test('pins the exact complete graph schedule', () => {
     ),
     43,
   );
+});
+
+test('captures only the exact frozen null-prototype authority capability', async () => {
+  const fixture = authorityFixture();
+  const consume = validateTrustedProviderOwnerBootstrap(fixture.bootstrap);
+  assert.equal(typeof consume, 'function');
+  await consume(async (bytes) => {
+    assert.equal(bytes, fixture.bytes);
+  });
+  assert.equal(fixture.calls(), 1);
+  assert.equal(allZero(fixture.bytes), true);
+
+  const shadowedValid = Buffer.alloc(32, 0xa5);
+  Object.defineProperty(shadowedValid, 'byteLength', { value: 0 });
+  assert.equal(validateTrustedProviderOwnerAuthorityBytes(shadowedValid), shadowedValid);
+  shadowedValid.fill(0);
+
+  const shadowedEmpty = Buffer.alloc(0);
+  Object.defineProperty(shadowedEmpty, 'byteLength', { value: 32 });
+  assert.throws(
+    () => validateTrustedProviderOwnerAuthorityBytes(shadowedEmpty),
+    ownerError,
+  );
+  if (typeof SharedArrayBuffer === 'function') {
+    const shared = Buffer.from(new SharedArrayBuffer(32));
+    Object.defineProperty(shared, 'buffer', { value: new ArrayBuffer(32) });
+    const sharedArrayBufferDescriptor = Object.getOwnPropertyDescriptor(
+      globalThis,
+      'SharedArrayBuffer',
+    );
+    try {
+      Object.defineProperty(globalThis, 'SharedArrayBuffer', {
+        configurable: true,
+        value: class ShadowedSharedArrayBuffer {},
+      });
+      assert.throws(
+        () => validateTrustedProviderOwnerAuthorityBytes(shared),
+        ownerError,
+      );
+    } finally {
+      Object.defineProperty(globalThis, 'SharedArrayBuffer', sharedArrayBufferDescriptor);
+    }
+    shared.fill(0);
+  }
+
+  const validAuthority = fixture.bootstrap.authority;
+  for (const invalid of [
+    undefined,
+    null,
+    {},
+    Object.freeze({ authority: validAuthority }),
+    nullRecord({ authority: Object.freeze({ consume() {} }) }),
+    nullRecord({ authority: validAuthority, extra: true }),
+    new Proxy(fixture.bootstrap, {}),
+  ]) assert.throws(() => validateTrustedProviderOwnerBootstrap(invalid), ownerError);
 });
 
 test('owns all 43 timeline-ordered source observations without generic authority', async () => {
@@ -219,7 +320,11 @@ test('constructs only during execute and drains every acquired root on close', a
       });
     },
   });
-  const owner = createBrowserRelayTrustedProviderOwnerForTesting(runtime);
+  const authority = authorityFixture({ trace });
+  const owner = createBrowserRelayTrustedProviderOwnerForTesting(
+    runtime,
+    authority.bootstrap,
+  );
   assert.equal(Object.getPrototypeOf(owner), null);
   assert.equal(Object.isFrozen(owner), true);
   assert.deepEqual(Object.keys(owner), ['execute', 'close']);
@@ -228,7 +333,10 @@ test('constructs only during execute and drains every acquired root on close', a
   const controller = new AbortController();
   const result = await owner.execute(Object.freeze({ signal: controller.signal }));
   assert.deepEqual(result, expectedResult);
-  assert.deepEqual(trace.slice(0, 5), [
+  assert.equal(authority.calls(), 1);
+  assert.equal(allZero(authority.bytes), true);
+  assert.deepEqual(trace.slice(0, 6), [
+    'authority:consume',
     'source:create',
     'operation:create',
     'browser:create',
@@ -268,8 +376,41 @@ test('fails closed and cleans partial construction without retaining thrown deta
     createBrowser() { assert.fail('browser construction must not run'); },
     createComposition() { assert.fail('composition construction must not run'); },
   });
-  const owner = createBrowserRelayTrustedProviderOwnerForTesting(runtime);
+  const authority = authorityFixture();
+  const owner = createBrowserRelayTrustedProviderOwnerForTesting(
+    runtime,
+    authority.bootstrap,
+  );
   await assert.rejects(owner.execute(Object.freeze({ signal: controller.signal })), ownerError);
   await owner.close();
+  assert.equal(authority.calls(), 1);
+  assert.equal(allZero(authority.bytes), true);
   assert.deepEqual(trace, ['source:close']);
+});
+
+test('fails closed on invalid or rejected authority without constructing the graph', async () => {
+  for (const fixture of [
+    authorityFixture({ value: 'Bearer invalid-authority' }),
+    authorityFixture({ reject: true }),
+  ]) {
+    const owner = createBrowserRelayTrustedProviderOwnerForTesting(
+      unreachableRuntime(),
+      fixture.bootstrap,
+    );
+    await assert.rejects(owner.execute(), ownerError);
+    await owner.close();
+    assert.equal(fixture.calls(), 1);
+    if (Buffer.isBuffer(fixture.bytes)) assert.equal(allZero(fixture.bytes), true);
+  }
+});
+
+test('close before execute clears the captured consumer without invoking it', async () => {
+  const fixture = authorityFixture();
+  const owner = createBrowserRelayTrustedProviderOwnerForTesting(
+    unreachableRuntime(),
+    fixture.bootstrap,
+  );
+  await Promise.all([owner.close(), owner.close()]);
+  assert.equal(fixture.calls(), 0);
+  await assert.rejects(owner.execute(), ownerError);
 });

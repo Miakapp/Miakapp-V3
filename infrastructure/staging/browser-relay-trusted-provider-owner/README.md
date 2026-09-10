@@ -1,6 +1,6 @@
 # Browser-relay trusted provider owner
 
-This package is the first complete, executable owner of the Miakapp V4 browser-relay
+This package is the complete, executable owner of the Miakapp V4 browser-relay
 acceptance graph. It joins seven source-truth providers, 32 named provider methods,
 17 operation callbacks, and the five browser-matrix capabilities behind the existing
 trusted-source composition and dedicated-process boundary.
@@ -9,7 +9,9 @@ The owner executes one 22-stage matrix. It closes 43 independently sourced
 observations and 40 assertions across Chromium, Firefox, and WebKit, then returns the
 existing sanitized operation result. Provider capabilities, operation state, private
 page inputs, browser handles, pages, and cleanup closures remain inside the child
-process. Only the closed result can cross IPC.
+process. Only the closed result can cross IPC. The byte-identical revision-1 profile
+is archived as `profile-v1.json`; current revision 2 also records the synthetic
+ephemeral-authority proof described below.
 
 ## Offline proof boundary
 
@@ -40,7 +42,27 @@ retention bound. Publication and dependent relay reads remain below the reviewed
 75-second authority deadline; explicit cross-source barriers preserve all remaining
 evidence order.
 
-## Artifact and authority
+## Artifact and ephemeral authority
+
+The materialized entry factory requires exactly one frozen null-prototype bootstrap
+object with one `authority` capability. That capability is itself a frozen
+null-prototype object exposing only `consume(callback)`. The process worker owns the
+capability and its opaque Buffer; the owner captures only the consume function.
+
+One complete owner execution is wrapped in exactly one consume callback. The owner
+validates only that the callback value is the same bounded Node Buffer; it never
+parses, copies, stringifies, serializes, logs, diagnoses, persists, or returns its
+bytes. The worker overwrites the Buffer after the asynchronous callback settles.
+Ignoring the capability or attempting a second consumption fails the surrounding
+process operation. Closing before execute leaves consumption to the worker's
+fail-closed settlement path.
+
+This milestone uses deterministic synthetic bytes only. The capability proves an
+ownership seam for a future short-lived, audience-restricted credential, but it does
+not acquire one and does not grant the providers any new live behavior. Buffer
+overwrite is best-effort hygiene for reachable application-owned memory, not secure
+erasure: same-user or privileged observers, deliberate copies, kernel buffers, swap,
+heap dumps, and memory already reclaimed by the runtime remain outside the claim.
 
 `bundle.mjs` builds a deterministic `MIAKOWN1` artifact containing the exact
 repository dependency/validation closure and the required `playwright-core`
@@ -54,14 +76,16 @@ files or documentation and no owner testing entrypoint. Browser binaries remain
 external Playwright runtime material; the bundle contains no browser binary,
 environment value, cloud credential, or user datum.
 
-The child process is a strong ownership and data-flow boundary, not an operating
-system sandbox. Its trusted code still has same-user filesystem and network authority.
+The child process is an ownership and data-flow boundary, not an operating-system
+sandbox or secure enclave. Its trusted code still has same-user filesystem and
+network authority.
 The package guard therefore admits only the reviewed loopback listener, ephemeral TLS
 generation, fixed page origins, and Playwright browser processes.
 
-This proof is not a staging cloud run, Hosting publication, live source observation,
-public-ingress change, or authorization to execute the live matrix. It creates no cloud
-resource and has zero incremental monthly cost.
+This proof uses no real credential and is not a staging cloud run, Hosting
+publication, live source observation, public-ingress change, or authorization to
+execute the live matrix. It creates no cloud resource and has zero incremental
+monthly cost.
 
 Run the fast package gate with:
 

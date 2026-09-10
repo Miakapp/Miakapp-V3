@@ -28,6 +28,20 @@ function manifest(bytes) {
   return JSON.parse(bytes.subarray(HEADER_BYTES, HEADER_BYTES + length).toString('utf8'));
 }
 
+function bootstrap() {
+  const authority = Object.freeze(Object.assign(Object.create(null), {
+    async consume(callback) {
+      const bytes = Buffer.alloc(32, 0xa5);
+      try {
+        return await callback(bytes);
+      } finally {
+        bytes.fill(0);
+      }
+    },
+  }));
+  return Object.freeze(Object.assign(Object.create(null), { authority }));
+}
+
 test('builds one byte-identical complete dependency-bearing owner artifact', () => {
   const first = buildBrowserRelayTrustedProviderOwnerBundle();
   const second = buildBrowserRelayTrustedProviderOwnerBundle();
@@ -124,7 +138,7 @@ test('materializes an inert owner whose only module export and public fields are
       && path !== 'infrastructure/staging/browser-relay-edge/guard.mjs')
   )), false);
   assert.deepEqual(Object.keys(module), ['createBrowserRelayTrustedProviderOwner']);
-  const owner = module.createBrowserRelayTrustedProviderOwner();
+  const owner = module.createBrowserRelayTrustedProviderOwner(bootstrap());
   assert.equal(Object.getPrototypeOf(owner), null);
   assert.deepEqual(Object.keys(owner), ['execute', 'close']);
   await assert.rejects(
