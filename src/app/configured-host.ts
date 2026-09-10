@@ -1,11 +1,9 @@
 import { getApps, initializeApp, type FirebaseOptions } from 'firebase/app';
 import {
-  browserLocalPersistence,
   getAuth,
   GoogleAuthProvider,
   onAuthStateChanged,
-  setPersistence,
-  signInWithPopup,
+  signInWithRedirect,
   type Auth,
 } from 'firebase/auth';
 import {
@@ -86,10 +84,9 @@ class FirebaseLiveIdentity implements LiveIdentity {
   };
 
   readonly signIn = async (): Promise<void> => {
-    await setPersistence(this.#auth, browserLocalPersistence);
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
-    await signInWithPopup(this.#auth, provider);
+    await signInWithRedirect(this.#auth, provider);
   };
 
   readonly getFirebaseIdToken: LiveIdentity['getFirebaseIdToken'] = async ({ signal }) => {

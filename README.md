@@ -2,7 +2,10 @@
 
 Miakapp V4 is an agent-native, privacy-conscious home interface. The repository currently contains the browser host, shared protocol contracts, component runtime, synthetic home, control plane, and reproducible staging infrastructure.
 
-The browser app is an interactive product preview. It deliberately makes no cloud, relay, or real-home connection yet. Its UI is nevertheless rendered through the production `miakapp.component/1` semantic contract: untrusted components cannot inject HTML, CSS, URLs, or credentials into the trusted host.
+The browser app is an interactive product preview by default and a staging client
+when explicitly built in live mode. Its UI is rendered through the production
+`miakapp.component/1` semantic contract: untrusted components cannot inject
+HTML, CSS, URLs, or credentials into the trusted host.
 
 The latest `main` preview is published at
 <https://miakapp.github.io/Miakapp-V3/>. It uses fictional local data and is safe
@@ -25,10 +28,20 @@ The browser host has two explicit modes:
 - `VITE_MIAKAPP_MODE=live` — Firebase Auth + App Check → control plane →
   selected relay → Bun coordinator through `miakapi/browser`.
 
-Copy `.env.staging.example` to a non-committed environment file when operating
-a staging deployment. Firebase web configuration and the reCAPTCHA Enterprise
-site key identify public browser resources; Home Keys and relay access tokens
-must never be added to a Vite environment variable or browser bundle.
+The committed `.env.staging` contains only the public Firebase web identity,
+public App Check site key, and non-secret staging routes. Use
+`.env.staging.example` when adapting the host to another environment. Home Keys
+and relay access tokens must never be added to a Vite environment variable or
+browser bundle.
+
+The V4 staging host has a separate Firebase configuration so the legacy root
+hosting target cannot be selected accidentally. A deployment additionally
+requires an exact confirmation:
+
+```sh
+MIAKAPP_STAGING_DEPLOY_CONFIRMATION=deploy-browser-host:miakapp-v4-staging \
+  ./scripts/deploy-staging.sh
+```
 
 ## Validate browser changes
 
@@ -38,7 +51,11 @@ bun run check:web
 
 This runs ESLint, TypeScript, Vitest, and a production Vite build. The protocol and infrastructure packages have their own checks exposed through the root `package.json`.
 
-The root Firebase alias intentionally remains the untouched Miakapp V3 production project for staging-policy verification. The public preview is deployed only through the GitHub Pages workflow; do not run `firebase deploy` from this repository.
+The root Firebase alias intentionally remains the untouched Miakapp V3
+production project for staging-policy verification. The fictional public
+preview is deployed only through the GitHub Pages workflow. Deploy the live V4
+host only through the guarded staging script above; do not run a bare
+`firebase deploy` from this repository.
 
 ## Repository map
 
