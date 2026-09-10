@@ -26,6 +26,18 @@ interface LiveConfiguration {
   readonly homeDetail: string;
 }
 
+export function requireSameOriginAuthDomain(
+  authDomain: string,
+  pageLocation: Pick<Location, 'hostname' | 'protocol'>,
+): string {
+  if (pageLocation.protocol === 'https:' && authDomain !== pageLocation.hostname) {
+    throw new Error(
+      `Firebase authDomain must match the HTTPS host (${pageLocation.hostname}) for redirect sign-in`,
+    );
+  }
+  return authDomain;
+}
+
 function required(name: string): string {
   const value = import.meta.env[name];
   if (typeof value !== 'string' || value.trim() === '') {
@@ -40,11 +52,15 @@ function readLiveConfiguration(): LiveConfiguration | undefined {
   if (!exchangeEndpoint.startsWith('https://')) {
     throw new Error('The Miakapp control-plane exchange endpoint must use HTTPS');
   }
+  const authDomain = requireSameOriginAuthDomain(
+    required('VITE_MIAKAPP_FIREBASE_AUTH_DOMAIN'),
+    window.location,
+  );
   return Object.freeze({
     firebase: Object.freeze({
       apiKey: required('VITE_MIAKAPP_FIREBASE_API_KEY'),
       appId: required('VITE_MIAKAPP_FIREBASE_APP_ID'),
-      authDomain: required('VITE_MIAKAPP_FIREBASE_AUTH_DOMAIN'),
+      authDomain,
       messagingSenderId: required('VITE_MIAKAPP_FIREBASE_MESSAGING_SENDER_ID'),
       projectId: required('VITE_MIAKAPP_FIREBASE_PROJECT_ID'),
       storageBucket: required('VITE_MIAKAPP_FIREBASE_STORAGE_BUCKET'),
