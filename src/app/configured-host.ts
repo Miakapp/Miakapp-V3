@@ -26,11 +26,16 @@ interface LiveConfiguration {
   readonly homeDetail: string;
 }
 
-export function resolveSameOriginFirebaseAuthDomain(
-  authDomain: string,
-  pageLocation: Pick<Location, 'hostname' | 'protocol'>,
-): string {
-  return pageLocation.protocol === 'https:' ? pageLocation.hostname : authDomain;
+type GooglePopupSignIn = (
+  auth: Auth,
+  provider: GoogleAuthProvider,
+) => Promise<unknown>;
+
+export async function signInWithGoogle(
+  auth: Auth,
+  popupSignIn: GooglePopupSignIn = signInWithPopup,
+): Promise<void> {
+  await popupSignIn(auth, new GoogleAuthProvider());
 }
 
 function required(name: string): string {
@@ -47,15 +52,11 @@ function readLiveConfiguration(): LiveConfiguration | undefined {
   if (!exchangeEndpoint.startsWith('https://')) {
     throw new Error('The Miakapp control-plane exchange endpoint must use HTTPS');
   }
-  const authDomain = resolveSameOriginFirebaseAuthDomain(
-    required('VITE_MIAKAPP_FIREBASE_AUTH_DOMAIN'),
-    window.location,
-  );
   return Object.freeze({
     firebase: Object.freeze({
       apiKey: required('VITE_MIAKAPP_FIREBASE_API_KEY'),
       appId: required('VITE_MIAKAPP_FIREBASE_APP_ID'),
-      authDomain,
+      authDomain: required('VITE_MIAKAPP_FIREBASE_AUTH_DOMAIN'),
       messagingSenderId: required('VITE_MIAKAPP_FIREBASE_MESSAGING_SENDER_ID'),
       projectId: required('VITE_MIAKAPP_FIREBASE_PROJECT_ID'),
       storageBucket: required('VITE_MIAKAPP_FIREBASE_STORAGE_BUCKET'),
@@ -95,7 +96,7 @@ class FirebaseLiveIdentity implements LiveIdentity {
   };
 
   readonly signIn = async (): Promise<void> => {
-    await signInWithPopup(this.#auth, new GoogleAuthProvider());
+    await signInWithGoogle(this.#auth);
   };
 
   readonly getFirebaseIdToken: LiveIdentity['getFirebaseIdToken'] = async ({ signal }) => {

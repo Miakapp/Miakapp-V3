@@ -1,26 +1,18 @@
-import { describe, expect, it } from 'vitest';
+import { GoogleAuthProvider, type Auth } from 'firebase/auth';
+import { describe, expect, it, vi } from 'vitest';
 
-import { resolveSameOriginFirebaseAuthDomain } from './configured-host';
+import { signInWithGoogle } from './configured-host';
 
 describe('configured staging host', () => {
-  it('keeps Firebase redirect auth on the same Hosting origin', () => {
-    expect(resolveSameOriginFirebaseAuthDomain('home.example.test', {
-      hostname: 'home.example.test',
-      protocol: 'https:',
-    })).toBe('home.example.test');
-  });
+  it('starts Google sign-in with a popup in the user click', async () => {
+    const popupSignIn = vi.fn(async (auth: Auth, provider: GoogleAuthProvider) => {
+      void auth;
+      void provider;
+    });
 
-  it('replaces a cross-origin Firebase domain on HTTPS', () => {
-    expect(resolveSameOriginFirebaseAuthDomain('project.firebaseapp.com', {
-      hostname: 'project.web.app',
-      protocol: 'https:',
-    })).toBe('project.web.app');
-  });
+    await signInWithGoogle({} as Auth, popupSignIn);
 
-  it('allows the Firebase emulator domain during HTTP development', () => {
-    expect(resolveSameOriginFirebaseAuthDomain('project.firebaseapp.com', {
-      hostname: 'localhost',
-      protocol: 'http:',
-    })).toBe('project.firebaseapp.com');
+    expect(popupSignIn).toHaveBeenCalledOnce();
+    expect(popupSignIn.mock.calls[0]?.[1]).toBeInstanceOf(GoogleAuthProvider);
   });
 });
