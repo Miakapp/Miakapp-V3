@@ -14,6 +14,7 @@ const ROOT_FILES = Object.freeze([
   'operation.mjs',
   'owner.mjs',
   'page-host.mjs',
+  'profile-v1.json',
   'profile.json',
   'source-truth.mjs',
   'testing.mjs',
@@ -77,7 +78,7 @@ const STATIC_IMPORTS = Object.freeze({
     './operation.mjs',
     './source-truth.mjs',
   ]),
-  'testing.mjs': Object.freeze(['./internal.mjs']),
+  'testing.mjs': Object.freeze(['./contract.mjs', './internal.mjs']),
   'bundle.mjs': Object.freeze([
     '../browser-relay-trusted-provider-process/owner-bundle.mjs',
     './contract.mjs',
@@ -168,13 +169,27 @@ export async function validateBrowserRelayTrustedProviderOwnerRoot(rootUrl) {
     if (!production.includes(marker)) reject('Trusted provider owner graph has drifted');
   }
   if (!contents['owner.mjs'].includes(
-    'export function createBrowserRelayTrustedProviderOwner()',
+    'export function createBrowserRelayTrustedProviderOwner(bootstrapValue)',
   )
+    || !contents['owner.mjs'].includes('validateTrustedProviderOwnerBootstrap(bootstrapValue)')
+    || !contents['owner.mjs'].includes(
+      'createBrowserRelayTrustedProviderOwnerInternal(productionRuntime, consumeAuthority)',
+    )
     || contents['owner.mjs'].includes('testing.mjs')
     || contents['owner.mjs'].includes('ForTesting')
     || !contents['testing.mjs'].includes(
       'createBrowserRelayTrustedProviderOwnerForTesting',
     )) reject('Trusted provider owner production/testing separation has drifted');
+  if (!contents['entry.mjs'].includes(
+    'export function createBrowserRelayTrustedProviderOwner(bootstrap)',
+  )
+    || !contents['internal.mjs'].includes('consumeAuthorityValue')
+    || !contents['internal.mjs'].includes('return await consume(async (authorityValue) => {')
+    || !contents['internal.mjs'].includes(
+      'validateTrustedProviderOwnerAuthorityBytes(authorityValue)',
+    )) {
+    reject('Trusted provider owner ephemeral authority boundary has drifted');
+  }
   if (!contents['entry.mjs'].includes('registerHooks({')
     || !contents['entry.mjs'].includes('allowedModuleUrls.has(resolution?.url)')
     || !contents['entry.mjs'].includes("new URL('module-allowlist.json', import.meta.url)")) {
@@ -256,6 +271,18 @@ export async function validateBrowserRelayTrustedProviderOwnerRoot(rootUrl) {
     || profile.bundle.module_allowlist_included !== true
     || profile.bundle.unlisted_bundle_modules_importable !== false
     || profile.bundle.validation_only_assets_importable !== false
+    || profile.ephemeral_authority.factory_context_fields.join(',') !== 'authority'
+    || profile.ephemeral_authority.capability_fields.join(',') !== 'consume'
+    || profile.ephemeral_authority.required_per_process_execution !== true
+    || profile.ephemeral_authority.consume_at_most_once !== true
+    || profile.ephemeral_authority.opaque_bytes_parsed_by_owner !== false
+    || profile.ephemeral_authority.opaque_bytes_copied_by_owner !== false
+    || profile.ephemeral_authority.opaque_bytes_in_observation_or_result !== false
+    || profile.ephemeral_authority.secure_erasure_claimed !== false
+    || profile.lifecycle.authority_consume_calls_per_execution !== 1
+    || profile.lifecycle.authority_consume_wraps_owner_execution !== true
+    || profile.authority.process_ephemeral_authority_capability_authorized !== true
+    || profile.authority.synthetic_opaque_authority_authorized_for_offline_proof !== true
     || profile.authority.external_network_authorized !== false
     || profile.authority.cloud_requests_authorized !== false
     || profile.authority.cloud_mutations_authorized !== false
@@ -265,6 +292,9 @@ export async function validateBrowserRelayTrustedProviderOwnerRoot(rootUrl) {
     || profile.evidence.cloud_requests !== 0
     || profile.evidence.cloud_mutations !== 0
     || profile.evidence.live_execution_count !== 0
+    || profile.evidence.synthetic_authority_consumptions !== 1
+    || profile.evidence.real_credentials_used !== 0
+    || profile.evidence.authority_persistence_events !== 0
     || profile.evidence.incremental_monthly_cost_eur !== 0) {
     reject('Trusted provider owner profile exceeds the reviewed offline authority');
   }

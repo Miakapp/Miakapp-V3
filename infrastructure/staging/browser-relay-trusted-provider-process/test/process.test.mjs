@@ -23,6 +23,9 @@ import {
   buildTrustedProviderProcessExecute,
 } from '../contract.mjs';
 import {
+  writeTrustedProviderEphemeralAuthority,
+} from '../authority-channel.mjs';
+import {
   createTrustedProviderProcessFrameWriter,
   readTrustedProviderProcessFrames,
 } from '../framed-channel.mjs';
@@ -38,7 +41,9 @@ import {
   hostilePeerBundle,
   ownerBundle,
   playwrightCoreOwnerBundle,
+  processExecuteInput,
   processExists,
+  syntheticAuthority,
   waitFor,
 } from './helpers.mjs';
 
@@ -72,6 +77,14 @@ function registerBundleCleanup(t, bundle) {
   return bundle;
 }
 
+function execute(ownerProcess, signal) {
+  return ownerProcess.execute(processExecuteInput(signal));
+}
+
+function allZero(bytes) {
+  return bytes.every((byte) => byte === 0);
+}
+
 function assertSuccessfulFreshProcess(source) {
   const outcome = spawnSync(process.execPath, ['--input-type=module', '--eval', source], {
     encoding: 'utf8',
@@ -91,8 +104,16 @@ test('owns the complete synthetic owner lifecycle in a separate closed process',
   const bundle = registerBundleCleanup(t, ownerBundle({ observationPath }));
   const ownerProcess = createBrowserRelayTrustedProviderProcess(options(bundle));
   assert.deepEqual(Object.keys(ownerProcess), ['execute', 'close']);
-  const result = await ownerProcess.execute();
+  const input = processExecuteInput();
+  const expectedAuthority = Buffer.from(input.authority);
+  assert.equal(readFileSync(bundle.path).includes(expectedAuthority), false);
+  const resultTask = ownerProcess.execute(input);
+  assert.equal(allZero(input.authority), true);
+  const result = await resultTask;
   const observation = JSON.parse(readFileSync(observationPath, 'utf8'));
+  assert.equal(readFileSync(observationPath).includes(expectedAuthority), false);
+  assert.equal(Buffer.from(JSON.stringify(result), 'utf8').includes(expectedAuthority), false);
+  expectedAuthority.fill(0);
   assert.equal(result.state, 'completed_once_fully_clean');
   assert.notEqual(observation.pid, process.pid);
   assert.equal(existsSync(dirname(fileURLToPath(observation.entry_url))), false);
@@ -100,11 +121,19 @@ test('owns the complete synthetic owner lifecycle in a separate closed process',
   assert.deepEqual(observation.exec_argv, []);
   assert.equal(observation.process_send, true);
   assert.equal(observation.process_channel, true);
+  assert.deepEqual(observation.factory_context_keys, ['authority']);
+  assert.equal(observation.factory_context_frozen, true);
+  assert.equal(observation.factory_context_prototype_null, true);
+  assert.deepEqual(observation.authority_capability_keys, ['consume']);
+  assert.equal(observation.authority_capability_frozen, true);
+  assert.equal(observation.authority_capability_prototype_null, true);
+  assert.equal(observation.authority_is_buffer, true);
+  assert.equal(observation.authority_bytes, 32);
   assert.deepEqual(observation.context_keys, ['signal']);
   assert.equal(observation.context_frozen, true);
   assert.equal(observation.context_prototype_null, true);
   assert.equal(observation.closed, true);
-  await assert.rejects(ownerProcess.execute(), errorCode('already_executed'));
+  await assert.rejects(execute(ownerProcess), errorCode('already_executed'));
   await ownerProcess.close();
   await ownerProcess.close();
 });
@@ -125,6 +154,10 @@ test('rejects pre-abort and close-before-execute without starting an owner', asy
   );
   const exactExecute = createBrowserRelayTrustedProviderProcess(options(bundle));
   await assert.rejects(
+    exactExecute.execute(),
+    errorCode('invalid_configuration'),
+  );
+  await assert.rejects(
     exactExecute.execute({}, {}),
     errorCode('invalid_configuration'),
   );
@@ -132,12 +165,15 @@ test('rejects pre-abort and close-before-execute without starting an owner', asy
   const preAborted = createBrowserRelayTrustedProviderProcess(options(bundle));
   const controller = new AbortController();
   controller.abort(new Error('Bearer caller-secret'));
-  await assert.rejects(preAborted.execute({ signal: controller.signal }), errorCode('aborted'));
+  const preAbortedInput = processExecuteInput(controller.signal);
+  const preAbortedTask = preAborted.execute(preAbortedInput);
+  assert.equal(allZero(preAbortedInput.authority), true);
+  await assert.rejects(preAbortedTask, errorCode('aborted'));
   await preAborted.close();
 
   const closed = createBrowserRelayTrustedProviderProcess(options(bundle));
   await closed.close();
-  await assert.rejects(closed.execute(), errorCode('closed'));
+  await assert.rejects(execute(closed), errorCode('closed'));
 });
 
 test('fails closed on owner integrity, import and interface drift', async (t) => {
@@ -146,17 +182,17 @@ test('fails closed on owner integrity, import and interface drift', async (t) =>
     ...options(valid),
     owner_bundle_sha256: 'b'.repeat(64),
   });
-  await assert.rejects(wrongDigest.execute(), errorCode('owner_integrity_failed'));
+  await assert.rejects(execute(wrongDigest), errorCode('owner_integrity_failed'));
 
   const syntax = registerBundleCleanup(t, createBundle('export function broken( {'));
   await assert.rejects(
-    createBrowserRelayTrustedProviderProcess(options(syntax)).execute(),
+    execute(createBrowserRelayTrustedProviderProcess(options(syntax))),
     errorCode('owner_import_failed'),
   );
 
   const wrongExport = registerBundleCleanup(t, createBundle('export const wrong = true;'));
   await assert.rejects(
-    createBrowserRelayTrustedProviderProcess(options(wrongExport)).execute(),
+    execute(createBrowserRelayTrustedProviderProcess(options(wrongExport))),
     errorCode('owner_contract_failed'),
   );
 
@@ -164,8 +200,8 @@ test('fails closed on owner integrity, import and interface drift', async (t) =>
 export function createBrowserRelayTrustedProviderOwner() { return {}; }
 `));
   await assert.rejects(
-    createBrowserRelayTrustedProviderProcess(options(wrongOwner)).execute(),
-    errorCode('owner_contract_failed'),
+    execute(createBrowserRelayTrustedProviderProcess(options(wrongOwner))),
+    errorCode('authority_contract_failed'),
   );
 
   const observationDirectory = mkdtempSync(join(tmpdir(), 'miakapp-owner-tamper-'));
@@ -176,10 +212,10 @@ export function createBrowserRelayTrustedProviderOwner() { return {}; }
   tamperedBytes[tamperedBytes.byteLength - 1] ^= 0xff;
   writeFileSync(tampered.path, tamperedBytes);
   await assert.rejects(
-    createBrowserRelayTrustedProviderProcess(options({
+    execute(createBrowserRelayTrustedProviderProcess(options({
       ...tampered,
       sha256: createHash('sha256').update(tamperedBytes).digest('hex'),
-    })).execute(),
+    }))),
     errorCode('owner_integrity_failed'),
   );
   assert.equal(existsSync(observationPath), false);
@@ -192,26 +228,26 @@ test('rejects linked and executable owner containers', async (t) => {
   symlinkSync(valid.path, linkPath);
   t.after(() => rmSync(linkDirectory, { force: true, recursive: true }));
   await assert.rejects(
-    createBrowserRelayTrustedProviderProcess({
+    execute(createBrowserRelayTrustedProviderProcess({
       ...options(valid),
       owner_bundle_path: linkPath,
-    }).execute(),
+    })),
     errorCode('owner_integrity_failed'),
   );
 
   const linkedDirectory = join(linkDirectory, 'linked-directory');
   symlinkSync(valid.directory, linkedDirectory, 'dir');
   await assert.rejects(
-    createBrowserRelayTrustedProviderProcess({
+    execute(createBrowserRelayTrustedProviderProcess({
       ...options(valid),
       owner_bundle_path: join(linkedDirectory, 'owner.mjs'),
-    }).execute(),
+    })),
     errorCode('owner_integrity_failed'),
   );
 
   chmodSync(valid.path, 0o700);
   await assert.rejects(
-    createBrowserRelayTrustedProviderProcess(options(valid)).execute(),
+    execute(createBrowserRelayTrustedProviderProcess(options(valid))),
     errorCode('owner_integrity_failed'),
   );
   chmodSync(valid.path, 0o600);
@@ -226,7 +262,7 @@ test('loads the pinned Playwright-core package tree without launching a browser'
     ready_timeout_milliseconds: 10_000,
     operation_timeout_milliseconds: 5_000,
   }));
-  assert.equal((await ownerProcess.execute()).state, 'completed_once_fully_clean');
+  assert.equal((await execute(ownerProcess)).state, 'completed_once_fully_clean');
   await ownerProcess.close();
 });
 
@@ -267,7 +303,7 @@ export function createBrowserRelayTrustedProviderOwner() {
 }
 `));
     await assert.rejects(
-      createBrowserRelayTrustedProviderProcess(options(bundle)).execute(),
+      execute(createBrowserRelayTrustedProviderProcess(options(bundle))),
       errorCode('owner_import_failed'),
     );
   }
@@ -281,8 +317,24 @@ test('sanitizes execute, result and close failures', async (t) => {
   ]) {
     const bundle = registerBundleCleanup(t, ownerBundle({ mode }));
     await assert.rejects(
-      createBrowserRelayTrustedProviderProcess(options(bundle)).execute(),
+      execute(createBrowserRelayTrustedProviderProcess(options(bundle))),
       errorCode(code),
+    );
+  }
+});
+
+test('requires exactly one owner authority consumption', async (t) => {
+  for (const mode of [
+    'ignore_authority',
+    'ignore_authority_throw',
+    'ignore_authority_close',
+    'double_authority',
+    'double_authority_throw',
+  ]) {
+    const bundle = registerBundleCleanup(t, ownerBundle({ mode }));
+    await assert.rejects(
+      execute(createBrowserRelayTrustedProviderProcess(options(bundle))),
+      errorCode('authority_contract_failed'),
     );
   }
 });
@@ -299,7 +351,8 @@ crypto.randomBytes = () => { throw new Error('Bearer entropy-secret'); };
 syncBuiltinESMExports();
 const { createBrowserRelayTrustedProviderProcess } = await import(${JSON.stringify(PROCESS_ENTRY_URL)});
 try {
-  await createBrowserRelayTrustedProviderProcess(${optionsSource}).execute();
+  await createBrowserRelayTrustedProviderProcess(${optionsSource})
+    .execute({ authority: Buffer.alloc(32, 0xa5) });
 } catch (error) {
   process.exit(error?.code === 'peer_failed'
     && error?.message === 'Trusted provider process failed (peer_failed)'
@@ -312,7 +365,8 @@ import process from 'node:process';
 Object.defineProperty(process, 'release', { value: { name: 'bun' } });
 const { createBrowserRelayTrustedProviderProcess } = await import(${JSON.stringify(PROCESS_ENTRY_URL)});
 try {
-  await createBrowserRelayTrustedProviderProcess(${optionsSource}).execute();
+  await createBrowserRelayTrustedProviderProcess(${optionsSource})
+    .execute({ authority: Buffer.alloc(32, 0xa5) });
 } catch (error) {
   process.exit(error?.code === 'unsupported_platform'
     && error?.message === 'Trusted provider process failed (unsupported_platform)' ? 0 : 2);
@@ -333,7 +387,7 @@ test('forwards cooperative cancellation without its reason', async (t) => {
   const ownerProcess = createBrowserRelayTrustedProviderProcess(options(bundle, {
     operation_timeout_milliseconds: 2_000,
   }));
-  const operation = ownerProcess.execute({ signal: controller.signal });
+  const operation = execute(ownerProcess, controller.signal);
   await waitFor(() => existsSync(observationPath));
   controller.abort(new Error('Bearer caller-secret'));
   await assert.rejects(operation, errorCode('aborted'));
@@ -353,11 +407,11 @@ test('hard-terminates an owner that ignores abort and never replays it', async (
     cancellation_grace_milliseconds: 50,
   }));
   const startedAt = Date.now();
-  const operation = ownerProcess.execute();
+  const operation = execute(ownerProcess);
   await waitFor(() => existsSync(observationPath));
   await assert.rejects(operation, errorCode('operation_timeout'));
   assert.ok(Date.now() - startedAt < 2_000);
-  await assert.rejects(ownerProcess.execute(), errorCode('already_executed'));
+  await assert.rejects(execute(ownerProcess), errorCode('already_executed'));
   await ownerProcess.close();
 });
 
@@ -373,7 +427,7 @@ test('close converges with an active uncooperative operation', async (t) => {
     operation_timeout_milliseconds: 2_000,
     cancellation_grace_milliseconds: 25,
   }));
-  const operation = ownerProcess.execute();
+  const operation = execute(ownerProcess);
   await waitFor(() => existsSync(observationPath));
   await ownerProcess.close();
   await assert.rejects(operation, errorCode('closed'));
@@ -392,7 +446,7 @@ test('kills a SIGTERM-ignoring descendant in the same POSIX process group', asyn
     operation_timeout_milliseconds: 500,
     cancellation_grace_milliseconds: 50,
   }));
-  const operation = ownerProcess.execute();
+  const operation = execute(ownerProcess);
   await waitFor(() => existsSync(pidPath));
   await assert.rejects(operation, errorCode('operation_timeout'));
   const descendantPid = Number(readFileSync(pidPath, 'utf8'));
@@ -416,9 +470,9 @@ test('settles only after successful and failed owner descendants are gone', asyn
     }));
     const ownerProcess = createBrowserRelayTrustedProviderProcess(options(bundle));
     if (expectedCode === undefined) {
-      assert.equal((await ownerProcess.execute()).state, 'completed_once_fully_clean');
+      assert.equal((await execute(ownerProcess)).state, 'completed_once_fully_clean');
     } else {
-      await assert.rejects(ownerProcess.execute(), errorCode(expectedCode));
+      await assert.rejects(execute(ownerProcess), errorCode(expectedCode));
     }
     assert.equal(existsSync(pidPath), true);
     const descendantPid = Number(readFileSync(pidPath, 'utf8'));
@@ -445,7 +499,7 @@ test('sends one cooperative cancel across concurrent abort and close', async (t)
     HOSTILE_PEER,
   );
   const controller = new AbortController();
-  const operation = ownerProcess.execute({ signal: controller.signal });
+  const operation = execute(ownerProcess, controller.signal);
   await waitFor(() => existsSync(`${observationPath}.started`));
   const rejection = assert.rejects(operation, errorCode('aborted'));
   controller.abort(new Error('Bearer caller-secret'));
@@ -473,9 +527,53 @@ test('rejects hostile startup frames and early exits', async (t) => {
       }),
       HOSTILE_PEER,
     );
-    await assert.rejects(ownerProcess.execute(), errorCode(code));
+    await assert.rejects(execute(ownerProcess), errorCode(code));
     await ownerProcess.close();
   }
+});
+
+test('rejects hostile authority transfer and acknowledgement behavior', async (t) => {
+  for (const [mode, code] of [
+    ['authority_partial_read', 'ready_timeout'],
+    ['authority_missing_ack', 'ready_timeout'],
+    ['authority_duplicate_ack', 'invalid_protocol'],
+    ['authority_result_before_ack', 'invalid_protocol'],
+  ]) {
+    const bundle = registerBundleCleanup(t, hostilePeerBundle({
+      mode,
+      result: closedOperationResult(),
+    }));
+    const ownerProcess = createBrowserRelayTrustedProviderProcessInternal(
+      options(bundle, { ready_timeout_milliseconds: 200 }),
+      HOSTILE_PEER,
+    );
+    await assert.rejects(execute(ownerProcess), errorCode(code));
+    await ownerProcess.close();
+  }
+});
+
+test('aborts after authority transfer without sending execute or replaying', async (t) => {
+  const observationDirectory = mkdtempSync(join(tmpdir(), 'miakapp-authority-abort-'));
+  const observationPath = join(observationDirectory, 'received');
+  t.after(() => rmSync(observationDirectory, { force: true, recursive: true }));
+  const bundle = registerBundleCleanup(t, hostilePeerBundle({
+    mode: 'authority_missing_ack',
+    observation_path: observationPath,
+  }));
+  const ownerProcess = createBrowserRelayTrustedProviderProcessInternal(
+    options(bundle, {
+      ready_timeout_milliseconds: 2_000,
+      cancellation_grace_milliseconds: 25,
+    }),
+    HOSTILE_PEER,
+  );
+  const controller = new AbortController();
+  const operation = execute(ownerProcess, controller.signal);
+  await waitFor(() => existsSync(observationPath));
+  controller.abort(new Error('Bearer caller-secret'));
+  await assert.rejects(operation, errorCode('aborted'));
+  await assert.rejects(execute(ownerProcess), errorCode('already_executed'));
+  await ownerProcess.close();
 });
 
 test('rejects hostile terminal identity, code, duplication, crash and hang', async (t) => {
@@ -498,7 +596,7 @@ test('rejects hostile terminal identity, code, duplication, crash and hang', asy
       }),
       HOSTILE_PEER,
     );
-    await assert.rejects(ownerProcess.execute(), errorCode(code));
+    await assert.rejects(execute(ownerProcess), errorCode(code));
     await ownerProcess.close();
   }
 });
@@ -513,7 +611,7 @@ test('accepts one valid hostile-peer result only after clean process close', asy
     options(bundle),
     HOSTILE_PEER,
   );
-  assert.deepEqual(await ownerProcess.execute(), expected);
+  assert.deepEqual(await execute(ownerProcess), expected);
   await ownerProcess.close();
 });
 
@@ -534,7 +632,7 @@ test('worker closes the owner before reporting an active protocol failure', {
   const child = spawn(process.execPath, [
     WORKER,
     '--protocol-version',
-    '1',
+    '2',
     '--owner-bundle-path',
     bundle.path,
     '--owner-bundle-sha256',
@@ -545,7 +643,7 @@ test('worker closes the owner before reporting an active protocol failure', {
     detached: true,
     env: Object.create(null),
     shell: false,
-    stdio: ['ignore', 'ignore', 'ignore', 'pipe', 'pipe'],
+    stdio: ['ignore', 'ignore', 'ignore', 'pipe', 'pipe', 'pipe'],
   });
   t.after(() => {
     if (!Number.isSafeInteger(child.pid)) return;
@@ -557,11 +655,15 @@ test('worker closes the owner before reporting an active protocol failure', {
   });
   const requestStream = child.stdio[3];
   const responseStream = child.stdio[4];
+  const authorityStream = child.stdio[5];
   assert.notEqual(requestStream, null);
   assert.notEqual(responseStream, null);
+  assert.notEqual(authorityStream, null);
   const writer = createTrustedProviderProcessFrameWriter(requestStream);
   let resolveReady;
   let rejectReady;
+  let resolveAuthorityReady;
+  let rejectAuthorityReady;
   let resolveTerminal;
   let rejectTerminal;
   const ready = new Promise((resolve, reject) => {
@@ -572,17 +674,24 @@ test('worker closes the owner before reporting an active protocol failure', {
     resolveTerminal = resolve;
     rejectTerminal = reject;
   });
+  const authorityReady = new Promise((resolve, reject) => {
+    resolveAuthorityReady = resolve;
+    rejectAuthorityReady = reject;
+  });
   readTrustedProviderProcessFrames(responseStream, {
     onMessage(message) {
       if (message.type === 'ready') resolveReady();
+      else if (message.type === 'authority_ready') resolveAuthorityReady();
       else resolveTerminal(message);
     },
     onFailure() {
       const failure = new Error('worker response framing failed');
       rejectReady(failure);
+      rejectAuthorityReady(failure);
       rejectTerminal(failure);
     },
     onEnd() {
+      rejectAuthorityReady(new Error('worker response ended before authority readiness'));
       rejectTerminal(new Error('worker response ended before a terminal message'));
     },
   });
@@ -590,6 +699,8 @@ test('worker closes the owner before reporting an active protocol failure', {
     child.once('close', (code, signal) => resolve({ code, signal }));
   });
   await ready;
+  await writeTrustedProviderEphemeralAuthority(authorityStream, syntheticAuthority());
+  await authorityReady;
   const requestIdentifier = 'A'.repeat(43);
   await writer.write(buildTrustedProviderProcessExecute(requestIdentifier));
   await waitFor(() => existsSync(observationPath));
@@ -602,5 +713,6 @@ test('worker closes the owner before reporting an active protocol failure', {
   assert.equal(readFileSync(observationPath, 'utf8'), 'closed');
   writer.destroy();
   responseStream.destroy();
+  authorityStream.destroy();
   assert.deepEqual(await childClosed, { code: 1, signal: null });
 });

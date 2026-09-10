@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 
 const MODULES = Object.freeze([
+  '../authority-channel.mjs',
   '../contract.mjs',
   '../framed-channel.mjs',
   '../internal.mjs',

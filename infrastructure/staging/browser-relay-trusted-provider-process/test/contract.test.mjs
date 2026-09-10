@@ -6,12 +6,15 @@ import {
   TRUSTED_PROVIDER_PROCESS_DEFAULT_CANCELLATION_GRACE_MILLISECONDS,
   TRUSTED_PROVIDER_PROCESS_DEFAULT_OPERATION_TIMEOUT_MILLISECONDS,
   TRUSTED_PROVIDER_PROCESS_DEFAULT_READY_TIMEOUT_MILLISECONDS,
+  TRUSTED_PROVIDER_PROCESS_MAXIMUM_AUTHORITY_BYTES,
   TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_BYTES,
   TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_FILE_BYTES,
   TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_FILES,
   TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_MANIFEST_BYTES,
   TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_PATH_BYTES,
   TRUSTED_PROVIDER_PROCESS_MAXIMUM_OWNER_BUNDLE_SEGMENT_BYTES,
+  TRUSTED_PROVIDER_PROCESS_PROTOCOL_VERSION,
+  buildTrustedProviderProcessAuthorityReady,
   buildTrustedProviderProcessCancel,
   buildTrustedProviderProcessExecute,
   buildTrustedProviderProcessFailure,
@@ -23,6 +26,7 @@ import {
   normalizeTrustedProviderProcessOptions,
   validateTrustedProviderOwner,
   validateTrustedProviderOwnerModule,
+  validateTrustedProviderProcessAuthorityReady,
   validateTrustedProviderProcessCancel,
   validateTrustedProviderProcessExecute,
   validateTrustedProviderProcessExecuteInput,
@@ -116,18 +120,66 @@ test('validates exact bounded options and applies reviewed defaults', () => {
   assert.equal(getterCalls, 0);
 });
 
-test('accepts only an optional AbortSignal execute input', () => {
-  assert.deepEqual(validateTrustedProviderProcessExecuteInput(), {});
+test('requires exact bounded authority bytes and accepts only an optional AbortSignal', () => {
+  assert.equal(TRUSTED_PROVIDER_PROCESS_MAXIMUM_AUTHORITY_BYTES, 16_384);
+  const authority = Buffer.alloc(32, 0xa5);
+  assert.equal(validateTrustedProviderProcessExecuteInput({ authority }).authority, authority);
   const signal = new AbortController().signal;
-  assert.equal(validateTrustedProviderProcessExecuteInput({ signal }).signal, signal);
-  for (const invalid of [null, [], { extra: true }, { signal: {} }]) {
+  const validated = validateTrustedProviderProcessExecuteInput({ authority, signal });
+  assert.equal(validated.authority, authority);
+  assert.equal(validated.signal, signal);
+  const shadowedValid = Buffer.alloc(32, 0xa5);
+  Object.defineProperty(shadowedValid, 'byteLength', { value: 0 });
+  assert.equal(
+    validateTrustedProviderProcessExecuteInput({ authority: shadowedValid }).authority,
+    shadowedValid,
+  );
+  const shared = typeof SharedArrayBuffer === 'function'
+    ? Buffer.from(new SharedArrayBuffer(32))
+    : undefined;
+  if (shared !== undefined) {
+    Object.defineProperty(shared, 'buffer', { value: new ArrayBuffer(32) });
+    const sharedArrayBufferDescriptor = Object.getOwnPropertyDescriptor(
+      globalThis,
+      'SharedArrayBuffer',
+    );
+    try {
+      Object.defineProperty(globalThis, 'SharedArrayBuffer', {
+        configurable: true,
+        value: class ShadowedSharedArrayBuffer {},
+      });
+      assert.throws(
+        () => validateTrustedProviderProcessExecuteInput({ authority: shared }),
+        fixedCode('invalid_configuration'),
+      );
+    } finally {
+      Object.defineProperty(globalThis, 'SharedArrayBuffer', sharedArrayBufferDescriptor);
+    }
+  }
+  const shadowedEmpty = Buffer.alloc(0);
+  Object.defineProperty(shadowedEmpty, 'byteLength', { value: 32 });
+  const shadowedOversized = Buffer.alloc(
+    TRUSTED_PROVIDER_PROCESS_MAXIMUM_AUTHORITY_BYTES + 1,
+  );
+  Object.defineProperty(shadowedOversized, 'byteLength', { value: 1 });
+  for (const invalid of [
+    undefined,
+    null,
+    [],
+    {},
+    { authority: shadowedEmpty },
+    { authority: shadowedOversized },
+    { authority: 'Bearer caller-secret' },
+    { authority, extra: true },
+    { authority, signal: {} },
+  ]) {
     assert.throws(
       () => validateTrustedProviderProcessExecuteInput(invalid),
       fixedCode('invalid_configuration'),
     );
   }
   let getterCalls = 0;
-  const accessor = {};
+  const accessor = { authority };
   Object.defineProperty(accessor, 'signal', {
     enumerable: true,
     get() {
@@ -135,9 +187,13 @@ test('accepts only an optional AbortSignal execute input', () => {
       return signal;
     },
   });
-  const hidden = {};
+  const hidden = { authority };
   Object.defineProperty(hidden, 'hidden', { value: true });
-  for (const invalid of [accessor, hidden, { signal, [Symbol('hidden')]: true }]) {
+  for (const invalid of [
+    accessor,
+    hidden,
+    { authority, signal, [Symbol('hidden')]: true },
+  ]) {
     assert.throws(
       () => validateTrustedProviderProcessExecuteInput(invalid),
       fixedCode('invalid_configuration'),
@@ -199,12 +255,19 @@ test('captures only the exact owner factory and hooks', async () => {
 });
 
 test('builds and validates the exact versioned protocol', async () => {
+  assert.equal(TRUSTED_PROVIDER_PROCESS_PROTOCOL_VERSION, 2);
   assert.equal(
     validateTrustedProviderProcessReady(
       buildTrustedProviderProcessReady(DIGEST),
       DIGEST,
     ).type,
     'ready',
+  );
+  assert.equal(
+    validateTrustedProviderProcessAuthorityReady(
+      buildTrustedProviderProcessAuthorityReady(),
+    ).type,
+    'authority_ready',
   );
   assert.equal(
     validateTrustedProviderProcessStartupFailure(
@@ -244,7 +307,7 @@ test('builds and validates the exact versioned protocol', async () => {
 test('rejects version, key, ID, code and accessor drift', async () => {
   const execute = buildTrustedProviderProcessExecute(REQUEST_ID);
   for (const invalid of [
-    { ...execute, protocol_version: 2 },
+    { ...execute, protocol_version: 1 },
     { ...execute, request_id: 'short' },
     { ...execute, extra: true },
     { ...execute, type: 'generic_method' },
@@ -264,6 +327,15 @@ test('rejects version, key, ID, code and accessor drift', async () => {
     fixedCode('invalid_protocol'),
   );
   assert.equal(getterCalls, 0);
+  const authorityReady = buildTrustedProviderProcessAuthorityReady();
+  for (const invalid of [
+    { ...authorityReady, protocol_version: 1 },
+    { ...authorityReady, extra: true },
+    { ...authorityReady, type: 'ready' },
+  ]) assert.throws(
+    () => validateTrustedProviderProcessAuthorityReady(invalid),
+    fixedCode('invalid_protocol'),
+  );
   assert.throws(
     () => buildTrustedProviderProcessFailure(REQUEST_ID, 'Bearer secret'),
     fixedCode('invalid_protocol'),

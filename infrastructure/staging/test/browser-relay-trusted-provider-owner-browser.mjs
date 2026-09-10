@@ -34,7 +34,10 @@ try {
     operation_timeout_milliseconds: 900_000,
     cancellation_grace_milliseconds: 5_000,
   });
-  const result = await ownerProcess.execute();
+  const completeAuthority = Buffer.alloc(32, 0xa5);
+  const resultTask = ownerProcess.execute({ authority: completeAuthority });
+  assert.equal(completeAuthority.every((byte) => byte === 0), true);
+  const result = await resultTask;
   assert.equal(result.schema, 'miakapp.staging-browser-relay-operation-result/1');
   assert.equal(result.state, 'completed_once_fully_clean');
   assert.equal(result.matrix_executions, 1);
@@ -53,7 +56,12 @@ try {
     cancellation_grace_milliseconds: 5_000,
   });
   const controller = new AbortController();
-  const operation = ownerProcess.execute({ signal: controller.signal });
+  const cancellationAuthority = Buffer.alloc(32, 0x5a);
+  const operation = ownerProcess.execute({
+    authority: cancellationAuthority,
+    signal: controller.signal,
+  });
+  assert.equal(cancellationAuthority.every((byte) => byte === 0), true);
   const cancellation = assert.rejects(operation, (error) => (
     error instanceof StagingBrowserRelayTrustedProviderProcessError
     && error.code === 'aborted'

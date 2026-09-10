@@ -397,8 +397,8 @@ fail immediately. GitHub workflow `349440747` was observed in state
 | [`browser-relay-source-session-producers/`](browser-relay-source-session-producers/) | Dormant trusted-client session producers | Converts seven exact frozen `{ observe, close }` clients into the fixed-scope ephemeral sessions, enforces canonical order and semantic projection, sanitizes cancellation, drains every started callback and releases client references only at real terminal settlement; the adjacent fixed-target clients are now present, while live authority providers, credentials, network, case wiring, IPC and execution remain absent |
 | [`browser-relay-source-clients/`](browser-relay-source-clients/) | Dormant fixed-target source clients | Converts seven explicit at-most-30-minute source authorities into the exact trusted client map, binds every acquisition and receipt to a fresh non-serializable capability and one immutable reviewed target, rejects consuming App Check and delayed-metric inference, and releases authority references only after actual callback settlement; it discovers no credential, owns no network transport and remains unwired and unexecuted |
 | [`browser-relay-trusted-source-composition/`](browser-relay-trusted-source-composition/) | Dormant trusted-provider composition root | Accepts seven exact named provider capabilities, composes the five fixed source layers and inserts all 22 stages/43 observations into the claim-bound operation matrix; its direct API remains same-process and trusted, while the adjacent process owner provides the isolation boundary |
-| [`browser-relay-trusted-provider-process/`](browser-relay-trusted-provider-process/) | Dormant dedicated-process owner boundary | Verifies one deterministic dependency-bearing owner container by exact SHA-256, materializes its canonical manifest and payload into a parent-owned private workspace, confines ordinary ESM/CommonJS resolution to that workspace while retaining Node built-ins, and imports the entry in a fresh Node process with an empty ambient environment, two bounded raw pipes, closed messages/results, cooperative cancellation followed by whole-group termination, and no replay; synthetic hostile-process tests and a real offline `playwright-core` 1.62.1 package-tree load pass, while browser binaries, browser launch, live providers and execution remain absent |
-| [`browser-relay-trusted-provider-owner/`](browser-relay-trusted-provider-owner/) | Complete offline provider/page owner artifact | Creates all seven synthetic source-truth providers, the 17 operation callbacks and three real Playwright engines only inside the digest-pinned child, executes all 22 stages/43 observations/40 assertions once, and physically closes pages, contexts, browsers and providers before the process result; Chromium uses an ephemeral loopback-only TLS page host and Firefox/WebKit use exact-origin interception, with no external network, credential, cloud or live staging authority |
+| [`browser-relay-trusted-provider-process/`](browser-relay-trusted-provider-process/) | Dormant dedicated-process owner and ephemeral-authority boundary | Verifies one deterministic dependency-bearing owner container, confines its module graph to a parent-owned private workspace, and imports it in a fresh Node process with an empty ambient environment; protocol v2 keeps bounded JSON control/result frames on fd3/fd4 and transfers one mandatory 1..16,384-byte opaque Buffer on fd5 only after child readiness, requiring validated EOF/descriptor close and a non-secret acknowledgement before execute. Caller, parent, stream-chunk and worker buffers receive best-effort overwrite, the owner gets only one `consume(callback)` capability, and hostile-process tests pass; real credentials, network/cloud requests, browser launch in this layer and live execution remain zero |
+| [`browser-relay-trusted-provider-owner/`](browser-relay-trusted-provider-owner/) | Complete offline provider/page owner artifact with synthetic authority consumption | Requires the worker-created frozen `{ authority: { consume } }` bootstrap and wraps the complete graph execution in exactly one callback without parsing, copying, persisting, observing or returning its opaque synthetic bytes. It creates all seven synthetic source-truth providers, 17 operation callbacks and three real Playwright engines only inside the digest-pinned child, executes all 22 stages/43 observations/40 assertions once, and physically closes pages, contexts, browsers and providers before the process result; Chromium uses an ephemeral loopback-only TLS page host and Firefox/WebKit use exact-origin interception, with no external network, real credential, cloud or live staging authority |
 | [`browser-relay-chromium-scenario/`](browser-relay-chromium-scenario/) | Dormant complete Chromium page-scenario driver | Owns two pages and inputs, closes the real 18-fact receipt, and proves one native BFCache restore through trusted persisted page events plus exact CDP navigation; its projection port is composed offline, while live authority remains absent |
 | [`browser-relay-playwright-bridge/`](browser-relay-playwright-bridge/) | Dormant page-to-receipt Playwright bridge | Lazily drives the phased host and real receipt producer for Firefox/WebKit; its legacy Chromium path stays blocked before page or private-input acquisition because high-level Playwright cannot prove native BFCache restoration |
 | [`browser-relay-page-receipt/`](browser-relay-page-receipt/) | Dormant browser-owned source receipt producer | Revision 2 reduces 18 exact Chromium page facts or three secondary-browser facts, cross-checks cumulative host lifecycle evidence, typed call outcomes and terminal cleanup, is bound to the bridge and now combines offline with every independent source |
@@ -1088,34 +1088,47 @@ the real claim-bound adapter.
 Construction, validation and import remain inert. The adjacent
 [`browser-relay-trusted-provider-process/`](browser-relay-trusted-provider-process/)
 now owns one operation in one fresh detached POSIX process. The parent passes
-only a digest-pinned absolute container path and receives one closed operation
-result over two length-prefixed raw pipes; no provider, browser handle,
-environment, credential or arbitrary IPC method crosses the boundary. The
-container's fixed v1 framing binds one canonical manifest plus ordered raw
+only a digest-pinned absolute container path at construction. At execution it
+claims one mandatory bounded Buffer, immediately overwrites the caller view and
+receives only one closed operation result. Protocol v2 uses fd3/fd4 for bounded
+length-prefixed JSON control/result frames and fd5 for one raw binary authority
+envelope; no provider, browser handle, environment value or arbitrary IPC method
+crosses the boundary. The container's fixed v1 framing binds one canonical manifest plus ordered raw
 payloads. It is bounded to 32 MiB overall, a 256-KiB manifest, 512 files, 8 MiB
 per file and 256 UTF-8 bytes per safe relative path; exact inventory and
 per-file SHA-256 checks reject structural or payload drift. The parent creates
 one empty canonical `0700` temporary workspace before spawn. The worker
 materializes only verified bytes into `0700` directories and `0400` files, then
 imports the entry through its file URL, permitting reviewed relative and package
-dependencies. Ready, operation and cancellation deadlines are bounded. Abort
+dependencies. After verified import the child sends `ready`; the parent writes and
+closes fd5; the child validates exact EOF and descriptor close and returns
+`authority_ready`; only then can the parent send `execute`. Ready, operation and
+cancellation deadlines are bounded. Abort
 is forwarded cooperatively and then terminates the complete process group,
-while crashes, malformed frames and ambiguous disconnects fail closed without
-restart or replay. The worker closes the owner before its terminal message.
-Both child and parent validate the result, and the public promise resolves only
-after the real process and pipes close, process-group settlement, and successful
+while crashes, malformed frames or authority envelopes, missing/duplicate
+acknowledgements and ambiguous disconnects fail closed without restart or replay.
+The worker exposes only a frozen null-prototype `{consume}` capability to the
+owner, requires exactly one asynchronous callback, overwrites its reachable Buffer
+after settlement and closes the owner before its terminal message. Both child and
+parent validate the result, and the public promise resolves only after the real
+process and all three pipes close, process-group settlement, and successful
 parent-owned workspace removal. This is process and lifecycle isolation for
 trusted same-user code, not an operating-system sandbox: the child retains the
 account's filesystem and network authority, and parent-crash workspace cleanup
-is not guaranteed. A real offline child now loads the installed
+is not guaranteed. Buffer overwrite is best-effort application-memory hygiene,
+not secure erasure, and deliberate caller copies remain replayable. A real offline child now loads the installed
 `playwright-core` 1.62.1 package tree and resolves package/browser metadata.
-That proof includes no browser binary or launch and performs no network, cloud
-or live request. The adjacent
+That proof includes no browser binary or launch, uses synthetic authority only,
+and performs no network, cloud or live request. The adjacent
 [`browser-relay-trusted-provider-owner/`](browser-relay-trusted-provider-owner/)
 now supplies the complete dependency-bearing artifact that this process was
-designed to own. Its zero-argument production entry constructs seven distinct
-synthetic source-truth providers, all 17 operation callbacks and the full
-Chromium/Firefox/WebKit page graph only after the child receives `execute`.
+designed to own. Its production entry requires the worker-created frozen
+`{ authority: { consume } }` bootstrap and wraps the whole operation in one
+consume callback. It validates only Buffer identity and bounds, and never parses,
+copies, stringifies, persists, observes or returns the opaque synthetic bytes.
+It constructs seven distinct synthetic source-truth providers, all 17 operation
+callbacks and the full Chromium/Firefox/WebKit page graph only after the child
+receives `execute`.
 All 22 stages, 43 observations and 40 assertions close into the existing single
 operation result before provider, context and browser references are released.
 Chromium deliberately installs no Playwright route handler: an ephemeral
@@ -1135,7 +1148,9 @@ are excluded.
 The dedicated workflow proves the graph using three real installed engines and
 the production page runtime while recording zero DNS, external network, cloud,
 Hosting publication and live staging executions. This remains trusted same-user
-code rather than an OS sandbox, and it has no credential-discovery surface.
+code rather than an OS sandbox, and it has no credential-discovery surface. A
+short-lived audience-restricted real authority source, its seven-provider
+attenuation, and a zero-trust relay design remain unsolved and separately gated.
 Concrete external source-truth transports, staging Hosting publication and the
 single authorized live matrix execution remain open.
 The adjacent
