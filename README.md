@@ -4,6 +4,10 @@ Miakapp V4 is an agent-native, privacy-conscious home interface. The repository 
 
 The browser app is an interactive product preview. It deliberately makes no cloud, relay, or real-home connection yet. Its UI is nevertheless rendered through the production `miakapp.component/1` semantic contract: untrusted components cannot inject HTML, CSS, URLs, or credentials into the trusted host.
 
+The latest `main` preview is published at
+<https://miakapp.github.io/Miakapp-V3/>. It uses fictional local data and is safe
+to explore without an account or Home connection.
+
 ## Run the browser host
 
 Requirements: Node.js 22.22 or newer and Bun 1.2.23.
@@ -23,7 +27,7 @@ bun run check:web
 
 This runs ESLint, TypeScript, Vitest, and a production Vite build. The protocol and infrastructure packages have their own checks exposed through the root `package.json`.
 
-The root Firebase alias intentionally remains the untouched Miakapp V3 production project for staging-policy verification. The V4 preview has no hosting target or deploy command; do not run `firebase deploy` from this repository.
+The root Firebase alias intentionally remains the untouched Miakapp V3 production project for staging-policy verification. The public preview is deployed only through the GitHub Pages workflow; do not run `firebase deploy` from this repository.
 
 ## Repository map
 
