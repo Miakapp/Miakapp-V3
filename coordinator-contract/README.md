@@ -4,7 +4,7 @@ This repository-local conformance package makes the public coordinator and tempo
 migration-adapter boundary from [RFC 0003](../docs/rfcs/0003-coordinator-sdk-and-migration.md)
 executable before either implementation repository adopts it.
 
-It is a contract kit, not the `miakapi` SDK, a relay client, a Node-RED node, or a
+It is a contract kit, not the `miakapi` SDK, a relay client, a runtime-specific adapter, or a
 production migration tool. Passing its self-tests proves that the corpus and
 runner are internally consistent. A future implementation conforms only after it
 is installed as the subject and passes its complete named profile.
@@ -41,7 +41,7 @@ but callable action paths are outside the mode. In `recorded_action`, device
 commands and notification intents must pass through the bounded recorder.
 
 This capability shape catches accidental calls through injected dependencies. It
-cannot make arbitrary Node-RED code safe merely by naming it a dry run. A
+cannot make arbitrary source-system code safe merely by naming it a dry run. A
 production-shaped action comparison still requires a terminable process boundary
 and structural replacement of every downstream effect adapter.
 
