@@ -4,7 +4,7 @@ Status: Accepted
 
 Date: 2026-08-31
 
-Last updated: 2026-09-04 — audience-bound browser relay credentials specified.
+Last updated: 2026-09-13 — authenticated read of the active component pointer.
 
 ## 1. Scope
 
@@ -861,9 +861,14 @@ No relay token is accepted. The authorized publisher may:
 - request one short-lived upload capability bound to the complete home, release,
   ABI, requirements, digest and size tuple;
 - finalize only that immutable content-addressed object after delivery-path
-  read-back verifies exact size and digest; and
+  read-back verifies exact size and digest;
+- read the active `components/{home}` pointer and its generation; and
 - compare-and-set `components/{home}` from an expected generation to a strictly
   greater generation using the exact RFC 0002 pointer schema.
+
+The read grants no publication authority of its own. It reports state that the
+publisher is already entitled to act on, and it never substitutes for the
+compare-and-set that follows it.
 
 The upload capability expires within fifteen minutes, permits one object name and
 cannot overwrite an existing digest. It contains no bucket-wide credential.
@@ -969,6 +974,65 @@ distinguishes whether a lost upload `PUT` took effect. `GET
 and `finalized_at`, or uniform `invalid_artifact` when no matching finalized
 record exists. A publisher that lost the finalize response uses this second read
 before deciding whether another action is necessary.
+
+The same publisher authorization protects one further read, which answers what is
+live rather than what was finalized. `GET /v1/homes/{homeId}/component-pointer`
+takes no body, no query and no idempotency key, and returns the closed schema
+`miakapp.component-pointer-state/1`:
+
+```json
+{
+  "schema": "miakapp.component-pointer-state/1",
+  "generation": 42,
+  "pointer": {
+    "schema": "miakapp.component-pointer/1",
+    "home_id": "home_01J...",
+    "generation": 42,
+    "release": "2026-08-30.1",
+    "abi": "miakapp.component/1",
+    "url": "https://control.example/v1/components/<digest>.js",
+    "sha256": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE",
+    "size": 348210,
+    "requires": {
+      "state_read": ["global.temperature"],
+      "event_subscribe": [],
+      "event_publish": [],
+      "call": ["lighting.set"],
+      "presentation": []
+    }
+  }
+}
+```
+
+`pointer` is the exact RFC 0002 §7.1 document as stored, or `null` for a home
+that has never activated a release. `generation` repeats the pointer generation,
+and is exactly `0` in that never-published case, so a publisher always has a
+number to supply as `expected_generation` without special-casing an absent
+document. When `pointer` is non-null its `generation` and the envelope
+`generation` are equal; a reader that finds them different MUST treat the
+response as invalid rather than choose one. The response is derived from the
+same stored document the RFC 0002 host reads, never recomputed from release
+records, and it carries `Cache-Control: no-store` under Section 4.2. An unknown
+home is `home_not_found`; a quarantined digest does not hide the pointer, since
+the caller needs to see what is live in order to roll away from it.
+
+This read is advisory and is not a reservation. It takes no lock, has no bearing
+on which publisher activates next, and never makes the subsequent compare-and-set
+unnecessary: a publisher that reads generation N and then activates N+1 may still
+receive `generation_conflict`, and that refusal remains correct. Section 13.1's
+prohibition on last-write-wins is unaffected, because activation stays the only
+operation that establishes a generation.
+
+The read exists because Section 17 already directs a caller whose activation
+response was lost to reconcile against the active pointer, and because the
+digest-keyed `component-releases/{sha256}` read cannot serve that purpose: it
+reports that an artifact was finalized, which is equally true whether or not the
+activation transaction committed, and a publisher recovering from an uncertain
+outcome may not know the digest that is currently live. The pointer is also
+authenticated platform data reachable by an enrolled browser client, but a
+`components:publish` token is not a Firebase session, so a non-browser publisher
+has no path to it. Requiring one would mean issuing publication tooling a
+broader credential than publication needs, which Section 2 forbids.
 
 Finally `POST /v1/homes/{homeId}/component-releases:activate` accepts exactly:
 
@@ -1161,7 +1225,10 @@ Push delivery may already have reached FCM when a response is lost. Component
 activation may already have committed. For each such operation, a transport loss
 is `outcome_unknown`; the caller reconciles through the exact Section 13 metadata
 reads, audit or the RFC 0002 active pointer instead of automatically repeating
-the effect.
+the effect. For a lost activation response that reconciliation is the Section
+13.2 `component-pointer` read: a publisher compares the live generation and
+digest against the activation it attempted, and repeats the compare-and-set only
+when the pointer shows the attempt did not commit.
 
 ## 18. Emulator and conformance requirements
 
@@ -1199,7 +1266,10 @@ contract harness MUST prove:
     capability, complete `(home, release, ABI, requirements, digest, size,
     publisher)` binding, byte-derived delivery-path read-back, delayed
     reconciliation with fresh authority, generation CAS, quarantine and rollback
-    to an already verified digest;
+    to an already verified digest, and an authenticated pointer read that returns
+    generation `0` with a null pointer before any activation, the exact stored
+    pointer afterwards, and `generation_conflict` when a compare-and-set uses a
+    generation that another activation has since superseded;
 11. bounded JSON, files, audit projections and the exact 16-home, four-live-push-
     challenge, 16-destination, 64-active-and-retained-key, structurally bounded
     16-active-grant and 256-retained-grant boundaries, including causal active-
