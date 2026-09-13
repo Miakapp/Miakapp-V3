@@ -213,6 +213,20 @@ export interface ComponentPointerRepresentation extends ComponentUploadInput {
   readonly url: string;
 }
 
+/**
+ * What is live for a home, as opposed to what was finalized.
+ *
+ * `generation` is `0` with a null pointer before any activation, which is the
+ * value a publisher passes as `expected_generation` for a first publication. It
+ * is advisory: activation remains a compare-and-set and may still refuse a
+ * generation this read reported.
+ */
+export interface ComponentPointerStateRepresentation {
+  readonly schema: 'miakapp.component-pointer-state/1';
+  readonly generation: number;
+  readonly pointer: ComponentPointerRepresentation | null;
+}
+
 export type ExchangeRequest =
   | {
     readonly purpose: 'relay';
