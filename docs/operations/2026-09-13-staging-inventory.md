@@ -80,14 +80,35 @@ its task, which is a slower and more deliberate problem to unwind.
 import * as miakapiBrowserImplementation from '../../infrastructure/staging/browser-relay-page/vendor/miakapi-browser-v4.mjs';
 ```
 
-The application imports an **84 KB minified vendored bundle, with no type
-declarations, from inside a staging evidence directory**, and the comment says
-plainly why: updating the real dependency would have disturbed evidence that the
-staging suite seals.
+The application imports an **84 KB minified vendored bundle from inside a
+staging evidence directory**, and the comment says plainly why: updating the
+real dependency would have disturbed evidence that the staging suite seals. That
+is the scaffolding constraining the product.
 
-That is the scaffolding constraining the product. Whatever is decided about the
-rest of this directory, this import should become a dependency on
-`miakapi/browser` — the actual published package — with types.
+To be precise about the risk, because the obvious reading is wrong: the
+application is **not** untyped. The rest of `miakapi-browser.ts` hand-declares
+the SDK surface it uses — `BrowserClient`, `BrowserStateSnapshot`,
+`BrowserReadySession` and the rest — and casts the two imported factories to it.
+The `@ts-expect-error` covers only the import line.
+
+The real exposure is **silent drift**. Those declarations are a hand-written
+duplicate of `miakapi/browser`'s public types, and nothing checks the copy
+against the original. The SDK can change shape and the application will keep
+compiling against a description of a version it no longer runs. `miakapi` is not
+in `package.json` at all, so there is nothing to check against even in principle.
+
+Fixing this needs a dependency decision that is not mine to take:
+
+- publish `miakapi` and depend on it normally — clean, but the package is
+  deliberately `private: true` until the control plane it talks to is deployed;
+- depend on `Miakapp/MiakAPI` as a pinned git dependency, which needs a `prepare`
+  script because `dist/` is not committed;
+- keep vendoring, but move the bundle out of the evidence directory and generate
+  the type declarations from the SDK instead of hand-writing them.
+
+The third is the smallest, and it is still not a tidy-up: four staging files
+(`validate.mjs`, and `browser-relay-page/{guard,artifact,page}.mjs`) pin that
+exact path and digest, so moving the file edits the evidence machinery itself.
 
 ## What it costs
 
@@ -134,9 +155,9 @@ It is not the reason anything is slow.
 
 ## Suggested order of work
 
-1. **Replace the vendored import** in `src/app/miakapi-browser.ts` with a real
-   dependency on `miakapi/browser`. Small, self-contained, and it unhooks the
-   application from the scaffolding.
+1. **Close the drift risk** in `src/app/miakapi-browser.ts`, by whichever of the
+   three options above is acceptable. It is the only place where the scaffolding
+   reaches into the product, and the failure mode is silent.
 2. **Rewrite `infrastructure/staging/README.md`.** Its status section is a
    single run-on sentence of retired, converged and rebased states. Nobody can
    act on it, which is part of why the directory grew unchecked.
