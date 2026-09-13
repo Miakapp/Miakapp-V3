@@ -26,7 +26,7 @@ describe('public fixture privacy boundary', () => {
     ['active_endpoint', { value: 'mqtt://broker.synthetic.test/topic' }],
     ['non_reserved_url', { value: 'https://public.example.com/resource' }],
     ['non_synthetic_time', { value: '2031-01-02T03:04:05Z' }],
-    ['node_red_export', { type: 'function', z: 'syn_flow_example', wires: [] }],
+    ['automation_graph_export', { type: 'function', z: 'syn_graph_example', wires: [] }],
   ] as const) {
     test(`detects ${code}`, () => {
       expect(scanPublicFixture(candidate).map((finding) => finding.code)).toContain(code);
