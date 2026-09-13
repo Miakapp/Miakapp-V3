@@ -91,38 +91,69 @@ Why this shape:
 
 Open: certificate lifetime, and whether an unenrolled user may hold one at all.
 
-### 4.3 Transport: this is the hard part, and it is not a detail
+### 4.3 Transport: Local Network Access, with a fallback for the browsers that lack it
 
-The web app is served over HTTPS. A browser refuses `ws://192.168.1.x` from an
-HTTPS page as mixed content, and `wss://192.168.1.x` requires a certificate
-valid for that name. There is no way around this from page JavaScript.
+The web app is served over HTTPS, so the naive obstacle is that a browser
+refuses `ws://192.168.1.x` from an HTTPS page as mixed content, and
+`wss://192.168.1.x` needs a certificate valid for that name.
 
-Two workable answers:
+**Local Network Access removes that obstacle where it is implemented.** The
+[WICG specification](https://wicg.github.io/local-network-access/) gates
+requests to local and loopback addresses behind the `local-network` and
+`loopback-network` permissions, and **grants relax mixed-content blocking for
+exactly those requests** — the specification says this is deliberate, because
+local devices generally cannot obtain publicly trusted certificates. WebSockets
+are in scope, alongside `fetch`, WebTransport and WebRTC. Private IP literals
+such as `192.168.0.1` and `.local` names do not even need
+`Request.targetAddressSpace` set; the relaxation applies once permission is
+granted.
 
-**(A) Public DNS name pointing at a private address, with a real certificate.**
-`<coordinator-id>.local.miakapp.app` resolves to the coordinator's LAN address;
-the coordinator holds a Let's Encrypt certificate obtained through DNS-01, with
-the platform delegating or brokering the challenge. This is the proven path:
-Plex (`*.plex.direct`), Home Assistant Cloud and UniFi all ship variants of it.
+For this design that means a plain `ws://192.168.1.50:<port>` from the
+authenticated app, behind one permission prompt. **No DNS, no certificate, no
+ACME, no platform-operated zone** — an entire ongoing operational commitment
+disappears from the proposal, and the offline story stops depending on a
+resolver being reachable. This is strictly better than the DNS-and-certificate
+approach an earlier draft of this document recommended.
 
-Its honest limitation: **resolving a public name needs a resolver.** With the
-WAN link physically cut and no cached DNS answer, the name does not resolve, and
-a browser cannot be told to skip resolution. That is exactly the scenario in the
-goal statement, so (A) alone does not fully deliver it. Closing the gap means a
-resolver that survives the outage — the coordinator answering for its own name
-on the LAN, or a documented router DNS entry. That has to be designed, not
-assumed.
+The limitation is availability, not capability:
 
-**(B) WebRTC data channel.** DTLS with a self-signed certificate is legitimate
-here, so there is no PKI and no mixed-content problem. The cost is signalling:
-ICE parameters must be exchanged. On a single subnet no STUN or TURN is needed,
-and host candidates plus the DTLS fingerprint can be cached from the last online
-session, which makes a fully offline start possible. More engineering, fewer
-external dependencies, and it does not need DNS at all.
+| | Status |
+| --- | --- |
+| Chrome, Chrome Android, Edge | 142, since October 2025 |
+| Firefox | not implemented |
+| Safari | not implemented |
+| Baseline | limited; MDN marks the feature experimental |
 
-**Recommendation: ship (A) first, design the session layer so (B) can replace
-the transport without touching anything above it.** Do not advertise
-"works with the internet cut" until the resolver question is answered.
+Safari's absence is the one that matters: every browser on iOS is WebKit, so no
+iPhone gets local access through this path. For a home application that is not a
+rounding error.
+
+So the transport is a ladder, chosen per coordinator at connect time:
+
+1. **Local Network Access**, where the permission can be granted. Cheapest by a
+   wide margin and needs nothing from the platform.
+2. **WebRTC data channel**, everywhere else. DTLS with a self-signed
+   certificate is legitimate, so there is still no PKI. The cost is signalling:
+   ICE parameters must be exchanged, but on a single subnet no STUN or TURN is
+   needed, and host candidates plus the DTLS fingerprint can be cached from the
+   last online session, which keeps an offline start possible. Note that on
+   Chromium, WebRTC to a local address is itself gated by Local Network Access,
+   so this path also prompts there.
+3. **The relay**, as today.
+
+Both local rungs carry a consequence §4.2 must absorb: a plain `ws://` LAN
+socket has **no transport encryption**, and a self-signed DTLS peer is
+authenticated only by a fingerprint the client already trusts. Anything on the
+home network can otherwise observe or spoof a session that opens a gate. The
+device-bound key pair therefore has to carry an authenticated key exchange and
+per-session encryption, not merely prove identity at connect time. That is a
+larger ask than §4.2 as first written, and it is the price of dropping TLS.
+
+**Hardening, easy to get wrong:** the component runtime broker is a cross-origin
+iframe running home-authored code. It must never reach the local network. The
+default `local-network` allowlist is `self`, so a cross-origin iframe does not
+inherit the permission, but the host should state it explicitly with
+`Permissions-Policy: local-network=(self)` rather than rely on a default.
 
 ### 4.4 Discovery: the relay publishes candidates, the client caches and races
 
@@ -190,21 +221,28 @@ role; it does not retire it.
    aggregation, per-coordinator staleness, single-session rule. Ships over the
    relay only, with no behaviour change for users.
 4. **Local credentials** (§4.2), still over the relay.
-5. **Transport (A)** with certificate issuance and candidate publication.
-6. **Offline resolver**, and only then the availability claim.
+5. **Local Network Access transport** with candidate publication and the
+   authenticated session encryption §4.3 requires. Chromium only, and honestly
+   labelled as such in the product.
+6. **WebRTC fallback**, which is what makes the feature true on iOS. Only once
+   both rungs exist does the availability claim hold for a whole household.
 
 Steps 2 and 3 carry most of the risk and neither needs a single new network
 path. Step 3 is worth doing on its own merits even if local-first were dropped.
 
 ## 8. Open questions
 
-- Does the platform run a DNS zone for `local.miakapp.app`, and who operates the
-  ACME brokering? This is an ongoing operational commitment, not a one-off.
+- Which authenticated key exchange over the unencrypted local socket? Noise or a
+  small explicit ECDH-plus-AEAD construction, and who reviews it. This is now on
+  the critical path, since §4.3 no longer gets confidentiality from TLS.
+- When a user denies the Local Network Access prompt, what does the product do?
+  A permission that can be refused permanently needs a path back that is not
+  "reinstall your browser".
 - Local session certificate lifetime, and revocation propagation when the device
   is offline and the user's access was withdrawn.
 - May an unenrolled user hold a local certificate, or is `miakapp.join` online-only?
-- Does a self-hosted relay deployment get the same DNS and certificate service,
-  or is local-first a platform-hosted feature?
+- Is local-first available to a self-hosted relay deployment? Nothing in §4.3
+  needs a platform service any more, so the honest default is yes.
 - What happens to push during an outage? Nothing in this document addresses it,
   and a home that is locally operable but silently missing alerts is a worse
   failure than one that is visibly offline.
