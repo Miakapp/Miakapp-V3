@@ -1,13 +1,37 @@
 name: Staging manifest safety gate
 
+# This gate runs `terraform providers lock -platform=darwin_arm64
+# -platform=linux_amd64` across eight roots, which downloads both platforms of
+# every provider on every run — several gigabytes, and essentially all of the
+# job's wall clock. With providers already present the same eight roots finish
+# `init`, `validate` and `test` in about twenty seconds.
+#
+# `terraform providers lock` deliberately ignores the plugin cache directory, so
+# caching cannot fix it. The gate is therefore scoped to the changes it can
+# actually be affected by, rather than run on every pull request.
 on:
   push:
     branches:
       - main
+    paths:
+      - '.github/workflows/staging-manifest.yml'
+      - 'infrastructure/staging/**'
+      - 'package.json'
+      - 'bun.lock'
   pull_request:
+    paths:
+      - '.github/workflows/staging-manifest.yml'
+      - 'infrastructure/staging/**'
+      - 'package.json'
+      - 'bun.lock'
 
 permissions:
   contents: read
+
+# A superseded push should not leave a half-hour job running to completion.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   validate:
