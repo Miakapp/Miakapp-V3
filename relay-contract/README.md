@@ -106,19 +106,38 @@ scenario cites the clause it holds the subject to.
 `send` payload may contain `{"$": "name"}` placeholders resolved from an earlier
 `capture`.
 
+Bringing a home up to a declared, enrolled state takes twenty frames, so a
+scenario may name a **prelude** instead of repeating them. `preludes` holds the
+shared sequences and a scenario's own `steps` are appended to the one it names,
+which keeps each scenario's file entry to the behaviour it actually pins down.
+
+| Prelude | Leaves the home |
+| --- | --- |
+| `declared-home` | one coordinator, five slices activated, no user |
+| `enrolled-home` → `enrolled-user` | the same plus an enrolled, granted user |
+
 Frames are encoded and decoded with `protocol/typescript`, the same codec
 already certified byte-for-byte against the Go implementation. The runner
 therefore adds no second opinion about the wire format.
 
 ## Status
 
-Eleven scenarios, covering the handshake, credential and version refusals,
-direction and connection-state enforcement, the five-slice declaration
-transaction, and state disclosure to a granted and an ungranted user. The Go
-relay passes all eleven.
+Nineteen scenarios covering the handshake for both roles, credential, version
+and home-change refusals, direction and connection-state enforcement, the
+five-slice declaration transaction, state disclosure to a granted and an
+ungranted user, the call round trip with its relay-constructed principal, event
+delivery in both directions with subscription enforcement, reauthentication and
+resynchronization, and coordinator presence on disconnect. The Go relay passes
+all nineteen.
 
-This is a beginning, not the full behavioural surface. `Miakapp-Server` holds 31
-black-box relay tests whose scenarios belong here; extracting the rest is the
-remaining work. Three areas appear untested even there — `GOAWAY` and draining,
-version-range negotiation beyond a flat refusal, and the call lifecycle under
-disconnect — and those need writing rather than extracting.
+Several of these assert the security property rather than the happy path: the
+principal on a dispatched call and on a forwarded event is constructed by the
+relay from verified identity, never echoed from the sender, and an unsubscribed
+user receives nothing.
+
+This is not yet the full behavioural surface. `Miakapp-Server` holds 31
+black-box relay tests; the concurrency-sensitive ones — colliding activations
+resolving to exactly one winner, replacement fencing in-flight calls — need an
+ordered corpus to gain a way to express concurrency before they can be
+extracted. `GOAWAY` and draining, and version-range negotiation beyond a flat
+refusal, appear untested even there and need writing rather than extracting.

@@ -336,203 +336,8 @@
     {
       "name": "declaration/five slices activate and enrol the user",
       "requires": "RFC 0001 §7.5",
-      "steps": [
-        {
-          "action": "connect",
-          "peer": "coordinator"
-        },
-        {
-          "action": "send",
-          "peer": "coordinator",
-          "opcode": "Hello",
-          "payload": [
-            1,
-            0,
-            0,
-            2,
-            "conformance.coordinator.primary",
-            [
-              "primary"
-            ]
-          ]
-        },
-        {
-          "action": "expect",
-          "peer": "coordinator",
-          "opcode": "Welcome"
-        },
-        {
-          "action": "expect",
-          "peer": "coordinator",
-          "opcode": "PresenceSnapshot"
-        },
-        {
-          "action": "send",
-          "peer": "coordinator",
-          "opcode": "StateSync",
-          "payload": [
-            1,
-            [
-              [
-                "home.temperature",
-                20
-              ]
-            ]
-          ]
-        },
-        {
-          "action": "expect",
-          "peer": "coordinator",
-          "opcode": "StateSyncOk",
-          "match": {
-            "0": 1
-          }
-        },
-        {
-          "action": "send",
-          "peer": "coordinator",
-          "opcode": "StateAclSync",
-          "payload": [
-            2,
-            [
-              [
-                "user-a",
-                [
-                  "home.*"
-                ]
-              ]
-            ]
-          ]
-        },
-        {
-          "action": "expect",
-          "peer": "coordinator",
-          "opcode": "StateAclOk",
-          "match": {
-            "0": 2
-          }
-        },
-        {
-          "action": "send",
-          "peer": "coordinator",
-          "opcode": "EventSync",
-          "payload": [
-            3,
-            [
-              [
-                "home.alert",
-                3
-              ]
-            ]
-          ]
-        },
-        {
-          "action": "expect",
-          "peer": "coordinator",
-          "opcode": "EventSyncOk",
-          "match": {
-            "0": 3
-          }
-        },
-        {
-          "action": "send",
-          "peer": "coordinator",
-          "opcode": "EventAclSync",
-          "payload": [
-            4,
-            [
-              [
-                "user-a",
-                [
-                  "home.alert"
-                ],
-                [
-                  "home.alert"
-                ]
-              ]
-            ]
-          ]
-        },
-        {
-          "action": "expect",
-          "peer": "coordinator",
-          "opcode": "EventAclOk",
-          "match": {
-            "0": 4
-          }
-        },
-        {
-          "action": "send",
-          "peer": "coordinator",
-          "opcode": "FunctionSync",
-          "payload": [
-            5,
-            [
-              "home.set"
-            ]
-          ]
-        },
-        {
-          "action": "expect",
-          "peer": "coordinator",
-          "opcode": "FunctionSyncOk",
-          "match": {
-            "0": 5
-          }
-        },
-        {
-          "action": "connect",
-          "peer": "user"
-        },
-        {
-          "action": "send",
-          "peer": "user",
-          "opcode": "Hello",
-          "payload": [
-            1,
-            0,
-            0,
-            1,
-            "conformance.user.a",
-            [
-              "conformance-home"
-            ]
-          ]
-        },
-        {
-          "action": "expect",
-          "peer": "user",
-          "opcode": "Welcome",
-          "match": {
-            "4": true
-          }
-        },
-        {
-          "action": "expect",
-          "peer": "user",
-          "opcode": "StateDict"
-        },
-        {
-          "action": "expect",
-          "peer": "user",
-          "opcode": "StateSnapshot"
-        },
-        {
-          "action": "expect",
-          "peer": "user",
-          "opcode": "TopicDict"
-        },
-        {
-          "action": "expect",
-          "peer": "user",
-          "opcode": "FunctionDict"
-        },
-        {
-          "action": "expect",
-          "peer": "coordinator",
-          "opcode": "PresenceChange"
-        }
-      ]
+      "prelude": "enrolled-user",
+      "steps": []
     },
     {
       "name": "declaration/slices out of order are refused",
@@ -596,191 +401,8 @@
     {
       "name": "state/a coordinator set reaches the granted user as a patch",
       "requires": "RFC 0001 §7.2, §8.1",
+      "prelude": "enrolled-user",
       "steps": [
-        {
-          "action": "connect",
-          "peer": "coordinator"
-        },
-        {
-          "action": "send",
-          "peer": "coordinator",
-          "opcode": "Hello",
-          "payload": [
-            1,
-            0,
-            0,
-            2,
-            "conformance.coordinator.primary",
-            [
-              "primary"
-            ]
-          ]
-        },
-        {
-          "action": "expect",
-          "peer": "coordinator",
-          "opcode": "Welcome"
-        },
-        {
-          "action": "expect",
-          "peer": "coordinator",
-          "opcode": "PresenceSnapshot"
-        },
-        {
-          "action": "send",
-          "peer": "coordinator",
-          "opcode": "StateSync",
-          "payload": [
-            1,
-            [
-              [
-                "home.temperature",
-                20
-              ]
-            ]
-          ]
-        },
-        {
-          "action": "expect",
-          "peer": "coordinator",
-          "opcode": "StateSyncOk",
-          "capture": {
-            "epoch": "1",
-            "pathId": "3.0.0"
-          }
-        },
-        {
-          "action": "send",
-          "peer": "coordinator",
-          "opcode": "StateAclSync",
-          "payload": [
-            2,
-            [
-              [
-                "user-a",
-                [
-                  "home.*"
-                ]
-              ]
-            ]
-          ]
-        },
-        {
-          "action": "expect",
-          "peer": "coordinator",
-          "opcode": "StateAclOk"
-        },
-        {
-          "action": "send",
-          "peer": "coordinator",
-          "opcode": "EventSync",
-          "payload": [
-            3,
-            [
-              [
-                "home.alert",
-                3
-              ]
-            ]
-          ]
-        },
-        {
-          "action": "expect",
-          "peer": "coordinator",
-          "opcode": "EventSyncOk"
-        },
-        {
-          "action": "send",
-          "peer": "coordinator",
-          "opcode": "EventAclSync",
-          "payload": [
-            4,
-            [
-              [
-                "user-a",
-                [
-                  "home.alert"
-                ],
-                [
-                  "home.alert"
-                ]
-              ]
-            ]
-          ]
-        },
-        {
-          "action": "expect",
-          "peer": "coordinator",
-          "opcode": "EventAclOk"
-        },
-        {
-          "action": "send",
-          "peer": "coordinator",
-          "opcode": "FunctionSync",
-          "payload": [
-            5,
-            [
-              "home.set"
-            ]
-          ]
-        },
-        {
-          "action": "expect",
-          "peer": "coordinator",
-          "opcode": "FunctionSyncOk"
-        },
-        {
-          "action": "connect",
-          "peer": "user"
-        },
-        {
-          "action": "send",
-          "peer": "user",
-          "opcode": "Hello",
-          "payload": [
-            1,
-            0,
-            0,
-            1,
-            "conformance.user.a",
-            [
-              "conformance-home"
-            ]
-          ]
-        },
-        {
-          "action": "expect",
-          "peer": "user",
-          "opcode": "Welcome",
-          "match": {
-            "4": true
-          }
-        },
-        {
-          "action": "expect",
-          "peer": "user",
-          "opcode": "StateDict"
-        },
-        {
-          "action": "expect",
-          "peer": "user",
-          "opcode": "StateSnapshot"
-        },
-        {
-          "action": "expect",
-          "peer": "user",
-          "opcode": "TopicDict"
-        },
-        {
-          "action": "expect",
-          "peer": "user",
-          "opcode": "FunctionDict"
-        },
-        {
-          "action": "expect",
-          "peer": "coordinator",
-          "opcode": "PresenceChange"
-        },
         {
           "action": "send",
           "peer": "coordinator",
@@ -819,135 +441,8 @@
     {
       "name": "state/an ungranted user sees no state entry",
       "requires": "RFC 0001 §8.1",
+      "prelude": "declared-home",
       "steps": [
-        {
-          "action": "connect",
-          "peer": "coordinator"
-        },
-        {
-          "action": "send",
-          "peer": "coordinator",
-          "opcode": "Hello",
-          "payload": [
-            1,
-            0,
-            0,
-            2,
-            "conformance.coordinator.primary",
-            [
-              "primary"
-            ]
-          ]
-        },
-        {
-          "action": "expect",
-          "peer": "coordinator",
-          "opcode": "Welcome"
-        },
-        {
-          "action": "expect",
-          "peer": "coordinator",
-          "opcode": "PresenceSnapshot"
-        },
-        {
-          "action": "send",
-          "peer": "coordinator",
-          "opcode": "StateSync",
-          "payload": [
-            1,
-            [
-              [
-                "home.temperature",
-                20
-              ]
-            ]
-          ]
-        },
-        {
-          "action": "expect",
-          "peer": "coordinator",
-          "opcode": "StateSyncOk"
-        },
-        {
-          "action": "send",
-          "peer": "coordinator",
-          "opcode": "StateAclSync",
-          "payload": [
-            2,
-            [
-              [
-                "user-a",
-                [
-                  "home.*"
-                ]
-              ]
-            ]
-          ]
-        },
-        {
-          "action": "expect",
-          "peer": "coordinator",
-          "opcode": "StateAclOk"
-        },
-        {
-          "action": "send",
-          "peer": "coordinator",
-          "opcode": "EventSync",
-          "payload": [
-            3,
-            [
-              [
-                "home.alert",
-                3
-              ]
-            ]
-          ]
-        },
-        {
-          "action": "expect",
-          "peer": "coordinator",
-          "opcode": "EventSyncOk"
-        },
-        {
-          "action": "send",
-          "peer": "coordinator",
-          "opcode": "EventAclSync",
-          "payload": [
-            4,
-            [
-              [
-                "user-a",
-                [
-                  "home.alert"
-                ],
-                [
-                  "home.alert"
-                ]
-              ]
-            ]
-          ]
-        },
-        {
-          "action": "expect",
-          "peer": "coordinator",
-          "opcode": "EventAclOk"
-        },
-        {
-          "action": "send",
-          "peer": "coordinator",
-          "opcode": "FunctionSync",
-          "payload": [
-            5,
-            [
-              "home.set"
-            ]
-          ]
-        },
-        {
-          "action": "expect",
-          "peer": "coordinator",
-          "opcode": "FunctionSyncOk"
-        },
         {
           "action": "connect",
           "peer": "other"
@@ -996,6 +491,657 @@
           "opcode": "FunctionDict"
         }
       ]
+    },
+    {
+      "name": "call/a granted call round-trips and carries a non-spoofable principal",
+      "requires": "RFC 0001 §5.4, §7.4, §8.3",
+      "prelude": "enrolled-user",
+      "steps": [
+        {
+          "action": "send",
+          "peer": "user",
+          "opcode": "Call",
+          "payload": [
+            11,
+            0,
+            null,
+            {
+              "$": "functionId"
+            },
+            5000,
+            null,
+            1,
+            {
+              "temperature": 22
+            }
+          ]
+        },
+        {
+          "action": "expect",
+          "peer": "coordinator",
+          "opcode": "CallDispatch",
+          "match": {
+            "1.0": 1,
+            "1.1": "user-a",
+            "1.3": null,
+            "1.4": "user-a@example.test"
+          },
+          "capture": {
+            "calleeId": "0"
+          }
+        },
+        {
+          "action": "expect",
+          "peer": "user",
+          "opcode": "CallAccepted"
+        },
+        {
+          "action": "send",
+          "peer": "coordinator",
+          "opcode": "CallResult",
+          "payload": [
+            {
+              "$": "calleeId"
+            },
+            true,
+            {
+              "accepted": true
+            }
+          ]
+        },
+        {
+          "action": "expect",
+          "peer": "user",
+          "opcode": "CallResult",
+          "match": {
+            "0": 11
+          }
+        }
+      ]
+    },
+    {
+      "name": "call/a call naming an unknown function is refused",
+      "requires": "RFC 0001 §7.4, §11",
+      "prelude": "enrolled-user",
+      "steps": [
+        {
+          "action": "send",
+          "peer": "user",
+          "opcode": "Call",
+          "payload": [
+            12,
+            0,
+            null,
+            99999,
+            5000,
+            null,
+            1,
+            {}
+          ]
+        },
+        {
+          "action": "expect",
+          "peer": "user",
+          "opcode": "Error",
+          "match": {
+            "0": 12
+          }
+        },
+        {
+          "action": "expectSilence",
+          "peer": "coordinator",
+          "ms": 150
+        }
+      ]
+    },
+    {
+      "name": "event/a subscribed user receives a coordinator event with its source",
+      "requires": "RFC 0001 §5.4, §7.3, §8.2",
+      "prelude": "enrolled-user",
+      "steps": [
+        {
+          "action": "send",
+          "peer": "user",
+          "opcode": "Subscribe",
+          "payload": [
+            41,
+            [
+              {
+                "$": "topicId"
+              }
+            ]
+          ]
+        },
+        {
+          "action": "expect",
+          "peer": "user",
+          "opcode": "SubscribeOk",
+          "match": {
+            "0": 41
+          }
+        },
+        {
+          "action": "send",
+          "peer": "coordinator",
+          "opcode": "Event",
+          "payload": [
+            42,
+            {
+              "$": "topicId"
+            },
+            0,
+            null,
+            {
+              "active": true
+            }
+          ]
+        },
+        {
+          "action": "expect",
+          "peer": "user",
+          "opcode": "Event",
+          "match": {
+            "4.0": 2,
+            "4.3": "primary"
+          }
+        }
+      ]
+    },
+    {
+      "name": "event/a user event reaches the coordinator with its verified identity",
+      "requires": "RFC 0001 §5.4, §7.3",
+      "prelude": "enrolled-user",
+      "steps": [
+        {
+          "action": "send",
+          "peer": "user",
+          "opcode": "Subscribe",
+          "payload": [
+            41,
+            [
+              {
+                "$": "topicId"
+              }
+            ]
+          ]
+        },
+        {
+          "action": "expect",
+          "peer": "user",
+          "opcode": "SubscribeOk"
+        },
+        {
+          "action": "send",
+          "peer": "user",
+          "opcode": "Event",
+          "payload": [
+            43,
+            {
+              "$": "topicId"
+            },
+            0,
+            null,
+            {
+              "acknowledge": true
+            }
+          ]
+        },
+        {
+          "action": "expect",
+          "peer": "coordinator",
+          "opcode": "Event",
+          "match": {
+            "4.1": "user-a",
+            "4.4": "user-a@example.test"
+          }
+        }
+      ]
+    },
+    {
+      "name": "event/an unsubscribed user receives nothing",
+      "requires": "RFC 0001 §7.3, §8.2",
+      "prelude": "enrolled-user",
+      "steps": [
+        {
+          "action": "send",
+          "peer": "coordinator",
+          "opcode": "Event",
+          "payload": [
+            42,
+            {
+              "$": "topicId"
+            },
+            0,
+            null,
+            {
+              "active": true
+            }
+          ]
+        },
+        {
+          "action": "expectSilence",
+          "peer": "user",
+          "ms": 200
+        }
+      ]
+    },
+    {
+      "name": "session/reauthentication renews the lease and state resynchronizes",
+      "requires": "RFC 0001 §7.1, §7.2",
+      "prelude": "enrolled-user",
+      "steps": [
+        {
+          "action": "send",
+          "peer": "user",
+          "opcode": "Reauth",
+          "payload": [
+            12,
+            "conformance.user.a.renewed"
+          ]
+        },
+        {
+          "action": "expect",
+          "peer": "user",
+          "opcode": "ReauthOk",
+          "match": {
+            "0": 12
+          }
+        },
+        {
+          "action": "send",
+          "peer": "user",
+          "opcode": "StateResync",
+          "payload": [
+            13
+          ]
+        },
+        {
+          "action": "expect",
+          "peer": "user",
+          "opcode": "StateDict"
+        },
+        {
+          "action": "expect",
+          "peer": "user",
+          "opcode": "StateSnapshot"
+        }
+      ]
+    },
+    {
+      "name": "session/reauthentication may not change the home",
+      "requires": "RFC 0001 §7.1",
+      "prelude": "enrolled-user",
+      "steps": [
+        {
+          "action": "send",
+          "peer": "user",
+          "opcode": "Reauth",
+          "payload": [
+            14,
+            "conformance.user.a.other"
+          ]
+        },
+        {
+          "action": "expect",
+          "peer": "user",
+          "opcode": "Fatal"
+        },
+        {
+          "action": "expectClosed",
+          "peer": "user"
+        }
+      ]
+    },
+    {
+      "name": "presence/a coordinator disconnect is announced to the home",
+      "requires": "RFC 0001 §7.6, §9",
+      "profile": "fast-grace",
+      "prelude": "enrolled-user",
+      "steps": [
+        {
+          "action": "close",
+          "peer": "coordinator"
+        },
+        {
+          "action": "expect",
+          "peer": "user",
+          "opcode": "HomeStatus"
+        }
+      ]
     }
-  ]
+  ],
+  "preludes": {
+    "declared-home": [
+      {
+        "action": "connect",
+        "peer": "coordinator"
+      },
+      {
+        "action": "send",
+        "peer": "coordinator",
+        "opcode": "Hello",
+        "payload": [
+          1,
+          0,
+          0,
+          2,
+          "conformance.coordinator.primary",
+          [
+            "primary"
+          ]
+        ]
+      },
+      {
+        "action": "expect",
+        "peer": "coordinator",
+        "opcode": "Welcome"
+      },
+      {
+        "action": "expect",
+        "peer": "coordinator",
+        "opcode": "PresenceSnapshot"
+      },
+      {
+        "action": "send",
+        "peer": "coordinator",
+        "opcode": "StateSync",
+        "payload": [
+          1,
+          [
+            [
+              "home.temperature",
+              20
+            ]
+          ]
+        ]
+      },
+      {
+        "action": "expect",
+        "peer": "coordinator",
+        "opcode": "StateSyncOk",
+        "capture": {
+          "epoch": "1",
+          "pathId": "3.0.0"
+        }
+      },
+      {
+        "action": "send",
+        "peer": "coordinator",
+        "opcode": "StateAclSync",
+        "payload": [
+          2,
+          [
+            [
+              "user-a",
+              [
+                "home.*"
+              ]
+            ]
+          ]
+        ]
+      },
+      {
+        "action": "expect",
+        "peer": "coordinator",
+        "opcode": "StateAclOk"
+      },
+      {
+        "action": "send",
+        "peer": "coordinator",
+        "opcode": "EventSync",
+        "payload": [
+          3,
+          [
+            [
+              "home.alert",
+              3
+            ]
+          ]
+        ]
+      },
+      {
+        "action": "expect",
+        "peer": "coordinator",
+        "opcode": "EventSyncOk",
+        "capture": {
+          "topicId": "1.0.0"
+        }
+      },
+      {
+        "action": "send",
+        "peer": "coordinator",
+        "opcode": "EventAclSync",
+        "payload": [
+          4,
+          [
+            [
+              "user-a",
+              [
+                "home.alert"
+              ],
+              [
+                "home.alert"
+              ]
+            ]
+          ]
+        ]
+      },
+      {
+        "action": "expect",
+        "peer": "coordinator",
+        "opcode": "EventAclOk"
+      },
+      {
+        "action": "send",
+        "peer": "coordinator",
+        "opcode": "FunctionSync",
+        "payload": [
+          5,
+          [
+            "home.set"
+          ]
+        ]
+      },
+      {
+        "action": "expect",
+        "peer": "coordinator",
+        "opcode": "FunctionSyncOk",
+        "capture": {
+          "functionId": "1.0.0"
+        }
+      }
+    ],
+    "enrolled-user": [
+      {
+        "action": "connect",
+        "peer": "coordinator"
+      },
+      {
+        "action": "send",
+        "peer": "coordinator",
+        "opcode": "Hello",
+        "payload": [
+          1,
+          0,
+          0,
+          2,
+          "conformance.coordinator.primary",
+          [
+            "primary"
+          ]
+        ]
+      },
+      {
+        "action": "expect",
+        "peer": "coordinator",
+        "opcode": "Welcome"
+      },
+      {
+        "action": "expect",
+        "peer": "coordinator",
+        "opcode": "PresenceSnapshot"
+      },
+      {
+        "action": "send",
+        "peer": "coordinator",
+        "opcode": "StateSync",
+        "payload": [
+          1,
+          [
+            [
+              "home.temperature",
+              20
+            ]
+          ]
+        ]
+      },
+      {
+        "action": "expect",
+        "peer": "coordinator",
+        "opcode": "StateSyncOk",
+        "capture": {
+          "epoch": "1",
+          "pathId": "3.0.0"
+        }
+      },
+      {
+        "action": "send",
+        "peer": "coordinator",
+        "opcode": "StateAclSync",
+        "payload": [
+          2,
+          [
+            [
+              "user-a",
+              [
+                "home.*"
+              ]
+            ]
+          ]
+        ]
+      },
+      {
+        "action": "expect",
+        "peer": "coordinator",
+        "opcode": "StateAclOk"
+      },
+      {
+        "action": "send",
+        "peer": "coordinator",
+        "opcode": "EventSync",
+        "payload": [
+          3,
+          [
+            [
+              "home.alert",
+              3
+            ]
+          ]
+        ]
+      },
+      {
+        "action": "expect",
+        "peer": "coordinator",
+        "opcode": "EventSyncOk",
+        "capture": {
+          "topicId": "1.0.0"
+        }
+      },
+      {
+        "action": "send",
+        "peer": "coordinator",
+        "opcode": "EventAclSync",
+        "payload": [
+          4,
+          [
+            [
+              "user-a",
+              [
+                "home.alert"
+              ],
+              [
+                "home.alert"
+              ]
+            ]
+          ]
+        ]
+      },
+      {
+        "action": "expect",
+        "peer": "coordinator",
+        "opcode": "EventAclOk"
+      },
+      {
+        "action": "send",
+        "peer": "coordinator",
+        "opcode": "FunctionSync",
+        "payload": [
+          5,
+          [
+            "home.set"
+          ]
+        ]
+      },
+      {
+        "action": "expect",
+        "peer": "coordinator",
+        "opcode": "FunctionSyncOk",
+        "capture": {
+          "functionId": "1.0.0"
+        }
+      },
+      {
+        "action": "connect",
+        "peer": "user"
+      },
+      {
+        "action": "send",
+        "peer": "user",
+        "opcode": "Hello",
+        "payload": [
+          1,
+          0,
+          0,
+          1,
+          "conformance.user.a",
+          [
+            "conformance-home"
+          ]
+        ]
+      },
+      {
+        "action": "expect",
+        "peer": "user",
+        "opcode": "Welcome",
+        "match": {
+          "4": true
+        }
+      },
+      {
+        "action": "expect",
+        "peer": "user",
+        "opcode": "StateDict"
+      },
+      {
+        "action": "expect",
+        "peer": "user",
+        "opcode": "StateSnapshot"
+      },
+      {
+        "action": "expect",
+        "peer": "user",
+        "opcode": "TopicDict"
+      },
+      {
+        "action": "expect",
+        "peer": "user",
+        "opcode": "FunctionDict"
+      },
+      {
+        "action": "expect",
+        "peer": "coordinator",
+        "opcode": "PresenceChange"
+      }
+    ]
+  }
 }
