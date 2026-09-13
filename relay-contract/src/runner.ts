@@ -76,6 +76,8 @@ export interface Scenario {
   /** The RFC 0001 clause this scenario holds the subject to. */
   readonly requires: string;
   readonly profile?: string;
+  /** Shared opening steps, prepended before `steps`. */
+  readonly prelude?: string;
   readonly steps: readonly Step[];
 }
 
@@ -83,7 +85,20 @@ export interface Corpus {
   readonly schema: string;
   readonly protocol: readonly [number, number];
   readonly subprotocol: string;
+  /**
+   * Named step sequences most scenarios open with. Bringing a home up to a
+   * declared, enrolled state takes twenty frames; repeating them per scenario
+   * would bury the one behaviour each scenario actually pins down.
+   */
+  readonly preludes?: Readonly<Record<string, readonly Step[]>>;
   readonly scenarios: readonly Scenario[];
+}
+
+export function stepsOf(scenario: Scenario, corpus: Corpus): readonly Step[] {
+  if (scenario.prelude === undefined) return scenario.steps;
+  const prelude = corpus.preludes?.[scenario.prelude];
+  if (prelude === undefined) throw new Error(`unknown prelude: ${scenario.prelude}`);
+  return [...prelude, ...scenario.steps];
 }
 
 export interface SubjectCommand {
@@ -363,8 +378,9 @@ export async function runScenario(
 ): Promise<ScenarioResult> {
   let started: { url: string; stop: () => void } | undefined;
   try {
+    const steps = stepsOf(scenario, corpus);
     started = await startSubject(subject, scenario.profile ?? 'default');
-    await runSteps(scenario.steps, started.url, corpus.subprotocol);
+    await runSteps(steps, started.url, corpus.subprotocol);
     return { name: scenario.name, passed: true };
   } catch (error) {
     return {

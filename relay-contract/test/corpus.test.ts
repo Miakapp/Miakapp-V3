@@ -8,7 +8,7 @@
 import { describe, expect, test } from 'bun:test';
 import { Opcode } from '../../protocol/typescript/src/codec.ts';
 import corpusDocument from '../fixtures/v1/scenarios.json' with { type: 'json' };
-import type { Corpus, Step } from '../src/runner.ts';
+import { stepsOf, type Corpus, type Step } from '../src/runner.ts';
 
 const corpus = corpusDocument as unknown as Corpus;
 const OPCODE_NAMES = new Set(Object.keys(Opcode));
@@ -44,8 +44,8 @@ describe('corpus', () => {
 
   test('every step is a known action', () => {
     for (const scenario of corpus.scenarios) {
-      expect(scenario.steps.length).toBeGreaterThan(0);
-      for (const step of scenario.steps) {
+      expect(stepsOf(scenario, corpus).length).toBeGreaterThan(0);
+      for (const step of stepsOf(scenario, corpus)) {
         expect(ACTIONS.has((step as Step).action)).toBe(true);
       }
     }
@@ -53,7 +53,7 @@ describe('corpus', () => {
 
   test('every opcode named by the corpus exists in the certified codec', () => {
     for (const scenario of corpus.scenarios) {
-      for (const step of scenario.steps) {
+      for (const step of stepsOf(scenario, corpus)) {
         if (step.action !== 'send' && step.action !== 'expect') continue;
         expect(OPCODE_NAMES.has(step.opcode)).toBe(true);
       }
@@ -63,7 +63,7 @@ describe('corpus', () => {
   test('a scenario only addresses peers it connected', () => {
     for (const scenario of corpus.scenarios) {
       const connected = new Set<string>();
-      for (const step of scenario.steps) {
+      for (const step of stepsOf(scenario, corpus)) {
         if (step.action === 'wait') continue;
         if (step.action === 'connect') {
           expect(connected.has(step.peer)).toBe(false);
@@ -79,7 +79,7 @@ describe('corpus', () => {
   test('every placeholder is captured before it is referenced', () => {
     for (const scenario of corpus.scenarios) {
       const captured = new Set<string>();
-      for (const step of scenario.steps) {
+      for (const step of stepsOf(scenario, corpus)) {
         if (step.action === 'expect') {
           for (const name of Object.keys(step.capture ?? {})) captured.add(name);
           continue;
@@ -89,6 +89,13 @@ describe('corpus', () => {
           expect(captured.has(reference)).toBe(true);
         }
       }
+    }
+  });
+
+  test('every prelude a scenario names exists', () => {
+    for (const scenario of corpus.scenarios) {
+      if (scenario.prelude === undefined) continue;
+      expect(corpus.preludes?.[scenario.prelude]).toBeDefined();
     }
   });
 
