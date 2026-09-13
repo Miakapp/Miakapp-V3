@@ -20,6 +20,7 @@ const ACTIONS = new Set([
   'connect',
   'send',
   'expect',
+  'expectExclusive',
   'expectClosed',
   'expectSilence',
   'close',
@@ -57,6 +58,11 @@ describe('corpus', () => {
   test('every opcode named by the corpus exists in the certified codec', () => {
     for (const scenario of corpus.scenarios) {
       for (const step of stepsOf(scenario, corpus)) {
+        if (step.action === 'expectExclusive') {
+          expect(OPCODE_NAMES.has(step.winner.opcode)).toBe(true);
+          expect(OPCODE_NAMES.has(step.loser.opcode)).toBe(true);
+          continue;
+        }
         if (step.action !== 'send' && step.action !== 'expect') continue;
         expect(OPCODE_NAMES.has(step.opcode)).toBe(true);
       }
@@ -68,6 +74,13 @@ describe('corpus', () => {
       const connected = new Set<string>();
       for (const step of stepsOf(scenario, corpus)) {
         if (step.action === 'wait') continue;
+        if (step.action === 'expectExclusive') {
+          // A contest needs at least two peers, or it asserts nothing.
+          expect(step.peers.length).toBeGreaterThan(1);
+          expect(new Set(step.peers).size).toBe(step.peers.length);
+          for (const peer of step.peers) expect(connected.has(peer)).toBe(true);
+          continue;
+        }
         if (step.action === 'connect') {
           expect(connected.has(step.peer)).toBe(false);
           connected.add(step.peer);

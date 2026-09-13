@@ -1238,6 +1238,245 @@
       ]
     },
     {
+      "name": "declaration/contested activations resolve to exactly one winner",
+      "requires": "RFC 0001 \u00a77.4, \u00a77.5",
+      "steps": [
+        {
+          "action": "connect",
+          "peer": "primary"
+        },
+        {
+          "action": "send",
+          "peer": "primary",
+          "opcode": "Hello",
+          "payload": [
+            1,
+            0,
+            0,
+            2,
+            "conformance.coordinator.primary",
+            [
+              "primary"
+            ]
+          ]
+        },
+        {
+          "action": "expect",
+          "peer": "primary",
+          "opcode": "Welcome"
+        },
+        {
+          "action": "expect",
+          "peer": "primary",
+          "opcode": "PresenceSnapshot"
+        },
+        {
+          "action": "connect",
+          "peer": "secondary"
+        },
+        {
+          "action": "send",
+          "peer": "secondary",
+          "opcode": "Hello",
+          "payload": [
+            1,
+            0,
+            0,
+            2,
+            "conformance.coordinator.secondary",
+            [
+              "secondary"
+            ]
+          ]
+        },
+        {
+          "action": "expect",
+          "peer": "secondary",
+          "opcode": "Welcome"
+        },
+        {
+          "action": "expect",
+          "peer": "secondary",
+          "opcode": "PresenceSnapshot"
+        },
+        {
+          "action": "send",
+          "peer": "primary",
+          "opcode": "StateSync",
+          "payload": [
+            100,
+            [
+              [
+                "shared.value",
+                1
+              ]
+            ]
+          ]
+        },
+        {
+          "action": "expect",
+          "peer": "primary",
+          "opcode": "StateSyncOk"
+        },
+        {
+          "action": "send",
+          "peer": "primary",
+          "opcode": "StateAclSync",
+          "payload": [
+            101,
+            [
+              [
+                "user-a",
+                [
+                  "shared.value"
+                ]
+              ]
+            ]
+          ]
+        },
+        {
+          "action": "expect",
+          "peer": "primary",
+          "opcode": "StateAclOk"
+        },
+        {
+          "action": "send",
+          "peer": "primary",
+          "opcode": "EventSync",
+          "payload": [
+            102,
+            []
+          ]
+        },
+        {
+          "action": "expect",
+          "peer": "primary",
+          "opcode": "EventSyncOk"
+        },
+        {
+          "action": "send",
+          "peer": "primary",
+          "opcode": "EventAclSync",
+          "payload": [
+            103,
+            []
+          ]
+        },
+        {
+          "action": "expect",
+          "peer": "primary",
+          "opcode": "EventAclOk"
+        },
+        {
+          "action": "send",
+          "peer": "secondary",
+          "opcode": "StateSync",
+          "payload": [
+            200,
+            [
+              [
+                "shared.value",
+                2
+              ]
+            ]
+          ]
+        },
+        {
+          "action": "expect",
+          "peer": "secondary",
+          "opcode": "StateSyncOk"
+        },
+        {
+          "action": "send",
+          "peer": "secondary",
+          "opcode": "StateAclSync",
+          "payload": [
+            201,
+            [
+              [
+                "user-a",
+                [
+                  "shared.value"
+                ]
+              ]
+            ]
+          ]
+        },
+        {
+          "action": "expect",
+          "peer": "secondary",
+          "opcode": "StateAclOk"
+        },
+        {
+          "action": "send",
+          "peer": "secondary",
+          "opcode": "EventSync",
+          "payload": [
+            202,
+            []
+          ]
+        },
+        {
+          "action": "expect",
+          "peer": "secondary",
+          "opcode": "EventSyncOk"
+        },
+        {
+          "action": "send",
+          "peer": "secondary",
+          "opcode": "EventAclSync",
+          "payload": [
+            203,
+            []
+          ]
+        },
+        {
+          "action": "expect",
+          "peer": "secondary",
+          "opcode": "EventAclOk"
+        },
+        {
+          "action": "send",
+          "peer": "primary",
+          "opcode": "FunctionSync",
+          "payload": [
+            104,
+            [
+              "primary.run"
+            ]
+          ]
+        },
+        {
+          "action": "send",
+          "peer": "secondary",
+          "opcode": "FunctionSync",
+          "payload": [
+            204,
+            [
+              "secondary.run"
+            ]
+          ]
+        },
+        {
+          "action": "expectExclusive",
+          "peers": [
+            "primary",
+            "secondary"
+          ],
+          "winner": {
+            "opcode": "FunctionSyncOk"
+          },
+          "loser": {
+            "opcode": "Error",
+            "match": {
+              "1": 48,
+              "2": 1302
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "state/a declared path survives deletion and resynchronization",
       "requires": "RFC 0001 \u00a77.2, \u00a78.1",
       "prelude": "enrolled-user",

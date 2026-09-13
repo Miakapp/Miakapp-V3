@@ -105,6 +105,7 @@ scenario cites the clause it holds the subject to.
 | `connect` | open a socket for a named peer |
 | `send` | encode and send one frame |
 | `expect` | receive one frame, assert its opcode, optionally `match` payload positions and `capture` values |
+| `expectExclusive` | receive one frame from each of `peers`, assert exactly one is the `winner` shape and the rest are the `loser` shape |
 | `expectClosed` | the subject closed this connection |
 | `expectSilence` | nothing arrived within `ms` |
 | `close` | close this peer |
@@ -134,12 +135,13 @@ therefore adds no second opinion about the wire format.
 
 ## Status
 
-Thirty-seven scenarios. The Go relay passes all thirty-seven.
+Thirty-eight scenarios. The Go relay passes all thirty-eight.
 
 They cover the handshake for both roles; credential, version and home-change
 refusals; version-range negotiation and an unsupported major; direction and
-connection-state enforcement; the five-slice declaration transaction and a
-colliding one; state disclosure to a granted and an ungranted user; a declared
+connection-state enforcement; the five-slice declaration transaction, a
+colliding one and a contested one resolving to exactly one winner; state
+disclosure to a granted and an ungranted user; a declared
 path surviving deletion; the call round trip with its relay-constructed
 principal, cancellation, late results and calls with no coordinator; event
 delivery in both directions with subscription enforcement; reauthentication,
@@ -160,9 +162,16 @@ than claiming a physical effect did or did not happen.
 `Miakapp-Server` holds 35 black-box and white-box relay tests. What remains
 there is deliberate, not pending:
 
-- **Concurrency.** Colliding activations resolving to exactly one winner, and
-  bootstrap never preceding `WELCOME`, need the corpus to gain a way to express
-  concurrent steps. The ordered form here would test a different property.
+- **Scheduling races.** `expectExclusive` covers the observable half of a
+  contest — exactly one winner, every loser refused with `1302` — without
+  pinning which peer wins, because §7.5 promises a single winner and not a
+  particular one. What no wire-level corpus can force is the *interleaving*:
+  two activations written back to back may still be serialized before either
+  contends, so a subject that never actually races will pass. Proving the lock
+  itself is a white-box test in each implementation. Bootstrap never preceding
+  `WELCOME` stays out for the same reason — per-peer ordering is already pinned
+  by the ordered form, and what the Go test adds is a concurrent arrival the
+  corpus cannot schedule.
 - **Process limits.** Connection admission, per-source rate and memory bounds,
   the aggregate outbound queue budget and home capacity are deployment policy,
   not RFC 0001 behaviour. A relay may choose different numbers and still

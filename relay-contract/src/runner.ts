@@ -46,6 +46,29 @@ export interface ExpectStep {
   readonly capture?: Readonly<Record<string, string>>;
 }
 
+export interface FrameShape {
+  readonly opcode: string;
+  readonly match?: Readonly<Record<string, unknown>>;
+}
+
+/**
+ * Receives one frame from every listed peer at once and requires that exactly
+ * one of them is the winning shape and every other is the losing shape.
+ *
+ * Contested declarations are the one place where the ordered form asserts the
+ * wrong property. RFC 0001 §7.5 does not promise that the first sender wins —
+ * it promises that the home-scoped activation lock leaves exactly one winner.
+ * An ordered `expect` per peer would pin a particular winner, so a conforming
+ * implementation that resolved the contest the other way would fail a test the
+ * RFC never asked it to pass.
+ */
+export interface ExpectExclusiveStep {
+  readonly action: 'expectExclusive';
+  readonly peers: readonly string[];
+  readonly winner: FrameShape;
+  readonly loser: FrameShape;
+}
+
 export interface ExpectClosedStep {
   readonly action: 'expectClosed';
   readonly peer: string;
@@ -71,6 +94,7 @@ export type Step =
   | ConnectStep
   | SendStep
   | ExpectStep
+  | ExpectExclusiveStep
   | ExpectClosedStep
   | ExpectSilenceStep
   | CloseStep
@@ -262,6 +286,14 @@ function resolve(value: unknown, captured: ReadonlyMap<string, unknown>): unknow
   );
 }
 
+/** True when a frame has the opcode and every matched field of a shape. */
+function fits(frame: Frame, shape: FrameShape, captured: ReadonlyMap<string, unknown>): boolean {
+  if (frame.opcode !== opcodeOf(shape.opcode)) return false;
+  return Object.entries(shape.match ?? {}).every(
+    ([path, expectation]) => deepEqual(valueAt(frame.payload, path), resolve(expectation, captured)),
+  );
+}
+
 /** Starts one subject and resolves its advertised URL. */
 async function startSubject(
   subject: SubjectCommand,
@@ -345,6 +377,27 @@ async function runSteps(
               throw new Error(`${at}: nothing to capture at ${step.opcode}.payload[${path}]`);
             }
             captured.set(name, value);
+          }
+          break;
+        }
+        case 'expectExclusive': {
+          if (step.peers.length < 2) throw new Error(`${at}: needs at least two peers`);
+          const frames = await Promise.all(step.peers.map((name) => peerOf(name).receive()));
+          const winners: string[] = [];
+          const unexplained: string[] = [];
+          for (const [position, frame] of frames.entries()) {
+            const name = step.peers[position] as string;
+            if (fits(frame, step.winner, captured)) winners.push(name);
+            else if (!fits(frame, step.loser, captured)) unexplained.push(`${name} received ${describe(frame)}`);
+          }
+          if (unexplained.length > 0) {
+            throw new Error(`${at}: neither the winning nor the losing shape: ${unexplained.join('; ')}`);
+          }
+          if (winners.length !== 1) {
+            throw new Error(
+              `${at}: expected exactly one ${step.winner.opcode} among ${step.peers.join(', ')}, `
+              + `received ${winners.length}${winners.length > 0 ? ` (${winners.join(', ')})` : ''}`,
+            );
           }
           break;
         }
