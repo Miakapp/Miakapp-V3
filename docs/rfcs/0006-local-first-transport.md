@@ -9,6 +9,9 @@ Target: Miakapp 4
 Depends on: RFC 0001 (wire protocol), RFC 0004 (control plane), RFC 0005
 (browser client SDK)
 
+Composes with: RFC 0007 (coordinator-qualified names), which is what makes the
+client-side merge in §3 trivial and per-coordinator staleness expressible.
+
 ## 1. Goal
 
 A device on the same network as a home's coordinators talks to them directly.
@@ -199,7 +202,9 @@ role; it does not retire it.
 - **Per-coordinator epochs, revisions and staleness.** A single global
   "connected" indicator stops being meaningful. The UI must be able to say that
   one part of the home is stale while the rest is live. RFC 0002 already took
-  this position for component state, and the same honesty applies here.
+  this position for component state, and the same honesty applies here. RFC 0007 is
+  what makes this cheap: with coordinator-qualified names the stale subtree is
+  identified by its prefix rather than tracked separately.
 - **Exactly one active session per coordinator.** If a coordinator is reachable
   both directly and through the relay, the client picks one and never merges two
   streams for the same coordinator: that would duplicate events and corrupt
@@ -209,7 +214,9 @@ role; it does not retire it.
   changing several coordinators is not one transaction. Client-side aggregation
   makes that visible rather than introducing it.
 - **Name collisions across coordinators** become the client's problem to resolve
-  and display, since no relay arbitrates the union any more.
+  and display, since no relay arbitrates the union any more — unless RFC 0007 is
+  adopted, in which case they cannot occur. That is the strongest argument for
+  taking the two together.
 
 ## 7. Staging
 
