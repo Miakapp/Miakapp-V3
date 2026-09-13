@@ -35,7 +35,12 @@ export interface ExpectStep {
   readonly action: 'expect';
   readonly peer: string;
   readonly opcode: string;
-  /** Payload assertions by index, as decimal string keys. Deep-compared. */
+  /**
+   * Payload assertions by dotted index path, deep-compared. A `{"$": "name"}`
+   * placeholder is resolved like one in a `send` payload, so a scenario can
+   * assert that a relay-assigned identifier — a dictionary ID, or a call ID the
+   * relay rewrote when routing — came back where it belongs.
+   */
   readonly match?: Readonly<Record<string, unknown>>;
   /** Binds values out of the received payload, by dotted index path. */
   readonly capture?: Readonly<Record<string, string>>;
@@ -324,8 +329,9 @@ async function runSteps(
           if (frame.opcode !== expected) {
             throw new Error(`${at}: expected ${step.opcode} on ${step.peer}, received ${describe(frame)}`);
           }
-          for (const [key, value] of Object.entries(step.match ?? {})) {
+          for (const [key, expectation] of Object.entries(step.match ?? {})) {
             const observed = valueAt(frame.payload, key);
+            const value = resolve(expectation, captured);
             if (!deepEqual(observed, value)) {
               throw new Error(
                 `${at}: ${step.opcode}.payload[${key}] on ${step.peer} is `

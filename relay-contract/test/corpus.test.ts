@@ -13,6 +13,9 @@ import { stepsOf, type Corpus, type Step } from '../src/runner.ts';
 const corpus = corpusDocument as unknown as Corpus;
 const OPCODE_NAMES = new Set(Object.keys(Opcode));
 
+/** The configuration profiles the subject contract in README.md defines. */
+const PROFILES = ['default', 'fast-grace', 'drain-on-cli'];
+
 const ACTIONS = new Set([
   'connect',
   'send',
@@ -81,12 +84,31 @@ describe('corpus', () => {
       const captured = new Set<string>();
       for (const step of stepsOf(scenario, corpus)) {
         if (step.action === 'expect') {
+          // A match is asserted against the frame this step receives, so its
+          // own captures are not yet bound when it runs.
+          for (const reference of references(step.match ?? {})) {
+            expect(captured.has(reference)).toBe(true);
+          }
           for (const name of Object.keys(step.capture ?? {})) captured.add(name);
           continue;
         }
         if (step.action !== 'send') continue;
         for (const reference of references(step.payload)) {
           expect(captured.has(reference)).toBe(true);
+        }
+      }
+    }
+  });
+
+  test('a match addresses a payload by dotted index path', () => {
+    for (const scenario of corpus.scenarios) {
+      for (const step of stepsOf(scenario, corpus)) {
+        if (step.action !== 'expect') continue;
+        for (const path of Object.keys(step.match ?? {})) {
+          expect(path).toMatch(/^\d+(\.\d+)*$/);
+        }
+        for (const path of Object.values(step.capture ?? {})) {
+          expect(path).toMatch(/^\d+(\.\d+)*$/);
         }
       }
     }
@@ -102,7 +124,17 @@ describe('corpus', () => {
   test('a profile is either default or declared by the subject contract', () => {
     for (const scenario of corpus.scenarios) {
       if (scenario.profile === undefined) continue;
-      expect(['default', 'fast-grace']).toContain(scenario.profile);
+      expect(PROFILES).toContain(scenario.profile);
+    }
+  });
+
+  test('a scenario that observes draining names a draining profile', () => {
+    for (const scenario of corpus.scenarios) {
+      const drains = stepsOf(scenario, corpus).some(
+        (step) => step.action === 'expect' && step.opcode === 'Goaway',
+      );
+      if (!drains) continue;
+      expect(scenario.profile).toBe('drain-on-cli');
     }
   });
 });

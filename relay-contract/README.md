@@ -64,6 +64,7 @@ Every credential belongs to `conformance-home` unless its name says otherwise.
 | `conformance.user.a.expiring` | user | `user-a`, sub-second lease |
 | `conformance.user.a.other` | user | `user-a` in `conformance-home-other` |
 | `conformance.coordinator.primary` | coordinator | name `primary` |
+| `conformance.coordinator.primary.other-client` | coordinator | name `primary`, a different client binding |
 | `conformance.coordinator.secondary` | coordinator | name `secondary` |
 | `conformance.cli` | CLI | — |
 
@@ -82,9 +83,17 @@ A fixture verifier belongs in a separate binary, never in the production one.
 | --- | --- |
 | `default` | 30-second disconnect grace; everything else at the implementation's defaults |
 | `fast-grace` | 250 ms disconnect grace, for scenarios that must observe grace expiry |
+| `drain-on-cli` | the subject starts a graceful drain when a CLI credential authenticates |
 
 A scenario declares the profile it assumes, so the corpus never depends on one
 implementation's configuration type.
+
+`drain-on-cli` exists because draining is the one behaviour no peer can ask for
+on the wire: the relay decides it. A subject under this profile begins its drain
+window once `conformance.cli` authenticates, which gives the corpus an ordered
+trigger — no other scenario uses that credential — rather than a race against
+process start. The window must outlast a terminal call reply and still expire
+within a test run; the Go subject uses 500 ms.
 
 ## The corpus
 
@@ -104,7 +113,10 @@ scenario cites the clause it holds the subject to.
 `match` and `capture` address payloads by dotted index path, so `"3.0.0"` is
 `payload[3][0][0]`. Epochs and dictionary IDs are assigned by the subject, so a
 `send` payload may contain `{"$": "name"}` placeholders resolved from an earlier
-`capture`.
+`capture`. A `match` resolves them the same way, which is how a scenario asserts
+that an identifier the relay assigned came back where it belongs — that a
+cancellation was rewritten to the callee's call ID, or that a recreated state
+path reused its dictionary entry rather than allocating a new one.
 
 Bringing a home up to a declared, enrolled state takes twenty frames, so a
 scenario may name a **prelude** instead of repeating them. `preludes` holds the
@@ -122,22 +134,45 @@ therefore adds no second opinion about the wire format.
 
 ## Status
 
-Nineteen scenarios covering the handshake for both roles, credential, version
-and home-change refusals, direction and connection-state enforcement, the
-five-slice declaration transaction, state disclosure to a granted and an
-ungranted user, the call round trip with its relay-constructed principal, event
-delivery in both directions with subscription enforcement, reauthentication and
-resynchronization, and coordinator presence on disconnect. The Go relay passes
-all nineteen.
+Thirty-seven scenarios. The Go relay passes all thirty-seven.
 
-Several of these assert the security property rather than the happy path: the
-principal on a dispatched call and on a forwarded event is constructed by the
-relay from verified identity, never echoed from the sender, and an unsubscribed
-user receives nothing.
+They cover the handshake for both roles; credential, version and home-change
+refusals; version-range negotiation and an unsupported major; direction and
+connection-state enforcement; the five-slice declaration transaction and a
+colliding one; state disclosure to a granted and an ungranted user; a declared
+path surviving deletion; the call round trip with its relay-constructed
+principal, cancellation, late results and calls with no coordinator; event
+delivery in both directions with subscription enforcement; reauthentication,
+its three immutability rules and lease expiry; coordinator presence, generation
+replacement and the atomic purge at grace expiry; and the drain window from
+`GOAWAY` to the relay deadline.
 
-This is not yet the full behavioural surface. `Miakapp-Server` holds 31
-black-box relay tests; the concurrency-sensitive ones — colliding activations
-resolving to exactly one winner, replacement fencing in-flight calls — need an
-ordered corpus to gain a way to express concurrency before they can be
-extracted. `GOAWAY` and draining, and version-range negotiation beyond a flat
-refusal, appear untested even there and need writing rather than extracting.
+Several assert the security property rather than the happy path: the principal
+on a dispatched call and on a forwarded event is constructed by the relay from
+verified identity, never echoed from the sender; an unsubscribed user receives
+nothing; a colliding declaration never publishes its staged prefix; a
+replacement coordinator cannot publish before it redeclares; and a call
+interrupted by replacement or cancellation resolves as `OUTCOME_UNKNOWN` rather
+than claiming a physical effect did or did not happen.
+
+### What the corpus still does not hold
+
+`Miakapp-Server` holds 35 black-box and white-box relay tests. What remains
+there is deliberate, not pending:
+
+- **Concurrency.** Colliding activations resolving to exactly one winner, and
+  bootstrap never preceding `WELCOME`, need the corpus to gain a way to express
+  concurrent steps. The ordered form here would test a different property.
+- **Process limits.** Connection admission, per-source rate and memory bounds,
+  the aggregate outbound queue budget and home capacity are deployment policy,
+  not RFC 0001 behaviour. A relay may choose different numbers and still
+  conform.
+- **Internal invariants.** Queue accounting, request identifiers held until a
+  terminal write, and unencodable snapshots rejected atomically are white-box
+  tests against structures no wire peer can observe.
+- **The identifier-reuse window.** That a very late result is still discarded
+  after 260 intervening calls needs a loop primitive with per-iteration
+  identifiers; expressing it as 260 literal entries would be unreadable.
+- **Pre-upgrade rejection.** Origin and subprotocol refusals happen before the
+  WebSocket exists, so the runner — which always dials correctly — cannot reach
+  them.
