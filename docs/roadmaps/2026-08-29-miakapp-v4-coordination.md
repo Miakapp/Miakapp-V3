@@ -181,7 +181,10 @@ Deliverables:
    harness;
 4. an optional runtime-specific adapter test harness for each installation that
    needs one;
-5. a timed restore rehearsal for the local coordinator environment;
+5. **complete for the v3 Node-RED installation** — a timed restore rehearsal for
+   the local coordinator environment, executed by
+   `node-red-adapter/bin/restore-rehearsal.mjs` and reported in
+   `node-red-adapter/RESTORE-REHEARSAL.md`;
 6. an explicit list of behavior intentionally preserved versus fixed.
 
 Exit gate: the Miakapp 4 implementation can be compared against a deterministic oracle
@@ -233,6 +236,42 @@ rather than a delta.
 The harness also produces runtime-persisted exports on demand, so a
 `flows.json` parser can be checked against the shape Node-RED actually writes
 instead of against a fixture its own author typed.
+
+Characterization status (2026-09-14, restore): deliverable 5 is answered for
+this installation by `node-red-adapter/RESTORE-REHEARSAL.md`, which is produced
+by destroying a real environment and bringing it back rather than by describing
+how one would. It runs in CI, so its findings cannot quietly stop being true.
+
+The environment has two layers that recover differently: the installation, which
+is derivable from a lockfile and is deliberately not backed up, and the user
+directory, which is the only irreplaceable part. Restoring the second onto the
+first returns a house indistinguishable from the one destroyed — same registered
+types, coordinator connection, message delivery, notification, committed
+variable set and persisted flow digest — in 0.4 s from a 1 KiB archive of
+`flows.json` alone.
+
+Three findings came out of performing it rather than writing it. Archiving
+`node_modules` as well is the one backup scope that fails: a partial npm tree
+shadows the working installation, the local copy cannot resolve its own
+dependencies, and no node type registers. That failure is silent — `start()`
+resolves, the flow revision loads, and the runtime settles into waiting for
+missing types, so a supervisor observes a healthy process with no house behind
+it. A restore procedure must therefore assert registered node types rather than
+service liveness. Second, `commitVariables` reads `env`-typed values from the
+process environment with no fallback and no record in the user directory, so a
+restore onto a bare shell drops that state path in serialisation without an
+error at any layer. Third, time-to-process is not time-to-state: the outgoing
+variable set starts empty on every boot and each commit sends the whole set, so
+state is complete only once every commit node has fired, bounded below by the
+slowest trigger in the house. A v4 comparison run started before that point
+reads an oracle that is still filling in.
+
+This closes the last open workstream B deliverable for the v3 Node-RED
+installation: 1 to 3 are complete, 4 is optional per installation and answered
+for this one, and 5 and 6 are now answered for it. What remains before the
+workstream itself closes is its exit gate rather than a deliverable — comparing
+a Miakapp 4 implementation against these oracles in CI — and, for deliverables 4
+to 6, repeating them for any other installation that turns out to need one.
 
 ### C. Relay and SDK vertical slice
 

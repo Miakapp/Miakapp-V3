@@ -1,8 +1,8 @@
 # Node-RED runtime adapter harness
 
-Workstream B deliverable 4. Runs the **real** Node-RED runtime with the **real**
-published MiakAPI v3 node, so claims about v3 behaviour come from observation
-instead of from reading its source.
+Workstream B deliverables 4 and 5. Runs the **real** Node-RED runtime with the
+**real** published MiakAPI v3 node, so claims about v3 behaviour come from
+observation instead of from reading its source.
 
 Every other characterization corpus in this repository models v3. This one
 executes it.
@@ -39,6 +39,7 @@ The harness opens no network sockets. The fixture's MQTT broker is set to
 ./check.sh                      # npm ci + the full suite
 npm test                        # the suite alone
 npm run capture                 # write a real runtime export to captured/
+npm run rehearse                # destroy an environment and restore it, timed
 ```
 
 Node ≥ 22.9. The dependency tree is pinned by `package-lock.json`; this
@@ -93,6 +94,26 @@ Checked against the v4 CLI on the captured export:
 deploy in the same process inherits the first one's handlers. `startHouse()`
 refuses a second call, and isolation comes from `node --test` running each test
 file in its own process. One scenario per file.
+
+## Restore rehearsal
+
+`npm run rehearse` builds a real environment, archives it at three scopes,
+destroys it, restores each archive into a path that did not exist, boots it in a
+fresh process and compares it against the house that was lost. It runs in CI as
+`test/restore-rehearsal.test.mjs`.
+
+Full write-up in [`RESTORE-REHEARSAL.md`](./RESTORE-REHEARSAL.md). The short
+version:
+
+- `flows.json` alone restores the house, in **0.4 s** from a 1 KiB archive.
+- **Archiving `node_modules` breaks the restore.** A partial npm tree shadows
+  the working installation, nothing registers, and Node-RED does not crash —
+  `start()` resolves, the flows load, and the runtime waits for types that never
+  arrive. A supervisor sees a healthy service with no house behind it.
+- A restore that forgets the process environment loses an `env`-typed state path
+  silently: the key is set to `undefined` and vanishes in serialisation.
+- Time-to-process is not time-to-state. The outgoing variable set starts empty
+  on every boot, so state is complete only once every commit node has fired.
 
 ## Deliberately not covered
 
