@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -19,7 +19,58 @@ const planScript = readFileSync(new URL('plan.sh', terraformRoot), 'utf8');
 const lockFile = readFileSync(new URL('.terraform.lock.hcl', terraformRoot), 'utf8');
 const cliConfig = readFileSync(new URL('terraform-cli.tfrc', terraformRoot), 'utf8');
 const checkScript = readFileSync(new URL('../check.sh', import.meta.url), 'utf8');
-const workflow = readFileSync(new URL('../../../.github/workflows/staging-manifest.yml', import.meta.url), 'utf8');
+const repositoryRoot = new URL('../../../', import.meta.url);
+const workflow = readFileSync(new URL('.github/workflows/staging-manifest.yml', repositoryRoot), 'utf8');
+const packageScripts = JSON.parse(readFileSync(new URL('package.json', repositoryRoot), 'utf8')).scripts;
+
+// Every repository file the gate reads, followed from the workflow rather than
+// hand-listed: the workflow names an npm script, `package.json` resolves it to
+// `check.sh`, and `check.sh` names the rest. Only the scripts this gate runs are
+// followed — `package.json` also holds unrelated gates. Keeping just the paths
+// that exist on disk drops registry hostnames and other path-shaped tokens.
+const gateInputs = (() => {
+  const inputs = new Set(['.github/workflows/staging-manifest.yml', 'package.json', 'bun.lock']);
+  const sources = [];
+  for (const [, script] of workflow.matchAll(/npm run ([\w:-]+)/g)) {
+    assert.ok(packageScripts[script], `the workflow runs an undefined script: ${script}`);
+    sources.push(packageScripts[script]);
+  }
+  assert.notEqual(sources.length, 0, 'the workflow runs no npm script');
+  sources.push(checkScript);
+  for (const source of sources) {
+    for (const [token] of source.matchAll(/(?:[\w.-]+\/)*[\w.-]+\.(?:mjs|cjs|js|mts|cts|ts|tsx|sh|bash|json|jsonc|tf|tfrc|tfvars|hcl|lock|yml|yaml|toml|md)\b/g)) {
+      const candidate = token.replace(/^\.\//, '');
+      if (existsSync(new URL(candidate, repositoryRoot))) {
+        inputs.add(candidate);
+      }
+    }
+  }
+  return [...inputs].sort();
+})();
+
+// The `on:` trigger's `paths:` list, read straight from the workflow text.
+function triggerPathFilter(trigger) {
+  const lines = workflow.split('\n');
+  const start = lines.indexOf(`  ${trigger}:`);
+  assert.notEqual(start, -1, trigger);
+  const end = lines.findIndex((line, index) => index > start && line !== '' && !line.startsWith('    '));
+  const block = lines.slice(start + 1, end === -1 ? lines.length : end);
+  const pathsIndex = block.indexOf('    paths:');
+  assert.notEqual(pathsIndex, -1, `${trigger} must be scoped by a paths filter`);
+  const entries = [];
+  for (const line of block.slice(pathsIndex + 1)) {
+    if (!line.startsWith('      - ')) break;
+    entries.push(line.slice('      - '.length).trim().replace(/^['"]|['"]$/g, ''));
+  }
+  assert.notEqual(entries.length, 0, `${trigger} paths`);
+  return entries;
+}
+
+function filterCovers(filter, path) {
+  return filter.some((pattern) =>
+    pattern.endsWith('/**') ? path.startsWith(pattern.slice(0, -2)) : pattern === path,
+  );
+}
 
 function providerLockBlock(provider) {
   const start = lockFile.indexOf(`provider "registry.terraform.io/hashicorp/${provider}"`);
@@ -216,6 +267,32 @@ test('locks both providers for macOS ARM64 and Linux AMD64', () => {
   assert.match(checkScript, /for terraform_root in bootstrap terraform/);
   assert.match(checkScript, /-platform=darwin_arm64/);
   assert.match(checkScript, /-platform=linux_amd64/);
-  assert.doesNotMatch(workflow, /^\s+paths:/m);
   assert.match(workflow, /name: Staging manifest safety gate \/ validate/);
+});
+
+// The gate downloads both platforms of every provider on every run, so it is
+// scoped to the paths that can change its outcome. A path filter is only safe
+// while it covers every input the gate reads: anything reachable from
+// `check.sh` that the filter misses would change the gate's verdict without
+// being able to run it. This asserts that coverage instead of trusting it.
+test('can be triggered by every input it reads, identically on push and pull request', () => {
+  const pushFilter = triggerPathFilter('push');
+  const pullRequestFilter = triggerPathFilter('pull_request');
+  assert.deepEqual(
+    pushFilter,
+    pullRequestFilter,
+    'a push/pull_request asymmetry would let a change reach main unvalidated',
+  );
+
+  // Guards against a vacuous pass: if the extraction above ever stops finding
+  // the gate's own entry points, the coverage loop proves nothing.
+  assert.ok(gateInputs.includes('infrastructure/staging/check.sh'), 'check.sh was not discovered');
+  assert.ok(
+    gateInputs.includes('infrastructure/staging/test/terraform.test.mjs'),
+    'this test file was not discovered',
+  );
+
+  for (const input of gateInputs) {
+    assert.ok(filterCovers(pullRequestFilter, input), `the gate reads ${input} but cannot be triggered by it`);
+  }
 });
