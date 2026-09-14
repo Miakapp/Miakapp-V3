@@ -6,8 +6,8 @@ classes without copying a production export, topology, identifier, value,
 schedule, host name, URL, user count, device model, or automation rule.
 
 The fixture is hand-authored from a generic behavior taxonomy. It is not an
-anonymized Node-RED flow and cannot be used to reconstruct the reference
-installation.
+anonymized export from any home-automation system and cannot be used to
+reconstruct the reference installation.
 
 ## Layout
 
@@ -45,8 +45,8 @@ Consumers can choose a shorter deadline or supply a parent cancellation signal.
 Synchronous untrusted adapter code still belongs behind a terminable worker or
 process boundary because an in-process JavaScript deadline cannot preempt it.
 
-Device commands are records only. The fixture runner has no network, MQTT,
-GPIO, Node-RED deployment, Firebase, or push-delivery integration.
+Device commands are records only. The fixture runner has no network, device,
+broker, automation-runtime, Firebase, or push-delivery integration.
 
 ## Privacy boundary
 
@@ -77,16 +77,16 @@ Node 22:
 ./synthetic-home/check.sh
 ```
 
-The package remains private while the migration adapter is still unimplemented,
+The package remains private until its release and versioning workflow is defined,
 but its exported boundary is compiled Node-compatible ESM rather than Bun-only
-TypeScript source.
+TypeScript source so runtime-specific adapters can consume it.
 
 ## Boundary
 
 This corpus closes the sanitized synthetic-fixture action only. It does not yet
-implement the MiakAPI 4 surface, the temporary Node-RED shadow adapter,
+implement the MiakAPI 4 surface, a runtime-specific shadow adapter,
 production comparison, backup/restore rehearsal, or platform push contract.
 Those consumers must adapt to this replay API without importing private data.
 The `concurrent_action` capsule models the deterministic busy guard observed by
 a second action while an earlier operation is in flight; atomic simultaneous
-dispatch belongs in the future Node-RED adapter harness.
+dispatch belongs in the runtime-specific adapter harness.
