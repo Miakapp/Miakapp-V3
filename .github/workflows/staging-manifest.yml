@@ -7,23 +7,20 @@ name: Staging manifest safety gate
 # `init`, `validate` and `test` in about twenty seconds.
 #
 # `terraform providers lock` deliberately ignores the plugin cache directory, so
-# caching cannot fix it. The gate is therefore scoped to the changes it can
-# actually be affected by, rather than run on every pull request.
+# caching cannot fix it. The gate therefore skips its work when no input it
+# reads has changed, rather than paying for every unrelated pull request.
+#
+# The skip is decided inside the job and deliberately NOT with an `on: paths:`
+# filter. `Staging manifest safety gate / validate` is a required status check
+# on `main`: a filtered-out workflow reports no check at all, and a required
+# check that is never reported blocks a pull request forever instead of passing
+# it. The job always runs and always reports; it decides for itself whether to
+# do the expensive work. `staging-manifest-scope.sh` holds the input list.
 on:
   push:
     branches:
       - main
-    paths:
-      - '.github/workflows/staging-manifest.yml'
-      - 'infrastructure/staging/**'
-      - 'package.json'
-      - 'bun.lock'
   pull_request:
-    paths:
-      - '.github/workflows/staging-manifest.yml'
-      - 'infrastructure/staging/**'
-      - 'package.json'
-      - 'bun.lock'
 
 permissions:
   contents: read
@@ -40,18 +37,31 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+      - name: Decide whether any gate input changed
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: ./.github/workflows/staging-manifest-scope.sh
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        if: steps.scope.outputs.changed == 'true'
         with:
           node-version: 22.22.0
           package-manager-cache: false
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        if: steps.scope.outputs.changed == 'true'
         with:
           bun-version: 1.2.23
       - name: Install locked browser-attestation dependencies
+        if: steps.scope.outputs.changed == 'true'
         run: bun install --frozen-lockfile
       - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        if: steps.scope.outputs.changed == 'true'
         with:
           terraform_version: 1.11.3
           terraform_wrapper: false
       - name: Validate and mock-plan the credential-free staging foundation
+        if: steps.scope.outputs.changed == 'true'
         run: npm run test:staging-manifest
