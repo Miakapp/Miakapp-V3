@@ -115,16 +115,20 @@ function renderNode(
       );
     case 'status': {
       const state = stringProp(node, 'state');
+      const label = stringProp(node, 'label');
+      const detail = node.props.detail ? stringProp(node, 'detail') : undefined;
       return (
         <div
+          aria-label={detail ? `${label}: ${detail}` : label}
           className={`semantic-status semantic-status--${state}`}
           data-node-id={node.id}
           key={node.id}
+          role="status"
         >
           <span className="semantic-status__dot" />
           <span>
-            <strong>{stringProp(node, 'label')}</strong>
-            {node.props.detail ? <small>{stringProp(node, 'detail')}</small> : null}
+            <strong>{label}</strong>
+            {detail ? <small>{detail}</small> : null}
           </span>
         </div>
       );
