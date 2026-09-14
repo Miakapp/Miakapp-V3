@@ -19,7 +19,6 @@ HTML, CSS, URL, or property-bag injection.
 The browser corpus runs the same broker and headers in Chromium, Firefox, and
 WebKit. It includes valid, tampered, declaration-shadowing, egress,
 invalid-tree, sparse-array, undeclared-capability, duplicate-load, lifecycle,
-dual-release staging and activation, explicit higher-generation rollback,
 message-flood, and pre/post-activation infinite-loop bundles. Tests observe
 actual probe requests; rejected promises or CSP console messages are not treated
 as sufficient evidence.
@@ -38,8 +37,9 @@ as sufficient evidence.
 This remains an architectural boundary subset. The repository root now contains
 the first production-shaped React semantic renderer, but it uses an explicitly
 offline preview adapter and is not yet connected to this broker. Firebase
-artifact delivery, generated-component SDK, production-shell lifecycle integration
-and full RFC conformance remain behind the accepted ABI and explicit exit gate.
+artifact delivery, generated-component SDK, dual-release activation, complete
+host lifecycle and full RFC conformance remain behind the accepted ABI and
+explicit exit gate.
 
 ## Run
 
@@ -71,6 +71,6 @@ bun run test:browser
 Passing this harness demonstrates the selected browser primitives and the tested
 protocol subset. A production implementation still has to fetch real Firebase
 artifacts, use the exact production headers and attributes, connect to RFC 0001
-sessions, enforce publisher authorization, reuse the proven dual-release swap from
-the production React shell, reconcile the full React design system, handle
-visibility/BFCache, and pass every conformance item in RFC 0002 Section 18.
+sessions, enforce publisher authorization, stage and atomically swap two
+releases, reconcile the full React design system, handle visibility/BFCache, and
+pass every conformance item in RFC 0002 Section 18.
