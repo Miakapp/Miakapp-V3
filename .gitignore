@@ -1,6 +1,7 @@
 node_modules/
 package-lock.json
 !control-plane/deployment/package-lock.json
+!node-red-adapter/package-lock.json
 /dist
 .env.local
 .env.*.local

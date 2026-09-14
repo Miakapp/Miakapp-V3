@@ -198,9 +198,41 @@ recorder-owned state and leased effects, stimulus-indexed lifecycle/errors,
 terminal declaration-promise evidence, atomic-declaration rollback and causal
 call-handle checks, plus compiled Node 22 and authenticated process-bounded
 external-subject execution. No production export or private value is part of
-either corpus. Any required runtime-specific harness, restore rehearsal and
-deployment-specific preserved-versus-fixed list remain open, so the workstream
-is not complete.
+either corpus. The restore rehearsal and deployment-specific
+preserved-versus-fixed list remain open, so the workstream is not complete.
+
+Characterization status (2026-09-14): `node-red-adapter/` is the runtime
+specific harness for the one installation that currently needs one, the v3
+Node-RED deployment. Deliverable 4 stays open in general, since it is per
+installation and optional; it is answered for this installation.
+
+The harness boots a real Node-RED 5.0.7 runtime with
+`node-red-contrib-miakapi@3.0.31` exactly as published, deploys the synthetic
+house through the same runtime call the editor's Deploy button makes, and
+replaces only the `miakapi` cloud SDK with a recording stand-in at the
+`require` boundary. That substitution is not a convenience: the v3 node opens a
+coordinator connection while the node is being instantiated, so a harness
+keeping the real SDK would reach a production service from CI. It opens no
+network sockets, and no production export or private value is part of the
+corpus.
+
+This is the first corpus that executes v3 rather than modelling it, which turns
+six claims previously read out of the node's source into observations, each
+pinned by a test. `coordSecret` is persisted in cleartext, because the node
+registers no credentials schema and Node-RED therefore writes no
+`flows_cred.json` at all. A full deploy is persisted verbatim, with no injected
+defaults, which is what makes hand-authored fixtures structurally faithful
+stand-ins for runtime exports. `allowedGroups: []` allows everyone.
+`initMiakapi` subscribes to the coordinator once per event and fans out in
+module scope, so an export without it has action nodes that can never fire, and
+the coordinator cannot tell which input ids are bound. `commitVariables`
+coerces every falsy reading to `''`, the most likely source of silent
+divergence when v4 replays v3 state. Every commit sends the whole variable set
+rather than a delta.
+
+The harness also produces runtime-persisted exports on demand, so a
+`flows.json` parser can be checked against the shape Node-RED actually writes
+instead of against a fixture its own author typed.
 
 ### C. Relay and SDK vertical slice
 
