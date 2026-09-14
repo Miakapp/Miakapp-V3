@@ -58,6 +58,7 @@ test('the browser alone contains a hostile guest without the confinement prelude
   // assertion does not depend on the guest telling the truth.
   const hostPeer = await context.newPage();
   await hostPeer.goto(hostUrl);
+  await hostPeer.request.get('http://127.0.0.1:4173/leak-reset');
   await hostPeer.evaluate(() => {
     const scope = window as typeof window & { heardFromGuest: string[] };
     scope.heardFromGuest = [];
@@ -87,8 +88,13 @@ test('the browser alone contains a hostile guest without the confinement prelude
       + 'These are contained by our JavaScript only, so the exit gate is not met for them.',
   ).toEqual([]);
 
-  // Independent of what the guest believed happened: nothing reached the network.
-  expect(leakRequests, 'hostile guest performed network egress').toEqual([]);
+  // Two independent views of egress. The browser-side list says what the engine
+  // attempted; the server-side list says what actually arrived. They can differ,
+  // and only the second one decides whether bytes left the machine.
+  const delivered = await hostPeer.request.get('http://127.0.0.1:4173/leak-hits')
+    .then((reply) => reply.json() as Promise<string[]>);
+  expect(delivered, 'hostile guest reached the network; bytes left the browser').toEqual([]);
+  expect(leakRequests, 'hostile guest attempted network egress').toEqual([]);
 
   // Direct evidence from the other side of the boundary.
   const heard = await hostPeer.evaluate(() => (
