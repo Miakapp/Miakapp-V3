@@ -44,10 +44,29 @@ let started = false;
 
 /**
  * @param {object} options
- * @param {unknown[]} options.flows      Authored flow definitions to deploy.
+ * @param {unknown[]|null} [options.flows]  Flow definitions to deploy. Pass `null`
+ *   to start from whatever the environment already has on disk, which is what a
+ *   restore has to do: nobody redeploys the house after pulling a backup back.
  * @param {object[]} [options.users]     Users the recorded SDK should report.
+ * @param {string} [options.userDir]     Start in this environment instead of a
+ *   fresh temporary one. Used by the restore rehearsal to boot a restored copy.
+ * @param {boolean} [options.keepUserDir] Leave the environment on disk at stop().
+ * @param {boolean} [options.requireNodes] Throw when the runtime never
+ *   instantiates the deployed nodes. Set `false` to inspect a runtime that
+ *   started without them, which is what a broken restore produces: Node-RED
+ *   resolves `start()`, logs a warning, and waits for the missing types.
  */
-export async function startHouse({ flows, users = [] }) {
+export async function startHouse({
+  flows = null,
+  users = [],
+  userDir: existingUserDir = null,
+  keepUserDir = false,
+  requireNodes = true,
+} = {}) {
+  if (flows === null && existingUserDir === null) {
+    throw new Error('startHouse() needs either flows to deploy or an existing userDir to start from');
+  }
+
   if (started) {
     throw new Error(
       'startHouse() was already called in this process. The v3 node keeps HOME and its '
@@ -68,13 +87,20 @@ export async function startHouse({ flows, users = [] }) {
     return originalLoad.call(this, request, ...rest);
   };
 
-  const userDir = await mkdtemp(path.join(tmpdir(), 'node-red-adapter-'));
-  await mkdir(path.join(userDir, 'node_modules'), { recursive: true });
+  const userDir = existingUserDir ?? (await mkdtemp(path.join(tmpdir(), 'node-red-adapter-')));
 
-  // Node-RED discovers node packages by scanning userDir/node_modules. Linking
-  // the installed package keeps the bytes identical to what npm resolved.
-  const installedPackage = path.dirname(require.resolve(`${NODE_PACKAGE}/package.json`));
-  await symlink(installedPackage, path.join(userDir, 'node_modules', NODE_PACKAGE), 'dir');
+  // Deploying means we are building an environment, so the node package gets
+  // installed. Starting from disk means we are running an environment somebody
+  // else produced, so whatever is in `node_modules` is what the house gets —
+  // installing here would quietly repair the very gap a restore might have.
+  if (flows !== null) {
+    await mkdir(path.join(userDir, 'node_modules'), { recursive: true });
+
+    // Node-RED discovers node packages by scanning userDir/node_modules. Linking
+    // the installed package keeps the bytes identical to what npm resolved.
+    const installedPackage = path.dirname(require.resolve(`${NODE_PACKAGE}/package.json`));
+    await symlink(installedPackage, path.join(userDir, 'node_modules', NODE_PACKAGE), 'dir');
+  }
 
   const RED = require('node-red');
   const server = createServer();
@@ -109,12 +135,14 @@ export async function startHouse({ flows, users = [] }) {
     return sendEvents;
   });
 
-  // The same call the admin API makes for a full deploy from the editor.
-  await RED.runtime.flows.setFlows({
-    user: null,
-    flows: { flows },
-    deploymentType: 'full',
-  });
+  if (flows !== null) {
+    // The same call the admin API makes for a full deploy from the editor.
+    await RED.runtime.flows.setFlows({
+      user: null,
+      flows: { flows },
+      deploymentType: 'full',
+    });
+  }
 
   // `setFlows` resolves once the configuration is persisted, which is before
   // the runtime has instantiated a single node.
@@ -124,7 +152,17 @@ export async function startHouse({ flows, users = [] }) {
   // resolves, so a one-shot listener registered around the deploy can be
   // satisfied by the empty start and return a runtime with no nodes in it.
   // Waiting until the nodes exist is the condition the tests actually need.
-  await waitForNodes(RED, flows);
+  //
+  // Starting from disk waits on the same condition, against the flows the
+  // runtime loaded rather than the ones we handed it.
+  const expectedFlows = flows ?? (await readPersistedFlows(userDir));
+  let missingNodeIds = [];
+  try {
+    await waitForNodes(RED, expectedFlows);
+  } catch (error) {
+    if (requireNodes) throw error;
+    missingNodeIds = error.missingNodeIds ?? [];
+  }
 
   const readPersisted = async (file) => {
     try {
@@ -152,6 +190,28 @@ export async function startHouse({ flows, users = [] }) {
     persistedFlows: () => readPersisted('flows.json'),
     persistedCredentials: () => readPersisted('flows_cred.json'),
 
+    /**
+     * Deployed nodes the runtime never instantiated. Empty on a healthy boot.
+     * Only populated when `requireNodes: false`.
+     */
+    missingNodeIds,
+
+    /**
+     * Flow node types the runtime has no registration for.
+     *
+     * This is the runtime's own view of a failed palette load: it starts, holds
+     * the flows, and waits for these types to appear. Nothing throws.
+     */
+    missingTypes() {
+      return [
+        ...new Set(
+          expectedFlows
+            .filter((node) => node.type !== 'tab' && !RED.nodes.getType(node.type))
+            .map((node) => node.type),
+        ),
+      ].sort();
+    },
+
     /** Node types the runtime actually registered from the package. */
     registeredTypes() {
       return RED.nodes
@@ -163,7 +223,7 @@ export async function startHouse({ flows, users = [] }) {
     async stop() {
       await RED.stop();
       Module._load = originalLoad;
-      await rm(userDir, { recursive: true, force: true });
+      if (!keepUserDir) await rm(userDir, { recursive: true, force: true });
     },
   };
 }
@@ -174,7 +234,7 @@ export async function startHouse({ flows, users = [] }) {
  * Config nodes (no `z`) and tabs are excluded: the runtime only registers them
  * when a flow node references them.
  */
-async function waitForNodes(RED, flows, timeoutMs = 20000) {
+async function waitForNodes(RED, flows, timeoutMs = Number(process.env.NODE_RED_ADAPTER_NODE_TIMEOUT_MS ?? 20000)) {
   const expected = flows
     .filter((node) => node.type !== 'tab' && typeof node.z === 'string' && node.z.length > 0)
     .map((node) => node.id);
@@ -185,11 +245,23 @@ async function waitForNodes(RED, flows, timeoutMs = 20000) {
     if (missing.length === 0) return;
 
     if (Date.now() > deadline) {
-      throw new Error(
+      const error = new Error(
         `the runtime did not instantiate these nodes within ${timeoutMs}ms: ${missing.join(', ')}`,
       );
+      error.missingNodeIds = missing;
+      throw error;
     }
     await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+}
+
+/** The flow set the runtime found on disk, which is what a restored house runs. */
+async function readPersistedFlows(userDir) {
+  try {
+    return JSON.parse(await readFile(path.join(userDir, 'flows.json'), 'utf8'));
+  } catch (error) {
+    if (error.code === 'ENOENT') return [];
+    throw error;
   }
 }
 
