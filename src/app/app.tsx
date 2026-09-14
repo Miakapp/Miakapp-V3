@@ -127,7 +127,7 @@ function ActivityView({
   );
 }
 
-function SettingsView(): React.JSX.Element {
+function SettingsView({ preview }: { readonly preview: boolean }): React.JSX.Element {
   return (
     <section className="static-view">
       <header className="static-view__heading">
@@ -140,8 +140,12 @@ function SettingsView(): React.JSX.Element {
           <span className="settings-card__icon"><HomeIcon /></span>
           <div>
             <h2>Home coordinator</h2>
-            <p>Preview adapter</p>
-            <small>No cloud or home connection is active in this build.</small>
+            <p>{preview ? 'Preview adapter' : 'Bun coordinator'}</p>
+            <small>
+              {preview
+                ? 'No cloud or home connection is active in this build.'
+                : 'Live state and actions travel through MiakAPI without a Node-RED dependency.'}
+            </small>
           </div>
         </article>
         <article className="static-panel settings-card">
@@ -190,7 +194,7 @@ export function App({ createHost = createDemoHost }: AppProps): React.JSX.Elemen
             <strong>{snapshot.activeHome.name}</strong>
             <small>{snapshot.activeHome.detail}</small>
           </span>
-          <span className="home-picker__mode">Preview</span>
+          <span className="home-picker__mode">{snapshot.modeLabel}</span>
         </div>
         <Navigation onChange={setView} view={view} />
         <div className="sidebar__footer">
@@ -205,10 +209,13 @@ export function App({ createHost = createDemoHost }: AppProps): React.JSX.Elemen
           <ConnectionPill detail={snapshot.connectionDetail} />
         </header>
 
-        <div className="preview-notice" role="status">
+        <div className={snapshot.preview ? 'preview-notice' : 'preview-notice preview-notice--live'} role="status">
           <span><SparkIcon /></span>
-          <strong>Interactive product preview</strong>
-          <small>No cloud, relay, or home is connected.</small>
+          <strong>{snapshot.noticeTitle}</strong>
+          <small>{snapshot.noticeDetail}</small>
+          {snapshot.signInAvailable ? (
+            <button onClick={host.signIn} type="button">Sign in with Google</button>
+          ) : null}
         </div>
 
         {view === 'home' ? (
@@ -241,7 +248,7 @@ export function App({ createHost = createDemoHost }: AppProps): React.JSX.Elemen
         ) : view === 'activity' ? (
           <ActivityView activity={snapshot.activity} />
         ) : (
-          <SettingsView />
+          <SettingsView preview={snapshot.preview} />
         )}
 
         <footer className="workspace__footer">

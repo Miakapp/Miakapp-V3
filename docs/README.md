@@ -16,7 +16,7 @@ implemented across several repositories.
   release lifecycle.
 - [`rfcs/0003-coordinator-sdk-and-migration.md`](rfcs/0003-coordinator-sdk-and-migration.md)
   — accepted public coordinator API, retry and lifecycle semantics, temporary
-  Node-RED boundary, fail-closed shadow modes, and comparison contract.
+  legacy-system boundary, fail-closed shadow modes, and comparison contract.
 - [`rfcs/0004-platform-control-plane.md`](rfcs/0004-platform-control-plane.md)
   — accepted owner bootstrap, Home Key, resource-specific token, JWKS, Firebase
   source identity, audience-bound browser exchange, push-consent and
@@ -284,9 +284,9 @@ corpus under [`../component-runtime/`](../component-runtime/); complete
 production conformance remains an exit gate for the component-platform vertical
 slice. RFC 0003 is backed by the API-level corpus, bounded replay runner,
 synthetic-home adapter and effect recorder under [`../coordinator-contract/`](../coordinator-contract/);
-the real MiakAPI implementation now passes that contract while the Node-RED
-runtime adapter remains open. RFC 0004 is backed by deterministic signed
-vectors, independent TypeScript and Go verifiers, and a bounded behavioral model
+the real MiakAPI implementation now passes that contract while runtime-specific
+migration adapters remain optional and implementation-owned. RFC 0004 is backed
+by deterministic signed vectors, independent TypeScript and Go verifiers, and a bounded behavioral model
 under [`../control-plane-contract/`](../control-plane-contract/). Its first
 owner-to-access-token implementation slice runs through Auth, Functions and
 Firestore under [`../control-plane/`](../control-plane/). The same isolated

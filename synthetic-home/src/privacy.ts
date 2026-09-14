@@ -203,9 +203,9 @@ export function scanPublicFixture(value: unknown): PrivacyFinding[] {
     if (keys.includes('type') && keys.includes('wires') && keys.includes('z')) {
       addFinding(
         findings,
-        'node_red_export',
+        'automation_graph_export',
         current.path,
-        'raw Node-RED node structures are not allowed',
+        'raw source-runtime structures are not allowed',
       );
     }
     for (let index = keys.length - 1; index >= 0; index -= 1) {

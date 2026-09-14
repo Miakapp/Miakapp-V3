@@ -32,6 +32,10 @@ export interface TrustedHostSnapshot {
   readonly uiTree: UiNode;
   readonly activity: readonly HomeActivity[];
   readonly preview: boolean;
+  readonly modeLabel: string;
+  readonly noticeTitle: string;
+  readonly noticeDetail: string;
+  readonly signInAvailable: boolean;
 }
 
 export interface SemanticInteraction {
@@ -44,5 +48,6 @@ export interface TrustedHost {
   readonly getSnapshot: () => TrustedHostSnapshot;
   readonly subscribe: (listener: () => void) => () => void;
   readonly interact: (interaction: SemanticInteraction) => void;
+  readonly signIn?: () => void;
   readonly dispose: () => void;
 }

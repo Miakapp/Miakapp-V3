@@ -8,7 +8,8 @@
 ## 1. Scope
 
 This document defines the public coordinator API that agents and applications use
-on top of RFC 0001, together with the temporary Node-RED migration boundary. It
+on top of RFC 0001, together with the temporary legacy-system migration
+boundary. It
 specifies observable lifecycle, declaration, state, event, call, presence, error,
 shadow, comparison and shutdown behavior. The API is deliberately higher-level
 than wire frames: applications use names and values while the SDK owns request
@@ -23,7 +24,7 @@ The following remain outside this RFC:
 - relay implementation details already owned by RFC 0001;
 - durable event replay, durable call-operation resources and active-active
   physical control;
-- a permanent Node-RED product or a permanent v3 compatibility path.
+- a permanent integration-specific adapter or a permanent v3 compatibility path.
 
 The words **MUST**, **MUST NOT**, **REQUIRED**, **SHOULD**, **SHOULD NOT** and
 **MAY** are interpreted as described in RFC 2119 and RFC 8174.
@@ -52,9 +53,10 @@ The coordinator surface has eight constraints:
 7. **Shadow means non-actuating by construction.** Mirroring an input while
    discarding its result is not a safety boundary. Shadow effects go only to an
    isolated recorder, and an unclassified effect fails closed.
-8. **The working v3 installation is an oracle, not a new architecture.** Legacy
-   groups, DOM element actions and push selection may be translated temporarily
-   for comparison but do not enter the Miakapp 4 product contract.
+8. **The working installation is an oracle, not a new architecture.** Source-
+   specific permissions, action identifiers and notification behavior may be
+   translated temporarily for comparison but do not enter the Miakapp 4 product
+   contract.
 
 ## 3. Package and runtime boundary
 
@@ -74,8 +76,8 @@ consumers continue to behave correctly.
 
 The production package is authored in strict TypeScript and publishes compiled
 JavaScript plus declarations. Bun is the primary coordinator runtime. The shared
-coordinator library MUST also run under the Node version required by the migration
-adapter; the first adapter baseline is Node 22.9 or newer and Node-RED 5.
+coordinator library MUST also run under Node 22.9 or newer so runtime-specific
+migration adapters can reuse the same SDK without redefining its behavior.
 
 The package exports an explicit ESM boundary. It does not expose source files or
 undocumented subpaths. Runtime-specific filesystem, process, keychain, prompt and
@@ -557,7 +559,8 @@ export class ApplicationCallError extends Error {
 The constructor rejects codes outside the RFC 0001 application range and bounds
 the explicitly caller-safe message to 256 UTF-8 bytes without control characters.
 It validates `retryable` as a boolean at runtime rather than relying on TypeScript,
-because JavaScript and Node-RED callers use the same constructor. Any other throw
+because Bun, Node and plain JavaScript callers use the same constructor. Any
+other throw
 becomes a generic internal call error; stack traces and arbitrary thrown text are
 not sent to the caller.
 
@@ -693,57 +696,51 @@ payloads, notification contents, verified email and stack traces from applicatio
 handlers are redacted by default. Logging a path, topic, function or coordinator
 name is allowed only after the caller explicitly enables name diagnostics.
 
-## 14. Node-RED migration adapter
+## 14. Legacy-system migration adapter
 
 ### 14.1 Product boundary
 
-The adapter is temporary coordinator-side migration tooling. It is not a v3
-protocol path in the new relay and is not the recommended way to build a new
-Miakapp home. The public `node-red-contrib-miakapi` package remains on the legacy
-major, receives deprecation/onboarding messaging and points users to
-`https://miakapp.com/`. The bridge may live in the same source repository but is
-published, enabled and removed independently from the legacy nodes.
+An adapter is optional, temporary coordinator-side migration tooling for one
+existing home-automation system. It is not a legacy protocol path in the new
+relay, is not part of the agent-authored coordinator, and is not the recommended
+way to build a new Miakapp home. Each bridge is implemented, enabled and removed
+independently from both the source system and the public Miakapp 4 runtime.
 
-### 14.2 Node-RED structure
+### 14.2 Host-runtime structure
 
-The bridge uses one Node-RED configuration node per coordinator connection. The
-configuration node owns the `miakapi@4` instance, connection status, desired
-declarations, bounded recorder and cleanup. Functional nodes obtain it through
-`RED.nodes.getNode`; no module-global home, variables object or handler registry
-exists.
+The bridge owns one isolated `miakapi@4` instance per coordinator connection,
+together with its connection status, desired declarations, bounded recorder and
+cleanup. No module-global home, mutable state object or handler registry may be
+shared between adapter instances.
 
-The Home Key or equivalent bootstrap secret is a Node-RED credential, declared in
-the registration credential schema and read through `node.credentials`. It is not
-an ordinary node default, flow property, status string, comparison report or
-exported message field.
+The Home Key or equivalent bootstrap secret is stored through the host runtime's
+credential facility. It is not an ordinary configuration value, automation
+property, status string, comparison report or exported message field.
 
-Every runtime node implements `close`. Closing or redeploying a configuration
-node aborts in-flight evaluation and replay, removes listeners, stops the SDK and
-invokes the Node-RED completion callback within its runtime deadline. Input
-handlers use `(msg, send, done)` and report failures through `done(error)` so
-Catch nodes can observe them.
+Every adapter instance implements explicit close semantics. Closing, restarting
+or redeploying it aborts in-flight evaluation and replay, removes listeners,
+stops the SDK and reports completion within the host runtime's deadline.
 
-Configured value expressions use Node-RED's typed-property evaluation utilities,
-including their asynchronous context path. The adapter does not own a private
-JSONata 1.x runtime and does not assume synchronous evaluation. Context reads are
+Configured value expressions use the source system's supported evaluation API,
+including asynchronous execution where applicable. The adapter does not embed a
+second expression runtime or assume synchronous evaluation. Source reads are
 copied and validated before entering the protocol value boundary.
 
 ### 14.3 Legacy translation
 
 For the temporary comparison window only:
 
-- a v3 full variable commit is converted into the bridge coordinator's complete
-  state slice using the same path strings;
-- the legacy `global.` namespace may be translated into explicit per-user ACLs;
-- legacy group-name prefixes may be translated from the current legacy user list
-  into explicit user ACL entries;
+- a legacy state snapshot is converted into the bridge coordinator's complete
+  state slice using deterministic path mappings;
+- source-system permissions may be translated into explicit per-user ACLs only
+  through a reviewed identity mapping;
 - an empty explicit ACL remains an enrolled user with no state visibility;
-- DOM element action IDs, admin flags, notification flags and group names remain
+- source-system action IDs, roles, notification flags and grouping concepts remain
   adapter inputs and never become general Miakapp 4 SDK concepts;
 - notification sends become notification intents in all non-live modes.
 
 Translation is deterministic and closed: an unknown path form, duplicate user,
-ambiguous action element or unsupported value rejects the current comparison
+ambiguous source action or unsupported value rejects the current comparison
 capsule. It is not silently dropped.
 
 ## 15. Migration modes and effect safety
@@ -763,13 +760,14 @@ the mode.
 
 In every non-live mode, the only supplied effect capability is an `EffectRecorder`
 with bounded methods for device commands and notification intents. There is no
-live device, MQTT, GPIO, HTTP, shell, push or arbitrary Node-RED send capability
-inside the conformance subject. An effect category absent from the recorder
+live device, MQTT, GPIO, HTTP, shell, push or arbitrary host-runtime effect
+capability inside the conformance subject. An effect category absent from the recorder
 contract throws `unclassified_effect` and fails the capsule.
 
 `shadow_state` does not declare callable functions to beta users. Copying an
-action into an ordinary Node-RED flow and discarding its response is forbidden:
-the downstream flow may still actuate. `recorded_action` is permitted only when
+action into an ordinary legacy automation path and discarding its response is
+forbidden: the downstream system may still actuate. `recorded_action` is permitted
+only when
 the complete action path is structurally connected to the recorder or another
 reviewed dry-run implementation. Labels, comments and a `dryRun` boolean passed
 to arbitrary downstream code are not enforcement.
@@ -813,7 +811,8 @@ raw values, user identities and flow exports remain private and gitignored.
 ## 17. Synthetic-home conformance adapter
 
 The executable coordinator contract consumes the generic `synthetic-home`
-`ReplaySubject` boundary. A future MiakAPI or Node-RED implementation supplies:
+`ReplaySubject` boundary. A future MiakAPI or migration-adapter implementation
+supplies:
 
 ```ts
 reset(setup, signal)
@@ -865,7 +864,7 @@ a dedicated child process supervised by stage and total watchdogs, authenticated
 completion messages and a bounded kill grace, so a synchronous infinite loop or
 inherited worker pipe cannot pin the checker. This is a termination boundary, not
 an OS sandbox: production-shaped comparison also structurally replaces every live
-effect capability rather than invoking untrusted Node-RED or adapter code in the
+effect capability rather than invoking untrusted source-system or adapter code in the
 orchestrator process.
 
 ## 18. Preserved and intentionally fixed behavior
@@ -877,13 +876,13 @@ orchestrator process.
 | `global.` and group prefixes filter users | translated temporarily; fixed as explicit per-user ACLs |
 | user actions contain element ID/type/name/value | translated temporarily; fixed as named calls with authenticated principal |
 | callbacks append forever | fixed with idempotent unsubscribe and shutdown cleanup |
-| one module-global Node-RED home | fixed with explicit configuration nodes |
-| coordinator secret stored in node defaults | fixed with credential storage and Home Key token provider |
+| one shared mutable source-system connection | fixed with one isolated adapter instance per coordinator |
+| coordinator secret stored in ordinary configuration | fixed with credential storage and Home Key token provider |
 | full commit after every change | fixed with complete declaration for ownership and atomic named mutations thereafter |
 | fixed one-second reconnect | fixed with RFC 0001 full-jitter exponential backoff |
 | application ping every five seconds | removed; RFC 6455 control frames own liveness |
 | notification code directly selects and sends to users | intent preserved; delivery waits for the control-plane push-grant contract |
-| action group filtering only in a Node-RED callback | fixed; relay metadata plus final coordinator authorization are mandatory |
+| action filtering only in a source-system callback | fixed; relay metadata plus final coordinator authorization are mandatory |
 | manual live script as `npm test` | fixed with isolated deterministic contract tests |
 
 ## 19. Conformance
@@ -911,9 +910,10 @@ A coordinator SDK conforms to API 1.0 when it:
 
 A migration adapter additionally conforms when it:
 
-1. uses a Node-RED configuration node and credential store;
-2. closes cleanly across full and modified redeploys;
-3. evaluates typed properties asynchronously through the Node-RED runtime;
+1. isolates configuration, credentials and lifecycle per coordinator connection;
+2. closes cleanly across restarts and redeploys;
+3. evaluates source-system values through its supported runtime without assuming
+   synchronous execution;
 4. consumes the public synthetic-home fixture without production data;
 5. publishes only state in `shadow_state`;
 6. routes every non-live effect to the bounded recorder;
@@ -930,8 +930,9 @@ selection MUST retain the fixed coverage set for that profile; selecting an
 arbitrary subset is not conformance.
 
 The shared executable package establishes the public surface and fixture runner.
-It does not prove a future MiakAPI build or Node-RED runtime conforms until that
-implementation is installed as the subject and passes its complete profile.
+It does not prove a future MiakAPI build or runtime-specific adapter conforms
+until that implementation is installed as the subject and passes its complete
+profile.
 
 ## 20. Security and privacy acceptance matrix
 
@@ -940,7 +941,7 @@ implementation is installed as the subject and passes its complete profile.
 | state or ACL prefix becomes visible during replacement | intermediate probes observe only the previous configuration until atomic activation |
 | concurrent coordinators stage a colliding declaration | home-locked final revalidation activates at most one and the loser retains its previous configuration |
 | a declaration is superseded, rejected or stopped | every promise represented by that desired snapshot has one causally indexed terminal settlement |
-| secret exported in a Node-RED flow | credential-schema test and redacted export fixture |
+| secret exported in an automation definition | credential-schema test and redacted export fixture |
 | shadow action reaches a physical sink | hostile sink test observes zero calls |
 | notification shadow reaches platform push | hostile push test observes zero calls |
 | unknown effect bypasses the recorder | `unclassified_effect` fail-closed test |
@@ -987,7 +988,7 @@ changing coordinator lifecycle semantics. It MUST still return only the bounded
 | no automatic effect retry | RFC 0001 cannot prove a post-dispatch outcome |
 | pull-bounded call stream | wire credit follows consumer demand and bounds memory |
 | injected token provider | control-plane details remain open and secrets stay outside transport logic |
-| configuration node per connection | Node-RED lifecycle and ownership become explicit and testable |
+| isolated adapter instance per connection | lifecycle and ownership become explicit and testable across source systems |
 | state-only default shadow | copying a request does not suppress its side effects |
 | recorder as the only non-live effect capability | safety is structural and fail-closed rather than conventional |
 | legacy package deprecation | the bridge protects migration without becoming the new product |
@@ -1001,10 +1002,6 @@ changing coordinator lifecycle semantics. It MUST still return only the bounded
   ecosystem trust and migration boundary.
 - [Synthetic-home fixture](../../synthetic-home/README.md) defines the public
   deterministic behavior oracle.
-- [Node-RED configuration nodes](https://nodered.org/docs/creating-nodes/config-nodes),
-  [credentials](https://nodered.org/docs/creating-nodes/credentials) and
-  [close lifecycle](https://nodered.org/docs/creating-nodes/node-js#closing-the-node)
-  define the adapter runtime obligations.
 - [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html) defines idempotent HTTP
   method semantics used as background for retry terminology.
 - [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785.html) defines deterministic
