@@ -102,6 +102,11 @@ function response(body: BodyInit | null, init: ResponseInit = {}): Response {
   return new Response(body, init);
 }
 
+// Server-side egress evidence. A request observed by the browser's devtools
+// protocol may still have been refused before dispatch; a request recorded here
+// definitively left the browser and reached a remote listener.
+let leakHits: string[] = [];
+
 Bun.serve({
   hostname: '0.0.0.0',
   port,
@@ -154,12 +159,25 @@ Bun.serve({
         },
       });
     }
+    if (url.pathname === '/leak-hits' && hostname === '127.0.0.1') {
+      return response(JSON.stringify(leakHits), {
+        headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+      });
+    }
+    if (url.pathname === '/leak-reset' && hostname === '127.0.0.1') {
+      leakHits = [];
+      return response('ok', { headers: { 'cache-control': 'no-store' } });
+    }
     if (url.pathname === '/leak-module.mjs') {
+      leakHits.push(request.url);
       return response('export default true;', {
         headers: { 'content-type': 'text/javascript' },
       });
     }
-    if (url.pathname === '/leak') return response(null, { status: 204 });
+    if (url.pathname === '/leak') {
+      leakHits.push(request.url);
+      return response(null, { status: 204 });
+    }
     if (url.pathname === '/health') return response('ok');
     return response('not found', { status: 404 });
   },
