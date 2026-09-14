@@ -289,6 +289,16 @@ part of the build. The opaque broker remains proven in its separate three-engine
 hostile harness; wiring its lifecycle, immutable Firebase artifact delivery and
 the real `miakapi/browser` adapter into this shell remains open.
 
+Implementation status (2026-09-14): the live trusted-host adapter now exposes
+one physical call through the complete ABI 1 status vocabulary instead of
+collapsing acceptance and completion into a spinner. The rendered path moves
+through pending, coordinator-accepted and applied, distinguishes failed from
+outcome-unknown without retrying, and invalidates late settlements after sign-out
+or disposal. Relay snapshots marked stale are identified in trusted UI and keep
+the physical control disabled. This is the first live vertical slice of
+deliverable 5; the starter design system remains open for the complete component
+surface.
+
 Exit gate: a deliberately hostile bundle is contained by browser-enforced
 boundaries, not by instructions or conventions.
 
