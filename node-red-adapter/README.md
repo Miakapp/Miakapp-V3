@@ -88,12 +88,24 @@ Checked against the v4 CLI on the captured export:
   critical: Action serrure-entree lists no group, so every signed-in user may invoke it; ...
 ```
 
+## What the behavior means for the migration
+
+`PRESERVED-VS-FIXED.md` is workstream B deliverable 6: which v3 behaviors
+Miakapp 4 keeps, which it changes, and which still need a decision. Every row
+cites either a test here or a line of the published package.
+
 ## One house per process
 
 `miakapi.js` keeps `HOME` and its event handlers in module scope, so a second
 deploy in the same process inherits the first one's handlers. `startHouse()`
 refuses a second call, and isolation comes from `node --test` running each test
 file in its own process. One scenario per file.
+
+That accumulation is itself under test. `redeploy()` deploys again into the
+same running runtime, which is what pressing Deploy a second time does, and
+`test/redeploy-accumulation.test.mjs` measures the result: one press produces
+1, then 4, then 9 downstream messages over three deploys, because both the
+client list and the handler list grow and delivery walks both.
 
 ## Restore rehearsal
 
