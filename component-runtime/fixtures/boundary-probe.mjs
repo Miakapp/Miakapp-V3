@@ -45,10 +45,15 @@ async function probe() {
     request.send();
   }));
 
-  results.push(await attempt('eventSource', () => {
+  // Construction alone proves nothing: EventSource never throws synchronously
+  // for a policy-refused URL, it reports asynchronously. Wait for the stream to
+  // actually open before calling this authority reachable.
+  results.push(await attempt('eventSource', () => new Promise((resolve, reject) => {
     const Source = requireGlobal('EventSource', globalThis.EventSource);
-    new Source(`${ORIGIN}/leak?via=no-prelude-event-source`);
-  }));
+    const source = new Source(`${ORIGIN}/leak?via=no-prelude-event-source`);
+    source.onopen = () => { source.close(); resolve(); };
+    source.onerror = () => { source.close(); reject(new Error('refused')); };
+  })));
 
   results.push(await attempt('sendBeacon', () => {
     const beacon = requireGlobal('sendBeacon', globalThis.navigator && navigator.sendBeacon);
@@ -85,10 +90,17 @@ async function probe() {
     await requireGlobal('caches', globalThis.caches).open('cross-home-probe');
   }));
 
-  results.push(await attempt('broadcastChannel', () => {
+  // Likewise, constructing a channel in an opaque origin is not an escape by
+  // itself. What matters is whether a context on the trusted host origin can be
+  // reached. The host page listens on this name and echoes anything it hears,
+  // so a reply here means the channel genuinely crossed the boundary.
+  results.push(await attempt('broadcastChannelReach', () => new Promise((resolve, reject) => {
     const Channel = requireGlobal('BroadcastChannel', globalThis.BroadcastChannel);
-    new Channel('cross-home-probe').postMessage('secret');
-  }));
+    const channel = new Channel('cross-home-probe');
+    channel.onmessage = () => { channel.close(); resolve(); };
+    channel.postMessage('secret-from-guest');
+    setTimeout(() => { channel.close(); reject(new Error('no-peer')); }, 1500);
+  })));
 
   results.push(await attempt('subworker', () => new Promise((resolve, reject) => {
     const Nested = requireGlobal('Worker', globalThis.Worker);

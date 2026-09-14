@@ -13,6 +13,7 @@ import { expect, test } from '@playwright/test';
 // the remaining denials are attributable to the browser alone.
 
 const boundaryUrl = 'http://localhost:4173/boundary.html';
+const hostUrl = 'http://127.0.0.1:4173/host.html';
 
 // Every authority the prelude removes, plus the host-storage and service-worker
 // reach named by roadmap deliverable D.6.
@@ -26,7 +27,7 @@ const PROBES = [
   'websocket',
   'indexedDB',
   'cacheStorage',
-  'broadcastChannel',
+  'broadcastChannelReach',
   'subworker',
   'hostStorage',
   'serviceWorker',
@@ -46,12 +47,28 @@ async function readObservations(page: import('@playwright/test').Page): Promise<
   return observations;
 }
 
-test('the browser alone contains a hostile guest without the confinement prelude', async ({ page }) => {
+test('the browser alone contains a hostile guest without the confinement prelude', async ({ context }) => {
   const leakRequests: string[] = [];
-  page.on('request', (request) => {
+  context.on('request', (request) => {
     if (new URL(request.url()).pathname.startsWith('/leak')) leakRequests.push(request.url());
   });
 
+  // A cooperating peer on the trusted host origin. It echoes whatever it hears,
+  // so the guest learns of any reach, and it records what it heard, so the
+  // assertion does not depend on the guest telling the truth.
+  const hostPeer = await context.newPage();
+  await hostPeer.goto(hostUrl);
+  await hostPeer.evaluate(() => {
+    const scope = window as typeof window & { heardFromGuest: string[] };
+    scope.heardFromGuest = [];
+    const channel = new BroadcastChannel('cross-home-probe');
+    channel.onmessage = (event) => {
+      scope.heardFromGuest.push(String(event.data));
+      channel.postMessage('echo');
+    };
+  });
+
+  const page = await context.newPage();
   await page.goto(boundaryUrl);
   const observations = await readObservations(page);
 
@@ -72,6 +89,12 @@ test('the browser alone contains a hostile guest without the confinement prelude
 
   // Independent of what the guest believed happened: nothing reached the network.
   expect(leakRequests, 'hostile guest performed network egress').toEqual([]);
+
+  // Direct evidence from the other side of the boundary.
+  const heard = await hostPeer.evaluate(() => (
+    (window as typeof window & { heardFromGuest: string[] }).heardFromGuest
+  ));
+  expect(heard, 'guest reached the trusted host origin over BroadcastChannel').toEqual([]);
 });
 
 test('the host secret survives a guest running without the confinement prelude', async ({ page }) => {
