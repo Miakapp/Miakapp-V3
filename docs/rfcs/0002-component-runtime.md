@@ -857,6 +857,27 @@ Tests MUST observe actual network requests, not only rejected JavaScript promise
 CSP console messages alone are not evidence. A release cannot replace these tests
 with jsdom or a single browser engine.
 
+Observing the browser's own request stream is also insufficient. Chromium reports
+a CSP-refused request to the devtools protocol *before* refusing it: a synchronous
+`XMLHttpRequest`, an `EventSource` and a dynamic `import()` from a confined Worker
+all appear as requests while none of them is dispatched. Firefox and WebKit report
+nothing for the same code. An egress test MUST therefore decide on what a remote
+listener actually received, and MUST NOT assert that the browser-side request list
+is empty — that assertion encodes one engine's reporting behaviour, not a security
+property.
+
+Containment MUST NOT rest on the confinement prelude alone. The prelude runs in
+the guest's own global scope, so it is an in-language convention; the exit gate
+requires the browser to hold the boundary by itself. `test/containment.spec.ts`
+keeps that separation honest by running the hostile probe with no prelude under
+otherwise identical conditions. With the prelude removed, network egress (fetch,
+XHR, EventSource, `sendBeacon`, WebSocket, `importScripts`, dynamic import, a
+nested Worker), storage reach (IndexedDB, CacheStorage, host `localStorage`),
+`BroadcastChannel` reach to the trusted host origin, and `serviceWorker.register`
+are all still denied by the browser in Chromium, Firefox and WebKit. The prelude
+is therefore defence in depth over an enforced boundary, which is what the gate
+asks for.
+
 The repository reference harness intentionally proves a boundary subset: byte
 integrity, classic-program parsing, prelude confinement (including declaration
 shadowing), semantic rendering, selected capability/state checks, staging and
