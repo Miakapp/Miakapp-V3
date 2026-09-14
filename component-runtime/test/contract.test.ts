@@ -16,6 +16,10 @@ import {
   sha256Base64Url,
   verifyArtifactBytes,
 } from '../src/artifact';
+import {
+  loadVerifiedArtifact,
+  type ArtifactCache,
+} from '../src/artifact-cache';
 import { validateGuestProgram } from '../src/program';
 
 const artifactOrigin = 'https://artifacts.example';
@@ -321,6 +325,132 @@ describe('artifact integrity', () => {
       value: 'https://attacker.example/homes/home-test/artifact.mjs',
     });
     await expect(fetchWith(redirected)).rejects.toMatchObject({ code: 'pointer_invalid' });
+  });
+});
+
+class MemoryArtifactCache implements ArtifactCache {
+  readonly entries = new Map<string, Uint8Array>();
+  readonly deleted: string[] = [];
+  failGet = false;
+  failPut = false;
+  mutatePut = false;
+
+  async get(homeId: string, sha256: string): Promise<Uint8Array | undefined> {
+    if (this.failGet) throw new Error('cache read failed');
+    const bytes = this.entries.get(`${homeId}:${sha256}`);
+    return bytes?.slice();
+  }
+
+  async put(homeId: string, sha256: string, bytes: Uint8Array): Promise<void> {
+    if (this.failPut) throw new Error('cache write failed');
+    if (this.mutatePut && bytes.byteLength > 0) bytes[0] = bytes[0]! ^ 1;
+    this.entries.set(`${homeId}:${sha256}`, bytes.slice());
+  }
+
+  async delete(homeId: string, sha256: string): Promise<void> {
+    const key = `${homeId}:${sha256}`;
+    this.deleted.push(key);
+    this.entries.delete(key);
+  }
+}
+
+describe('verified artifact cache', () => {
+  test('reuses content-addressed bytes only after revalidating them', async () => {
+    const bytes = new TextEncoder().encode('self.postMessage("cached")');
+    const sha256 = await sha256Base64Url(bytes);
+    const candidate = pointer({ size: bytes.byteLength, sha256 });
+    const cache = new MemoryArtifactCache();
+    let fetches = 0;
+    const fetchMock = async () => {
+      fetches += 1;
+      return new Response(bytes, {
+        status: 200,
+        headers: { 'content-type': 'text/javascript' },
+      });
+    };
+    const options = {
+      cache,
+      fetch: fetchMock as unknown as typeof fetch,
+      allowedArtifactOrigins: new Set([artifactOrigin]),
+    };
+
+    const first = await loadVerifiedArtifact(candidate, options);
+    first.bytes[0] = first.bytes[0]! ^ 1;
+    const second = await loadVerifiedArtifact(candidate, options);
+
+    expect(first.source).toBe('network');
+    expect(second).toEqual({ bytes, sha256, source: 'cache' });
+    expect(fetches).toBe(1);
+  });
+
+  test('evicts corrupt cached bytes and replaces them from the verified network response', async () => {
+    const bytes = new TextEncoder().encode('self.postMessage("fresh")');
+    const sha256 = await sha256Base64Url(bytes);
+    const candidate = pointer({ size: bytes.byteLength, sha256 });
+    const cache = new MemoryArtifactCache();
+    cache.entries.set(`${candidate.home_id}:${candidate.sha256}`, new Uint8Array(bytes.byteLength));
+    let fetches = 0;
+
+    const result = await loadVerifiedArtifact(candidate, {
+      cache,
+      fetch: (async () => {
+        fetches += 1;
+        return new Response(bytes, {
+          status: 200,
+          headers: { 'content-type': 'text/javascript' },
+        });
+      }) as unknown as typeof fetch,
+      allowedArtifactOrigins: new Set([artifactOrigin]),
+    });
+
+    expect(result).toEqual({ bytes, sha256, source: 'network' });
+    expect(fetches).toBe(1);
+    expect(cache.deleted).toEqual([`${candidate.home_id}:${candidate.sha256}`]);
+    expect(cache.entries.get(`${candidate.home_id}:${candidate.sha256}`)).toEqual(bytes);
+  });
+
+  test('does not let an injected cache mutate verified network bytes', async () => {
+    const bytes = new TextEncoder().encode('self.postMessage("isolated")');
+    const sha256 = await sha256Base64Url(bytes);
+    const candidate = pointer({ size: bytes.byteLength, sha256 });
+    const cache = new MemoryArtifactCache();
+    cache.mutatePut = true;
+
+    const result = await loadVerifiedArtifact(candidate, {
+      cache,
+      fetch: (async () => new Response(bytes, {
+        status: 200,
+        headers: { 'content-type': 'text/javascript' },
+      })) as unknown as typeof fetch,
+      allowedArtifactOrigins: new Set([artifactOrigin]),
+    });
+
+    expect(result).toEqual({ bytes, sha256, source: 'network' });
+    expect(cache.entries.get(`${candidate.home_id}:${candidate.sha256}`)).not.toEqual(bytes);
+  });
+
+  test('treats storage outages as cache misses without weakening network verification', async () => {
+    const bytes = new TextEncoder().encode('self.postMessage("available")');
+    const sha256 = await sha256Base64Url(bytes);
+    const candidate = pointer({ size: bytes.byteLength, sha256 });
+    const cache = new MemoryArtifactCache();
+    cache.failGet = true;
+    cache.failPut = true;
+    const failures: unknown[] = [];
+
+    await expect(loadVerifiedArtifact(candidate, {
+      cache,
+      onCacheError: (error) => {
+        failures.push(error);
+        throw new Error('observer failed');
+      },
+      fetch: (async () => new Response(bytes, {
+        status: 200,
+        headers: { 'content-type': 'text/javascript' },
+      })) as unknown as typeof fetch,
+      allowedArtifactOrigins: new Set([artifactOrigin]),
+    })).resolves.toEqual({ bytes, sha256, source: 'network' });
+    expect(failures).toHaveLength(2);
   });
 });
 
