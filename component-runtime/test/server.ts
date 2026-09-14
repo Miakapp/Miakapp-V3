@@ -46,9 +46,50 @@ const sandboxHtml = `<!doctype html>
   <body><script type="module">${brokerBundle}</script></body>
 </html>`;
 
+// The no-prelude boundary experiment. This document is served with byte-identical
+// security headers to /sandbox.html so the only difference from the deployed
+// runtime is the missing confinement prelude. Whatever the probe still cannot do
+// here is denied by the browser rather than by our JavaScript.
+const boundaryProbe = await Bun.file(new URL('../fixtures/boundary-probe.mjs', import.meta.url)).text();
+const boundaryScript = `
+  const source = ${JSON.stringify(boundaryProbe)};
+  const url = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
+  // Classic, exactly like RuntimeBroker creates the guest Worker. A module
+  // worker would make importScripts absent for reasons unrelated to security.
+  const worker = new Worker(url, { type: 'classic' });
+  const publish = (text) => {
+    const node = document.getElementById('observations');
+    node.textContent = text;
+    node.dataset.done = 'true';
+  };
+  worker.onmessage = (event) => publish(event.data);
+  worker.onerror = (event) => publish('worker-error:' + (event.message || 'unknown'));
+`;
+const boundaryHash = createHash('sha256').update(boundaryScript).digest('base64');
+
+const boundaryHtml = `<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><title>Miakapp boundary probe</title></head>
+  <body>
+    <div id="observations">probe running</div>
+    <script>${boundaryScript}</script>
+  </body>
+</html>`;
+
 const sandboxCsp = [
   "sandbox allow-scripts",
   `script-src 'sha256-${brokerHash}'`,
+  ...SANDBOX_DENY_DIRECTIVES,
+  'worker-src blob:',
+  'child-src blob:',
+  `frame-ancestors ${hostOrigin}`,
+].join('; ');
+
+// Identical to sandboxCsp apart from the inline script it authorises, so the
+// experiment cannot accidentally weaken the policy it is measuring.
+const boundaryCsp = [
+  'sandbox allow-scripts',
+  `script-src 'sha256-${boundaryHash}'`,
   ...SANDBOX_DENY_DIRECTIVES,
   'worker-src blob:',
   'child-src blob:',
@@ -92,6 +133,19 @@ Bun.serve({
         headers: {
           'content-type': 'text/html; charset=utf-8',
           'content-security-policy': sandboxCsp,
+          'permissions-policy': permissionsPolicy,
+          'referrer-policy': 'no-referrer',
+          'x-content-type-options': 'nosniff',
+          'cache-control': 'no-store',
+          'cross-origin-resource-policy': 'cross-origin',
+        },
+      });
+    }
+    if (url.pathname === '/boundary.html' && hostname === 'localhost') {
+      return response(boundaryHtml, {
+        headers: {
+          'content-type': 'text/html; charset=utf-8',
+          'content-security-policy': boundaryCsp,
           'permissions-policy': permissionsPolicy,
           'referrer-policy': 'no-referrer',
           'x-content-type-options': 'nosniff',
