@@ -21,6 +21,10 @@ const cliConfig = readFileSync(new URL('terraform-cli.tfrc', terraformRoot), 'ut
 const checkScript = readFileSync(new URL('../check.sh', import.meta.url), 'utf8');
 const repositoryRoot = new URL('../../../', import.meta.url);
 const workflow = readFileSync(new URL('.github/workflows/staging-manifest.yml', repositoryRoot), 'utf8');
+const scopeScript = readFileSync(
+  new URL('.github/workflows/staging-manifest-scope.sh', repositoryRoot),
+  'utf8',
+);
 const packageScripts = JSON.parse(readFileSync(new URL('package.json', repositoryRoot), 'utf8')).scripts;
 
 // Every repository file the gate reads, followed from the workflow rather than
@@ -48,27 +52,24 @@ const gateInputs = (() => {
   return [...inputs].sort();
 })();
 
-// The `on:` trigger's `paths:` list, read straight from the workflow text.
-function triggerPathFilter(trigger) {
-  const lines = workflow.split('\n');
-  const start = lines.indexOf(`  ${trigger}:`);
-  assert.notEqual(start, -1, trigger);
-  const end = lines.findIndex((line, index) => index > start && line !== '' && !line.startsWith('    '));
-  const block = lines.slice(start + 1, end === -1 ? lines.length : end);
-  const pathsIndex = block.indexOf('    paths:');
-  assert.notEqual(pathsIndex, -1, `${trigger} must be scoped by a paths filter`);
+// The gate's input list, read straight from the script that decides the skip.
+function scopeInputs() {
+  const lines = scopeScript.split('\n');
+  const start = lines.indexOf('INPUTS=(');
+  assert.notEqual(start, -1, 'the scope script must declare an INPUTS list');
   const entries = [];
-  for (const line of block.slice(pathsIndex + 1)) {
-    if (!line.startsWith('      - ')) break;
-    entries.push(line.slice('      - '.length).trim().replace(/^['"]|['"]$/g, ''));
+  for (const line of lines.slice(start + 1)) {
+    if (line.trim() === ')') break;
+    entries.push(line.trim().replace(/^['"]|['"]$/g, ''));
   }
-  assert.notEqual(entries.length, 0, `${trigger} paths`);
+  assert.notEqual(entries.length, 0, 'INPUTS');
   return entries;
 }
 
+// A trailing slash is the script's own "this directory and everything under it".
 function filterCovers(filter, path) {
   return filter.some((pattern) =>
-    pattern.endsWith('/**') ? path.startsWith(pattern.slice(0, -2)) : pattern === path,
+    pattern.endsWith('/') ? path.startsWith(pattern) : pattern === path,
   );
 }
 
@@ -270,19 +271,13 @@ test('locks both providers for macOS ARM64 and Linux AMD64', () => {
   assert.match(workflow, /name: Staging manifest safety gate \/ validate/);
 });
 
-// The gate downloads both platforms of every provider on every run, so it is
-// scoped to the paths that can change its outcome. A path filter is only safe
-// while it covers every input the gate reads: anything reachable from
-// `check.sh` that the filter misses would change the gate's verdict without
-// being able to run it. This asserts that coverage instead of trusting it.
-test('can be triggered by every input it reads, identically on push and pull request', () => {
-  const pushFilter = triggerPathFilter('push');
-  const pullRequestFilter = triggerPathFilter('pull_request');
-  assert.deepEqual(
-    pushFilter,
-    pullRequestFilter,
-    'a push/pull_request asymmetry would let a change reach main unvalidated',
-  );
+// The gate downloads both platforms of every provider on every run, so it skips
+// its work when nothing it reads has changed. That skip is only safe while its
+// input list covers every input the gate actually reads: anything reachable
+// from `check.sh` that the list misses would change the gate's verdict on a
+// revision the gate skipped. This asserts that coverage instead of trusting it.
+test('cannot skip itself on a revision that changes an input it reads', () => {
+  const inputs = scopeInputs();
 
   // Guards against a vacuous pass: if the extraction above ever stops finding
   // the gate's own entry points, the coverage loop proves nothing.
@@ -293,6 +288,41 @@ test('can be triggered by every input it reads, identically on push and pull req
   );
 
   for (const input of gateInputs) {
-    assert.ok(filterCovers(pullRequestFilter, input), `the gate reads ${input} but cannot be triggered by it`);
+    assert.ok(filterCovers(inputs, input), `the gate reads ${input} but would skip a change to it`);
+  }
+
+  // The script's own list is an input: editing it changes the verdict.
+  assert.ok(
+    filterCovers(inputs, '.github/workflows/staging-manifest-scope.sh'),
+    'the scope script must count itself as an input',
+  );
+});
+
+// `Staging manifest safety gate / validate` is a required status check on
+// `main`. A workflow filtered out by `on: paths:` reports no check at all, and
+// a required check that is never reported blocks a pull request forever rather
+// than passing it. So the workflow must stay unfiltered and decide internally.
+test('the required check is reported on every revision, not filtered out', () => {
+  assert.match(workflow, /name: Staging manifest safety gate \/ validate/);
+  assert.doesNotMatch(
+    workflow,
+    /^ {4}paths(-ignore)?:/m,
+    'a required check must not be scoped away by a trigger filter',
+  );
+
+  // The expensive steps are the ones that may be skipped. The step that decides
+  // must not be, or nothing ever sets the output the others are guarded by.
+  const stepsIndex = workflow.indexOf('\n    steps:\n');
+  assert.notEqual(stepsIndex, -1, 'the job must declare steps');
+  const steps = workflow.slice(stepsIndex).split(/\n {6}- /).slice(1);
+  assert.ok(steps.length >= 6, `expected the gate's steps, found ${steps.length}`);
+  const decider = steps.find((step) => step.includes('staging-manifest-scope.sh'));
+  assert.ok(decider, 'the job must run the scope script');
+  assert.doesNotMatch(decider, /^\s+if:/m, 'the deciding step must always run');
+
+  const guard = "if: steps.scope.outputs.changed == 'true'";
+  for (const step of steps) {
+    if (step === decider || step.includes('actions/checkout')) continue;
+    assert.ok(step.includes(guard), `an unguarded step would always pay the gate's cost:\n${step}`);
   }
 });
