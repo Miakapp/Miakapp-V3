@@ -286,8 +286,13 @@ fail-closed rejection of arbitrary properties before render. A local preview
 adapter makes the product shell inspectable without Firebase, relay or home
 credentials, and the legacy V3 Vue/Auth/service-worker application is no longer
 part of the build. The opaque broker remains proven in its separate three-engine
-hostile harness; wiring its lifecycle, immutable Firebase artifact delivery and
-the real `miakapi/browser` adapter into this shell remains open.
+hostile harness. That harness now stages a second real broker beside the active
+release, preserves the old release when a staged candidate attempts an effect,
+revokes the old broker before the DOM swap, enables candidate effects only after
+the swap, and executes an explicit rollback under a greater generation without
+ever observing two effectful releases. Wiring that lifecycle, immutable Firebase
+artifact delivery and the real `miakapi/browser` adapter into the production
+shell remains open.
 
 Exit gate: a deliberately hostile bundle is contained by browser-enforced
 boundaries, not by instructions or conventions.
