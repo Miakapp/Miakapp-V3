@@ -10,8 +10,9 @@ describe('App', () => {
     const user = userEvent.setup();
     render(<App />);
 
-    expect(screen.getByRole('status')).toHaveTextContent('Interactive product preview');
-    expect(screen.getByRole('status')).toHaveTextContent('No cloud, relay, or home is connected.');
+    const previewStatus = screen.getByRole('status', { name: 'Interactive product preview' });
+    expect(previewStatus).toHaveTextContent('Interactive product preview');
+    expect(previewStatus).toHaveTextContent('No cloud, relay, or home is connected.');
     expect(screen.getByText('3 lights on')).toBeVisible();
 
     await user.click(screen.getByRole('checkbox', { name: 'Kitchen' }));
