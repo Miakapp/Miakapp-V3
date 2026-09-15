@@ -48,6 +48,43 @@ MIAKAPP_STAGING_DEPLOY_CONFIRMATION=deploy-browser-host:miakapp-v4-staging \
   ./scripts/deploy-staging.sh
 ```
 
+## Start and stop the staging home
+
+The staging home is not free to leave running, and the reason is not the
+obvious one. Measured on 2026-09-14:
+
+| Service | minimum | billable seconds |
+| --- | --- | --- |
+| `miakapp-staging-coordinator` | 1 | 86 321 (~24 h) |
+| `miakapp-staging-relay-a` | 0 | 86 307 (~24 h) |
+| `miakapp-staging-relay-b` | 0 | 0 |
+| `control-plane` | 0 | 242 |
+
+The coordinator is billed because its minimum pins one instance. The relay is
+billed because the coordinator holds an outbound WebSocket to it, and Cloud Run
+bills an instance with an open connection as active whatever its minimum says.
+Two vCPU-days for one idle home. `relay-b` is configured identically and costs
+nothing, which is what identifies the socket rather than the configuration as
+the cause — reading `min = 0` and concluding "free" is the mistake this table
+exists to prevent.
+
+So the staging home is a session, not a deployment:
+
+```sh
+bun scripts/staging-home.ts status
+
+MIAKAPP_STAGING_HOME_CONFIRMATION=start-billing:miakapp-v4-staging \
+  bun scripts/staging-home.ts up --apply
+# ... run the session ...
+bun scripts/staging-home.ts down --apply
+```
+
+`up` and `down` print the exact request and change nothing without `--apply`.
+`status` is read-only and reports the live instance count next to the minimum,
+because those two disagree whenever a socket is open. Starting needs an explicit
+confirmation and stopping does not: a wrong `down` costs a restart, a wrong `up`
+bills silently until somebody notices.
+
 ## Validate browser changes
 
 ```sh
