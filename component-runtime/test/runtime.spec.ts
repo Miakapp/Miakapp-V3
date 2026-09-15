@@ -268,3 +268,71 @@ test('teardown removes generated UI and requires a fresh epoch', async ({ page }
   expect(second.epoch).toBeGreaterThan(first.epoch);
   expect(second.renderRevision).toBe(first.renderRevision);
 });
+
+test('serializes generation changes across trusted IndexedDB ledgers', async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const moduleUrl = '/release-state.js';
+    const {
+      ComponentReleaseLedger,
+      IndexedDbReleaseMetadataStore,
+    } = await import(moduleUrl);
+    const databaseName = `release-state-${crypto.randomUUID()}`;
+    const homeId = 'home-browser-test';
+    const artifactOrigin = 'https://artifacts.example';
+    const context = {
+      expectedHomeId: homeId,
+      allowedArtifactOrigins: new Set([artifactOrigin]),
+      allowedPathPrefixes: ['/homes/'],
+    };
+    const makePointer = (generation: number, sha256: string) => ({
+      schema: 'miakapp.component-pointer/1',
+      home_id: homeId,
+      generation,
+      release: `release-${generation}`,
+      abi: 'miakapp.component/1',
+      url: `${artifactOrigin}/homes/${homeId}/${sha256}.js`,
+      sha256,
+      size: 128,
+      requires: {
+        state_read: [],
+        event_subscribe: [],
+        event_publish: [],
+        call: [],
+        presentation: [],
+      },
+    });
+    const first = new ComponentReleaseLedger(
+      context,
+      new IndexedDbReleaseMetadataStore(indexedDB, databaseName),
+    );
+    const second = new ComponentReleaseLedger(
+      context,
+      new IndexedDbReleaseMetadataStore(indexedDB, databaseName),
+    );
+    const digest1 = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+    const digest2 = 'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB';
+    const digest3 = 'CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC';
+
+    await first.accept(makePointer(1, digest1));
+    await first.markActive(makePointer(1, digest1));
+    const settled = await Promise.allSettled([
+      first.accept(makePointer(2, digest2)),
+      second.accept(makePointer(2, digest3)),
+    ]);
+    const stored = await second.read();
+    return {
+      statuses: settled.map((entry) => entry.status).sort(),
+      highest: stored?.highest_accepted.generation,
+      acceptedDigest: stored?.highest_accepted.sha256,
+      lastKnownGood: stored?.last_known_good?.generation,
+    };
+  });
+
+  expect(result.statuses).toEqual(['fulfilled', 'rejected'].sort());
+  expect(result.highest).toBe(2);
+  expect([
+    'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',
+    'CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC',
+  ]).toContain(result.acceptedDigest);
+  expect(result.lastKnownGood).toBe(1);
+});

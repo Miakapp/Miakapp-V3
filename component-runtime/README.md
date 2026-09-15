@@ -33,6 +33,10 @@ as sufficient evidence.
   IndexedDB, returns defensive copies, and revalidates bytes before every use.
 - `src/runtime-broker.ts` is the fixed opaque broker used by the proof.
 - `src/host-harness.ts` is a trusted host and safe semantic renderer for tests.
+- `src/release-state.ts` keeps the anti-rollback floor and last-known-good
+  pointer in a transactional trusted-host ledger. It rejects same-generation
+  equivocation and exposes automatic fallback only while a candidate is still
+  effect-free.
 - `fixtures/` contains auditable home-bundle inputs, including hostile bundles.
 - `test/contract.test.ts` covers schemas, limits, and byte verification.
 - `test/runtime.spec.ts` exercises the real browser boundary.
