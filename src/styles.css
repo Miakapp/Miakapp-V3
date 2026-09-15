@@ -608,6 +608,17 @@ svg {
   opacity: 0.55;
 }
 
+/* Host-owned pending term. It sits next to the label, never in place of it. */
+.semantic-button__pending,
+.semantic-toggle__pending {
+  margin-left: 6px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  color: #6f7368;
+}
+
 .semantic-toggle {
   min-height: 30px;
   display: flex;
