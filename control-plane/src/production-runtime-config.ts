@@ -212,6 +212,7 @@ export function createProductionDeploymentConfig(
     userRelayExchangeEndpoint: `${issuer}/v1/user-relay-tokens:exchange`,
     pushAudience: `${issuer}/v1/push`,
     componentsAudience: `${issuer}/v1/components`,
+    runtimeDiagnosticsEndpoint: `${issuer}/v1/runtime-diagnostics`,
     componentBucket: runtime.componentBucket,
     componentUploadBaseUrl: `${issuer}/v1/component-uploads`,
     componentArtifactBaseUrl: `${issuer}/v1/components`,
