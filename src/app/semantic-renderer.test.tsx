@@ -1,7 +1,13 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { STATUS_STATES, type StatusState, type UiNode } from '../../component-runtime/src/contract';
+import {
+  PENDING_NODE_TYPES,
+  STATUS_STATES,
+  type PendingNodeType,
+  type StatusState,
+  type UiNode,
+} from '../../component-runtime/src/contract';
 import { createDemoTree } from './demo-tree';
 import { SemanticRenderer } from './semantic-renderer';
 
@@ -21,6 +27,19 @@ function statusTree(state: StatusState): UiNode {
     children: [
       { id: 'status', type: 'status', props: { label: 'Comfort', state } },
     ],
+  };
+}
+
+function pendingControlTree(type: PendingNodeType): UiNode {
+  const props = type === 'button'
+    ? { label: 'Unlock the door', handler: 'entry.unlock', pending: true }
+    : { label: 'Kitchen', value: false, handler: 'lighting.kitchen.toggle', pending: true };
+
+  return {
+    id: 'root',
+    type: 'screen',
+    props: { title: 'Pending surface' },
+    children: [{ id: 'control', type, props }],
   };
 }
 
@@ -107,6 +126,43 @@ describe('SemanticRenderer', () => {
       expect(screen.getByRole('status')).toHaveTextContent(expected);
       unmount();
     }
+  });
+
+  it('keeps a pending control named and says why it stopped answering', () => {
+    // Guards the loop below against passing vacuously if the vocabulary is emptied.
+    expect(PENDING_NODE_TYPES).toHaveLength(2);
+
+    for (const type of PENDING_NODE_TYPES) {
+      const { unmount } = render(
+        <SemanticRenderer onInteraction={vi.fn()} tree={pendingControlTree(type)} />,
+      );
+
+      const control = screen.getByRole(type === 'button' ? 'button' : 'checkbox');
+      const label = type === 'button' ? 'Unlock the door' : 'Kitchen';
+      const term = document
+        .querySelector(`.semantic-${type}__pending`)
+        ?.textContent ?? '';
+
+      expect(term).not.toBe('');
+      // The host disables it; without the term the control just reads as broken.
+      expect(control).toBeDisabled();
+      expect(control).toHaveAttribute('aria-busy', 'true');
+      // The label a person reached for has to survive the pending state.
+      expect(control).toHaveAccessibleName(`${label} ${term}`);
+
+      unmount();
+    }
+  });
+
+  it('leaves a settled control untouched by the pending vocabulary', () => {
+    render(<SemanticRenderer onInteraction={vi.fn()} tree={createDemoTree(INITIAL_STATE)} />);
+
+    const toggle = screen.getByRole('checkbox', { name: 'Kitchen' });
+
+    expect(toggle).toBeEnabled();
+    expect(toggle).toHaveAttribute('aria-busy', 'false');
+    expect(document.querySelector('.semantic-toggle__pending')).toBeNull();
+    expect(document.querySelector('.semantic-button__pending')).toBeNull();
   });
 
   it('rejects media that the trusted host did not grant', () => {

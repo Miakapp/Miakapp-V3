@@ -95,6 +95,17 @@ export const STATUS_STATES = [
 
 export type StatusState = (typeof STATUS_STATES)[number];
 
+/**
+ * Node types whose props carry `pending`. A pending control is inert — the host
+ * disables it — so every one of them owes the person an explanation of why it
+ * stopped answering. Keeping the list here, and routing each parse through
+ * `pendingProp`, is what makes a new pending-capable node widen this type and
+ * so break the host's term table until the new control is named too.
+ */
+export const PENDING_NODE_TYPES = ['button', 'toggle'] as const;
+
+export type PendingNodeType = (typeof PENDING_NODE_TYPES)[number];
+
 export interface UiNode {
   id: string;
   type: UiNodeType;
@@ -397,6 +408,10 @@ function optionalBoolean(value: unknown, label: string): boolean | undefined {
   return value;
 }
 
+function pendingProp(value: unknown, type: PendingNodeType): boolean {
+  return optionalBoolean(value, `${type}.props.pending`) ?? false;
+}
+
 interface TextBudget {
   bytes: number;
 }
@@ -494,7 +509,7 @@ function validateProps(
           ? 'primary'
           : enumValue(props.variant, ['primary', 'secondary', 'danger'], 'button.props.variant'),
         disabled: optionalBoolean(props.disabled, 'button.props.disabled') ?? false,
-        pending: optionalBoolean(props.pending, 'button.props.pending') ?? false,
+        pending: pendingProp(props.pending, 'button'),
       };
     }
     case 'toggle': {
@@ -505,7 +520,7 @@ function validateProps(
         value: props.value,
         handler: handlerId(props.handler, 'toggle.props.handler'),
         disabled: optionalBoolean(props.disabled, 'toggle.props.disabled') ?? false,
-        pending: optionalBoolean(props.pending, 'toggle.props.pending') ?? false,
+        pending: pendingProp(props.pending, 'toggle'),
       };
     }
     case 'input': {
