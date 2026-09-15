@@ -11,6 +11,7 @@ import {
 import type {
   HomeActivity,
   HomeConnectionStatus,
+  HomeState,
   HomeSummary,
   SemanticInteraction,
   TrustedHost,
@@ -85,6 +86,14 @@ class LiveTrustedHost implements TrustedHost {
   #status: BrowserClientStatus = 'idle';
   #state: LiveState = EMPTY_STATE;
   #stateStale = false;
+  /**
+   * The home state as the relay reported it, kept beside `#state` because the
+   * two answer different questions. `#state` feeds this host's own tree, which
+   * blanks on staleness. `#homeState` is what a component receives, and a
+   * component is told the state is old rather than handed an empty home.
+   * Undefined until the client has delivered one snapshot.
+   */
+  #homeState: HomeState | undefined;
   #activity: readonly HomeActivity[] = EMPTY_ACTIVITY;
   #action: LiveActionStatus = IDLE_ACTION;
   #actionGeneration = 0;
@@ -240,6 +249,11 @@ class LiveTrustedHost implements TrustedHost {
         if (this.#client !== client) return;
         this.#stateStale = snapshot.stale;
         this.#state = snapshot.stale ? EMPTY_STATE : snapshot.values;
+        this.#homeState = Object.freeze({
+          values: snapshot.values,
+          revision: snapshot.revision,
+          stale: snapshot.stale,
+        });
         this.#publish();
       }),
       client.errors.subscribe((failure) => {
@@ -273,6 +287,7 @@ class LiveTrustedHost implements TrustedHost {
     this.#removeClientListeners = [];
     this.#state = EMPTY_STATE;
     this.#stateStale = false;
+    this.#homeState = undefined;
     this.#action = IDLE_ACTION;
     this.#status = 'idle';
     try {
@@ -302,6 +317,7 @@ class LiveTrustedHost implements TrustedHost {
   #buildSnapshot(): TrustedHostSnapshot {
     const connection = connectionFrom(this.#status);
     return Object.freeze({
+      ...(this.#homeState === undefined ? {} : { homeState: this.#homeState }),
       activeHome: this.#home,
       homes: Object.freeze([this.#home]),
       connection,

@@ -8,7 +8,13 @@ import {
   type RuntimeLifecycle,
 } from './component-runtime-host';
 import { createDemoHost } from './demo-host';
-import type { HomeActivity, HostView, SemanticInteraction, TrustedHost } from './host';
+import type {
+  HomeActivity,
+  HomeState,
+  HostView,
+  SemanticInteraction,
+  TrustedHost,
+} from './host';
 import {
   ActivityIcon,
   HomeIcon,
@@ -135,8 +141,10 @@ function useComponentRuntime(
   diagnostics: RuntimeDiagnostics | undefined,
   mountRuntime: MountComponentRuntime,
   containerRef: React.RefObject<HTMLDivElement | null>,
+  homeState: HomeState | undefined,
 ): ComponentRuntimeBinding {
   const sessionRef = useRef<ComponentRuntimeSession | undefined>(undefined);
+  const [session, setSession] = useState<ComponentRuntimeSession | undefined>(undefined);
   const [sandboxOrigin] = useState<string | undefined>(() => readSandboxOrigin?.());
   const [outcome, setOutcome] = useState<RuntimeOutcome>(PENDING_RUNTIME);
 
@@ -184,6 +192,7 @@ function useComponentRuntime(
         }
         session = mounted;
         sessionRef.current = mounted;
+        setSession(mounted);
       },
       () => {
         if (released) return;
@@ -194,9 +203,23 @@ function useComponentRuntime(
     return () => {
       released = true;
       sessionRef.current = undefined;
+      setSession(undefined);
       session?.dispose();
     };
   }, [activated, sandboxOrigin, diagnostics, mountRuntime, containerRef]);
+
+  // The component sees the home only through this. It runs on the session as
+  // well as on the state so that a component mounting against state that
+  // arrived first is not left reading an empty home until the next update —
+  // which, for a quiet home, is a long time.
+  useEffect(() => {
+    if (session === undefined || homeState === undefined) return;
+    if (homeState.stale) {
+      session.markStateStale(homeState.revision, 'home_state_stale');
+      return;
+    }
+    session.publishState(homeState.values, homeState.revision);
+  }, [session, homeState]);
 
   const interact = useCallback((interaction: SemanticInteraction): void => {
     sessionRef.current?.interact(interaction.handler, interaction.event, interaction.value);
@@ -447,6 +470,7 @@ export function App({
     diagnostics,
     mountRuntime,
     runtimeContainer,
+    snapshot.homeState,
   );
   const runtimeState = runtime.state;
   const runtimeLabel = componentRuntimeLabel(runtimeState);
