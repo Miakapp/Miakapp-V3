@@ -169,6 +169,32 @@ describe('collectStagingEnvFaults', () => {
     ]);
   });
 
+  it('rejects a diagnostics endpoint that names another control plane', () => {
+    expect(
+      faultsFor({
+        VITE_MIAKAPP_RUNTIME_DIAGNOSTICS_ENDPOINT: 'https://stale.example.test/v1/runtime-diagnostics',
+      }),
+    ).toEqual([
+      'VITE_MIAKAPP_RUNTIME_DIAGNOSTICS_ENDPOINT must share the control plane origin https://control.example.test, but points at https://stale.example.test',
+    ]);
+  });
+
+  it('accepts a diagnostics endpoint on the control plane origin whatever its path', () => {
+    expect(
+      faultsFor({
+        VITE_MIAKAPP_RUNTIME_DIAGNOSTICS_ENDPOINT: 'https://control.example.test/v2/elsewhere',
+      }),
+    ).toEqual([]);
+  });
+
+  it('reports a malformed diagnostics endpoint once, not twice', () => {
+    expect(
+      faultsFor({ VITE_MIAKAPP_RUNTIME_DIAGNOSTICS_ENDPOINT: 'http://control.example.test/v1/runtime-diagnostics' }),
+    ).toEqual([
+      'VITE_MIAKAPP_RUNTIME_DIAGNOSTICS_ENDPOINT must use HTTPS: http://control.example.test/v1/runtime-diagnostics',
+    ]);
+  });
+
   it('leaves the optional features off without complaint when nothing declares them', () => {
     const env: Record<string, string> = { ...LIVE_ENV };
     delete env.VITE_MIAKAPP_RUNTIME_DIAGNOSTICS_ENDPOINT;
