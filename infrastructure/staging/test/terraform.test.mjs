@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -19,7 +19,59 @@ const planScript = readFileSync(new URL('plan.sh', terraformRoot), 'utf8');
 const lockFile = readFileSync(new URL('.terraform.lock.hcl', terraformRoot), 'utf8');
 const cliConfig = readFileSync(new URL('terraform-cli.tfrc', terraformRoot), 'utf8');
 const checkScript = readFileSync(new URL('../check.sh', import.meta.url), 'utf8');
-const workflow = readFileSync(new URL('../../../.github/workflows/staging-manifest.yml', import.meta.url), 'utf8');
+const repositoryRoot = new URL('../../../', import.meta.url);
+const workflow = readFileSync(new URL('.github/workflows/staging-manifest.yml', repositoryRoot), 'utf8');
+const scopeScript = readFileSync(
+  new URL('.github/workflows/staging-manifest-scope.sh', repositoryRoot),
+  'utf8',
+);
+const packageScripts = JSON.parse(readFileSync(new URL('package.json', repositoryRoot), 'utf8')).scripts;
+
+// Every repository file the gate reads, followed from the workflow rather than
+// hand-listed: the workflow names an npm script, `package.json` resolves it to
+// `check.sh`, and `check.sh` names the rest. Only the scripts this gate runs are
+// followed — `package.json` also holds unrelated gates. Keeping just the paths
+// that exist on disk drops registry hostnames and other path-shaped tokens.
+const gateInputs = (() => {
+  const inputs = new Set(['.github/workflows/staging-manifest.yml', 'package.json', 'bun.lock']);
+  const sources = [];
+  for (const [, script] of workflow.matchAll(/npm run ([\w:-]+)/g)) {
+    assert.ok(packageScripts[script], `the workflow runs an undefined script: ${script}`);
+    sources.push(packageScripts[script]);
+  }
+  assert.notEqual(sources.length, 0, 'the workflow runs no npm script');
+  sources.push(checkScript);
+  for (const source of sources) {
+    for (const [token] of source.matchAll(/(?:[\w.-]+\/)*[\w.-]+\.(?:mjs|cjs|js|mts|cts|ts|tsx|sh|bash|json|jsonc|tf|tfrc|tfvars|hcl|lock|yml|yaml|toml|md)\b/g)) {
+      const candidate = token.replace(/^\.\//, '');
+      if (existsSync(new URL(candidate, repositoryRoot))) {
+        inputs.add(candidate);
+      }
+    }
+  }
+  return [...inputs].sort();
+})();
+
+// The gate's input list, read straight from the script that decides the skip.
+function scopeInputs() {
+  const lines = scopeScript.split('\n');
+  const start = lines.indexOf('INPUTS=(');
+  assert.notEqual(start, -1, 'the scope script must declare an INPUTS list');
+  const entries = [];
+  for (const line of lines.slice(start + 1)) {
+    if (line.trim() === ')') break;
+    entries.push(line.trim().replace(/^['"]|['"]$/g, ''));
+  }
+  assert.notEqual(entries.length, 0, 'INPUTS');
+  return entries;
+}
+
+// A trailing slash is the script's own "this directory and everything under it".
+function filterCovers(filter, path) {
+  return filter.some((pattern) =>
+    pattern.endsWith('/') ? path.startsWith(pattern) : pattern === path,
+  );
+}
 
 function providerLockBlock(provider) {
   const start = lockFile.indexOf(`provider "registry.terraform.io/hashicorp/${provider}"`);
@@ -216,6 +268,61 @@ test('locks both providers for macOS ARM64 and Linux AMD64', () => {
   assert.match(checkScript, /for terraform_root in bootstrap terraform/);
   assert.match(checkScript, /-platform=darwin_arm64/);
   assert.match(checkScript, /-platform=linux_amd64/);
-  assert.doesNotMatch(workflow, /^\s+paths:/m);
   assert.match(workflow, /name: Staging manifest safety gate \/ validate/);
+});
+
+// The gate downloads both platforms of every provider on every run, so it skips
+// its work when nothing it reads has changed. That skip is only safe while its
+// input list covers every input the gate actually reads: anything reachable
+// from `check.sh` that the list misses would change the gate's verdict on a
+// revision the gate skipped. This asserts that coverage instead of trusting it.
+test('cannot skip itself on a revision that changes an input it reads', () => {
+  const inputs = scopeInputs();
+
+  // Guards against a vacuous pass: if the extraction above ever stops finding
+  // the gate's own entry points, the coverage loop proves nothing.
+  assert.ok(gateInputs.includes('infrastructure/staging/check.sh'), 'check.sh was not discovered');
+  assert.ok(
+    gateInputs.includes('infrastructure/staging/test/terraform.test.mjs'),
+    'this test file was not discovered',
+  );
+
+  for (const input of gateInputs) {
+    assert.ok(filterCovers(inputs, input), `the gate reads ${input} but would skip a change to it`);
+  }
+
+  // The script's own list is an input: editing it changes the verdict.
+  assert.ok(
+    filterCovers(inputs, '.github/workflows/staging-manifest-scope.sh'),
+    'the scope script must count itself as an input',
+  );
+});
+
+// `Staging manifest safety gate / validate` is a required status check on
+// `main`. A workflow filtered out by `on: paths:` reports no check at all, and
+// a required check that is never reported blocks a pull request forever rather
+// than passing it. So the workflow must stay unfiltered and decide internally.
+test('the required check is reported on every revision, not filtered out', () => {
+  assert.match(workflow, /name: Staging manifest safety gate \/ validate/);
+  assert.doesNotMatch(
+    workflow,
+    /^ {4}paths(-ignore)?:/m,
+    'a required check must not be scoped away by a trigger filter',
+  );
+
+  // The expensive steps are the ones that may be skipped. The step that decides
+  // must not be, or nothing ever sets the output the others are guarded by.
+  const stepsIndex = workflow.indexOf('\n    steps:\n');
+  assert.notEqual(stepsIndex, -1, 'the job must declare steps');
+  const steps = workflow.slice(stepsIndex).split(/\n {6}- /).slice(1);
+  assert.ok(steps.length >= 6, `expected the gate's steps, found ${steps.length}`);
+  const decider = steps.find((step) => step.includes('staging-manifest-scope.sh'));
+  assert.ok(decider, 'the job must run the scope script');
+  assert.doesNotMatch(decider, /^\s+if:/m, 'the deciding step must always run');
+
+  const guard = "if: steps.scope.outputs.changed == 'true'";
+  for (const step of steps) {
+    if (step === decider || step.includes('actions/checkout')) continue;
+    assert.ok(step.includes(guard), `an unguarded step would always pay the gate's cost:\n${step}`);
+  }
 });
