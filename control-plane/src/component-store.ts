@@ -21,6 +21,7 @@ import {
   HOME_ID_PATTERN,
   type Clock,
   type ComponentPointerRepresentation,
+  type ComponentPointerStateRepresentation,
   type ComponentPublisherPrincipal,
   type ComponentReleaseRepresentation,
   type ComponentRequirements,
@@ -37,6 +38,7 @@ const UPLOAD_INDEX_SCHEMA = 'miakapp.component-upload-index/1';
 const RELEASE_SCHEMA = 'miakapp.component-release-record/1';
 const ARTIFACT_PUBLICATION_SCHEMA = 'miakapp.component-artifact-publication/1';
 const POINTER_SCHEMA = 'miakapp.component-pointer/1';
+const POINTER_STATE_SCHEMA = 'miakapp.component-pointer-state/1';
 const QUARANTINE_SCHEMA = 'miakapp.component-quarantine/1';
 const CONTROL_CHARACTER = /\p{Cc}/u;
 
@@ -703,6 +705,40 @@ export class ComponentStore {
     });
   }
 
+  /**
+   * Reports the live pointer so a publisher can supply `expected_generation`
+   * and reconcile an activation whose response was lost.
+   *
+   * Deliberately not a transaction and deliberately not a reservation: it takes
+   * no lock, and {@link activateRelease} still refuses a superseded generation
+   * with `generation_conflict`. A quarantined digest stays visible here,
+   * because rolling away from it requires knowing that it is what is live.
+   */
+  async readPointer(
+    principal: ComponentPublisherPrincipal,
+    homeId: string,
+  ): Promise<ComponentPointerStateRepresentation> {
+    if (!HOME_ID_PATTERN.test(homeId)) throw apiError('invalid_request');
+    const [home, pointerSnapshot] = await Promise.all([
+      this.#homeRef(homeId).get(),
+      this.#firestore.collection('components').doc(homeId).get(),
+    ]);
+    authorizeHome(home, principal, homeId);
+    if (!pointerSnapshot.exists) {
+      return Object.freeze({
+        schema: POINTER_STATE_SCHEMA,
+        generation: 0,
+        pointer: null,
+      });
+    }
+    const pointer = this.#validatedPointer(pointerSnapshot, homeId);
+    return Object.freeze({
+      schema: POINTER_STATE_SCHEMA,
+      generation: pointer.generation,
+      pointer,
+    });
+  }
+
   async quarantineDigest(sha256: string): Promise<void> {
     if (!canonicalBase64url(sha256, 32)) throw apiError('invalid_request');
     await this.#firestore.collection('componentQuarantine').doc(sha256).set({
@@ -969,6 +1005,13 @@ export class ComponentStore {
   }
 
   #pointerGeneration(snapshot: DocumentSnapshot, homeId: string): number {
+    return this.#validatedPointer(snapshot, homeId).generation;
+  }
+
+  #validatedPointer(
+    snapshot: DocumentSnapshot,
+    homeId: string,
+  ): ComponentPointerRepresentation {
     const data = snapshot.data();
     if (data === undefined
       || !exactKeys(data, [
@@ -987,8 +1030,18 @@ export class ComponentStore {
       || data.size > MAX_COMPONENT_ARTIFACT_BYTES) {
       throw apiError('temporarily_unavailable');
     }
-    storedRequirements(data.requires);
-    return data.generation as number;
+    const requires = storedRequirements(data.requires);
+    return Object.freeze({
+      schema: POINTER_SCHEMA,
+      home_id: homeId,
+      generation: data.generation as number,
+      release: data.release as string,
+      abi: COMPONENT_ABI,
+      url: data.url as string,
+      sha256: data.sha256 as string,
+      size: data.size as number,
+      requires,
+    });
   }
 
   #capabilityVerifier(uploadId: string, uploadToken: string, version: string): string {
