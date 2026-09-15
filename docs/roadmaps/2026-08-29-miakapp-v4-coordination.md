@@ -458,12 +458,23 @@ DOM. It deliberately shares no code with `component-runtime/src/host-harness.ts`
 which self-installs on import and plants a decoy secret; that module must never
 reach a production graph.
 
-Two things still separate this from a live mount, and neither is a call-site
-step. The sandbox site itself does not exist as a deployable artifact: only
-`component-runtime/test/server.ts` serves `/sandbox.html` with the broker, its
-CSP and its permissions policy. And no deployment declares the origin that would
-serve it. Until both land, `mountComponentRuntime` has no origin to point at, so
-the shell does not call it and deliverable 1 stays open on the sandbox site.
+The sandbox site now exists as a deployable artifact.
+`component-runtime/src/sandbox-document.ts` builds `/sandbox.html` with the
+broker inlined, together with the response headers it is only safe under — the
+CSP hash that binds that exact bundle, the deny directives and disabled features
+read from `security-profile.ts`, and `frame-ancestors` naming the declared host
+origin. `component-runtime/scripts/build-sandbox.ts` emits that document and a
+matching Firebase Hosting config into `dist-sandbox/`, refusing to build unless
+`MIAKAPP_SANDBOX_ORIGIN`, `MIAKAPP_HOST_ORIGIN` and `MIAKAPP_SANDBOX_SITE` are
+declared. The document and its config are one unit: served without the generated
+headers, the file is an unsandboxed page that still looks correct.
+
+One thing still separates this from a live mount, and it is not a call-site
+step: no deployment has been provisioned yet. The sandbox must be served from an
+origin *different* from the shell's, which means a second hosting site, and
+`VITE_MIAKAPP_COMPONENT_SANDBOX_ORIGIN` must then declare it to the shell. Until
+a deployment exists, `mountComponentRuntime` still has no origin to point at, so
+the shell does not call it and deliverable 1 stays open on provisioning.
 
 Exit gate: a deliberately hostile bundle is contained by browser-enforced
 boundaries, not by instructions or conventions.
@@ -533,6 +544,25 @@ Cloud Run service are now active with internal-only ingress. An unscheduled
 private Workflow returned the exact discovery document after two controlled
 failures, without opening public ingress or making an application mutation.
 Credential-free checks validate all six Terraform roots with mock providers.
+
+A seventh local slice closes the receiving end of shell runtime diagnostics.
+`src/app/runtime-diagnostics.ts` has emitted `miakapp.runtime-diagnostics/1`
+since #205, but nothing accepted it, so a sandbox broken in production was
+silent on both ends. `POST /v1/runtime-diagnostics` now admits that report
+through `control-plane/src/runtime-diagnostics.ts`. The endpoint cannot
+authenticate its caller — the shell posts with `credentials: 'omit'` — so every
+field is re-checked against the same closed failure vocabulary the shell uses
+and a failing report is rejected with `invalid_request` rather than recorded:
+an operator surface that stores whatever it is handed is a writable log. The
+release identifier is constrained to an identifier shape before it becomes a
+log label or a rate-limit subject, the instant must be a UTC RFC 3339 value
+within five minutes of the server clock, and the recorded observation time is
+always the server's. Accepted reports are emitted as one structured log line
+and nothing durable is written, because an unauthenticated route backed by a
+store is an amplification primitive that admission budgets cannot bound. The
+new `runtime.diagnostics.report` operation is rate-limited per source and per
+release. This is local evidence of the ingest contract; it does not prove
+Functions ingress, log retention or alerting on a deployed project.
 
 The one-shot protected recovery is complete and its active workflow is removed.
 PR #30 configuration commit

@@ -77,11 +77,12 @@ Every deployment publishes a bounded JSON document at
   "exchange_endpoint": "https://control.example.test/v1/access-tokens:exchange",
   "user_relay_exchange_endpoint": "https://control.example.test/v1/user-relay-tokens:exchange",
   "push_audience": "https://control.example.test/v1/push",
-  "components_audience": "https://control.example.test/v1/components"
+  "components_audience": "https://control.example.test/v1/components",
+  "runtime_diagnostics_endpoint": "https://control.example.test/v1/runtime-diagnostics"
 }
 ```
 
-All six URLs MUST be absolute HTTPS URLs without user information, query or
+All seven URLs MUST be absolute HTTPS URLs without user information, query or
 fragment. `issuer` has no trailing slash. The other values are exact identifiers,
 not prefixes. The document has no unknown fields and is at most 4 KiB.
 

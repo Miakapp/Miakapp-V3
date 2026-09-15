@@ -53,3 +53,32 @@ jobs:
           path: component-runtime/test-results/
           if-no-files-found: ignore
           retention-days: 7
+
+  # The unit contract proves the builder is correct for a given broker source.
+  # It cannot prove that bundling the real broker still yields a document the
+  # browser will execute: the CSP hash covers the escaped script text, so a
+  # change in what esbuild emits can break the artifact while every test stays
+  # green. This builds it for throwaway origins and re-derives the digest from
+  # the bytes that would be served.
+  sandbox-artifact:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      MIAKAPP_SANDBOX_ORIGIN: https://sandbox.invalid
+      MIAKAPP_HOST_ORIGIN: https://host.invalid
+      MIAKAPP_SANDBOX_SITE: miakapp-sandbox-ci
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: 1.2.23
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      # esbuild resolves from the package that owns the build script.
+      - name: Install component runtime dependencies
+        working-directory: component-runtime
+        run: bun install --frozen-lockfile
+      - name: Build the sandbox artifact
+        run: bun run build:sandbox
+      - name: Verify the served bytes against the declared policy
+        run: bun run verify:sandbox

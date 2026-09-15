@@ -38,6 +38,7 @@ export const ADMISSION_OPERATIONS = Object.freeze([
   'component.upload.deliver',
   'component.finalize',
   'component.activate',
+  'runtime.diagnostics.report',
 ] as const);
 
 export type AdmissionOperation = typeof ADMISSION_OPERATIONS[number];
@@ -66,6 +67,8 @@ export const ADMISSION_BUDGETS = Object.freeze([
   'component.upload.delivery_bytes.home',
   'component.finalize.home',
   'component.activate.home',
+  'runtime.diagnostics.source',
+  'runtime.diagnostics.release',
 ] as const);
 
 export type AdmissionBudget = typeof ADMISSION_BUDGETS[number];
@@ -288,6 +291,7 @@ export interface DeploymentConfig {
   readonly userRelayExchangeEndpoint: string;
   readonly pushAudience: string;
   readonly componentsAudience: string;
+  readonly runtimeDiagnosticsEndpoint: string;
   readonly componentBucket: string;
   readonly componentUploadBaseUrl: string;
   readonly componentArtifactBaseUrl: string;
