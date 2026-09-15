@@ -534,6 +534,25 @@ private Workflow returned the exact discovery document after two controlled
 failures, without opening public ingress or making an application mutation.
 Credential-free checks validate all six Terraform roots with mock providers.
 
+A seventh local slice closes the receiving end of shell runtime diagnostics.
+`src/app/runtime-diagnostics.ts` has emitted `miakapp.runtime-diagnostics/1`
+since #205, but nothing accepted it, so a sandbox broken in production was
+silent on both ends. `POST /v1/runtime-diagnostics` now admits that report
+through `control-plane/src/runtime-diagnostics.ts`. The endpoint cannot
+authenticate its caller — the shell posts with `credentials: 'omit'` — so every
+field is re-checked against the same closed failure vocabulary the shell uses
+and a failing report is rejected with `invalid_request` rather than recorded:
+an operator surface that stores whatever it is handed is a writable log. The
+release identifier is constrained to an identifier shape before it becomes a
+log label or a rate-limit subject, the instant must be a UTC RFC 3339 value
+within five minutes of the server clock, and the recorded observation time is
+always the server's. Accepted reports are emitted as one structured log line
+and nothing durable is written, because an unauthenticated route backed by a
+store is an amplification primitive that admission budgets cannot bound. The
+new `runtime.diagnostics.report` operation is rate-limited per source and per
+release. This is local evidence of the ingest contract; it does not prove
+Functions ingress, log retention or alerting on a deployed project.
+
 The one-shot protected recovery is complete and its active workflow is removed.
 PR #30 configuration commit
 `ee457535a64355cd8133410d9c8c43f039608928` applied a 35-no-op/two-update plan
