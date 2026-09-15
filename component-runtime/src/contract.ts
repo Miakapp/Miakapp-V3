@@ -76,6 +76,25 @@ export type UiNodeType =
   | 'progress'
   | 'media';
 
+/**
+ * The closed status vocabulary a component may report. The trusted host renders
+ * each of these as a distinct term, so this array is the single source the
+ * renderer's term table is checked against: adding a state here without naming
+ * it there is a type error rather than a status that renders as an unlabelled
+ * dot.
+ */
+export const STATUS_STATES = [
+  'idle',
+  'pending',
+  'accepted',
+  'applied',
+  'failed',
+  'stale',
+  'outcome_unknown',
+] as const;
+
+export type StatusState = (typeof STATUS_STATES)[number];
+
 export interface UiNode {
   id: string;
   type: UiNodeType;
@@ -462,15 +481,7 @@ function validateProps(
       if (budget.bytes > LIMITS.uiTextBytes) fail('render_invalid', 'aggregate UI text exceeds the limit');
       return {
         label: uiText(props.label, LIMITS.textBytes, 'status.props.label', budget),
-        state: enumValue(props.state, [
-          'idle',
-          'pending',
-          'accepted',
-          'applied',
-          'failed',
-          'stale',
-          'outcome_unknown',
-        ], 'status.props.state'),
+        state: enumValue(props.state, STATUS_STATES, 'status.props.state'),
         ...(detail === undefined ? {} : { detail }),
       };
     }
