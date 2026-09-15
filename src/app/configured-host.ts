@@ -107,6 +107,20 @@ export function readConfiguredSandboxOrigin(): string | undefined {
   return origin;
 }
 
+/**
+ * Runtime failures are reported only where the deployment says to report them.
+ * An undeclared endpoint means the shell stays as mute as it is today rather
+ * than guessing a destination for data about a home.
+ */
+export function readConfiguredDiagnosticsEndpoint(): string | undefined {
+  const endpoint = optional('VITE_MIAKAPP_RUNTIME_DIAGNOSTICS_ENDPOINT');
+  if (endpoint === undefined) return undefined;
+  if (!endpoint.startsWith('https://')) {
+    throw new Error('The Miakapp runtime diagnostics endpoint must use HTTPS');
+  }
+  return endpoint;
+}
+
 function readLiveConfiguration(): LiveConfiguration | undefined {
   if (import.meta.env.VITE_MIAKAPP_MODE !== 'live') return undefined;
   const exchangeEndpoint = required('VITE_MIAKAPP_CONTROL_PLANE_EXCHANGE_ENDPOINT');
