@@ -50,13 +50,14 @@ type KeySet struct {
 }
 
 type Deployment struct {
-	Issuer                    string `json:"issuer"`
-	JWKSURI                   string `json:"jwks_uri"`
-	ExchangeEndpoint          string `json:"exchange_endpoint"`
-	UserRelayExchangeEndpoint string `json:"user_relay_exchange_endpoint"`
-	PushAudience              string `json:"push_audience"`
-	ComponentsAudience        string `json:"components_audience"`
-	RelayAudience             string `json:"relay_audience"`
+	Issuer                     string `json:"issuer"`
+	JWKSURI                    string `json:"jwks_uri"`
+	ExchangeEndpoint           string `json:"exchange_endpoint"`
+	UserRelayExchangeEndpoint  string `json:"user_relay_exchange_endpoint"`
+	PushAudience               string `json:"push_audience"`
+	ComponentsAudience         string `json:"components_audience"`
+	RuntimeDiagnosticsEndpoint string `json:"runtime_diagnostics_endpoint"`
+	RelayAudience              string `json:"relay_audience"`
 }
 
 type FirebaseProfile struct {

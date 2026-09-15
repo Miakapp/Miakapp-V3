@@ -653,6 +653,7 @@ async function routeRequest(
       user_relay_exchange_endpoint: dependencies.config.userRelayExchangeEndpoint,
       push_audience: dependencies.config.pushAudience,
       components_audience: dependencies.config.componentsAudience,
+      runtime_diagnostics_endpoint: dependencies.config.runtimeDiagnosticsEndpoint,
     });
     return;
   }
