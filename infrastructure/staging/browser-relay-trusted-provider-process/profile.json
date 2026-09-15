@@ -183,7 +183,7 @@
     "process_source_sha256": "65c071b5bf8295c5460224b1b03d88e5f18fd90619b2dedd744382131ed80b1d",
     "worker_source_sha256": "d145349cb1a54c2f2007481ad7157b993ab7b12df3955842c151b83ba4f2b1ea",
     "guard_source_sha256": "bb30ebb25d9f452ce42eac3cadc4f6d51c5176adac32736adec67b03063d54b1",
-    "test_corpus_sha256": "9648e6755471fae5928096c1170f450e918e6ab302ad65c6074b8d12b41c06d5",
+    "test_corpus_sha256": "cd8ee65a1f3d496920af2f5b68a28764f8dc5ef3ec54f99830becb23cb9f4d78",
     "workflow_sha256": "c40058122042a3777099febdb23b9750375c8aaca2dcb929265be67af48f1467"
   }
 }
