@@ -54,12 +54,18 @@ const UNCOOPERATIVE_DESCENDANT = fileURLToPath(
 );
 const WORKER = fileURLToPath(new URL('../worker.mjs', import.meta.url));
 const CANONICAL_TMP_DIRECTORY = realpathSync.native(tmpdir());
+// Startup budget for cases whose assertion is not about readiness. Spawning the
+// owner process and loading its bundle is far slower on a contended CI runner
+// than on a developer machine, so a tight budget here turns unrelated
+// assertions into `ready_timeout` failures. The cases that do assert
+// `ready_timeout` set their own short budget instead.
+const READY_TIMEOUT_MILLISECONDS = 10_000;
 
 function options(bundle, overrides = {}) {
   return Object.freeze({
     owner_bundle_path: bundle.path,
     owner_bundle_sha256: bundle.sha256,
-    ready_timeout_milliseconds: 250,
+    ready_timeout_milliseconds: READY_TIMEOUT_MILLISECONDS,
     operation_timeout_milliseconds: 500,
     cancellation_grace_milliseconds: 50,
     ...overrides,
@@ -492,7 +498,6 @@ test('sends one cooperative cancel across concurrent abort and close', async (t)
   }));
   const ownerProcess = createBrowserRelayTrustedProviderProcessInternal(
     options(bundle, {
-      ready_timeout_milliseconds: 500,
       operation_timeout_milliseconds: 2_000,
       cancellation_grace_milliseconds: 500,
     }),
@@ -523,7 +528,8 @@ test('rejects hostile startup frames and early exits', async (t) => {
     const bundle = registerBundleCleanup(t, hostilePeerBundle({ mode }));
     const ownerProcess = createBrowserRelayTrustedProviderProcessInternal(
       options(bundle, {
-        ready_timeout_milliseconds: mode === 'hang_ready' ? 150 : 500,
+        ready_timeout_milliseconds:
+          mode === 'hang_ready' ? 150 : READY_TIMEOUT_MILLISECONDS,
       }),
       HOSTILE_PEER,
     );
@@ -562,7 +568,6 @@ test('aborts after authority transfer without sending execute or replaying', asy
   }));
   const ownerProcess = createBrowserRelayTrustedProviderProcessInternal(
     options(bundle, {
-      ready_timeout_milliseconds: 2_000,
       cancellation_grace_milliseconds: 25,
     }),
     HOSTILE_PEER,
@@ -590,7 +595,6 @@ test('rejects hostile terminal identity, code, duplication, crash and hang', asy
     }));
     const ownerProcess = createBrowserRelayTrustedProviderProcessInternal(
       options(bundle, {
-        ready_timeout_milliseconds: 500,
         operation_timeout_milliseconds: mode === 'result_then_hang' ? 250 : 1_000,
         cancellation_grace_milliseconds: 50,
       }),
