@@ -1097,3 +1097,23 @@ svg {
     transition-duration: 0.01ms !important;
   }
 }
+
+/*
+  The component runtime's sandbox frame is a compute surface, not a view. It stays
+  in the layout (an undisplayed frame need not load) but occupies nothing and
+  cannot be reached by the pointer or the caret.
+*/
+.component-runtime-surface {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  border: 0;
+  pointer-events: none;
+}
+
+.component-runtime-surface iframe {
+  width: 0;
+  height: 0;
+  border: 0;
+}

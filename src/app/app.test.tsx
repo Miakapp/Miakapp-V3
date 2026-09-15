@@ -115,3 +115,299 @@ describe('App', () => {
     expect(observed?.aborted).toBe(true);
   });
 });
+
+const SANDBOX_ORIGIN = 'https://sandbox.miakapp.test';
+
+function runtimeTree(title: string): unknown {
+  return {
+    id: 'runtime-screen',
+    type: 'screen',
+    props: { title },
+    children: [
+      {
+        id: 'runtime-action',
+        type: 'button',
+        props: { label: 'Run it', handler: 'runtime.action', variant: 'primary' },
+      },
+    ],
+  };
+}
+
+function releaseWithArtifact(bytes: Uint8Array): ActivatedRelease {
+  return {
+    pointer: { release: '2026.09.15-runtime' } as ActivatedRelease['pointer'],
+    artifact: { bytes } as unknown as ActivatedRelease['artifact'],
+    fellBack: false,
+  };
+}
+
+function coordinatorFor(release: ActivatedRelease): ComponentReleaseCoordinator {
+  return { activate: async () => release };
+}
+
+describe('App component runtime call site', () => {
+  it('never mounts the runtime when the deployment declares no sandbox origin', async () => {
+    const mountRuntime = vi.fn();
+    render(
+      <App
+        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
+        mountRuntime={mountRuntime as never}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Component 2026\.09\.15-runtime/)).toBeVisible();
+    });
+    expect(mountRuntime).not.toHaveBeenCalled();
+    // The shell keeps rendering the trusted host's own tree.
+    expect(screen.getByText('3 lights on')).toBeVisible();
+  });
+
+  it('never mounts the runtime when no release was verified', () => {
+    const mountRuntime = vi.fn();
+    render(
+      <App
+        createComponentRelease={() => undefined}
+        mountRuntime={mountRuntime as never}
+        readSandboxOrigin={() => SANDBOX_ORIGIN}
+      />,
+    );
+
+    expect(mountRuntime).not.toHaveBeenCalled();
+    expect(screen.getByText('Semantic host · ABI 1')).toBeVisible();
+  });
+
+  it('runs the verified artifact in the declared sandbox and renders what it returns', async () => {
+    const bytes = new Uint8Array([7, 8, 9]);
+    const session = { lifecycle: 'active' as const, interact: vi.fn(), dispose: vi.fn() };
+    const mountRuntime = vi.fn(async (_release: never, options: never) => {
+      const opts = options as unknown as { onTree: (tree: unknown, revision: number) => void };
+      opts.onTree(runtimeTree('Runtime speaking'), 4);
+      return session;
+    });
+
+    render(
+      <App
+        createComponentRelease={() => coordinatorFor(releaseWithArtifact(bytes))}
+        mountRuntime={mountRuntime as never}
+        readSandboxOrigin={() => SANDBOX_ORIGIN}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 1, name: 'Runtime speaking' })).toBeVisible();
+    });
+
+    const [passedRelease, passedOptions] = mountRuntime.mock.calls[0]! as unknown as [
+      { pointer: { release: string }; artifact: { bytes: Uint8Array } },
+      { sandboxOrigin: string; container: HTMLElement },
+    ];
+    expect(passedRelease.artifact.bytes).toBe(bytes);
+    expect(passedRelease.pointer.release).toBe('2026.09.15-runtime');
+    expect(passedOptions.sandboxOrigin).toBe(SANDBOX_ORIGIN);
+    expect(passedOptions.container).toBe(screen.getByTestId('component-runtime-surface'));
+    expect(screen.getByText('Component runtime · revision 4')).toBeVisible();
+    // The runtime's tree replaces the host's, it does not render beside it.
+    expect(screen.queryByText('3 lights on')).toBeNull();
+  });
+
+  it('routes interactions on the runtime tree to the runtime, never to the trusted host', async () => {
+    const user = userEvent.setup();
+    const session = { lifecycle: 'active' as const, interact: vi.fn(), dispose: vi.fn() };
+    const host = createDemoHost();
+    const hostInteract = vi.spyOn(host, 'interact');
+    const mountRuntime = vi.fn(async (_release: never, options: never) => {
+      (options as unknown as { onTree: (t: unknown, r: number) => void })
+        .onTree(runtimeTree('Runtime speaking'), 1);
+      return session;
+    });
+
+    render(
+      <App
+        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
+        createHost={() => host}
+        mountRuntime={mountRuntime as never}
+        readSandboxOrigin={() => SANDBOX_ORIGIN}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Run it' })).toBeVisible();
+    });
+    await user.click(screen.getByRole('button', { name: 'Run it' }));
+
+    expect(session.interact).toHaveBeenCalledWith('runtime.action', 'press', undefined);
+    expect(hostInteract).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the trusted host tree when the runtime dies', async () => {
+    const session = { lifecycle: 'active' as const, interact: vi.fn(), dispose: vi.fn() };
+    const mountRuntime = vi.fn(async (_release: never, options: never) => {
+      const opts = options as unknown as {
+        onTree: (t: unknown, r: number) => void;
+        onLifecycle: (l: string, f?: { code: string; message: string }) => void;
+      };
+      opts.onTree(runtimeTree('Runtime speaking'), 1);
+      opts.onLifecycle('failed', {
+        code: 'bridge_protocol_violation',
+        message: 'bad envelope',
+      });
+      return session;
+    });
+
+    render(
+      <App
+        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
+        mountRuntime={mountRuntime as never}
+        readSandboxOrigin={() => SANDBOX_ORIGIN}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Component runtime stopped · bridge_protocol_violation'))
+        .toBeVisible();
+    });
+    expect(screen.queryByRole('heading', { level: 1, name: 'Runtime speaking' })).toBeNull();
+    expect(screen.getByText('3 lights on')).toBeVisible();
+  });
+
+  it('keeps a component-authored failure code out of the shell chrome', async () => {
+    const session = { lifecycle: 'active' as const, interact: vi.fn(), dispose: vi.fn() };
+    const mountRuntime = vi.fn(async (_release: never, options: never) => {
+      const opts = options as unknown as {
+        onLifecycle: (l: string, f?: { code: string; message: string }) => void;
+      };
+      // `runtime.error` copies this straight off the bridge, so the component
+      // is choosing the text. Rendering it would rent it a line of trusted UI.
+      opts.onLifecycle('failed', {
+        code: 'Session expired — sign in again at evil.example',
+        message: 'phishing',
+      });
+      return session;
+    });
+
+    render(
+      <App
+        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
+        mountRuntime={mountRuntime as never}
+        readSandboxOrigin={() => SANDBOX_ORIGIN}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Component runtime stopped · unclassified')).toBeVisible();
+    });
+    expect(screen.queryByText(/evil\.example/)).toBeNull();
+  });
+
+  it('reports the failure that made the shell fall back', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 204 }));
+    const mountRuntime = vi.fn(async (_release: never, options: never) => {
+      const opts = options as unknown as {
+        onLifecycle: (l: string, f?: { code: string; message: string }) => void;
+      };
+      opts.onLifecycle('failed', { code: 'ready_timeout', message: 'no readiness' });
+      return { lifecycle: 'active' as const, interact: vi.fn(), dispose: vi.fn() };
+    });
+
+    render(
+      <App
+        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
+        mountRuntime={mountRuntime as never}
+        readDiagnosticsEndpoint={() => 'https://diagnostics.example/runtime'}
+        readSandboxOrigin={() => SANDBOX_ORIGIN}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Component runtime stopped · ready_timeout')).toBeVisible();
+    });
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledOnce();
+    });
+
+    const [endpoint, init] = fetchSpy.mock.calls[0]! as [string, RequestInit];
+    expect(endpoint).toBe('https://diagnostics.example/runtime');
+    expect(init.keepalive).toBe(true);
+    expect(init.credentials).toBe('omit');
+    expect(JSON.parse(init.body as string)).toEqual({
+      schema: 'miakapp.runtime-diagnostics/1',
+      code: 'ready_timeout',
+      release: '2026.09.15-runtime',
+      at: expect.any(String),
+    });
+    fetchSpy.mockRestore();
+  });
+
+  it('stays silent when no diagnostics endpoint is declared', async () => {
+    const mountRuntime = vi.fn(async () => {
+      throw new Error('sandbox unreachable');
+    });
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+
+    render(
+      <App
+        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
+        mountRuntime={mountRuntime as never}
+        readSandboxOrigin={() => SANDBOX_ORIGIN}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Component runtime stopped · mount_failed')).toBeVisible();
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  });
+
+  it('disposes the runtime session when the shell unmounts', async () => {
+    const session = { lifecycle: 'active' as const, interact: vi.fn(), dispose: vi.fn() };
+    const mountRuntime = vi.fn(async () => session);
+
+    const view = render(
+      <App
+        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
+        mountRuntime={mountRuntime as never}
+        readSandboxOrigin={() => SANDBOX_ORIGIN}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(mountRuntime).toHaveBeenCalledOnce();
+    });
+    view.unmount();
+
+    expect(session.dispose).toHaveBeenCalledOnce();
+  });
+
+  it('disposes a mount that only lands after the shell unmounted', async () => {
+    const session = { lifecycle: 'active' as const, interact: vi.fn(), dispose: vi.fn() };
+    let settle: (() => void) | undefined;
+    const mountRuntime = vi.fn(async () => {
+      await new Promise<void>((resolve) => {
+        settle = resolve;
+      });
+      return session;
+    });
+
+    const view = render(
+      <App
+        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
+        mountRuntime={mountRuntime as never}
+        readSandboxOrigin={() => SANDBOX_ORIGIN}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(settle).toBeDefined();
+    });
+    view.unmount();
+    settle!();
+
+    // An orphan frame and its port would otherwise stay alive with no owner.
+    await waitFor(() => {
+      expect(session.dispose).toHaveBeenCalledOnce();
+    });
+  });
+});
