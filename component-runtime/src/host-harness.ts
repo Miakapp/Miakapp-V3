@@ -40,16 +40,20 @@ const DEFAULT_GRANT: CapabilityRequirements = {
   presentation: ['media.front_door'],
 };
 
-interface MountOptions {
+export interface MountOptions {
   grant?: CapabilityRequirements;
   initialState?: Record<string, unknown>;
   hashOverride?: string;
   tamperAfterHostVerification?: boolean;
   duplicateLoad?: boolean;
   staging?: boolean;
+  deferActivation?: boolean;
+  epoch?: number;
+  generation?: number;
+  release?: string;
 }
 
-interface HarnessSnapshot {
+export interface HarnessSnapshot {
   lifecycle: string;
   epoch: number;
   errors: Array<{ code: string; message: string }>;
@@ -62,6 +66,7 @@ interface HarnessSnapshot {
 
 interface HarnessWindow extends Window {
   runtimeHarness?: RuntimeHarness;
+  dualRuntimeHarness?: DualRuntimeHarness;
   firebaseToken?: string;
 }
 
@@ -231,6 +236,7 @@ export class RuntimeHarness {
   private pendingBrokerProbe: number | undefined;
   private nextBrokerProbe = 1;
   private missedBrokerHeartbeats = 0;
+  private activateOnFirstRender = true;
   private lifecycle = 'absent';
   private errors: Array<{ code: string; message: string }> = [];
   private calls: unknown[] = [];
@@ -320,7 +326,9 @@ export class RuntimeHarness {
             throw new ContractViolation('render_invalid', 'host render revision is invalid');
           }
           this.render(payload.tree, revision as number);
-          if (this.lifecycle === 'staging') this.send('runtime.activate', {});
+          if (this.lifecycle === 'staging' && this.activateOnFirstRender) {
+            this.send('runtime.activate', {});
+          }
           break;
         }
         case 'runtime.active':
@@ -406,7 +414,12 @@ export class RuntimeHarness {
     this.missedBrokerHeartbeats = 0;
     this.outgoingSeq = 1;
     this.expectedBrokerSeq = 1;
-    this.epoch += 1;
+    this.activateOnFirstRender = !options.deferActivation;
+    const nextEpoch = options.epoch ?? this.epoch + 1;
+    if (!Number.isSafeInteger(nextEpoch) || nextEpoch <= this.epoch) {
+      throw new Error('Runtime epoch must increase');
+    }
+    this.epoch = nextEpoch;
     this.instance = randomId();
     this.grant = validateRequirements(options.grant ?? DEFAULT_GRANT);
     this.lifecycle = 'iframe_starting';
@@ -477,8 +490,8 @@ export class RuntimeHarness {
     const loadPayload = (artifact: ArrayBuffer) => ({
       release: {
         home_id: 'home-test',
-        generation: this.epoch,
-        release: `test-${this.epoch}`,
+        generation: options.generation ?? this.epoch,
+        release: options.release ?? `test-${options.generation ?? this.epoch}`,
         abi: COMPONENT_ABI,
         sha256: pointer.sha256,
         size: pointer.size,
@@ -516,7 +529,21 @@ export class RuntimeHarness {
         this.send('runtime.ping', { challenge: this.pendingBrokerProbe });
       }
     }, LIMITS.heartbeatMs);
-    await this.waitFor(() => ['active', 'failed', 'terminated'].includes(this.lifecycle), 7_000);
+    await this.waitFor(() => (
+      ['failed', 'terminated'].includes(this.lifecycle)
+      || (options.deferActivation
+        ? this.lifecycle === 'staging' && this.renderRevision > 0
+        : this.lifecycle === 'active')
+    ), 7_000);
+    return this.snapshot();
+  }
+
+  async activate(): Promise<HarnessSnapshot> {
+    if (this.lifecycle !== 'staging' || this.renderRevision === 0) {
+      throw new Error('Runtime has not completed staging');
+    }
+    this.send('runtime.activate', {});
+    await this.waitFor(() => ['active', 'failed', 'terminated'].includes(this.lifecycle));
     return this.snapshot();
   }
 
@@ -564,6 +591,169 @@ export class RuntimeHarness {
   }
 }
 
+interface ReleaseSlot {
+  generation: number;
+  harness: RuntimeHarness;
+  root: HTMLElement;
+}
+
+export interface DualHarnessSnapshot {
+  activeGeneration?: number;
+  stagedGeneration?: number;
+  highestAcceptedGeneration: number;
+  effectfulGenerations: number[];
+  active?: HarnessSnapshot;
+  staged?: HarnessSnapshot;
+  transitions: string[];
+  authoritySamples: number[][];
+}
+
+export class DualRuntimeHarness {
+  readonly sandboxOrigin: string;
+  readonly root: HTMLElement;
+  private active: ReleaseSlot | undefined;
+  private staged: ReleaseSlot | undefined;
+  private highestAcceptedGeneration = 0;
+  private transitionInProgress = false;
+  private transitions: string[] = [];
+  private authoritySamples: number[][] = [];
+
+  constructor(sandboxOrigin: string, root: HTMLElement) {
+    this.sandboxOrigin = sandboxOrigin;
+    this.root = root;
+  }
+
+  private effectfulGenerations(): number[] {
+    const effectful = new Set<number>();
+    for (const slot of [this.active, this.staged]) {
+      if (slot?.harness.status().lifecycle === 'active') effectful.add(slot.generation);
+    }
+    return [...effectful].sort((left, right) => left - right);
+  }
+
+  private record(transition: string): void {
+    this.transitions.push(transition);
+    const effectful = this.effectfulGenerations();
+    if (effectful.length > 1) throw new Error('Two component releases hold effectful authority');
+    this.authoritySamples.push(effectful);
+  }
+
+  status(): DualHarnessSnapshot {
+    return {
+      ...(this.active ? {
+        activeGeneration: this.active.generation,
+        active: this.active.harness.status(),
+      } : {}),
+      ...(this.staged ? {
+        stagedGeneration: this.staged.generation,
+        staged: this.staged.harness.status(),
+      } : {}),
+      highestAcceptedGeneration: this.highestAcceptedGeneration,
+      effectfulGenerations: this.effectfulGenerations(),
+      transitions: [...this.transitions],
+      authoritySamples: this.authoritySamples.map((sample) => [...sample]),
+    };
+  }
+
+  async stageSource(source: string, options: MountOptions & { generation: number }): Promise<DualHarnessSnapshot> {
+    if (this.transitionInProgress) throw new Error('A component release transition is already in progress');
+    if (!Number.isSafeInteger(options.generation) || options.generation <= this.highestAcceptedGeneration) {
+      throw new Error('Candidate generation must be a safe integer above the highest accepted generation');
+    }
+    this.abortStaged();
+    this.transitionInProgress = true;
+    try {
+      this.highestAcceptedGeneration = options.generation;
+      const root = document.createElement('div');
+      root.dataset.componentGeneration = String(options.generation);
+      const harness = new RuntimeHarness(this.sandboxOrigin, root);
+      const candidate: ReleaseSlot = { generation: options.generation, harness, root };
+      this.staged = candidate;
+      let result: HarnessSnapshot;
+      try {
+        result = await harness.mountSource(source, {
+          ...options,
+          staging: true,
+          deferActivation: true,
+          epoch: options.generation,
+        });
+      } catch {
+        result = harness.status();
+      }
+      if (result.lifecycle !== 'staging') {
+        harness.dispose();
+        this.staged = undefined;
+        this.record(`candidate_failed:${options.generation}`);
+        return this.status();
+      }
+      this.record(`candidate_staged:${options.generation}`);
+      return this.status();
+    } finally {
+      this.transitionInProgress = false;
+    }
+  }
+
+  async activateStaged(): Promise<DualHarnessSnapshot> {
+    if (this.transitionInProgress) throw new Error('A component release transition is already in progress');
+    const candidate = this.staged;
+    if (!candidate || candidate.harness.status().lifecycle !== 'staging') {
+      throw new Error('No successfully staged component release');
+    }
+    this.transitionInProgress = true;
+    try {
+      const previous = this.active;
+      if (previous) {
+        previous.harness.dispose();
+        this.record(`old_revoked:${previous.generation}`);
+      }
+      this.root.replaceChildren(candidate.root);
+      this.record(`tree_swapped:${candidate.generation}`);
+      let activated: HarnessSnapshot;
+      try {
+        activated = await candidate.harness.activate();
+      } catch {
+        activated = candidate.harness.status();
+      }
+      if (activated.lifecycle !== 'active') {
+        candidate.harness.dispose();
+        this.active = undefined;
+        this.staged = undefined;
+        const error = document.createElement('div');
+        error.setAttribute('role', 'alert');
+        error.textContent = 'The home component could not be activated.';
+        this.root.replaceChildren(error);
+        this.record(`candidate_activation_failed:${candidate.generation}`);
+        return this.status();
+      }
+      this.active = candidate;
+      this.staged = undefined;
+      this.record(`candidate_effects_enabled:${candidate.generation}`);
+      return this.status();
+    } finally {
+      this.transitionInProgress = false;
+    }
+  }
+
+  abortStaged(): DualHarnessSnapshot {
+    if (this.transitionInProgress) throw new Error('A component release transition is already in progress');
+    if (this.staged) {
+      const generation = this.staged.generation;
+      this.staged.harness.dispose();
+      this.staged = undefined;
+      this.record(`candidate_aborted:${generation}`);
+    }
+    return this.status();
+  }
+
+  dispose(): void {
+    this.staged?.harness.dispose();
+    if (this.active !== this.staged) this.active?.harness.dispose();
+    this.staged = undefined;
+    this.active = undefined;
+    this.root.replaceChildren();
+  }
+}
+
 export function installHostHarness(): RuntimeHarness {
   const root = document.querySelector<HTMLElement>('#generated');
   if (!root) throw new Error('Missing #generated root');
@@ -574,6 +764,7 @@ export function installHostHarness(): RuntimeHarness {
   harnessWindow.firebaseToken = 'firebase-secret-must-not-cross';
   localStorage.setItem('firebase-token', 'firebase-secret-must-not-cross');
   harnessWindow.runtimeHarness = harness;
+  harnessWindow.dualRuntimeHarness = new DualRuntimeHarness(sandboxOrigin, root);
   return harness;
 }
 
