@@ -221,6 +221,50 @@ function componentRuntimeLabel(state: ComponentRuntimeState): string | undefined
   return undefined;
 }
 
+/**
+ * The runtime states in which the home view shows the trusted host's own screen
+ * although the deployment expected a component screen. `idle` is excluded
+ * because nothing was expected — the build declares no release or no sandbox
+ * origin — and `active` because the component screen is the one on display.
+ * Deriving the union by exclusion is what makes a new runtime state widen it
+ * and break the term table below until the new state is named.
+ */
+type SubstitutedScreenStatus = Exclude<ComponentRuntimeState['status'], 'active' | 'idle'>;
+
+/**
+ * Host-owned sentence for each of those states. The footer already names the
+ * runtime, but the substitution happens in the middle of the page: the
+ * component's screen is replaced by the home's own screen, and both are real,
+ * both answer, and both drive the same home through different controls. Nothing
+ * looks broken, which is precisely why the region has to say whose screen it is
+ * rather than leave the person to notice that the controls changed under them.
+ */
+const SUBSTITUTED_SCREEN_TERMS: Record<SubstitutedScreenStatus, string> = {
+  starting: 'This is the home’s own screen. The component screen is still starting.',
+  failed: 'This is the home’s own screen. The component screen stopped.',
+};
+
+/**
+ * Names the screen on display, or renders nothing when the component screen is
+ * the one on display and when none was ever expected. The failure code comes
+ * from `classifyRuntimeFailure`, so what reaches this notice is a host term and
+ * never the component's own text.
+ */
+function ScreenNotice({
+  state,
+}: {
+  readonly state: ComponentRuntimeState;
+}): React.JSX.Element | null {
+  if (state.status === 'active' || state.status === 'idle') return null;
+
+  return (
+    <p className="screen-notice" role="status">
+      <span>{SUBSTITUTED_SCREEN_TERMS[state.status]}</span>
+      {state.status === 'failed' ? <small>{state.code}</small> : null}
+    </p>
+  );
+}
+
 const NAV_ITEMS: ReadonlyArray<{
   view: HostView;
   label: string;
@@ -451,14 +495,17 @@ export function App({
 
         {view === 'home' ? (
           <div className="home-layout">
-            {runtimeState.status === 'active' ? (
-              <SemanticRenderer
-                onInteraction={runtime.interact}
-                tree={runtimeState.tree}
-              />
-            ) : (
-              <SemanticRenderer onInteraction={host.interact} tree={snapshot.uiTree} />
-            )}
+            <div className="home-screen">
+              <ScreenNotice state={runtimeState} />
+              {runtimeState.status === 'active' ? (
+                <SemanticRenderer
+                  onInteraction={runtime.interact}
+                  tree={runtimeState.tree}
+                />
+              ) : (
+                <SemanticRenderer onInteraction={host.interact} tree={snapshot.uiTree} />
+              )}
+            </div>
             <aside className="activity-rail">
               <header>
                 <div>
