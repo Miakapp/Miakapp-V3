@@ -114,6 +114,7 @@ function validateActions(value, path) {
     'actions/setup-go@*',
     'actions/setup-java@*',
     'actions/setup-node@*',
+    'actions/upload-artifact@*',
     'actions/upload-pages-artifact@*',
     'google-github-actions/auth@*',
     'google-github-actions/setup-gcloud@*',
@@ -135,7 +136,7 @@ export function validateGitHubPolicy(value, options = {}) {
     'activation',
   ]);
   exact(policy.schema, 'miakapp.staging-github-policy/1', 'policy.schema');
-  exact(policy.revision, 7, 'policy.revision');
+  exact(policy.revision, 8, 'policy.revision');
   exact(
     policy.status,
     'manual_keyless_partial_foundation_recovery_retired',
