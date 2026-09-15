@@ -25,6 +25,38 @@ test.beforeEach(async ({ page }) => {
   await page.goto(hostUrl);
 });
 
+test('stores isolated defensive copies in the trusted IndexedDB cache', async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const moduleUrl = '/artifact-cache.js';
+    const { IndexedDbArtifactCache } = await import(moduleUrl);
+    const cache = new IndexedDbArtifactCache();
+    const home = `home-${crypto.randomUUID()}`;
+    const digest = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+    const original = Uint8Array.from([1, 2, 3, 4]);
+
+    await cache.put(home, digest, original);
+    original[0] = 99;
+    const first = await cache.get(home, digest);
+    if (first === undefined) throw new Error('missing cached artifact');
+    first[1] = 88;
+    const second = await cache.get(home, digest);
+    await cache.delete(home, digest);
+    const deleted = await cache.get(home, digest);
+
+    return {
+      first: Array.from(first),
+      second: second === undefined ? undefined : Array.from(second),
+      deleted: deleted === undefined,
+    };
+  });
+
+  expect(result).toEqual({
+    first: [1, 88, 3, 4],
+    second: [1, 2, 3, 4],
+    deleted: true,
+  });
+});
+
 test('renders a valid tree and preserves RFC 0001 call states', async ({ page }) => {
   const result = await mount(page, await fixture('good.mjs'));
   expect(result.lifecycle, JSON.stringify(result)).toBe('active');
@@ -235,4 +267,72 @@ test('teardown removes generated UI and requires a fresh epoch', async ({ page }
   expect(second.lifecycle).toBe('active');
   expect(second.epoch).toBeGreaterThan(first.epoch);
   expect(second.renderRevision).toBe(first.renderRevision);
+});
+
+test('serializes generation changes across trusted IndexedDB ledgers', async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const moduleUrl = '/release-state.js';
+    const {
+      ComponentReleaseLedger,
+      IndexedDbReleaseMetadataStore,
+    } = await import(moduleUrl);
+    const databaseName = `release-state-${crypto.randomUUID()}`;
+    const homeId = 'home-browser-test';
+    const artifactOrigin = 'https://artifacts.example';
+    const context = {
+      expectedHomeId: homeId,
+      allowedArtifactOrigins: new Set([artifactOrigin]),
+      allowedPathPrefixes: ['/homes/'],
+    };
+    const makePointer = (generation: number, sha256: string) => ({
+      schema: 'miakapp.component-pointer/1',
+      home_id: homeId,
+      generation,
+      release: `release-${generation}`,
+      abi: 'miakapp.component/1',
+      url: `${artifactOrigin}/homes/${homeId}/${sha256}.js`,
+      sha256,
+      size: 128,
+      requires: {
+        state_read: [],
+        event_subscribe: [],
+        event_publish: [],
+        call: [],
+        presentation: [],
+      },
+    });
+    const first = new ComponentReleaseLedger(
+      context,
+      new IndexedDbReleaseMetadataStore(indexedDB, databaseName),
+    );
+    const second = new ComponentReleaseLedger(
+      context,
+      new IndexedDbReleaseMetadataStore(indexedDB, databaseName),
+    );
+    const digest1 = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+    const digest2 = 'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB';
+    const digest3 = 'CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC';
+
+    await first.accept(makePointer(1, digest1));
+    await first.markActive(makePointer(1, digest1));
+    const settled = await Promise.allSettled([
+      first.accept(makePointer(2, digest2)),
+      second.accept(makePointer(2, digest3)),
+    ]);
+    const stored = await second.read();
+    return {
+      statuses: settled.map((entry) => entry.status).sort(),
+      highest: stored?.highest_accepted.generation,
+      acceptedDigest: stored?.highest_accepted.sha256,
+      lastKnownGood: stored?.last_known_good?.generation,
+    };
+  });
+
+  expect(result.statuses).toEqual(['fulfilled', 'rejected'].sort());
+  expect(result.highest).toBe(2);
+  expect([
+    'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',
+    'CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC',
+  ]).toContain(result.acceptedDigest);
+  expect(result.lastKnownGood).toBe(1);
 });

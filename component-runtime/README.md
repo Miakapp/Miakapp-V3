@@ -19,7 +19,8 @@ HTML, CSS, URL, or property-bag injection.
 The browser corpus runs the same broker and headers in Chromium, Firefox, and
 WebKit. It includes valid, tampered, declaration-shadowing, egress,
 invalid-tree, sparse-array, undeclared-capability, duplicate-load, lifecycle,
-message-flood, and pre/post-activation infinite-loop bundles. Tests observe
+message-flood, pre/post-activation infinite-loop bundles, and the trusted
+IndexedDB artifact cache. Tests observe
 actual probe requests; rejected promises or CSP console messages are not treated
 as sufficient evidence.
 
@@ -28,18 +29,26 @@ as sufficient evidence.
 - `src/contract.ts` defines the framework-neutral pointer, capability, envelope,
   and semantic-tree validators.
 - `src/artifact.ts` implements bounded fetch and exact SHA-256 verification.
+- `src/artifact-cache.ts` keeps content-addressed trusted-host copies in
+  IndexedDB, returns defensive copies, and revalidates bytes before every use.
 - `src/runtime-broker.ts` is the fixed opaque broker used by the proof.
 - `src/host-harness.ts` is a trusted host and safe semantic renderer for tests.
+- `src/release-state.ts` keeps the anti-rollback floor and last-known-good
+  pointer in a transactional trusted-host ledger. It rejects same-generation
+  equivocation and exposes automatic fallback only while a candidate is still
+  effect-free.
 - `fixtures/` contains auditable home-bundle inputs, including hostile bundles.
 - `test/contract.test.ts` covers schemas, limits, and byte verification.
 - `test/runtime.spec.ts` exercises the real browser boundary.
 
 This remains an architectural boundary subset. The repository root now contains
 the first production-shaped React semantic renderer, but it uses an explicitly
-offline preview adapter and is not yet connected to this broker. Firebase
-artifact delivery, generated-component SDK, dual-release activation, complete
-host lifecycle and full RFC conformance remain behind the accepted ABI and
-explicit exit gate.
+offline preview adapter and is not yet connected to this broker. The artifact
+loader now treats storage outages as cache misses, evicts corrupt entries, and
+never serves cached bytes without repeating size and digest verification.
+Firebase pointer delivery, generated-component SDK, dual-release activation,
+complete host lifecycle and full RFC conformance remain behind the accepted ABI
+and explicit exit gate.
 
 ## Run
 

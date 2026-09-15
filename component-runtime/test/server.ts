@@ -22,9 +22,11 @@ async function bundle(entry: string): Promise<string> {
 
 const brokerBundle = (await bundle('src/runtime-broker.ts')).replace(/<\/script/giu, '<\\/script');
 const hostBundle = await bundle('src/host-harness.ts');
+const artifactCacheBundle = await bundle('src/artifact-cache.ts');
 const brokerHash = createHash('sha256').update(brokerBundle).digest('base64');
 const sandboxOrigin = `http://localhost:${port}`;
 const hostOrigin = `http://127.0.0.1:${port}`;
+const releaseStateBundle = await bundle('src/release-state.ts');
 
 const hostHtml = `<!doctype html>
 <html lang="en" data-sandbox-origin="${sandboxOrigin}">
@@ -46,9 +48,50 @@ const sandboxHtml = `<!doctype html>
   <body><script type="module">${brokerBundle}</script></body>
 </html>`;
 
+// The no-prelude boundary experiment. This document is served with byte-identical
+// security headers to /sandbox.html so the only difference from the deployed
+// runtime is the missing confinement prelude. Whatever the probe still cannot do
+// here is denied by the browser rather than by our JavaScript.
+const boundaryProbe = await Bun.file(new URL('../fixtures/boundary-probe.mjs', import.meta.url)).text();
+const boundaryScript = `
+  const source = ${JSON.stringify(boundaryProbe)};
+  const url = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
+  // Classic, exactly like RuntimeBroker creates the guest Worker. A module
+  // worker would make importScripts absent for reasons unrelated to security.
+  const worker = new Worker(url, { type: 'classic' });
+  const publish = (text) => {
+    const node = document.getElementById('observations');
+    node.textContent = text;
+    node.dataset.done = 'true';
+  };
+  worker.onmessage = (event) => publish(event.data);
+  worker.onerror = (event) => publish('worker-error:' + (event.message || 'unknown'));
+`;
+const boundaryHash = createHash('sha256').update(boundaryScript).digest('base64');
+
+const boundaryHtml = `<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><title>Miakapp boundary probe</title></head>
+  <body>
+    <div id="observations">probe running</div>
+    <script>${boundaryScript}</script>
+  </body>
+</html>`;
+
 const sandboxCsp = [
   "sandbox allow-scripts",
   `script-src 'sha256-${brokerHash}'`,
+  ...SANDBOX_DENY_DIRECTIVES,
+  'worker-src blob:',
+  'child-src blob:',
+  `frame-ancestors ${hostOrigin}`,
+].join('; ');
+
+// Identical to sandboxCsp apart from the inline script it authorises, so the
+// experiment cannot accidentally weaken the policy it is measuring.
+const boundaryCsp = [
+  'sandbox allow-scripts',
+  `script-src 'sha256-${boundaryHash}'`,
   ...SANDBOX_DENY_DIRECTIVES,
   'worker-src blob:',
   'child-src blob:',
@@ -60,6 +103,11 @@ const permissionsPolicy = SANDBOX_DISABLED_FEATURES.map((feature) => `${feature}
 function response(body: BodyInit | null, init: ResponseInit = {}): Response {
   return new Response(body, init);
 }
+
+// Server-side egress evidence. A request observed by the browser's devtools
+// protocol may still have been refused before dispatch; a request recorded here
+// definitively left the browser and reached a remote listener.
+let leakHits: string[] = [];
 
 Bun.serve({
   hostname: '0.0.0.0',
@@ -87,6 +135,15 @@ Bun.serve({
         },
       });
     }
+    if (url.pathname === '/artifact-cache.js' && hostname === '127.0.0.1') {
+      return response(artifactCacheBundle, {
+        headers: {
+          'content-type': 'text/javascript; charset=utf-8',
+          'cache-control': 'no-store',
+          'x-content-type-options': 'nosniff',
+        },
+      });
+    }
     if (url.pathname === '/sandbox.html' && hostname === 'localhost') {
       return response(sandboxHtml, {
         headers: {
@@ -100,12 +157,47 @@ Bun.serve({
         },
       });
     }
+    if (url.pathname === '/boundary.html' && hostname === 'localhost') {
+      return response(boundaryHtml, {
+        headers: {
+          'content-type': 'text/html; charset=utf-8',
+          'content-security-policy': boundaryCsp,
+          'permissions-policy': permissionsPolicy,
+          'referrer-policy': 'no-referrer',
+          'x-content-type-options': 'nosniff',
+          'cache-control': 'no-store',
+          'cross-origin-resource-policy': 'cross-origin',
+        },
+      });
+    }
+    if (url.pathname === '/leak-hits' && hostname === '127.0.0.1') {
+      return response(JSON.stringify(leakHits), {
+        headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+      });
+    }
+    if (url.pathname === '/leak-reset' && hostname === '127.0.0.1') {
+      leakHits = [];
+      return response('ok', { headers: { 'cache-control': 'no-store' } });
+    }
     if (url.pathname === '/leak-module.mjs') {
+      leakHits.push(request.url);
       return response('export default true;', {
         headers: { 'content-type': 'text/javascript' },
       });
     }
-    if (url.pathname === '/leak') return response(null, { status: 204 });
+    if (url.pathname === '/leak') {
+      leakHits.push(request.url);
+      return response(null, { status: 204 });
+    }
+    if (url.pathname === '/release-state.js' && hostname === '127.0.0.1') {
+      return response(releaseStateBundle, {
+        headers: {
+          'content-type': 'text/javascript; charset=utf-8',
+          'cache-control': 'no-store',
+          'x-content-type-options': 'nosniff',
+        },
+      });
+    }
     if (url.pathname === '/health') return response('ok');
     return response('not found', { status: 404 });
   },
