@@ -248,7 +248,10 @@ describe('App component runtime call site', () => {
         onLifecycle: (l: string, f?: { code: string; message: string }) => void;
       };
       opts.onTree(runtimeTree('Runtime speaking'), 1);
-      opts.onLifecycle('failed', { code: 'contract_violation', message: 'bad envelope' });
+      opts.onLifecycle('failed', {
+        code: 'bridge_protocol_violation',
+        message: 'bad envelope',
+      });
       return session;
     });
 
@@ -261,10 +264,101 @@ describe('App component runtime call site', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Component runtime stopped · contract_violation')).toBeVisible();
+      expect(screen.getByText('Component runtime stopped · bridge_protocol_violation'))
+        .toBeVisible();
     });
     expect(screen.queryByRole('heading', { level: 1, name: 'Runtime speaking' })).toBeNull();
     expect(screen.getByText('3 lights on')).toBeVisible();
+  });
+
+  it('keeps a component-authored failure code out of the shell chrome', async () => {
+    const session = { lifecycle: 'active' as const, interact: vi.fn(), dispose: vi.fn() };
+    const mountRuntime = vi.fn(async (_release: never, options: never) => {
+      const opts = options as unknown as {
+        onLifecycle: (l: string, f?: { code: string; message: string }) => void;
+      };
+      // `runtime.error` copies this straight off the bridge, so the component
+      // is choosing the text. Rendering it would rent it a line of trusted UI.
+      opts.onLifecycle('failed', {
+        code: 'Session expired — sign in again at evil.example',
+        message: 'phishing',
+      });
+      return session;
+    });
+
+    render(
+      <App
+        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
+        mountRuntime={mountRuntime as never}
+        readSandboxOrigin={() => SANDBOX_ORIGIN}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Component runtime stopped · unclassified')).toBeVisible();
+    });
+    expect(screen.queryByText(/evil\.example/)).toBeNull();
+  });
+
+  it('reports the failure that made the shell fall back', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 204 }));
+    const mountRuntime = vi.fn(async (_release: never, options: never) => {
+      const opts = options as unknown as {
+        onLifecycle: (l: string, f?: { code: string; message: string }) => void;
+      };
+      opts.onLifecycle('failed', { code: 'ready_timeout', message: 'no readiness' });
+      return { lifecycle: 'active' as const, interact: vi.fn(), dispose: vi.fn() };
+    });
+
+    render(
+      <App
+        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
+        mountRuntime={mountRuntime as never}
+        readDiagnosticsEndpoint={() => 'https://diagnostics.example/runtime'}
+        readSandboxOrigin={() => SANDBOX_ORIGIN}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Component runtime stopped · ready_timeout')).toBeVisible();
+    });
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledOnce();
+    });
+
+    const [endpoint, init] = fetchSpy.mock.calls[0]! as [string, RequestInit];
+    expect(endpoint).toBe('https://diagnostics.example/runtime');
+    expect(init.keepalive).toBe(true);
+    expect(init.credentials).toBe('omit');
+    expect(JSON.parse(init.body as string)).toEqual({
+      schema: 'miakapp.runtime-diagnostics/1',
+      code: 'ready_timeout',
+      release: '2026.09.15-runtime',
+      at: expect.any(String),
+    });
+    fetchSpy.mockRestore();
+  });
+
+  it('stays silent when no diagnostics endpoint is declared', async () => {
+    const mountRuntime = vi.fn(async () => {
+      throw new Error('sandbox unreachable');
+    });
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+
+    render(
+      <App
+        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
+        mountRuntime={mountRuntime as never}
+        readSandboxOrigin={() => SANDBOX_ORIGIN}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Component runtime stopped · mount_failed')).toBeVisible();
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
   });
 
   it('disposes the runtime session when the shell unmounts', async () => {
