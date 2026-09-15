@@ -1,5 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
+import type { ComponentReleaseCoordinator } from './component-release';
 import { createDemoHost } from './demo-host';
 import type { HomeActivity, HostView, TrustedHost } from './host';
 import {
@@ -13,6 +14,66 @@ import { SemanticRenderer } from './semantic-renderer';
 
 interface AppProps {
   readonly createHost?: () => TrustedHost;
+  readonly createComponentRelease?: () => ComponentReleaseCoordinator | undefined;
+}
+
+type ComponentReleaseState =
+  | { readonly status: 'absent' }
+  | { readonly status: 'activating' }
+  | { readonly status: 'active'; readonly release: string; readonly fellBack: boolean }
+  | { readonly status: 'unavailable' };
+
+const NO_COMPONENT_RELEASE: ComponentReleaseState = Object.freeze({ status: 'absent' });
+
+/**
+ * Activates the verified component release once per shell mount. The artifact
+ * is fetched, size- and digest-checked and recorded in the release ledger here;
+ * executing it is the component runtime host's job, not the shell's.
+ */
+function useComponentRelease(
+  createComponentRelease: (() => ComponentReleaseCoordinator | undefined) | undefined,
+): ComponentReleaseState {
+  const [coordinator] = useState<ComponentReleaseCoordinator | undefined>(
+    () => createComponentRelease?.(),
+  );
+  const [state, setState] = useState<ComponentReleaseState>(
+    () => (coordinator === undefined ? NO_COMPONENT_RELEASE : { status: 'activating' }),
+  );
+
+  useEffect(() => {
+    if (coordinator === undefined) return undefined;
+
+    const controller = new AbortController();
+    void coordinator.activate(controller.signal).then(
+      (activated) => {
+        if (controller.signal.aborted) return;
+        setState({
+          status: 'active',
+          release: activated.pointer.release,
+          fellBack: activated.fellBack,
+        });
+      },
+      () => {
+        if (controller.signal.aborted) return;
+        setState({ status: 'unavailable' });
+      },
+    );
+
+    return () => controller.abort();
+  }, [coordinator]);
+
+  return state;
+}
+
+function componentReleaseLabel(state: ComponentReleaseState): string {
+  if (state.status === 'activating') return 'Verifying component release';
+  if (state.status === 'active') {
+    return state.fellBack
+      ? `Component ${state.release} · last known good`
+      : `Component ${state.release} · verified`;
+  }
+  if (state.status === 'unavailable') return 'Component release unavailable';
+  return 'Semantic host · ABI 1';
 }
 
 const NAV_ITEMS: ReadonlyArray<{
@@ -175,10 +236,14 @@ function SettingsView({ preview }: { readonly preview: boolean }): React.JSX.Ele
   );
 }
 
-export function App({ createHost = createDemoHost }: AppProps): React.JSX.Element {
+export function App({
+  createHost = createDemoHost,
+  createComponentRelease,
+}: AppProps): React.JSX.Element {
   const [host] = useState<TrustedHost>(() => createHost());
   const [view, setView] = useState<HostView>('home');
   const snapshot = useSyncExternalStore(host.subscribe, host.getSnapshot, host.getSnapshot);
+  const componentRelease = useComponentRelease(createComponentRelease);
 
   useEffect(() => () => host.dispose(), [host]);
 
@@ -257,7 +322,7 @@ export function App({ createHost = createDemoHost }: AppProps): React.JSX.Elemen
 
         <footer className="workspace__footer">
           <span>{snapshot.lastSynced}</span>
-          <span>Semantic host · ABI 1</span>
+          <span>{componentReleaseLabel(componentRelease)}</span>
         </footer>
       </main>
 
