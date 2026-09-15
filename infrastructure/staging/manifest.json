@@ -2,14 +2,14 @@
   "schema": "miakapp.staging-manifest-bundle/1",
   "bundle_revision": 4,
   "manifest_schema": "miakapp.staging-intent/1",
-  "manifest_revision": 109,
+  "manifest_revision": 110,
   "fragments": [
     {
       "id": "core",
       "path": "manifest/core.json",
       "mount": "manifest",
       "size_bytes": 18657,
-      "sha256": "31b5fa202c7d61c70bf31b05819122d7de32f4183b4f9111f7b943f05a5cf078"
+      "sha256": "3b19b89b6eb5bf2cc140653dc345b3f6477d9797fae7d8b783e95d82dfbcd41d"
     },
     {
       "id": "terraform",
@@ -44,7 +44,7 @@
       "path": "manifest/evidence-browser-relay-providers.json",
       "mount": "evidence",
       "size_bytes": 56610,
-      "sha256": "59af821438e5b88039a0b22d3b2db0ab96086ad67e7545482e1c90a2b7a1f3cf"
+      "sha256": "8eec42c01725c1f494dd8da8e2262e37d11c3e280fe209f9839f8193318724ec"
     },
     {
       "id": "evidence-browser-relay-operations",
