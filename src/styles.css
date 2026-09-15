@@ -608,9 +608,11 @@ svg {
   opacity: 0.55;
 }
 
-/* Host-owned pending term. It sits next to the label, never in place of it. */
+/* Host-owned inert term (pending or disabled). It sits next to the label,
+   never in place of it. */
 .semantic-button__pending,
-.semantic-toggle__pending {
+.semantic-toggle__pending,
+.semantic-field__disabled {
   margin-left: 6px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -674,6 +676,22 @@ svg {
   outline-offset: 3px;
 }
 
+/* The real checkbox is visually hidden, so without these a disabled toggle was
+   pixel-identical to a live one and still carried the pointer cursor. */
+.semantic-toggle:has(input:disabled) {
+  cursor: not-allowed;
+}
+
+.semantic-toggle input:disabled + .semantic-toggle__track {
+  background: #e9e8e2;
+  box-shadow: inset 0 0 0 1px #d2d0c7;
+}
+
+.semantic-toggle input:disabled + .semantic-toggle__track span {
+  background: #f4f3ee;
+  box-shadow: none;
+}
+
 .semantic-field {
   display: grid;
   gap: 7px;
@@ -692,6 +710,14 @@ svg {
   border: 1px solid #dedad0;
   border-radius: 10px;
   font-size: 12px;
+}
+
+.semantic-field input:disabled,
+.semantic-field select:disabled {
+  cursor: not-allowed;
+  color: var(--muted);
+  background: #eceae3;
+  border-style: dashed;
 }
 
 .semantic-progress {

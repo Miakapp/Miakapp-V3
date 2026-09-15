@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import {
   ContractViolation,
   validateUiTree,
+  type DisabledNodeType,
   type PendingNodeType,
   type StatusState,
   type UiNode,
@@ -44,6 +45,44 @@ const PENDING_TERMS: Record<PendingNodeType, string> = {
   button: 'Working…',
   toggle: 'Working…',
 };
+
+/**
+ * Host-owned term for every control the contract lets a component disable.
+ * Before this, `disabled` reached a person through appearance alone, and only
+ * for `button` (`opacity: .55`). A disabled `toggle` was pixel-identical to a
+ * live one — its real checkbox is visually hidden and the painted track is
+ * `aria-hidden` — and `input` and `select` had no disabled treatment at all.
+ * Like the pending term, this is host text beside the component's own label, so
+ * a component can neither forge it nor suppress it. Typing it as a total record
+ * over `DisabledNodeType` is what keeps it exhaustive.
+ */
+const DISABLED_TERMS: Record<DisabledNodeType, string> = {
+  button: 'Unavailable',
+  toggle: 'Unavailable',
+  input: 'Unavailable',
+  select: 'Unavailable',
+};
+
+/**
+ * The two reasons a control can be inert are not equals. `pending` implies the
+ * host disabled the control itself, so both terms would otherwise fire at once
+ * and stack two explanations onto one control. Pending is the more specific and
+ * the more perishable of the two, so it wins; `disabled` is what remains when
+ * nothing is in flight.
+ */
+function inertTerm(type: DisabledNodeType, disabled: boolean, pending: boolean): string | null {
+  if (pending && (type === 'button' || type === 'toggle')) return PENDING_TERMS[type];
+  return disabled ? DISABLED_TERMS[type] : null;
+}
+
+/**
+ * The separator is load-bearing: two adjacent JSX text nodes produce no space
+ * in the accessible name, which would run the label and the term together.
+ */
+function InertTerm({ className, term }: { className: string; term: string | null }) {
+  if (term === null) return null;
+  return <>{' '}<small className={className}>{term}</small></>;
+}
 
 interface SemanticRendererProps {
   readonly tree: unknown;
@@ -191,11 +230,10 @@ function renderNode(
           type="button"
         >
           {stringProp(node, 'label')}
-          {/* The separator is load-bearing: without it the accessible name of a
-              pending control runs its two words together. */}
-          {pending
-            ? <>{' '}<small className="semantic-button__pending">{PENDING_TERMS.button}</small></>
-            : null}
+          <InertTerm
+            className="semantic-button__pending"
+            term={inertTerm('button', booleanProp(node, 'disabled'), pending)}
+          />
         </button>
       );
     }
@@ -205,9 +243,10 @@ function renderNode(
       return (
         <label className="semantic-toggle" data-node-id={node.id} key={node.id}>
           <span>{stringProp(node, 'label')}</span>
-          {pending
-            ? <>{' '}<small className="semantic-toggle__pending">{PENDING_TERMS.toggle}</small></>
-            : null}
+          <InertTerm
+            className="semantic-toggle__pending"
+            term={inertTerm('toggle', booleanProp(node, 'disabled'), pending)}
+          />
           <input
             aria-busy={pending}
             checked={value}
@@ -226,7 +265,13 @@ function renderNode(
     case 'input':
       return (
         <label className="semantic-field" data-node-id={node.id} key={node.id}>
-          <span>{stringProp(node, 'label')}</span>
+          <span>
+            {stringProp(node, 'label')}
+            <InertTerm
+              className="semantic-field__disabled"
+              term={inertTerm('input', booleanProp(node, 'disabled'), false)}
+            />
+          </span>
           <input
             disabled={booleanProp(node, 'disabled')}
             maxLength={numberProp(node, 'max_length')}
@@ -244,7 +289,13 @@ function renderNode(
       const options = node.props.options as Array<{ value: string; label: string }>;
       return (
         <label className="semantic-field" data-node-id={node.id} key={node.id}>
-          <span>{stringProp(node, 'label')}</span>
+          <span>
+            {stringProp(node, 'label')}
+            <InertTerm
+              className="semantic-field__disabled"
+              term={inertTerm('select', booleanProp(node, 'disabled'), false)}
+            />
+          </span>
           <select
             disabled={booleanProp(node, 'disabled')}
             onChange={(event) => onInteraction({
