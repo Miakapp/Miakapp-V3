@@ -317,6 +317,7 @@ class LiveTrustedHost implements TrustedHost {
   #buildSnapshot(): TrustedHostSnapshot {
     const connection = connectionFrom(this.#status);
     return Object.freeze({
+      authenticated: this.#signedIn,
       ...(this.#homeState === undefined ? {} : { homeState: this.#homeState }),
       activeHome: this.#home,
       homes: Object.freeze([this.#home]),

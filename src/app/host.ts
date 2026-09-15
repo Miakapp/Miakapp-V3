@@ -38,6 +38,8 @@ export interface HomeState {
 }
 
 export interface TrustedHostSnapshot {
+  /** Whether the trusted identity boundary currently has a signed-in user. */
+  readonly authenticated: boolean;
   readonly homeState?: HomeState;
   readonly activeHome: HomeSummary;
   readonly homes: readonly HomeSummary[];
