@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { App } from './app';
 import type { ActivatedRelease, ComponentReleaseCoordinator } from './component-release';
 import { createDemoHost } from './demo-host';
+import type { HomeState, TrustedHost, TrustedHostSnapshot } from './host';
 
 function activatedRelease(release: string, fellBack: boolean): ActivatedRelease {
   return {
@@ -528,5 +529,101 @@ describe('App home screen provenance', () => {
     // every build without a sandbox origin read exactly as they did before.
     expect(screen.queryByText(SUBSTITUTED_SCREEN)).toBeNull();
     expect(screen.getByText('3 lights on')).toBeVisible();
+  });
+});
+
+describe('App home state delivery', () => {
+  function hostWith(homeState: HomeState | undefined): () => TrustedHost {
+    const base = createDemoHost();
+    const snapshot: TrustedHostSnapshot = {
+      ...base.getSnapshot(),
+      ...(homeState === undefined ? {} : { homeState }),
+    };
+    return () => ({
+      getSnapshot: () => snapshot,
+      subscribe: () => () => undefined,
+      interact: vi.fn(),
+      dispose: vi.fn(),
+    });
+  }
+
+  function runtimeSpy() {
+    const session = {
+      lifecycle: 'active' as const,
+      interact: vi.fn(),
+      dispose: vi.fn(),
+      publishState: vi.fn(),
+      markStateStale: vi.fn(),
+    };
+    const mountRuntime = vi.fn(async (_release: never, options: never) => {
+      const opts = options as unknown as { onTree: (t: unknown, r: number) => void };
+      opts.onTree(runtimeTree('Runtime speaking'), 1);
+      return session;
+    });
+    return { session, mountRuntime };
+  }
+
+  it('hands the running component the home state the shell holds', async () => {
+    const { session, mountRuntime } = runtimeSpy();
+
+    render(
+      <App
+        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
+        createHost={hostWith({
+          values: { 'zone.alpha.light.on': true },
+          revision: 12,
+          stale: false,
+        })}
+        mountRuntime={mountRuntime as never}
+        readSandboxOrigin={() => SANDBOX_ORIGIN}
+      />,
+    );
+
+    // Filtering to the grant is the runtime host's job; the shell's is to hand
+    // over what it has, once the session exists to receive it.
+    await waitFor(() => {
+      expect(session.publishState)
+        .toHaveBeenCalledWith({ 'zone.alpha.light.on': true }, 12);
+    });
+    expect(session.markStateStale).not.toHaveBeenCalled();
+  });
+
+  it('says the state is old rather than handing over an empty home', async () => {
+    const { session, mountRuntime } = runtimeSpy();
+
+    render(
+      <App
+        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
+        // The live host blanks its own values on staleness. Publishing those
+        // blanks would tell the component the home is freshly empty.
+        createHost={hostWith({ values: {}, revision: 12, stale: true })}
+        mountRuntime={mountRuntime as never}
+        readSandboxOrigin={() => SANDBOX_ORIGIN}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(session.markStateStale).toHaveBeenCalledWith(12, 'home_state_stale');
+    });
+    expect(session.publishState).not.toHaveBeenCalled();
+  });
+
+  it('publishes nothing when the build has no live home', async () => {
+    const { session, mountRuntime } = runtimeSpy();
+
+    render(
+      <App
+        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
+        createHost={hostWith(undefined)}
+        mountRuntime={mountRuntime as never}
+        readSandboxOrigin={() => SANDBOX_ORIGIN}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 1, name: 'Runtime speaking' })).toBeVisible();
+    });
+    expect(session.publishState).not.toHaveBeenCalled();
+    expect(session.markStateStale).not.toHaveBeenCalled();
   });
 });
