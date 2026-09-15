@@ -114,6 +114,55 @@ function describeEndpointFault(key: string, value: string): string | undefined {
   return undefined;
 }
 
+/**
+ * A control plane derives every endpoint it publishes from one issuer:
+ * `production-runtime-config.ts` builds `exchangeEndpoint`,
+ * `userRelayExchangeEndpoint` and `runtimeDiagnosticsEndpoint` by appending a
+ * fixed path to the same origin. So a diagnostics endpoint that does not share
+ * the origin of the exchange endpoint names a *different* control plane from
+ * the one this shell authenticates against — a stale host left behind by a
+ * copied `.env`, or a typo in the one place it cannot be noticed.
+ *
+ * It cannot be noticed because the ingest route answers `204` with no body by
+ * design. A shell posting to the wrong origin looks exactly like a shell
+ * posting to the right one, and the diagnostics loop that #205 and #206 exist
+ * to provide stops reporting in silence.
+ *
+ * The origin is compared against the operator's own exchange endpoint rather
+ * than against the `runtime_diagnostics_endpoint` published by discovery, and
+ * that is deliberate. Discovery is fetched unauthenticated; treating it as the
+ * authority on where telemetry goes would hand whoever answers that fetch the
+ * power to redirect our reports. The exchange endpoint is already a required
+ * key the operator sets, so anchoring on it adds no new trust and needs no
+ * network — this rule holds in CI, offline, on every change.
+ *
+ * Only the origin is compared. The path is not derivable: staging points
+ * `VITE_MIAKAPP_CONTROL_PLANE_EXCHANGE_ENDPOINT` at the user-relay exchange
+ * rather than the access-token one, so demanding a particular suffix would
+ * reject a working deployment.
+ */
+function describeDiagnosticsIssuerFault(
+  exchangeEndpoint: string,
+  diagnosticsEndpoint: string,
+): string | undefined {
+  let exchange: URL;
+  let diagnostics: URL;
+  try {
+    exchange = new URL(exchangeEndpoint);
+    diagnostics = new URL(diagnosticsEndpoint);
+  } catch {
+    // Whichever value failed to parse already has its own fault reported.
+    return undefined;
+  }
+  // A plaintext exchange endpoint is its own fault in live mode. Comparing
+  // origins across schemes would additionally report one host as two control
+  // planes, which sends the operator looking for a second deployment that does
+  // not exist.
+  if (exchange.protocol !== 'https:') return undefined;
+  if (exchange.origin === diagnostics.origin) return undefined;
+  return `VITE_MIAKAPP_RUNTIME_DIAGNOSTICS_ENDPOINT must share the control plane origin ${exchange.origin}, but points at ${diagnostics.origin}`;
+}
+
 function collectArtifactOriginFaults(value: string): readonly string[] {
   const key = 'VITE_MIAKAPP_COMPONENT_ARTIFACT_ORIGINS';
   const origins = value.split(',').map((origin) => origin.trim()).filter((origin) => origin !== '');
@@ -148,13 +197,14 @@ export function collectStagingEnvFaults(env: Readonly<Record<string, string>>): 
     faults.push(`${MODE_KEY} must be "live" or "demo", not ${mode}`);
   }
 
+  const exchangeEndpoint = present(env, 'VITE_MIAKAPP_CONTROL_PLANE_EXCHANGE_ENDPOINT');
+
   // Outside live mode the host never reads its live keys, so demanding them
   // would reject a deliberately configured demo build.
   if (mode === 'live') {
     for (const key of LIVE_REQUIRED_KEYS) {
       if (present(env, key) === undefined) faults.push(`${key} is required when ${MODE_KEY}=live`);
     }
-    const exchangeEndpoint = present(env, 'VITE_MIAKAPP_CONTROL_PLANE_EXCHANGE_ENDPOINT');
     if (exchangeEndpoint !== undefined) {
       const fault = describeEndpointFault('VITE_MIAKAPP_CONTROL_PLANE_EXCHANGE_ENDPOINT', exchangeEndpoint);
       if (fault !== undefined) faults.push(fault);
@@ -165,6 +215,10 @@ export function collectStagingEnvFaults(env: Readonly<Record<string, string>>): 
   if (diagnosticsEndpoint !== undefined) {
     const fault = describeEndpointFault('VITE_MIAKAPP_RUNTIME_DIAGNOSTICS_ENDPOINT', diagnosticsEndpoint);
     if (fault !== undefined) faults.push(fault);
+    else if (exchangeEndpoint !== undefined) {
+      const crossFault = describeDiagnosticsIssuerFault(exchangeEndpoint, diagnosticsEndpoint);
+      if (crossFault !== undefined) faults.push(crossFault);
+    }
   }
 
   const sandboxOrigin = present(env, 'VITE_MIAKAPP_COMPONENT_SANDBOX_ORIGIN');
