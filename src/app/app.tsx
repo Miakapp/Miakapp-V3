@@ -1,8 +1,14 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
-import type { ComponentReleaseCoordinator } from './component-release';
+import type { ActivatedRelease, ComponentReleaseCoordinator } from './component-release';
+import {
+  mountComponentRuntime,
+  type ComponentRuntimeSession,
+  type RuntimeFailure,
+  type RuntimeLifecycle,
+} from './component-runtime-host';
 import { createDemoHost } from './demo-host';
-import type { HomeActivity, HostView, TrustedHost } from './host';
+import type { HomeActivity, HostView, SemanticInteraction, TrustedHost } from './host';
 import {
   ActivityIcon,
   HomeIcon,
@@ -12,15 +18,24 @@ import {
 } from './icons';
 import { SemanticRenderer } from './semantic-renderer';
 
+type MountComponentRuntime = typeof mountComponentRuntime;
+
 interface AppProps {
   readonly createHost?: () => TrustedHost;
   readonly createComponentRelease?: () => ComponentReleaseCoordinator | undefined;
+  readonly readSandboxOrigin?: () => string | undefined;
+  readonly mountRuntime?: MountComponentRuntime;
 }
 
 type ComponentReleaseState =
   | { readonly status: 'absent' }
   | { readonly status: 'activating' }
-  | { readonly status: 'active'; readonly release: string; readonly fellBack: boolean }
+  | {
+    readonly status: 'active';
+    readonly release: string;
+    readonly fellBack: boolean;
+    readonly activated: ActivatedRelease;
+  }
   | { readonly status: 'unavailable' };
 
 const NO_COMPONENT_RELEASE: ComponentReleaseState = Object.freeze({ status: 'absent' });
@@ -51,6 +66,7 @@ function useComponentRelease(
           status: 'active',
           release: activated.pointer.release,
           fellBack: activated.fellBack,
+          activated,
         });
       },
       () => {
@@ -74,6 +90,120 @@ function componentReleaseLabel(state: ComponentReleaseState): string {
   }
   if (state.status === 'unavailable') return 'Component release unavailable';
   return 'Semantic host · ABI 1';
+}
+
+type ComponentRuntimeState =
+  | { readonly status: 'idle' }
+  | { readonly status: 'starting' }
+  | { readonly status: 'active'; readonly tree: unknown; readonly revision: number }
+  | { readonly status: 'failed'; readonly code: string };
+
+type RuntimeOutcome =
+  | { readonly kind: 'pending' }
+  | { readonly kind: 'tree'; readonly tree: unknown; readonly revision: number }
+  | { readonly kind: 'failed'; readonly code: string };
+
+const PENDING_RUNTIME: RuntimeOutcome = Object.freeze({ kind: 'pending' });
+const IDLE_RUNTIME: ComponentRuntimeState = Object.freeze({ status: 'idle' });
+const STARTING_RUNTIME: ComponentRuntimeState = Object.freeze({ status: 'starting' });
+
+interface ComponentRuntimeBinding {
+  readonly state: ComponentRuntimeState;
+  readonly interact: (interaction: SemanticInteraction) => void;
+}
+
+/**
+ * Runs the verified artifact in the sandbox site once a release is active and
+ * the deployment declares that site's origin. Both are required: without a
+ * verified artifact there is nothing to run, and without a separate sandbox
+ * origin `mountComponentRuntime` refuses to mount at all. A build that declares
+ * neither behaves exactly as before.
+ *
+ * The frame is only the compute surface. It renders nothing the user sees: the
+ * semantic tree comes back as data and is revalidated by `SemanticRenderer`
+ * into trusted DOM, so the component never reaches the session's origin.
+ */
+function useComponentRuntime(
+  activated: ActivatedRelease | undefined,
+  readSandboxOrigin: (() => string | undefined) | undefined,
+  mountRuntime: MountComponentRuntime,
+  containerRef: React.RefObject<HTMLDivElement | null>,
+): ComponentRuntimeBinding {
+  const sessionRef = useRef<ComponentRuntimeSession | undefined>(undefined);
+  const [sandboxOrigin] = useState<string | undefined>(() => readSandboxOrigin?.());
+  const [outcome, setOutcome] = useState<RuntimeOutcome>(PENDING_RUNTIME);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (activated === undefined || sandboxOrigin === undefined || container === null) {
+      return undefined;
+    }
+
+    let released = false;
+    let session: ComponentRuntimeSession | undefined;
+
+    const onLifecycle = (lifecycle: RuntimeLifecycle, failure?: RuntimeFailure): void => {
+      if (released) return;
+      if (lifecycle !== 'failed' && lifecycle !== 'terminated') return;
+      setOutcome({ kind: 'failed', code: failure?.code ?? lifecycle });
+    };
+
+    void mountRuntime(
+      { pointer: activated.pointer, artifact: { bytes: activated.artifact.bytes } },
+      {
+        sandboxOrigin,
+        container,
+        onLifecycle,
+        onTree: (tree, revision) => {
+          if (released) return;
+          setOutcome({ kind: 'tree', tree, revision });
+        },
+      },
+    ).then(
+      (mounted) => {
+        // A mount that lands after the shell unmounted would otherwise leave an
+        // orphan frame and its port alive with nothing left to dispose them.
+        if (released) {
+          mounted.dispose();
+          return;
+        }
+        session = mounted;
+        sessionRef.current = mounted;
+      },
+      () => {
+        if (released) return;
+        setOutcome({ kind: 'failed', code: 'mount_failed' });
+      },
+    );
+
+    return () => {
+      released = true;
+      sessionRef.current = undefined;
+      session?.dispose();
+    };
+  }, [activated, sandboxOrigin, mountRuntime, containerRef]);
+
+  const interact = useCallback((interaction: SemanticInteraction): void => {
+    sessionRef.current?.interact(interaction.handler, interaction.event, interaction.value);
+  }, []);
+
+  const mounting = activated !== undefined && sandboxOrigin !== undefined;
+  const state: ComponentRuntimeState = !mounting
+    ? IDLE_RUNTIME
+    : outcome.kind === 'pending'
+      ? STARTING_RUNTIME
+      : outcome.kind === 'tree'
+        ? { status: 'active', tree: outcome.tree, revision: outcome.revision }
+        : { status: 'failed', code: outcome.code };
+
+  return { state, interact };
+}
+
+function componentRuntimeLabel(state: ComponentRuntimeState): string | undefined {
+  if (state.status === 'starting') return 'Component runtime starting';
+  if (state.status === 'active') return `Component runtime · revision ${state.revision}`;
+  if (state.status === 'failed') return `Component runtime stopped · ${state.code}`;
+  return undefined;
 }
 
 const NAV_ITEMS: ReadonlyArray<{
@@ -239,11 +369,22 @@ function SettingsView({ preview }: { readonly preview: boolean }): React.JSX.Ele
 export function App({
   createHost = createDemoHost,
   createComponentRelease,
+  readSandboxOrigin,
+  mountRuntime = mountComponentRuntime,
 }: AppProps): React.JSX.Element {
   const [host] = useState<TrustedHost>(() => createHost());
   const [view, setView] = useState<HostView>('home');
   const snapshot = useSyncExternalStore(host.subscribe, host.getSnapshot, host.getSnapshot);
   const componentRelease = useComponentRelease(createComponentRelease);
+  const runtimeContainer = useRef<HTMLDivElement | null>(null);
+  const runtime = useComponentRuntime(
+    componentRelease.status === 'active' ? componentRelease.activated : undefined,
+    readSandboxOrigin,
+    mountRuntime,
+    runtimeContainer,
+  );
+  const runtimeState = runtime.state;
+  const runtimeLabel = componentRuntimeLabel(runtimeState);
 
   useEffect(() => () => host.dispose(), [host]);
 
@@ -289,7 +430,14 @@ export function App({
 
         {view === 'home' ? (
           <div className="home-layout">
-            <SemanticRenderer onInteraction={host.interact} tree={snapshot.uiTree} />
+            {runtimeState.status === 'active' ? (
+              <SemanticRenderer
+                onInteraction={runtime.interact}
+                tree={runtimeState.tree}
+              />
+            ) : (
+              <SemanticRenderer onInteraction={host.interact} tree={snapshot.uiTree} />
+            )}
             <aside className="activity-rail">
               <header>
                 <div>
@@ -323,8 +471,21 @@ export function App({
         <footer className="workspace__footer">
           <span>{snapshot.lastSynced}</span>
           <span>{componentReleaseLabel(componentRelease)}</span>
+          {runtimeLabel === undefined ? null : <span>{runtimeLabel}</span>}
         </footer>
       </main>
+
+      {/*
+        The sandbox frame computes; it never shows. Kept out of the flow rather
+        than `display: none`, which browsers are free to treat as a reason not to
+        load the document at all.
+      */}
+      <div
+        aria-hidden="true"
+        className="component-runtime-surface"
+        data-testid="component-runtime-surface"
+        ref={runtimeContainer}
+      />
 
       <div className="mobile-nav"><Navigation onChange={setView} view={view} /></div>
     </div>

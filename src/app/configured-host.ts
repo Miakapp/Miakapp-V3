@@ -91,6 +91,22 @@ function readComponentReleaseConfiguration(): ComponentReleaseConfiguration | un
   return Object.freeze({ pointerEndpoint, allowedArtifactOrigins });
 }
 
+/**
+ * The component runtime stays off until the deployment names the origin of the
+ * dedicated sandbox site. That origin is the containment boundary, not a
+ * convenience: deriving it from the shell's own origin would serve home-authored
+ * code from the origin holding the session. It is declared or the runtime does
+ * not mount.
+ */
+export function readConfiguredSandboxOrigin(): string | undefined {
+  const origin = optional('VITE_MIAKAPP_COMPONENT_SANDBOX_ORIGIN');
+  if (origin === undefined) return undefined;
+  if (!origin.startsWith('https://')) {
+    throw new Error('The Miakapp component sandbox origin must use HTTPS');
+  }
+  return origin;
+}
+
 function readLiveConfiguration(): LiveConfiguration | undefined {
   if (import.meta.env.VITE_MIAKAPP_MODE !== 'live') return undefined;
   const exchangeEndpoint = required('VITE_MIAKAPP_CONTROL_PLANE_EXCHANGE_ENDPOINT');
