@@ -83,6 +83,18 @@ describe('Miakapp product entry flow', () => {
     expect(window.location.pathname).toBe('/new-home');
   });
 
+  it('opens the existing-home console after the regular sign-in entry point', async () => {
+    const user = userEvent.setup();
+    const { host } = mutableLiveHost();
+    render(<ProductApp createHost={() => host} />);
+
+    await user.click(screen.getByRole('button', { name: 'Se connecter' }));
+    await user.click(screen.getByRole('button', { name: 'Continuer avec Google' }));
+
+    await waitFor(() => expect(screen.getByText('3 lights on')).toBeVisible());
+    expect(window.location.pathname).toBe('/app');
+  });
+
   it('copies the exact command that a coding agent can execute', async () => {
     const user = userEvent.setup();
     const { host } = mutableLiveHost(true);
@@ -100,6 +112,26 @@ describe('Miakapp product entry flow', () => {
 
     expect(writeClipboard).toHaveBeenCalledWith(AGENT_START_PROMPT);
     await waitFor(() => expect(screen.getByRole('button', { name: 'Prompt copié' })).toBeVisible());
+  });
+
+  it('keeps the prompt usable when clipboard access is refused', async () => {
+    const user = userEvent.setup();
+    const { host } = mutableLiveHost(true);
+    const writeClipboard = vi.fn(async () => Promise.reject(new Error('denied')));
+    render(
+      <ProductApp
+        createHost={() => host}
+        initialRoute="new-home"
+        writeClipboard={writeClipboard}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Copier le prompt' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Copie impossible. Sélectionnez le prompt ci-dessus.',
+    );
+    expect(screen.getByText(AGENT_START_PROMPT)).toBeVisible();
   });
 
   it('offers Molted as the recommended managed path', () => {
