@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import {
   ContractViolation,
   validateUiTree,
+  type PendingNodeType,
   type StatusState,
   type UiNode,
 } from '../../component-runtime/src/contract';
@@ -28,6 +29,20 @@ const STATUS_TERMS: Record<StatusState, string> = {
   failed: 'Failed',
   stale: 'Stale',
   outcome_unknown: 'Outcome unknown',
+};
+
+/**
+ * Host-owned term for every control the contract lets a component mark pending.
+ * The host disables a pending control, and a control that goes inert without
+ * saying so reads as broken rather than busy. The term sits beside the
+ * component's own label instead of replacing it, so the control keeps the name
+ * a person reached for; `aria-busy` repeats it to assistive technology.
+ * Typing it as a total record over `PendingNodeType` is what keeps it
+ * exhaustive.
+ */
+const PENDING_TERMS: Record<PendingNodeType, string> = {
+  button: 'Working…',
+  toggle: 'Working…',
 };
 
 interface SemanticRendererProps {
@@ -164,6 +179,7 @@ function renderNode(
       const pending = booleanProp(node, 'pending');
       return (
         <button
+          aria-busy={pending}
           className={`semantic-button semantic-button--${stringProp(node, 'variant')}`}
           data-node-id={node.id}
           disabled={booleanProp(node, 'disabled') || pending}
@@ -174,18 +190,28 @@ function renderNode(
           })}
           type="button"
         >
-          {pending ? 'Working…' : stringProp(node, 'label')}
+          {stringProp(node, 'label')}
+          {/* The separator is load-bearing: without it the accessible name of a
+              pending control runs its two words together. */}
+          {pending
+            ? <>{' '}<small className="semantic-button__pending">{PENDING_TERMS.button}</small></>
+            : null}
         </button>
       );
     }
     case 'toggle': {
       const value = booleanProp(node, 'value');
+      const pending = booleanProp(node, 'pending');
       return (
         <label className="semantic-toggle" data-node-id={node.id} key={node.id}>
           <span>{stringProp(node, 'label')}</span>
+          {pending
+            ? <>{' '}<small className="semantic-toggle__pending">{PENDING_TERMS.toggle}</small></>
+            : null}
           <input
+            aria-busy={pending}
             checked={value}
-            disabled={booleanProp(node, 'disabled') || booleanProp(node, 'pending')}
+            disabled={booleanProp(node, 'disabled') || pending}
             onChange={(event) => onInteraction({
               event: 'change',
               handler: stringProp(node, 'handler'),
