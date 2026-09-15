@@ -16,6 +16,11 @@ import {
   SettingsIcon,
   SparkIcon,
 } from './icons';
+import {
+  classifyRuntimeFailure,
+  createRuntimeDiagnostics,
+  type RuntimeDiagnostics,
+} from './runtime-diagnostics';
 import { SemanticRenderer } from './semantic-renderer';
 
 type MountComponentRuntime = typeof mountComponentRuntime;
@@ -24,6 +29,7 @@ interface AppProps {
   readonly createHost?: () => TrustedHost;
   readonly createComponentRelease?: () => ComponentReleaseCoordinator | undefined;
   readonly readSandboxOrigin?: () => string | undefined;
+  readonly readDiagnosticsEndpoint?: () => string | undefined;
   readonly mountRuntime?: MountComponentRuntime;
 }
 
@@ -126,6 +132,7 @@ interface ComponentRuntimeBinding {
 function useComponentRuntime(
   activated: ActivatedRelease | undefined,
   readSandboxOrigin: (() => string | undefined) | undefined,
+  diagnostics: RuntimeDiagnostics | undefined,
   mountRuntime: MountComponentRuntime,
   containerRef: React.RefObject<HTMLDivElement | null>,
 ): ComponentRuntimeBinding {
@@ -142,10 +149,18 @@ function useComponentRuntime(
     let released = false;
     let session: ComponentRuntimeSession | undefined;
 
+    // The fallback below keeps the shell usable, which is also what makes a
+    // broken sandbox invisible. Report before falling back, and report the
+    // classified code: `failure.code` may be the component's own text.
+    const stopped = (code: string): void => {
+      diagnostics?.report(code, activated.pointer.release);
+      setOutcome({ kind: 'failed', code: classifyRuntimeFailure(code) });
+    };
+
     const onLifecycle = (lifecycle: RuntimeLifecycle, failure?: RuntimeFailure): void => {
       if (released) return;
       if (lifecycle !== 'failed' && lifecycle !== 'terminated') return;
-      setOutcome({ kind: 'failed', code: failure?.code ?? lifecycle });
+      stopped(failure?.code ?? lifecycle);
     };
 
     void mountRuntime(
@@ -172,7 +187,7 @@ function useComponentRuntime(
       },
       () => {
         if (released) return;
-        setOutcome({ kind: 'failed', code: 'mount_failed' });
+        stopped('mount_failed');
       },
     );
 
@@ -181,7 +196,7 @@ function useComponentRuntime(
       sessionRef.current = undefined;
       session?.dispose();
     };
-  }, [activated, sandboxOrigin, mountRuntime, containerRef]);
+  }, [activated, sandboxOrigin, diagnostics, mountRuntime, containerRef]);
 
   const interact = useCallback((interaction: SemanticInteraction): void => {
     sessionRef.current?.interact(interaction.handler, interaction.event, interaction.value);
@@ -370,6 +385,7 @@ export function App({
   createHost = createDemoHost,
   createComponentRelease,
   readSandboxOrigin,
+  readDiagnosticsEndpoint,
   mountRuntime = mountComponentRuntime,
 }: AppProps): React.JSX.Element {
   const [host] = useState<TrustedHost>(() => createHost());
@@ -377,9 +393,14 @@ export function App({
   const snapshot = useSyncExternalStore(host.subscribe, host.getSnapshot, host.getSnapshot);
   const componentRelease = useComponentRelease(createComponentRelease);
   const runtimeContainer = useRef<HTMLDivElement | null>(null);
+  const [diagnostics] = useState<RuntimeDiagnostics | undefined>(() => {
+    const endpoint = readDiagnosticsEndpoint?.();
+    return endpoint === undefined ? undefined : createRuntimeDiagnostics({ endpoint });
+  });
   const runtime = useComponentRuntime(
     componentRelease.status === 'active' ? componentRelease.activated : undefined,
     readSandboxOrigin,
+    diagnostics,
     mountRuntime,
     runtimeContainer,
   );
