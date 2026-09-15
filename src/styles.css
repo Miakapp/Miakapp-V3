@@ -516,16 +516,37 @@ svg {
   box-shadow: 0 0 0 2px #d8edbc;
 }
 
-.semantic-status--pending .semantic-status__dot,
-.semantic-status--outcome_unknown .semantic-status__dot,
-.semantic-status--stale .semantic-status__dot {
+.semantic-status--pending .semantic-status__dot {
   background: #e6a247;
   box-shadow: 0 0 0 2px #f8dfbe;
+}
+
+.semantic-status--stale .semantic-status__dot {
+  background: #a6a08f;
+  box-shadow: 0 0 0 2px #e4e0d5;
+}
+
+.semantic-status--outcome_unknown .semantic-status__dot {
+  background: #7f86c4;
+  box-shadow: 0 0 0 2px #d9dcf0;
 }
 
 .semantic-status--failed .semantic-status__dot {
   background: #d75d4f;
   box-shadow: 0 0 0 2px #f3cec8;
+}
+
+/* Host-owned state term. The dot repeats it in colour; neither is alone. */
+.semantic-status__term {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  color: #6f7368;
+}
+
+.semantic-status--failed .semantic-status__term {
+  color: #b84334;
 }
 
 .semantic-status strong,
