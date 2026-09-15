@@ -36,6 +36,11 @@ import {
   stringValue,
   type JsonValue,
 } from './json.js';
+import {
+  createLoggingRuntimeDiagnosticsSink,
+  parseRuntimeDiagnosticsReport,
+  type RuntimeDiagnosticsSink,
+} from './runtime-diagnostics.js';
 import { ControlPlaneStore, type AccessTokenIssuer } from './store.js';
 import { type PushTransport } from './push.js';
 import { PushStore } from './push-store.js';
@@ -81,6 +86,8 @@ export interface ApiDependencies {
   readonly pushStore: PushStore;
   readonly pushTransport: PushTransport;
   readonly componentStore: ComponentStore;
+  /** Defaults to a structured log line; deployments may route it elsewhere. */
+  readonly runtimeDiagnostics?: RuntimeDiagnosticsSink;
 }
 
 function setPrivateHeaders(response: Response): void {
@@ -149,6 +156,7 @@ function admissionOperation(request: Request): AdmissionOperation | null {
     && /^\/v1\/homes\/[a-z][a-z0-9-]{1,61}[a-z0-9]\/component-releases:activate$/.test(path)) {
     return 'component.activate';
   }
+  if (method === 'POST' && path === '/v1/runtime-diagnostics') return 'runtime.diagnostics.report';
   return null;
 }
 
@@ -1028,6 +1036,25 @@ async function routeRequest(
     return;
   }
 
+  if (request.path === '/v1/runtime-diagnostics' && request.method === 'POST') {
+    const ticket = activeAdmission(admission, 'runtime.diagnostics.report');
+    // The report is parsed before any budget names it, so a poster cannot spend
+    // another release's allowance by sending a body we would have refused.
+    const report = parseRuntimeDiagnosticsReport(
+      jsonBody(request),
+      dependencies.clock.now(),
+    );
+    ticket.identifySubject(report.release);
+    await ticket.consume([
+      { budget: 'runtime.diagnostics.release', subject: report.release },
+    ], ['runtime.diagnostics.source']);
+    dependencies.runtimeDiagnostics?.record(report);
+    // 204: the shell has nothing to do with an answer, and a body here would be
+    // a response worth amplifying.
+    response.sendStatus(204);
+    return;
+  }
+
   if (request.path === '/v1/access-tokens:exchange' && request.method === 'POST') {
     const ticket = activeAdmission(admission, 'access.exchange');
     const authorization = request.headers.authorization;
@@ -1092,6 +1119,10 @@ async function routeRequest(
 
 export function createControlPlaneApp(dependencies: ApiDependencies): express.Express {
   assertSigningKeyPublication(dependencies.config);
+  const resolved: ApiDependencies = {
+    ...dependencies,
+    runtimeDiagnostics: dependencies.runtimeDiagnostics ?? createLoggingRuntimeDiagnosticsSink(),
+  };
   const app = express();
   app.disable('x-powered-by');
   app.use(async (request: RawRequest, response: Response) => {
@@ -1100,15 +1131,15 @@ export function createControlPlaneApp(dependencies: ApiDependencies): express.Ex
     let admission: AdmissionTicket | null = null;
     setPrivateHeaders(response);
     try {
-      applyCors(request, response, dependencies.config);
+      applyCors(request, response, resolved.config);
       if (operation !== null) {
-        admission = await dependencies.admission.open({
+        admission = await resolved.admission.open({
           requestId,
           operation,
           source: requestSource(request),
         });
       }
-      await routeRequest(request, response, dependencies, requestId, admission);
+      await routeRequest(request, response, resolved, requestId, admission);
       if (admission !== null) await admission.finish('ok');
     } catch (error) {
       let responseError = error;

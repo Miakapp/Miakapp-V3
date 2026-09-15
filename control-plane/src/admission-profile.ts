@@ -29,6 +29,11 @@ export const CONTROL_PLANE_ADMISSION_PROFILE: AdmissionProfile = Object.freeze({
     'component.upload.delivery_bytes.home': Object.freeze({ maximum: 64 * 1_024 * 1_024, windowMilliseconds: HOUR }),
     'component.finalize.home': Object.freeze({ maximum: 64, windowMilliseconds: MINUTE }),
     'component.activate.home': Object.freeze({ maximum: 64, windowMilliseconds: MINUTE }),
+    // The shell caps itself at four reports per mount, but the cap lives in code
+    // an unauthenticated poster does not have to run. These are the bounds that
+    // actually hold: a crash loop behind one address, and one noisy release.
+    'runtime.diagnostics.source': Object.freeze({ maximum: 60, windowMilliseconds: MINUTE }),
+    'runtime.diagnostics.release': Object.freeze({ maximum: 240, windowMilliseconds: MINUTE }),
   }),
   auditRetentionMilliseconds: 7 * DAY,
   auditSlots: 4_096,
