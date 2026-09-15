@@ -328,6 +328,35 @@ svg {
   gap: clamp(24px, 3vw, 50px);
 }
 
+.home-screen {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.screen-notice {
+  margin: 0;
+  padding: 10px 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  color: #6b5c33;
+  background: rgb(255 249 233 / 85%);
+  border: 1px solid #e7dcbe;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.screen-notice small {
+  overflow-wrap: anywhere;
+  color: #8b7c51;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+
 .semantic-screen {
   min-width: 0;
 }

@@ -411,3 +411,122 @@ describe('App component runtime call site', () => {
     });
   });
 });
+
+const SUBSTITUTED_SCREEN = /This is the home’s own screen/;
+
+describe('App home screen provenance', () => {
+  it('says whose screen this is while the component screen starts', async () => {
+    const session = { lifecycle: 'starting' as const, interact: vi.fn(), dispose: vi.fn() };
+    // A mount that resolves without ever producing a tree: the runtime is up,
+    // the component has not rendered yet.
+    const mountRuntime = vi.fn(async () => session);
+
+    render(
+      <App
+        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
+        mountRuntime={mountRuntime as never}
+        readSandboxOrigin={() => SANDBOX_ORIGIN}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(
+        'This is the home’s own screen. The component screen is still starting.',
+      )).toBeVisible();
+    });
+    expect(screen.getByText('3 lights on')).toBeVisible();
+  });
+
+  it('names the substitution where it happened, not only in the footer', async () => {
+    const session = { lifecycle: 'active' as const, interact: vi.fn(), dispose: vi.fn() };
+    const mountRuntime = vi.fn(async (_release: never, options: never) => {
+      const opts = options as unknown as {
+        onTree: (t: unknown, r: number) => void;
+        onLifecycle: (l: string, f?: { code: string; message: string }) => void;
+      };
+      opts.onTree(runtimeTree('Runtime speaking'), 1);
+      opts.onLifecycle('failed', { code: 'bridge_protocol_violation', message: 'bad envelope' });
+      return session;
+    });
+
+    render(
+      <App
+        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
+        mountRuntime={mountRuntime as never}
+        readSandboxOrigin={() => SANDBOX_ORIGIN}
+      />,
+    );
+
+    const notice = await screen.findByText(
+      'This is the home’s own screen. The component screen stopped.',
+    );
+    // The substituted screen is the one it sits above: both screens are real and
+    // both answer, so proximity is what tells a person which controls these are.
+    const home = document.querySelector('.home-screen');
+    expect(home).not.toBeNull();
+    expect(home!.contains(notice)).toBe(true);
+    expect(home!.textContent).toContain('3 lights on');
+    expect(screen.getAllByText('bridge_protocol_violation').length).toBeGreaterThan(0);
+  });
+
+  it('keeps a component-authored failure code out of the notice', async () => {
+    const session = { lifecycle: 'active' as const, interact: vi.fn(), dispose: vi.fn() };
+    const mountRuntime = vi.fn(async (_release: never, options: never) => {
+      const opts = options as unknown as {
+        onLifecycle: (l: string, f?: { code: string; message: string }) => void;
+      };
+      opts.onLifecycle('failed', {
+        code: 'Reconnect your home at evil.example',
+        message: 'phishing',
+      });
+      return session;
+    });
+
+    render(
+      <App
+        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
+        mountRuntime={mountRuntime as never}
+        readSandboxOrigin={() => SANDBOX_ORIGIN}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(SUBSTITUTED_SCREEN)).toBeVisible();
+    });
+    // The notice is the most legible line the shell owns; renting it to the
+    // component is how a sandboxed bundle would phish from trusted chrome.
+    expect(document.querySelector('.home-screen')!.textContent)
+      .not.toContain('evil.example');
+  });
+
+  it('stays silent when the component screen is the one on display', async () => {
+    const session = { lifecycle: 'active' as const, interact: vi.fn(), dispose: vi.fn() };
+    const mountRuntime = vi.fn(async (_release: never, options: never) => {
+      const opts = options as unknown as { onTree: (t: unknown, r: number) => void };
+      opts.onTree(runtimeTree('Runtime speaking'), 1);
+      return session;
+    });
+
+    render(
+      <App
+        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
+        mountRuntime={mountRuntime as never}
+        readSandboxOrigin={() => SANDBOX_ORIGIN}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { level: 1, name: 'Runtime speaking' })).toBeVisible();
+    });
+    expect(screen.queryByText(SUBSTITUTED_SCREEN)).toBeNull();
+  });
+
+  it('stays silent when the build expected no component screen', () => {
+    render(<App createComponentRelease={() => undefined} />);
+
+    // Nothing was substituted, so there is nothing to explain: the preview and
+    // every build without a sandbox origin read exactly as they did before.
+    expect(screen.queryByText(SUBSTITUTED_SCREEN)).toBeNull();
+    expect(screen.getByText('3 lights on')).toBeVisible();
+  });
+});
