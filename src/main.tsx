@@ -4,6 +4,7 @@ import { App } from './app/app';
 import {
   createConfiguredComponentRelease,
   createConfiguredHost,
+  readConfiguredDiagnosticsEndpoint,
   readConfiguredSandboxOrigin,
 } from './app/configured-host';
 import './styles.css';
@@ -16,6 +17,7 @@ createRoot(root).render(
   <App
     createComponentRelease={createConfiguredComponentRelease}
     createHost={createConfiguredHost}
+    readDiagnosticsEndpoint={readConfiguredDiagnosticsEndpoint}
     readSandboxOrigin={readConfiguredSandboxOrigin}
   />,
 );
