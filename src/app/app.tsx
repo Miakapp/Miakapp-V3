@@ -209,7 +209,11 @@ export function App({ createHost = createDemoHost }: AppProps): React.JSX.Elemen
           <ConnectionPill detail={snapshot.connectionDetail} />
         </header>
 
-        <div className={snapshot.preview ? 'preview-notice' : 'preview-notice preview-notice--live'} role="status">
+        <div
+          aria-label={snapshot.noticeTitle}
+          className={snapshot.preview ? 'preview-notice' : 'preview-notice preview-notice--live'}
+          role="status"
+        >
           <span><SparkIcon /></span>
           <strong>{snapshot.noticeTitle}</strong>
           <small>{snapshot.noticeDetail}</small>
