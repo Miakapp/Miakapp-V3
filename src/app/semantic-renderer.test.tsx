@@ -24,6 +24,7 @@ describe('SemanticRenderer', () => {
       'data-media-handle',
       'media.front_door',
     );
+    expect(screen.getByRole('status', { name: 'Comfort: Stable for 2 hours' })).toBeVisible();
 
     fireEvent.click(screen.getByRole('checkbox', { name: 'Kitchen' }));
     expect(onInteraction).toHaveBeenCalledWith({

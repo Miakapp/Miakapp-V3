@@ -90,6 +90,12 @@ interface PointerResponse {
   readonly requires: ComponentRequirements;
 }
 
+interface PointerStateResponse {
+  readonly schema: 'miakapp.component-pointer-state/1';
+  readonly generation: number;
+  readonly pointer: PointerResponse | null;
+}
+
 type PublisherAuthorization =
   | { readonly token: string }
   | { readonly accessToken: string }
@@ -241,6 +247,10 @@ async function activate(
       generation,
     },
   });
+}
+
+async function readPointer(authorization: PublisherAuthorization): Promise<Response> {
+  return apiRequest('GET', `/v1/homes/${HOME_ID}/component-pointer`, authorization);
 }
 
 async function artifactRequest(publicUrl: string, options: Parameters<typeof apiRequest>[2] = {}): Promise<Response> {
@@ -686,6 +696,14 @@ describe('component publication vertical slice', () => {
     const first = await publish(authorization, firstBytes, '2026-09-01.first');
     const second = await publish(authorization, secondBytes, '2026-09-01.second');
 
+    const beforeAnyActivation = await readPointer(authorization);
+    expect(beforeAnyActivation.status).toBe(200);
+    expect(await jsonResponse<PointerStateResponse>(beforeAnyActivation)).toEqual({
+      schema: 'miakapp.component-pointer-state/1',
+      generation: 0,
+      pointer: null,
+    });
+
     const firstMarkerRef = firestore.collection('componentArtifacts').doc(`${first.sha256}.js`);
     const firstMarker = (await firstMarkerRef.get()).data();
     if (firstMarker === undefined) throw new Error('Publication marker missing');
@@ -718,6 +736,14 @@ describe('component publication vertical slice', () => {
       requires: REQUIREMENTS,
     });
 
+    const afterFirstActivation = await readPointer(authorization);
+    expect(afterFirstActivation.status).toBe(200);
+    expect(await jsonResponse<PointerStateResponse>(afterFirstActivation)).toEqual({
+      schema: 'miakapp.component-pointer-state/1',
+      generation: 1,
+      pointer: firstPointer,
+    });
+
     const stale = await activate(authorization, second.sha256, 0, 2);
     expect(stale.status).toBe(409);
     expect(await errorCode(stale)).toBe('generation_conflict');
@@ -733,6 +759,15 @@ describe('component publication vertical slice', () => {
     const activeGeneration = (await jsonResponse<PointerResponse>(winner)).generation;
     expect([2, 3]).toContain(activeGeneration);
 
+    // The read is advisory, not a reservation: `afterFirstActivation` reported
+    // generation 1 and the race has since moved past it, so a publisher acting
+    // on that read is still refused by the compare-and-set.
+    const afterRace = await readPointer(authorization);
+    expect((await jsonResponse<PointerStateResponse>(afterRace)).generation).toBe(activeGeneration);
+    const actingOnStaleRead = await activate(authorization, first.sha256, 1, activeGeneration + 1);
+    expect(actingOnStaleRead.status).toBe(409);
+    expect(await errorCode(actingOnStaleRead)).toBe('generation_conflict');
+
     await firestore.collection('componentQuarantine').doc(second.sha256).set({
       schema: 'miakapp.component-quarantine/1',
       sha256: second.sha256,
@@ -747,6 +782,14 @@ describe('component publication vertical slice', () => {
     expect(quarantined.status).toBe(403);
     expect(await errorCode(quarantined)).toBe('digest_quarantined');
 
+    // The quarantined digest is what is live here, and rolling away from it
+    // requires knowing that, so the read must not hide it.
+    const quarantinedRead = await readPointer(authorization);
+    expect(quarantinedRead.status).toBe(200);
+    const quarantinedState = await jsonResponse<PointerStateResponse>(quarantinedRead);
+    expect(quarantinedState.generation).toBe(activeGeneration);
+    expect(quarantinedState.pointer?.sha256).toBe(second.sha256);
+
     const rollback = await activate(
       authorization,
       first.sha256,
@@ -754,7 +797,16 @@ describe('component publication vertical slice', () => {
       activeGeneration + 1,
     );
     expect(rollback.status).toBe(200);
-    expect((await jsonResponse<PointerResponse>(rollback)).generation).toBe(activeGeneration + 1);
+    const rolledBack = await jsonResponse<PointerResponse>(rollback);
+    expect(rolledBack.generation).toBe(activeGeneration + 1);
+
+    const afterRollback = await readPointer(authorization);
+    expect(afterRollback.status).toBe(200);
+    expect(await jsonResponse<PointerStateResponse>(afterRollback)).toEqual({
+      schema: 'miakapp.component-pointer-state/1',
+      generation: activeGeneration + 1,
+      pointer: rolledBack,
+    });
 
     const anonymous = rules.unauthenticatedContext();
     const authenticated = rules.authenticatedContext(owner.userId);
