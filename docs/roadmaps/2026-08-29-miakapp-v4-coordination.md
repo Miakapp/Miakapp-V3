@@ -424,12 +424,21 @@ malformed persisted metadata. The three-engine corpus additionally proves atomic
 dual-release activation and serializes generation changes across trusted
 IndexedDB ledgers.
 
-What remains open for deliverable 4 is integration, not mechanism: nothing under
-`src/app/` imports `release-state.ts` or `artifact-cache.ts`, so the production
-shell still performs no pointer read, keeps no verified cache and consults no
-release ledger. Both modules are reachable only from `component-runtime/`'s own
-tests and harness server. Deliverable 4 closes when the shell consumes them,
-which is the same wiring step deliverable 1 is waiting on.
+What remains open for deliverable 4 is integration, not mechanism. The first
+half of that integration has landed: `src/app/component-release.ts` is a
+shell-owned seam that reads the pointer over RFC 0004 §13.2, passes it through
+`ComponentReleaseLedger` for the anti-rollback floor, loads the artifact through
+`loadVerifiedArtifact` over the IndexedDB cache, marks last-known-good only
+after the bytes verify end to end, and falls back to the last-known-good while
+the candidate is still in the `staging` phase. `release-state.ts` and
+`artifact-cache.ts` are therefore no longer reachable only from
+`component-runtime/`'s own tests and harness server.
+
+What is still missing is the call site: no render path invokes the coordinator,
+so the seam is absent from the production entry graph and the shipped bundle
+still performs no pointer read at runtime. Deliverable 4 closes when the render
+path activates a release through this seam, which is the same call-site step
+deliverable 1 is waiting on.
 
 Exit gate: a deliberately hostile bundle is contained by browser-enforced
 boundaries, not by instructions or conventions.
