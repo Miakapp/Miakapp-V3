@@ -458,12 +458,23 @@ DOM. It deliberately shares no code with `component-runtime/src/host-harness.ts`
 which self-installs on import and plants a decoy secret; that module must never
 reach a production graph.
 
-Two things still separate this from a live mount, and neither is a call-site
-step. The sandbox site itself does not exist as a deployable artifact: only
-`component-runtime/test/server.ts` serves `/sandbox.html` with the broker, its
-CSP and its permissions policy. And no deployment declares the origin that would
-serve it. Until both land, `mountComponentRuntime` has no origin to point at, so
-the shell does not call it and deliverable 1 stays open on the sandbox site.
+The sandbox site now exists as a deployable artifact.
+`component-runtime/src/sandbox-document.ts` builds `/sandbox.html` with the
+broker inlined, together with the response headers it is only safe under — the
+CSP hash that binds that exact bundle, the deny directives and disabled features
+read from `security-profile.ts`, and `frame-ancestors` naming the declared host
+origin. `component-runtime/scripts/build-sandbox.ts` emits that document and a
+matching Firebase Hosting config into `dist-sandbox/`, refusing to build unless
+`MIAKAPP_SANDBOX_ORIGIN`, `MIAKAPP_HOST_ORIGIN` and `MIAKAPP_SANDBOX_SITE` are
+declared. The document and its config are one unit: served without the generated
+headers, the file is an unsandboxed page that still looks correct.
+
+One thing still separates this from a live mount, and it is not a call-site
+step: no deployment has been provisioned yet. The sandbox must be served from an
+origin *different* from the shell's, which means a second hosting site, and
+`VITE_MIAKAPP_COMPONENT_SANDBOX_ORIGIN` must then declare it to the shell. Until
+a deployment exists, `mountComponentRuntime` still has no origin to point at, so
+the shell does not call it and deliverable 1 stays open on provisioning.
 
 Exit gate: a deliberately hostile bundle is contained by browser-enforced
 boundaries, not by instructions or conventions.
