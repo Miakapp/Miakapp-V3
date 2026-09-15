@@ -8,6 +8,7 @@ import { HomeIcon, LockIcon, SparkIcon } from './icons';
 export const AGENT_START_PROMPT = 'Installe la CLI `miakapp` via `npm i -g @miakapp/cli` puis fais `miakapp docs start` pour commencer.';
 
 type ProductRoute = 'landing' | 'login' | 'new-home' | 'console';
+type CopyState = 'idle' | 'copied' | 'failed';
 
 export interface ProductAppProps extends Omit<AppProps, 'host'> {
   readonly createHost?: () => TrustedHost;
@@ -144,11 +145,11 @@ function LoginPage({ host, onNavigate }: { readonly host: TrustedHost; readonly 
 }
 
 function NewHomePage({
-  copied,
+  copyState,
   onCopy,
   onNavigate,
 }: {
-  readonly copied: boolean;
+  readonly copyState: CopyState;
   readonly onCopy: () => void;
   readonly onNavigate: (route: ProductRoute) => void;
 }): React.JSX.Element {
@@ -168,8 +169,11 @@ function NewHomePage({
               <h2>Copiez ce prompt</h2>
               <pre><code>{AGENT_START_PROMPT}</code></pre>
               <button className="product-button" onClick={onCopy} type="button">
-                {copied ? 'Prompt copié' : 'Copier le prompt'}
+                {copyState === 'copied' ? 'Prompt copié' : 'Copier le prompt'}
               </button>
+              {copyState === 'failed' ? (
+                <p role="alert">Copie impossible. Sélectionnez le prompt ci-dessus.</p>
+              ) : null}
             </div>
           </article>
           <article className="onboarding-step onboarding-step--molted">
@@ -198,18 +202,21 @@ export function ProductApp({
 }: ProductAppProps): React.JSX.Element {
   const [host] = useState<TrustedHost>(() => createHost());
   const snapshot = useSyncExternalStore(host.subscribe, host.getSnapshot, host.getSnapshot);
+  const requestedRoute = initialRoute ?? routeFromPath(window.location.pathname);
   const [route, setRoute] = useState<ProductRoute>(() => {
-    const requested = initialRoute ?? routeFromPath(window.location.pathname);
-    return requested === 'new-home' && !snapshot.authenticated && !snapshot.preview
+    return requestedRoute === 'new-home' && !snapshot.authenticated && !snapshot.preview
       ? 'login'
-      : requested;
+      : requestedRoute;
   });
-  const [pendingAfterLogin, setPendingAfterLogin] = useState<ProductRoute>('new-home');
-  const [copied, setCopied] = useState(false);
+  const [pendingAfterLogin, setPendingAfterLogin] = useState<ProductRoute>(() => (
+    requestedRoute === 'new-home' ? 'new-home' : 'console'
+  ));
+  const [copyState, setCopyState] = useState<CopyState>('idle');
 
   const navigate = useCallback((next: ProductRoute): void => {
     const target = next === 'new-home' && !snapshot.authenticated && !snapshot.preview ? 'login' : next;
     if (target === 'login' && next === 'new-home') setPendingAfterLogin('new-home');
+    if (target === 'login' && next === 'login') setPendingAfterLogin('console');
     window.history.pushState({}, '', pathFor(target));
     setRoute(target);
   }, [snapshot.authenticated, snapshot.preview]);
@@ -236,9 +243,13 @@ export function ProductApp({
   if (displayedRoute === 'new-home') {
     return (
       <NewHomePage
-        copied={copied}
+        copyState={copyState}
         onCopy={() => {
-          void writeClipboard(AGENT_START_PROMPT).then(() => setCopied(true));
+          setCopyState('idle');
+          void writeClipboard(AGENT_START_PROMPT).then(
+            () => setCopyState('copied'),
+            () => setCopyState('failed'),
+          );
         }}
         onNavigate={navigate}
       />
