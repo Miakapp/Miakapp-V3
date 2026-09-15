@@ -6,7 +6,7 @@ import { isDeepStrictEqual, types } from 'node:util';
 export const TRUSTED_PROVIDER_PROCESS_PROFILE_PATH =
   'browser-relay-trusted-provider-process/profile.json';
 export const TRUSTED_PROVIDER_PROCESS_PROFILE_SHA256 =
-  '187e8c69b5e72b04895d0c299c1bf3d534b178323a7e65d9a628c870e534ad7d';
+  '7d22c1af9434d50740a19843b8b78aa8309bf73f5a13a284d9867e99297f35af';
 export const TRUSTED_PROVIDER_PROCESS_PROTOCOL_SCHEMA =
   'miakapp.staging-browser-relay-trusted-provider-process-ipc/1';
 export const TRUSTED_PROVIDER_PROCESS_PROTOCOL_VERSION = 2;
