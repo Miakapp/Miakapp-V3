@@ -3,6 +3,7 @@ package-lock.json
 !control-plane/deployment/package-lock.json
 !node-red-adapter/package-lock.json
 /dist
+/dist-sandbox
 .env.local
 .env.*.local
 .firebase

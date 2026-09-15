@@ -15,6 +15,7 @@
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc -b --pretty false",
     "test:web": "vitest run --config vitest.config.ts",
+    "build:sandbox": "bun run component-runtime/scripts/build-sandbox.ts",
     "check:web": "bun run lint && bun run typecheck && bun run test:web && bun run build",
     "test:protocol": "./protocol/check.sh",
     "test:runtime": "./component-runtime/check.sh",
