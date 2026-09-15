@@ -14,6 +14,11 @@ repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${repository_root}"
 export GOOGLE_CLOUD_QUOTA_PROJECT="${project_id}"
 
+# The shell validates this configuration in the browser, once the bundle is
+# already live. Applying the same rules here is the last point where a wrong
+# value costs a correction instead of a deployment.
+bun scripts/preflight-staging-env.ts staging
+
 bun run build --mode staging
 firebase deploy \
   --config firebase.staging.json \
