@@ -446,11 +446,24 @@ can be guessed. Measured on this commit: a live-mode `vite build` ships the
 `component-pointer` route and the `x-firebase-appcheck` header in the bundle,
 while a preview build still statically eliminates the whole live branch.
 
-What remains open is execution, not acquisition. The shell now reads the
-pointer, enforces the anti-rollback floor, verifies the artifact bytes and
-records last-known-good, but nothing evaluates the downloaded component: the
-component runtime host is still not mounted in the render path. Deliverable 1
-is waiting on that mount, not on another call-site step.
+What remains open is execution, not acquisition. The shell reads the pointer,
+enforces the anti-rollback floor, verifies the artifact bytes and records
+last-known-good. `src/app/component-runtime-host.ts` now supplies the trusted
+half of the bridge the broker has always expected: it creates the confined frame
+(`allow-scripts` without `allow-same-origin`), refuses to bind a frame that does
+not report an opaque origin, grants only the intersection of the deployment
+policy and the release requirements — nothing at all by default — and streams
+semantic trees out for `SemanticRenderer` to validate a second time in trusted
+DOM. It deliberately shares no code with `component-runtime/src/host-harness.ts`,
+which self-installs on import and plants a decoy secret; that module must never
+reach a production graph.
+
+Two things still separate this from a live mount, and neither is a call-site
+step. The sandbox site itself does not exist as a deployable artifact: only
+`component-runtime/test/server.ts` serves `/sandbox.html` with the broker, its
+CSP and its permissions policy. And no deployment declares the origin that would
+serve it. Until both land, `mountComponentRuntime` has no origin to point at, so
+the shell does not call it and deliverable 1 stays open on the sandbox site.
 
 Exit gate: a deliberately hostile bundle is contained by browser-enforced
 boundaries, not by instructions or conventions.
