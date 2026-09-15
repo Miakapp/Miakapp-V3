@@ -1,12 +1,12 @@
 import { createRoot } from 'react-dom/client';
 
-import { App } from './app/app';
 import {
   createConfiguredComponentRelease,
   createConfiguredHost,
   readConfiguredDiagnosticsEndpoint,
   readConfiguredSandboxOrigin,
 } from './app/configured-host';
+import { ProductApp } from './app/product-app';
 import './styles.css';
 
 const root = document.querySelector('#root');
@@ -14,7 +14,7 @@ const root = document.querySelector('#root');
 if (!root) throw new Error('Missing #root application container');
 
 createRoot(root).render(
-  <App
+  <ProductApp
     createComponentRelease={createConfiguredComponentRelease}
     createHost={createConfiguredHost}
     readDiagnosticsEndpoint={readConfiguredDiagnosticsEndpoint}
