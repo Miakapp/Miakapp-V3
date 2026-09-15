@@ -146,6 +146,7 @@ class DemoTrustedHost implements TrustedHost {
 
   #buildSnapshot(): TrustedHostSnapshot {
     return Object.freeze({
+      authenticated: false,
       activeHome: HORIZON,
       homes: Object.freeze([HORIZON, STUDIO]),
       connection: 'ready' as const,

@@ -31,7 +31,9 @@ import { SemanticRenderer } from './semantic-renderer';
 
 type MountComponentRuntime = typeof mountComponentRuntime;
 
-interface AppProps {
+export interface AppProps {
+  /** A host owned by a parent product shell; App will not dispose it. */
+  readonly host?: TrustedHost;
   readonly createHost?: () => TrustedHost;
   readonly createComponentRelease?: () => ComponentReleaseCoordinator | undefined;
   readonly readSandboxOrigin?: () => string | undefined;
@@ -449,13 +451,14 @@ function SettingsView({ preview }: { readonly preview: boolean }): React.JSX.Ele
 }
 
 export function App({
+  host: providedHost,
   createHost = createDemoHost,
   createComponentRelease,
   readSandboxOrigin,
   readDiagnosticsEndpoint,
   mountRuntime = mountComponentRuntime,
 }: AppProps): React.JSX.Element {
-  const [host] = useState<TrustedHost>(() => createHost());
+  const [host] = useState<TrustedHost>(() => providedHost ?? createHost());
   const [view, setView] = useState<HostView>('home');
   const snapshot = useSyncExternalStore(host.subscribe, host.getSnapshot, host.getSnapshot);
   const componentRelease = useComponentRelease(createComponentRelease);
@@ -475,7 +478,10 @@ export function App({
   const runtimeState = runtime.state;
   const runtimeLabel = componentRuntimeLabel(runtimeState);
 
-  useEffect(() => () => host.dispose(), [host]);
+  useEffect(() => {
+    if (providedHost !== undefined) return undefined;
+    return () => host.dispose();
+  }, [host, providedHost]);
 
   return (
     <div className="app-shell">
