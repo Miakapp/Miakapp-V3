@@ -1,7 +1,12 @@
 import { createRoot } from 'react-dom/client';
 
 import { App } from './app/app';
-import { createConfiguredComponentRelease, createConfiguredHost } from './app/configured-host';
+import {
+  createConfiguredComponentRelease,
+  createConfiguredHost,
+  readConfiguredDiagnosticsEndpoint,
+  readConfiguredSandboxOrigin,
+} from './app/configured-host';
 import './styles.css';
 
 const root = document.querySelector('#root');
@@ -12,5 +17,7 @@ createRoot(root).render(
   <App
     createComponentRelease={createConfiguredComponentRelease}
     createHost={createConfiguredHost}
+    readDiagnosticsEndpoint={readConfiguredDiagnosticsEndpoint}
+    readSandboxOrigin={readConfiguredSandboxOrigin}
   />,
 );
