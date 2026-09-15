@@ -106,6 +106,19 @@ export const PENDING_NODE_TYPES = ['button', 'toggle'] as const;
 
 export type PendingNodeType = (typeof PENDING_NODE_TYPES)[number];
 
+/**
+ * Node types whose props carry `disabled`. `pending` says "not yet"; `disabled`
+ * says "not by you, not now", and it is the weaker signal of the two because a
+ * component can set it on a control that never moves again. The host owes the
+ * same explanation here, and for the same reason: a control that stops
+ * answering without a word reads as broken, not as withheld. Routing each parse
+ * through `disabledProp` makes a new disable-capable node widen this type and
+ * so break the host's term table until the new control is named too.
+ */
+export const DISABLED_NODE_TYPES = ['button', 'toggle', 'input', 'select'] as const;
+
+export type DisabledNodeType = (typeof DISABLED_NODE_TYPES)[number];
+
 export interface UiNode {
   id: string;
   type: UiNodeType;
@@ -412,6 +425,10 @@ function pendingProp(value: unknown, type: PendingNodeType): boolean {
   return optionalBoolean(value, `${type}.props.pending`) ?? false;
 }
 
+function disabledProp(value: unknown, type: DisabledNodeType): boolean {
+  return optionalBoolean(value, `${type}.props.disabled`) ?? false;
+}
+
 interface TextBudget {
   bytes: number;
 }
@@ -508,7 +525,7 @@ function validateProps(
         variant: props.variant === undefined
           ? 'primary'
           : enumValue(props.variant, ['primary', 'secondary', 'danger'], 'button.props.variant'),
-        disabled: optionalBoolean(props.disabled, 'button.props.disabled') ?? false,
+        disabled: disabledProp(props.disabled, 'button'),
         pending: pendingProp(props.pending, 'button'),
       };
     }
@@ -519,7 +536,7 @@ function validateProps(
         label: uiText(props.label, LIMITS.textBytes, 'toggle.props.label', budget),
         value: props.value,
         handler: handlerId(props.handler, 'toggle.props.handler'),
-        disabled: optionalBoolean(props.disabled, 'toggle.props.disabled') ?? false,
+        disabled: disabledProp(props.disabled, 'toggle'),
         pending: pendingProp(props.pending, 'toggle'),
       };
     }
@@ -539,7 +556,7 @@ function validateProps(
           ? 'text'
           : enumValue(props.input_type, ['text', 'number', 'email', 'search'], 'input.props.input_type'),
         max_length: maxLength,
-        disabled: optionalBoolean(props.disabled, 'input.props.disabled') ?? false,
+        disabled: disabledProp(props.disabled, 'input'),
       };
     }
     case 'select': {
@@ -568,7 +585,7 @@ function validateProps(
         value,
         options,
         handler: handlerId(props.handler, 'select.props.handler'),
-        disabled: optionalBoolean(props.disabled, 'select.props.disabled') ?? false,
+        disabled: disabledProp(props.disabled, 'select'),
       };
     }
     case 'progress': {

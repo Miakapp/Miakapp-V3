@@ -2,8 +2,10 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  DISABLED_NODE_TYPES,
   PENDING_NODE_TYPES,
   STATUS_STATES,
+  type DisabledNodeType,
   type PendingNodeType,
   type StatusState,
   type UiNode,
@@ -40,6 +42,44 @@ function pendingControlTree(type: PendingNodeType): UiNode {
     type: 'screen',
     props: { title: 'Pending surface' },
     children: [{ id: 'control', type, props }],
+  };
+}
+
+const DISABLED_FIXTURES: Record<DisabledNodeType, { label: string; role: string; props: Record<string, unknown> }> = {
+  button: {
+    label: 'Unlock the door',
+    role: 'button',
+    props: { label: 'Unlock the door', handler: 'entry.unlock', disabled: true },
+  },
+  toggle: {
+    label: 'Kitchen',
+    role: 'checkbox',
+    props: { label: 'Kitchen', value: false, handler: 'lighting.kitchen.toggle', disabled: true },
+  },
+  input: {
+    label: 'Scene name',
+    role: 'textbox',
+    props: { label: 'Scene name', value: 'Evening', handler: 'scene.rename', disabled: true },
+  },
+  select: {
+    label: 'Scene',
+    role: 'combobox',
+    props: {
+      label: 'Scene',
+      value: 'evening',
+      handler: 'scene.select',
+      disabled: true,
+      options: [{ value: 'evening', label: 'Evening' }],
+    },
+  },
+};
+
+function disabledControlTree(type: DisabledNodeType): UiNode {
+  return {
+    id: 'root',
+    type: 'screen',
+    props: { title: 'Disabled surface' },
+    children: [{ id: 'control', type, props: DISABLED_FIXTURES[type].props }],
   };
 }
 
@@ -154,6 +194,53 @@ describe('SemanticRenderer', () => {
     }
   });
 
+  it('says why every disabled control stopped answering', () => {
+    // Guards the loop below against passing vacuously if the vocabulary is emptied.
+    expect(DISABLED_NODE_TYPES).toHaveLength(4);
+
+    for (const type of DISABLED_NODE_TYPES) {
+      const { label, role } = DISABLED_FIXTURES[type];
+      const { unmount } = render(
+        <SemanticRenderer onInteraction={vi.fn()} tree={disabledControlTree(type)} />,
+      );
+
+      const control = screen.getByRole(role);
+
+      expect(control).toBeDisabled();
+      // Appearance was the only channel before, and for toggle/input/select not
+      // even that: the term has to reach the accessible name.
+      expect(control).toHaveAccessibleName(`${label} Unavailable`);
+
+      unmount();
+    }
+  });
+
+  it('gives a pending control one reason, not two', () => {
+    // The host disables a pending control, so both terms would otherwise fire.
+    const tree: UiNode = {
+      id: 'root',
+      type: 'screen',
+      props: { title: 'Both surface' },
+      children: [{
+        id: 'control',
+        type: 'button',
+        props: {
+          label: 'Unlock the door',
+          handler: 'entry.unlock',
+          disabled: true,
+          pending: true,
+        },
+      }],
+    };
+
+    render(<SemanticRenderer onInteraction={vi.fn()} tree={tree} />);
+
+    const control = screen.getByRole('button');
+
+    expect(control).toHaveAccessibleName('Unlock the door Working…');
+    expect(control).not.toHaveAccessibleName('Unlock the door Working… Unavailable');
+  });
+
   it('leaves a settled control untouched by the pending vocabulary', () => {
     render(<SemanticRenderer onInteraction={vi.fn()} tree={createDemoTree(INITIAL_STATE)} />);
 
@@ -163,6 +250,7 @@ describe('SemanticRenderer', () => {
     expect(toggle).toHaveAttribute('aria-busy', 'false');
     expect(document.querySelector('.semantic-toggle__pending')).toBeNull();
     expect(document.querySelector('.semantic-button__pending')).toBeNull();
+    expect(document.querySelector('.semantic-field__disabled')).toBeNull();
   });
 
   it('rejects media that the trusted host did not grant', () => {
