@@ -415,6 +415,19 @@ last-known-good metadata, atomic activation and rollback remain open.
 Exit gate: a deliberately hostile bundle is contained by browser-enforced
 boundaries, not by instructions or conventions.
 
+Gate evidence (2026-09-14): the hostile corpus previously ran the confinement
+prelude and the browser boundary together, so a green result could not say which
+layer denied the authority — and the prelude is our own JavaScript inside the
+guest's global scope, which is the convention the gate rules out. The corpus now
+also runs the probe with **no prelude** under identical browser conditions. Every
+authority named by deliverable 6 stays denied by the browser alone on all three
+engines: network egress, IndexedDB and CacheStorage, host `localStorage`,
+`BroadcastChannel` reach to the trusted host origin, and service-worker
+registration. The gate is met for those authorities and the prelude is defence in
+depth. Note for future egress work: a CSP-refused request still appears in
+Chromium's request stream, so egress must be decided on what a remote listener
+received, never on the browser-side request list being empty.
+
 ### E. Platform control plane
 
 Implementation status (2026-09-01): RFC 0004 and `control-plane-contract/` are
