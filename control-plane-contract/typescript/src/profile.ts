@@ -113,6 +113,7 @@ export interface AccessTokenFixture {
     user_relay_exchange_endpoint: string;
     push_audience: string;
     components_audience: string;
+    runtime_diagnostics_endpoint: string;
     relay_audience: string;
   };
   firebase: {
@@ -514,6 +515,7 @@ export function validateAccessTokenFixture(raw: JsonValue): AccessTokenFixture {
       'user_relay_exchange_endpoint',
       'push_audience',
       'components_audience',
+      'runtime_diagnostics_endpoint',
       'relay_audience',
     ],
     [],
@@ -529,6 +531,10 @@ export function validateAccessTokenFixture(raw: JsonValue): AccessTokenFixture {
     ),
     push_audience: exactHttps(deploymentValue.push_audience, 'deployment.push_audience'),
     components_audience: exactHttps(deploymentValue.components_audience, 'deployment.components_audience'),
+    runtime_diagnostics_endpoint: exactHttps(
+      deploymentValue.runtime_diagnostics_endpoint,
+      'deployment.runtime_diagnostics_endpoint',
+    ),
     relay_audience: exactHttps(deploymentValue.relay_audience, 'deployment.relay_audience', true),
   });
   if (deployment.issuer.endsWith('/')) {

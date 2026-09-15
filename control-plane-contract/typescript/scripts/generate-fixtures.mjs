@@ -443,6 +443,7 @@ const fixture = {
     user_relay_exchange_endpoint: `${issuer}/v1/user-relay-tokens:exchange`,
     push_audience: pushAudience,
     components_audience: componentsAudience,
+    runtime_diagnostics_endpoint: `${issuer}/v1/runtime-diagnostics`,
     relay_audience: relayAudience,
   },
   firebase: {
