@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { App } from './app';
 import type { ActivatedRelease, ComponentReleaseCoordinator } from './component-release';
 import { createDemoHost } from './demo-host';
+import { HOST_FAILURE_CODES, type ClassifiedFailure } from './runtime-diagnostics';
 
 function activatedRelease(release: string, fellBack: boolean): ActivatedRelease {
   return {
@@ -264,7 +265,8 @@ describe('App component runtime call site', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Component runtime stopped · bridge_protocol_violation'))
+      expect(screen.getByText('Component runtime stopped: it broke the host bridge.'
+        + ' Showing the home\u2019s own controls instead.'))
         .toBeVisible();
     });
     expect(screen.queryByRole('heading', { level: 1, name: 'Runtime speaking' })).toBeNull();
@@ -295,7 +297,8 @@ describe('App component runtime call site', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Component runtime stopped · unclassified')).toBeVisible();
+      expect(screen.getByText('Component runtime stopped: the reason was not one the host recognises.'
+        + ' Showing the home\u2019s own controls instead.')).toBeVisible();
     });
     expect(screen.queryByText(/evil\.example/)).toBeNull();
   });
@@ -321,7 +324,8 @@ describe('App component runtime call site', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Component runtime stopped · ready_timeout')).toBeVisible();
+      expect(screen.getByText('Component runtime stopped: it never finished starting.'
+        + ' Showing the home\u2019s own controls instead.')).toBeVisible();
     });
     await waitFor(() => {
       expect(fetchSpy).toHaveBeenCalledOnce();
@@ -355,7 +359,8 @@ describe('App component runtime call site', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Component runtime stopped · mount_failed')).toBeVisible();
+      expect(screen.getByText('Component runtime stopped: it could not be started.'
+        + ' Showing the home\u2019s own controls instead.')).toBeVisible();
     });
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
@@ -409,5 +414,94 @@ describe('App component runtime call site', () => {
     await waitFor(() => {
       expect(session.dispose).toHaveBeenCalledOnce();
     });
+  });
+  // Second table over the same closed vocabulary. Adding a code to
+  // `HOST_FAILURE_CODES` without naming it fails to compile here as well as in
+  // the renderer, so the test cannot silently stop covering a reachable state.
+  const EXPECTED_FAILURE_PROSE: Record<ClassifiedFailure, string> = {
+    bridge_protocol_violation: 'it broke the host bridge',
+    capability_denied: 'it asked for something it may not use',
+    failed: 'it reported its own failure',
+    mount_failed: 'it could not be started',
+    ready_timeout: 'it never finished starting',
+    render_invalid: 'it sent a screen the host refused',
+    runtime_unresponsive: 'it went unresponsive',
+    sandbox_origin_invalid: 'this deployment has no valid sandbox origin',
+    terminated: 'the host shut it down',
+    unclassified: 'the reason was not one the host recognises',
+  };
+
+  it.each([...HOST_FAILURE_CODES, 'unclassified' as const])(
+    'names the %s failure in words and never as its identifier',
+    async (code) => {
+      const mountRuntime = vi.fn(async (_release: never, options: never) => {
+        const opts = options as unknown as {
+          onLifecycle: (l: string, f?: { code: string; message: string }) => void;
+        };
+        // `unclassified` is not a code the bridge can send; it is what the
+        // classifier substitutes, so it has to be provoked by an unknown one.
+        opts.onLifecycle('failed', {
+          code: code === 'unclassified' ? 'component_invented_this' : code,
+          message: 'stopped',
+        });
+        return { lifecycle: 'active' as const, interact: vi.fn(), dispose: vi.fn() };
+      });
+
+      const view = render(
+        <App
+          createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
+          mountRuntime={mountRuntime as never}
+          readSandboxOrigin={() => SANDBOX_ORIGIN}
+        />,
+      );
+
+      const region = screen.getByTestId('component-runtime-status');
+      await waitFor(() => {
+        expect(region).toHaveTextContent(EXPECTED_FAILURE_PROSE[code]);
+      });
+      // The reason is only half of it: the tree on screen is the home's own,
+      // not the component's, and nothing else on the page says so.
+      expect(region).toHaveTextContent('Showing the home\u2019s own controls instead.');
+      expect(region.textContent).not.toContain(code === 'unclassified' ? 'unclassified' : code);
+      view.unmount();
+    },
+  );
+
+  it('keeps the runtime status region mounted before anything has failed', async () => {
+    const view = render(<App createComponentRelease={() => undefined} />);
+
+    // A live region that appears in the same commit as its first text is one
+    // assistive technologies are allowed to miss, so the region has to exist
+    // while it still has nothing to say.
+    const region = screen.getByTestId('component-runtime-status');
+    expect(region).toHaveAttribute('role', 'status');
+    expect(region).toBeEmptyDOMElement();
+    view.unmount();
+
+    const mountRuntime = vi.fn(async (_release: never, options: never) => {
+      const opts = options as unknown as {
+        onTree: (t: unknown, r: number) => void;
+        onLifecycle: (l: string, f?: { code: string; message: string }) => void;
+      };
+      opts.onTree(runtimeTree('Runtime speaking'), 1);
+      opts.onLifecycle('terminated');
+      return { lifecycle: 'active' as const, interact: vi.fn(), dispose: vi.fn() };
+    });
+
+    render(
+      <App
+        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
+        mountRuntime={mountRuntime as never}
+        readSandboxOrigin={() => SANDBOX_ORIGIN}
+      />,
+    );
+
+    // The same region that was empty now carries the reason, which is what
+    // makes the mid-session swap audible rather than merely visible.
+    await waitFor(() => {
+      expect(screen.getByTestId('component-runtime-status'))
+        .toHaveTextContent('the host shut it down');
+    });
+    expect(screen.queryByRole('heading', { level: 1, name: 'Runtime speaking' })).toBeNull();
   });
 });

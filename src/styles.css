@@ -1012,6 +1012,21 @@ svg {
   letter-spacing: 0.03em;
 }
 
+/*
+  The runtime status region stays mounted so it can announce a mid-session
+  failure, which means it is usually empty. Taking it out of the flow while
+  empty keeps `space-between` distributing the two visible items as before;
+  `display: none` would have dropped it from the accessibility tree and put
+  back the very gap this region exists to close.
+*/
+.workspace__footer-runtime:empty {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
 @media (max-width: 1180px) {
   .semantic-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
