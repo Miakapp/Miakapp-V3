@@ -1,8 +1,11 @@
 import { defineConfig } from '@playwright/test';
+import { SPEC_GLOB } from './test/test-scope';
 
 export default defineConfig({
   testDir: './test',
-  testMatch: '*.spec.ts',
+  // Discovered, not listed: naming one file meant a second spec would sit in
+  // the corpus without ever running. See test/test-scope.ts.
+  testMatch: SPEC_GLOB,
   timeout: 20_000,
   expect: { timeout: 5_000 },
   fullyParallel: false,
