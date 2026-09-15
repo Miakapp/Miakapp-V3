@@ -3,12 +3,32 @@ import { useMemo } from 'react';
 import {
   ContractViolation,
   validateUiTree,
+  type StatusState,
   type UiNode,
 } from '../../component-runtime/src/contract';
 import type { SemanticInteraction } from './host';
 import { LockIcon } from './icons';
 
 const PREVIEW_MEDIA_HANDLES = new Set(['media.front_door']);
+
+/**
+ * Host-owned term for every contract status state. The dot colour used to be the
+ * only channel carrying the state, which put it out of reach of assistive
+ * technology entirely and collapsed `pending`, `stale` and `outcome_unknown`
+ * into one amber bucket — three states a person has to tell apart to know
+ * whether an action is still coming, already old, or may have applied. The term
+ * is host text next to the component's label, never supplied by the component.
+ * Typing it as a total record over `StatusState` is what keeps it exhaustive.
+ */
+const STATUS_TERMS: Record<StatusState, string> = {
+  idle: 'Idle',
+  pending: 'Pending',
+  accepted: 'Accepted',
+  applied: 'Applied',
+  failed: 'Failed',
+  stale: 'Stale',
+  outcome_unknown: 'Outcome unknown',
+};
 
 interface SemanticRendererProps {
   readonly tree: unknown;
@@ -38,6 +58,10 @@ function booleanProp(node: UiNode, name: string): boolean {
 
 function numberProp(node: UiNode, name: string): number {
   return node.props[name] as number;
+}
+
+function statusState(node: UiNode): StatusState {
+  return node.props.state as StatusState;
 }
 
 function children(
@@ -114,20 +138,23 @@ function renderNode(
         </p>
       );
     case 'status': {
-      const state = stringProp(node, 'state');
+      const state = statusState(node);
+      const term = STATUS_TERMS[state];
       const label = stringProp(node, 'label');
       const detail = node.props.detail ? stringProp(node, 'detail') : undefined;
       return (
         <div
-          aria-label={detail ? `${label}: ${detail}` : label}
+          aria-label={detail ? `${label}: ${term} — ${detail}` : `${label}: ${term}`}
           className={`semantic-status semantic-status--${state}`}
           data-node-id={node.id}
+          data-status-state={state}
           key={node.id}
           role="status"
         >
           <span className="semantic-status__dot" />
           <span>
             <strong>{label}</strong>
+            <small className="semantic-status__term">{term}</small>
             {detail ? <small>{detail}</small> : null}
           </span>
         </div>
