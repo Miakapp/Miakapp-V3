@@ -6,7 +6,43 @@ import type {
 import { waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+import type { UiNode } from '../../component-runtime/src/contract';
 import { createLiveHost, type LiveIdentity } from './live-host';
+
+type CallHandle = ReturnType<BrowserClient['calls']['start']>;
+
+function deferred<T>(): {
+  readonly promise: Promise<T>;
+  readonly reject: (reason: unknown) => void;
+  readonly resolve: (value: T) => void;
+} {
+  let reject!: (reason: unknown) => void;
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, reject, resolve };
+}
+
+function nodeById(tree: UiNode, id: string): UiNode {
+  if (tree.id === id) return tree;
+  for (const child of tree.children ?? []) {
+    if (child.id === id) return child;
+    const nested = nodeByIdOrUndefined(child, id);
+    if (nested !== undefined) return nested;
+  }
+  throw new Error(`Missing UI node ${id}`);
+}
+
+function nodeByIdOrUndefined(tree: UiNode, id: string): UiNode | undefined {
+  if (tree.id === id) return tree;
+  for (const child of tree.children ?? []) {
+    const nested = nodeByIdOrUndefined(child, id);
+    if (nested !== undefined) return nested;
+  }
+  return undefined;
+}
 
 function fakeIdentity(initiallySignedIn: boolean): LiveIdentity & {
   emit(signedIn: boolean): void;
@@ -30,7 +66,12 @@ function fakeIdentity(initiallySignedIn: boolean): LiveIdentity & {
   };
 }
 
-function fakeClient(): BrowserClient & {
+function fakeClient(call: CallHandle = {
+  localId: 'call-1',
+  accepted: Promise.resolve(),
+  result: Promise.resolve(null),
+  cancel: vi.fn(),
+}): BrowserClient & {
   emitLifecycle(event: BrowserLifecycleEvent): void;
   emitState(snapshot: BrowserStateSnapshot): void;
 } {
@@ -50,12 +91,7 @@ function fakeClient(): BrowserClient & {
       },
     },
     calls: {
-      start: vi.fn(() => ({
-        localId: 'call-1',
-        accepted: Promise.resolve(),
-        result: Promise.resolve(null),
-        cancel: vi.fn(),
-      })),
+      start: vi.fn(() => call),
     },
     errors: {
       subscribe: () => () => undefined,
@@ -143,7 +179,111 @@ describe('live trusted host', () => {
     }));
     await waitFor(() => {
       expect(host.getSnapshot().activity[0]?.title).toBe('Light toggled');
+      expect(nodeById(host.getSnapshot().uiTree, 'live-light-action-status').props.state)
+        .toBe('applied');
     });
+    host.dispose();
+  });
+
+  it('keeps pending, accepted and applied distinct while blocking a duplicate action', async () => {
+    const accepted = deferred<void>();
+    const result = deferred<unknown>();
+    const client = fakeClient({
+      localId: 'call-1',
+      accepted: accepted.promise,
+      result: result.promise,
+      cancel: vi.fn(),
+    });
+    const host = hostWith(fakeIdentity(true), [client]);
+    client.emitLifecycle({ previous: 'synchronizing', current: 'ready' });
+
+    host.interact({ event: 'press', handler: 'lighting.toggle' });
+    expect(nodeById(host.getSnapshot().uiTree, 'live-light-action-status').props.state)
+      .toBe('pending');
+
+    accepted.resolve(undefined);
+    await waitFor(() => {
+      expect(nodeById(host.getSnapshot().uiTree, 'live-light-action-status').props.state)
+        .toBe('accepted');
+    });
+
+    host.interact({ event: 'press', handler: 'lighting.toggle' });
+    expect(client.calls.start).toHaveBeenCalledOnce();
+
+    result.resolve(null);
+    await waitFor(() => {
+      expect(nodeById(host.getSnapshot().uiTree, 'live-light-action-status').props.state)
+        .toBe('applied');
+    });
+    host.dispose();
+  });
+
+  it.each([
+    ['failed', new Error('coordinator rejected the call')],
+    ['outcome_unknown', { outcome: 'outcome_unknown' }],
+  ] as const)('renders a terminal %s without retrying', async (expectedState, failure) => {
+    const result = deferred<unknown>();
+    const client = fakeClient({
+      localId: 'call-1',
+      accepted: Promise.resolve(),
+      result: result.promise,
+      cancel: vi.fn(),
+    });
+    const host = hostWith(fakeIdentity(true), [client]);
+    client.emitLifecycle({ previous: 'synchronizing', current: 'ready' });
+
+    host.interact({ event: 'press', handler: 'lighting.toggle' });
+    result.reject(failure);
+
+    await waitFor(() => {
+      expect(nodeById(host.getSnapshot().uiTree, 'live-light-action-status').props.state)
+        .toBe(expectedState);
+    });
+    expect(client.calls.start).toHaveBeenCalledOnce();
+    host.dispose();
+  });
+
+  it('marks stale relay state and disables the physical control', () => {
+    const client = fakeClient();
+    const host = hostWith(fakeIdentity(true), [client]);
+    client.emitLifecycle({ previous: 'synchronizing', current: 'ready' });
+    client.emitState({
+      epoch: new Uint8Array(16),
+      revision: 2,
+      stale: true,
+      values: { 'zone.alpha.light.on': true },
+    });
+
+    expect(nodeById(host.getSnapshot().uiTree, 'live-state-freshness').props.state)
+      .toBe('stale');
+    expect(nodeById(host.getSnapshot().uiTree, 'live-light-toggle').props.disabled)
+      .toBe(true);
+    host.interact({ event: 'press', handler: 'lighting.toggle' });
+    expect(client.calls.start).not.toHaveBeenCalled();
+    host.dispose();
+  });
+
+  it('ignores a late call settlement after sign-out', async () => {
+    const result = deferred<unknown>();
+    const identity = fakeIdentity(true);
+    const client = fakeClient({
+      localId: 'call-1',
+      accepted: Promise.resolve(),
+      result: result.promise,
+      cancel: vi.fn(),
+    });
+    const host = hostWith(identity, [client]);
+    client.emitLifecycle({ previous: 'synchronizing', current: 'ready' });
+    host.interact({ event: 'press', handler: 'lighting.toggle' });
+
+    identity.emit(false);
+    result.resolve(null);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(nodeById(host.getSnapshot().uiTree, 'live-light-action-status').props.state)
+      .toBe('idle');
+    expect(host.getSnapshot().activity).toHaveLength(0);
     host.dispose();
   });
 
