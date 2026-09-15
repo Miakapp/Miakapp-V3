@@ -185,7 +185,11 @@ Deliverables:
    the local coordinator environment, executed by
    `node-red-adapter/bin/restore-rehearsal.mjs` and reported in
    `node-red-adapter/RESTORE-REHEARSAL.md`;
-6. an explicit list of behavior intentionally preserved versus fixed.
+6. **complete for the v3 Node-RED installation** — an explicit list of behavior
+   intentionally preserved versus fixed, in
+   `node-red-adapter/PRESERVED-VS-FIXED.md`, with every row backed by a test
+   that observed the behavior or a cited line of the published package. Four
+   migration decisions it surfaces are open and belong to the product owner.
 
 Exit gate: the Miakapp 4 implementation can be compared against a deterministic oracle
 without accessing private production data in CI.
@@ -201,7 +205,8 @@ recorder-owned state and leased effects, stimulus-indexed lifecycle/errors,
 terminal declaration-promise evidence, atomic-declaration rollback and causal
 call-handle checks, plus compiled Node 22 and authenticated process-bounded
 external-subject execution. No production export or private value is part of
-either corpus. The restore rehearsal and deployment-specific
+either corpus. The restore rehearsal and, at the time that status was written,
+the deployment-specific
 preserved-versus-fixed list remain open, so the workstream is not complete.
 
 Characterization status (2026-09-14): `node-red-adapter/` is the runtime
@@ -265,6 +270,31 @@ variable set starts empty on every boot and each commit sends the whole set, so
 state is complete only once every commit node has fired, bounded below by the
 slowest trigger in the house. A v4 comparison run started before that point
 reads an oracle that is still filling in.
+
+Characterization status (2026-09-14, later): deliverable 6 is answered for this
+installation by `node-red-adapter/PRESERVED-VS-FIXED.md`. Every row cites either
+a test that observed the behavior or a line of the published package, so the
+list is evidence rather than a reading of the source.
+
+Executing v3 to build it corrected one row of RFC 0003 §18 and added three
+behaviors that table did not cover. The correction: the legacy client sends no
+application ping and holds no interval timer at all; it answers a ping the
+coordinator initiates, so that exchange is a coordinator-side change. The
+additions: `commitVariables` coerces every falsy reading to `''` before any
+adapter can see it, which makes a correct v4 diverge from the v3 oracle by
+design on those paths; an empty legacy `allowedGroups` allows everyone where an
+empty Miakapp 4 ACL allows no one, an inversion with no shape change to make it
+visible; and an unresolvable principal fails open on exactly the actions that
+carry no access rule, sending downstream before it throws.
+
+The redeploy cost is also now measured rather than asserted. Nothing in the
+package removes a handler or closes a client, and delivery walks both lists, so
+one button press produces 1, then 4, then 9 downstream messages over three
+deploys: amplification quadratic in deploys, invisible to the coordinator and
+reporting a single node id throughout.
+
+Four migration decisions the list surfaces are open and belong to the product
+owner; they are stated in that file rather than answered.
 
 This closes the last open workstream B deliverable for the v3 Node-RED
 installation: 1 to 3 are complete, 4 is optional per installation and answered

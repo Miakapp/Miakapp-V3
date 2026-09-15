@@ -186,6 +186,21 @@ export async function startHouse({
       node.receive(msg);
     },
 
+    /**
+     * Deploy again into the same running runtime, as pressing Deploy a second
+     * time does. This is not a second `startHouse()`: the process, the module
+     * scope and the recorder all survive, which is exactly the condition under
+     * which the v3 node's module-level `handlers` are observed to accumulate.
+     */
+    async redeploy(nextFlows = flows) {
+      await RED.runtime.flows.setFlows({
+        user: null,
+        flows: { flows: nextFlows },
+        deploymentType: 'full',
+      });
+      await waitForNodes(RED, nextFlows);
+    },
+
     /** What the runtime itself wrote to disk, not what we authored. */
     persistedFlows: () => readPersisted('flows.json'),
     persistedCredentials: () => readPersisted('flows_cred.json'),
