@@ -13,9 +13,19 @@ import {
   type AppCheck,
 } from 'firebase/app-check';
 
+import {
+  createComponentReleaseCoordinator,
+  createControlPlanePointerReader,
+  type ComponentReleaseCoordinator,
+} from './component-release';
 import { createDemoHost } from './demo-host';
 import type { TrustedHost } from './host';
 import { createLiveHost, type LiveIdentity } from './live-host';
+
+interface ComponentReleaseConfiguration {
+  readonly pointerEndpoint: string;
+  readonly allowedArtifactOrigins: ReadonlySet<string>;
+}
 
 interface LiveConfiguration {
   readonly firebase: FirebaseOptions;
@@ -24,7 +34,10 @@ interface LiveConfiguration {
   readonly homeId: string;
   readonly homeName: string;
   readonly homeDetail: string;
+  readonly componentRelease: ComponentReleaseConfiguration | undefined;
 }
+
+const LIVE_APP_NAME = 'miakapp-live-host';
 
 type GooglePopupSignIn = (
   auth: Auth,
@@ -44,6 +57,38 @@ function required(name: string): string {
     throw new Error(`Missing ${name} for the Miakapp live host`);
   }
   return value;
+}
+
+function optional(name: string): string | undefined {
+  const value = import.meta.env[name];
+  if (typeof value !== 'string' || value.trim() === '') return undefined;
+  return value.trim();
+}
+
+/**
+ * Component releases stay off until the deployment states both where the live
+ * pointer is served and which origins may serve artifacts. Neither can be
+ * guessed: they are the trust boundary the release ledger enforces.
+ */
+function readComponentReleaseConfiguration(): ComponentReleaseConfiguration | undefined {
+  const pointerEndpoint = optional('VITE_MIAKAPP_COMPONENT_POINTER_ENDPOINT');
+  const origins = optional('VITE_MIAKAPP_COMPONENT_ARTIFACT_ORIGINS');
+  if (pointerEndpoint === undefined || origins === undefined) return undefined;
+  if (!pointerEndpoint.startsWith('https://')) {
+    throw new Error('The Miakapp component pointer endpoint must use HTTPS');
+  }
+  const allowedArtifactOrigins = new Set(
+    origins.split(',').map((origin) => origin.trim()).filter((origin) => origin !== ''),
+  );
+  for (const origin of allowedArtifactOrigins) {
+    if (!origin.startsWith('https://')) {
+      throw new Error(`Component artifact origin ${origin} must use HTTPS`);
+    }
+  }
+  if (allowedArtifactOrigins.size === 0) {
+    throw new Error('VITE_MIAKAPP_COMPONENT_ARTIFACT_ORIGINS lists no origin');
+  }
+  return Object.freeze({ pointerEndpoint, allowedArtifactOrigins });
 }
 
 function readLiveConfiguration(): LiveConfiguration | undefined {
@@ -66,7 +111,36 @@ function readLiveConfiguration(): LiveConfiguration | undefined {
     homeId: required('VITE_MIAKAPP_HOME_ID'),
     homeName: required('VITE_MIAKAPP_HOME_NAME'),
     homeDetail: required('VITE_MIAKAPP_HOME_DETAIL'),
+    componentRelease: readComponentReleaseConfiguration(),
   });
+}
+
+interface LiveRuntime {
+  readonly auth: Auth;
+  readonly appCheck: AppCheck;
+}
+
+const liveRuntimes = new WeakMap<object, LiveRuntime>();
+
+/**
+ * App Check may only be initialized once per Firebase app, so the host and the
+ * component release coordinator share one runtime. They still build their own
+ * identity, so disposing one never revokes the other's auth listener.
+ */
+function liveRuntime(configuration: LiveConfiguration): LiveRuntime {
+  const app = getApps().find(({ name }) => name === LIVE_APP_NAME)
+    ?? initializeApp(configuration.firebase, LIVE_APP_NAME);
+  const existing = liveRuntimes.get(app);
+  if (existing !== undefined) return existing;
+  const runtime: LiveRuntime = Object.freeze({
+    auth: getAuth(app),
+    appCheck: initializeAppCheck(app, {
+      provider: new ReCaptchaEnterpriseProvider(configuration.appCheckSiteKey),
+      isTokenAutoRefreshEnabled: true,
+    }),
+  });
+  liveRuntimes.set(app, runtime);
+  return runtime;
 }
 
 class FirebaseLiveIdentity implements LiveIdentity {
@@ -121,19 +195,44 @@ class FirebaseLiveIdentity implements LiveIdentity {
   };
 }
 
+/**
+ * Builds the coordinator the shell calls at boot, or undefined when this build
+ * serves the preview or declares no component release trust boundary.
+ */
+export function createConfiguredComponentRelease(): ComponentReleaseCoordinator | undefined {
+  const configuration = readLiveConfiguration();
+  if (configuration === undefined) return undefined;
+  const release = configuration.componentRelease;
+  if (release === undefined) return undefined;
+
+  const { auth, appCheck } = liveRuntime(configuration);
+  const identity = new FirebaseLiveIdentity(auth, appCheck);
+  const homeId = configuration.homeId;
+  const credentialRequest = (signal: AbortSignal | undefined) => Object.freeze({
+    homeId,
+    reason: 'initial' as const,
+    signal: signal ?? new AbortController().signal,
+  });
+
+  return createComponentReleaseCoordinator({
+    homeId,
+    allowedArtifactOrigins: release.allowedArtifactOrigins,
+    readPointer: createControlPlanePointerReader({
+      endpoint: release.pointerEndpoint,
+      homeId,
+      authorize: async (signal) =>
+        `Bearer ${await identity.getFirebaseIdToken(credentialRequest(signal))}`,
+      appCheckToken: async (signal) => await identity.getAppCheckToken(credentialRequest(signal)),
+    }),
+  });
+}
+
 export function createConfiguredHost(): TrustedHost {
   const configuration = readLiveConfiguration();
   if (configuration === undefined) return createDemoHost();
 
-  const app = getApps().find(({ name }) => name === 'miakapp-live-host')
-    ?? initializeApp(configuration.firebase, 'miakapp-live-host');
-  const identity = new FirebaseLiveIdentity(
-    getAuth(app),
-    initializeAppCheck(app, {
-      provider: new ReCaptchaEnterpriseProvider(configuration.appCheckSiteKey),
-      isTokenAutoRefreshEnabled: true,
-    }),
-  );
+  const { auth, appCheck } = liveRuntime(configuration);
+  const identity = new FirebaseLiveIdentity(auth, appCheck);
 
   return createLiveHost({
     exchangeEndpoint: configuration.exchangeEndpoint,

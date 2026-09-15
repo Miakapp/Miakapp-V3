@@ -26,7 +26,12 @@ export type ComponentPointerReader = (signal?: AbortSignal) => Promise<unknown>;
 export interface ControlPlanePointerReaderOptions {
   readonly endpoint: string;
   readonly homeId: string;
-  readonly authorize: () => Promise<string>;
+  readonly authorize: (signal?: AbortSignal) => Promise<string>;
+  /**
+   * Mirrors the control-plane exchange convention: the browser proves app
+   * integrity with an App Check token alongside the bearer credential.
+   */
+  readonly appCheckToken?: (signal?: AbortSignal) => Promise<string>;
   readonly fetch?: typeof globalThis.fetch;
 }
 
@@ -59,10 +64,17 @@ export function createControlPlanePointerReader(
   const base = options.endpoint.replace(/\/+$/u, '');
   const url = `${base}/v1/homes/${options.homeId}/component-pointer`;
   return async (signal) => {
-    const authorization = await options.authorize();
+    const authorization = await options.authorize(signal);
+    const headers: Record<string, string> = {
+      accept: 'application/json',
+      authorization,
+    };
+    if (options.appCheckToken !== undefined) {
+      headers['x-firebase-appcheck'] = await options.appCheckToken(signal);
+    }
     const request: RequestInit = {
       method: 'GET',
-      headers: { accept: 'application/json', authorization },
+      headers,
       credentials: 'omit',
       cache: 'no-store',
       redirect: 'error',
