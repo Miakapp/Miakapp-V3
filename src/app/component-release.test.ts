@@ -236,7 +236,38 @@ describe('control plane pointer reader', () => {
     const [url, request] = fetch.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe(`https://control.example/v1/homes/${HOME_ID}/component-pointer`);
     expect((request.headers as Record<string, string>).authorization).toBe('Bearer token-value');
+    expect((request.headers as Record<string, string>)['x-firebase-appcheck']).toBeUndefined();
     expect(request.credentials).toBe('omit');
+  });
+
+  it('proves app integrity with App Check and threads the caller abort signal', async () => {
+    const fetch = vi.fn(async () => new Response(
+      JSON.stringify({ generation: 3 }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    ));
+    const seen: Array<AbortSignal | undefined> = [];
+    const read = createControlPlanePointerReader({
+      endpoint: 'https://control.example',
+      homeId: HOME_ID,
+      authorize: async (signal) => {
+        seen.push(signal);
+        return 'Bearer token-value';
+      },
+      appCheckToken: async (signal) => {
+        seen.push(signal);
+        return 'appcheck-value';
+      },
+      fetch: fetch as unknown as typeof globalThis.fetch,
+    });
+
+    const controller = new AbortController();
+    await expect(read(controller.signal)).resolves.toMatchObject({ generation: 3 });
+
+    const [, request] = fetch.mock.calls[0] as unknown as [string, RequestInit];
+    expect((request.headers as Record<string, string>)['x-firebase-appcheck'])
+      .toBe('appcheck-value');
+    expect(request.signal).toBe(controller.signal);
+    expect(seen).toEqual([controller.signal, controller.signal]);
   });
 
   it('rejects a non-ok pointer response', async () => {

@@ -434,11 +434,23 @@ the candidate is still in the `staging` phase. `release-state.ts` and
 `artifact-cache.ts` are therefore no longer reachable only from
 `component-runtime/`'s own tests and harness server.
 
-What is still missing is the call site: no render path invokes the coordinator,
-so the seam is absent from the production entry graph and the shipped bundle
-still performs no pointer read at runtime. Deliverable 4 closes when the render
-path activates a release through this seam, which is the same call-site step
-deliverable 1 is waiting on.
+The call site has now landed too. `src/main.tsx` passes
+`createConfiguredComponentRelease` into the shell, and `App` activates the
+coordinator once per mount, aborting an in-flight activation on unmount and
+reporting the active release, a last-known-good fallback, or an explicit
+failure in the workspace footer. The coordinator is built only when the
+deployment declares both `VITE_MIAKAPP_COMPONENT_POINTER_ENDPOINT` and
+`VITE_MIAKAPP_COMPONENT_ARTIFACT_ORIGINS`, because the pointer origin and the
+allowed artifact origins are the trust boundary the ledger enforces and neither
+can be guessed. Measured on this commit: a live-mode `vite build` ships the
+`component-pointer` route and the `x-firebase-appcheck` header in the bundle,
+while a preview build still statically eliminates the whole live branch.
+
+What remains open is execution, not acquisition. The shell now reads the
+pointer, enforces the anti-rollback floor, verifies the artifact bytes and
+records last-known-good, but nothing evaluates the downloaded component: the
+component runtime host is still not mounted in the render path. Deliverable 1
+is waiting on that mount, not on another call-site step.
 
 Exit gate: a deliberately hostile bundle is contained by browser-enforced
 boundaries, not by instructions or conventions.
