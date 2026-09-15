@@ -117,39 +117,36 @@ function describeEndpointFault(key: string, value: string): string | undefined {
 /**
  * A control plane derives every endpoint it publishes from one issuer:
  * `production-runtime-config.ts` builds `exchangeEndpoint`,
- * `userRelayExchangeEndpoint` and `runtimeDiagnosticsEndpoint` by appending a
- * fixed path to the same origin. So a diagnostics endpoint that does not share
- * the origin of the exchange endpoint names a *different* control plane from
- * the one this shell authenticates against — a stale host left behind by a
- * copied `.env`, or a typo in the one place it cannot be noticed.
- *
- * It cannot be noticed because the ingest route answers `204` with no body by
- * design. A shell posting to the wrong origin looks exactly like a shell
- * posting to the right one, and the diagnostics loop that #205 and #206 exist
- * to provide stops reporting in silence.
+ * `userRelayExchangeEndpoint`, `runtimeDiagnosticsEndpoint` and
+ * `componentUploadBaseUrl` by appending a fixed path to the same origin. So an
+ * endpoint that does not share the origin of the exchange endpoint names a
+ * *different* control plane from the one this shell authenticates against — a
+ * stale host left behind by a copied `.env`, or a typo in the one place it
+ * cannot be noticed.
  *
  * The origin is compared against the operator's own exchange endpoint rather
- * than against the `runtime_diagnostics_endpoint` published by discovery, and
- * that is deliberate. Discovery is fetched unauthenticated; treating it as the
- * authority on where telemetry goes would hand whoever answers that fetch the
- * power to redirect our reports. The exchange endpoint is already a required
- * key the operator sets, so anchoring on it adds no new trust and needs no
- * network — this rule holds in CI, offline, on every change.
+ * than against the endpoints published by discovery, and that is deliberate.
+ * Discovery is fetched unauthenticated; treating it as the authority on where
+ * our requests go would hand whoever answers that fetch the power to redirect
+ * them. The exchange endpoint is already a required key the operator sets, so
+ * anchoring on it adds no new trust and needs no network — this rule holds in
+ * CI, offline, on every change.
  *
  * Only the origin is compared. The path is not derivable: staging points
  * `VITE_MIAKAPP_CONTROL_PLANE_EXCHANGE_ENDPOINT` at the user-relay exchange
  * rather than the access-token one, so demanding a particular suffix would
  * reject a working deployment.
  */
-function describeDiagnosticsIssuerFault(
+function describeIssuerOriginFault(
+  key: string,
   exchangeEndpoint: string,
-  diagnosticsEndpoint: string,
+  value: string,
 ): string | undefined {
   let exchange: URL;
-  let diagnostics: URL;
+  let endpoint: URL;
   try {
     exchange = new URL(exchangeEndpoint);
-    diagnostics = new URL(diagnosticsEndpoint);
+    endpoint = new URL(value);
   } catch {
     // Whichever value failed to parse already has its own fault reported.
     return undefined;
@@ -159,8 +156,8 @@ function describeDiagnosticsIssuerFault(
   // planes, which sends the operator looking for a second deployment that does
   // not exist.
   if (exchange.protocol !== 'https:') return undefined;
-  if (exchange.origin === diagnostics.origin) return undefined;
-  return `VITE_MIAKAPP_RUNTIME_DIAGNOSTICS_ENDPOINT must share the control plane origin ${exchange.origin}, but points at ${diagnostics.origin}`;
+  if (exchange.origin === endpoint.origin) return undefined;
+  return `${key} must share the control plane origin ${exchange.origin}, but points at ${endpoint.origin}`;
 }
 
 function collectArtifactOriginFaults(value: string): readonly string[] {
@@ -216,7 +213,15 @@ export function collectStagingEnvFaults(env: Readonly<Record<string, string>>): 
     const fault = describeEndpointFault('VITE_MIAKAPP_RUNTIME_DIAGNOSTICS_ENDPOINT', diagnosticsEndpoint);
     if (fault !== undefined) faults.push(fault);
     else if (exchangeEndpoint !== undefined) {
-      const crossFault = describeDiagnosticsIssuerFault(exchangeEndpoint, diagnosticsEndpoint);
+      // A misdirected diagnostics endpoint cannot be noticed at runtime: the
+      // ingest route answers `204` with no body by design, so a shell posting
+      // to the wrong origin looks exactly like one posting to the right origin,
+      // and the loop stops reporting in silence.
+      const crossFault = describeIssuerOriginFault(
+        'VITE_MIAKAPP_RUNTIME_DIAGNOSTICS_ENDPOINT',
+        exchangeEndpoint,
+        diagnosticsEndpoint,
+      );
       if (crossFault !== undefined) faults.push(crossFault);
     }
   }
@@ -246,6 +251,20 @@ export function collectStagingEnvFaults(env: Readonly<Record<string, string>>): 
   if (pointerEndpoint !== undefined) {
     const fault = describeEndpointFault('VITE_MIAKAPP_COMPONENT_POINTER_ENDPOINT', pointerEndpoint);
     if (fault !== undefined) faults.push(fault);
+    else if (exchangeEndpoint !== undefined) {
+      // This one is worse than a silent endpoint: `createControlPlanePointerReader`
+      // sends the `authorization` header it just obtained — and the App Check
+      // token — to whatever host this key names. A pointer endpoint off the
+      // control plane origin therefore hands a live credential to a third party
+      // on every activation, and the artifact it answers with is the code the
+      // shell then runs.
+      const crossFault = describeIssuerOriginFault(
+        'VITE_MIAKAPP_COMPONENT_POINTER_ENDPOINT',
+        exchangeEndpoint,
+        pointerEndpoint,
+      );
+      if (crossFault !== undefined) faults.push(crossFault);
+    }
   }
   if (artifactOrigins !== undefined) faults.push(...collectArtifactOriginFaults(artifactOrigins));
 

@@ -195,6 +195,53 @@ describe('collectStagingEnvFaults', () => {
     ]);
   });
 
+  it('rejects a pointer endpoint that names another control plane', () => {
+    expect(
+      faultsFor({
+        VITE_MIAKAPP_COMPONENT_POINTER_ENDPOINT: 'https://releases.example.test',
+        VITE_MIAKAPP_COMPONENT_ARTIFACT_ORIGINS: 'https://artifacts.example.test',
+      }),
+    ).toEqual([
+      'VITE_MIAKAPP_COMPONENT_POINTER_ENDPOINT must share the control plane origin https://control.example.test, but points at https://releases.example.test',
+    ]);
+  });
+
+  it('accepts a pointer endpoint on the control plane origin whatever its path', () => {
+    expect(
+      faultsFor({
+        VITE_MIAKAPP_COMPONENT_POINTER_ENDPOINT: 'https://control.example.test/v2/elsewhere',
+        VITE_MIAKAPP_COMPONENT_ARTIFACT_ORIGINS: 'https://artifacts.example.test',
+      }),
+    ).toEqual([]);
+  });
+
+  it('reports a malformed pointer endpoint once, not twice', () => {
+    expect(
+      faultsFor({
+        VITE_MIAKAPP_COMPONENT_POINTER_ENDPOINT: 'http://releases.example.test',
+        VITE_MIAKAPP_COMPONENT_ARTIFACT_ORIGINS: 'https://artifacts.example.test',
+      }),
+    ).toEqual([
+      'VITE_MIAKAPP_COMPONENT_POINTER_ENDPOINT must use HTTPS: http://releases.example.test',
+    ]);
+  });
+
+  it('stays silent about origins when the anchor itself is the faulty value', () => {
+    // The exchange endpoint is what every other endpoint is measured against.
+    // Once it is wrong, naming a second control plane sends the operator
+    // looking for a deployment that does not exist; report the anchor only.
+    expect(
+      faultsFor({
+        VITE_MIAKAPP_CONTROL_PLANE_EXCHANGE_ENDPOINT:
+          'http://control.example.test/v1/user-relay-tokens:exchange',
+        VITE_MIAKAPP_COMPONENT_POINTER_ENDPOINT: 'https://releases.example.test',
+        VITE_MIAKAPP_COMPONENT_ARTIFACT_ORIGINS: 'https://artifacts.example.test',
+      }),
+    ).toEqual([
+      'VITE_MIAKAPP_CONTROL_PLANE_EXCHANGE_ENDPOINT must use HTTPS: http://control.example.test/v1/user-relay-tokens:exchange',
+    ]);
+  });
+
   it('leaves the optional features off without complaint when nothing declares them', () => {
     const env: Record<string, string> = { ...LIVE_ENV };
     delete env.VITE_MIAKAPP_RUNTIME_DIAGNOSTICS_ENDPOINT;
