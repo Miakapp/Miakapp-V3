@@ -880,10 +880,27 @@ orchestrator process.
 | coordinator secret stored in ordinary configuration | fixed with credential storage and Home Key token provider |
 | full commit after every change | fixed with complete declaration for ownership and atomic named mutations thereafter |
 | fixed one-second reconnect | fixed with RFC 0001 full-jitter exponential backoff |
-| application ping every five seconds | removed; RFC 6455 control frames own liveness |
+| legacy client answers a coordinator-driven application ping | removed; RFC 6455 control frames own liveness, on the coordinator side |
 | notification code directly selects and sends to users | intent preserved; delivery waits for the control-plane push-grant contract |
 | action filtering only in a source-system callback | fixed; relay metadata plus final coordinator authorization are mandatory |
 | manual live script as `npm test` | fixed with isolated deterministic contract tests |
+
+This table is the design-level list and stays runtime-agnostic. The
+deployment-specific list for the v3 Node-RED installation, where each row cites
+either a test that observed the behavior or a line of the published package,
+is `node-red-adapter/PRESERVED-VS-FIXED.md`.
+
+The ping row above was corrected once the harness could execute v3: the legacy
+client sends no application ping and contains no interval timer at all. It
+answers a ping the coordinator initiates, so replacing that exchange with RFC
+6455 control frames is a coordinator-side change, not a client-side one.
+
+That list also records three v3 behaviors this table does not yet cover, each
+found by execution rather than reading, and each still needing a migration
+decision: falsy readings are coerced to `''` before any adapter can observe
+them, an empty legacy ACL means the opposite of an empty Miakapp 4 ACL, and an
+unresolvable principal fails open on exactly the actions that carry no access
+rule.
 
 ## 19. Conformance
 

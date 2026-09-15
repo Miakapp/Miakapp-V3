@@ -181,8 +181,15 @@ Deliverables:
    harness;
 4. an optional runtime-specific adapter test harness for each installation that
    needs one;
-5. a timed restore rehearsal for the local coordinator environment;
-6. an explicit list of behavior intentionally preserved versus fixed.
+5. **complete for the v3 Node-RED installation** — a timed restore rehearsal for
+   the local coordinator environment, executed by
+   `node-red-adapter/bin/restore-rehearsal.mjs` and reported in
+   `node-red-adapter/RESTORE-REHEARSAL.md`;
+6. **complete for the v3 Node-RED installation** — an explicit list of behavior
+   intentionally preserved versus fixed, in
+   `node-red-adapter/PRESERVED-VS-FIXED.md`, with every row backed by a test
+   that observed the behavior or a cited line of the published package. Four
+   migration decisions it surfaces are open and belong to the product owner.
 
 Exit gate: the Miakapp 4 implementation can be compared against a deterministic oracle
 without accessing private production data in CI.
@@ -198,9 +205,103 @@ recorder-owned state and leased effects, stimulus-indexed lifecycle/errors,
 terminal declaration-promise evidence, atomic-declaration rollback and causal
 call-handle checks, plus compiled Node 22 and authenticated process-bounded
 external-subject execution. No production export or private value is part of
-either corpus. Any required runtime-specific harness, restore rehearsal and
-deployment-specific preserved-versus-fixed list remain open, so the workstream
-is not complete.
+either corpus. The restore rehearsal and, at the time that status was written,
+the deployment-specific
+preserved-versus-fixed list remain open, so the workstream is not complete.
+
+Characterization status (2026-09-14): `node-red-adapter/` is the runtime
+specific harness for the one installation that currently needs one, the v3
+Node-RED deployment. Deliverable 4 stays open in general, since it is per
+installation and optional; it is answered for this installation.
+
+The harness boots a real Node-RED 5.0.7 runtime with
+`node-red-contrib-miakapi@3.0.31` exactly as published, deploys the synthetic
+house through the same runtime call the editor's Deploy button makes, and
+replaces only the `miakapi` cloud SDK with a recording stand-in at the
+`require` boundary. That substitution is not a convenience: the v3 node opens a
+coordinator connection while the node is being instantiated, so a harness
+keeping the real SDK would reach a production service from CI. It opens no
+network sockets, and no production export or private value is part of the
+corpus.
+
+This is the first corpus that executes v3 rather than modelling it, which turns
+six claims previously read out of the node's source into observations, each
+pinned by a test. `coordSecret` is persisted in cleartext, because the node
+registers no credentials schema and Node-RED therefore writes no
+`flows_cred.json` at all. A full deploy is persisted verbatim, with no injected
+defaults, which is what makes hand-authored fixtures structurally faithful
+stand-ins for runtime exports. `allowedGroups: []` allows everyone.
+`initMiakapi` subscribes to the coordinator once per event and fans out in
+module scope, so an export without it has action nodes that can never fire, and
+the coordinator cannot tell which input ids are bound. `commitVariables`
+coerces every falsy reading to `''`, the most likely source of silent
+divergence when v4 replays v3 state. Every commit sends the whole variable set
+rather than a delta.
+
+The harness also produces runtime-persisted exports on demand, so a
+`flows.json` parser can be checked against the shape Node-RED actually writes
+instead of against a fixture its own author typed.
+
+Characterization status (2026-09-14, restore): deliverable 5 is answered for
+this installation by `node-red-adapter/RESTORE-REHEARSAL.md`, which is produced
+by destroying a real environment and bringing it back rather than by describing
+how one would. It runs in CI, so its findings cannot quietly stop being true.
+
+The environment has two layers that recover differently: the installation, which
+is derivable from a lockfile and is deliberately not backed up, and the user
+directory, which is the only irreplaceable part. Restoring the second onto the
+first returns a house indistinguishable from the one destroyed — same registered
+types, coordinator connection, message delivery, notification, committed
+variable set and persisted flow digest — in 0.4 s from a 1 KiB archive of
+`flows.json` alone.
+
+Three findings came out of performing it rather than writing it. Archiving
+`node_modules` as well is the one backup scope that fails: a partial npm tree
+shadows the working installation, the local copy cannot resolve its own
+dependencies, and no node type registers. That failure is silent — `start()`
+resolves, the flow revision loads, and the runtime settles into waiting for
+missing types, so a supervisor observes a healthy process with no house behind
+it. A restore procedure must therefore assert registered node types rather than
+service liveness. Second, `commitVariables` reads `env`-typed values from the
+process environment with no fallback and no record in the user directory, so a
+restore onto a bare shell drops that state path in serialisation without an
+error at any layer. Third, time-to-process is not time-to-state: the outgoing
+variable set starts empty on every boot and each commit sends the whole set, so
+state is complete only once every commit node has fired, bounded below by the
+slowest trigger in the house. A v4 comparison run started before that point
+reads an oracle that is still filling in.
+
+Characterization status (2026-09-14, later): deliverable 6 is answered for this
+installation by `node-red-adapter/PRESERVED-VS-FIXED.md`. Every row cites either
+a test that observed the behavior or a line of the published package, so the
+list is evidence rather than a reading of the source.
+
+Executing v3 to build it corrected one row of RFC 0003 §18 and added three
+behaviors that table did not cover. The correction: the legacy client sends no
+application ping and holds no interval timer at all; it answers a ping the
+coordinator initiates, so that exchange is a coordinator-side change. The
+additions: `commitVariables` coerces every falsy reading to `''` before any
+adapter can see it, which makes a correct v4 diverge from the v3 oracle by
+design on those paths; an empty legacy `allowedGroups` allows everyone where an
+empty Miakapp 4 ACL allows no one, an inversion with no shape change to make it
+visible; and an unresolvable principal fails open on exactly the actions that
+carry no access rule, sending downstream before it throws.
+
+The redeploy cost is also now measured rather than asserted. Nothing in the
+package removes a handler or closes a client, and delivery walks both lists, so
+one button press produces 1, then 4, then 9 downstream messages over three
+deploys: amplification quadratic in deploys, invisible to the coordinator and
+reporting a single node id throughout.
+
+Four migration decisions the list surfaces are open and belong to the product
+owner; they are stated in that file rather than answered.
+
+This closes the last open workstream B deliverable for the v3 Node-RED
+installation: 1 to 3 are complete, 4 is optional per installation and answered
+for this one, and 5 and 6 are now answered for it. What remains before the
+workstream itself closes is its exit gate rather than a deliverable — comparing
+a Miakapp 4 implementation against these oracles in CI — and, for deliverables 4
+to 6, repeating them for any other installation that turns out to need one.
 
 ### C. Relay and SDK vertical slice
 
@@ -286,8 +387,23 @@ fail-closed rejection of arbitrary properties before render. A local preview
 adapter makes the product shell inspectable without Firebase, relay or home
 credentials, and the legacy V3 Vue/Auth/service-worker application is no longer
 part of the build. The opaque broker remains proven in its separate three-engine
-hostile harness; wiring its lifecycle, immutable Firebase artifact delivery and
-the real `miakapi/browser` adapter into this shell remains open.
+hostile harness. That harness now stages a second real broker beside the active
+release, preserves the old release when a staged candidate attempts an effect,
+revokes the old broker before the DOM swap, enables candidate effects only after
+the swap, and executes an explicit rollback under a greater generation without
+ever observing two effectful releases. Wiring that lifecycle, immutable Firebase
+artifact delivery and the real `miakapi/browser` adapter into the production
+shell remains open.
+
+Implementation status (2026-09-14): the live trusted-host adapter now exposes
+one physical call through the complete ABI 1 status vocabulary instead of
+collapsing acceptance and completion into a spinner. The rendered path moves
+through pending, coordinator-accepted and applied, distinguishes failed from
+outcome-unknown without retrying, and invalidates late settlements after sign-out
+or disposal. Relay snapshots marked stale are identified in trusted UI and keep
+the physical control disabled. This is the first live vertical slice of
+deliverable 5; the starter design system remains open for the complete component
+surface.
 
 Exit gate: a deliberately hostile bundle is contained by browser-enforced
 boundaries, not by instructions or conventions.

@@ -913,6 +913,17 @@ async function routeRequest(
     return;
   }
 
+  const componentPointerReadMatch = /^\/v1\/homes\/([a-z][a-z0-9-]{1,61}[a-z0-9])\/component-pointer$/
+    .exec(request.path);
+  if (componentPointerReadMatch !== null && request.method === 'GET') {
+    const id = pathHomeId(componentPointerReadMatch[1] as string);
+    const principal = await componentPrincipal(request, dependencies, id);
+    requireEmptyBody(request);
+    const state = await dependencies.componentStore.readPointer(principal, id);
+    sendJson(response, 200, state);
+    return;
+  }
+
   const keysMatch = /^\/v1\/homes\/([a-z][a-z0-9-]{1,61}[a-z0-9])\/home-keys$/.exec(request.path);
   if (keysMatch !== null && (request.method === 'GET' || request.method === 'POST')) {
     const ticket = request.method === 'POST'

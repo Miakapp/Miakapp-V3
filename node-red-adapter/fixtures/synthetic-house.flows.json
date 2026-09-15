@@ -1,0 +1,177 @@
+[
+  {
+    "id": "tab-maison",
+    "type": "tab",
+    "label": "Maison",
+    "disabled": false,
+    "info": ""
+  },
+  {
+    "id": "broker-local",
+    "type": "mqtt-broker",
+    "name": "Courtier local",
+    "broker": "127.0.0.1",
+    "port": "1883",
+    "clientid": "",
+    "autoConnect": false,
+    "usetls": false,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true,
+    "birthTopic": "",
+    "birthQos": "0",
+    "birthPayload": "",
+    "closeTopic": "",
+    "closeQos": "0",
+    "closePayload": "",
+    "willTopic": "",
+    "willQos": "0",
+    "willPayload": ""
+  },
+  {
+    "id": "init-home",
+    "type": "initMiakapi",
+    "z": "tab-maison",
+    "home": "maison-synthetique",
+    "coordID": "coord-synthetique",
+    "coordSecret": "secret-en-clair-du-coordinateur",
+    "x": 160,
+    "y": 80,
+    "wires": []
+  },
+  {
+    "id": "mqtt-temperature",
+    "type": "mqtt in",
+    "z": "tab-maison",
+    "name": "Température salon",
+    "topic": "maison/salon/temperature",
+    "qos": "0",
+    "datatype": "auto-detect",
+    "broker": "broker-local",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 160,
+    "y": 180,
+    "wires": [["commit-etat"]]
+  },
+  {
+    "id": "commit-etat",
+    "type": "commitVariables",
+    "z": "tab-maison",
+    "name": "Publier l'état",
+    "values": {
+      "capteurs.salon.temperature": {
+        "type": "jsonata",
+        "value": "msg.payload"
+      },
+      "capteurs.salle de bain.humidite": {
+        "type": "str",
+        "value": "48"
+      },
+      "systeme.version": {
+        "type": "env",
+        "value": "HOUSE_VERSION"
+      }
+    },
+    "x": 420,
+    "y": 180,
+    "wires": []
+  },
+  {
+    "id": "on-ready",
+    "type": "onHomeReady",
+    "z": "tab-maison",
+    "name": "",
+    "x": 160,
+    "y": 260,
+    "wires": [["journal"]]
+  },
+  {
+    "id": "on-update",
+    "type": "onHomeUpdate",
+    "z": "tab-maison",
+    "name": "",
+    "x": 160,
+    "y": 320,
+    "wires": [["journal"]]
+  },
+  {
+    "id": "on-login",
+    "type": "onUserLogin",
+    "z": "tab-maison",
+    "name": "",
+    "x": 160,
+    "y": 380,
+    "wires": [["journal"]]
+  },
+  {
+    "id": "action-lampe",
+    "type": "onUserAction",
+    "z": "tab-maison",
+    "name": "Lampe salon",
+    "inputID": "lampe-salon",
+    "allowedGroups": ["habitants"],
+    "x": 160,
+    "y": 440,
+    "wires": [["journal"]]
+  },
+  {
+    "id": "action-serrure",
+    "type": "onUserAction",
+    "z": "tab-maison",
+    "name": "Serrure entrée",
+    "inputID": "serrure-entree",
+    "allowedGroups": [],
+    "x": 160,
+    "y": 500,
+    "wires": [["notif-serrure"]]
+  },
+  {
+    "id": "notif-serrure",
+    "type": "sendPushNotif",
+    "z": "tab-maison",
+    "name": "Alerte serrure",
+    "title": "\"Serrure\"",
+    "body": "\"Ouverture par \" & msg.userAction.user.displayName",
+    "image": "",
+    "tag": "serrure",
+    "adminOnly": true,
+    "group": "",
+    "x": 440,
+    "y": 500,
+    "wires": []
+  },
+  {
+    "id": "lire-utilisateurs",
+    "type": "getHomeUsers",
+    "z": "tab-maison",
+    "name": "",
+    "x": 160,
+    "y": 560,
+    "wires": [["journal"]]
+  },
+  {
+    "id": "reconnecter",
+    "type": "reconnectMiakapi",
+    "z": "tab-maison",
+    "name": "",
+    "x": 160,
+    "y": 620,
+    "wires": []
+  },
+  {
+    "id": "journal",
+    "type": "debug",
+    "z": "tab-maison",
+    "name": "journal",
+    "active": false,
+    "tosidebar": false,
+    "console": false,
+    "complete": "true",
+    "x": 660,
+    "y": 320,
+    "wires": []
+  }
+]
