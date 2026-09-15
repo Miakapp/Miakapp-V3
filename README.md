@@ -71,6 +71,7 @@ host only through the guarded staging script above; do not run a bare
 - `control-plane/` — Firebase control-plane implementation and emulator slice
 - `control-plane-contract/` — shared control-plane contract
 - `synthetic-home/` — deterministic home fixture
+- `node-red-adapter/` — the published v3 node under a real Node-RED runtime
 - `infrastructure/` — Terraform and staging safety gates
 - `docs/` — RFCs, operating guides, architecture, and roadmap
 
