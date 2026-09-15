@@ -25,6 +25,38 @@ test.beforeEach(async ({ page }) => {
   await page.goto(hostUrl);
 });
 
+test('stores isolated defensive copies in the trusted IndexedDB cache', async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const moduleUrl = '/artifact-cache.js';
+    const { IndexedDbArtifactCache } = await import(moduleUrl);
+    const cache = new IndexedDbArtifactCache();
+    const home = `home-${crypto.randomUUID()}`;
+    const digest = 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+    const original = Uint8Array.from([1, 2, 3, 4]);
+
+    await cache.put(home, digest, original);
+    original[0] = 99;
+    const first = await cache.get(home, digest);
+    if (first === undefined) throw new Error('missing cached artifact');
+    first[1] = 88;
+    const second = await cache.get(home, digest);
+    await cache.delete(home, digest);
+    const deleted = await cache.get(home, digest);
+
+    return {
+      first: Array.from(first),
+      second: second === undefined ? undefined : Array.from(second),
+      deleted: deleted === undefined,
+    };
+  });
+
+  expect(result).toEqual({
+    first: [1, 88, 3, 4],
+    second: [1, 2, 3, 4],
+    deleted: true,
+  });
+});
+
 test('renders a valid tree and preserves RFC 0001 call states', async ({ page }) => {
   const result = await mount(page, await fixture('good.mjs'));
   expect(result.lifecycle, JSON.stringify(result)).toBe('active');

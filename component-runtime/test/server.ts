@@ -22,6 +22,7 @@ async function bundle(entry: string): Promise<string> {
 
 const brokerBundle = (await bundle('src/runtime-broker.ts')).replace(/<\/script/giu, '<\\/script');
 const hostBundle = await bundle('src/host-harness.ts');
+const artifactCacheBundle = await bundle('src/artifact-cache.ts');
 const brokerHash = createHash('sha256').update(brokerBundle).digest('base64');
 const sandboxOrigin = `http://localhost:${port}`;
 const hostOrigin = `http://127.0.0.1:${port}`;
@@ -81,6 +82,15 @@ Bun.serve({
     }
     if (url.pathname === '/host.js' && hostname === '127.0.0.1') {
       return response(hostBundle, {
+        headers: {
+          'content-type': 'text/javascript; charset=utf-8',
+          'cache-control': 'no-store',
+          'x-content-type-options': 'nosniff',
+        },
+      });
+    }
+    if (url.pathname === '/artifact-cache.js' && hostname === '127.0.0.1') {
+      return response(artifactCacheBundle, {
         headers: {
           'content-type': 'text/javascript; charset=utf-8',
           'cache-control': 'no-store',
