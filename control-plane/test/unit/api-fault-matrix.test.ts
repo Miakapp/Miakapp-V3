@@ -474,6 +474,36 @@ describe('control-plane API dependency fault matrix', () => {
     expect(response.headers.get('vary')).toContain('Origin');
   });
 
+  test('publishes every operator endpoint in discovery, and nothing else', async () => {
+    const response = await request(dependencies(), {
+      method: 'GET',
+      path: '/.well-known/miakapp-control-plane',
+      headers: {},
+    });
+
+    expect(response.status).toBe(200);
+    const document = parsed<Record<string, string>>(response);
+    expect(document).toEqual({
+      schema: 'miakapp.control-plane-discovery/1',
+      issuer: CONFIG.issuer,
+      jwks_uri: CONFIG.jwksUri,
+      exchange_endpoint: CONFIG.exchangeEndpoint,
+      user_relay_exchange_endpoint: CONFIG.userRelayExchangeEndpoint,
+      push_audience: CONFIG.pushAudience,
+      components_audience: CONFIG.componentsAudience,
+      runtime_diagnostics_endpoint: CONFIG.runtimeDiagnosticsEndpoint,
+    });
+
+    // The document is read by unauthenticated clients, so every advertised
+    // location must be a canonical HTTPS URL under our own issuer: a relative
+    // or foreign value here would redirect an operator's reports off-origin.
+    for (const [key, value] of Object.entries(document)) {
+      if (key === 'schema' || key === 'issuer') continue;
+      expect(value.startsWith(`${CONFIG.issuer}/`)).toBe(true);
+      expect(new URL(value).href).toBe(value);
+    }
+  });
+
   test('rejects an active signing key that is absent from the published JWKS', () => {
     const deps = dependencies();
     expect(() => createControlPlaneApp({

@@ -20,6 +20,7 @@ interface SyntheticFixture {
     readonly user_relay_exchange_endpoint: string;
     readonly push_audience: string;
     readonly components_audience: string;
+    readonly runtime_diagnostics_endpoint: string;
   };
   readonly home_key: { readonly pepper_base64url: string };
   readonly key_sets: {
@@ -107,6 +108,7 @@ export function loadEmulatorConfig(
     userRelayExchangeEndpoint: fixture.deployment.user_relay_exchange_endpoint,
     pushAudience: fixture.deployment.push_audience,
     componentsAudience: fixture.deployment.components_audience,
+    runtimeDiagnosticsEndpoint: fixture.deployment.runtime_diagnostics_endpoint,
     componentBucket,
     componentUploadBaseUrl: 'https://control.example.test/v1/component-uploads',
     componentArtifactBaseUrl: 'https://control.example.test/v1/components',

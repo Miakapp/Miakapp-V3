@@ -166,6 +166,7 @@ describe('production runtime configuration', () => {
       userRelayExchangeEndpoint: 'https://control.staging.miakapp.com/v1/user-relay-tokens:exchange',
       pushAudience: 'https://control.staging.miakapp.com/v1/push',
       componentsAudience: 'https://control.staging.miakapp.com/v1/components',
+      runtimeDiagnosticsEndpoint: 'https://control.staging.miakapp.com/v1/runtime-diagnostics',
       componentUploadBaseUrl: 'https://control.staging.miakapp.com/v1/component-uploads',
       componentArtifactBaseUrl: 'https://control.staging.miakapp.com/v1/components',
       appCheckAppId: '1:1234567890:web:0123456789abcdef',

@@ -46,4 +46,12 @@ export default typescriptEslint.config(
       'react-refresh/only-export-components': 'off',
     },
   },
+  {
+    files: ['scripts/**/*.ts'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
 );
