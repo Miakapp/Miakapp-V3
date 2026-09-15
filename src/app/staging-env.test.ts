@@ -142,7 +142,8 @@ describe('collectStagingEnvFaults', () => {
     expect(
       faultsFor({
         VITE_MIAKAPP_COMPONENT_POINTER_ENDPOINT: 'https://control.example.test/v1/pointer',
-        VITE_MIAKAPP_COMPONENT_ARTIFACT_ORIGINS: ' https://one.example.test , https://two.example.test ',
+        VITE_MIAKAPP_COMPONENT_ARTIFACT_ORIGINS:
+          ' https://control.example.test , https://two.example.test ',
       }),
     ).toEqual([]);
   });
@@ -199,7 +200,7 @@ describe('collectStagingEnvFaults', () => {
     expect(
       faultsFor({
         VITE_MIAKAPP_COMPONENT_POINTER_ENDPOINT: 'https://releases.example.test',
-        VITE_MIAKAPP_COMPONENT_ARTIFACT_ORIGINS: 'https://artifacts.example.test',
+        VITE_MIAKAPP_COMPONENT_ARTIFACT_ORIGINS: 'https://control.example.test',
       }),
     ).toEqual([
       'VITE_MIAKAPP_COMPONENT_POINTER_ENDPOINT must share the control plane origin https://control.example.test, but points at https://releases.example.test',
@@ -210,7 +211,7 @@ describe('collectStagingEnvFaults', () => {
     expect(
       faultsFor({
         VITE_MIAKAPP_COMPONENT_POINTER_ENDPOINT: 'https://control.example.test/v2/elsewhere',
-        VITE_MIAKAPP_COMPONENT_ARTIFACT_ORIGINS: 'https://artifacts.example.test',
+        VITE_MIAKAPP_COMPONENT_ARTIFACT_ORIGINS: 'https://control.example.test',
       }),
     ).toEqual([]);
   });
@@ -219,17 +220,58 @@ describe('collectStagingEnvFaults', () => {
     expect(
       faultsFor({
         VITE_MIAKAPP_COMPONENT_POINTER_ENDPOINT: 'http://releases.example.test',
-        VITE_MIAKAPP_COMPONENT_ARTIFACT_ORIGINS: 'https://artifacts.example.test',
+        VITE_MIAKAPP_COMPONENT_ARTIFACT_ORIGINS: 'https://control.example.test',
       }),
     ).toEqual([
       'VITE_MIAKAPP_COMPONENT_POINTER_ENDPOINT must use HTTPS: http://releases.example.test',
     ]);
   });
 
+  it('rejects an artifact origin list that excludes the control plane', () => {
+    // Every pointer names an artifact on the control plane origin, so this list
+    // refuses all of them at `allowedArtifactOrigins.has(url.origin)`. Releases
+    // read as configured and never activate.
+    expect(
+      faultsFor({
+        VITE_MIAKAPP_COMPONENT_POINTER_ENDPOINT: 'https://control.example.test/v1/pointer',
+        VITE_MIAKAPP_COMPONENT_ARTIFACT_ORIGINS: 'https://artifacts.example.test',
+      }),
+    ).toEqual([
+      'VITE_MIAKAPP_COMPONENT_ARTIFACT_ORIGINS must include the control plane origin https://control.example.test, which serves every artifact a pointer names; it lists https://artifacts.example.test',
+    ]);
+  });
+
+  it('accepts artifact origins beside the control plane rather than demanding it alone', () => {
+    // Containment, not equality: the digest in the pointer is what makes bytes
+    // trustworthy, so a deployment may name a mirror as well.
+    expect(
+      faultsFor({
+        VITE_MIAKAPP_COMPONENT_POINTER_ENDPOINT: 'https://control.example.test/v1/pointer',
+        VITE_MIAKAPP_COMPONENT_ARTIFACT_ORIGINS:
+          'https://artifacts.example.test,https://control.example.test',
+      }),
+    ).toEqual([]);
+  });
+
+  it('stays silent about the control plane origin while the list is still malformed', () => {
+    // The entry must be retyped anyway; a second sentence about containment
+    // would describe a list that does not exist yet.
+    expect(
+      faultsFor({
+        VITE_MIAKAPP_COMPONENT_POINTER_ENDPOINT: 'https://control.example.test/v1/pointer',
+        VITE_MIAKAPP_COMPONENT_ARTIFACT_ORIGINS: 'http://artifacts.example.test',
+      }),
+    ).toEqual([
+      'VITE_MIAKAPP_COMPONENT_ARTIFACT_ORIGINS must use HTTPS: http://artifacts.example.test',
+    ]);
+  });
+
   it('stays silent about origins when the anchor itself is the faulty value', () => {
-    // The exchange endpoint is what every other endpoint is measured against.
+    // The exchange endpoint is what every other value is measured against.
     // Once it is wrong, naming a second control plane sends the operator
     // looking for a deployment that does not exist; report the anchor only.
+    // Both cross-key rules go quiet here: the pointer origin and the artifact
+    // origin list, neither of which contains `control.example.test`.
     expect(
       faultsFor({
         VITE_MIAKAPP_CONTROL_PLANE_EXCHANGE_ENDPOINT:

@@ -137,30 +137,68 @@ function describeEndpointFault(key: string, value: string): string | undefined {
  * rather than the access-token one, so demanding a particular suffix would
  * reject a working deployment.
  */
+/**
+ * The origin every other control plane value is measured against, or
+ * `undefined` when the anchor cannot carry that weight.
+ *
+ * A plaintext or unparseable exchange endpoint is already its own fault in live
+ * mode. Measuring anything against it would additionally report one host as two
+ * control planes, which sends the operator looking for a second deployment that
+ * does not exist. Every cross-key rule therefore goes silent here rather than
+ * repeating that judgement.
+ */
+function controlPlaneOrigin(exchangeEndpoint: string): string | undefined {
+  let exchange: URL;
+  try {
+    exchange = new URL(exchangeEndpoint);
+  } catch {
+    return undefined;
+  }
+  if (exchange.protocol !== 'https:') return undefined;
+  return exchange.origin;
+}
+
 function describeIssuerOriginFault(
   key: string,
   exchangeEndpoint: string,
   value: string,
 ): string | undefined {
-  let exchange: URL;
+  const anchor = controlPlaneOrigin(exchangeEndpoint);
+  if (anchor === undefined) return undefined;
   let endpoint: URL;
   try {
-    exchange = new URL(exchangeEndpoint);
     endpoint = new URL(value);
   } catch {
-    // Whichever value failed to parse already has its own fault reported.
+    // The value already has its own fault reported.
     return undefined;
   }
-  // A plaintext exchange endpoint is its own fault in live mode. Comparing
-  // origins across schemes would additionally report one host as two control
-  // planes, which sends the operator looking for a second deployment that does
-  // not exist.
-  if (exchange.protocol !== 'https:') return undefined;
-  if (exchange.origin === endpoint.origin) return undefined;
-  return `${key} must share the control plane origin ${exchange.origin}, but points at ${endpoint.origin}`;
+  if (anchor === endpoint.origin) return undefined;
+  return `${key} must share the control plane origin ${anchor}, but points at ${endpoint.origin}`;
 }
 
-function collectArtifactOriginFaults(value: string): readonly string[] {
+/**
+ * Unlike the endpoint keys, this one is a *list*, and the rule is containment
+ * rather than equality: a deployment may legitimately name extra origins, since
+ * the bytes are verified against the pointer's digest wherever they come from.
+ *
+ * But the control plane origin cannot be one of the optional ones. A pointer
+ * never names an artifact anywhere else: `createProductionDeploymentConfig`
+ * builds `componentArtifactBaseUrl` as `${issuer}/v1/components`, and
+ * `ComponentStore` refuses to publish a release whose `publicUrl` is not
+ * `${componentArtifactBaseUrl}/${sha256}.js` — it answers `temporarily_unavailable`
+ * instead. So the origin is structural, not conventional.
+ *
+ * A list without it therefore rejects *every* artifact it is ever offered, at
+ * `allowedArtifactOrigins.has(url.origin)` in `component-runtime/src/artifact.ts`,
+ * as `pointer_invalid`. Releases look configured, the shell mounts, and nothing
+ * ever activates — the same silent mode as a misspelled key. Should artifacts
+ * one day be served from a bucket or CDN of their own, this rule is the thing
+ * to revisit, because the premise above is what makes it true.
+ */
+function collectArtifactOriginFaults(
+  value: string,
+  exchangeEndpoint: string | undefined,
+): readonly string[] {
   const key = 'VITE_MIAKAPP_COMPONENT_ARTIFACT_ORIGINS';
   const origins = value.split(',').map((origin) => origin.trim()).filter((origin) => origin !== '');
   if (origins.length === 0) return [`${key} lists no origin`];
@@ -169,7 +207,15 @@ function collectArtifactOriginFaults(value: string): readonly string[] {
     const fault = describeOriginFault(key, origin, { toleratesTrailingSlash: false });
     if (fault !== undefined) faults.push(fault);
   }
-  return faults;
+  // A malformed list is not yet a list; asking whether it contains the control
+  // plane would pile a second sentence onto a value the operator must retype.
+  if (faults.length > 0) return faults;
+  if (exchangeEndpoint === undefined) return faults;
+  const anchor = controlPlaneOrigin(exchangeEndpoint);
+  if (anchor === undefined || origins.includes(anchor)) return faults;
+  return [
+    `${key} must include the control plane origin ${anchor}, which serves every artifact a pointer names; it lists ${origins.join(', ')}`,
+  ];
 }
 
 /**
@@ -266,7 +312,12 @@ export function collectStagingEnvFaults(env: Readonly<Record<string, string>>): 
       if (crossFault !== undefined) faults.push(crossFault);
     }
   }
-  if (artifactOrigins !== undefined) faults.push(...collectArtifactOriginFaults(artifactOrigins));
+  if (artifactOrigins !== undefined) {
+    // Half a release configuration already reads as "releases are off" above, so
+    // the list is inert and the control plane anchor has nothing to say about it.
+    const anchor = pointerEndpoint === undefined ? undefined : exchangeEndpoint;
+    faults.push(...collectArtifactOriginFaults(artifactOrigins, anchor));
+  }
 
   return faults;
 }
