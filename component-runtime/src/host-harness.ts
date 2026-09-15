@@ -171,7 +171,7 @@ function renderNode(
       input.type = props.input_type as string;
       input.value = props.value as string;
       input.maxLength = props.max_length as number;
-      input.disabled = Boolean(props.disabled);
+      input.disabled = Boolean(props.disabled || props.pending);
       input.addEventListener('input', () => interact(node.id, 'change', input.value));
       label.append(input);
       element = label;
@@ -188,7 +188,7 @@ function renderNode(
         select.append(optionElement);
       }
       select.value = props.value as string;
-      select.disabled = Boolean(props.disabled);
+      select.disabled = Boolean(props.disabled || props.pending);
       select.addEventListener('change', () => interact(node.id, 'change', select.value));
       label.append(select);
       element = label;

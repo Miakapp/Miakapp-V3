@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 
 import {
   ContractViolation,
+  PENDING_NODE_TYPES,
   validateUiTree,
   type DisabledNodeType,
   type PendingNodeType,
@@ -44,6 +45,8 @@ const STATUS_TERMS: Record<StatusState, string> = {
 const PENDING_TERMS: Record<PendingNodeType, string> = {
   button: 'Working…',
   toggle: 'Working…',
+  input: 'Working…',
+  select: 'Working…',
 };
 
 /**
@@ -63,6 +66,20 @@ const DISABLED_TERMS: Record<DisabledNodeType, string> = {
   select: 'Unavailable',
 };
 
+const PENDING_CAPABLE: ReadonlySet<string> = new Set<string>(PENDING_NODE_TYPES);
+
+/**
+ * Not every control the contract lets a component disable can also be marked
+ * pending, so reaching `PENDING_TERMS` needs a narrowing. Deriving it from
+ * `PENDING_NODE_TYPES` rather than spelling the members out is what keeps it
+ * honest: a hand-written `type === 'button' || …` stays valid TypeScript after
+ * the contract gains a pending-capable control, and silently drops that
+ * control's pending term on the floor.
+ */
+function isPendingCapable(type: DisabledNodeType): type is DisabledNodeType & PendingNodeType {
+  return PENDING_CAPABLE.has(type);
+}
+
 /**
  * The two reasons a control can be inert are not equals. `pending` implies the
  * host disabled the control itself, so both terms would otherwise fire at once
@@ -71,7 +88,7 @@ const DISABLED_TERMS: Record<DisabledNodeType, string> = {
  * nothing is in flight.
  */
 function inertTerm(type: DisabledNodeType, disabled: boolean, pending: boolean): string | null {
-  if (pending && (type === 'button' || type === 'toggle')) return PENDING_TERMS[type];
+  if (pending && isPendingCapable(type)) return PENDING_TERMS[type];
   return disabled ? DISABLED_TERMS[type] : null;
 }
 
@@ -231,7 +248,7 @@ function renderNode(
         >
           {stringProp(node, 'label')}
           <InertTerm
-            className="semantic-button__pending"
+            className="semantic-inert-term"
             term={inertTerm('button', booleanProp(node, 'disabled'), pending)}
           />
         </button>
@@ -244,7 +261,7 @@ function renderNode(
         <label className="semantic-toggle" data-node-id={node.id} key={node.id}>
           <span>{stringProp(node, 'label')}</span>
           <InertTerm
-            className="semantic-toggle__pending"
+            className="semantic-inert-term"
             term={inertTerm('toggle', booleanProp(node, 'disabled'), pending)}
           />
           <input
@@ -262,18 +279,20 @@ function renderNode(
         </label>
       );
     }
-    case 'input':
+    case 'input': {
+      const pending = booleanProp(node, 'pending');
       return (
         <label className="semantic-field" data-node-id={node.id} key={node.id}>
           <span>
             {stringProp(node, 'label')}
             <InertTerm
-              className="semantic-field__disabled"
-              term={inertTerm('input', booleanProp(node, 'disabled'), false)}
+              className="semantic-inert-term"
+              term={inertTerm('input', booleanProp(node, 'disabled'), pending)}
             />
           </span>
           <input
-            disabled={booleanProp(node, 'disabled')}
+            aria-busy={pending}
+            disabled={booleanProp(node, 'disabled') || pending}
             maxLength={numberProp(node, 'max_length')}
             onChange={(event) => onInteraction({
               event: 'change',
@@ -285,19 +304,22 @@ function renderNode(
           />
         </label>
       );
+    }
     case 'select': {
       const options = node.props.options as Array<{ value: string; label: string }>;
+      const pending = booleanProp(node, 'pending');
       return (
         <label className="semantic-field" data-node-id={node.id} key={node.id}>
           <span>
             {stringProp(node, 'label')}
             <InertTerm
-              className="semantic-field__disabled"
-              term={inertTerm('select', booleanProp(node, 'disabled'), false)}
+              className="semantic-inert-term"
+              term={inertTerm('select', booleanProp(node, 'disabled'), pending)}
             />
           </span>
           <select
-            disabled={booleanProp(node, 'disabled')}
+            aria-busy={pending}
+            disabled={booleanProp(node, 'disabled') || pending}
             onChange={(event) => onInteraction({
               event: 'change',
               handler: stringProp(node, 'handler'),

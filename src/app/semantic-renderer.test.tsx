@@ -6,7 +6,6 @@ import {
   PENDING_NODE_TYPES,
   STATUS_STATES,
   type DisabledNodeType,
-  type PendingNodeType,
   type StatusState,
   type UiNode,
 } from '../../component-runtime/src/contract';
@@ -32,34 +31,33 @@ function statusTree(state: StatusState): UiNode {
   };
 }
 
-function pendingControlTree(type: PendingNodeType): UiNode {
-  const props = type === 'button'
-    ? { label: 'Unlock the door', handler: 'entry.unlock', pending: true }
-    : { label: 'Kitchen', value: false, handler: 'lighting.kitchen.toggle', pending: true };
-
-  return {
-    id: 'root',
-    type: 'screen',
-    props: { title: 'Pending surface' },
-    children: [{ id: 'control', type, props }],
-  };
+interface ControlFixture {
+  readonly label: string;
+  readonly role: string;
+  readonly props: Record<string, unknown>;
 }
 
-const DISABLED_FIXTURES: Record<DisabledNodeType, { label: string; role: string; props: Record<string, unknown> }> = {
+/**
+ * One fixture per control, carrying only the props that make it valid. The
+ * inert flag is supplied by the caller so the pending and disabled loops
+ * exercise the same control through the same tree, rather than diverging into
+ * two hand-written shapes that can drift apart.
+ */
+const CONTROL_FIXTURES: Record<DisabledNodeType, ControlFixture> = {
   button: {
     label: 'Unlock the door',
     role: 'button',
-    props: { label: 'Unlock the door', handler: 'entry.unlock', disabled: true },
+    props: { label: 'Unlock the door', handler: 'entry.unlock' },
   },
   toggle: {
     label: 'Kitchen',
     role: 'checkbox',
-    props: { label: 'Kitchen', value: false, handler: 'lighting.kitchen.toggle', disabled: true },
+    props: { label: 'Kitchen', value: false, handler: 'lighting.kitchen.toggle' },
   },
   input: {
     label: 'Scene name',
     role: 'textbox',
-    props: { label: 'Scene name', value: 'Evening', handler: 'scene.rename', disabled: true },
+    props: { label: 'Scene name', value: 'Evening', handler: 'scene.rename' },
   },
   select: {
     label: 'Scene',
@@ -68,18 +66,17 @@ const DISABLED_FIXTURES: Record<DisabledNodeType, { label: string; role: string;
       label: 'Scene',
       value: 'evening',
       handler: 'scene.select',
-      disabled: true,
       options: [{ value: 'evening', label: 'Evening' }],
     },
   },
 };
 
-function disabledControlTree(type: DisabledNodeType): UiNode {
+function controlTree(type: DisabledNodeType, inert: Record<string, boolean>): UiNode {
   return {
     id: 'root',
     type: 'screen',
-    props: { title: 'Disabled surface' },
-    children: [{ id: 'control', type, props: DISABLED_FIXTURES[type].props }],
+    props: { title: 'Control surface' },
+    children: [{ id: 'control', type, props: { ...CONTROL_FIXTURES[type].props, ...inert } }],
   };
 }
 
@@ -170,18 +167,16 @@ describe('SemanticRenderer', () => {
 
   it('keeps a pending control named and says why it stopped answering', () => {
     // Guards the loop below against passing vacuously if the vocabulary is emptied.
-    expect(PENDING_NODE_TYPES).toHaveLength(2);
+    expect(PENDING_NODE_TYPES).toHaveLength(4);
 
     for (const type of PENDING_NODE_TYPES) {
+      const { label, role } = CONTROL_FIXTURES[type];
       const { unmount } = render(
-        <SemanticRenderer onInteraction={vi.fn()} tree={pendingControlTree(type)} />,
+        <SemanticRenderer onInteraction={vi.fn()} tree={controlTree(type, { pending: true })} />,
       );
 
-      const control = screen.getByRole(type === 'button' ? 'button' : 'checkbox');
-      const label = type === 'button' ? 'Unlock the door' : 'Kitchen';
-      const term = document
-        .querySelector(`.semantic-${type}__pending`)
-        ?.textContent ?? '';
+      const control = screen.getByRole(role);
+      const term = document.querySelector('.semantic-inert-term')?.textContent ?? '';
 
       expect(term).not.toBe('');
       // The host disables it; without the term the control just reads as broken.
@@ -194,14 +189,34 @@ describe('SemanticRenderer', () => {
     }
   });
 
+  it('tells a waiting field apart from a withheld one', () => {
+    // `Unavailable` is the word for a control withheld. Saying it over a value
+    // the home has not answered yet tells a person to stop waiting, which is
+    // the opposite of true — and before `pending` reached fields it was the
+    // only word a component could put there.
+    for (const type of ['input', 'select'] as const) {
+      const pendingView = render(
+        <SemanticRenderer onInteraction={vi.fn()} tree={controlTree(type, { pending: true })} />,
+      );
+      expect(document.querySelector('.semantic-inert-term')).toHaveTextContent('Working…');
+      pendingView.unmount();
+
+      const disabledView = render(
+        <SemanticRenderer onInteraction={vi.fn()} tree={controlTree(type, { disabled: true })} />,
+      );
+      expect(document.querySelector('.semantic-inert-term')).toHaveTextContent('Unavailable');
+      disabledView.unmount();
+    }
+  });
+
   it('says why every disabled control stopped answering', () => {
     // Guards the loop below against passing vacuously if the vocabulary is emptied.
     expect(DISABLED_NODE_TYPES).toHaveLength(4);
 
     for (const type of DISABLED_NODE_TYPES) {
-      const { label, role } = DISABLED_FIXTURES[type];
+      const { label, role } = CONTROL_FIXTURES[type];
       const { unmount } = render(
-        <SemanticRenderer onInteraction={vi.fn()} tree={disabledControlTree(type)} />,
+        <SemanticRenderer onInteraction={vi.fn()} tree={controlTree(type, { disabled: true })} />,
       );
 
       const control = screen.getByRole(role);

@@ -122,7 +122,7 @@ interface LoadPayload {
   artifact: ArrayBuffer;
 }
 
-interface InteractionTarget {
+export interface InteractionTarget {
   handler: string;
   event: 'press' | 'change';
   disabled: boolean;
@@ -283,7 +283,15 @@ function validateGuestMessage(value: unknown): { kind: string; payload: unknown 
   return { kind: record.kind, payload: record.payload };
 }
 
-function collectInteractionTargets(root: UiNode): Map<string, InteractionTarget> {
+/**
+ * The broker's own view of which nodes may still be interacted with. It is the
+ * half that enforces: the host paints a pending control inert, but this map is
+ * what rejects an interaction that arrives for one anyway — a stale render, a
+ * host defect, or a guest replaying its own `ui.interaction`. Exported so the
+ * unit corpus can assert that every control the contract lets a component mark
+ * pending is closed here, without launching a browser.
+ */
+export function collectInteractionTargets(root: UiNode): Map<string, InteractionTarget> {
   const targets = new Map<string, InteractionTarget>();
   const stack = [root];
   while (stack.length > 0) {
@@ -307,7 +315,7 @@ function collectInteractionTargets(root: UiNode): Map<string, InteractionTarget>
       targets.set(node.id, {
         handler: props.handler as string,
         event: 'change',
-        disabled: Boolean(props.disabled),
+        disabled: Boolean(props.disabled || props.pending),
         type: node.type,
         maxLength: props.max_length as number,
       });
@@ -315,7 +323,7 @@ function collectInteractionTargets(root: UiNode): Map<string, InteractionTarget>
       targets.set(node.id, {
         handler: props.handler as string,
         event: 'change',
-        disabled: Boolean(props.disabled),
+        disabled: Boolean(props.disabled || props.pending),
         type: node.type,
         options: new Set((props.options as Array<{ value: string }>).map((option) => option.value)),
       });

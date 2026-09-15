@@ -101,8 +101,15 @@ export type StatusState = (typeof STATUS_STATES)[number];
  * stopped answering. Keeping the list here, and routing each parse through
  * `pendingProp`, is what makes a new pending-capable node widen this type and
  * so break the host's term table until the new control is named too.
+ *
+ * `input` and `select` are here because a submitted value waits exactly as a
+ * press does: the home has been asked and has not answered. Without `pending`
+ * the only way a component could freeze such a field was `disabled`, which the
+ * host renders as "Unavailable" — the word for a control withheld, not for one
+ * whose answer is still coming. A person told a field is unavailable stops
+ * waiting for it.
  */
-export const PENDING_NODE_TYPES = ['button', 'toggle'] as const;
+export const PENDING_NODE_TYPES = ['button', 'toggle', 'input', 'select'] as const;
 
 export type PendingNodeType = (typeof PENDING_NODE_TYPES)[number];
 
@@ -541,7 +548,7 @@ function validateProps(
       };
     }
     case 'input': {
-      const props = exactObject(raw, ['label', 'value', 'handler'], ['input_type', 'max_length', 'disabled'], 'input.props');
+      const props = exactObject(raw, ['label', 'value', 'handler'], ['input_type', 'max_length', 'disabled', 'pending'], 'input.props');
       const value = typeof props.value === 'string' ? props.value : fail('render_invalid', 'input.props.value must be a string');
       if (utf8Bytes(value) > LIMITS.inputBytes) fail('render_invalid', 'input.props.value exceeds the limit');
       const maxLength = props.max_length === undefined
@@ -557,10 +564,11 @@ function validateProps(
           : enumValue(props.input_type, ['text', 'number', 'email', 'search'], 'input.props.input_type'),
         max_length: maxLength,
         disabled: disabledProp(props.disabled, 'input'),
+        pending: pendingProp(props.pending, 'input'),
       };
     }
     case 'select': {
-      const props = exactObject(raw, ['label', 'value', 'options', 'handler'], ['disabled'], 'select.props');
+      const props = exactObject(raw, ['label', 'value', 'options', 'handler'], ['disabled', 'pending'], 'select.props');
       const optionInputs = denseArray(
         props.options,
         LIMITS.selectOptions,
@@ -586,6 +594,7 @@ function validateProps(
         options,
         handler: handlerId(props.handler, 'select.props.handler'),
         disabled: disabledProp(props.disabled, 'select'),
+        pending: pendingProp(props.pending, 'select'),
       };
     }
     case 'progress': {
