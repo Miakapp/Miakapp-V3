@@ -28,6 +28,11 @@ The browser host has two explicit modes:
 - `VITE_MIAKAPP_MODE=live` — Firebase Auth + App Check → control plane →
   selected relay → Bun coordinator through `miakapi/browser`.
 
+The live host presents each physical call as an accessible state machine:
+pending, coordinator-accepted, applied, failed, or outcome unknown. A stale relay
+snapshot is shown explicitly and disables physical controls instead of rendering
+its values as current.
+
 The committed `.env.staging` contains only the public Firebase web identity,
 public App Check site key, and non-secret staging routes. Use
 `.env.staging.example` when adapting the host to another environment. Home Keys

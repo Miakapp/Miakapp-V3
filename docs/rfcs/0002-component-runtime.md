@@ -861,8 +861,10 @@ The repository reference harness intentionally proves a boundary subset: byte
 integrity, classic-program parsing, prelude confinement (including declaration
 shadowing), semantic rendering, selected capability/state checks, staging and
 suspension denial, port rejection, canonical array/message limits, Worker
-watchdogs, and teardown in Chromium, Firefox, and WebKit. It does not yet claim
-the complete matrix above, Firebase delivery, dual-instance activation,
+watchdogs, teardown, dual-instance activation without overlapping effect
+authority, failed-candidate preservation, and explicit higher-generation
+rollback in Chromium, Firefox, and WebKit. It does not yet claim the complete
+matrix above, Firebase delivery, production-shell lifecycle integration,
 BFCache/visibility restoration, keyed React reconciliation, or production SDK
 conformance. Those remain exit criteria for the component-platform vertical
 slice.
