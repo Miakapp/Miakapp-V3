@@ -291,6 +291,7 @@ export interface DeploymentConfig {
   readonly userRelayExchangeEndpoint: string;
   readonly pushAudience: string;
   readonly componentsAudience: string;
+  readonly runtimeDiagnosticsEndpoint: string;
   readonly componentBucket: string;
   readonly componentUploadBaseUrl: string;
   readonly componentArtifactBaseUrl: string;

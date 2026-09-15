@@ -220,6 +220,7 @@ const config = Object.freeze({
   userRelayExchangeEndpoint: `${controlUrl}/v1/user-relay-tokens:exchange`,
   pushAudience: `${controlUrl}/v1/push`,
   componentsAudience: `${controlUrl}/v1/components`,
+  runtimeDiagnosticsEndpoint: `${controlUrl}/v1/runtime-diagnostics`,
   componentUploadBaseUrl: `${controlUrl}/v1/component-uploads`,
   componentArtifactBaseUrl: `${controlUrl}/v1/components`,
   get signingPublicJwk() {
