@@ -409,8 +409,27 @@ A later cache slice (2026-09-14) adds a trusted-host IndexedDB store keyed by
 home and artifact digest. Every hit is copied and repeats the exact size and
 SHA-256 verification before use; corruption is evicted and storage outages fall
 back to the same bounded, credential-free network verification path. The
-three-engine browser corpus exercises the real IndexedDB adapter. Pointer reads,
-last-known-good metadata, atomic activation and rollback remain open.
+three-engine browser corpus exercises the real IndexedDB adapter.
+
+Status (2026-09-15): the four items that slice left open have since landed, so
+the remaining gap is narrower than "activation" and should not be restated as
+mechanism work. An authenticated read of the live component pointer is served by
+the control plane (RFC 0004 §13.2). `component-runtime/src/release-state.ts`
+persists the anti-rollback floor and the last-known-good release: it raises the
+generation floor while retaining the last-known-good pointer, rejects
+equivocation inside an already accepted generation, marks only the exact highest
+accepted pointer as last-known-good, allows automatic fallback only before
+candidate effects and never to a quarantined release, and fails closed on
+malformed persisted metadata. The three-engine corpus additionally proves atomic
+dual-release activation and serializes generation changes across trusted
+IndexedDB ledgers.
+
+What remains open for deliverable 4 is integration, not mechanism: nothing under
+`src/app/` imports `release-state.ts` or `artifact-cache.ts`, so the production
+shell still performs no pointer read, keeps no verified cache and consults no
+release ledger. Both modules are reachable only from `component-runtime/`'s own
+tests and harness server. Deliverable 4 closes when the shell consumes them,
+which is the same wiring step deliverable 1 is waiting on.
 
 Exit gate: a deliberately hostile bundle is contained by browser-enforced
 boundaries, not by instructions or conventions.
