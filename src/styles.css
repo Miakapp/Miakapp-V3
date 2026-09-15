@@ -638,10 +638,10 @@ svg {
 }
 
 /* Host-owned inert term (pending or disabled). It sits next to the label,
-   never in place of it. */
-.semantic-button__pending,
-.semantic-toggle__pending,
-.semantic-field__disabled {
+   never in place of it. One class for all four controls: the three it replaces
+   were named after the reason, and `semantic-field__disabled` already carried
+   a pending term the moment a field could be marked pending. */
+.semantic-inert-term {
   margin-left: 6px;
   font-weight: 600;
   letter-spacing: 0.04em;

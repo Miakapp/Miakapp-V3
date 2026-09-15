@@ -716,8 +716,8 @@ ABI 1 defines these semantic types:
 | `status` | label plus `idle`, `pending`, `accepted`, `applied`, `failed`, `stale`, or `outcome_unknown` |
 | `button` | accessible label, semantic variant, disabled/pending, handler ID |
 | `toggle` | accessible label, boolean value, disabled/pending, handler ID |
-| `input` | label, string value, input kind, maximum length, handler ID |
-| `select` | label, selected scalar value, bounded literal options, handler ID |
+| `input` | label, string value, input kind, maximum length, disabled/pending, handler ID |
+| `select` | label, selected scalar value, bounded literal options, disabled/pending, handler ID |
 | `progress` | label and finite bounded value |
 | `media` | accessible label and a granted opaque presentation handle |
 
