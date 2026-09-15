@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test:unit": "bun test test/contract.test.ts test/release-state.test.ts",
+    "test:unit": "bun test test/contract.test.ts test/release-state.test.ts test/authoring.test.ts",
     "test:browser": "playwright test",
     "check": "bun run typecheck && bun run test:unit && bun run test:browser",
     "serve:test": "bun run test/server.ts"
