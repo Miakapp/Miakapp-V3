@@ -38,14 +38,29 @@ function booleanValue(
   return typeof value === 'boolean' ? value : undefined;
 }
 
+export type LiveActionState =
+  | 'idle'
+  | 'pending'
+  | 'accepted'
+  | 'applied'
+  | 'failed'
+  | 'outcome_unknown';
+
+export interface LiveActionStatus {
+  readonly detail: string;
+  readonly state: LiveActionState;
+}
+
 export interface LiveTreeOptions {
+  readonly action: LiveActionStatus;
   readonly connected: boolean;
-  readonly pendingAction: boolean;
   readonly state: LiveState;
+  readonly stateStale: boolean;
 }
 
 export function createLiveTree(options: LiveTreeOptions): UiNode {
-  const { connected, pendingAction, state } = options;
+  const { action, connected, state, stateStale } = options;
+  const actionPending = action.state === 'pending' || action.state === 'accepted';
   const lightOn = booleanValue(state, 'zone.alpha.light.on');
   const temperature = numberValue(state, 'climate.zone_gamma.temperature');
   const setpoint = numberValue(state, 'climate.zone_gamma.setpoint');
@@ -75,6 +90,19 @@ export function createLiveTree(options: LiveTreeOptions): UiNode {
             'This screen is rendered by the trusted host from MiakAPI state. No Node-RED dependency is involved.',
             'muted',
           ),
+          {
+            id: 'live-state-freshness',
+            type: 'status',
+            props: {
+              label: 'Relay state',
+              detail: !connected
+                ? 'Waiting for synchronization'
+                : stateStale
+                  ? 'Last snapshot is stale; controls remain disabled'
+                  : 'Current snapshot verified',
+              state: !connected ? 'idle' : stateStale ? 'stale' : 'accepted',
+            },
+          },
         ],
       },
       {
@@ -100,8 +128,17 @@ export function createLiveTree(options: LiveTreeOptions): UiNode {
                   label: 'Toggle light',
                   handler: 'lighting.toggle',
                   variant: 'primary',
-                  disabled: !connected,
-                  pending: pendingAction,
+                  disabled: !connected || stateStale,
+                  pending: actionPending,
+                },
+              },
+              {
+                id: 'live-light-action-status',
+                type: 'status',
+                props: {
+                  label: 'Light action',
+                  detail: action.detail,
+                  state: action.state,
                 },
               },
             ],
