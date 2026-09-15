@@ -373,7 +373,7 @@ Deliverables:
    React semantic-tree renderer plus the RFC 0002 opaque Worker broker;
 2. minimal versioned component bridge and React authoring adapter;
 3. immutable upload followed by atomic pointer publication;
-4. content verification, rollback, loading/error states, and cache behavior;
+4. **bounded fetch and verified-cache foundations complete; activation integration open** — content verification, rollback, loading/error states, and cache behavior;
 5. starter design system with accessible controls and explicit pending,
    accepted, applied, failed, stale, and outcome-unknown states;
 6. malicious-bundle tests proving the absence of Firebase tokens, host storage,
@@ -404,6 +404,13 @@ or disposal. Relay snapshots marked stale are identified in trusted UI and keep
 the physical control disabled. This is the first live vertical slice of
 deliverable 5; the starter design system remains open for the complete component
 surface.
+
+A later cache slice (2026-09-14) adds a trusted-host IndexedDB store keyed by
+home and artifact digest. Every hit is copied and repeats the exact size and
+SHA-256 verification before use; corruption is evicted and storage outages fall
+back to the same bounded, credential-free network verification path. The
+three-engine browser corpus exercises the real IndexedDB adapter. Pointer reads,
+last-known-good metadata, atomic activation and rollback remain open.
 
 Exit gate: a deliberately hostile bundle is contained by browser-enforced
 boundaries, not by instructions or conventions.
