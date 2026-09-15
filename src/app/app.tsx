@@ -19,6 +19,7 @@ import {
 import {
   classifyRuntimeFailure,
   createRuntimeDiagnostics,
+  type ClassifiedFailure,
   type RuntimeDiagnostics,
 } from './runtime-diagnostics';
 import { SemanticRenderer } from './semantic-renderer';
@@ -102,12 +103,15 @@ type ComponentRuntimeState =
   | { readonly status: 'idle' }
   | { readonly status: 'starting' }
   | { readonly status: 'active'; readonly tree: unknown; readonly revision: number }
-  | { readonly status: 'failed'; readonly code: string };
+  // `string` here would have re-admitted component-authored text into the
+  // chrome by type alone; the only writer is `classifyRuntimeFailure`, so the
+  // state carries what the classifier vouched for.
+  | { readonly status: 'failed'; readonly code: ClassifiedFailure };
 
 type RuntimeOutcome =
   | { readonly kind: 'pending' }
   | { readonly kind: 'tree'; readonly tree: unknown; readonly revision: number }
-  | { readonly kind: 'failed'; readonly code: string };
+  | { readonly kind: 'failed'; readonly code: ClassifiedFailure };
 
 const PENDING_RUNTIME: RuntimeOutcome = Object.freeze({ kind: 'pending' });
 const IDLE_RUNTIME: ComponentRuntimeState = Object.freeze({ status: 'idle' });
@@ -214,10 +218,40 @@ function useComponentRuntime(
   return { state, interact };
 }
 
+/**
+ * Host prose for every code `classifyRuntimeFailure` can return. `tsc` rejects
+ * a new entry in `HOST_FAILURE_CODES` until it is named here, so a failure the
+ * host can raise cannot reach a person as a bare identifier.
+ *
+ * The classifier already guarantees these strings are ours rather than the
+ * component's; what it does not do is make them legible. `render_invalid` in a
+ * footer tells an operator what happened and tells everyone else nothing.
+ */
+const RUNTIME_FAILURE_TERMS: Record<ClassifiedFailure, string> = {
+  bridge_protocol_violation: 'it broke the host bridge',
+  capability_denied: 'it asked for something it may not use',
+  failed: 'it reported its own failure',
+  mount_failed: 'it could not be started',
+  ready_timeout: 'it never finished starting',
+  render_invalid: 'it sent a screen the host refused',
+  runtime_unresponsive: 'it went unresponsive',
+  sandbox_origin_invalid: 'this deployment has no valid sandbox origin',
+  terminated: 'the host shut it down',
+  unclassified: 'the reason was not one the host recognises',
+};
+
 function componentRuntimeLabel(state: ComponentRuntimeState): string | undefined {
   if (state.status === 'starting') return 'Component runtime starting';
   if (state.status === 'active') return `Component runtime · revision ${state.revision}`;
-  if (state.status === 'failed') return `Component runtime stopped · ${state.code}`;
+  if (state.status === 'failed') {
+    // Naming the fallback is the half that matters to whoever is holding the
+    // phone: the home's own controls render in the component's place, so the
+    // screen stays usable and therefore stays indistinguishable from a working
+    // one. Without this clause a person keeps operating a substitute UI with no
+    // way to know the component ever stopped.
+    return `Component runtime stopped: ${RUNTIME_FAILURE_TERMS[state.code]}.`
+      + ' Showing the home’s own controls instead.';
+  }
   return undefined;
 }
 
@@ -492,7 +526,20 @@ export function App({
         <footer className="workspace__footer">
           <span>{snapshot.lastSynced}</span>
           <span>{componentReleaseLabel(componentRelease)}</span>
-          {runtimeLabel === undefined ? null : <span>{runtimeLabel}</span>}
+          {/*
+            Mounted even while idle, and empty rather than absent. A live region
+            created in the same commit as its first text is one assistive
+            technologies are free to miss, and the runtime dying mid-session is
+            exactly the case where nothing else on screen announces the swap.
+            `:empty` keeps the silent region out of the footer's layout.
+          */}
+          <span
+            className="workspace__footer-runtime"
+            data-testid="component-runtime-status"
+            role="status"
+          >
+            {runtimeLabel ?? ''}
+          </span>
         </footer>
       </main>
 

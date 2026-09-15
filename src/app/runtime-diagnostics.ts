@@ -18,7 +18,7 @@
  * Every code the trusted half of the bridge raises, plus the shell's own mount
  * rejection. A code outside this set did not come from us.
  */
-const HOST_FAILURE_CODES = Object.freeze([
+export const HOST_FAILURE_CODES = Object.freeze([
   'bridge_protocol_violation',
   'capability_denied',
   'failed',
