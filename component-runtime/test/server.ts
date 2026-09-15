@@ -26,6 +26,7 @@ const artifactCacheBundle = await bundle('src/artifact-cache.ts');
 const brokerHash = createHash('sha256').update(brokerBundle).digest('base64');
 const sandboxOrigin = `http://localhost:${port}`;
 const hostOrigin = `http://127.0.0.1:${port}`;
+const releaseStateBundle = await bundle('src/release-state.ts');
 
 const hostHtml = `<!doctype html>
 <html lang="en" data-sandbox-origin="${sandboxOrigin}">
@@ -116,6 +117,15 @@ Bun.serve({
       });
     }
     if (url.pathname === '/leak') return response(null, { status: 204 });
+    if (url.pathname === '/release-state.js' && hostname === '127.0.0.1') {
+      return response(releaseStateBundle, {
+        headers: {
+          'content-type': 'text/javascript; charset=utf-8',
+          'cache-control': 'no-store',
+          'x-content-type-options': 'nosniff',
+        },
+      });
+    }
     if (url.pathname === '/health') return response('ok');
     return response('not found', { status: 404 });
   },

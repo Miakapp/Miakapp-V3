@@ -286,8 +286,23 @@ fail-closed rejection of arbitrary properties before render. A local preview
 adapter makes the product shell inspectable without Firebase, relay or home
 credentials, and the legacy V3 Vue/Auth/service-worker application is no longer
 part of the build. The opaque broker remains proven in its separate three-engine
-hostile harness; wiring its lifecycle, immutable Firebase artifact delivery and
-the real `miakapi/browser` adapter into this shell remains open.
+hostile harness. That harness now stages a second real broker beside the active
+release, preserves the old release when a staged candidate attempts an effect,
+revokes the old broker before the DOM swap, enables candidate effects only after
+the swap, and executes an explicit rollback under a greater generation without
+ever observing two effectful releases. Wiring that lifecycle, immutable Firebase
+artifact delivery and the real `miakapi/browser` adapter into the production
+shell remains open.
+
+Implementation status (2026-09-14): the live trusted-host adapter now exposes
+one physical call through the complete ABI 1 status vocabulary instead of
+collapsing acceptance and completion into a spinner. The rendered path moves
+through pending, coordinator-accepted and applied, distinguishes failed from
+outcome-unknown without retrying, and invalidates late settlements after sign-out
+or disposal. Relay snapshots marked stale are identified in trusted UI and keep
+the physical control disabled. This is the first live vertical slice of
+deliverable 5; the starter design system remains open for the complete component
+surface.
 
 A later cache slice (2026-09-14) adds a trusted-host IndexedDB store keyed by
 home and artifact digest. Every hit is copied and repeats the exact size and
