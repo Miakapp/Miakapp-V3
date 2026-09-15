@@ -23,7 +23,22 @@ export interface HomeActivity {
   readonly tone: 'agent' | 'home' | 'security';
 }
 
+/**
+ * The home's own state as the trusted host holds it, before any component sees
+ * it. `revision` is the relay's, so it is what a consumer orders updates by;
+ * `stale` is exposed rather than hidden, per RFC 0002 §12.2 — a component that
+ * is told nothing about staleness will present old values as current.
+ *
+ * Absent when the build has no live home, which is every preview build.
+ */
+export interface HomeState {
+  readonly values: Readonly<Record<string, unknown>>;
+  readonly revision: number;
+  readonly stale: boolean;
+}
+
 export interface TrustedHostSnapshot {
+  readonly homeState?: HomeState;
   readonly activeHome: HomeSummary;
   readonly homes: readonly HomeSummary[];
   readonly connection: HomeConnectionStatus;

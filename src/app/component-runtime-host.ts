@@ -88,7 +88,45 @@ export interface ComponentRuntimeRelease {
 export interface ComponentRuntimeSession {
   readonly lifecycle: RuntimeLifecycle;
   interact(nodeId: string, event: string, value?: unknown): void;
+  /**
+   * Hands the component the home state it was granted. Paths outside the grant
+   * are dropped here rather than sent: the broker answers an ungranted path
+   * with `capability_denied`, which terminates the runtime — so a host that
+   * forwarded a whole home snapshot would kill every component whose grant is
+   * narrower than the home, which is every component worth granting narrowly.
+   */
+  publishState(values: Readonly<Record<string, unknown>>, revision: number): void;
+  /**
+   * Says the state is old instead of presenting old values as current
+   * (RFC 0002 §12.2). This is a distinct message, not an empty snapshot: a
+   * snapshot clears the broker's stale flag, so sending one to mean "stale"
+   * would tell the component the home is freshly empty.
+   */
+  markStateStale(revision: number, reason: string): void;
   dispose(): void;
+}
+
+/**
+ * Keeps only the paths the effective grant covers. `isCapabilityGranted` is the
+ * contract's own matcher, so the host filters by exactly the rule the broker
+ * enforces rather than a second implementation of prefix matching.
+ */
+export function selectGrantedState(
+  values: Readonly<Record<string, unknown>>,
+  granted: readonly string[],
+): Record<string, unknown> {
+  const selected: Record<string, unknown> = {};
+  for (const [path, value] of Object.entries(values)) {
+    try {
+      if (isCapabilityGranted(granted, path)) selected[path] = value;
+    } catch {
+      // `isCapabilityGranted` validates the resource name and throws on a
+      // malformed one. Dropping it is the containing answer: the broker would
+      // reject it too, but by terminating the runtime — over a path this
+      // component never asked for and cannot fix.
+    }
+  }
+  return selected;
 }
 
 function randomId(bytes = 24): string {
@@ -184,6 +222,13 @@ export function mountComponentRuntime(
   let missedHeartbeats = 0;
   let readyListener: ((event: MessageEvent) => void) | undefined;
   let disposed = false;
+  // State may only follow `runtime.load`: the broker has no grant before it and
+  // answers a snapshot with an unhandled non-null assertion rather than a fault.
+  let loaded = false;
+  // The broker terminates on a revision that moves backward. Equal is allowed,
+  // so a caller may safely republish the revision it last sent — which is what
+  // happens when a new session mounts against state that has not changed.
+  let publishedStateRevision = 0;
 
   const cleanup = (): void => {
     if (heartbeat) clearInterval(heartbeat);
@@ -254,6 +299,8 @@ export function mountComponentRuntime(
       theme: options.theme ?? 'system',
       artifact: bytes.buffer,
     }, [bytes.buffer]);
+    loaded = true;
+    publishedStateRevision = options.stateRevision ?? 1;
 
     heartbeat = setInterval(() => {
       if (!port || (lifecycle !== 'staging' && lifecycle !== 'active')) return;
@@ -356,6 +403,20 @@ export function mountComponentRuntime(
           event,
           ...(value === undefined ? {} : { value }),
         });
+      },
+      publishState(values, revision) {
+        if (!loaded || disposed) return;
+        if (!Number.isSafeInteger(revision) || revision < publishedStateRevision) return;
+        publishedStateRevision = revision;
+        send('state.snapshot', {
+          revision,
+          values: selectGrantedState(values, grant.state_read),
+        });
+      },
+      markStateStale(revision, reason) {
+        if (!loaded || disposed) return;
+        if (!Number.isSafeInteger(revision) || revision < 1) return;
+        send('state.stale', { revision, reason });
       },
       dispose() {
         if (disposed) return;

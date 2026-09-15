@@ -10,6 +10,7 @@ import {
   DENY_ALL_CAPABILITIES,
   assertSandboxOrigin,
   intersectCapabilities,
+  selectGrantedState,
   mountComponentRuntime,
   type ComponentRuntimeSession,
   type RuntimeFailure,
@@ -398,5 +399,146 @@ describe('mountComponentRuntime', () => {
     expect(broker.kinds().filter((kind) => kind === 'runtime.dispose')).toHaveLength(1);
     expect(harness.lifecycles.filter((entry) => entry.lifecycle === 'terminated')).toHaveLength(1);
     expect(document.body.contains(harness.frames[0]!)).toBe(false);
+  });
+});
+
+describe('component runtime state delivery', () => {
+  async function bound(): Promise<{
+    harness: Harness;
+    broker: BrokerDouble;
+    session: ComponentRuntimeSession;
+  }> {
+    const harness = createHarness();
+    const mounted = mount(harness, { policy: REQUIRES });
+    harness.announce();
+    const session = await mounted;
+    const broker = new BrokerDouble(harness.brokerPort());
+    broker.send('runtime.bound', {});
+    broker.send('runtime.worker_ready', {});
+    await settle();
+    return { harness, broker, session };
+  }
+
+  function snapshots(broker: BrokerDouble): Array<Record<string, unknown>> {
+    return broker.received
+      .filter((envelope) => envelope.kind === 'state.snapshot')
+      .map((envelope) => envelope.payload as Record<string, unknown>);
+  }
+
+  it('hands the component only the state paths its grant covers', async () => {
+    const { broker, session } = await bound();
+
+    session.publishState({
+      'global.temperature': 21,
+      // Outside `REQUIRES.state_read`. The broker answers an ungranted path
+      // with `capability_denied`, which terminates the runtime — so forwarding
+      // a whole home snapshot would kill every narrowly granted component.
+      'security.alarm.code': '4815',
+    }, 4);
+    await settle();
+
+    expect(snapshots(broker)).toEqual([
+      { revision: 4, values: { 'global.temperature': 21 } },
+    ]);
+  });
+
+  it('hands a deployment-denied release nothing, whatever the release asked for', async () => {
+    const harness = createHarness();
+    // No policy: the deployment has declared none, so the effective grant is
+    // empty however wide `REQUIRES` is.
+    const mounted = mount(harness);
+    harness.announce();
+    const session = await mounted;
+    const broker = new BrokerDouble(harness.brokerPort());
+    broker.send('runtime.bound', {});
+    await settle();
+
+    session.publishState({ 'global.temperature': 21 }, 4);
+    await settle();
+
+    expect(snapshots(broker)).toEqual([{ revision: 4, values: {} }]);
+  });
+
+  it('drops a snapshot whose revision moved backward, and keeps an equal one', async () => {
+    const { broker, session } = await bound();
+
+    session.publishState({ 'global.temperature': 21 }, 9);
+    // The broker terminates on a revision that moved backward, so a late
+    // update from a reconnect must be dropped here rather than forwarded.
+    session.publishState({ 'global.temperature': 18 }, 8);
+    // Equal is allowed: a new session republishing unchanged state is normal.
+    session.publishState({ 'global.temperature': 21 }, 9);
+    await settle();
+
+    expect(snapshots(broker).map((payload) => payload.revision)).toEqual([9, 9]);
+  });
+
+  it('says the state is old instead of publishing an empty home', async () => {
+    const { broker, session } = await bound();
+
+    session.markStateStale(9, 'home_state_stale');
+    await settle();
+
+    // A snapshot clears the broker's stale flag, so an empty one would say the
+    // home is freshly empty — the opposite of RFC 0002 §12.2.
+    expect(snapshots(broker)).toHaveLength(0);
+    const stale = broker.received.filter((envelope) => envelope.kind === 'state.stale');
+    expect(stale).toHaveLength(1);
+    expect(stale[0]!.payload).toEqual({ revision: 9, reason: 'home_state_stale' });
+  });
+
+  it('publishes nothing before the release is loaded', async () => {
+    const harness = createHarness();
+    const mounted = mount(harness, { policy: REQUIRES });
+    harness.announce();
+    const session = await mounted;
+    const broker = new BrokerDouble(harness.brokerPort());
+
+    // The broker has no grant until `runtime.load`, and answers a snapshot sent
+    // before it by dereferencing one.
+    session.publishState({ 'global.temperature': 21 }, 2);
+    session.markStateStale(2, 'home_state_stale');
+    await settle();
+
+    expect(broker.kinds()).toEqual([]);
+  });
+
+  it('publishes nothing once the session is disposed', async () => {
+    const { broker, session } = await bound();
+
+    session.dispose();
+    session.publishState({ 'global.temperature': 21 }, 4);
+    await settle();
+
+    expect(snapshots(broker)).toHaveLength(0);
+  });
+});
+
+describe('selectGrantedState', () => {
+  it('keeps a granted path and drops everything else', () => {
+    expect(selectGrantedState(
+      { 'zone.alpha.light.on': true, 'security.alarm.code': '4815' },
+      ['zone.alpha.light.on'],
+    )).toEqual({ 'zone.alpha.light.on': true });
+  });
+
+  it('grants a subtree through the contract matcher, not a second prefix rule', () => {
+    expect(selectGrantedState(
+      { 'zone.alpha.light.on': true, 'zone.alphabet.light.on': true },
+      ['zone.alpha.*'],
+    )).toEqual({ 'zone.alpha.light.on': true });
+  });
+
+  it('drops a malformed path instead of letting it terminate the runtime', () => {
+    // The broker rejects a malformed resource name by faulting the runtime.
+    // Dropping it here contains a relay defect to the value it affects.
+    expect(selectGrantedState(
+      { 'zone.alpha.light.on': true, '': 'unnamed', 'not a name': 1 },
+      ['zone.alpha.*'],
+    )).toEqual({ 'zone.alpha.light.on': true });
+  });
+
+  it('returns an empty record when nothing is granted', () => {
+    expect(selectGrantedState({ 'zone.alpha.light.on': true }, [])).toEqual({});
   });
 });
