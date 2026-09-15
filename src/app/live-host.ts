@@ -16,7 +16,10 @@ import type {
   TrustedHost,
   TrustedHostSnapshot,
 } from './host';
-import { createLiveTree } from './live-tree';
+import {
+  createLiveTree,
+  type LiveActionStatus,
+} from './live-tree';
 
 export interface LiveIdentity {
   readonly isSignedIn: () => boolean;
@@ -44,6 +47,10 @@ type LiveState = NonNullable<ReturnType<BrowserClient['state']['snapshot']>>['va
 
 const EMPTY_STATE: LiveState = Object.freeze({});
 const EMPTY_ACTIVITY: readonly HomeActivity[] = Object.freeze([]);
+const IDLE_ACTION: LiveActionStatus = Object.freeze({
+  detail: 'No light action in progress',
+  state: 'idle',
+});
 
 function connectionFrom(status: BrowserClientStatus): HomeConnectionStatus {
   if (status === 'ready') return 'ready';
@@ -77,8 +84,10 @@ class LiveTrustedHost implements TrustedHost {
   #signedIn: boolean;
   #status: BrowserClientStatus = 'idle';
   #state: LiveState = EMPTY_STATE;
+  #stateStale = false;
   #activity: readonly HomeActivity[] = EMPTY_ACTIVITY;
-  #pendingAction = false;
+  #action: LiveActionStatus = IDLE_ACTION;
+  #actionGeneration = 0;
   #disposed = false;
   #connectionGeneration = 0;
   #snapshot: TrustedHostSnapshot;
@@ -125,28 +134,68 @@ class LiveTrustedHost implements TrustedHost {
     if (
       this.#disposed
       || this.#status !== 'ready'
-      || this.#pendingAction
+      || this.#stateStale
+      || this.#action.state === 'pending'
+      || this.#action.state === 'accepted'
       || interaction.handler !== 'lighting.toggle'
       || interaction.event !== 'press'
     ) return;
 
     const client = this.#client;
     if (client === undefined) return;
-    this.#pendingAction = true;
-    this.#publish();
-    const call = client.calls.start({
-      function: 'lighting.toggle',
-      arguments: null,
-      timeoutMs: 10_000,
-      idempotencyKey: crypto.randomUUID(),
+    const generation = ++this.#actionGeneration;
+    this.#action = Object.freeze({
+      detail: 'Waiting for coordinator acceptance',
+      state: 'pending',
     });
+    this.#publish();
+
+    let call: ReturnType<BrowserClient['calls']['start']>;
+    try {
+      call = client.calls.start({
+        function: 'lighting.toggle',
+        arguments: null,
+        timeoutMs: 10_000,
+        idempotencyKey: crypto.randomUUID(),
+      });
+    } catch {
+      this.#action = Object.freeze({
+        detail: 'The call was not dispatched',
+        state: 'failed',
+      });
+      this.#record('Light action failed', 'The coordinator call could not start.', 'security');
+      this.#publish();
+      return;
+    }
+
+    void call.accepted.then(() => {
+      if (!this.#isCurrentAction(generation) || this.#action.state !== 'pending') return;
+      this.#action = Object.freeze({
+        detail: 'Coordinator accepted the action',
+        state: 'accepted',
+      });
+      this.#publish();
+    }).catch(() => undefined);
+
     void call.result.then(() => {
+      if (!this.#isCurrentAction(generation)) return;
+      this.#action = Object.freeze({
+        detail: 'Coordinator confirmed the effect',
+        state: 'applied',
+      });
       this.#record('Light toggled', 'The Bun coordinator confirmed the action.', 'home');
     }).catch((failure: unknown) => {
+      if (!this.#isCurrentAction(generation)) return;
       const outcomeUnknown = typeof failure === 'object'
         && failure !== null
         && 'outcome' in failure
         && failure.outcome === 'outcome_unknown';
+      this.#action = Object.freeze({
+        detail: outcomeUnknown
+          ? 'The effect may have happened; it was not retried'
+          : 'The coordinator did not apply the action',
+        state: outcomeUnknown ? 'outcome_unknown' : 'failed',
+      });
       this.#record(
         outcomeUnknown ? 'Light state needs confirmation' : 'Light action failed',
         outcomeUnknown
@@ -155,7 +204,7 @@ class LiveTrustedHost implements TrustedHost {
         'security',
       );
     }).finally(() => {
-      this.#pendingAction = false;
+      if (!this.#isCurrentAction(generation)) return;
       this.#publish();
     });
   };
@@ -164,6 +213,7 @@ class LiveTrustedHost implements TrustedHost {
     if (this.#disposed) return;
     this.#disposed = true;
     this.#connectionGeneration += 1;
+    this.#actionGeneration += 1;
     this.#removeIdentityListener();
     for (const remove of this.#removeClientListeners) remove();
     this.#removeClientListeners = [];
@@ -188,6 +238,7 @@ class LiveTrustedHost implements TrustedHost {
       }),
       client.state.subscribe((snapshot) => {
         if (this.#client !== client) return;
+        this.#stateStale = snapshot.stale;
         this.#state = snapshot.stale ? EMPTY_STATE : snapshot.values;
         this.#publish();
       }),
@@ -215,11 +266,14 @@ class LiveTrustedHost implements TrustedHost {
 
   async #disconnect(): Promise<void> {
     ++this.#connectionGeneration;
+    ++this.#actionGeneration;
     const client = this.#client;
     this.#client = undefined;
     for (const remove of this.#removeClientListeners) remove();
     this.#removeClientListeners = [];
     this.#state = EMPTY_STATE;
+    this.#stateStale = false;
+    this.#action = IDLE_ACTION;
     this.#status = 'idle';
     try {
       await client?.stop({ deadlineMs: 2_000 });
@@ -241,6 +295,10 @@ class LiveTrustedHost implements TrustedHost {
     ]);
   }
 
+  #isCurrentAction(generation: number): boolean {
+    return !this.#disposed && generation === this.#actionGeneration;
+  }
+
   #buildSnapshot(): TrustedHostSnapshot {
     const connection = connectionFrom(this.#status);
     return Object.freeze({
@@ -250,9 +308,10 @@ class LiveTrustedHost implements TrustedHost {
       connectionDetail: connectionDetail(this.#status, this.#signedIn),
       lastSynced: connection === 'ready' ? 'Live state current' : 'No current live state',
       uiTree: createLiveTree({
+        action: this.#action,
         connected: connection === 'ready',
-        pendingAction: this.#pendingAction,
         state: this.#state,
+        stateStale: this.#stateStale,
       }),
       activity: this.#activity,
       preview: false,
