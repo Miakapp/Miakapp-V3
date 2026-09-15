@@ -14,6 +14,7 @@
     "user_relay_exchange_endpoint": "https://control.example.test/v1/user-relay-tokens:exchange",
     "push_audience": "https://control.example.test/v1/push",
     "components_audience": "https://control.example.test/v1/components",
+    "runtime_diagnostics_endpoint": "https://control.example.test/v1/runtime-diagnostics",
     "relay_audience": "wss://relay.example.test/ws"
   },
   "firebase": {
