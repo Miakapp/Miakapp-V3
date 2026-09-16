@@ -64,23 +64,46 @@ describe('Miakapp product entry flow', () => {
     expect(screen.queryByText('3 lights on')).toBeNull();
   });
 
-  it('puts Google sign-in between a visitor and the new-home flow', async () => {
+  it('hands a visitor the prompt without asking for an account first', async () => {
     const user = userEvent.setup();
+    // A signed-out visitor on a live build: the case the sign-in gate used to
+    // intercept. The two things that make Miakapp concrete — the prompt and the
+    // Molted path — are the whole reason someone came, so they come first.
     const { host, signIn } = mutableLiveHost();
     render(<ProductApp createHost={() => host} />);
 
     await user.click(screen.getAllByRole('button', { name: 'Créer ma maison' })[1]!);
-    expect(screen.getByRole('heading', { level: 1, name: 'Retrouvez votre maison.' })).toBeVisible();
 
-    await user.click(screen.getByRole('button', { name: 'Continuer avec Google' }));
-    expect(signIn).toHaveBeenCalledOnce();
-    await waitFor(() => {
-      expect(screen.getByRole('heading', {
-        level: 1,
-        name: 'Donnez ce point de départ à votre agent.',
-      })).toBeVisible();
-    });
+    expect(screen.getByRole('heading', {
+      level: 1,
+      name: 'Donnez ce point de départ à votre agent.',
+    })).toBeVisible();
+    expect(screen.getByText(AGENT_START_PROMPT)).toBeVisible();
+    expect(screen.getByRole('link', { name: /Utiliser dans molted\.cloud/u })).toBeVisible();
     expect(window.location.pathname).toBe('/new-home');
+    expect(signIn).not.toHaveBeenCalled();
+  });
+
+  it('says where the account actually comes from, so its absence reads as a choice', () => {
+    render(<ProductApp createHost={() => mutableLiveHost().host} initialRoute="new-home" />);
+
+    // The agent sends a link when it needs to issue the Home Key; that is the
+    // moment the account is created. A page with no sign-up and no explanation
+    // reads as an unfinished page.
+    expect(screen.getByText('Le compte vient plus tard, et c’est voulu.')).toBeVisible();
+    expect(screen.getByText(/il vous enverra un lien/u)).toBeVisible();
+  });
+
+  it('opens a deep link to the prompt for a signed-out visitor', () => {
+    window.history.replaceState({}, '', '/new-home');
+    // The link the agent sends lands here. Bouncing it to a login page would
+    // break the one flow this page exists to serve.
+    render(<ProductApp createHost={() => mutableLiveHost().host} />);
+
+    expect(screen.getByRole('heading', {
+      level: 1,
+      name: 'Donnez ce point de départ à votre agent.',
+    })).toBeVisible();
   });
 
   it('opens the existing-home console after the regular sign-in entry point', async () => {

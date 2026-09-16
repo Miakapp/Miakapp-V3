@@ -188,6 +188,17 @@ function NewHomePage({
             </div>
           </article>
         </section>
+        <aside className="onboarding-next">
+          <span className="onboarding-next__icon"><LockIcon /></span>
+          <div>
+            <strong>Le compte vient plus tard, et c’est voulu.</strong>
+            <p>
+              Votre agent travaille d’abord. Quand il aura besoin d’émettre la clé de
+              votre maison, il vous enverra un lien — c’est à ce moment-là que vous
+              créerez votre compte Miakapp. Rien à signer pour commencer à lire le guide.
+            </p>
+          </div>
+        </aside>
         <button className="text-button" onClick={() => onNavigate('console')} type="button">J’ai déjà une maison →</button>
       </main>
     </ProductChrome>
@@ -202,28 +213,20 @@ export function ProductApp({
 }: ProductAppProps): React.JSX.Element {
   const [host] = useState<TrustedHost>(() => createHost());
   const snapshot = useSyncExternalStore(host.subscribe, host.getSnapshot, host.getSnapshot);
-  const requestedRoute = initialRoute ?? routeFromPath(window.location.pathname);
-  const [route, setRoute] = useState<ProductRoute>(() => {
-    return requestedRoute === 'new-home' && !snapshot.authenticated && !snapshot.preview
-      ? 'login'
-      : requestedRoute;
-  });
-  const [pendingAfterLogin, setPendingAfterLogin] = useState<ProductRoute>(() => (
-    requestedRoute === 'new-home' ? 'new-home' : 'console'
-  ));
+  const [route, setRoute] = useState<ProductRoute>(
+    () => initialRoute ?? routeFromPath(window.location.pathname),
+  );
   const [copyState, setCopyState] = useState<CopyState>('idle');
 
   const navigate = useCallback((next: ProductRoute): void => {
-    const target = next === 'new-home' && !snapshot.authenticated && !snapshot.preview ? 'login' : next;
-    if (target === 'login' && next === 'new-home') setPendingAfterLogin('new-home');
-    if (target === 'login' && next === 'login') setPendingAfterLogin('console');
-    window.history.pushState({}, '', pathFor(target));
-    setRoute(target);
-  }, [snapshot.authenticated, snapshot.preview]);
+    window.history.pushState({}, '', pathFor(next));
+    setRoute(next);
+  }, []);
 
-  const displayedRoute = route === 'login' && snapshot.authenticated
-    ? pendingAfterLogin
-    : route;
+  // Signing in is never a toll on the way somewhere else, so there is nowhere
+  // to resume: whoever reaches `/login` asked for it, and what they asked for
+  // is their existing home.
+  const displayedRoute = route === 'login' && snapshot.authenticated ? 'console' : route;
 
   useEffect(() => {
     const onPopState = (): void => setRoute(routeFromPath(window.location.pathname));
@@ -233,8 +236,8 @@ export function ProductApp({
 
   useEffect(() => {
     if (route !== 'login' || !snapshot.authenticated) return;
-    window.history.replaceState({}, '', pathFor(pendingAfterLogin));
-  }, [pendingAfterLogin, route, snapshot.authenticated]);
+    window.history.replaceState({}, '', pathFor('console'));
+  }, [route, snapshot.authenticated]);
 
   useEffect(() => () => host.dispose(), [host]);
 
