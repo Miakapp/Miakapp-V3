@@ -1724,6 +1724,52 @@ svg {
   line-height: 1.65;
 }
 
+/* The visitor has no account at this point and is not being asked for one, so
+   the page has to say when the account does arrive. Without it, a page whose
+   only actions are "copy" and "open Molted" reads as though the sign-up were
+   missing. */
+.onboarding-next {
+  margin-top: 28px;
+  padding: 20px 24px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  background: rgb(255 253 248 / 70%);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+}
+
+.onboarding-next__icon {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  color: var(--night);
+  background: var(--blue);
+  border-radius: 12px;
+}
+
+.onboarding-next__icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.onboarding-next strong {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.onboarding-next p {
+  margin: 0;
+  max-width: 68ch;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .onboarding-page > .text-button {
   margin-top: 24px;
 }
