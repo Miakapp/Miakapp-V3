@@ -1461,16 +1461,19 @@ svg {
   font-size: 9px;
 }
 
+.landing-audiences,
 .landing-principles {
   padding: 88px max(24px, calc((100% - 1220px) / 2));
   color: var(--ink);
   background: var(--paper);
 }
 
+.landing-audiences .product-kicker,
 .landing-principles .product-kicker {
   color: #6e7f26;
 }
 
+.landing-audiences > h2,
 .landing-principles > h2 {
   max-width: 800px;
   margin: 18px 0 48px;
@@ -1481,12 +1484,14 @@ svg {
   line-height: 1.05;
 }
 
+.landing-audiences > div,
 .landing-principles > div {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
 }
 
+.landing-audiences article,
 .landing-principles article {
   min-height: 180px;
   padding: 24px;
@@ -1495,16 +1500,66 @@ svg {
   border-radius: 20px;
 }
 
+.landing-audiences article strong,
 .landing-principles article strong {
   font-family: ui-serif, Georgia, serif;
   font-size: 21px;
 }
 
+.landing-audiences article p,
 .landing-principles article p {
   margin: 16px 0 0;
   color: var(--muted);
   font-size: 13px;
   line-height: 1.65;
+}
+
+/* Two bands of the same shape, so the background is what tells them apart:
+   "is this for me?" sits on the warm panel, "why is it safe?" on paper. */
+.landing-audiences {
+  background: #efece3;
+}
+
+/* Host-owned language switch. It has to be reachable before anything else on
+   the page makes sense, so it leads the navigation rather than hiding in a
+   footer. The visible label is the subtag; the accessible name is the language
+   written in its own language, which is what someone who cannot read the
+   current one can actually recognise. */
+.locale-switch {
+  display: flex;
+  padding: 3px;
+  gap: 2px;
+  background: #ebe7dd;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.locale-switch__option {
+  padding: 5px 10px;
+  color: #6b7064;
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+}
+
+.locale-switch__option.is-active {
+  color: var(--night);
+  background: var(--panel);
+  box-shadow: 0 1px 2px rgb(27 31 24 / 8%);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .product-centered {
@@ -1873,6 +1928,7 @@ svg {
     margin: 0 auto;
   }
 
+  .landing-audiences > div,
   .landing-principles > div,
   .onboarding-grid {
     grid-template-columns: minmax(0, 1fr);
@@ -1999,10 +2055,12 @@ svg {
     bottom: 15px;
   }
 
+  .landing-audiences,
   .landing-principles {
     padding-block: 64px;
   }
 
+  .landing-audiences > div,
   .landing-principles > div {
     grid-template-columns: minmax(0, 1fr);
   }

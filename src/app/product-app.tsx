@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 
 import { App, type AppProps } from './app';
+import {
+  COPY,
+  LOCALES,
+  LOCALE_LABELS,
+  readStoredLocale,
+  resolveLocale,
+  writeStoredLocale,
+  type CopyKey,
+  type Locale,
+} from './copy';
 import { createDemoHost } from './demo-host';
 import type { TrustedHost } from './host';
 import { HomeIcon, LockIcon, SparkIcon } from './icons';
@@ -14,7 +24,12 @@ export interface ProductAppProps extends Omit<AppProps, 'host'> {
   readonly createHost?: () => TrustedHost;
   readonly initialRoute?: ProductRoute;
   readonly writeClipboard?: (text: string) => Promise<void>;
+  readonly initialLocale?: Locale;
 }
+
+/** Reads one string in the active language. Passed down rather than pulled from
+ *  a context, so every component that shows text says so in its signature. */
+export type Translate = (key: CopyKey) => string;
 
 function routeFromPath(pathname: string): ProductRoute {
   if (pathname === '/login') return 'login';
@@ -40,21 +55,58 @@ function ProductBrand({ onNavigate }: { readonly onNavigate: () => void }): Reac
   );
 }
 
+function LocaleSwitch({
+  locale,
+  onChange,
+  t,
+}: {
+  readonly locale: Locale;
+  readonly onChange: (locale: Locale) => void;
+  readonly t: Translate;
+}): React.JSX.Element {
+  return (
+    <div className="locale-switch" role="group" aria-label={t('localeSwitchLabel')}>
+      {LOCALES.map((candidate) => (
+        <button
+          aria-pressed={candidate === locale}
+          className={candidate === locale ? 'locale-switch__option is-active' : 'locale-switch__option'}
+          key={candidate}
+          lang={candidate}
+          onClick={() => onChange(candidate)}
+          type="button"
+        >
+          <span aria-hidden="true">{candidate.toUpperCase()}</span>
+          <span className="visually-hidden">{LOCALE_LABELS[candidate]}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+interface ChromeProps {
+  readonly children: React.ReactNode;
+  readonly locale: Locale;
+  readonly onLocaleChange: (locale: Locale) => void;
+  readonly onNavigate: (route: ProductRoute) => void;
+  readonly t: Translate;
+}
+
 function ProductChrome({
   children,
+  locale,
+  onLocaleChange,
   onNavigate,
-}: {
-  readonly children: React.ReactNode;
-  readonly onNavigate: (route: ProductRoute) => void;
-}): React.JSX.Element {
+  t,
+}: ChromeProps): React.JSX.Element {
   return (
     <div className="product-shell">
       <header className="product-header">
         <ProductBrand onNavigate={() => onNavigate('landing')} />
-        <nav aria-label="Navigation produit">
-          <button onClick={() => onNavigate('login')} type="button">Se connecter</button>
+        <nav aria-label="Miakapp">
+          <LocaleSwitch locale={locale} onChange={onLocaleChange} t={t} />
+          <button onClick={() => onNavigate('login')} type="button">{t('navSignIn')}</button>
           <button className="product-button product-button--compact" onClick={() => onNavigate('new-home')} type="button">
-            Créer ma maison
+            {t('navCreate')}
           </button>
         </nav>
       </header>
@@ -63,60 +115,81 @@ function ProductChrome({
   );
 }
 
-function LandingPage({ onNavigate }: { readonly onNavigate: (route: ProductRoute) => void }): React.JSX.Element {
+type PageProps = Omit<ChromeProps, 'children'>;
+
+function LandingPage({ t, ...chrome }: PageProps): React.JSX.Element {
+  const { onNavigate } = chrome;
   return (
-    <ProductChrome onNavigate={onNavigate}>
+    <ProductChrome t={t} {...chrome}>
       <main className="landing-page">
         <section className="landing-hero">
           <div className="landing-hero__copy">
-            <p className="product-kicker"><span /> Votre maison, écrite pour vous</p>
-            <h1>L’interface de votre maison ne devrait ressembler qu’à vous.</h1>
-            <p className="landing-hero__lede">
-              Miakapp donne à votre agent de code les outils pour construire vos pages,
-              connecter vos appareils et faire évoluer votre maison — sans enfermer votre interface.
-            </p>
+            <p className="product-kicker"><span /> {t('landingKicker')}</p>
+            <h1>{t('landingTitle')}</h1>
+            <p className="landing-hero__lede">{t('landingLede')}</p>
             <div className="product-actions">
               <button className="product-button" onClick={() => onNavigate('new-home')} type="button">
-                Créer ma maison <span aria-hidden="true">→</span>
+                {t('landingPrimaryCta')} <span aria-hidden="true">→</span>
               </button>
               <button className="product-button product-button--ghost" onClick={() => onNavigate('console')} type="button">
-                Voir la maison de démonstration
+                {t('landingSecondaryCta')}
               </button>
             </div>
-            <ul className="landing-proof" aria-label="Principes Miakapp">
-              <li><span>01</span> Votre dépôt Git</li>
-              <li><span>02</span> Votre agent</li>
-              <li><span>03</span> Votre interface</li>
+            <ul className="landing-proof" aria-label={t('landingProofLabel')}>
+              <li><span>01</span> {t('landingProofOne')}</li>
+              <li><span>02</span> {t('landingProofTwo')}</li>
+              <li><span>03</span> {t('landingProofThree')}</li>
             </ul>
           </div>
-          <div className="landing-visual" aria-label="Aperçu d’une maison Miakapp">
+          <div className="landing-visual" aria-label={t('landingCardVisualLabel')}>
             <div className="landing-visual__orb landing-visual__orb--one" />
             <div className="landing-visual__orb landing-visual__orb--two" />
             <article className="landing-home-card">
               <header>
                 <span className="landing-home-card__icon"><HomeIcon /></span>
-                <div><strong>Maison Horizon</strong><small>Tout est calme</small></div>
-                <span className="landing-home-card__live">En direct</span>
+                <div><strong>{t('landingCardHome')}</strong><small>{t('landingCardCalm')}</small></div>
+                <span className="landing-home-card__live">{t('landingCardLive')}</span>
               </header>
-              <div className="landing-home-card__metric"><strong>19,5°</strong><span>Salon</span></div>
+              <div className="landing-home-card__metric"><strong>19,5°</strong><span>{t('landingCardRoom')}</span></div>
               <div className="landing-home-card__row">
-                <span><small>Énergie</small><strong>350 W</strong></span>
-                <span><small>Batterie</small><strong>80 %</strong></span>
+                <span><small>{t('landingCardEnergy')}</small><strong>350 W</strong></span>
+                <span><small>{t('landingCardBattery')}</small><strong>80 %</strong></span>
               </div>
               <div className="landing-home-card__control">
-                <span>Éclairage du salon</span><span className="landing-toggle" />
+                <span>{t('landingCardLight')}</span><span className="landing-toggle" />
               </div>
             </article>
-            <p className="landing-agent-note"><SparkIcon /><span><strong>Construit par votre agent</strong><small>Modifiable à tout moment</small></span></p>
+            <p className="landing-agent-note">
+              <SparkIcon />
+              <span><strong>{t('landingAgentNote')}</strong><small>{t('landingAgentNoteDetail')}</small></span>
+            </p>
+          </div>
+        </section>
+        <section className="landing-audiences">
+          <p className="product-kicker">{t('audiencesKicker')}</p>
+          <h2>{t('audiencesTitle')}</h2>
+          <div>
+            <article>
+              <strong>{t('audienceTinkererTitle')}</strong>
+              <p>{t('audienceTinkererBody')}</p>
+            </article>
+            <article>
+              <strong>{t('audienceCuriousTitle')}</strong>
+              <p>{t('audienceCuriousBody')}</p>
+            </article>
+            <article>
+              <strong>{t('audienceNewcomerTitle')}</strong>
+              <p>{t('audienceNewcomerBody')}</p>
+            </article>
           </div>
         </section>
         <section className="landing-principles">
-          <p className="product-kicker">Pas une app domotique de plus</p>
-          <h2>Miakapp sépare ce qui doit rester stable de ce qui doit rester libre.</h2>
+          <p className="product-kicker">{t('principlesKicker')}</p>
+          <h2>{t('principlesTitle')}</h2>
           <div>
-            <article><strong>Le socle protège</strong><p>Identité, permissions, connexion et exécution restent dans un hôte de confiance.</p></article>
-            <article><strong>L’agent construit</strong><p>Pages, navigation, composants et style vivent dans votre dépôt et évoluent avec vous.</p></article>
-            <article><strong>La maison répond</strong><p>Les coordinateurs exposent les états et actions. Ils ne décident jamais de l’interface.</p></article>
+            <article><strong>{t('principleBaseTitle')}</strong><p>{t('principleBaseBody')}</p></article>
+            <article><strong>{t('principleAgentTitle')}</strong><p>{t('principleAgentBody')}</p></article>
+            <article><strong>{t('principleHomeTitle')}</strong><p>{t('principleHomeBody')}</p></article>
           </div>
         </section>
       </main>
@@ -124,20 +197,21 @@ function LandingPage({ onNavigate }: { readonly onNavigate: (route: ProductRoute
   );
 }
 
-function LoginPage({ host, onNavigate }: { readonly host: TrustedHost; readonly onNavigate: (route: ProductRoute) => void }): React.JSX.Element {
+function LoginPage({ host, t, ...chrome }: PageProps & { readonly host: TrustedHost }): React.JSX.Element {
+  const { onNavigate } = chrome;
   return (
-    <ProductChrome onNavigate={onNavigate}>
+    <ProductChrome t={t} {...chrome}>
       <main className="product-centered">
         <section className="auth-card">
           <span className="auth-card__icon"><LockIcon /></span>
-          <p className="product-kicker">Espace personnel</p>
-          <h1>Retrouvez votre maison.</h1>
-          <p>Connectez-vous pour ouvrir une installation existante ou commencer une nouvelle maison.</p>
+          <p className="product-kicker">{t('loginKicker')}</p>
+          <h1>{t('loginTitle')}</h1>
+          <p>{t('loginLede')}</p>
           <button className="google-button" disabled={host.signIn === undefined} onClick={host.signIn} type="button">
-            <span aria-hidden="true">G</span> Continuer avec Google
+            <span aria-hidden="true">G</span> {t('loginGoogle')}
           </button>
-          <small>Miakapp utilise votre identité pour ouvrir uniquement les maisons auxquelles vous avez accès.</small>
-          <button className="text-button" onClick={() => onNavigate('landing')} type="button">← Retour à l’accueil</button>
+          <small>{t('loginPrivacy')}</small>
+          <button className="text-button" onClick={() => onNavigate('landing')} type="button">{t('loginBack')}</button>
         </section>
       </main>
     </ProductChrome>
@@ -147,43 +221,44 @@ function LoginPage({ host, onNavigate }: { readonly host: TrustedHost; readonly 
 function NewHomePage({
   copyState,
   onCopy,
-  onNavigate,
-}: {
+  t,
+  ...chrome
+}: PageProps & {
   readonly copyState: CopyState;
   readonly onCopy: () => void;
-  readonly onNavigate: (route: ProductRoute) => void;
 }): React.JSX.Element {
+  const { onNavigate } = chrome;
   return (
-    <ProductChrome onNavigate={onNavigate}>
+    <ProductChrome t={t} {...chrome}>
       <main className="onboarding-page">
         <header className="onboarding-heading">
-          <p className="product-kicker"><span /> Nouvelle maison</p>
-          <h1>Donnez ce point de départ à votre agent.</h1>
-          <p>Il installera le guide Miakapp, découvrira votre installation et construira votre interface dans votre propre dépôt.</p>
+          <p className="product-kicker"><span /> {t('onboardingKicker')}</p>
+          <h1>{t('onboardingTitle')}</h1>
+          <p>{t('onboardingLede')}</p>
         </header>
         <section className="onboarding-grid">
           <article className="onboarding-step onboarding-step--prompt">
             <span className="onboarding-step__number">01</span>
             <div>
-              <p className="product-kicker">Claude Code ou Codex</p>
-              <h2>Copiez ce prompt</h2>
+              <p className="product-kicker">{t('onboardingPromptKicker')}</p>
+              <h2>{t('onboardingPromptTitle')}</h2>
+              {/* The prompt itself is never translated: it is a command an agent
+                  executes, and a translated command does not run. */}
               <pre><code>{AGENT_START_PROMPT}</code></pre>
               <button className="product-button" onClick={onCopy} type="button">
-                {copyState === 'copied' ? 'Prompt copié' : 'Copier le prompt'}
+                {copyState === 'copied' ? t('onboardingCopied') : t('onboardingCopy')}
               </button>
-              {copyState === 'failed' ? (
-                <p role="alert">Copie impossible. Sélectionnez le prompt ci-dessus.</p>
-              ) : null}
+              {copyState === 'failed' ? <p role="alert">{t('onboardingCopyFailed')}</p> : null}
             </div>
           </article>
           <article className="onboarding-step onboarding-step--molted">
             <span className="onboarding-step__number">02</span>
             <div>
-              <span className="recommended-pill">Recommandé</span>
-              <h2>Ou laissez Molted préparer l’agent</h2>
-              <p>Un espace prêt à l’emploi, sans terminal ni infrastructure à maintenir.</p>
+              <span className="recommended-pill">{t('onboardingRecommended')}</span>
+              <h2>{t('onboardingMoltedTitle')}</h2>
+              <p>{t('onboardingMoltedBody')}</p>
               <a className="product-button product-button--dark" href="https://molted.cloud" rel="noreferrer" target="_blank">
-                Utiliser dans molted.cloud <span aria-hidden="true">↗</span>
+                {t('onboardingMoltedCta')} <span aria-hidden="true">↗</span>
               </a>
             </div>
           </article>
@@ -191,15 +266,13 @@ function NewHomePage({
         <aside className="onboarding-next">
           <span className="onboarding-next__icon"><LockIcon /></span>
           <div>
-            <strong>Le compte vient plus tard, et c’est voulu.</strong>
-            <p>
-              Votre agent travaille d’abord. Quand il aura besoin d’émettre la clé de
-              votre maison, il vous enverra un lien — c’est à ce moment-là que vous
-              créerez votre compte Miakapp. Rien à signer pour commencer à lire le guide.
-            </p>
+            <strong>{t('onboardingAccountTitle')}</strong>
+            <p>{t('onboardingAccountBody')}</p>
           </div>
         </aside>
-        <button className="text-button" onClick={() => onNavigate('console')} type="button">J’ai déjà une maison →</button>
+        <button className="text-button" onClick={() => onNavigate('console')} type="button">
+          {t('onboardingHasHome')}
+        </button>
       </main>
     </ProductChrome>
   );
@@ -208,6 +281,7 @@ function NewHomePage({
 export function ProductApp({
   createHost = createDemoHost,
   initialRoute,
+  initialLocale,
   writeClipboard = async (text) => navigator.clipboard.writeText(text),
   ...appProps
 }: ProductAppProps): React.JSX.Element {
@@ -217,6 +291,23 @@ export function ProductApp({
     () => initialRoute ?? routeFromPath(window.location.pathname),
   );
   const [copyState, setCopyState] = useState<CopyState>('idle');
+  const [locale, setLocale] = useState<Locale>(() => (
+    initialLocale
+    ?? resolveLocale(readStoredLocale(globalThis.localStorage), navigator.languages ?? [navigator.language])
+  ));
+
+  const t = useCallback<Translate>((key) => COPY[locale][key], [locale]);
+
+  const changeLocale = useCallback((next: Locale): void => {
+    setLocale(next);
+    writeStoredLocale(globalThis.localStorage, next);
+  }, []);
+
+  // The document's own language is part of the page, not decoration: it is what
+  // a screen reader picks a voice from and what a translation prompt keys off.
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
 
   const navigate = useCallback((next: ProductRoute): void => {
     window.history.pushState({}, '', pathFor(next));
@@ -241,8 +332,10 @@ export function ProductApp({
 
   useEffect(() => () => host.dispose(), [host]);
 
+  const chrome = { locale, onLocaleChange: changeLocale, onNavigate: navigate, t };
+
   if (displayedRoute === 'console') return <App {...appProps} host={host} />;
-  if (displayedRoute === 'login') return <LoginPage host={host} onNavigate={navigate} />;
+  if (displayedRoute === 'login') return <LoginPage host={host} {...chrome} />;
   if (displayedRoute === 'new-home') {
     return (
       <NewHomePage
@@ -254,9 +347,9 @@ export function ProductApp({
             () => setCopyState('failed'),
           );
         }}
-        onNavigate={navigate}
+        {...chrome}
       />
     );
   }
-  return <LandingPage onNavigate={navigate} />;
+  return <LandingPage {...chrome} />;
 }
