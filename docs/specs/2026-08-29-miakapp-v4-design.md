@@ -330,7 +330,7 @@ terminal call frames are never allowed to sit behind an unbounded data stream.
 
 ### Allowlists
 
-Exact paths and prefixes (`salon.*`). The coordinator declares them; the server
+Exact paths and prefixes (`living_room.*`). The coordinator declares them; the server
 resolves them once into identifier sets and only re-evaluates when a new path
 appears. Hot-path filtering becomes an integer set-membership test.
 
@@ -387,7 +387,7 @@ the complete slice and notify.
 | Event topic visibility | owned, additive | union, then per-user filtering |
 
 Explicit rejection is deliberate: two coordinators claiming
-`salon.temperature` produce an immediate error rather than a silent overwrite.
+`living_room.temperature` produce an immediate error rather than a silent overwrite.
 The union on allowlists is what lets one coordinator declare rights over
 variables owned by another.
 

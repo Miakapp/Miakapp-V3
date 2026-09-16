@@ -1,11 +1,21 @@
-# Node-RED runtime adapter harness
+# Legacy Node-RED v3 characterization
 
-Workstream B deliverables 4 and 5. Runs the **real** Node-RED runtime with the
-**real** published MiakAPI v3 node, so claims about v3 behaviour come from
-observation instead of from reading its source.
+This is migration evidence for one legacy v3 installation. It is **not** a
+Miakapp 4 adapter implementation, runtime dependency, starter template, or
+recommended architecture for a new home.
 
-Every other characterization corpus in this repository models v3. This one
-executes it.
+The corpus runs the **real** Node-RED runtime with the **real** published MiakAPI
+v3 node, so claims about that legacy system come from observation instead of
+from reading its source. Keeping it under `legacy/` prevents installation-
+specific behavior from becoming a public Miakapp contract.
+
+Every generic characterization corpus in this repository models behavior at a
+runtime-neutral boundary. This one executes a particular legacy runtime.
+
+The house fixture is fictional and contains no production export or private
+value. Its labels and identifiers are deliberately neutral English: the corpus
+preserves Node-RED and v3 data *shapes*, not the vocabulary of the household
+that originally motivated the migration work.
 
 ## What is real, and what is not
 
@@ -85,7 +95,7 @@ Checked against the v4 CLI on the captured export:
 ```
 14 nodes, 1 flow, 1 broker, 3 state paths, 2 actions — 2 findings to settle before migrating
   critical: A coordinator secret is stored in cleartext in this export; ...
-  critical: Action serrure-entree lists no group, so every signed-in user may invoke it; ...
+  critical: Action front-door-lock lists no group, so every signed-in user may invoke it; ...
 ```
 
 ## What the behavior means for the migration

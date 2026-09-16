@@ -31,22 +31,22 @@ after(async () => {
 });
 
 test('a commit resolves jsonata, literal and env values in one payload', async () => {
-  house.receive('commit-etat', { payload: 21.5 });
+  house.receive('commit-state', { payload: 21.5 });
   await settle();
 
   assert.equal(house.recorder.commits.length, 1);
   assert.deepEqual(house.recorder.commits[0], {
-    'capteurs.salon.temperature': 21.5,
-    'capteurs.salle de bain.humidite': '48',
-    'systeme.version': '3.0.31',
+    'sensors.living_room.temperature': 21.5,
+    'sensors.guest room.humidity_μ': '48',
+    'system.version': '3.0.31',
   });
 });
 
-test('variable paths keep spaces and accents exactly as authored', async () => {
-  // `capteurs.salle de bain.humidite` survives untouched. Anything in v4 that
+test('variable paths keep spaces and non-ASCII characters exactly as authored', async () => {
+  // `sensors.guest room.humidity_μ` survives untouched. Anything in v4 that
   // assumes dotted paths are slug-shaped will not round-trip a real house.
   const [committed] = house.recorder.commits;
-  assert.ok(Object.keys(committed).includes('capteurs.salle de bain.humidite'));
+  assert.ok(Object.keys(committed).includes('sensors.guest room.humidity_μ'));
 });
 
 test('a falsy sensor reading is committed as an empty string, not as its value', async () => {
@@ -55,15 +55,15 @@ test('a falsy sensor reading is committed as an empty string, not as its value',
   // at the coordinator as ''. This is the single most likely source of silent
   // divergence when v4 replays v3 state, so it is pinned here rather than
   // discovered during migration.
-  house.receive('commit-etat', { payload: 0 });
+  house.receive('commit-state', { payload: 0 });
   await settle();
 
   assert.equal(house.recorder.commits.length, 2);
-  assert.equal(house.recorder.commits[1]['capteurs.salon.temperature'], '');
+  assert.equal(house.recorder.commits[1]['sensors.living_room.temperature'], '');
 
-  house.receive('commit-etat', { payload: false });
+  house.receive('commit-state', { payload: false });
   await settle();
-  assert.equal(house.recorder.commits[2]['capteurs.salon.temperature'], '');
+  assert.equal(house.recorder.commits[2]['sensors.living_room.temperature'], '');
 });
 
 test('each commit sends the full variable set, not only what changed', async () => {
@@ -72,8 +72,8 @@ test('each commit sends the full variable set, not only what changed', async () 
   // flow knows about.
   const latest = house.recorder.commits.at(-1);
   assert.deepEqual(Object.keys(latest).sort(), [
-    'capteurs.salle de bain.humidite',
-    'capteurs.salon.temperature',
-    'systeme.version',
+    'sensors.guest room.humidity_μ',
+    'sensors.living_room.temperature',
+    'system.version',
   ]);
 });

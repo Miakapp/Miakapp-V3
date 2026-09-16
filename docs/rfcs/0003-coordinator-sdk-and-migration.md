@@ -888,7 +888,7 @@ orchestrator process.
 This table is the design-level list and stays runtime-agnostic. The
 deployment-specific list for the v3 Node-RED installation, where each row cites
 either a test that observed the behavior or a line of the published package,
-is `node-red-adapter/PRESERVED-VS-FIXED.md`.
+is `legacy/node-red-v3-characterization/PRESERVED-VS-FIXED.md`.
 
 The ping row above was corrected once the harness could execute v3: the legacy
 client sends no application ping and contains no interval timer at all. It

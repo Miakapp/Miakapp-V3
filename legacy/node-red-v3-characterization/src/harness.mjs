@@ -38,7 +38,7 @@ export const NODE_PACKAGE = 'node-red-contrib-miakapi';
  * purpose: the point of the harness is to show which fields land in the
  * encrypted credentials file and which land in plain `flows.json`.
  */
-const CREDENTIAL_SECRET = 'node-red-adapter-harness-key';
+const CREDENTIAL_SECRET = 'legacy-node-red-v3-harness-key';
 
 let started = false;
 
@@ -87,7 +87,7 @@ export async function startHouse({
     return originalLoad.call(this, request, ...rest);
   };
 
-  const userDir = existingUserDir ?? (await mkdtemp(path.join(tmpdir(), 'node-red-adapter-')));
+  const userDir = existingUserDir ?? (await mkdtemp(path.join(tmpdir(), 'legacy-node-red-v3-')));
 
   // Deploying means we are building an environment, so the node package gets
   // installed. Starting from disk means we are running an environment somebody

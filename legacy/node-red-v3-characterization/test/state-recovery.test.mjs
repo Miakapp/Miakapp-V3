@@ -24,32 +24,32 @@ import { startHouse, settle } from '../src/harness.mjs';
  * happens between the first commit and the last after a restart.
  */
 const flows = [
-  { id: 'tab-maison', type: 'tab', label: 'Maison' },
+  { id: 'tab-home', type: 'tab', label: 'Home' },
   {
     id: 'init-home',
     type: 'initMiakapi',
-    z: 'tab-maison',
-    home: 'maison-synthetique',
-    coordID: 'coord-synthetique',
-    coordSecret: 'secret-en-clair-du-coordinateur',
+    z: 'tab-home',
+    home: 'synthetic-home',
+    coordID: 'synthetic-coordinator',
+    coordSecret: 'plaintext-coordinator-secret',
     wires: [],
   },
   {
-    id: 'commit-salon',
+    id: 'commit-living-room',
     type: 'commitVariables',
-    z: 'tab-maison',
-    name: 'Salon',
-    values: { 'capteurs.salon.temperature': { type: 'jsonata', value: 'msg.payload' } },
+    z: 'tab-home',
+    name: 'Living room',
+    values: { 'sensors.living_room.temperature': { type: 'jsonata', value: 'msg.payload' } },
     wires: [],
   },
   {
     id: 'commit-chaudiere',
     type: 'commitVariables',
-    z: 'tab-maison',
-    name: 'Chaudière',
+    z: 'tab-home',
+    name: 'Boiler',
     // A boiler reports rarely. That is the point: this node may not fire for a
     // long time after a restart.
-    values: { 'chauffage.chaudiere.pression': { type: 'jsonata', value: 'msg.payload' } },
+    values: { 'heating.boiler.pressure': { type: 'jsonata', value: 'msg.payload' } },
     wires: [],
   },
 ];
@@ -72,17 +72,17 @@ test('a restarted house starts with an empty variable set', () => {
 });
 
 test('the first commit after a restart carries only the paths of the node that fired', async () => {
-  house.receive('commit-salon', { payload: 21.5 });
+  house.receive('commit-living-room', { payload: 21.5 });
   await settle();
 
   assert.equal(house.recorder.commits.length, 1);
-  assert.deepEqual(house.recorder.commits[0], { 'capteurs.salon.temperature': 21.5 });
+  assert.deepEqual(house.recorder.commits[0], { 'sensors.living_room.temperature': 21.5 });
 
   // The boiler path is absent, not stale and not null. Combined with the
   // observation that every commit sends the whole set rather than a delta, a
   // coordinator that treats a commit as the house's complete state has just
   // been told the boiler path does not exist.
-  assert.ok(!('chauffage.chaudiere.pression' in house.recorder.commits[0]));
+  assert.ok(!('heating.boiler.pressure' in house.recorder.commits[0]));
 });
 
 test('the set is only complete once every commit node has fired at least once', async () => {
@@ -90,8 +90,8 @@ test('the set is only complete once every commit node has fired at least once', 
   await settle();
 
   assert.deepEqual(house.recorder.commits.at(-1), {
-    'capteurs.salon.temperature': 21.5,
-    'chauffage.chaudiere.pression': 1.4,
+    'sensors.living_room.temperature': 21.5,
+    'heating.boiler.pressure': 1.4,
   });
 
   // So recovery time for state is not the boot time measured by the restore

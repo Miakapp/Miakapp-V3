@@ -135,7 +135,7 @@ user actions and sent the lock notification. One thing changed: the variable set
 the coordinator received went from three paths to two.
 
 The mechanism is worth stating exactly, because it produces no error at any
-layer. `variables['systeme.version']` is assigned `undefined`; the key is
+layer. `variables['system.version']` is assigned `undefined`; the key is
 present in the object the node built, and disappears when the set is serialised
 on the way to the coordinator. Combined with the characterized behavior that
 every commit sends the whole set rather than a delta, a coordinator treating a
