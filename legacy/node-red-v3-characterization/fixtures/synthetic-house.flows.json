@@ -1,15 +1,15 @@
 [
   {
-    "id": "tab-maison",
+    "id": "tab-home",
     "type": "tab",
-    "label": "Maison",
+    "label": "Home",
     "disabled": false,
     "info": ""
   },
   {
     "id": "broker-local",
     "type": "mqtt-broker",
-    "name": "Courtier local",
+    "name": "Local broker",
     "broker": "127.0.0.1",
     "port": "1883",
     "clientid": "",
@@ -31,10 +31,10 @@
   {
     "id": "init-home",
     "type": "initMiakapi",
-    "z": "tab-maison",
-    "home": "maison-synthetique",
-    "coordID": "coord-synthetique",
-    "coordSecret": "secret-en-clair-du-coordinateur",
+    "z": "tab-home",
+    "home": "synthetic-home",
+    "coordID": "synthetic-coordinator",
+    "coordSecret": "plaintext-coordinator-secret",
     "x": 160,
     "y": 80,
     "wires": []
@@ -42,9 +42,9 @@
   {
     "id": "mqtt-temperature",
     "type": "mqtt in",
-    "z": "tab-maison",
-    "name": "Température salon",
-    "topic": "maison/salon/temperature",
+    "z": "tab-home",
+    "name": "Living-room temperature",
+    "topic": "home/living-room/temperature",
     "qos": "0",
     "datatype": "auto-detect",
     "broker": "broker-local",
@@ -54,23 +54,23 @@
     "inputs": 0,
     "x": 160,
     "y": 180,
-    "wires": [["commit-etat"]]
+    "wires": [["commit-state"]]
   },
   {
-    "id": "commit-etat",
+    "id": "commit-state",
     "type": "commitVariables",
-    "z": "tab-maison",
-    "name": "Publier l'état",
+    "z": "tab-home",
+    "name": "Publish state",
     "values": {
-      "capteurs.salon.temperature": {
+      "sensors.living_room.temperature": {
         "type": "jsonata",
         "value": "msg.payload"
       },
-      "capteurs.salle de bain.humidite": {
+      "sensors.guest room.humidity_μ": {
         "type": "str",
         "value": "48"
       },
-      "systeme.version": {
+      "system.version": {
         "type": "env",
         "value": "HOUSE_VERSION"
       }
@@ -82,61 +82,61 @@
   {
     "id": "on-ready",
     "type": "onHomeReady",
-    "z": "tab-maison",
+    "z": "tab-home",
     "name": "",
     "x": 160,
     "y": 260,
-    "wires": [["journal"]]
+    "wires": [["log"]]
   },
   {
     "id": "on-update",
     "type": "onHomeUpdate",
-    "z": "tab-maison",
+    "z": "tab-home",
     "name": "",
     "x": 160,
     "y": 320,
-    "wires": [["journal"]]
+    "wires": [["log"]]
   },
   {
     "id": "on-login",
     "type": "onUserLogin",
-    "z": "tab-maison",
+    "z": "tab-home",
     "name": "",
     "x": 160,
     "y": 380,
-    "wires": [["journal"]]
+    "wires": [["log"]]
   },
   {
-    "id": "action-lampe",
+    "id": "action-lamp",
     "type": "onUserAction",
-    "z": "tab-maison",
-    "name": "Lampe salon",
-    "inputID": "lampe-salon",
-    "allowedGroups": ["habitants"],
+    "z": "tab-home",
+    "name": "Living-room lamp",
+    "inputID": "living-room-lamp",
+    "allowedGroups": ["residents"],
     "x": 160,
     "y": 440,
-    "wires": [["journal"]]
+    "wires": [["log"]]
   },
   {
-    "id": "action-serrure",
+    "id": "action-lock",
     "type": "onUserAction",
-    "z": "tab-maison",
-    "name": "Serrure entrée",
-    "inputID": "serrure-entree",
+    "z": "tab-home",
+    "name": "Front-door lock",
+    "inputID": "front-door-lock",
     "allowedGroups": [],
     "x": 160,
     "y": 500,
-    "wires": [["notif-serrure"]]
+    "wires": [["lock-notification"]]
   },
   {
-    "id": "notif-serrure",
+    "id": "lock-notification",
     "type": "sendPushNotif",
-    "z": "tab-maison",
-    "name": "Alerte serrure",
-    "title": "\"Serrure\"",
-    "body": "\"Ouverture par \" & msg.userAction.user.displayName",
+    "z": "tab-home",
+    "name": "Lock alert",
+    "title": "\"Lock\"",
+    "body": "\"Opened by \" & msg.userAction.user.displayName",
     "image": "",
-    "tag": "serrure",
+    "tag": "lock",
     "adminOnly": true,
     "group": "",
     "x": 440,
@@ -144,28 +144,28 @@
     "wires": []
   },
   {
-    "id": "lire-utilisateurs",
+    "id": "read-users",
     "type": "getHomeUsers",
-    "z": "tab-maison",
+    "z": "tab-home",
     "name": "",
     "x": 160,
     "y": 560,
-    "wires": [["journal"]]
+    "wires": [["log"]]
   },
   {
-    "id": "reconnecter",
+    "id": "reconnect",
     "type": "reconnectMiakapi",
-    "z": "tab-maison",
+    "z": "tab-home",
     "name": "",
     "x": 160,
     "y": 620,
     "wires": []
   },
   {
-    "id": "journal",
+    "id": "log",
     "type": "debug",
-    "z": "tab-maison",
-    "name": "journal",
+    "z": "tab-home",
+    "name": "log",
     "active": false,
     "tosidebar": false,
     "console": false,

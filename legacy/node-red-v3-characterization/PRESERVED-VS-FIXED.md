@@ -83,7 +83,7 @@ door open to the whole house into a door open to no one — or, if the direction
 of the mapping is reversed by mistake, silently publishes a permissive rule as a
 restrictive one.
 
-The fixture puts this on `serrure-entree`, the front door, deliberately.
+The fixture puts this on `front-door-lock`, the front door, deliberately.
 
 ### An unresolvable principal fails open on exactly the wrong node
 
@@ -199,7 +199,7 @@ These need a product decision. They are listed, not answered.
 ## Running the evidence
 
 ```sh
-cd node-red-adapter && ./check.sh
+cd legacy/node-red-v3-characterization && ./check.sh
 ```
 
 28 tests, from a clean `npm ci`. No network sockets are opened: the `miakapi`

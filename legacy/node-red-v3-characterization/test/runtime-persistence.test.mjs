@@ -59,12 +59,12 @@ test('coordSecret is stored in cleartext in flows.json', async () => {
   const persisted = await house.persistedFlows();
   const init = persisted.find((node) => node.type === 'initMiakapi');
 
-  assert.equal(init.coordSecret, 'secret-en-clair-du-coordinateur');
+  assert.equal(init.coordSecret, 'plaintext-coordinator-secret');
 
   // The raw file, not the parsed object: anyone reading flows.json — a backup,
   // a git remote, a support archive — reads the coordinator secret.
   const raw = await readFile(path.join(house.userDir, 'flows.json'), 'utf8');
-  assert.ok(raw.includes('secret-en-clair-du-coordinateur'));
+  assert.ok(raw.includes('plaintext-coordinator-secret'));
 });
 
 test('no credentials file is created at all, because the node declares none', async () => {
@@ -79,9 +79,9 @@ test('no credentials file is created at all, because the node declares none', as
 test('the secret reaches the SDK exactly as the flow spells it', () => {
   assert.deepEqual(house.recorder.connections, [
     {
-      homeID: 'maison-synthetique',
-      coordID: 'coord-synthetique',
-      coordSecret: 'secret-en-clair-du-coordinateur',
+      homeID: 'synthetic-home',
+      coordID: 'synthetic-coordinator',
+      coordSecret: 'plaintext-coordinator-secret',
     },
   ]);
 });

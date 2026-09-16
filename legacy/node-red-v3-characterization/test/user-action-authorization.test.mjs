@@ -24,8 +24,8 @@ const action = (inputID, user) => ({
   user,
 });
 
-const guest = { displayName: 'Invité', groups: ['invites'], isAdmin: false, notifications: true };
-const resident = { displayName: 'Mathieu', groups: ['habitants'], isAdmin: true, notifications: true };
+const guest = { displayName: 'Guest', groups: ['guests'], isAdmin: false, notifications: true };
+const resident = { displayName: 'Alex', groups: ['residents'], isAdmin: true, notifications: true };
 
 const actionsFrom = (nodeId) => house.sent.filter((event) => event.sourceId === nodeId);
 
@@ -54,14 +54,14 @@ test('the coordinator sees one action consumer however many nodes listen', () =>
 });
 
 test('a listed group allows the matching user and blocks everyone else', async () => {
-  house.emit.userAction(action('lampe-salon', resident));
+  house.emit.userAction(action('living-room-lamp', resident));
   await settle();
-  assert.equal(actionsFrom('action-lampe').length, 1);
+  assert.equal(actionsFrom('action-lamp').length, 1);
 
-  house.emit.userAction(action('lampe-salon', guest));
+  house.emit.userAction(action('living-room-lamp', guest));
   await settle();
   assert.equal(
-    actionsFrom('action-lampe').length,
+    actionsFrom('action-lamp').length,
     1,
     'a user outside allowedGroups must not reach the flow',
   );
@@ -71,10 +71,10 @@ test('an empty allowedGroups list allows everyone, including a guest', async () 
   // `allowedGroups: []` reads like "nobody", and the fixture puts it on a door
   // lock to make the stake obvious. The v3 handler sets `allowed = true`
   // whenever no group is listed, so the guest opens the door.
-  house.emit.userAction(action('serrure-entree', guest));
+  house.emit.userAction(action('front-door-lock', guest));
   await settle();
 
-  assert.equal(actionsFrom('action-serrure').length, 1);
+  assert.equal(actionsFrom('action-lock').length, 1);
 });
 
 test('an action is delivered only to nodes bound to its input id', async () => {

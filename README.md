@@ -108,8 +108,20 @@ host only through the guarded staging script above; do not run a bare
 - `control-plane/` — Firebase control-plane implementation and emulator slice
 - `control-plane-contract/` — shared control-plane contract
 - `synthetic-home/` — deterministic home fixture
-- `node-red-adapter/` — the published v3 node under a real Node-RED runtime
+- `legacy/` — optional, installation-specific migration evidence; never a Miakapp 4 runtime dependency
 - `infrastructure/` — Terraform and staging safety gates
 - `docs/` — RFCs, operating guides, architecture, and roadmap
 
 See [`docs/README.md`](docs/README.md) for the documentation index and current implementation status.
+
+### Why there is a Node-RED corpus
+
+[`legacy/node-red-v3-characterization/`](legacy/node-red-v3-characterization/)
+executes the published MiakAPI v3 node under a real Node-RED runtime. It exists
+only to measure one legacy migration target and to keep those observations out
+of the generic Miakapp 4 contracts.
+
+Node-RED is **not** required, recommended, bundled, or exposed by Miakapp 4. A
+new home uses the coordinator SDK directly. The corpus is isolated under
+`legacy/` so its source-system vocabulary cannot be mistaken for product
+architecture.

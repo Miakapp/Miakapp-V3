@@ -16,7 +16,7 @@ export default typescriptEslint.config(
       'control-plane-contract/**',
       'coordinator-contract/**',
       'infrastructure/**',
-      'node-red-adapter/**',
+      'legacy/node-red-v3-characterization/**',
       'protocol/**',
       'synthetic-home/**',
     ],
