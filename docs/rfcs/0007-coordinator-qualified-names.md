@@ -15,8 +15,8 @@ Every state path, event topic and function name a client sees is prefixed with
 the name of the coordinator that owns it:
 
 ```
-salon.climate.temperature        instead of   climate.temperature
-salon.lighting.set                             lighting.set
+living_room.climate.temperature        instead of   climate.temperature
+living_room.lighting.set                             lighting.set
 garage.door.opened                             door.opened
 ```
 
@@ -108,7 +108,7 @@ correctness risk, exactly the work this RFC removes.
 
 Instead the qualified name is the wire name. `miakapi` qualifies at its single
 declaration boundary, so an author still writes `climate.temperature` in
-`CoordinatorConfiguration` and the coordinator declares `salon.climate.temperature`.
+`CoordinatorConfiguration` and the coordinator declares `living_room.climate.temperature`.
 ACL patterns are qualified by the same boundary. Nothing downstream ever
 rewrites a name: the relay routes, the client concatenates.
 
@@ -129,7 +129,7 @@ in this home" becomes one pattern per coordinator rather than `*`. That is more
 verbose and more honest: a blanket cross-coordinator grant should be written out.
 
 **A component's requirements name their coordinator.** `requires.call` becomes
-`["salon.lighting.set"]`. This is an improvement — a component declares which
+`["living_room.lighting.set"]`. This is an improvement — a component declares which
 coordinator it depends on, and a missing coordinator becomes a legible staging
 failure rather than a silently absent path. It also means a published artifact
 is bound to a coordinator name, which is the second reason renames are migrations.
@@ -138,7 +138,7 @@ is bound to a coordinator name, which is the second reason renames are migration
 16,384-path home dictionary budget counts paths, not bytes.
 
 **The interface must group by coordinator, or hide it well.** A household does
-not think in coordinators. `salon.` and `garage.` prefixes are an implementation
+not think in coordinators. `living_room.` and `garage.` prefixes are an implementation
 fact leaking into names the user may see. The host should render the grouping,
 not the prefix.
 

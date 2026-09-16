@@ -33,20 +33,20 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 let house;
 
 const resident = {
-  displayName: 'Mathieu',
-  groups: ['habitants'],
+  displayName: 'Alex',
+  groups: ['residents'],
   isAdmin: true,
   notifications: true,
 };
 
-const lampPress = { type: 'press', input: { id: 'lampe-salon' }, user: resident };
+const lampPress = { type: 'press', input: { id: 'living-room-lamp' }, user: resident };
 
-/** How many messages `action-lampe` emits for exactly one press. */
+/** How many messages `action-lamp` emits for exactly one press. */
 async function deliveriesForOnePress() {
-  const before = house.sent.filter((event) => event.sourceId === 'action-lampe').length;
+  const before = house.sent.filter((event) => event.sourceId === 'action-lamp').length;
   house.emit.userAction(lampPress);
   await settle();
-  return house.sent.filter((event) => event.sourceId === 'action-lampe').length - before;
+  return house.sent.filter((event) => event.sourceId === 'action-lamp').length - before;
 }
 
 before(async () => {
@@ -83,7 +83,7 @@ test('a full redeploy opens a second coordinator connection and closes nothing',
 
 test('after one redeploy a single press fires the flow four times, not twice', async () => {
   // Two leaked clients each receive the action, and each fans out over a
-  // `handlers.userAction` list that now holds two entries for `lampe-salon`.
+  // `handlers.userAction` list that now holds two entries for `living-room-lamp`.
   // Two times two. The duplication multiplies because both lists grew.
   assert.equal(await deliveriesForOnePress(), 4);
 });
@@ -96,7 +96,7 @@ test('a second redeploy makes it nine: the amplification is quadratic in deploys
 
   // Three clients over three handler entries. After n deploys one press runs
   // the downstream flow n squared times. For the lamp in this fixture that is a
-  // repeated command; the same fixture binds `serrure-entree` the same way.
+  // repeated command; the same fixture binds `front-door-lock` the same way.
   assert.equal(await deliveriesForOnePress(), 9);
 });
 
@@ -105,7 +105,7 @@ test('every duplicate reports the same node id, so the flood looks like one node
   // the same flow. Nothing that identifies senders by id can tell the
   // generations apart: it does not look like extra nodes, it looks like one
   // node firing repeatedly.
-  const fromLamp = house.sent.filter((event) => event.sourceId === 'action-lampe');
+  const fromLamp = house.sent.filter((event) => event.sourceId === 'action-lamp');
 
   assert.ok(fromLamp.length >= 14);
   assert.deepEqual([...new Set(fromLamp.map((event) => event.sourceType))], ['onUserAction']);

@@ -13,9 +13,9 @@ import { startHouse, settle } from '../src/harness.mjs';
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 const users = [
-  { uid: 'u-admin', displayName: 'Mathieu', groups: ['habitants', 'admins'], isAdmin: true, notifications: true },
-  { uid: 'u-resident', displayName: 'Kylian', groups: ['habitants'], isAdmin: false, notifications: true },
-  { uid: 'u-muet', displayName: 'Lucas', groups: ['habitants'], isAdmin: true, notifications: false },
+  { uid: 'u-admin', displayName: 'Alex', groups: ['residents', 'admins'], isAdmin: true, notifications: true },
+  { uid: 'u-resident', displayName: 'Casey', groups: ['residents'], isAdmin: false, notifications: true },
+  { uid: 'u-muted', displayName: 'Jordan', groups: ['residents'], isAdmin: true, notifications: false },
 ];
 
 let house;
@@ -35,25 +35,25 @@ after(async () => {
 test('an adminOnly notification reaches admins who kept notifications on', async () => {
   house.emit.userAction({
     type: 'press',
-    input: { id: 'serrure-entree' },
-    user: { displayName: 'Invité', groups: ['invites'], isAdmin: false, notifications: true },
+    input: { id: 'front-door-lock' },
+    user: { displayName: 'Guest', groups: ['guests'], isAdmin: false, notifications: true },
   });
   await settle();
 
   assert.deepEqual(
     house.recorder.pushes.map((push) => push.uid),
     ['u-admin'],
-    'Kylian is not an admin and Lucas disabled notifications',
+    'Casey is not an admin and Jordan disabled notifications',
   );
 });
 
 test('notification title and body are jsonata over the triggering message', async () => {
   const [push] = house.recorder.pushes;
   assert.deepEqual(push.notif, {
-    title: 'Serrure',
-    body: 'Ouverture par Invité',
+    title: 'Lock',
+    body: 'Opened by Guest',
     image: '',
-    tag: 'serrure',
+    tag: 'lock',
   });
 });
 
@@ -78,18 +78,18 @@ test('ready, update and login each fan out to their subscribed nodes', async () 
 });
 
 test('getHomeUsers answers from the live user list', async () => {
-  house.receive('lire-utilisateurs', {});
+  house.receive('read-users', {});
   await settle();
 
-  const [event] = house.sent.filter((item) => item.sourceId === 'lire-utilisateurs');
+  const [event] = house.sent.filter((item) => item.sourceId === 'read-users');
   assert.deepEqual(
     event.msg.users.map((user) => user.displayName),
-    ['Mathieu', 'Kylian', 'Lucas'],
+    ['Alex', 'Casey', 'Jordan'],
   );
 });
 
 test('reconnect asks the SDK to reconnect rather than rebuilding the home', async () => {
-  house.receive('reconnecter', {});
+  house.receive('reconnect', {});
   await settle();
 
   assert.equal(house.recorder.reconnects, 1);

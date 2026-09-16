@@ -28,8 +28,8 @@ const flows = JSON.parse(await readFile(fixture, 'utf8'));
 const house = await startHouse({
   flows,
   users: [
-    { uid: 'u-admin', displayName: 'Mathieu', groups: ['habitants', 'admins'], isAdmin: true, notifications: true },
-    { uid: 'u-invite', displayName: 'Invité', groups: ['invites'], isAdmin: false, notifications: true },
+    { uid: 'u-admin', displayName: 'Alex', groups: ['residents', 'admins'], isAdmin: true, notifications: true },
+    { uid: 'u-guest', displayName: 'Guest', groups: ['guests'], isAdmin: false, notifications: true },
   ],
 });
 

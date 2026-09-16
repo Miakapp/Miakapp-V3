@@ -1,5 +1,5 @@
 {
-  "name": "@miakapp/node-red-adapter",
+  "name": "@miakapp/legacy-node-red-v3-characterization",
   "version": "0.0.0",
   "private": true,
   "type": "module",

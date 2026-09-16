@@ -53,18 +53,18 @@ after(async () => {
 });
 
 test('an action from an unknown user throws out of the guarded node', async () => {
-  // `lampe-salon` is the node that lists groups (`["habitants"]`). Reading
+  // `living-room-lamp` is the node that lists groups (`["residents"]`). Reading
   // `.groups` off `undefined` is a TypeError, and nothing in the v3 node
   // catches it.
   assert.throws(
-    () => house.emit.userAction(unresolved('lampe-salon')),
+    () => house.emit.userAction(unresolved('living-room-lamp')),
     TypeError,
   );
   await settle();
 });
 
 test('the unguarded lock fires its flow first, and only then crashes', async () => {
-  // `serrure-entree` has an empty allowedGroups, so the node short-circuits to
+  // `front-door-lock` has an empty allowedGroups, so the node short-circuits to
   // `else allowed = true` and never dereferences the missing user to decide.
   // It sends, and only afterwards builds its status badge:
   //
@@ -73,16 +73,16 @@ test('the unguarded lock fires its flow first, and only then crashes', async () 
   //
   // So this node also throws, but the order is what matters: the message is
   // already downstream when it does.
-  const before = sentBy('action-serrure');
+  const before = sentBy('action-lock');
 
   assert.throws(
-    () => house.emit.userAction(unresolved('serrure-entree')),
+    () => house.emit.userAction(unresolved('front-door-lock')),
     TypeError,
   );
   await settle();
 
   // The door opened. The crash is the status line, after the effect.
-  assert.equal(sentBy('action-serrure') - before, 1);
+  assert.equal(sentBy('action-lock') - before, 1);
 });
 
 test('the guarded node crashes before sending, so the two failures differ', () => {
@@ -95,11 +95,11 @@ test('the guarded node crashes before sending, so the two failures differ', () =
   // the unguarded one through. Both end in an uncaught TypeError, so neither
   // failure is distinguishable from the other by its error alone, and the
   // fixture puts the unguarded one on the front door.
-  const lampBefore = sentBy('action-lampe');
+  const lampBefore = sentBy('action-lamp');
 
-  assert.throws(() => house.emit.userAction(unresolved('lampe-salon')), TypeError);
+  assert.throws(() => house.emit.userAction(unresolved('living-room-lamp')), TypeError);
 
-  assert.equal(sentBy('action-lampe') - lampBefore, 0);
+  assert.equal(sentBy('action-lamp') - lampBefore, 0);
 });
 
 test('the throw is not contained: later handlers for the same input are skipped', async () => {
