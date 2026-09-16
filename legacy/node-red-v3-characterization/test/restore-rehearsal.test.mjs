@@ -85,14 +85,14 @@ test('a restore that forgets the process environment loses a state path silently
   // `commitVariables` reads env-typed values from `process.env` with no
   // fallback, so a missing variable becomes `undefined` rather than an error.
   // The key is still in the set the node built...
-  assert.ok(divergence.after.setKeys.includes('systeme.version'));
+  assert.ok(divergence.after.setKeys.includes('system.version'));
   // ...and gone from what serialisation carries to the coordinator.
-  assert.ok(!divergence.after.transportedKeys.includes('systeme.version'));
-  assert.ok(divergence.before.transportedKeys.includes('systeme.version'));
+  assert.ok(!divergence.after.transportedKeys.includes('system.version'));
+  assert.ok(divergence.before.transportedKeys.includes('system.version'));
 
   // Everything else came back, which is what makes it hard to notice.
   assert.deepEqual(
     divergence.after.transportedKeys,
-    ['capteurs.salle de bain.humidite', 'capteurs.salon.temperature'],
+    ['sensors.guest room.humidity_μ', 'sensors.living_room.temperature'],
   );
 });

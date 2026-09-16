@@ -27,15 +27,15 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const USERS = [
   {
     uid: 'uid-mathieu',
-    displayName: 'Mathieu',
-    groups: ['habitants'],
+    displayName: 'Alex',
+    groups: ['residents'],
     isAdmin: true,
     notifications: true,
   },
   {
     uid: 'uid-invite',
-    displayName: 'Invité',
-    groups: ['invites'],
+    displayName: 'Guest',
+    groups: ['guests'],
     isAdmin: false,
     notifications: true,
   },
@@ -94,16 +94,16 @@ async function observe(subject) {
   await settle();
 
   // A resident presses the living-room lamp, and a guest presses it too.
-  subject.emit.userAction({ type: 'press', input: { id: 'lampe-salon' }, user: USERS[0] });
-  subject.emit.userAction({ type: 'press', input: { id: 'lampe-salon' }, user: USERS[1] });
+  subject.emit.userAction({ type: 'press', input: { id: 'living-room-lamp' }, user: USERS[0] });
+  subject.emit.userAction({ type: 'press', input: { id: 'living-room-lamp' }, user: USERS[1] });
   await settle();
 
   // Somebody opens the front door, which fans out to a push notification.
-  subject.emit.userAction({ type: 'press', input: { id: 'serrure-entree' }, user: USERS[1] });
+  subject.emit.userAction({ type: 'press', input: { id: 'front-door-lock' }, user: USERS[1] });
   await settle();
 
   // A temperature reading arrives from the broker and is committed upstream.
-  subject.receive('commit-etat', { payload: 21.5 });
+  subject.receive('commit-state', { payload: 21.5 });
   await settle();
 
   const committed = subject.recorder.commits.at(-1) ?? {};
