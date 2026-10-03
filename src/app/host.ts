@@ -40,7 +40,7 @@ export interface HomeState {
 export interface TrustedHostSnapshot {
   /** Whether the trusted identity boundary currently has a signed-in user. */
   readonly authenticated: boolean;
-  /** Changes on identity transitions, without exposing a UID to the UI. */
+  /** Changes on identity transitions or explicit reconnection; never exposes a UID. */
   readonly authorizationEpoch?: number;
   readonly homeState?: HomeState;
   readonly activeHome: HomeSummary;
@@ -83,6 +83,8 @@ export interface TrustedHost {
   readonly call?: (name: string, args: unknown, options: HouseCallOptions) => Promise<unknown>;
   /** Account-owned shell preferences only; never forwarded to a house runtime. */
   readonly getPreferencesScope?: () => string | undefined;
+  /** Restarts a failed connection only; never replays house calls. */
+  readonly reconnect?: () => void;
   readonly signIn?: () => void;
   /** Signs out the trusted identity; never exposed to a house runtime. */
   readonly signOut?: () => Promise<void>;

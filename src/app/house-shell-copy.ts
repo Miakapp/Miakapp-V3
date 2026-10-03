@@ -38,6 +38,8 @@ const FR = {
   reload: 'Relancer l’interface',
   shortcutHint: 'Depuis la maison, Alt + Maj + M ramène au menu Miakapp.',
 
+  connectionRetry: 'Réessayer',
+  connectionRetryLabel: 'Réessayer la connexion',
   connectionOffline: 'Maison hors ligne',
   connectionReconnecting: 'Reconnexion…',
   connectionConnecting: 'Connexion…',
@@ -115,6 +117,8 @@ const EN: Record<HouseCopyKey, string> = {
   reload: 'Restart the interface',
   shortcutHint: 'From inside the home, Alt + Shift + M brings you back to the Miakapp menu.',
 
+  connectionRetry: 'Retry',
+  connectionRetryLabel: 'Retry connection',
   connectionOffline: 'Home offline',
   connectionReconnecting: 'Reconnecting…',
   connectionConnecting: 'Connecting…',

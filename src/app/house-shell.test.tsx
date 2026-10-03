@@ -720,3 +720,18 @@ describe('account-owned house favorites', () => {
     localStorage.clear();
   });
 });
+
+
+describe('trusted connection retry', () => {
+  it('offers relay retry only after consent, wired independently of UI reload', async () => {
+    const user = userEvent.setup(), reconnect = vi.fn();
+    const coordinator = coordinatorFor(new Error('offline'));
+    const host = { ...hostWith({ connection: 'unavailable', authenticated: true }), reconnect };
+    render(<App host={host} createComponentRelease={() => coordinator}
+      consentStore={createHouseConsentStore(memoryStorage())} />);
+    expect(screen.queryByRole('button', { name: 'Réessayer la connexion' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Ouvrir la maison' }));
+    await user.click(await screen.findByRole('button', { name: 'Réessayer la connexion' }));
+    expect(reconnect).toHaveBeenCalledOnce();
+  });
+});
