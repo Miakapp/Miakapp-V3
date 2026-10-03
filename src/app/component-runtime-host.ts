@@ -64,6 +64,8 @@ export interface RuntimeFailure {
 }
 
 export interface ComponentRuntimeHostOptions {
+  /** Cancels pending readiness as well as an already-bound session. */
+  readonly signal?: AbortSignal;
   /** Origin of the dedicated sandbox site, declared by the deployment. */
   readonly sandboxOrigin: string;
   /** Ceiling the deployment allows; the effective grant is this intersected with the release. */
@@ -185,6 +187,7 @@ export function mountComponentRuntime(
   release: ComponentRuntimeRelease,
   options: ComponentRuntimeHostOptions,
 ): Promise<ComponentRuntimeSession> {
+  if (options.signal?.aborted) return Promise.reject(new DOMException('Mount cancelled', 'AbortError'));
   // A whole-house application owns a document; handing it to the semantic
   // broker would only fail later, inside the sandbox, with a vaguer code.
   if (release.pointer.abi !== COMPONENT_ABI) {
@@ -224,7 +227,10 @@ export function mountComponentRuntime(
   // happens when a new session mounts against state that has not changed.
   let publishedStateRevision = options.stateRevision ?? 1;
 
+  let removeAbortListener: (() => void) | undefined;
   const cleanup = (): void => {
+    removeAbortListener?.();
+    removeAbortListener = undefined;
     if (heartbeat) clearInterval(heartbeat);
     heartbeat = undefined;
     if (readyTimer) clearTimeout(readyTimer);
@@ -390,6 +396,13 @@ export function mountComponentRuntime(
   };
 
   return new Promise<ComponentRuntimeSession>((resolve, reject) => {
+    const abort = (): void => {
+      settle('terminated');
+      reject(new DOMException('Mount cancelled', 'AbortError'));
+    };
+    options.signal?.addEventListener('abort', abort, { once: true });
+    removeAbortListener = () => options.signal?.removeEventListener('abort', abort);
+    if (options.signal?.aborted) { abort(); return; }
     const session: ComponentRuntimeSession = {
       get lifecycle() {
         return lifecycle;
