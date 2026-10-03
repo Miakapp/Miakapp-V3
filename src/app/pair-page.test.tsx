@@ -22,6 +22,7 @@ const CODE = 'MIAK-01234-56789-ABCDE-FGHJK-MNPQR';
 
 class FakePairing implements PairingService {
   readonly defaultRelayUrl: string | undefined;
+  issuer: string | undefined = 'https://control-plane.example.test';
   account: PairingAccount | null | undefined = null;
   homes: PairingHome[] = [{ id: 'maison-lea', name: 'Maison de Léa', icon: 'house' }];
   keys: PairingHomeKey[] = [{ id: 'key-a', label: 'Molted agent', createdAtMs: NOW - 86_400_000, lastUsedAtMs: null }];
@@ -107,9 +108,51 @@ describe('agent pairing page', () => {
     expect(await screen.findByText(CODE)).toBeVisible();
     expect(service.issued).toEqual(['maison-lea']);
     expect(screen.getByRole('timer')).toHaveTextContent('Expire dans 10:00');
+    // The exact command names this deployment's issuer and never the code.
+    const command = 'miakapp pair --issuer https://control-plane.example.test';
+    expect(screen.getByText(command)).toBeVisible();
+    expect(screen.getByText(command).textContent).not.toContain(CODE);
+
+    await user.click(screen.getByRole('button', { name: fr.pairCopyMessage }));
+    const message = String((writeClipboard.mock.calls as unknown as string[][])[0]![0]);
+    expect(message).toContain(`\`${command}\``);
+    expect(message).toContain('entrée standard');
+    expect(message).toContain(CODE);
+    expect(message).not.toContain('--code');
+    expect(screen.getByRole('button', { name: fr.pairCodeCopied })).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: fr.pairCopyCode }));
+    expect(writeClipboard).toHaveBeenLastCalledWith(CODE);
+  });
+
+  it('copies the agent message in the language the page is shown in', async () => {
+    const user = userEvent.setup();
+    const service = new FakePairing();
+    const { writeClipboard } = renderPage(service, 'en');
+    await user.click(screen.getByRole('button', { name: new RegExp(COPY.en.pairAccountCta, 'u') }));
+    await user.click(await screen.findByRole('button', { name: /Maison de Léa/u }));
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: COPY.en.pairConfirmSubmit }));
+    await screen.findByText(CODE);
+    await user.click(screen.getByRole('button', { name: COPY.en.pairCopyMessage }));
+    const message = String((writeClipboard.mock.calls as unknown as string[][])[0]![0]);
+    expect(message).toContain('standard input');
+    expect(message).toContain('Pair with my Miakapp home “Maison de Léa”');
+  });
+
+  it('offers only the code when the deployment names no issuer', async () => {
+    const user = userEvent.setup();
+    const service = new FakePairing();
+    service.issuer = undefined;
+    const { writeClipboard } = renderPage(service);
+    await user.click(screen.getByRole('button', { name: new RegExp(fr.pairAccountCta, 'u') }));
+    await user.click(await screen.findByRole('button', { name: /Maison de Léa/u }));
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: fr.pairConfirmSubmit }));
+    await screen.findByText(CODE);
+    expect(screen.queryByText(/miakapp pair/u)).toBeNull();
     await user.click(screen.getByRole('button', { name: fr.pairCodeCopy }));
     expect(writeClipboard).toHaveBeenCalledWith(CODE);
-    expect(screen.getByRole('button', { name: fr.pairCodeCopied })).toBeVisible();
   });
 
   it('creates a home when the account administers none, then asks for consent', async () => {
