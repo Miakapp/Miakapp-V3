@@ -65,6 +65,11 @@ export class PairingError extends Error {
 export interface PairingService {
   /** Where a new home's relay lives unless the person says otherwise. */
   readonly defaultRelayUrl: string | undefined;
+  /**
+   * The control plane the code is redeemed at, exactly as `miakapp pair
+   * --issuer` must name it. Taken from this deployment, never guessed.
+   */
+  readonly issuer: string | undefined;
   /** `undefined` while the session is still being restored. */
   getAccount(): PairingAccount | null | undefined;
   subscribe(listener: () => void): () => void;

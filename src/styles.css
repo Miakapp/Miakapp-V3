@@ -2704,3 +2704,19 @@ svg {
   min-width: 0;
   padding: clamp(12px, 3vw, 28px);
 }
+
+.pair-command {
+  display: grid;
+  gap: 6px;
+  margin: 14px 0 4px;
+}
+
+.pair-command pre {
+  margin: 0;
+  overflow-x: auto;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--night);
+  color: #f6f5ef;
+  font-size: 14px;
+}

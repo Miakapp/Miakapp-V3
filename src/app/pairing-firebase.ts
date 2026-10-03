@@ -33,6 +33,7 @@ export interface FirebasePairingOptions {
  */
 export class FirebasePairingService implements PairingService {
   readonly defaultRelayUrl: string | undefined;
+  readonly issuer: string;
   readonly #auth: Auth;
   readonly #api: PairingApi;
   readonly #listeners = new Set<() => void>();
@@ -43,6 +44,7 @@ export class FirebasePairingService implements PairingService {
   constructor(options: FirebasePairingOptions) {
     this.#auth = options.auth;
     this.defaultRelayUrl = options.defaultRelayUrl;
+    this.issuer = options.controlPlaneOrigin.replace(/\/+$/u, '');
     this.#popupSignIn = options.popupSignIn ?? signInWithPopup;
     this.#api = createPairingApi({
       controlPlaneOrigin: options.controlPlaneOrigin,

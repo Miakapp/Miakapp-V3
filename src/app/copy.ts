@@ -156,8 +156,15 @@ const FR = {
   pairBack: '← Changer de maison',
   pairCodeTitle: 'Transmettez ce code à votre agent.',
   pairCodeBody:
-    'Collez-le dans votre conversation avec l’agent. Il l’échangera une seule fois contre sa clé '
-    + 'avec la CLI Miakapp. Ne le donnez à personne d’autre.',
+    'Copiez le message ci-dessous dans votre conversation avec l’agent. Il échangera ce code une seule '
+    + 'fois contre sa propre clé avec la CLI Miakapp. Ne le donnez à personne d’autre.',
+  pairCommandLabel: 'Commande que l’agent exécute',
+  pairAgentMessage:
+    'Appaire-toi à ma maison Miakapp « {home} ». Si la CLI n’est pas installée : `npm i -g @miakapp/cli`. '
+    + 'Lance `{command}` et donne-lui le code d’appairage sur l’entrée standard (saisie masquée ou tube), '
+    + 'jamais en argument de commande. Code (valable 10 minutes, une seule fois) : {code}',
+  pairCopyMessage: 'Copier le message pour l’agent',
+  pairCopyCode: 'Copier le code seul',
   pairCodeCopy: 'Copier le code',
   pairCodeCopied: 'Code copié',
   pairCodeExpiresIn: 'Expire dans {time}',
@@ -313,8 +320,15 @@ const EN: Record<CopyKey, string> = {
   pairBack: '← Choose another home',
   pairCodeTitle: 'Hand this code to your agent.',
   pairCodeBody:
-    'Paste it into your conversation with the agent. It exchanges it once for its key with the '
-    + 'Miakapp CLI. Do not give it to anyone else.',
+    'Copy the message below into your conversation with the agent. It exchanges this code once for '
+    + 'its own key with the Miakapp CLI. Do not give it to anyone else.',
+  pairCommandLabel: 'Command the agent runs',
+  pairAgentMessage:
+    'Pair with my Miakapp home “{home}”. If the CLI is missing: `npm i -g @miakapp/cli`. '
+    + 'Run `{command}` and give it the pairing code on standard input (hidden prompt or pipe), '
+    + 'never as a command argument. Code (valid 10 minutes, single use): {code}',
+  pairCopyMessage: 'Copy the message for the agent',
+  pairCopyCode: 'Copy the code only',
   pairCodeCopy: 'Copy the code',
   pairCodeCopied: 'Code copied',
   pairCodeExpiresIn: 'Expires in {time}',

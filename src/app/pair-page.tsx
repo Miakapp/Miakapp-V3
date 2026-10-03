@@ -258,7 +258,11 @@ function PairFlow({
   const [newRelay, setNewRelay] = useState(service.defaultRelayUrl ?? '');
   const [confirmed, setConfirmed] = useState(false);
   const [issued, setIssued] = useState<IssuedPairingCode | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<'message' | 'code' | null>(null);
+  // The exact command, with the issuer this page was served for. The code is
+  // never part of it: the CLI reads it from a hidden prompt or a pipe, so it
+  // does not land in a shell history or a process list.
+  const pairCommand = service?.issuer === undefined ? undefined : `miakapp pair --issuer ${service.issuer}`;
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<PairingFailure | null>(null);
   const [clock, setClock] = useState(now);
@@ -323,7 +327,7 @@ function PairFlow({
     const code = await service.issueCode(home.id);
     setClock(now());
     setIssued(code);
-    setCopied(false);
+    setCopied(null);
     setStep('code');
   });
 
@@ -526,15 +530,37 @@ function PairFlow({
             ) : (
               <>
                 <output className="pair-code" aria-label={t('pairStepCode')}>{issued.code}</output>
+                {pairCommand === undefined ? null : (
+                  <div className="pair-command">
+                    <span className="pair-muted">{t('pairCommandLabel')}</span>
+                    <pre><code>{pairCommand}</code></pre>
+                  </div>
+                )}
                 <div className="pair-actions">
+                  {pairCommand === undefined ? null : (
+                    <button
+                      className="product-button"
+                      onClick={() => {
+                        const message = fill(t('pairAgentMessage'), {
+                          home: selected.name,
+                          command: pairCommand,
+                          code: issued.code,
+                        });
+                        void writeClipboard(message).then(() => setCopied('message'), () => setCopied(null));
+                      }}
+                      type="button"
+                    >
+                      {copied === 'message' ? t('pairCodeCopied') : t('pairCopyMessage')}
+                    </button>
+                  )}
                   <button
-                    className="product-button"
+                    className={pairCommand === undefined ? 'product-button' : 'product-button product-button--ghost'}
                     onClick={() => {
-                      void writeClipboard(issued.code).then(() => setCopied(true), () => setCopied(false));
+                      void writeClipboard(issued.code).then(() => setCopied('code'), () => setCopied(null));
                     }}
                     type="button"
                   >
-                    {copied ? t('pairCodeCopied') : t('pairCodeCopy')}
+                    {copied === 'code' ? t('pairCodeCopied') : pairCommand === undefined ? t('pairCodeCopy') : t('pairCopyCode')}
                   </button>
                   <span className="pair-muted" role="timer">
                     {fill(t('pairCodeExpiresIn'), { time: remaining(issued.expiresAtMs - clock) })}
