@@ -315,3 +315,35 @@ describe('component-publisher access-token verification', () => {
     )).toThrow(/configuration is invalid/);
   });
 });
+
+
+describe('reviewed staging edge identity', () => {
+  const issuer = 'https://control-plane-aczhngqraq-od.a.run.app';
+  const edge = { ...config, projectId: 'miakapp-v4-staging', issuer,
+    componentsAudience: `${issuer}/v1/components`, pushAudience: `${issuer}/v1/push` };
+
+  test('accepts a signed component publisher token issued by the configured staging edge', () => {
+    const token = signToken({ ...componentClaims, iss: issuer, aud: edge.componentsAudience });
+    expect(verifyComponentAccessToken(authorization(token), edge, CLOCK).homeId).toBe('synthetic-home');
+    expect(() => verifyComponentAccessToken(authorization(signToken(componentClaims)), edge, CLOCK))
+      .toThrow(AccessTokenVerificationError);
+  });
+
+  test('uses the same staging identity for push without crossing audiences', () => {
+    const token = signToken({ ...baseClaims, iss: issuer, aud: edge.pushAudience });
+    expect(verifyPushAccessToken(authorization(token), edge, CLOCK).homeId).toBe('synthetic-home');
+    expect(() => verifyComponentAccessToken(authorization(token), edge, CLOCK))
+      .toThrow(AccessTokenVerificationError);
+  });
+
+  test('does not extend the exception to production, emulator or other provider hosts', () => {
+    for (const projectId of ['miakapp-v4', 'demo-miakapp-v4', 'foreign-project']) {
+      expect(() => verifyComponentAccessToken(authorization(), { ...edge, projectId }, CLOCK))
+        .toThrow(/configuration is invalid/);
+    }
+    const foreign = 'https://foreign-service-od.a.run.app';
+    expect(() => verifyComponentAccessToken(authorization(), {
+      ...edge, issuer: foreign, componentsAudience: `${foreign}/v1/components`,
+    }, CLOCK)).toThrow(/configuration is invalid/);
+  });
+});

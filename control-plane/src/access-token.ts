@@ -1,5 +1,7 @@
 import { createPublicKey, verify, type JsonWebKey } from 'node:crypto';
 
+import { STAGING_BROWSER_RELAY_EDGE_PROFILE } from './staging-browser-relay-edge-profile.js';
+
 import { type JsonValue, parseRequestJson } from './json.js';
 import type { SigningPublicJwk } from './types.js';
 
@@ -203,9 +205,12 @@ function validateConfig(
   audience: string,
   scope: 'push:send' | 'components:publish',
 ): readonly ValidatedEd25519Key[] {
-  const expectedIssuer = ENVIRONMENT_ISSUERS[
-    config.projectId as keyof typeof ENVIRONMENT_ISSUERS
-  ];
+  // The deployment parser already accepts this exact staging-only identity.
+  // Apply the same closed allowlist here; arbitrary provider hosts stay refused.
+  const expectedIssuer = config.projectId === 'miakapp-v4-staging'
+    && config.issuer === STAGING_BROWSER_RELAY_EDGE_PROFILE.issuer
+    ? STAGING_BROWSER_RELAY_EDGE_PROFILE.issuer
+    : ENVIRONMENT_ISSUERS[config.projectId as keyof typeof ENVIRONMENT_ISSUERS];
   if (expectedIssuer === undefined
     || config.issuer !== expectedIssuer
     || Buffer.byteLength(config.issuer, 'utf8') > 2_048
