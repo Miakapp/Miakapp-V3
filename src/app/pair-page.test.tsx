@@ -89,6 +89,81 @@ function renderPage(service: PairingService | undefined, locale: Locale = 'fr', 
 describe('agent pairing page', () => {
   beforeEach(() => window.history.replaceState({}, '', '/pair'));
 
+  it('keeps one sign-in attempt pending and permits retry after a safe failure', async () => {
+    const user = userEvent.setup();
+    const service = new FakePairing();
+    let rejectSignIn!: (error: Error) => void;
+    service.signIn.mockImplementationOnce(() => new Promise((_resolve, reject) => { rejectSignIn = reject; }));
+    renderPage(service, 'en');
+    const button = screen.getByRole('button', { name: new RegExp(en.pairAccountCta, 'u') });
+    await user.dblClick(button);
+    expect(service.signIn).toHaveBeenCalledTimes(1);
+    expect(button).toBeDisabled();
+    expect(screen.getByRole('status')).toHaveTextContent(en.pairLoading);
+    await act(async () => rejectSignIn(new Error('private provider details')));
+    expect(await screen.findByRole('alert')).toHaveTextContent(en.pairErrorUnavailable);
+    expect(screen.queryByText('private provider details')).toBeNull();
+    expect(button).toBeEnabled();
+    await user.click(button);
+    expect(await screen.findByText('lea@example.test')).toBeVisible();
+  });
+
+  it('preserves the current account and shows a cancelled account chooser error', async () => {
+    const user = userEvent.setup();
+    const service = new FakePairing();
+    service.account = { id: 'old', email: 'old@example.test', name: null };
+    service.signIn.mockRejectedValueOnce(new Error('popup closed'));
+    renderPage(service, 'en');
+    await user.click(await screen.findByRole('button', { name: /Maison de Léa/u }));
+    await user.click(screen.getByRole('button', { name: en.pairSwitchAccount }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(en.pairErrorUnavailable);
+    expect(service.signOut).not.toHaveBeenCalled();
+    expect(screen.getByText('old@example.test')).toBeVisible();
+    expect(service.issued).toEqual([]);
+    await user.click(screen.getByRole('button', { name: en.pairSwitchAccount }));
+    expect(await screen.findByText('lea@example.test')).toBeVisible();
+    expect(screen.getByRole('heading', { name: en.pairHomesTitle })).toBeVisible();
+  });
+
+  it('blocks mutations while reauthenticating and lets a failed reauthentication retry', async () => {
+    const user = userEvent.setup();
+    const service = new FakePairing();
+    service.account = { id: 'lea', email: 'lea@example.test', name: null };
+    service.issueFailures = [new PairingError('stale_sign_in')];
+    let rejectSignIn!: (error: Error) => void;
+    service.signIn.mockImplementationOnce(() => new Promise((_resolve, reject) => { rejectSignIn = reject; }));
+    renderPage(service, 'en');
+    await user.click(await screen.findByRole('button', { name: /Maison de Léa/u }));
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: en.pairConfirmSubmit }));
+    await user.click(within(await screen.findByRole('alert')).getByRole('button'));
+    expect(screen.getByRole('button', { name: en.pairConfirmSubmit })).toBeDisabled();
+    expect(screen.getByRole('button', { name: en.pairSwitchAccount })).toBeDisabled();
+    await act(async () => rejectSignIn(new Error('private provider details')));
+    expect(await screen.findByRole('alert')).toHaveTextContent(en.pairErrorStale);
+    expect(service.issued).toEqual([]);
+    await user.click(within(screen.getByRole('alert')).getByRole('button'));
+    expect(await screen.findByText(CODE)).toBeVisible();
+    expect(service.issued).toEqual(['maison-lea']);
+  });
+
+  it('requests only one replacement for an expired pairing code', async () => {
+    const user = userEvent.setup();
+    const service = new FakePairing();
+    service.account = { id: 'lea', email: 'lea@example.test', name: null };
+    const issue = vi.spyOn(service, 'issueCode')
+      .mockResolvedValueOnce({ code: CODE, homeId: 'maison-lea', scopes: [], expiresAtMs: NOW - 1 })
+      .mockImplementationOnce(() => new Promise(() => undefined));
+    renderPage(service, 'en');
+    await user.click(await screen.findByRole('button', { name: /Maison de Léa/u }));
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: en.pairConfirmSubmit }));
+    const button = await screen.findByRole('button', { name: en.pairCodeAgain });
+    await user.dblClick(button);
+    expect(issue).toHaveBeenCalledTimes(2);
+    expect(button).toBeDisabled();
+  });
+
   it('walks account → home → explicit consent → one code', async () => {
     const user = userEvent.setup();
     const service = new FakePairing();
@@ -369,7 +444,7 @@ describe('agent pairing page', () => {
 
     await user.click(await screen.findByRole('button', { name: /Maison de Léa/u }));
     await user.click(screen.getByRole('button', { name: en.pairSwitchAccount }));
-    expect(service.signOut).toHaveBeenCalledTimes(1);
+    expect(service.signOut).not.toHaveBeenCalled();
     expect(await screen.findByText('lea@example.test')).toBeVisible();
     expect(screen.getByRole('heading', { name: en.pairHomesTitle })).toBeVisible();
   });
