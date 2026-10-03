@@ -15,7 +15,7 @@ import { createDemoHost } from './demo-host';
 import type { HomeState, TrustedHost, TrustedHostSnapshot } from './host';
 import { createHouseConsentStore, HOUSE_CONSENT_VERSION } from './house-consent';
 import { createHouseFavoritesStore } from './house-favorites';
-import type { MountHouseApp } from './house-shell';
+import { HouseShell, type HouseStage, type MountHouseApp } from './house-shell';
 
 const SANDBOX_ORIGIN = 'https://sandbox.miakapp.test';
 const HOME_ID = 'home_horizon';
@@ -434,4 +434,28 @@ describe('house shell — around a running home', () => {
       expect(text).not.toContain(jargon);
     }
   });
+});
+
+
+describe('house shell — truthful connection status', () => {
+  it.each(['consent', 'declined', 'signin', 'loading', 'unavailable', 'empty'] as const)(
+    'only reports an observed offline state in %s', (kind) => {
+      const home = createDemoHost().getSnapshot().activeHome;
+      render(<HouseShell
+        home={home} homes={[home]} connection="unavailable"
+        stage={{ kind } as HouseStage} consent={undefined}
+        favorites={createHouseFavoritesStore(memoryStorage())}
+        sandboxOrigin={undefined} homeState={undefined} call={undefined}
+        onAcceptConsent={vi.fn()} onDeclineConsent={vi.fn()} onReopen={vi.fn()}
+        onRevokeConsent={vi.fn()} onRetry={vi.fn()} onSwitchHome={vi.fn()}
+      />);
+      const bar = within(screen.getByRole('banner', { name: 'Miakapp' }));
+      if (['consent', 'declined', 'signin'].includes(kind)) {
+        expect(bar.queryByText('Maison hors ligne')).not.toBeInTheDocument();
+      } else {
+        expect(bar.getByText('Maison hors ligne')).toBeVisible();
+      }
+      expect(bar.getByRole('button', { name: 'Réglages' })).toBeVisible();
+    },
+  );
 });
