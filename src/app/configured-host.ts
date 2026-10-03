@@ -229,26 +229,28 @@ function liveRuntime(configuration: LiveConfiguration): LiveRuntime {
   return runtime;
 }
 
-class FirebaseLiveIdentity implements LiveIdentity {
+export class FirebaseLiveIdentity implements LiveIdentity {
   readonly #auth: Auth;
   readonly #appCheck: AppCheck;
   readonly #listeners = new Set<(signedIn: boolean) => void>();
   readonly #removeAuthListener: () => void;
-  #signedIn: boolean;
+  #userId: string | null;
 
   constructor(auth: Auth, appCheck: AppCheck) {
     this.#auth = auth;
     this.#appCheck = appCheck;
-    this.#signedIn = auth.currentUser !== null;
+    this.#userId = auth.currentUser?.uid ?? null;
     this.#removeAuthListener = onAuthStateChanged(auth, (user) => {
-      const signedIn = user !== null;
-      if (signedIn === this.#signedIn) return;
-      this.#signedIn = signedIn;
-      for (const listener of this.#listeners) listener(signedIn);
+      const userId = user?.uid ?? null;
+      if (userId === this.#userId) return;
+      this.#userId = userId;
+      for (const listener of this.#listeners) listener(userId !== null);
     });
   }
 
-  readonly isSignedIn = (): boolean => this.#signedIn;
+  readonly isSignedIn = (): boolean => this.#userId !== null;
+
+  readonly getUserId = (): string | null => this.#userId;
 
   readonly subscribe = (listener: (signedIn: boolean) => void): (() => void) => {
     this.#listeners.add(listener);
@@ -265,6 +267,9 @@ class FirebaseLiveIdentity implements LiveIdentity {
     if (user === null) throw new Error('The Firebase user is signed out');
     const token = await user.getIdToken(false);
     if (signal.aborted) throw signal.reason;
+    if (this.#auth.currentUser?.uid !== user.uid || this.#userId !== user.uid) {
+      throw new Error('The Firebase identity changed');
+    }
     return token;
   };
 

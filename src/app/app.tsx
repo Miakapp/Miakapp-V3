@@ -91,11 +91,12 @@ function useComponentRelease(
   coordinator: ComponentReleaseCoordinator | undefined,
   enabled: boolean,
   attempt: number,
+  authorizationEpoch: number,
 ): ComponentReleaseState {
   // Bind a result to one continuous authorization window. Withdrawal or
-  // sign-out invalidates it immediately; reopening must activate again, even
+  // sign-out or account switch invalidates it immediately; reopening must activate again, even
   // if the retry counter and coordinator did not change.
-  const request = useMemo(() => ({ coordinator, enabled, attempt }), [coordinator, enabled, attempt]);
+  const request = useMemo(() => ({ coordinator, enabled, attempt, authorizationEpoch }), [coordinator, enabled, attempt, authorizationEpoch]);
   const [outcome, setOutcome] = useState<
     { readonly request: typeof request; readonly state: ComponentReleaseState } | undefined
   >(undefined);
@@ -492,6 +493,7 @@ export function App({
     coordinator,
     consent !== undefined && !needsSignIn,
     attempt,
+    snapshot.authorizationEpoch ?? 0,
   );
   const activatedComponent = componentRelease.status === 'active'
     && componentRelease.activated.pointer.abi === COMPONENT_ABI

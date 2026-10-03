@@ -373,6 +373,36 @@ describe('house shell — consent before any house resource', () => {
     expect(mount).toHaveBeenCalledTimes(1);
   });
 
+  it.each([APP_ABI, COMPONENT_ABI])('reauthorizes %s after a direct account switch', async (abi) => {
+    const consent = createHouseConsentStore(memoryStorage());
+    consent.grant(HOME_ID);
+    const release = appRelease();
+    const coordinator = coordinatorFor({ ...release, pointer: { ...release.pointer, abi } });
+    const house = fakeMount();
+    const session = { lifecycle: 'active' as const, dispose: vi.fn(), interact: vi.fn(), publishState: vi.fn(), markStateStale: vi.fn() };
+    const mountRuntime = vi.fn(async () => session);
+    const mount = abi === APP_ABI ? house.mount : mountRuntime;
+    const base = createDemoHost();
+    let snapshot = { ...base.getSnapshot(), authenticated: true, signInAvailable: false, authorizationEpoch: 1 };
+    const listeners = new Set<() => void>();
+    const host = { ...base, getSnapshot: () => snapshot, subscribe: (listener: () => void) => {
+      listeners.add(listener); return () => { listeners.delete(listener); };
+    } };
+    render(<App host={host} consentStore={consent} createComponentRelease={() => coordinator}
+      mountHouseApp={house.mount} mountRuntime={mountRuntime} readSandboxOrigin={() => SANDBOX_ORIGIN} />);
+    await waitFor(() => expect(mount).toHaveBeenCalledOnce());
+    let rejectActivation!: (error: Error) => void;
+    coordinator.activate.mockImplementationOnce(() => new Promise((_resolve, reject) => { rejectActivation = reject; }));
+    act(() => { snapshot = { ...snapshot, authorizationEpoch: 2 }; listeners.forEach((listener) => listener()); });
+    expect(abi === APP_ABI ? house.sessions[0]!.dispose : session.dispose).toHaveBeenCalledOnce();
+    expect(coordinator.activate).toHaveBeenCalledTimes(2);
+    expect(mount).toHaveBeenCalledTimes(1);
+    expect(document.querySelector('iframe')).toBeNull();
+    await act(async () => { rejectActivation(new Error('new account denied')); });
+    expect(mount).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('banner', { name: 'Miakapp' })).toBeVisible();
+  });
+
   it('asks a signed-out resident to sign in before requesting anything', () => {
     const coordinator = coordinatorFor();
     const consent = createHouseConsentStore(memoryStorage());
