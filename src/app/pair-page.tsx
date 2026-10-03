@@ -119,13 +119,19 @@ function KeyList({
 }): React.JSX.Element {
   const [keys, setKeys] = useState<Loadable<readonly PairingHomeKey[]> | null>(null);
   const [revoked, setRevoked] = useState(false);
+  const active = useRef(true);
+  useEffect(() => {
+    active.current = true;
+    return () => { active.current = false; };
+  }, []);
   const format = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' });
 
   function load(): void {
     setKeys({ status: 'loading' });
     service.listKeys(home.id).then(
-      (value) => setKeys({ status: 'ready', value }),
+      (value) => { if (active.current) setKeys({ status: 'ready', value }); },
       (error: unknown) => {
+        if (!active.current) return;
         const failure = failureOf(error);
         setKeys({ status: 'failed', failure });
         onFailure(failure, load);
@@ -136,10 +142,13 @@ function KeyList({
   function revoke(keyId: string): void {
     service.revokeKey(home.id, keyId).then(
       () => {
+        if (!active.current) return;
         setRevoked(true);
         load();
       },
-      (error: unknown) => onFailure(failureOf(error), () => revoke(keyId)),
+      (error: unknown) => {
+        if (active.current) onFailure(failureOf(error), () => revoke(keyId));
+      },
     );
   }
 
@@ -217,7 +226,7 @@ export function PairPage({
 
   // A different account is a different set of homes and a different grant, so
   // the flow is keyed by it: nothing chosen under the previous one carries over.
-  const accountKey = account === undefined ? 'restoring' : account === null ? 'none' : `account:${account.email}`;
+  const accountKey = account === undefined ? 'restoring' : account === null ? 'none' : `account:${account.id}`;
   return (
     <PairFlow
       account={account}
@@ -267,6 +276,21 @@ function PairFlow({
   const [failure, setFailure] = useState<PairingFailure | null>(null);
   const [clock, setClock] = useState(now);
   const retry = useRef<(() => void) | null>(null);
+  const active = useRef(true);
+  const generation = useRef(0);
+  useEffect(() => {
+    active.current = true;
+    return () => { active.current = false; };
+  }, []);
+
+  function resetPending(): void {
+    generation.current += 1;
+    retry.current = null;
+    setBusy(false);
+    setFailure(null);
+    setIssued(null);
+    setCopied(null);
+  }
 
   const fail = useCallback((next: PairingFailure, again: () => void): void => {
     retry.current = again;
@@ -308,31 +332,50 @@ function PairFlow({
     setHomesAttempt((attempt) => attempt + 1);
   };
 
-  function run(action: () => Promise<void>): void {
+  function run(action: (isCurrent: () => boolean) => Promise<void>): void {
+    const attempt = ++generation.current;
+    const accountId = account?.id;
+    const isCurrent = (): boolean => active.current
+      && generation.current === attempt
+      && service.getAccount()?.id === accountId;
     setBusy(true);
     setFailure(null);
-    action().catch((error: unknown) => fail(failureOf(error), () => run(action))).finally(() => setBusy(false));
+    retry.current = null;
+    action(isCurrent).catch((error: unknown) => {
+      if (isCurrent()) fail(failureOf(error), () => run(action));
+    }).finally(() => {
+      if (isCurrent()) setBusy(false);
+    });
   }
 
   const reauthenticate = (): void => {
+    const again = retry.current;
+    const attempt = generation.current;
+    const accountId = account?.id;
     setFailure(null);
     service.signIn().then(() => {
-      const again = retry.current;
+      // Reauthentication may select a different account. Its grant starts from
+      // scratch; it must never replay the previous account's mutation.
+      if (!active.current || generation.current !== attempt
+        || service.getAccount()?.id !== accountId || retry.current !== again) return;
       retry.current = null;
       again?.();
     }, () => undefined);
   };
 
-  const issue = (home: PairingHome): void => run(async () => {
+  const issue = (home: PairingHome): void => run(async (isCurrent) => {
     const code = await service.issueCode(home.id);
+    if (!isCurrent()) return;
+    if (code.homeId !== home.id) throw new PairingError('unavailable');
     setClock(now());
     setIssued(code);
     setCopied(null);
     setStep('code');
   });
 
-  const createHome = (): void => run(async () => {
+  const createHome = (): void => run(async (isCurrent) => {
     const created = await service.createHome({ id: newId, name: newName, relayUrl: newRelay.trim() });
+    if (!isCurrent()) return;
     setHomes((previous) => ({
       status: 'ready',
       value: [...(previous.status === 'ready' ? previous.value : []), created],
@@ -407,6 +450,7 @@ function PairFlow({
                   <li key={home.id}>
                     <button
                       onClick={() => {
+                        resetPending();
                         setSelected(home);
                         setConfirmed(false);
                         setFailure(null);
@@ -510,9 +554,9 @@ function PairFlow({
               <button className="product-button" disabled={!confirmed || busy} onClick={() => issue(selected)} type="button">
                 {t('pairConfirmSubmit')}
               </button>
-              <button className="text-button" onClick={() => setStep('home')} type="button">{t('pairBack')}</button>
+              <button className="text-button" onClick={() => { resetPending(); setStep('home'); }} type="button">{t('pairBack')}</button>
             </div>
-            <KeyList home={selected} locale={locale} onFailure={fail} service={service} t={t} />
+            <KeyList key={selected.id} home={selected} locale={locale} onFailure={fail} service={service} t={t} />
           </div>
         ) : null}
 
@@ -568,7 +612,7 @@ function PairFlow({
                 </div>
               </>
             )}
-            <KeyList home={selected} locale={locale} onFailure={fail} service={service} t={t} />
+            <KeyList key={selected.id} home={selected} locale={locale} onFailure={fail} service={service} t={t} />
           </div>
         ) : null}
       </section>
