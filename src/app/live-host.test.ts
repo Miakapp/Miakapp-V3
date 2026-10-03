@@ -58,6 +58,7 @@ function fakeIdentity(initiallySignedIn: boolean): LiveIdentity & {
       return () => listeners.delete(listener);
     },
     signIn: vi.fn(async () => undefined),
+    signOut: vi.fn(async () => undefined),
     getFirebaseIdToken: vi.fn(async () => 'firebase-token'),
     getAppCheckToken: vi.fn(async () => 'app-check-token'),
     dispose: vi.fn(),
@@ -411,6 +412,40 @@ describe('live trusted host — calls from a home’s own interface', () => {
     ready(client);
     await expect(host.call!('heating.set', null, options())).rejects.toMatchObject({ code: 'outcome_unknown' });
     expect(client.calls.start).toHaveBeenCalledOnce();
+    host.dispose();
+  });
+});
+
+
+describe('resident-initiated sign-out', () => {
+  it('delegates to the identity and tears down the relay and state when it signs out', async () => {
+    const identity = fakeIdentity(true);
+    vi.mocked(identity.signOut).mockImplementation(async () => { identity.emit(false); });
+    const client = fakeClient();
+    const host = hostWith(identity, [client]);
+    client.emitLifecycle({ previous: 'synchronizing', current: 'ready' });
+    client.emitState({ epoch: new Uint8Array(16), revision: 1, stale: false,
+      values: { 'zone.private': 'synthetic private state' } });
+    await host.signOut!();
+    expect(identity.signOut).toHaveBeenCalledOnce();
+    expect(client.stop).toHaveBeenCalledOnce();
+    expect(host.getSnapshot().authenticated).toBe(false);
+    expect(host.getSnapshot().homeState).toBeUndefined();
+    await expect(host.call!('lighting.toggle', null, { timeoutMs: 1000,
+      signal: new AbortController().signal })).rejects.toMatchObject({ code: 'unavailable' });
+    await host.signOut!();
+    expect(identity.signOut).toHaveBeenCalledOnce();
+    host.dispose();
+  });
+
+  it('propagates sign-out failure and keeps the identity state truthful', async () => {
+    const identity = fakeIdentity(true);
+    vi.mocked(identity.signOut).mockRejectedValue(new Error('sign-out unavailable'));
+    const client = fakeClient();
+    const host = hostWith(identity, [client]);
+    await expect(host.signOut!()).rejects.toThrow('sign-out unavailable');
+    expect(host.getSnapshot().authenticated).toBe(true);
+    expect(client.stop).not.toHaveBeenCalled();
     host.dispose();
   });
 });

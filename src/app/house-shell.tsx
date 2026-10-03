@@ -71,6 +71,7 @@ export interface HouseShellProps {
   readonly homeState: HomeState | undefined;
   readonly call: ((name: string, args: unknown, options: HouseCallOptions) => Promise<unknown>) | undefined;
   readonly signIn?: (() => void) | undefined;
+  readonly signOut?: (() => Promise<void>) | undefined;
   readonly onAcceptConsent: () => void;
   readonly onDeclineConsent: () => void;
   readonly onReopen: () => void;
@@ -529,6 +530,35 @@ function connectionText(connection: HomeConnectionStatus, t: HouseTranslate): st
   return undefined;
 }
 
+function AccountSettings({ signOut, t }: {
+  readonly signOut: () => Promise<void>;
+  readonly t: HouseTranslate;
+}): React.JSX.Element {
+  const [status, setStatus] = useState<'idle' | 'pending' | 'failed'>('idle');
+  const pending = useRef(false);
+  const disconnect = async (): Promise<void> => {
+    if (pending.current) return;
+    pending.current = true;
+    setStatus('pending');
+    try {
+      await signOut();
+      setStatus('idle');
+    } catch {
+      setStatus('failed');
+    } finally {
+      pending.current = false;
+    }
+  };
+  return <section className="house-settings__section">
+    <h3>{t('accountSection')}</h3>
+    <button className="house-button house-button--ghost" disabled={status === 'pending'}
+      onClick={() => { void disconnect(); }} type="button">
+      {t(status === 'pending' ? 'signingOut' : 'signOut')}
+    </button>
+    {status === 'failed' ? <p role="alert">{t('signOutFailed')}</p> : null}
+  </section>;
+}
+
 export function HouseShell(props: HouseShellProps): React.JSX.Element {
   const {
     consent,
@@ -657,6 +687,7 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
             </>
           ) : (
             <div className="house-settings">
+              {props.signOut === undefined ? null : <AccountSettings signOut={props.signOut} t={t} />}
               <fieldset className="house-segmented">
                 <legend>{t('themeLabel')}</legend>
                 {THEMES.map((option) => (

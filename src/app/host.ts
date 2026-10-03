@@ -80,5 +80,7 @@ export interface TrustedHost {
    */
   readonly call?: (name: string, args: unknown, options: HouseCallOptions) => Promise<unknown>;
   readonly signIn?: () => void;
+  /** Signs out the trusted identity; never exposed to a house runtime. */
+  readonly signOut?: () => Promise<void>;
   readonly dispose: () => void;
 }
