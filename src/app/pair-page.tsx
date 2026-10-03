@@ -278,6 +278,7 @@ function PairFlow({
   const retry = useRef<(() => void) | null>(null);
   const active = useRef(true);
   const generation = useRef(0);
+  const pending = useRef(false);
   useEffect(() => {
     active.current = true;
     return () => { active.current = false; };
@@ -285,6 +286,7 @@ function PairFlow({
 
   function resetPending(): void {
     generation.current += 1;
+    pending.current = false;
     retry.current = null;
     setBusy(false);
     setFailure(null);
@@ -333,6 +335,8 @@ function PairFlow({
   };
 
   function run(action: (isCurrent: () => boolean) => Promise<void>): void {
+    if (pending.current) return;
+    pending.current = true;
     const attempt = ++generation.current;
     const accountId = account?.id;
     const isCurrent = (): boolean => active.current
@@ -344,23 +348,40 @@ function PairFlow({
     action(isCurrent).catch((error: unknown) => {
       if (isCurrent()) fail(failureOf(error), () => run(action));
     }).finally(() => {
-      if (isCurrent()) setBusy(false);
+      if (isCurrent()) {
+        pending.current = false;
+        setBusy(false);
+      }
     });
   }
 
   const reauthenticate = (): void => {
+    if (pending.current) return;
+    pending.current = true;
     const again = retry.current;
-    const attempt = generation.current;
+    const attempt = ++generation.current;
     const accountId = account?.id;
+    const isCurrent = (): boolean => active.current && generation.current === attempt
+      && service.getAccount()?.id === accountId;
+    setBusy(true);
     setFailure(null);
     service.signIn().then(() => {
-      // Reauthentication may select a different account. Its grant starts from
-      // scratch; it must never replay the previous account's mutation.
-      if (!active.current || generation.current !== attempt
-        || service.getAccount()?.id !== accountId || retry.current !== again) return;
+      // Only the same account, home and pending action may resume. Opening the
+      // chooser must not authorize a different account or an abandoned flow.
+      if (!isCurrent()) return;
+      pending.current = false;
+      setBusy(false);
+      if (retry.current !== again) return;
       retry.current = null;
       again?.();
-    }, () => undefined);
+    }, () => {
+      if (!isCurrent()) return;
+      pending.current = false;
+      setBusy(false);
+      // Authentication did not complete: retain the original action and a
+      // visible retry, without exposing provider details or replaying a grant.
+      if (retry.current === again) setFailure('stale_sign_in');
+    });
   };
 
   const issue = (home: PairingHome): void => run(async (isCurrent) => {
@@ -403,13 +424,15 @@ function PairFlow({
 
         {failure !== null ? <FailureNotice failure={failure} onReauthenticate={reauthenticate} t={t} /> : null}
 
+        {busy ? <p className="pair-muted" role="status">{t('pairLoading')}</p> : null}
+
         {account === undefined ? <p className="pair-muted">{t('pairLoading')}</p> : null}
 
         {account === null ? (
           <div className="pair-section">
             <h2>{t('pairAccountTitle')}</h2>
             <p className="pair-muted">{t('pairAccountBody')}</p>
-            <button className="google-button" onClick={() => run(service.signIn)} type="button">
+            <button className="google-button" disabled={busy} onClick={() => run(service.signIn)} type="button">
               <span aria-hidden="true">G</span> {t('pairAccountCta')}
             </button>
           </div>
@@ -420,10 +443,8 @@ function PairFlow({
             <span>{t('pairSignedInAs')} <strong>{account.email ?? account.name}</strong></span>
             <button
               className="text-button"
-              onClick={() => run(async () => {
-                await service.signOut();
-                await service.signIn();
-              })}
+              disabled={busy}
+              onClick={() => run(service.signIn)}
               type="button"
             >
               {t('pairSwitchAccount')}
@@ -567,7 +588,7 @@ function PairFlow({
             {expired ? (
               <div className="pair-alert" role="alert">
                 <p>{t('pairCodeExpired')}</p>
-                <button className="product-button product-button--compact" onClick={() => issue(selected)} type="button">
+                <button className="product-button product-button--compact" disabled={busy} onClick={() => issue(selected)} type="button">
                   {t('pairCodeAgain')}
                 </button>
               </div>
