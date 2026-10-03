@@ -566,7 +566,9 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
   };
   const removeFavorite = (homeId: string): void => setFavoriteList(favorites.remove(homeId));
   const listed = listHomes(home, homes, favoriteList);
-  const status = connectionText(connection, t);
+  // Before consent and identity, no home connection has been attempted.
+  const connectionObservable = !['consent', 'declined', 'signin'].includes(stage.kind);
+  const status = connectionObservable ? connectionText(connection, t) : undefined;
   const openHomes = (): void => setPanel((open) => (open === 'homes' ? undefined : 'homes'));
 
   const consentDate = consent === undefined
