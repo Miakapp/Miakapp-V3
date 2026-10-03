@@ -54,7 +54,7 @@ export class FirebasePairingService implements PairingService {
     this.#removeAuthListener = onAuthStateChanged(this.#auth, (user) => {
       this.#account = user === null
         ? null
-        : Object.freeze({ email: user.email, name: user.displayName });
+        : Object.freeze({ id: user.uid, email: user.email, name: user.displayName });
       for (const listener of this.#listeners) listener();
     });
   }
