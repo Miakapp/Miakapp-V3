@@ -114,6 +114,28 @@ describe('Firebase owner principal', () => {
     expect(verified).toBe(1);
   });
 
+  test('checks the current account and revocation state, not only the token signature', async () => {
+    let argumentsSeen: unknown[] = [];
+    const verifier = new FirebaseAdminAuthVerifier({
+      verifyIdToken: async (...args: unknown[]) => {
+        argumentsSeen = args;
+        return decoded();
+      },
+    });
+    await authenticateFirebase(verifier, 'Bearer signed-token', now * 1_000);
+    expect(argumentsSeen).toEqual(['signed-token', true]);
+  });
+
+  test.each(['auth/id-token-revoked', 'auth/user-disabled', 'auth/user-not-found'])(
+    'rejects %s without classifying it as a retryable outage', async (code) => {
+      const verifier = new FirebaseAdminAuthVerifier({
+        verifyIdToken: async () => { throw Object.assign(new Error('private account detail'), { code }); },
+      });
+      await expect(authenticateFirebase(verifier, 'Bearer signed-token', now * 1_000))
+        .rejects.toMatchObject({ code: 'invalid_firebase_token', status: 401, retryable: false });
+    },
+  );
+
   test('keeps definitive Firebase rejection separate from key-fetch dependency failure', async () => {
     const verifierFor = (error: Error & { readonly code: string }) => (
       new FirebaseAdminAuthVerifier({
