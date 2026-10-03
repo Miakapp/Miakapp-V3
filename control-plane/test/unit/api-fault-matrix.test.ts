@@ -34,6 +34,7 @@ import {
   type AdmissionBudget,
   type AppCheckPrincipal,
   type ComponentPublisherPrincipal,
+  type ComponentUploadInput,
   type ExchangeRequest,
   type FirebasePrincipal,
   type HomeKeyAccessGrant,
@@ -1002,5 +1003,45 @@ describe('control-plane API dependency fault matrix', () => {
     ]);
     expect(authorizationCalls).toBe(1);
     expect(transportCalls).toBe(1);
+  });
+});
+
+describe('component release ABIs', () => {
+  const requires = { state_read: [], event_subscribe: [], event_publish: [], call: [], presentation: [] };
+  const upload = (abi: string) => jsonRequest(
+    'POST',
+    `/v1/homes/${HOME_ID}/component-uploads`,
+    { release: 'house-1', abi, sha256: 'A'.repeat(43), size: ARTIFACT.byteLength, requires },
+    { Authorization: COMPONENT_AUTHORIZATION },
+  );
+
+  test('admits a whole-house application and passes its ABI through unchanged', async () => {
+    const received: ComponentUploadInput[] = [];
+    for (const abi of ['miakapp.app/1', 'miakapp.component/1']) {
+      const response = await request(dependencies({
+        componentStore: {
+          issueUpload: async (_principal: ComponentPublisherPrincipal, _homeId: string, input: ComponentUploadInput) => {
+            received.push(input);
+            return { upload_id: UPLOAD_ID };
+          },
+        },
+      }), upload(abi));
+      expect(response.status).toBe(201);
+    }
+    expect(received.map((input) => input.abi)).toEqual(['miakapp.app/1', 'miakapp.component/1']);
+  });
+
+  test('refuses an ABI the shell cannot run', async () => {
+    let calls = 0;
+    const response = await request(dependencies({
+      componentStore: {
+        issueUpload: async () => {
+          calls += 1;
+          return {};
+        },
+      },
+    }), upload('miakapp.app/2'));
+    expect(response.status).toBe(400);
+    expect(calls).toBe(0);
   });
 });

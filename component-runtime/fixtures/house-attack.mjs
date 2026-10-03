@@ -1,6 +1,8 @@
 // A hostile house application. Every probe records whether the authority it
 // reached for was available; the browser test reads the verdicts and, for
-// network probes, also checks the server never heard from it.
+// network probes, also checks the server never heard from it. A classic script,
+// as releases are, so the probes run inside an async function.
+(async () => {
 const results = [];
 const record = (name, outcome) => results.push(`${name}=${outcome}`);
 const leak = (label) => `http://127.0.0.1:4173/leak?${label}`;
@@ -63,3 +65,4 @@ output.textContent = results.join('\n');
 output.dataset.done = 'true';
 output.style.cssText = 'position:relative;z-index:2147483647;background:white';
 document.body.append(output);
+})();
