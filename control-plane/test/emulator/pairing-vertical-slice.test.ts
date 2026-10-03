@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { deleteApp, initializeApp } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
 import {
   getFirestore,
   type DocumentReference,
@@ -18,6 +19,7 @@ import { loadAccessTokenFixture, type AccessTokenFixture } from '../../../contro
 import { RANDOM_SUBJECT_ATTEMPTS, reserveAdmissionSubjects } from './admission-fixture.js';
 import {
   PROJECT_ID,
+  AUTH_HOST,
   apiRequest,
   clearFirestore,
   jsonResponse,
@@ -167,6 +169,50 @@ afterAll(async () => {
 });
 
 describe('Firebase Emulator browser-to-agent pairing', () => {
+  test.each(['disabled', 'deleted', 'revoked'] as const)(
+    'rejects an already-issued owner token after the account is %s', async (state) => {
+      const account = await signUp(`pairing-${state}@example.test`);
+      // Auth emulator tokens are unsigned. Make authentication precede the
+      // revocation clock without waiting for a wall-clock second boundary.
+      const segments = account.idToken.split('.');
+      const claims = JSON.parse(Buffer.from(segments[1] as string, 'base64url').toString('utf8'));
+      claims.auth_time -= 10;
+      segments[1] = Buffer.from(JSON.stringify(claims)).toString('base64url');
+      // The emulator checks revocation even when the SDK flag is omitted.
+      // Keep the fixture initially valid, then exercise real SDK invalidation.
+      const setup = await fetch(
+        `http://${AUTH_HOST}/identitytoolkit.googleapis.com/v1/accounts:update?key=synthetic-key`,
+        {
+          method: 'POST',
+          headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ localId: account.userId, validSince: String(claims.auth_time - 1) }),
+        },
+      );
+      expect(setup.ok).toBe(true);
+      const user = { ...account, idToken: segments.join('.') };
+      await createHome(user);
+      expect((await apiRequest('GET', '/v1/homes', { token: user.idToken })).status).toBe(200);
+
+      const auth = getAuth(admin);
+      if (state === 'disabled') await auth.updateUser(user.userId, { disabled: true });
+      else if (state === 'deleted') await auth.deleteUser(user.userId);
+      else await auth.revokeRefreshTokens(user.userId);
+
+      for (const response of [
+        await apiRequest('GET', '/v1/homes', { token: user.idToken }),
+        await apiRequest('POST', `/v1/homes/${HOME_ID}/pairing-codes`, {
+          token: user.idToken, body: issueBody(),
+        }),
+      ]) {
+        expect(response.status).toBe(401);
+        expect(response.headers.get('cache-control')).toBe('no-store');
+        expect(await errorCode(response)).toBe('invalid_firebase_token');
+      }
+      expect((await firestore.collection('controlPairingCodes').get()).size).toBe(0);
+      expect((await apiRequest('GET', '/v1/homes', { token: owner.idToken })).status).toBe(200);
+    },
+  );
+
   test('lists only the homes an account administers', async () => {
     await createHome();
     const mine = await apiRequest('GET', '/v1/homes', { token: owner.idToken });
