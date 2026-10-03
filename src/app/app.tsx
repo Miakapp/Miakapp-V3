@@ -480,9 +480,11 @@ export function App({
     () => providedFavoritesStore ?? createHouseFavoritesStore(),
   );
   const homeId = snapshot.activeHome.id;
-  const [consent, setConsent] = useState<HouseConsentRecord | undefined>(
+  const readConsent = useCallback(
     () => (houseMode ? consentStore.read(homeId) : undefined),
+    [consentStore, homeId, houseMode],
   );
+  const consent = useSyncExternalStore(consentStore.subscribe, readConsent, readConsent);
   const [declined, setDeclined] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const needsSignIn = snapshot.signInAvailable && !snapshot.authenticated;
@@ -554,14 +556,13 @@ export function App({
         {...(mountHouseApp === undefined ? {} : { mountHouseApp })}
         onAcceptConsent={() => {
           setDeclined(false);
-          setConsent(consentStore.grant(homeId));
+          consentStore.grant(homeId);
         }}
         onDeclineConsent={() => setDeclined(true)}
         onReopen={() => setDeclined(false)}
         onRetry={() => setAttempt((value) => value + 1)}
         onRevokeConsent={() => {
           consentStore.revoke(homeId);
-          setConsent(undefined);
         }}
         onSwitchHome={switchHome}
         sandboxOrigin={sandboxOrigin}
