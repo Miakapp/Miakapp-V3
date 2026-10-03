@@ -8,6 +8,8 @@ import {
   type BrowserRelayCredentialRequest,
 } from './miakapi-browser';
 
+import { createRealHomeTree } from './real-home-tree';
+
 import type {
   HomeActivity,
   HomeConnectionStatus,
@@ -35,6 +37,7 @@ export interface LiveHostOptions {
   readonly home: HomeSummary;
   readonly exchangeEndpoint: string;
   readonly identity: LiveIdentity;
+  readonly readOnlyHome?: boolean;
 }
 
 export interface LiveHostDependencies {
@@ -76,6 +79,7 @@ class LiveTrustedHost implements TrustedHost {
   readonly #listeners = new Set<() => void>();
   readonly #identity: LiveIdentity;
   readonly #home: HomeSummary;
+  readonly #readOnlyHome: boolean;
   readonly #createClient: BrowserClientFactory;
   readonly #credentialProvider: BrowserRelayCredentialProvider;
   readonly #removeIdentityListener: () => void;
@@ -104,6 +108,7 @@ class LiveTrustedHost implements TrustedHost {
   constructor(options: LiveHostOptions, dependencies: LiveHostDependencies) {
     this.#identity = options.identity;
     this.#home = options.home;
+    this.#readOnlyHome = options.readOnlyHome ?? false;
     this.#signedIn = options.identity.isSignedIn();
     const createCredentialProvider = dependencies.createCredentialProvider
       ?? createControlPlaneBrowserRelayCredentialProvider;
@@ -142,6 +147,7 @@ class LiveTrustedHost implements TrustedHost {
   readonly interact = (interaction: SemanticInteraction): void => {
     if (
       this.#disposed
+      || this.#readOnlyHome
       || this.#status !== 'ready'
       || this.#stateStale
       || this.#action.state === 'pending'
@@ -324,19 +330,24 @@ class LiveTrustedHost implements TrustedHost {
       connection,
       connectionDetail: connectionDetail(this.#status, this.#signedIn),
       lastSynced: connection === 'ready' ? 'Live state current' : 'No current live state',
-      uiTree: createLiveTree({
-        action: this.#action,
-        connected: connection === 'ready',
-        state: this.#state,
-        stateStale: this.#stateStale,
-      }),
+      uiTree: this.#readOnlyHome
+        ? createRealHomeTree({ connected: connection === 'ready', state: this.#state, stateStale: this.#stateStale })
+        : createLiveTree({
+          action: this.#action,
+          connected: connection === 'ready',
+          state: this.#state,
+          stateStale: this.#stateStale,
+        }),
       activity: this.#activity,
       preview: false,
-      modeLabel: 'Staging',
-      noticeTitle: this.#signedIn ? 'Live staging connection' : 'Connect to Miakapp staging',
-      noticeDetail: this.#signedIn
-        ? 'Firebase identity, App Check, control plane, relay and Bun coordinator.'
-        : 'Sign in with Google to open the trusted live path.',
+      modeLabel: this.#readOnlyHome ? 'Lecture seule' : 'Staging',
+      noticeTitle: this.#readOnlyHome ? 'Maison de Mathieu'
+        : this.#signedIn ? 'Live staging connection' : 'Connect to Miakapp staging',
+      noticeDetail: this.#readOnlyHome
+        ? 'États du Salon et de la Mezzanine. Aucune commande physique disponible.'
+        : this.#signedIn
+          ? 'Firebase identity, App Check, control plane, relay and Bun coordinator.'
+          : 'Sign in with Google to open the trusted live path.',
       signInAvailable: !this.#signedIn,
     });
   }
