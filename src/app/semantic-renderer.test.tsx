@@ -87,12 +87,13 @@ describe('SemanticRenderer', () => {
     render(<SemanticRenderer onInteraction={onInteraction} tree={createDemoTree(INITIAL_STATE)} />);
 
     expect(screen.getByRole('heading', { level: 1, name: 'Good evening, Mathieu.' })).toBeVisible();
+    expect(screen.queryByText('Your living interface')).not.toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Front door camera preview' })).toHaveAttribute(
       'data-media-handle',
       'media.front_door',
     );
     expect(
-      screen.getByRole('status', { name: 'Comfort: Accepted — Stable for 2 hours' }),
+      screen.getByRole('status', { name: 'Comfort: Request received — Stable for 2 hours' }),
     ).toBeVisible();
 
     fireEvent.click(screen.getByRole('checkbox', { name: 'Kitchen' }));
@@ -115,7 +116,7 @@ describe('SemanticRenderer', () => {
 
     render(<SemanticRenderer onInteraction={vi.fn()} tree={invalidTree} />);
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Component blocked');
+    expect(screen.getByRole('alert')).toHaveTextContent('Interface unavailable');
     expect(screen.getByRole('alert')).toHaveTextContent('screen.props.style is not allowed');
     expect(screen.queryByRole('heading', { name: 'Untrusted screen' })).not.toBeInTheDocument();
   });
@@ -152,9 +153,9 @@ describe('SemanticRenderer', () => {
 
   it('tells pending, stale and outcome-unknown apart', () => {
     for (const [state, expected] of [
-      ['pending', 'Pending'],
-      ['stale', 'Stale'],
-      ['outcome_unknown', 'Outcome unknown'],
+      ['pending', 'In progress'],
+      ['stale', 'Out of date'],
+      ['outcome_unknown', 'Result not confirmed'],
     ] as const) {
       const { unmount } = render(
         <SemanticRenderer onInteraction={vi.fn()} tree={statusTree(state)} />,
@@ -163,6 +164,32 @@ describe('SemanticRenderer', () => {
       expect(screen.getByRole('status')).toHaveTextContent(expected);
       unmount();
     }
+  });
+
+  it('localizes every distinct status without hiding uncertainty or rewriting home labels', () => {
+    const terms = new Set<string>();
+    for (const state of STATUS_STATES) {
+      const { unmount } = render(<SemanticRenderer locale="fr" onInteraction={vi.fn()} tree={statusTree(state)} />);
+      const status = screen.getByRole('status');
+      const term = status.querySelector('.semantic-status__term')!.textContent!;
+      expect(status).toHaveAccessibleName(`Comfort: ${term}`);
+      expect(status).toHaveAttribute('data-status-state', state);
+      if (state === 'outcome_unknown') expect(term).toBe('Résultat non confirmé');
+      if (state === 'accepted') expect(term).toBe('Demande reçue');
+      terms.add(term);
+      unmount();
+    }
+    expect(terms.size).toBe(STATUS_STATES.length);
+  });
+
+  it('updates trusted control terms when the shell language changes', () => {
+    const tree = controlTree('button', { pending: true, disabled: true });
+    const { rerender } = render(<SemanticRenderer locale="fr" onInteraction={vi.fn()} tree={tree} />);
+    expect(screen.getByRole('button')).toHaveAccessibleName('Unlock the door En cours…');
+    expect(screen.getByRole('button')).toBeDisabled();
+    rerender(<SemanticRenderer locale="en" onInteraction={vi.fn()} tree={tree} />);
+    expect(screen.getByRole('button')).toHaveAccessibleName('Unlock the door Working…');
+    expect(screen.getByRole('button')).toBeDisabled();
   });
 
   it('keeps a pending control named and says why it stopped answering', () => {
