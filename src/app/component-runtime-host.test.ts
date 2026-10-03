@@ -600,3 +600,40 @@ describe('selectGrantedState', () => {
     expect(selectGrantedState({ 'zone.alpha.light.on': true }, [])).toEqual({});
   });
 });
+
+
+describe('mount cancellation', () => {
+  it('does not create a frame when already cancelled', async () => {
+    const harness = createHarness();
+    const controller = new AbortController();
+    controller.abort();
+    await expect(mount(harness, { signal: controller.signal })).rejects.toMatchObject({ name: 'AbortError' });
+    expect(harness.frames).toHaveLength(0);
+  });
+
+  it('removes the waiting frame and refuses late readiness', async () => {
+    const harness = createHarness();
+    const controller = new AbortController();
+    const pending = mount(harness, { signal: controller.signal });
+    expect(document.querySelector('iframe')).not.toBeNull();
+    controller.abort();
+    expect(document.querySelector('iframe')).toBeNull();
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+    harness.announce();
+    expect(harness.posted).toHaveLength(0);
+    expect(harness.lifecycles).toEqual([{ lifecycle: 'terminated' }]);
+  });
+
+  it('also removes a bound session synchronously', async () => {
+    const harness = createHarness();
+    const controller = new AbortController();
+    const pending = mount(harness, { signal: controller.signal });
+    harness.announce();
+    const session = await pending;
+    controller.abort();
+    expect(session.lifecycle).toBe('terminated');
+    expect(document.querySelector('iframe')).toBeNull();
+    session.dispose();
+    expect(harness.lifecycles.filter(item => item.lifecycle === 'terminated')).toHaveLength(1);
+  });
+});

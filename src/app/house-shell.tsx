@@ -364,6 +364,7 @@ function HouseAppStage({
     const container = containerRef.current;
     if (container === null || sandboxOrigin === undefined) return undefined;
     let released = false;
+    const controller = new AbortController();
     const current = latest.current;
     setLifecycle('starting');
     setFailure(undefined);
@@ -372,6 +373,7 @@ function HouseAppStage({
       { pointer: release.pointer, artifact: { bytes: release.artifact.bytes } },
       {
         sandboxOrigin,
+        signal: controller.signal,
         container,
         policy: platformGrantCeiling(release.pointer.requires),
         home: { id: home.id, name: home.name },
@@ -380,6 +382,7 @@ function HouseAppStage({
         theme: current.theme,
         ...(current.homeState === undefined ? {} : { initialState: current.homeState }),
         call: async (name, args, options) => {
+          if (released) throw new HouseCallError('denied');
           const forward = latest.current.call;
           if (forward === undefined) throw new HouseCallError('unavailable');
           return await forward(name, args, options);
@@ -404,6 +407,7 @@ function HouseAppStage({
 
     return () => {
       released = true;
+      controller.abort();
       sessionRef.current?.dispose();
       sessionRef.current = undefined;
     };

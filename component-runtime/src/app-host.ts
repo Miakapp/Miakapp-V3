@@ -72,6 +72,8 @@ export interface HouseAppState {
 }
 
 export interface HouseAppHostOptions {
+  /** Cancels pending readiness as well as an already-bound session. */
+  readonly signal?: AbortSignal;
   readonly sandboxOrigin: string;
   readonly container: HTMLElement;
   readonly home: { readonly id: string; readonly name: string };
@@ -169,6 +171,7 @@ export function mountHouseApp(
   release: HouseAppRelease,
   options: HouseAppHostOptions,
 ): Promise<HouseAppSession> {
+  if (options.signal?.aborted) return Promise.reject(new DOMException('Mount cancelled', 'AbortError'));
   const hostWindow = options.window ?? window;
   const hostDocument = hostWindow.document;
   if (release.pointer.abi !== APP_ABI) {
@@ -209,7 +212,10 @@ export function mountHouseApp(
 
   const frame = hostDocument.createElement('iframe');
 
+  let removeAbortListener: (() => void) | undefined;
   const cleanup = (): void => {
+    removeAbortListener?.();
+    removeAbortListener = undefined;
     if (frameTimer) clearTimeout(frameTimer);
     if (bootTimer) clearTimeout(bootTimer);
     if (heartbeat) clearInterval(heartbeat);
@@ -369,6 +375,13 @@ export function mountHouseApp(
   };
 
   return new Promise<HouseAppSession>((resolve, reject) => {
+    const abort = (): void => {
+      settle('disposed');
+      reject(new DOMException('Mount cancelled', 'AbortError'));
+    };
+    options.signal?.addEventListener('abort', abort, { once: true });
+    removeAbortListener = () => options.signal?.removeEventListener('abort', abort);
+    if (options.signal?.aborted) { abort(); return; }
     const session: HouseAppSession = {
       get lifecycle() {
         return lifecycle;
