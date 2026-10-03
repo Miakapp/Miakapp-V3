@@ -27,6 +27,9 @@ import {
 
 export interface LiveIdentity {
   readonly isSignedIn: () => boolean;
+  /** Internal identity only; never passed to a house runtime. */
+  readonly getUserId: () => string | null;
+  /** Notify for every UID transition, including signed-in A → signed-in B. */
   readonly subscribe: (listener: (signedIn: boolean) => void) => () => void;
   readonly signIn: () => Promise<void>;
   readonly getFirebaseIdToken: (request: BrowserRelayCredentialRequest) => Promise<string>;
@@ -80,12 +83,14 @@ class LiveTrustedHost implements TrustedHost {
   readonly #identity: LiveIdentity;
   readonly #home: HomeSummary;
   readonly #createClient: BrowserClientFactory;
-  readonly #credentialProvider: BrowserRelayCredentialProvider;
+  readonly #createCredentialProvider: () => BrowserRelayCredentialProvider;
   readonly #removeIdentityListener: () => void;
 
   #client: BrowserClient | undefined;
   #removeClientListeners: Array<() => void> = [];
   #signedIn: boolean;
+  #userId: string | null;
+  #authorizationEpoch = 0;
   #status: BrowserClientStatus = 'idle';
   #state: LiveState = EMPTY_STATE;
   #stateStale = false;
@@ -107,21 +112,53 @@ class LiveTrustedHost implements TrustedHost {
   constructor(options: LiveHostOptions, dependencies: LiveHostDependencies) {
     this.#identity = options.identity;
     this.#home = options.home;
-    this.#signedIn = options.identity.isSignedIn();
+    this.#userId = options.identity.getUserId();
+    this.#signedIn = this.#userId !== null;
     const createCredentialProvider = dependencies.createCredentialProvider
       ?? createControlPlaneBrowserRelayCredentialProvider;
-    this.#credentialProvider = createCredentialProvider({
-      exchangeEndpoint: options.exchangeEndpoint,
-      getFirebaseIdToken: options.identity.getFirebaseIdToken,
-      getAppCheckToken: options.identity.getAppCheckToken,
-    });
+    this.#createCredentialProvider = () => {
+      const epoch = this.#authorizationEpoch;
+      const current = (): void => {
+        if (this.#disposed || epoch !== this.#authorizationEpoch
+          || this.#identity.getUserId() !== this.#userId || !this.#signedIn) {
+          throw new Error('Identity changed');
+        }
+      };
+      const provider = createCredentialProvider({
+        exchangeEndpoint: options.exchangeEndpoint,
+        getFirebaseIdToken: async (request) => {
+          current();
+          const token = await options.identity.getFirebaseIdToken(request);
+          current();
+          return token;
+        },
+        getAppCheckToken: async (request) => {
+          current();
+          const token = await options.identity.getAppCheckToken(request);
+          current();
+          return token;
+        },
+      });
+      return { getCredential: async (request) => {
+        current();
+        const credential = await provider.getCredential(request);
+        current();
+        return credential;
+      } };
+    };
     this.#createClient = dependencies.createClient ?? createBrowserClient;
     this.#snapshot = this.#buildSnapshot();
-    this.#removeIdentityListener = this.#identity.subscribe((signedIn) => {
-      if (this.#disposed || signedIn === this.#signedIn) return;
-      this.#signedIn = signedIn;
-      if (signedIn) void this.#connect();
-      else void this.#disconnect();
+    this.#removeIdentityListener = this.#identity.subscribe(() => {
+      const userId = this.#identity.getUserId();
+      if (this.#disposed || userId === this.#userId) return;
+      this.#userId = userId;
+      this.#signedIn = userId !== null;
+      ++this.#authorizationEpoch;
+      // Detach synchronously; an old stop() must not block or overwrite the
+      // new account. A fresh provider cannot reuse a prior user's lease.
+      void this.#disconnect();
+      this.#activity = EMPTY_ACTIVITY;
+      if (this.#signedIn) void this.#connect();
       this.#publish();
     });
     if (this.#signedIn) void this.#connect();
@@ -245,8 +282,11 @@ class LiveTrustedHost implements TrustedHost {
       throw new HouseCallError('unavailable');
     }
     try {
-      return await call.result;
+      const result = await call.result;
+      if (this.#disposed || this.#client !== client) throw new HouseCallError('denied');
+      return result;
     } catch (failure) {
+      if (this.#disposed || this.#client !== client) throw new HouseCallError('denied');
       const outcome = typeof failure === 'object' && failure !== null && 'outcome' in failure
         ? failure.outcome
         : undefined;
@@ -274,7 +314,7 @@ class LiveTrustedHost implements TrustedHost {
     const generation = ++this.#connectionGeneration;
     const client = this.#createClient({
       homeId: this.#home.id,
-      credentialProvider: this.#credentialProvider,
+      credentialProvider: this.#createCredentialProvider(),
     });
     this.#client = client;
     this.#removeClientListeners = [
@@ -356,6 +396,7 @@ class LiveTrustedHost implements TrustedHost {
     const connection = connectionFrom(this.#status);
     return Object.freeze({
       authenticated: this.#signedIn,
+      authorizationEpoch: this.#authorizationEpoch,
       ...(this.#homeState === undefined ? {} : { homeState: this.#homeState }),
       activeHome: this.#home,
       homes: Object.freeze([this.#home]),

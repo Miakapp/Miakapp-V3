@@ -45,12 +45,14 @@ function nodeByIdOrUndefined(tree: UiNode, id: string): UiNode | undefined {
 }
 
 function fakeIdentity(initiallySignedIn: boolean): LiveIdentity & {
-  emit(signedIn: boolean): void;
+  emit(signedIn: boolean, userId?: string): void;
 } {
   let signedIn = initiallySignedIn;
+  let userId = signedIn ? 'resident-a' : null;
   const listeners = new Set<(value: boolean) => void>();
   return {
     isSignedIn: () => signedIn,
+    getUserId: () => userId,
     subscribe(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
@@ -59,8 +61,9 @@ function fakeIdentity(initiallySignedIn: boolean): LiveIdentity & {
     getFirebaseIdToken: vi.fn(async () => 'firebase-token'),
     getAppCheckToken: vi.fn(async () => 'app-check-token'),
     dispose: vi.fn(),
-    emit(value) {
+    emit(value, nextUserId = 'resident-a') {
       signedIn = value;
+      userId = value ? nextUserId : null;
       for (const listener of listeners) listener(value);
     },
   };
@@ -139,6 +142,60 @@ function hostWith(identity: LiveIdentity, clients: BrowserClient[]) {
 }
 
 describe('live trusted host', () => {
+  it('drops the old relay and private state on a direct account switch', async () => {
+    const identity = fakeIdentity(true);
+    const first = fakeClient();
+    const second = fakeClient();
+    const stop = deferred<void>();
+    vi.mocked(first.stop).mockReturnValue(stop.promise);
+    const host = hostWith(identity, [first, second]);
+    first.emitLifecycle({ previous: 'synchronizing', current: 'ready' });
+    first.emitState({ epoch: new Uint8Array(16), revision: 1, stale: false,
+      values: { 'zone.private': 'resident-a-only' } });
+    const before = host.getSnapshot();
+    identity.emit(true, 'resident-b');
+    expect(first.stop).toHaveBeenCalledOnce();
+    expect(host.getSnapshot().homeState).toBeUndefined();
+    expect(host.getSnapshot().authenticated).toBe(true);
+    expect(host.getSnapshot().authorizationEpoch).not.toBe(before.authorizationEpoch);
+    expect(second.start).toHaveBeenCalledOnce();
+    first.emitState({ epoch: new Uint8Array(16), revision: 2, stale: false,
+      values: { 'zone.private': 'late-a' } });
+    expect(host.getSnapshot().homeState).toBeUndefined();
+    await expect(host.call?.('lighting.toggle', null, { timeoutMs: 1000,
+      signal: new AbortController().signal })).rejects.toMatchObject({ code: 'unavailable' });
+    stop.resolve();
+    await stop.promise;
+    second.emitLifecycle({ previous: 'synchronizing', current: 'ready' });
+    expect(host.getSnapshot().connection).toBe('ready');
+    host.dispose();
+  });
+
+  it('rejects retired credential providers and late call results after switching accounts', async () => {
+    const identity = fakeIdentity(true);
+    const pending = deferred<unknown>();
+    const first = fakeClient({ localId: 'call-old', accepted: Promise.resolve(), result: pending.promise, cancel: vi.fn() });
+    const second = fakeClient();
+    const clients = [first, second];
+    const captured: import('./miakapi-browser').BrowserRelayCredentialProvider[] = [];
+    const createProvider = vi.fn(() => ({ getCredential: vi.fn(async () => ({ relayUrl: 'wss://relay.example.test/ws', accessToken: 'synthetic', expiresAtMs: Date.now() + 60000 })) }));
+    const host = createLiveHost({ exchangeEndpoint: 'https://control.example.test/exchange',
+      home: { id: 'synthetic-home', name: 'Synthetic', detail: '', accent: '#fff' }, identity }, {
+      createCredentialProvider: createProvider,
+      createClient: (options) => { captured.push(options.credentialProvider); return clients.shift()!; },
+    });
+    first.emitLifecycle({ previous: 'synchronizing', current: 'ready' });
+    const call = host.call!('lighting.toggle', null, { timeoutMs: 1000, signal: new AbortController().signal });
+    identity.emit(true, 'resident-b');
+    identity.emit(true, 'resident-b');
+    expect(createProvider).toHaveBeenCalledTimes(2);
+    expect(second.start).toHaveBeenCalledOnce();
+    pending.resolve('old-private-result');
+    await expect(call).rejects.toMatchObject({ code: 'denied' });
+    await expect(captured[0]!.getCredential({ homeId: 'synthetic-home', reason: 'initial', signal: new AbortController().signal })).rejects.toThrow('Identity changed');
+    host.dispose();
+  });
+
   it('keeps relay creation behind an explicit Firebase sign-in', () => {
     const identity = fakeIdentity(false);
     const host = hostWith(identity, []);
