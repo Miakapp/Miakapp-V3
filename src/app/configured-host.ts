@@ -34,6 +34,7 @@ interface LiveConfiguration {
   readonly homeId: string;
   readonly homeName: string;
   readonly homeDetail: string;
+  readonly readOnlyHome: boolean;
   readonly componentRelease: ComponentReleaseConfiguration | undefined;
 }
 
@@ -123,6 +124,9 @@ export function readConfiguredDiagnosticsEndpoint(): string | undefined {
 
 function readLiveConfiguration(): LiveConfiguration | undefined {
   if (import.meta.env.VITE_MIAKAPP_MODE !== 'live') return undefined;
+  // A bounded owner canary, not a general home selector. The coordinator alone grants state.
+  const readOnlyHome = window.location.pathname === '/app'
+    && new URLSearchParams(window.location.search).get('home') === 'mathieu-home';
   const exchangeEndpoint = required('VITE_MIAKAPP_CONTROL_PLANE_EXCHANGE_ENDPOINT');
   if (!exchangeEndpoint.startsWith('https://')) {
     throw new Error('The Miakapp control-plane exchange endpoint must use HTTPS');
@@ -138,9 +142,10 @@ function readLiveConfiguration(): LiveConfiguration | undefined {
     }),
     appCheckSiteKey: required('VITE_MIAKAPP_APP_CHECK_SITE_KEY'),
     exchangeEndpoint,
-    homeId: required('VITE_MIAKAPP_HOME_ID'),
-    homeName: required('VITE_MIAKAPP_HOME_NAME'),
-    homeDetail: required('VITE_MIAKAPP_HOME_DETAIL'),
+    homeId: readOnlyHome ? 'mathieu-home' : required('VITE_MIAKAPP_HOME_ID'),
+    homeName: readOnlyHome ? 'Maison de Mathieu' : required('VITE_MIAKAPP_HOME_NAME'),
+    homeDetail: readOnlyHome ? 'États réels · lecture seule' : required('VITE_MIAKAPP_HOME_DETAIL'),
+    readOnlyHome,
     componentRelease: readComponentReleaseConfiguration(),
   });
 }
@@ -231,7 +236,7 @@ class FirebaseLiveIdentity implements LiveIdentity {
  */
 export function createConfiguredComponentRelease(): ComponentReleaseCoordinator | undefined {
   const configuration = readLiveConfiguration();
-  if (configuration === undefined) return undefined;
+  if (configuration === undefined || configuration.readOnlyHome) return undefined;
   const release = configuration.componentRelease;
   if (release === undefined) return undefined;
 
@@ -266,6 +271,7 @@ export function createConfiguredHost(): TrustedHost {
 
   return createLiveHost({
     exchangeEndpoint: configuration.exchangeEndpoint,
+    readOnlyHome: configuration.readOnlyHome,
     home: Object.freeze({
       id: configuration.homeId,
       name: configuration.homeName,
