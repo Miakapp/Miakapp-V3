@@ -11,6 +11,7 @@ import {
 } from '../../component-runtime/src/contract';
 import type { SemanticInteraction } from './host';
 import { LockIcon } from './icons';
+import type { Locale } from './copy';
 
 const PREVIEW_MEDIA_HANDLES = new Set(['media.front_door']);
 
@@ -25,12 +26,12 @@ const PREVIEW_MEDIA_HANDLES = new Set(['media.front_door']);
  */
 const STATUS_TERMS: Record<StatusState, string> = {
   idle: 'Idle',
-  pending: 'Pending',
-  accepted: 'Accepted',
+  pending: 'In progress',
+  accepted: 'Request received',
   applied: 'Applied',
   failed: 'Failed',
-  stale: 'Stale',
-  outcome_unknown: 'Outcome unknown',
+  stale: 'Out of date',
+  outcome_unknown: 'Result not confirmed',
 };
 
 /**
@@ -66,6 +67,16 @@ const DISABLED_TERMS: Record<DisabledNodeType, string> = {
   select: 'Unavailable',
 };
 
+const FR_STATUS_TERMS: Record<StatusState, string> = {
+  idle: 'Au repos',
+  pending: 'En cours',
+  accepted: 'Demande reçue',
+  applied: 'Effectué',
+  failed: 'Échec',
+  stale: 'À actualiser',
+  outcome_unknown: 'Résultat non confirmé',
+};
+
 const PENDING_CAPABLE: ReadonlySet<string> = new Set<string>(PENDING_NODE_TYPES);
 
 /**
@@ -87,7 +98,8 @@ function isPendingCapable(type: DisabledNodeType): type is DisabledNodeType & Pe
  * the more perishable of the two, so it wins; `disabled` is what remains when
  * nothing is in flight.
  */
-function inertTerm(type: DisabledNodeType, disabled: boolean, pending: boolean): string | null {
+function inertTerm(type: DisabledNodeType, disabled: boolean, pending: boolean, locale: Locale): string | null {
+  if (locale === 'fr') return pending && isPendingCapable(type) ? 'En cours…' : disabled ? 'Indisponible' : null;
   if (pending && isPendingCapable(type)) return PENDING_TERMS[type];
   return disabled ? DISABLED_TERMS[type] : null;
 }
@@ -102,6 +114,7 @@ function InertTerm({ className, term }: { className: string; term: string | null
 }
 
 interface SemanticRendererProps {
+  readonly locale?: Locale;
   readonly tree: unknown;
   readonly onInteraction: (interaction: SemanticInteraction) => void;
   readonly mediaHandles?: ReadonlySet<string>;
@@ -138,23 +151,24 @@ function statusState(node: UiNode): StatusState {
 function children(
   node: UiNode,
   onInteraction: SemanticRendererProps['onInteraction'],
+  locale: Locale,
 ): React.ReactNode {
-  return node.children?.map((child) => renderNode(child, onInteraction));
+  return node.children?.map((child) => renderNode(child, onInteraction, locale));
 }
 
 function renderNode(
   node: UiNode,
   onInteraction: SemanticRendererProps['onInteraction'],
+  locale: Locale,
 ): React.JSX.Element {
   switch (node.type) {
     case 'screen':
       return (
         <section className="semantic-screen" data-node-id={node.id} key={node.id}>
           <header className="semantic-screen__heading">
-            <p className="eyebrow">Your living interface</p>
             <h1>{stringProp(node, 'title')}</h1>
           </header>
-          {children(node, onInteraction)}
+          {children(node, onInteraction, locale)}
         </section>
       );
     case 'stack':
@@ -169,7 +183,7 @@ function renderNode(
           data-node-id={node.id}
           key={node.id}
         >
-          {children(node, onInteraction)}
+          {children(node, onInteraction, locale)}
         </div>
       );
     case 'grid':
@@ -181,7 +195,7 @@ function renderNode(
           key={node.id}
           style={{ '--semantic-columns': numberProp(node, 'columns') } as React.CSSProperties}
         >
-          {children(node, onInteraction)}
+          {children(node, onInteraction, locale)}
         </div>
       );
     case 'section':
@@ -191,7 +205,7 @@ function renderNode(
             <h2>{stringProp(node, 'heading')}</h2>
             {node.props.description ? <p>{stringProp(node, 'description')}</p> : null}
           </header>
-          <div className="semantic-card__body">{children(node, onInteraction)}</div>
+          <div className="semantic-card__body">{children(node, onInteraction, locale)}</div>
         </section>
       );
     case 'text':
@@ -210,7 +224,7 @@ function renderNode(
       );
     case 'status': {
       const state = statusState(node);
-      const term = STATUS_TERMS[state];
+      const term = (locale === 'fr' ? FR_STATUS_TERMS : STATUS_TERMS)[state];
       const label = stringProp(node, 'label');
       const detail = node.props.detail ? stringProp(node, 'detail') : undefined;
       return (
@@ -249,7 +263,7 @@ function renderNode(
           {stringProp(node, 'label')}
           <InertTerm
             className="semantic-inert-term"
-            term={inertTerm('button', booleanProp(node, 'disabled'), pending)}
+            term={inertTerm('button', booleanProp(node, 'disabled'), pending, locale)}
           />
         </button>
       );
@@ -262,7 +276,7 @@ function renderNode(
           <span>{stringProp(node, 'label')}</span>
           <InertTerm
             className="semantic-inert-term"
-            term={inertTerm('toggle', booleanProp(node, 'disabled'), pending)}
+            term={inertTerm('toggle', booleanProp(node, 'disabled'), pending, locale)}
           />
           <input
             aria-busy={pending}
@@ -287,7 +301,7 @@ function renderNode(
             {stringProp(node, 'label')}
             <InertTerm
               className="semantic-inert-term"
-              term={inertTerm('input', booleanProp(node, 'disabled'), pending)}
+              term={inertTerm('input', booleanProp(node, 'disabled'), pending, locale)}
             />
           </span>
           <input
@@ -314,7 +328,7 @@ function renderNode(
             {stringProp(node, 'label')}
             <InertTerm
               className="semantic-inert-term"
-              term={inertTerm('select', booleanProp(node, 'disabled'), pending)}
+              term={inertTerm('select', booleanProp(node, 'disabled'), pending, locale)}
             />
           </span>
           <select
@@ -355,7 +369,7 @@ function renderNode(
     case 'media':
       return (
         <div
-          aria-label={`${stringProp(node, 'label')} preview`}
+          aria-label={`${stringProp(node, 'label')} ${locale === 'fr' ? 'aperçu' : 'preview'}`}
           className="semantic-media"
           data-media-handle={stringProp(node, 'handle')}
           data-node-id={node.id}
@@ -364,7 +378,7 @@ function renderNode(
         >
           <span className="semantic-media__glow" />
           <span className="semantic-media__door"><LockIcon /></span>
-          <small>Capability-gated media</small>
+          <small>{locale === 'fr' ? 'Aperçu du média' : 'Media preview'}</small>
         </div>
       );
   }
@@ -384,6 +398,7 @@ function validate(tree: unknown, mediaHandles: ReadonlySet<string>): ValidationR
 export function SemanticRenderer({
   tree,
   onInteraction,
+  locale = 'en',
   mediaHandles = PREVIEW_MEDIA_HANDLES,
 }: SemanticRendererProps): React.JSX.Element {
   const result = useMemo(() => validate(tree, mediaHandles), [mediaHandles, tree]);
@@ -391,12 +406,17 @@ export function SemanticRenderer({
   if (!result.ok) {
     return (
       <section className="semantic-error" role="alert">
-        <strong>Component blocked</strong>
-        <p>The trusted host rejected this interface before rendering it.</p>
-        <code>{result.message}</code>
+        <strong>{locale === 'fr' ? 'Interface indisponible' : 'Interface unavailable'}</strong>
+        <p>{locale === 'fr'
+          ? 'Cette interface n’a pas pu être affichée en toute sécurité.'
+          : 'This interface could not be displayed safely.'}</p>
+        <details>
+          <summary>{locale === 'fr' ? 'Détails techniques' : 'Technical details'}</summary>
+          <code>{result.message}</code>
+        </details>
       </section>
     );
   }
 
-  return renderNode(result.tree, onInteraction);
+  return renderNode(result.tree, onInteraction, locale);
 }

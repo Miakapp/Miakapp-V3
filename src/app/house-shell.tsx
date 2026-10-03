@@ -468,12 +468,14 @@ function componentFailureKey(code: string): HouseCopyKey {
  */
 function ComponentStage({
   home,
+  locale,
   onRetry,
   onSwitchAway,
   screen,
   t,
 }: {
   readonly home: HomeSummary;
+  readonly locale: Locale;
   readonly onRetry: () => void;
   readonly onSwitchAway: () => void;
   readonly screen: ComponentScreen | undefined;
@@ -483,7 +485,7 @@ function ComponentStage({
   if (state.status === 'active') {
     return (
       <div className="house-stage__semantic">
-        <SemanticRenderer onInteraction={screen!.interact} tree={state.tree} />
+        <SemanticRenderer locale={locale} onInteraction={screen!.interact} tree={state.tree} />
       </div>
     );
   }
@@ -756,6 +758,7 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
           </StagePanel>
         ) : stage.kind === 'component' ? (
           <ComponentStage
+            locale={locale}
             home={home}
             onRetry={props.onRetry}
             onSwitchAway={openHomes}
