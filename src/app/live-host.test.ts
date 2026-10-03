@@ -116,7 +116,7 @@ function fakeClient(call: CallHandle = {
   };
 }
 
-function hostWith(identity: LiveIdentity, clients: BrowserClient[]) {
+function hostWith(identity: LiveIdentity, clients: BrowserClient[], readOnlyHome = false) {
   return createLiveHost({
     exchangeEndpoint: 'https://control.example.test/v1/user-relay-tokens:exchange',
     home: {
@@ -126,6 +126,7 @@ function hostWith(identity: LiveIdentity, clients: BrowserClient[]) {
       accent: '#b8d9ff',
     },
     identity,
+    readOnlyHome,
   }, {
     createCredentialProvider: () => ({
       getCredential: vi.fn(async () => ({
@@ -182,6 +183,30 @@ describe('live trusted host', () => {
       expect(nodeById(host.getSnapshot().uiTree, 'live-light-action-status').props.state)
         .toBe('applied');
     });
+    host.dispose();
+  });
+
+  it('shows only real temperatures and refuses actions in the read-only home', () => {
+    const client = fakeClient();
+    const host = hostWith(fakeIdentity(true), [client], true);
+    client.emitLifecycle({ previous: 'synchronizing', current: 'ready' });
+    client.emitState({
+      epoch: new Uint8Array(16), revision: 1, stale: false,
+      values: { 'room.salon.temperature': 21.4, 'room.mezzanine.temperature': 23.1 },
+    });
+    const tree = host.getSnapshot().uiTree;
+    expect(tree.id).toBe('mathieu-home');
+    expect(nodeById(tree, 'salon-temperature').props.text).toContain('21,4');
+    expect(nodeById(tree, 'mezzanine-temperature').props.text).toContain('23,1');
+    expect(nodeByIdOrUndefined(tree, 'live-light-toggle')).toBeUndefined();
+    host.interact({ event: 'press', handler: 'lighting.toggle' });
+    expect(client.calls.start).not.toHaveBeenCalled();
+    client.emitState({
+      epoch: new Uint8Array(16), revision: 2, stale: true,
+      values: { 'room.salon.temperature': 21.4 },
+    });
+    expect(nodeById(host.getSnapshot().uiTree, 'salon-temperature').props.text)
+      .toBe('Indisponible');
     host.dispose();
   });
 
