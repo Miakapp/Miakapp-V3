@@ -83,6 +83,23 @@ test('a house draws its own interface and drives the home only through granted c
   await expect(house.locator('#light')).toBeDisabled();
 });
 
+test('a house built with a UI framework runs as one bundled release', async ({ page }) => {
+  await open(page);
+  const source = await (await page.request.get('http://127.0.0.1:4173/fixtures/house-react.js')).text();
+  await page.evaluate(async (text) => {
+    const scope = window as unknown as { house: { mount(source: string, request: unknown): Promise<void> } };
+    await scope.house.mount(text, {});
+  }, source);
+  await expect.poll(() => events(page)).toEqual(['starting', 'loading', 'active']);
+
+  const house = page.frameLocator('iframe.house-app-frame');
+  await expect(house.locator('#react-title')).toHaveText('Maison test');
+  await expect(house.locator('#lamp')).toHaveText('Lumière éteinte');
+  await house.locator('#lamp').click();
+  await expect(house.locator('#lamp')).toHaveText('Lumière allumée');
+  await expect(house.locator('#lamp')).toHaveCSS('background-color', 'rgb(255, 211, 77)');
+});
+
 test('a hostile house reaches no network, storage, shell, popup or fullscreen, and cannot cover the shell', async ({ page }) => {
   await open(page);
   await mount(page, 'house-attack.mjs');
