@@ -192,11 +192,12 @@ describe('live trusted host', () => {
     client.emitLifecycle({ previous: 'synchronizing', current: 'ready' });
     client.emitState({
       epoch: new Uint8Array(16), revision: 1, stale: false,
-      values: { 'room.salon.temperature': 21.4, 'room.mezzanine.temperature': 23.1 },
+      values: { 'room.salon.temperature': 21.4, 'room.entree.temperature': 22.2, 'room.mezzanine.temperature': 23.1 },
     });
     const tree = host.getSnapshot().uiTree;
     expect(tree.id).toBe('mathieu-home');
     expect(nodeById(tree, 'salon-temperature').props.text).toContain('21,4');
+    expect(nodeById(tree, 'entree-temperature').props.text).toContain('22,2');
     expect(nodeById(tree, 'mezzanine-temperature').props.text).toContain('23,1');
     expect(nodeByIdOrUndefined(tree, 'live-light-toggle')).toBeUndefined();
     host.interact({ event: 'press', handler: 'lighting.toggle' });
