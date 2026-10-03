@@ -167,6 +167,12 @@ function admissionOperation(request: Request): AdmissionOperation | null {
   return null;
 }
 
+/** The trusted resident link for a home, never derived from a request. */
+export function homeUrl(config: DeploymentConfig, homeId: string): string | null {
+  if (config.homeUrlTemplate === undefined) return null;
+  return config.homeUrlTemplate.replace('{home_id}', homeId);
+}
+
 function requestSource(request: Request): string {
   const remote = request.socket.remoteAddress;
   if (remote === undefined) return 'unknown';
@@ -686,6 +692,9 @@ async function routeRequest(
       push_audience: dependencies.config.pushAudience,
       components_audience: dependencies.config.componentsAudience,
       runtime_diagnostics_endpoint: dependencies.config.runtimeDiagnosticsEndpoint,
+      ...(dependencies.config.homeUrlTemplate === undefined
+        ? {}
+        : { home_url_template: dependencies.config.homeUrlTemplate }),
     });
     return;
   }
@@ -1018,6 +1027,30 @@ async function routeRequest(
     requireEmptyBody(request);
     const state = await dependencies.componentStore.readPointer(principal, id);
     sendJson(response, 200, state);
+    return;
+  }
+
+  // The resident read (RFC 0004 §13.5). A Firebase user and App Check, like the
+  // user relay exchange; no ownership and no recent authentication, because it
+  // discloses only what any authenticated user could already read from the
+  // `components/{homeId}` document. Membership, and therefore home data, stays
+  // with the coordinator behind the relay.
+  const homeInterfaceMatch = /^\/v1\/homes\/([a-z][a-z0-9-]{1,61}[a-z0-9])\/interface$/
+    .exec(request.path);
+  if (homeInterfaceMatch !== null && request.method === 'GET') {
+    const id = pathHomeId(homeInterfaceMatch[1] as string);
+    await destinationPrincipals(request, dependencies);
+    requireEmptyBody(request);
+    const live = await dependencies.componentStore.readHomeInterface(id);
+    response.set('Cache-Control', 'no-store');
+    sendJson(response, 200, {
+      schema: 'miakapp.home-interface/1',
+      home_id: id,
+      name: live.name,
+      home_url: homeUrl(dependencies.config, id),
+      generation: live.generation,
+      pointer: live.pointer,
+    });
     return;
   }
 

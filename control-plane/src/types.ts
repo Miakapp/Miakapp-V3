@@ -268,6 +268,26 @@ export interface ComponentPointerStateRepresentation {
   readonly pointer: ComponentPointerRepresentation | null;
 }
 
+/**
+ * What a signed-in resident's browser needs to open a home's own interface.
+ *
+ * Readable by any authenticated application user, exactly like the
+ * `components/{homeId}` Firestore rule and the user relay exchange (RFC 0004
+ * §11.2): pointers and artifacts are not confidentiality boundaries (RFC 0002
+ * §4.1). Home data never travels here; it reaches a resident only through the
+ * relay, filtered by the coordinator's per-user ACL. `name` is the public
+ * directory name. `home_url` is the trusted resident link, or null when the
+ * deployment declares no home application origin.
+ */
+export interface HomeInterfaceRepresentation {
+  readonly schema: 'miakapp.home-interface/1';
+  readonly home_id: string;
+  readonly name: string;
+  readonly home_url: string | null;
+  readonly generation: number;
+  readonly pointer: ComponentPointerRepresentation | null;
+}
+
 export type ExchangeRequest =
   | {
     readonly purpose: 'relay';
@@ -330,6 +350,11 @@ export interface DeploymentConfig {
   readonly pushAudience: string;
   readonly componentsAudience: string;
   readonly runtimeDiagnosticsEndpoint: string;
+  /**
+   * `https://<trusted web origin>/app?home={home_id}`, or undefined when the
+   * deployment names no home application origin. Never a component URL.
+   */
+  readonly homeUrlTemplate?: string;
   readonly componentBucket: string;
   readonly componentUploadBaseUrl: string;
   readonly componentArtifactBaseUrl: string;

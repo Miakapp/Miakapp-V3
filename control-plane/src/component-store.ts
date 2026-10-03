@@ -739,6 +739,40 @@ export class ComponentStore {
     });
   }
 
+  /**
+   * The resident read: the live pointer of an existing home, with no owner or
+   * publisher check and no recent-authentication requirement. The caller has
+   * already proven a Firebase user and App Check. It reveals nothing beyond the
+   * public directory name and the non-confidential pointer; it never touches
+   * home state, owner identity, keys or relay routing.
+   */
+  async readHomeInterface(homeId: string): Promise<{
+    readonly name: string;
+    readonly generation: number;
+    readonly pointer: ComponentPointerRepresentation | null;
+  }> {
+    if (!HOME_ID_PATTERN.test(homeId)) throw apiError('invalid_request');
+    const [home, directory, pointerSnapshot] = await Promise.all([
+      this.#homeRef(homeId).get(),
+      this.#firestore.collection('homes').doc(homeId).get(),
+      this.#firestore.collection('components').doc(homeId).get(),
+    ]);
+    if (!home.exists || !directory.exists) throw apiError('home_not_found');
+    const name = directory.get('name');
+    if (home.get('schema') !== 'miakapp.control-home/1'
+      || home.get('home_id') !== homeId
+      || directory.get('schema') !== 'miakapp.home/1'
+      || directory.get('home_id') !== homeId
+      || typeof name !== 'string'
+      || name.length === 0
+      || name.length > 128) {
+      throw apiError('temporarily_unavailable');
+    }
+    if (!pointerSnapshot.exists) return Object.freeze({ name, generation: 0, pointer: null });
+    const pointer = this.#validatedPointer(pointerSnapshot, homeId);
+    return Object.freeze({ name, generation: pointer.generation, pointer });
+  }
+
   async quarantineDigest(sha256: string): Promise<void> {
     if (!canonicalBase64url(sha256, 32)) throw apiError('invalid_request');
     await this.#firestore.collection('componentQuarantine').doc(sha256).set({
