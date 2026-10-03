@@ -30,6 +30,8 @@ export interface SandboxArtifactInput {
   readonly hostOrigin: string;
   /** The Hosting site the build was told to target. */
   readonly site: string;
+  /** The emitted `app.html`, when the site also serves whole-house applications. */
+  readonly appHtml?: string;
 }
 
 export interface SandboxArtifactReport {
@@ -39,6 +41,8 @@ export interface SandboxArtifactReport {
   readonly documentDigest: string;
   readonly scriptBytes: number;
   readonly documentBytes: number;
+  /** Present when `app.html` was verified alongside. */
+  readonly app?: { readonly scriptHash: string; readonly documentDigest: string };
 }
 
 const encoder = new TextEncoder();
@@ -113,31 +117,9 @@ function extractInlineScript(html: string): string {
   return script;
 }
 
-function readHeaders(config: unknown, site: string): ReadonlyMap<string, string> {
-  if (typeof config !== 'object' || config === null) {
-    fail('hosting config is not an object');
-  }
-  const hosting = (config as { hosting?: unknown }).hosting;
-  if (typeof hosting !== 'object' || hosting === null) {
-    fail('hosting config has no hosting section');
-  }
-  const section = hosting as Record<string, unknown>;
-  if (section.site !== site) {
-    fail(`hosting config targets site ${String(section.site)}, expected ${site}`);
-  }
-  // A rewrite would let an unknown path be answered by a document served under
-  // the sandbox's headers. The host requests one path; everything else 404s.
-  if (section.rewrites !== undefined) {
-    fail('hosting config declares rewrites; unknown paths must 404');
-  }
-  const headerRules = section.headers;
-  if (!Array.isArray(headerRules) || headerRules.length !== 1) {
-    fail('hosting config must declare exactly one header rule');
-  }
-  const rule = headerRules[0] as { source?: unknown; headers?: unknown };
-  if (rule.source !== '/sandbox.html') {
-    fail(`header rule covers ${String(rule.source)}, expected /sandbox.html`);
-  }
+const DOCUMENT_PATHS = new Set(['/sandbox.html', '/app.html']);
+
+function headerMap(rule: { source?: unknown; headers?: unknown }): ReadonlyMap<string, string> {
   if (!Array.isArray(rule.headers)) {
     fail('header rule carries no headers');
   }
@@ -150,6 +132,47 @@ function readHeaders(config: unknown, site: string): ReadonlyMap<string, string>
     headers.set(header.key.toLowerCase(), header.value);
   }
   return headers;
+}
+
+/**
+ * Reads the header rule of every document the site serves. `/sandbox.html` is
+ * required and first; `/app.html` may follow. Any other source is a path the
+ * host never requests being served under the sandbox's headers.
+ */
+function readHeaderRules(config: unknown, site: string): ReadonlyMap<string, ReadonlyMap<string, string>> {
+  if (typeof config !== 'object' || config === null) {
+    fail('hosting config is not an object');
+  }
+  const hosting = (config as { hosting?: unknown }).hosting;
+  if (typeof hosting !== 'object' || hosting === null) {
+    fail('hosting config has no hosting section');
+  }
+  const section = hosting as Record<string, unknown>;
+  if (section.site !== site) {
+    fail(`hosting config targets site ${String(section.site)}, expected ${site}`);
+  }
+  // A rewrite would let an unknown path be answered by a document served under
+  // the sandbox's headers. The host requests known paths; everything else 404s.
+  if (section.rewrites !== undefined) {
+    fail('hosting config declares rewrites; unknown paths must 404');
+  }
+  const headerRules = section.headers;
+  if (!Array.isArray(headerRules) || headerRules.length < 1 || headerRules.length > DOCUMENT_PATHS.size) {
+    fail('hosting config must declare one header rule per served document');
+  }
+  const first = headerRules[0] as { source?: unknown };
+  if (first.source !== '/sandbox.html') {
+    fail(`header rule covers ${String(first.source)}, expected /sandbox.html`);
+  }
+  const rules = new Map<string, ReadonlyMap<string, string>>();
+  for (const value of headerRules as readonly unknown[]) {
+    const rule = value as { source?: unknown; headers?: unknown };
+    if (typeof rule.source !== 'string' || !DOCUMENT_PATHS.has(rule.source) || rules.has(rule.source)) {
+      fail(`header rule covers ${String(rule.source)}, which the host never requests`);
+    }
+    rules.set(rule.source, headerMap(rule));
+  }
+  return rules;
 }
 
 function directives(csp: string): ReadonlyMap<string, string> {
@@ -179,7 +202,8 @@ export async function verifySandboxArtifact(
   const script = extractInlineScript(input.html);
   const scriptHash = toBase64(await digest(script));
 
-  const headers = readHeaders(input.config, input.site);
+  const rules = readHeaderRules(input.config, input.site);
+  const headers = rules.get('/sandbox.html')!;
   const csp = headers.get('content-security-policy');
   if (csp === undefined) {
     fail('no Content-Security-Policy header');
@@ -227,10 +251,52 @@ export async function verifySandboxArtifact(
     }
   }
 
+  const appRule = rules.get('/app.html');
+  if ((appRule === undefined) !== (input.appHtml === undefined)) {
+    fail('app.html and its header rule must be deployed together');
+  }
+  const app = appRule === undefined || input.appHtml === undefined
+    ? undefined
+    : await verifyAppDocument(input.appHtml, appRule, input.hostOrigin);
+
   return {
     scriptHash,
     documentDigest: toHex(await digest(input.html)),
     scriptBytes: encoder.encode(script).length,
     documentBytes: encoder.encode(input.html).length,
+    ...(app === undefined ? {} : { app }),
   };
+}
+
+/**
+ * The whole-house document admits more presentation than the broker — inline
+ * styles, `data:`/`blob:` media, evaluated code — but exactly the same absence
+ * of origin and network. Those are what this checks, from the served bytes.
+ */
+async function verifyAppDocument(
+  html: string,
+  headers: ReadonlyMap<string, string>,
+  hostOrigin: string,
+): Promise<{ readonly scriptHash: string; readonly documentDigest: string }> {
+  const scriptHash = toBase64(await digest(extractInlineScript(html)));
+  const csp = headers.get('content-security-policy');
+  if (csp === undefined) fail('app.html has no Content-Security-Policy header');
+  const policy = directives(csp);
+  const expectedScriptSrc = `'sha256-${scriptHash}' blob: 'unsafe-eval' 'wasm-unsafe-eval'`;
+  if (policy.get('script-src') !== expectedScriptSrc) {
+    fail(`app.html script-src is ${String(policy.get('script-src'))}, expected ${expectedScriptSrc}`);
+  }
+  if (policy.get('sandbox') !== 'allow-scripts allow-forms') {
+    fail(`app.html sandbox is "${String(policy.get('sandbox'))}", expected "allow-scripts allow-forms"`);
+  }
+  for (const closed of ['default-src', 'connect-src', 'frame-src', 'form-action', 'object-src', 'base-uri']) {
+    if (policy.get(closed) !== "'none'") fail(`app.html ${closed} must be 'none'`);
+  }
+  if (policy.get('frame-ancestors') !== hostOrigin) {
+    fail(`app.html frame-ancestors is ${String(policy.get('frame-ancestors'))}, expected ${hostOrigin}`);
+  }
+  if (!headers.get('permissions-policy')?.includes('fullscreen=()')) {
+    fail('app.html Permissions-Policy must deny fullscreen');
+  }
+  return { scriptHash, documentDigest: toHex(await digest(html)) };
 }

@@ -3,9 +3,12 @@
 Miakapp V4 is an agent-native, privacy-conscious home interface. The repository currently contains the browser host, shared protocol contracts, component runtime, synthetic home, control plane, and reproducible staging infrastructure.
 
 The browser app is an interactive product preview by default and a staging client
-when explicitly built in live mode. Its UI is rendered through the production
-`miakapp.component/1` semantic contract: untrusted components cannot inject
-HTML, CSS, URLs, or credentials into the trusted host.
+when explicitly built in live mode. A home's interface is either a
+`miakapp.component/1` semantic tree drawn by the trusted host, or a whole-house
+application (`miakapp.app/1`) with its own layout, styles and libraries, run in
+an isolated frame behind a consent screen and a permanent Miakapp bar — see
+[`docs/specs/2026-10-03-house-app-abi.md`](docs/specs/2026-10-03-house-app-abi.md).
+Neither can reach the session, other homes or the Miakapp controls.
 
 The latest `main` preview is published at
 <https://miakapp.github.io/Miakapp-V3/>. It uses fictional local data and is safe

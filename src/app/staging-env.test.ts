@@ -284,6 +284,24 @@ describe('collectStagingEnvFaults', () => {
     ]);
   });
 
+  it('accepts a canonical default relay for homes created from /pair', () => {
+    expect(faultsFor({ VITE_MIAKAPP_DEFAULT_RELAY_URL: 'wss://relay.example.test/ws' })).toEqual([]);
+  });
+
+  it('rejects a default relay the control plane would refuse at home creation', () => {
+    for (const relay of [
+      'https://relay.example.test/ws',
+      'wss://relay.example.test/socket',
+      'wss://relay.example.test/ws?home=x',
+      'wss://RELAY.example.test/ws',
+      'not a url',
+    ]) {
+      expect(faultsFor({ VITE_MIAKAPP_DEFAULT_RELAY_URL: relay })).toEqual([
+        `VITE_MIAKAPP_DEFAULT_RELAY_URL must be a canonical wss:// URL ending in /ws: ${relay}`,
+      ]);
+    }
+  });
+
   it('leaves the optional features off without complaint when nothing declares them', () => {
     const env: Record<string, string> = { ...LIVE_ENV };
     delete env.VITE_MIAKAPP_RUNTIME_DIAGNOSTICS_ENDPOINT;

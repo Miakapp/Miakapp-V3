@@ -32,6 +32,7 @@ import {
   parseHost,
   signUp,
   staleAuthenticationToken,
+  syntheticAppCheckToken,
   type EmulatorUser,
 } from './helpers.js';
 
@@ -866,5 +867,80 @@ describe('component publication vertical slice', () => {
     const accepted = await deliver(issued.upload, bytes);
     expect(accepted.status).toBe(204);
     expect(accepted.headers.get('Access-Control-Allow-Origin')).toBe(ALLOWED_ORIGIN);
+  });
+
+  test('opens the live interface to any signed-in resident without recent sign-in, and only that', async () => {
+    const appCheck = syntheticAppCheckToken(config);
+    const key = await createKey();
+    const access = await exchange(key);
+    const authorization = { accessToken: access.access_token } as const;
+    const bytes = Buffer.from('document.body.textContent = "house";\n');
+    const issued = await issueUpload(authorization, bytes, '2026-10-03.app', digest(bytes), bytes.byteLength, 'miakapp.app/1');
+    expect(issued.response.status).toBe(201);
+    expect((await deliver(issued.upload!, bytes)).status).toBe(204);
+    const released = await jsonResponse<ReleaseResponse>(await finalize(authorization, issued.upload!.upload_id));
+    expect(released.abi).toBe('miakapp.app/1');
+    expect((await activate(authorization, released.sha256, 0, 1)).status).toBe(200);
+
+    const readInterface = (options: Parameters<typeof apiRequest>[2], homeId = HOME_ID) =>
+      apiRequest('GET', `/v1/homes/${homeId}/interface`, options);
+
+    // Owner, a guest the coordinator may enrol, and an outsider it will not:
+    // the control plane answers all three identically, because what it returns
+    // is not home data. Home data stays behind the relay and coordinator ACL.
+    const guest = await signUp(`component-guest-${userSequence}@example.test`);
+    const bodies: unknown[] = [];
+    for (const user of [owner, guest, stranger]) {
+      const response = await readInterface({ token: user.idToken, appCheckToken: appCheck });
+      expect(response.status).toBe(200);
+      expect(response.headers.get('cache-control')).toContain('no-store');
+      bodies.push(await jsonResponse(response));
+    }
+    expect(bodies[1]).toEqual(bodies[0]);
+    expect(bodies[2]).toEqual(bodies[0]);
+    expect(bodies[0]).toEqual({
+      schema: 'miakapp.home-interface/1',
+      home_id: HOME_ID,
+      name: 'Component Home',
+      home_url: `https://app.example.test/app?home=${HOME_ID}`,
+      generation: 1,
+      pointer: expect.objectContaining({ abi: 'miakapp.app/1', sha256: released.sha256, generation: 1 }),
+    });
+    const text = JSON.stringify(bodies[0]);
+    expect(text).not.toContain(owner.userId);
+    expect(text).not.toContain('component-relay.example.test');
+
+    // An old sign-in still reads; it still cannot publish as the owner.
+    const staleToken = await staleAuthenticationToken(owner);
+    expect((await readInterface({ token: staleToken, appCheckToken: appCheck })).status).toBe(200);
+    const staleOwnerRead = await readPointer({ token: staleToken });
+    expect(staleOwnerRead.status).toBe(401);
+    expect(await errorCode(staleOwnerRead)).toBe('recent_authentication_required');
+
+    // No App Check, no Firebase user, or a forged Firebase token: refused.
+    expect((await readInterface({ token: guest.idToken })).status).toBe(401);
+    expect((await readInterface({ appCheckToken: appCheck })).status).toBe(401);
+    expect((await readInterface({ token: `${guest.idToken}x`, appCheckToken: appCheck })).status).toBe(401);
+
+    // Another home answers with its own (empty) pointer, never this one.
+    const other = await apiRequest('POST', '/v1/homes', {
+      token: stranger.idToken,
+      body: { home_id: 'component-home-b', name: 'Other Home', icon: 'house', relay_url: 'wss://other-relay.example.test/ws' },
+    });
+    expect(other.status).toBe(201);
+    const otherInterface = await readInterface({ token: owner.idToken, appCheckToken: appCheck }, 'component-home-b');
+    expect(otherInterface.status).toBe(200);
+    const otherBody = await jsonResponse<Record<string, unknown>>(otherInterface);
+    expect(otherBody).toMatchObject({ home_id: 'component-home-b', generation: 0, pointer: null });
+    expect(JSON.stringify(otherBody)).not.toContain(released.sha256);
+    const unknown = await readInterface({ token: owner.idToken, appCheckToken: appCheck }, 'no-such-home');
+    expect(unknown.status).toBe(404);
+
+    // A revoked publisher key can no longer obtain publication access.
+    const keyId = parseHomeKey(key).keyId;
+    const revoke = await apiRequest('DELETE', `/v1/homes/${HOME_ID}/home-keys/${keyId}`, { token: owner.idToken });
+    expect(revoke.status).toBe(204);
+    const afterRevoke = await apiRequest('POST', '/v1/access-tokens:exchange', { homeKey: key, body: { purpose: 'components' } });
+    expect(afterRevoke.status).toBe(401);
   });
 });

@@ -49,7 +49,6 @@ export interface TrustedHostSnapshot {
   readonly uiTree: UiNode;
   readonly activity: readonly HomeActivity[];
   readonly preview: boolean;
-  readonly readOnlyHome?: boolean;
   readonly modeLabel: string;
   readonly noticeTitle: string;
   readonly noticeDetail: string;
@@ -62,10 +61,22 @@ export interface SemanticInteraction {
   readonly value?: string | boolean;
 }
 
+export interface HouseCallOptions {
+  readonly timeoutMs: number;
+  readonly signal: AbortSignal;
+}
+
 export interface TrustedHost {
   readonly getSnapshot: () => TrustedHostSnapshot;
   readonly subscribe: (listener: () => void) => () => void;
   readonly interact: (interaction: SemanticInteraction) => void;
+  /**
+   * Forwards a named coordinator call on behalf of the home's own interface.
+   * Rejects with `HouseCallError` using the closed bridge vocabulary. The
+   * coordinator, not this method, decides whether the resident may make it.
+   * Absent on hosts that cannot reach a coordinator.
+   */
+  readonly call?: (name: string, args: unknown, options: HouseCallOptions) => Promise<unknown>;
   readonly signIn?: () => void;
   readonly dispose: () => void;
 }

@@ -15,8 +15,11 @@ import {
 } from '../../component-runtime/src/release-state';
 
 import {
+  HomeInterfaceRead,
+  NoPublishedRelease,
   createComponentReleaseCoordinator,
   createControlPlanePointerReader,
+  unwrapPointerState,
 } from './component-release';
 
 const HOME_ID = 'home-test';
@@ -218,7 +221,7 @@ describe('component release coordinator', () => {
 });
 
 describe('control plane pointer reader', () => {
-  it('reads the RFC 0004 §13.2 route with an authorization header', async () => {
+  it('reads the resident route (RFC 0004 §13.5) with an authorization header', async () => {
     const pointer = await pointerFor(3, 'export const a = 3;');
     const fetch = vi.fn(async () => new Response(JSON.stringify(pointer), {
       status: 200,
@@ -234,7 +237,7 @@ describe('control plane pointer reader', () => {
 
     await expect(read()).resolves.toMatchObject({ generation: 3 });
     const [url, request] = fetch.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url).toBe(`https://control.example/v1/homes/${HOME_ID}/component-pointer`);
+    expect(url).toBe(`https://control.example/v1/homes/${HOME_ID}/interface`);
     expect((request.headers as Record<string, string>).authorization).toBe('Bearer token-value');
     expect((request.headers as Record<string, string>)['x-firebase-appcheck']).toBeUndefined();
     expect(request.credentials).toBe('omit');
@@ -280,5 +283,89 @@ describe('control plane pointer reader', () => {
     });
 
     await expect(read()).rejects.toThrow('HTTP 503');
+  });
+});
+
+describe('control plane pointer state', () => {
+  it('opens the read envelope the control plane actually serves', async () => {
+    const pointer = await pointerFor(4, 'export const a = 4;');
+    const fetch = vi.fn(async () => new Response(JSON.stringify({
+      schema: 'miakapp.component-pointer-state/1',
+      generation: 4,
+      pointer,
+    }), { status: 200 }));
+    const read = createControlPlanePointerReader({
+      endpoint: 'https://control.example',
+      homeId: HOME_ID,
+      authorize: async () => 'Bearer token-value',
+      fetch: fetch as unknown as typeof globalThis.fetch,
+    });
+    await expect(read()).resolves.toEqual(pointer);
+  });
+
+  it('leaves any other shape for the ledger to reject', () => {
+    const lookalike = { schema: 'miakapp.component-pointer-state/1', generation: 1, pointer: {}, extra: true };
+    expect(unwrapPointerState(lookalike)).toBe(lookalike);
+    expect(unwrapPointerState(null)).toBeNull();
+  });
+
+  it('says a home published nothing, rather than failing, when the pointer is null', async () => {
+    const coordinator = coordinatorFor(null, {
+      store: new MemoryStore(),
+      cache: new MemoryCache(),
+      fetch: vi.fn() as unknown as typeof globalThis.fetch,
+    });
+    await expect(coordinator.activate()).rejects.toBeInstanceOf(NoPublishedRelease);
+  });
+});
+
+describe('resident home interface read', () => {
+  it('hands the ledger the bare pointer and keeps the public home name beside it', async () => {
+    const pointer = await pointerFor(5, 'export const a = 5;');
+    const read = unwrapPointerState({
+      schema: 'miakapp.home-interface/1',
+      home_id: HOME_ID,
+      name: 'Chalet',
+      home_url: `https://app.example/app?home=${HOME_ID}`,
+      generation: 5,
+      pointer,
+    });
+    expect(read).toBeInstanceOf(HomeInterfaceRead);
+    expect((read as HomeInterfaceRead).pointer).toEqual(pointer);
+    expect((read as HomeInterfaceRead).homeName).toBe('Chalet');
+
+    const fetch = vi.fn(async () => artifactResponse('export const a = 5;'));
+    const activated = await coordinatorFor(read, {
+      store: new MemoryStore(),
+      cache: new MemoryCache(),
+      fetch: fetch as unknown as typeof globalThis.fetch,
+    }).activate();
+    expect(activated.homeName).toBe('Chalet');
+    expect(activated.pointer.generation).toBe(5);
+  });
+
+  it('says which home published nothing', async () => {
+    const read = unwrapPointerState({
+      schema: 'miakapp.home-interface/1',
+      home_id: HOME_ID,
+      name: 'Chalet',
+      home_url: null,
+      generation: 0,
+      pointer: null,
+    });
+    const coordinator = coordinatorFor(read, {
+      store: new MemoryStore(),
+      cache: new MemoryCache(),
+      fetch: vi.fn() as unknown as typeof globalThis.fetch,
+    });
+    await expect(coordinator.activate()).rejects.toMatchObject({ homeName: 'Chalet' });
+  });
+
+  it('refuses an envelope with any extra field', () => {
+    const extra = {
+      schema: 'miakapp.home-interface/1', home_id: HOME_ID, name: 'x', home_url: null,
+      generation: 0, pointer: null, owner_uid: 'leak',
+    };
+    expect(unwrapPointerState(extra)).toBe(extra);
   });
 });

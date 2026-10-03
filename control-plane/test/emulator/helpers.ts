@@ -1,3 +1,6 @@
+import { createPrivateKey, sign, type JsonWebKey } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+
 import type { Firestore } from 'firebase-admin/firestore';
 
 import { clearAdmissionSubjectReservations } from './admission-fixture.js';
@@ -143,4 +146,30 @@ export function parseHost(value: string): { host: string; port: number } {
   const port = Number(value.slice(separator + 1));
   if (!Number.isInteger(port)) throw new Error(`Invalid emulator port: ${value}`);
   return { host: value.slice(0, separator), port };
+}
+
+/** A synthetic App Check token for the emulator deployment's exact app. */
+export function syntheticAppCheckToken(config: {
+  readonly appCheckIssuer: string;
+  readonly appCheckAudience: string;
+  readonly appCheckAppId: string;
+}): string {
+  const fixture = JSON.parse(readFileSync(
+    new URL('../../../control-plane-contract/fixtures/v1/access-tokens.json', import.meta.url),
+    'utf8',
+  )) as { readonly test_only_private_keys: { readonly firebase: JsonWebKey & { readonly kid: string } } };
+  const key = fixture.test_only_private_keys.firebase;
+  const header = Buffer.from(JSON.stringify({ alg: 'RS256', kid: key.kid, typ: 'JWT' }), 'utf8')
+    .toString('base64url');
+  const now = Math.floor(Date.now() / 1_000);
+  const claims = Buffer.from(JSON.stringify({
+    iss: config.appCheckIssuer,
+    aud: [config.appCheckAudience],
+    sub: config.appCheckAppId,
+    iat: now,
+    exp: now + 3_600,
+  }), 'utf8').toString('base64url');
+  const input = `${header}.${claims}`;
+  const signature = sign('RSA-SHA256', Buffer.from(input, 'ascii'), createPrivateKey({ key, format: 'jwk' }));
+  return `${input}.${signature.toString('base64url')}`;
 }

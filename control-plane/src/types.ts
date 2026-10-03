@@ -6,6 +6,13 @@ export const IDENTIFIER_PATTERN = /^[A-Za-z0-9_-]{22}$/;
 export const HOME_KEY_PATTERN = /^mhk1_([A-Za-z0-9_-]{22})_([A-Za-z0-9_-]{43})$/;
 export const SHA256_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 export const COMPONENT_ABI = 'miakapp.component/1' as const;
+/** A whole-house application drawn in an isolated frame by the trusted shell. */
+export const APP_ABI = 'miakapp.app/1' as const;
+export type ReleaseAbi = typeof COMPONENT_ABI | typeof APP_ABI;
+
+export function isReleaseAbi(value: unknown): value is ReleaseAbi {
+  return value === COMPONENT_ABI || value === APP_ABI;
+}
 export const HOME_KEY_ACCESS_SCOPES = Object.freeze([
   'relay:coordinator',
   'relay:cli',
@@ -39,6 +46,8 @@ export const ADMISSION_OPERATIONS = Object.freeze([
   'component.finalize',
   'component.activate',
   'runtime.diagnostics.report',
+  'pairing.code.issue',
+  'pairing.redeem',
 ] as const);
 
 export type AdmissionOperation = typeof ADMISSION_OPERATIONS[number];
@@ -69,6 +78,10 @@ export const ADMISSION_BUDGETS = Object.freeze([
   'component.activate.home',
   'runtime.diagnostics.source',
   'runtime.diagnostics.release',
+  'pairing.issue.actor',
+  'pairing.issue.source',
+  'pairing.redeem.source',
+  'pairing.redeem.code',
 ] as const);
 
 export type AdmissionBudget = typeof ADMISSION_BUDGETS[number];
@@ -120,6 +133,31 @@ export interface HomePatch {
   readonly name?: string;
   readonly icon?: string;
   readonly relayUrl?: string;
+}
+
+/**
+ * Pairing grants exactly what a full Home Key can hold in version 1: every
+ * Home Key scope, and nothing an owner credential alone may do (listing or
+ * revoking keys, changing the relay, renaming or deleting the home).
+ */
+export const PAIRING_ACCESS = 'full_home' as const;
+export const PAIRING_SCOPES: readonly HomeKeyAccessScope[] = Object.freeze([...HOME_KEY_ACCESS_SCOPES]);
+
+export interface PairingCodeRepresentation {
+  readonly schema: 'miakapp.pairing-code/1';
+  readonly code: string;
+  readonly home_id: string;
+  readonly access: typeof PAIRING_ACCESS;
+  readonly scopes: readonly HomeKeyAccessScope[];
+  readonly expires_at: string;
+  readonly redeem_endpoint: string;
+}
+
+export interface PairingRedemption {
+  readonly home_key: string;
+  readonly home_id: string;
+  readonly key_id: string;
+  readonly issuer: string;
 }
 
 export interface HomeKeyMetadata {
@@ -181,7 +219,7 @@ export interface ComponentRequirements {
 
 export interface ComponentUploadInput {
   readonly release: string;
-  readonly abi: typeof COMPONENT_ABI;
+  readonly abi: ReleaseAbi;
   readonly sha256: string;
   readonly size: number;
   readonly requires: ComponentRequirements;
@@ -226,6 +264,26 @@ export interface ComponentPointerRepresentation extends ComponentUploadInput {
  */
 export interface ComponentPointerStateRepresentation {
   readonly schema: 'miakapp.component-pointer-state/1';
+  readonly generation: number;
+  readonly pointer: ComponentPointerRepresentation | null;
+}
+
+/**
+ * What a signed-in resident's browser needs to open a home's own interface.
+ *
+ * Readable by any authenticated application user, exactly like the
+ * `components/{homeId}` Firestore rule and the user relay exchange (RFC 0004
+ * §11.2): pointers and artifacts are not confidentiality boundaries (RFC 0002
+ * §4.1). Home data never travels here; it reaches a resident only through the
+ * relay, filtered by the coordinator's per-user ACL. `name` is the public
+ * directory name. `home_url` is the trusted resident link, or null when the
+ * deployment declares no home application origin.
+ */
+export interface HomeInterfaceRepresentation {
+  readonly schema: 'miakapp.home-interface/1';
+  readonly home_id: string;
+  readonly name: string;
+  readonly home_url: string | null;
   readonly generation: number;
   readonly pointer: ComponentPointerRepresentation | null;
 }
@@ -292,6 +350,11 @@ export interface DeploymentConfig {
   readonly pushAudience: string;
   readonly componentsAudience: string;
   readonly runtimeDiagnosticsEndpoint: string;
+  /**
+   * `https://<trusted web origin>/app?home={home_id}`, or undefined when the
+   * deployment names no home application origin. Never a component URL.
+   */
+  readonly homeUrlTemplate?: string;
   readonly componentBucket: string;
   readonly componentUploadBaseUrl: string;
   readonly componentArtifactBaseUrl: string;

@@ -27,6 +27,7 @@ import {
 } from './component-artifact.js';
 import { ComponentStore } from './component-store.js';
 import { parseHomeKey, randomIdentifier } from './crypto.js';
+import { normalizePairingCode, pairingCodeLookup } from './pairing-code.js';
 import { ApiError, apiError } from './errors.js';
 import {
   assertExactKeys,
@@ -50,7 +51,8 @@ import {
   HOME_ID_PATTERN,
   IDENTIFIER_PATTERN,
   SHA256_PATTERN,
-  COMPONENT_ABI,
+  PAIRING_ACCESS,
+  isReleaseAbi,
   type HomeKeyAccessScope,
   type AdmissionOperation,
   type AppCheckPrincipal,
@@ -157,7 +159,18 @@ function admissionOperation(request: Request): AdmissionOperation | null {
     return 'component.activate';
   }
   if (method === 'POST' && path === '/v1/runtime-diagnostics') return 'runtime.diagnostics.report';
+  if (method === 'POST'
+    && /^\/v1\/homes\/[a-z][a-z0-9-]{1,61}[a-z0-9]\/pairing-codes$/.test(path)) {
+    return 'pairing.code.issue';
+  }
+  if (method === 'POST' && path === '/v1/pairing/redeem') return 'pairing.redeem';
   return null;
+}
+
+/** The trusted resident link for a home, never derived from a request. */
+export function homeUrl(config: DeploymentConfig, homeId: string): string | null {
+  if (config.homeUrlTemplate === undefined) return null;
+  return config.homeUrlTemplate.replace('{home_id}', homeId);
 }
 
 function requestSource(request: Request): string {
@@ -276,11 +289,12 @@ function safeNonnegativeInteger(value: JsonValue | undefined): number {
 function componentUploadInput(body: { [key: string]: JsonValue }): ComponentUploadInput {
   assertExactKeys(body, ['release', 'abi', 'sha256', 'size', 'requires']);
   const size = safeNonnegativeInteger(body.size);
-  if (body.abi !== COMPONENT_ABI || size === 0) throw apiError('invalid_request');
+  const abi = body.abi;
+  if (!isReleaseAbi(abi) || size === 0) throw apiError('invalid_request');
   if (size > MAX_COMPONENT_ARTIFACT_BYTES) throw apiError('limit_exceeded');
   return Object.freeze({
     release: boundedText(body.release, 64),
-    abi: COMPONENT_ABI,
+    abi,
     sha256: digestValue(body.sha256),
     size,
     requires: validateComponentRequirements(body.requires),
@@ -411,6 +425,30 @@ function keyCreation(body: { [key: string]: JsonValue }): {
   }
   scopes.sort((left, right) => Buffer.compare(Buffer.from(left), Buffer.from(right)));
   return Object.freeze({ label: boundedText(body.label, 64), scopes: scopes as HomeKeyAccessScope[] });
+}
+
+/**
+ * The browser must name both the access level and the exact home it is handing
+ * over. The confirmation is not a secret; it makes "full access to this home"
+ * a statement the caller has to spell out rather than a default a script can
+ * fall into, and binds it to the path so it cannot be replayed onto another.
+ */
+function pairingIssuance(body: { [key: string]: JsonValue }, id: string): void {
+  assertExactKeys(body, ['access', 'confirmation']);
+  if (body.access !== PAIRING_ACCESS
+    || body.confirmation !== `grant-full-home-access:${id}`) {
+    throw apiError('invalid_request');
+  }
+}
+
+function pairingRedemption(body: { [key: string]: JsonValue }): {
+  readonly code: string;
+  readonly label: string;
+} {
+  assertExactKeys(body, ['code', 'label']);
+  const label = boundedText(body.label, 64);
+  if (typeof body.code !== 'string') throw apiError('invalid_request');
+  return Object.freeze({ code: body.code, label });
 }
 
 function exchangeRequest(body: { [key: string]: JsonValue }): ExchangeRequest {
@@ -654,6 +692,9 @@ async function routeRequest(
       push_audience: dependencies.config.pushAudience,
       components_audience: dependencies.config.componentsAudience,
       runtime_diagnostics_endpoint: dependencies.config.runtimeDiagnosticsEndpoint,
+      ...(dependencies.config.homeUrlTemplate === undefined
+        ? {}
+        : { home_url_template: dependencies.config.homeUrlTemplate }),
     });
     return;
   }
@@ -813,6 +854,62 @@ async function routeRequest(
     return;
   }
 
+  if (request.path === '/v1/homes' && request.method === 'GET') {
+    const principal = await ownerPrincipal(request, dependencies);
+    requireEmptyBody(request);
+    const homes = await dependencies.store.listOwnedHomes(principal);
+    sendJson(response, 200, { schema: 'miakapp.home-list/1', homes });
+    return;
+  }
+
+  const pairingCodesMatch = /^\/v1\/homes\/([a-z][a-z0-9-]{1,61}[a-z0-9])\/pairing-codes$/
+    .exec(request.path);
+  if (pairingCodesMatch !== null && request.method === 'POST') {
+    const ticket = activeAdmission(admission, 'pairing.code.issue');
+    const principal = await ownerPrincipal(request, dependencies);
+    requireRecentAuthentication(principal, dependencies.clock.now());
+    identifyOwner(ticket, principal);
+    const id = pathHomeId(pairingCodesMatch[1] as string);
+    ticket.identifyHome(id);
+    ticket.identifySubject(id);
+    pairingIssuance(jsonBody(request), id);
+    await ticket.consume([
+      { budget: 'pairing.issue.actor', subject: principal.userId },
+    ], ['pairing.issue.source']);
+    const pairing = await dependencies.store.issuePairingCode(principal, id);
+    sendJson(response, 201, pairing);
+    return;
+  }
+
+  if (request.path === '/v1/pairing/redeem' && request.method === 'POST') {
+    const ticket = activeAdmission(admission, 'pairing.redeem');
+    // The code is the only credential. A second one alongside it would leave
+    // the reader guessing which of the two authorized the key.
+    if (request.headers.authorization !== undefined
+      || request.headers['x-firebase-appcheck'] !== undefined) {
+      throw apiError('invalid_request');
+    }
+    const input = pairingRedemption(jsonBody(request));
+    // Every syntactically complete request spends the source budget before the
+    // code is judged, so a malformed guess costs the same as a wrong one.
+    await ticket.consume([], ['pairing.redeem.source']);
+    const pepper = dependencies.config.homeKeyPepperForVersion(dependencies.config.verifierKeyVersion);
+    if (pepper === undefined) throw apiError('temporarily_unavailable');
+    const lookup = pairingCodeLookup(normalizePairingCode(input.code), pepper);
+    ticket.identifySubject(lookup);
+    await ticket.consume([{ budget: 'pairing.redeem.code', subject: lookup }]);
+    const redemption = await dependencies.store.redeemPairingCode(input.code, input.label);
+    ticket.identifyActor('home_key', redemption.key_id);
+    ticket.identifyHome(redemption.home_id);
+    sendJson(response, 200, {
+      home_key: redemption.home_key,
+      home_id: redemption.home_id,
+      key_id: redemption.key_id,
+      issuer: redemption.issuer,
+    });
+    return;
+  }
+
   const homeMatch = /^\/v1\/homes\/([a-z][a-z0-9-]{1,61}[a-z0-9])$/.exec(request.path);
   if (homeMatch !== null && request.method === 'PATCH') {
     const ticket = activeAdmission(admission, 'home.patch');
@@ -930,6 +1027,30 @@ async function routeRequest(
     requireEmptyBody(request);
     const state = await dependencies.componentStore.readPointer(principal, id);
     sendJson(response, 200, state);
+    return;
+  }
+
+  // The resident read (RFC 0004 §13.5). A Firebase user and App Check, like the
+  // user relay exchange; no ownership and no recent authentication, because it
+  // discloses only what any authenticated user could already read from the
+  // `components/{homeId}` document. Membership, and therefore home data, stays
+  // with the coordinator behind the relay.
+  const homeInterfaceMatch = /^\/v1\/homes\/([a-z][a-z0-9-]{1,61}[a-z0-9])\/interface$/
+    .exec(request.path);
+  if (homeInterfaceMatch !== null && request.method === 'GET') {
+    const id = pathHomeId(homeInterfaceMatch[1] as string);
+    await destinationPrincipals(request, dependencies);
+    requireEmptyBody(request);
+    const live = await dependencies.componentStore.readHomeInterface(id);
+    response.set('Cache-Control', 'no-store');
+    sendJson(response, 200, {
+      schema: 'miakapp.home-interface/1',
+      home_id: id,
+      name: live.name,
+      home_url: homeUrl(dependencies.config, id),
+      generation: live.generation,
+      pointer: live.pointer,
+    });
     return;
   }
 

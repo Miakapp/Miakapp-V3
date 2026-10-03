@@ -17,7 +17,7 @@ import { type ComponentObjectStorage } from './component-storage.js';
 import { apiError, ApiError } from './errors.js';
 import { randomIdentifier } from './crypto.js';
 import {
-  COMPONENT_ABI,
+  isReleaseAbi,
   HOME_ID_PATTERN,
   type Clock,
   type ComponentPointerRepresentation,
@@ -142,7 +142,7 @@ function storedRequirements(value: unknown): ComponentRequirements {
 
 function canonicalInput(input: ComponentUploadInput): ComponentUploadInput {
   if (!boundedRelease(input.release)
-    || input.abi !== COMPONENT_ABI
+    || !isReleaseAbi(input.abi)
     || !canonicalBase64url(input.sha256, 32)
     || !Number.isSafeInteger(input.size)
     || input.size <= 0
@@ -151,7 +151,7 @@ function canonicalInput(input: ComponentUploadInput): ComponentUploadInput {
   }
   return Object.freeze({
     release: input.release,
-    abi: COMPONENT_ABI,
+    abi: input.abi,
     sha256: input.sha256,
     size: input.size,
     requires: normalizedRequirements(input.requires),
@@ -254,7 +254,7 @@ function validateUpload(snapshot: DocumentSnapshot, expectedHomeId?: string): Va
     || !HOME_ID_PATTERN.test(data.home_id)
     || (expectedHomeId !== undefined && data.home_id !== expectedHomeId)
     || !boundedRelease(data.release)
-    || data.abi !== COMPONENT_ABI
+    || !isReleaseAbi(data.abi)
     || !canonicalBase64url(data.sha256, 32)
     || !Number.isSafeInteger(data.size)
     || data.size <= 0
@@ -298,7 +298,7 @@ function validateUpload(snapshot: DocumentSnapshot, expectedHomeId?: string): Va
   }
   const input = Object.freeze({
     release: data.release as string,
-    abi: COMPONENT_ABI,
+    abi: data.abi,
     sha256: data.sha256 as string,
     size: data.size as number,
     requires: storedRequirements(data.requires),
@@ -366,7 +366,7 @@ function validateRelease(snapshot: DocumentSnapshot, expectedHomeId: string): Va
     || data.schema !== RELEASE_SCHEMA
     || data.home_id !== expectedHomeId
     || !boundedRelease(data.release)
-    || data.abi !== COMPONENT_ABI
+    || !isReleaseAbi(data.abi)
     || data.sha256 !== snapshot.id
     || !canonicalBase64url(data.sha256, 32)
     || !Number.isSafeInteger(data.size)
@@ -395,7 +395,7 @@ function validateRelease(snapshot: DocumentSnapshot, expectedHomeId: string): Va
   }
   const input = Object.freeze({
     release: data.release as string,
-    abi: COMPONENT_ABI,
+    abi: data.abi,
     sha256: data.sha256 as string,
     size: data.size as number,
     requires: storedRequirements(data.requires),
@@ -739,6 +739,40 @@ export class ComponentStore {
     });
   }
 
+  /**
+   * The resident read: the live pointer of an existing home, with no owner or
+   * publisher check and no recent-authentication requirement. The caller has
+   * already proven a Firebase user and App Check. It reveals nothing beyond the
+   * public directory name and the non-confidential pointer; it never touches
+   * home state, owner identity, keys or relay routing.
+   */
+  async readHomeInterface(homeId: string): Promise<{
+    readonly name: string;
+    readonly generation: number;
+    readonly pointer: ComponentPointerRepresentation | null;
+  }> {
+    if (!HOME_ID_PATTERN.test(homeId)) throw apiError('invalid_request');
+    const [home, directory, pointerSnapshot] = await Promise.all([
+      this.#homeRef(homeId).get(),
+      this.#firestore.collection('homes').doc(homeId).get(),
+      this.#firestore.collection('components').doc(homeId).get(),
+    ]);
+    if (!home.exists || !directory.exists) throw apiError('home_not_found');
+    const name = directory.get('name');
+    if (home.get('schema') !== 'miakapp.control-home/1'
+      || home.get('home_id') !== homeId
+      || directory.get('schema') !== 'miakapp.home/1'
+      || directory.get('home_id') !== homeId
+      || typeof name !== 'string'
+      || name.length === 0
+      || name.length > 128) {
+      throw apiError('temporarily_unavailable');
+    }
+    if (!pointerSnapshot.exists) return Object.freeze({ name, generation: 0, pointer: null });
+    const pointer = this.#validatedPointer(pointerSnapshot, homeId);
+    return Object.freeze({ name, generation: pointer.generation, pointer });
+  }
+
   async quarantineDigest(sha256: string): Promise<void> {
     if (!canonicalBase64url(sha256, 32)) throw apiError('invalid_request');
     await this.#firestore.collection('componentQuarantine').doc(sha256).set({
@@ -1022,7 +1056,7 @@ export class ComponentStore {
       || !Number.isSafeInteger(data.generation)
       || data.generation <= 0
       || !boundedRelease(data.release)
-      || data.abi !== COMPONENT_ABI
+      || !isReleaseAbi(data.abi)
       || typeof data.url !== 'string'
       || !canonicalBase64url(data.sha256, 32)
       || !Number.isSafeInteger(data.size)
@@ -1036,7 +1070,7 @@ export class ComponentStore {
       home_id: homeId,
       generation: data.generation as number,
       release: data.release as string,
-      abi: COMPONENT_ABI,
+      abi: data.abi,
       url: data.url as string,
       sha256: data.sha256 as string,
       size: data.size as number,

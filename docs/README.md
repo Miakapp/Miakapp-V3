@@ -14,6 +14,10 @@ implemented across several repositories.
 - [`rfcs/0002-component-runtime.md`](rfcs/0002-component-runtime.md) — accepted
   browser boundary, immutable artifact, capability bridge, semantic UI ABI, and
   release lifecycle.
+- [`specs/2026-10-03-house-app-abi.md`](specs/2026-10-03-house-app-abi.md) —
+  whole-house applications (`miakapp.app/1`): the `window.miakapp` API, consent
+  before load, the permanent Miakapp bar, frame isolation, and what is still
+  missing end to end.
 - [`rfcs/0003-coordinator-sdk-and-migration.md`](rfcs/0003-coordinator-sdk-and-migration.md)
   — accepted public coordinator API, retry and lifecycle semantics, temporary
   legacy-system boundary, fail-closed shadow modes, and comparison contract.
