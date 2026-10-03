@@ -284,6 +284,23 @@ export function isCapabilityGranted(patterns: readonly string[], resource: strin
 }
 
 /**
+ * Whether a requirement — an exact name or a `prefix.*` pattern — lies wholly
+ * inside a set of allowed patterns. A wildcard requirement is covered only by
+ * the same wildcard or a broader one; never by exact names, which could not
+ * cover the paths it would admit.
+ */
+export function isPatternCovered(allowed: readonly string[], requirement: string): boolean {
+  if (requirement.endsWith('.*')) {
+    const base = validateResourceName(requirement.slice(0, -2));
+    return allowed.some((pattern) => (
+      pattern === requirement
+      || (pattern.endsWith('.*') && base.startsWith(`${pattern.slice(0, -2)}.`))
+    ));
+  }
+  return isCapabilityGranted(allowed, requirement);
+}
+
+/**
  * Keeps only the state paths a grant covers. Malformed paths are dropped rather
  * than thrown: the guest never asked for them and cannot fix them.
  */

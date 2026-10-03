@@ -2698,3 +2698,9 @@ svg {
     animation-duration: 3s;
   }
 }
+
+.house-stage__semantic {
+  flex: 1;
+  min-width: 0;
+  padding: clamp(12px, 3vw, 28px);
+}

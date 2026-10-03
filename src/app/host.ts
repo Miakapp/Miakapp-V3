@@ -49,7 +49,6 @@ export interface TrustedHostSnapshot {
   readonly uiTree: UiNode;
   readonly activity: readonly HomeActivity[];
   readonly preview: boolean;
-  readonly readOnlyHome?: boolean;
   readonly modeLabel: string;
   readonly noticeTitle: string;
   readonly noticeDetail: string;

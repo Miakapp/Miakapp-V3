@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { platformGrantCeiling } from './grant-ceiling';
 
 import {
   BROKER_PROTOCOL,
@@ -230,6 +231,40 @@ describe('intersectCapabilities', () => {
     });
     expect(grant.state_read).toEqual(['global.temperature']);
     expect(grant.call).toEqual([]);
+  });
+});
+
+describe('wildcard requirements under the platform ceiling', () => {
+  it('grants room.*, security.*, monitoring.* and admin.* reads and delivers only those paths', () => {
+    const requires = {
+      state_read: ['room.*', 'security.*', 'monitoring.*', 'admin.*'],
+      event_subscribe: [],
+      event_publish: [],
+      call: ['miakapp.join', 'lighting.set'],
+      presentation: [],
+    };
+    const grant = intersectCapabilities(requires, platformGrantCeiling(requires));
+    expect(grant.state_read).toEqual(['room.*', 'security.*', 'monitoring.*', 'admin.*']);
+    // Protocol-reserved functions are never brokered for a home.
+    expect(grant.call).toEqual(['lighting.set']);
+
+    const reading = {
+      kind: 'temperature', label: 'Température', room: { id: 'r1', label: 'Pièce', order: 1 },
+      value: 21.5, unit: '°C', observedAt: 1_790_000_000_000, fresh: true, source: 'live',
+    };
+    expect(selectGrantedState({
+      'room.r1.temperature': reading,
+      'monitoring.devices': [],
+      'roomx.leak': 1,
+      'coordinator.secret': 'x',
+    }, grant.state_read)).toEqual({ 'room.r1.temperature': reading, 'monitoring.devices': [] });
+  });
+
+  it('never lets a narrower ceiling be widened by a wildcard', () => {
+    const requires = { state_read: ['room.*'], event_subscribe: [], event_publish: [], call: [], presentation: [] };
+    const ceiling = { ...requires, state_read: ['room.r1.temperature'] };
+    expect(intersectCapabilities(requires, ceiling).state_read).toEqual([]);
+    expect(intersectCapabilities(requires, { ...requires, state_read: ['room.*'] }).state_read).toEqual(['room.*']);
   });
 });
 
