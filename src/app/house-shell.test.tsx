@@ -9,6 +9,7 @@ import type {
 } from '../../component-runtime/src/app-host';
 import { APP_ABI, COMPONENT_ABI, POINTER_SCHEMA } from '../../component-runtime/src/contract';
 import { App } from './app';
+import { mountComponentRuntime } from './component-runtime-host';
 import type { ActivatedRelease, ComponentReleaseCoordinator } from './component-release';
 import { NoPublishedRelease } from './component-release';
 import { createDemoHost } from './demo-host';
@@ -250,6 +251,21 @@ describe('house shell — consent before any house resource', () => {
     expect(switchHome).toHaveBeenCalledWith('chalet-annecy');
 
     await user.click(screen.getByRole('button', { name: 'Ouvrir quand même' }));
+    expect(screen.getByRole('button', { name: 'Ouvrir la maison' })).toBeVisible();
+  });
+
+  it('withdrawal removes a semantic frame still waiting for readiness immediately', async () => {
+    const consent = createHouseConsentStore(memoryStorage());
+    consent.grant(HOME_ID);
+    const release = appRelease();
+    const mountRuntime = vi.fn(mountComponentRuntime);
+    render(<App consentStore={consent}
+      createComponentRelease={() => coordinatorFor({ ...release, pointer: { ...release.pointer, abi: COMPONENT_ABI } })}
+      mountRuntime={mountRuntime} readSandboxOrigin={() => SANDBOX_ORIGIN} />);
+    await waitFor(() => expect(mountRuntime).toHaveBeenCalledOnce());
+    expect(document.querySelector('iframe')).not.toBeNull();
+    act(() => consent.revoke(HOME_ID));
+    expect(document.querySelector('iframe')).toBeNull();
     expect(screen.getByRole('button', { name: 'Ouvrir la maison' })).toBeVisible();
   });
 

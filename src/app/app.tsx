@@ -191,6 +191,7 @@ function useComponentRuntime(
     }
 
     let released = false;
+    const controller = new AbortController();
     let session: ComponentRuntimeSession | undefined;
 
     // The fallback below keeps the shell usable, which is also what makes a
@@ -211,6 +212,7 @@ function useComponentRuntime(
       { pointer: activated.pointer, artifact: { bytes: activated.artifact.bytes } },
       {
         sandboxOrigin,
+        signal: controller.signal,
         container,
         policy: platformGrantCeiling(activated.pointer.requires),
         onLifecycle,
@@ -239,6 +241,7 @@ function useComponentRuntime(
 
     return () => {
       released = true;
+      controller.abort();
       sessionRef.current = undefined;
       setSession(undefined);
       setOutcome(undefined);
