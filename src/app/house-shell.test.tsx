@@ -187,14 +187,14 @@ describe('house shell — consent before any house resource', () => {
     expect(screen.getByRole('banner', { name: 'Miakapp' }).contains(frame)).toBe(false);
 
     // The agreement is kept for this home, at the current notice version.
-    expect(JSON.parse(consentStorage.getItem('miakapp.house-consent')!)).toEqual({
+    expect(JSON.parse(consentStorage.getItem('miakapp.house-consent.v2:anonymous')!)).toEqual({
       [HOME_ID]: { version: HOUSE_CONSENT_VERSION, grantedAt: 1_790_000_000_000 },
     });
   });
 
   it('asks again when the notice version changed, and not when it did not', () => {
     const storage = memoryStorage();
-    storage.setItem('miakapp.house-consent', JSON.stringify({ [HOME_ID]: { version: 0, grantedAt: 1 } }));
+    storage.setItem('miakapp.house-consent.v2:anonymous', JSON.stringify({ [HOME_ID]: { version: 0, grantedAt: 1 } }));
     const stale = render(
       <App
         consentStore={createHouseConsentStore(storage)}
@@ -207,7 +207,7 @@ describe('house shell — consent before any house resource', () => {
     expect(screen.getByRole('button', { name: 'Ouvrir la maison' })).toBeVisible();
     stale.unmount();
 
-    storage.setItem('miakapp.house-consent', JSON.stringify({ [HOME_ID]: { version: HOUSE_CONSENT_VERSION, grantedAt: 1 } }));
+    storage.setItem('miakapp.house-consent.v2:anonymous', JSON.stringify({ [HOME_ID]: { version: HOUSE_CONSENT_VERSION, grantedAt: 1 } }));
     const coordinator = coordinatorFor();
     render(
       <App
@@ -309,8 +309,8 @@ describe('house shell — consent before any house resource', () => {
       mountHouseApp={house.mount} mountRuntime={mountRuntime} readSandboxOrigin={() => SANDBOX_ORIGIN} />);
     await waitFor(() => expect(mount).toHaveBeenCalledOnce());
     act(() => {
-      localStorage.removeItem('miakapp.house-consent');
-      window.dispatchEvent(new StorageEvent('storage', { key: 'miakapp.house-consent', storageArea: localStorage }));
+      localStorage.removeItem('miakapp.house-consent.v2:anonymous');
+      window.dispatchEvent(new StorageEvent('storage', { key: 'miakapp.house-consent.v2:anonymous', storageArea: localStorage }));
     });
     expect(abi === APP_ABI ? house.sessions[0]!.dispose : session.dispose).toHaveBeenCalledOnce();
     expect(document.querySelector('iframe')).toBeNull();

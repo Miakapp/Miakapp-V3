@@ -2,14 +2,14 @@
 //
 // A home's interface is written by whoever runs that home, not by Miakapp. The
 // shell says so and waits for an explicit yes before it fetches, verifies or
-// runs anything of that home's UI. The yes is kept per home and per notice
+// runs anything of that home's UI. The yes is kept per resident, per home and per notice
 // version: a materially different notice asks again. A no is not kept — the
 // person is asked again next time rather than silently locked out.
 
 /** Bump when the notice changes in a way that should ask everyone again. */
 export const HOUSE_CONSENT_VERSION = 1;
 
-const STORAGE_KEY = 'miakapp.house-consent';
+const STORAGE_PREFIX = 'miakapp.house-consent.v2:';
 
 export interface HouseConsentRecord {
   readonly version: number;
@@ -52,7 +52,11 @@ function parse(raw: string | null): Stored {
 export function createHouseConsentStore(
   storage: Pick<Storage, 'getItem' | 'setItem'> | undefined = safeLocalStorage(),
   now: () => number = Date.now,
+  scope = 'anonymous',
 ): HouseConsentStore {
+  // Scope is supplied by the trusted identity boundary, never by the home.
+  // Legacy ownerless grants are preserved, but cannot authorize a new person.
+  const storageKey = STORAGE_PREFIX + encodeURIComponent(scope);
   let memory: Stored = {};
   let cachedRaw: string | null | undefined;
   let cached: Stored = {};
@@ -61,14 +65,14 @@ export function createHouseConsentStore(
   const notify = (): void => { listeners.forEach((listener) => listener()); };
   const onStorage = (event: StorageEvent): void => {
     if (memoryOnly || event.storageArea !== storage) return;
-    if (event.key !== STORAGE_KEY && event.key !== null) return;
+    if (event.key !== storageKey && event.key !== null) return;
     // Read the current storage, not the event payload: queued events may be old.
     notify();
   };
   const load = (): Stored => {
     try {
       if (memoryOnly || storage === undefined) return memory;
-      const raw = storage.getItem(STORAGE_KEY);
+      const raw = storage.getItem(storageKey);
       if (raw !== cachedRaw) {
         cachedRaw = raw;
         cached = parse(raw);
@@ -81,7 +85,7 @@ export function createHouseConsentStore(
   const save = (value: Stored): void => {
     memory = value;
     try {
-      if (!memoryOnly) storage?.setItem(STORAGE_KEY, JSON.stringify(value));
+      if (!memoryOnly) storage?.setItem(storageKey, JSON.stringify(value));
     } catch {
       // A failed write must not resurrect the previous stored agreement on
       // the next read. Stay in memory for this page, including after revoke.
