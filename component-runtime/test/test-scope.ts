@@ -24,7 +24,7 @@ export const SPEC_GLOB = `**/*${SPEC_SUFFIX}`;
  * declared here, which is the moment someone decides whether it was meant to
  * run.
  */
-export const HELPERS: readonly string[] = ['server.ts', 'test-scope.ts'];
+export const HELPERS: readonly string[] = ['server.ts', 'test-scope.ts', 'app-harness.ts'];
 
 export type TestRole = 'spec' | 'unit' | 'helper' | 'unclaimed';
 

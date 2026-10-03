@@ -148,6 +148,8 @@ export async function buildSandboxDocument(input: SandboxDocumentInput): Promise
 export interface SandboxHostingConfigInput {
   readonly site: string;
   readonly headers: readonly SandboxHeader[];
+  /** Further documents on the same site, each served only under its own headers. */
+  readonly documents?: readonly { readonly path: string; readonly headers: readonly SandboxHeader[] }[];
 }
 
 /**
@@ -171,6 +173,10 @@ export function buildSandboxHostingConfig(input: SandboxHostingConfigInput): unk
           source: '/sandbox.html',
           headers: input.headers.map((header) => ({ key: header.key, value: header.value })),
         },
+        ...(input.documents ?? []).map((document) => ({
+          source: document.path,
+          headers: document.headers.map((header) => ({ key: header.key, value: header.value })),
+        })),
       ],
     },
   };

@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { build } from 'esbuild';
 import { SANDBOX_DENY_DIRECTIVES, SANDBOX_DISABLED_FEATURES } from '../src/security-profile';
+import { appContentSecurityPolicy, appPermissionsPolicy } from '../src/app-document';
 
 const port = 4173;
 const root = new URL('../', import.meta.url);
@@ -27,6 +28,39 @@ const brokerHash = createHash('sha256').update(brokerBundle).digest('base64');
 const sandboxOrigin = `http://localhost:${port}`;
 const hostOrigin = `http://127.0.0.1:${port}`;
 const releaseStateBundle = await bundle('src/release-state.ts');
+
+// The house-app corpus: the deployed `/app.html` policy, built by the same
+// function the sandbox site build uses, and a host page that plays the shell.
+const appBootstrap = (await bundle('src/app-bootstrap.ts')).replace(/<\/script/giu, '<\\/script');
+const appBootstrapHash = createHash('sha256').update(appBootstrap).digest('base64');
+const appHarnessBundle = await bundle('test/app-harness.ts');
+const appHtml = `<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><title>Miakapp</title></head>
+  <body><script type="module">${appBootstrap}</script></body>
+</html>`;
+const appHostHtml = `<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <title>Miakapp shell</title>
+    <style>
+      body { margin: 0; height: 100vh; display: flex; flex-direction: column; }
+      #shell-bar { height: 48px; flex: none; display: flex; align-items: center; padding: 0 12px; background: #141713; }
+      #stage { flex: 1; position: relative; }
+      #stage iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+    </style>
+  </head>
+  <body>
+    <header id="shell-bar"><button id="shell-menu" type="button">Menu Miakapp</button></header>
+    <main id="stage"></main>
+    <script>localStorage.setItem('shell-secret', 'session-must-not-cross');</script>
+    <script type="module" src="/app-harness.js"></script>
+  </body>
+</html>`;
+const appHostInline = createHash('sha256')
+  .update("localStorage.setItem('shell-secret', 'session-must-not-cross');")
+  .digest('base64');
 
 const hostHtml = `<!doctype html>
 <html lang="en" data-sandbox-origin="${sandboxOrigin}">
@@ -195,6 +229,35 @@ Bun.serve({
           'content-type': 'text/javascript; charset=utf-8',
           'cache-control': 'no-store',
           'x-content-type-options': 'nosniff',
+        },
+      });
+    }
+    if (url.pathname === '/app-host.html' && hostname === '127.0.0.1') {
+      return response(appHostHtml, {
+        headers: {
+          'content-type': 'text/html; charset=utf-8',
+          // `frame-src` is the shell's half of the boundary: the house frame
+          // may only ever hold a document from the sandbox origin.
+          'content-security-policy': `default-src 'none'; script-src 'self' 'sha256-${appHostInline}'; style-src 'unsafe-inline'; frame-src ${sandboxOrigin}; connect-src 'self'; base-uri 'none'; form-action 'none'`,
+          'cache-control': 'no-store',
+        },
+      });
+    }
+    if (url.pathname === '/app-harness.js' && hostname === '127.0.0.1') {
+      return response(appHarnessBundle, {
+        headers: { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-store' },
+      });
+    }
+    if (url.pathname === '/app.html' && hostname === 'localhost') {
+      return response(appHtml, {
+        headers: {
+          'content-type': 'text/html; charset=utf-8',
+          'content-security-policy': appContentSecurityPolicy(appBootstrapHash, hostOrigin),
+          'permissions-policy': appPermissionsPolicy(),
+          'referrer-policy': 'no-referrer',
+          'x-content-type-options': 'nosniff',
+          'cache-control': 'no-store',
+          'cross-origin-resource-policy': 'cross-origin',
         },
       });
     }

@@ -28,7 +28,21 @@ async function main(): Promise<void> {
   const html = await readFile(join(outDir, 'sandbox.html'), 'utf8');
   const config: unknown = JSON.parse(await readFile(join(outDir, 'firebase.json'), 'utf8'));
 
-  const report = await verifySandboxArtifact({ html, config, sandboxOrigin, hostOrigin, site });
+  let appHtml: string | undefined;
+  try {
+    appHtml = await readFile(join(outDir, 'app.html'), 'utf8');
+  } catch {
+    appHtml = undefined;
+  }
+
+  const report = await verifySandboxArtifact({
+    html,
+    config,
+    sandboxOrigin,
+    hostOrigin,
+    site,
+    ...(appHtml === undefined ? {} : { appHtml }),
+  });
 
   process.stdout.write(
     [
@@ -36,6 +50,9 @@ async function main(): Promise<void> {
       `script-src hash  sha256-${report.scriptHash} (recomputed from the served script)`,
       `inline script    ${report.scriptBytes} bytes`,
       `sandbox.html     sha256:${report.documentDigest} (${report.documentBytes} bytes)`,
+      ...(report.app === undefined ? [] : [
+        `app.html         sha256:${report.app.documentDigest} (script sha256-${report.app.scriptHash})`,
+      ]),
       '',
     ].join('\n'),
   );
