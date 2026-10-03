@@ -105,6 +105,7 @@ readonly -a ADMISSION_TEST_PATTERNS=(
 )
 readonly -a EMULATOR_TEST_FILES=(
   'test/emulator/component-vertical-slice.test.ts'
+  'test/emulator/pairing-vertical-slice.test.ts'
   'test/emulator/push-vertical-slice.test.ts'
   'test/emulator/vertical-slice.test.ts'
 )

@@ -40,6 +40,10 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    match /controlPairingCodes/{lookup} {
+      allow read, write: if false;
+    }
+
     match /pushGrantIndex/{grantId} {
       allow read, write: if false;
     }

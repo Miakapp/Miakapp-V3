@@ -2,6 +2,7 @@ import {
   Firestore,
   Timestamp,
   type DocumentData,
+  type DocumentReference,
   type DocumentSnapshot,
   type QueryDocumentSnapshot,
   type QuerySnapshot,
@@ -19,6 +20,13 @@ import {
   type SignedAccessToken,
 } from './crypto.js';
 import {
+  PAIRING_CODE_LIFETIME_MILLISECONDS,
+  displayPairingCode,
+  generatePairingCode,
+  normalizePairingCode,
+  pairingCodeLookup,
+} from './pairing-code.js';
+import {
   HOME_KEY_ACCESS_SCOPES,
   HOME_ID_PATTERN,
   IDENTIFIER_PATTERN,
@@ -33,7 +41,11 @@ import {
   type HomeKeyMetadata,
   type HomePatch,
   type HomeRepresentation,
+  type PairingCodeRepresentation,
+  type PairingRedemption,
   type UserRelayAccessGrant,
+  PAIRING_ACCESS,
+  PAIRING_SCOPES,
 } from './types.js';
 
 const MAX_OWNED_HOMES = 16;
@@ -77,6 +89,9 @@ export interface UserRelayTokenExchange extends AccessTokenExchange {
 }
 
 export type HomeKeyGenerator = () => GeneratedHomeKey;
+export type PairingCodeGenerator = () => string;
+
+const PAIRING_CODE_COLLECTION = 'controlPairingCodes';
 
 function safeCount(value: unknown): number {
   if (!Number.isSafeInteger(value) || (value as number) < 0) throw apiError('temporarily_unavailable');
@@ -275,17 +290,200 @@ export class ControlPlaneStore {
   readonly #config: DeploymentConfig;
   readonly #firestore: Firestore;
   readonly #homeKeyGenerator: HomeKeyGenerator;
+  readonly #pairingCodeGenerator: PairingCodeGenerator;
 
   constructor(
     firestore: Firestore,
     config: DeploymentConfig,
     clock: Clock,
     homeKeyGenerator: HomeKeyGenerator = generateHomeKey,
+    pairingCodeGenerator: PairingCodeGenerator = generatePairingCode,
   ) {
     this.#firestore = firestore;
     this.#config = config;
     this.#clock = clock;
     this.#homeKeyGenerator = homeKeyGenerator;
+    this.#pairingCodeGenerator = pairingCodeGenerator;
+  }
+
+  /**
+   * The homes this account administers. Version 1 has no platform-side
+   * membership, so "administers" means exactly "owns": the `owner_uid` of the
+   * private record. Public directory documents carry no owner and cannot
+   * answer this question, which is why it is a control-plane read.
+   */
+  async listOwnedHomes(principal: FirebasePrincipal): Promise<HomeRepresentation[]> {
+    const owned = await this.#firestore.collection('controlHomes')
+      .where('owner_uid', '==', principal.userId)
+      .limit(MAX_OWNED_HOMES + 1)
+      .get();
+    if (owned.size > MAX_OWNED_HOMES) throw apiError('temporarily_unavailable');
+    if (owned.empty) return [];
+    for (const document of owned.docs) privateHome(document, principal);
+    const publicSnapshots = await this.#firestore.getAll(
+      ...owned.docs.map((document) => this.#firestore.collection('homes').doc(document.id)),
+    );
+    const homes = publicSnapshots.map((snapshot) => {
+      const data = snapshot.data();
+      if (!snapshot.exists || data === undefined || data.home_id !== snapshot.id) {
+        throw apiError('temporarily_unavailable');
+      }
+      return homeRepresentation(data);
+    });
+    homes.sort((left, right) => (
+      left.created_at.localeCompare(right.created_at) || left.home_id.localeCompare(right.home_id)
+    ));
+    return Object.freeze(homes) as HomeRepresentation[];
+  }
+
+  /**
+   * Issues a ten-minute, single-use code that an agent redeems for a new
+   * full-access Home Key. Only the owner can issue one, and the code is stored
+   * solely as a keyed HMAC lookup: the plaintext exists in this response and
+   * nowhere else.
+   */
+  async issuePairingCode(
+    principal: FirebasePrincipal,
+    homeId: string,
+  ): Promise<PairingCodeRepresentation> {
+    const homeRef = this.#firestore.collection('controlHomes').doc(homeId);
+    const pepper = this.#pepperForVersion(this.#config.verifierKeyVersion);
+    const nowMilliseconds = this.#clock.now();
+    const now = Timestamp.fromMillis(nowMilliseconds);
+    const expiresAt = Timestamp.fromMillis(nowMilliseconds + PAIRING_CODE_LIFETIME_MILLISECONDS);
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const code = normalizePairingCode(this.#pairingCodeGenerator());
+      const lookup = pairingCodeLookup(code, pepper);
+      const codeRef = this.#firestore.collection(PAIRING_CODE_COLLECTION).doc(lookup);
+      const created = await this.#firestore.runTransaction(async (transaction) => {
+        const [homeSnapshot, codeSnapshot] = await Promise.all([
+          transaction.get(homeRef),
+          transaction.get(codeRef),
+        ]);
+        privateHome(homeSnapshot, principal);
+        if (codeSnapshot.exists) return false;
+        transaction.create(codeRef, {
+          schema: 'miakapp.pairing-code-record/1',
+          lookup,
+          lookup_key_version: this.#config.verifierKeyVersion,
+          home_id: homeId,
+          created_by: principal.userId,
+          access: PAIRING_ACCESS,
+          scopes: [...PAIRING_SCOPES],
+          status: 'pending',
+          created_at: now,
+          expires_at: expiresAt,
+          redeemed_at: null,
+          key_id: null,
+        });
+        return true;
+      });
+      if (!created) continue;
+      return Object.freeze({
+        schema: 'miakapp.pairing-code/1',
+        code: displayPairingCode(code),
+        home_id: homeId,
+        access: PAIRING_ACCESS,
+        scopes: Object.freeze([...PAIRING_SCOPES]),
+        expires_at: expiresAt.toDate().toISOString(),
+        redeem_endpoint: `${this.#config.issuer}/v1/pairing/redeem`,
+      });
+    }
+    throw apiError('temporarily_unavailable');
+  }
+
+  /**
+   * Consumes a pairing code and creates its Home Key in one transaction. The
+   * code record's `pending → redeemed` transition and the key's creation commit
+   * together or not at all, so two concurrent redemptions cannot both succeed
+   * and a failed key creation leaves the code usable.
+   *
+   * Ownership is re-checked here, not trusted from issuance: a code whose home
+   * no longer belongs to its issuer redeems nothing. Every rejection is the same
+   * `invalid_pairing_code`, whether the code is unknown, expired, consumed or
+   * orphaned.
+   */
+  async redeemPairingCode(rawCode: string, label: string): Promise<PairingRedemption> {
+    const code = normalizePairingCode(rawCode);
+    const pepper = this.#pepperForVersion(this.#config.verifierKeyVersion);
+    const codeRef = this.#firestore.collection(PAIRING_CODE_COLLECTION)
+      .doc(pairingCodeLookup(code, pepper));
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const generated = this.#homeKeyGenerator();
+      const verifier = deriveHomeKeyVerifier(generated.value, pepper);
+      try {
+        const homeId = await this.#firestore.runTransaction(async (transaction) => {
+          const codeSnapshot = await transaction.get(codeRef);
+          const pending = this.#pendingPairingCode(codeSnapshot, generated.keyId);
+          if (pending.replayed) return pending.homeId;
+          const homeRef = this.#firestore.collection('controlHomes').doc(pending.homeId);
+          const homeSnapshot = await transaction.get(homeRef);
+          if (!homeSnapshot.exists) throw apiError('invalid_pairing_code');
+          const home = privateHomeRecord(homeSnapshot);
+          if (home.ownerUid !== pending.createdBy) throw apiError('invalid_pairing_code');
+          const now = Timestamp.fromMillis(this.#clock.now());
+          const staged = await this.#stageHomeKey(transaction, {
+            home,
+            homeId: pending.homeId,
+            keyId: generated.keyId,
+            label,
+            scopes: PAIRING_SCOPES,
+            verifier,
+            createdBy: pending.createdBy,
+            now,
+          });
+          if (staged.existing) throw new IdentifierCollision();
+          staged.commit();
+          transaction.update(codeRef, {
+            status: 'redeemed',
+            redeemed_at: now,
+            key_id: generated.keyId,
+          });
+          return pending.homeId;
+        });
+        return Object.freeze({
+          home_key: generated.value,
+          home_id: homeId,
+          key_id: generated.keyId,
+          issuer: this.#config.issuer,
+        });
+      } catch (error) {
+        if (!(error instanceof IdentifierCollision)) throw error;
+      }
+    }
+    throw apiError('temporarily_unavailable');
+  }
+
+  #pendingPairingCode(
+    snapshot: DocumentSnapshot,
+    candidateKeyId: string,
+  ): { readonly homeId: string; readonly createdBy: string; readonly replayed: boolean } {
+    if (!snapshot.exists) throw apiError('invalid_pairing_code');
+    const data = snapshot.data();
+    if (data?.schema !== 'miakapp.pairing-code-record/1'
+      || data.lookup !== snapshot.id
+      || typeof data.home_id !== 'string'
+      || !HOME_ID_PATTERN.test(data.home_id)
+      || typeof data.created_by !== 'string'
+      || data.created_by.length === 0
+      || data.access !== PAIRING_ACCESS
+      || !sameScopes(data.scopes, PAIRING_SCOPES)
+      || (data.status !== 'pending' && data.status !== 'redeemed')) {
+      throw apiError('temporarily_unavailable');
+    }
+    // A transaction whose commit landed but whose acknowledgement was lost is
+    // retried by the SDK; finding our own key ID here means this very call
+    // already redeemed the code, and only this call holds the matching secret.
+    if (data.status === 'redeemed') {
+      if (data.key_id === candidateKeyId) {
+        return Object.freeze({ homeId: data.home_id, createdBy: data.created_by, replayed: true });
+      }
+      throw apiError('invalid_pairing_code');
+    }
+    if (timestamp(data.expires_at).toMillis() <= this.#clock.now()) {
+      throw apiError('invalid_pairing_code');
+    }
+    return Object.freeze({ homeId: data.home_id, createdBy: data.created_by, replayed: false });
   }
 
   async createHome(principal: FirebasePrincipal, input: HomeInput): Promise<HomeRepresentation> {
@@ -414,67 +612,113 @@ export class ControlPlaneStore {
     verifier: string,
   ): Promise<HomeKeyMetadata> {
     const homeRef = this.#firestore.collection('controlHomes').doc(homeId);
-    const keyRef = homeRef.collection('homeKeys').doc(keyId);
-    const indexRef = this.#firestore.collection('homeKeyIndex').doc(keyId);
     const now = Timestamp.fromMillis(this.#clock.now());
     const result = await this.#firestore.runTransaction(async (transaction) => {
       const homeSnapshot = await transaction.get(homeRef);
       const home = privateHome(homeSnapshot, principal);
-      const [keySnapshot, indexSnapshot] = await Promise.all([
-        transaction.get(keyRef),
-        transaction.get(indexRef),
-      ]);
-      const registrySnapshot = await transaction.get(
-        homeRef.collection('homeKeys').limit(MAX_RETAINED_HOME_KEYS + 1),
-      );
-      const registry = reconcileKeyRegistry(registrySnapshot, home, homeId);
-      if (keySnapshot.exists || indexSnapshot.exists) {
-        if (!keySnapshot.exists) throw new IdentifierCollision();
-        if (!indexSnapshot.exists) throw apiError('temporarily_unavailable');
-        const existing = validatedKeyRecord(keySnapshot, homeId);
-        validateKeyIndex(indexSnapshot, homeId, keyId, existing.status);
-        if (existing.status === 'active'
-          && existing.data.verifier === verifier
-          && existing.data.verifier_key_version === this.#config.verifierKeyVersion
-          && existing.data.created_by === principal.userId
-          && existing.data.label === label
-          && sameScopes(existing.data.scopes, scopes)) {
-          return existing.data;
-        }
-        throw new IdentifierCollision();
-      }
-      if (home.activeKeyCount >= MAX_ACTIVE_HOME_KEYS) throw apiError('limit_exceeded');
+      const staged = await this.#stageHomeKey(transaction, {
+        home,
+        homeId,
+        keyId,
+        label,
+        scopes,
+        verifier,
+        createdBy: principal.userId,
+        now,
+      });
+      if (staged.existing) return staged.record;
+      staged.commit();
+      return staged.record;
+    });
+    return keyMetadataFromData(result);
+  }
 
-      let compacted: ValidatedKeyRecord | undefined;
-      if (home.retainedKeyCount >= MAX_RETAINED_HOME_KEYS) {
-        compacted = registry
-          .filter((record) => record.status === 'revoked')
-          .sort(compareKeyRecords)[0];
-        if (compacted === undefined) throw apiError('limit_exceeded');
+  /**
+   * Performs every read a new Home Key needs inside `transaction` and returns
+   * the writes as one deferred step, so a caller can finish its own reads
+   * before committing. Firestore requires all reads to precede all writes, and
+   * pairing-code redemption must read its code record before the key exists.
+   *
+   * `existing` reports the replay of a commit this same call already made: an
+   * identical record under the freshly generated ID. Any other occupant of the
+   * ID is an `IdentifierCollision` and the caller draws another key.
+   */
+  async #stageHomeKey(
+    transaction: Transaction,
+    input: {
+      readonly home: PrivateHomeData;
+      readonly homeId: string;
+      readonly keyId: string;
+      readonly label: string;
+      readonly scopes: readonly HomeKeyAccessScope[];
+      readonly verifier: string;
+      readonly createdBy: string;
+      readonly now: Timestamp;
+    },
+  ): Promise<{ readonly existing: boolean; readonly record: DocumentData; readonly commit: () => void }> {
+    const { home, homeId, keyId, label, scopes, verifier, createdBy, now } = input;
+    const homeRef = this.#firestore.collection('controlHomes').doc(homeId);
+    const keyRef = homeRef.collection('homeKeys').doc(keyId);
+    const indexRef = this.#firestore.collection('homeKeyIndex').doc(keyId);
+    const [keySnapshot, indexSnapshot] = await Promise.all([
+      transaction.get(keyRef),
+      transaction.get(indexRef),
+    ]);
+    const registrySnapshot = await transaction.get(
+      homeRef.collection('homeKeys').limit(MAX_RETAINED_HOME_KEYS + 1),
+    );
+    const registry = reconcileKeyRegistry(registrySnapshot, home, homeId);
+    if (keySnapshot.exists || indexSnapshot.exists) {
+      if (!keySnapshot.exists) throw new IdentifierCollision();
+      if (!indexSnapshot.exists) throw apiError('temporarily_unavailable');
+      const existing = validatedKeyRecord(keySnapshot, homeId);
+      validateKeyIndex(indexSnapshot, homeId, keyId, existing.status);
+      if (existing.status === 'active'
+        && existing.data.verifier === verifier
+        && existing.data.verifier_key_version === this.#config.verifierKeyVersion
+        && existing.data.created_by === createdBy
+        && existing.data.label === label
+        && sameScopes(existing.data.scopes, scopes)) {
+        return Object.freeze({ existing: true, record: existing.data, commit: () => undefined });
       }
+      throw new IdentifierCollision();
+    }
+    if (home.activeKeyCount >= MAX_ACTIVE_HOME_KEYS) throw apiError('limit_exceeded');
 
-      if (compacted !== undefined) {
-        const compactedIndexRef = this.#firestore.collection('homeKeyIndex').doc(compacted.snapshot.id);
-        const compactedIndex = await transaction.get(compactedIndexRef);
-        validateKeyIndex(compactedIndex, homeId, compacted.snapshot.id, 'revoked');
+    let compacted: ValidatedKeyRecord | undefined;
+    if (home.retainedKeyCount >= MAX_RETAINED_HOME_KEYS) {
+      compacted = registry
+        .filter((record) => record.status === 'revoked')
+        .sort(compareKeyRecords)[0];
+      if (compacted === undefined) throw apiError('limit_exceeded');
+    }
+
+    let compactedIndexRef: DocumentReference | undefined;
+    if (compacted !== undefined) {
+      compactedIndexRef = this.#firestore.collection('homeKeyIndex').doc(compacted.snapshot.id);
+      const compactedIndex = await transaction.get(compactedIndexRef);
+      validateKeyIndex(compactedIndex, homeId, compacted.snapshot.id, 'revoked');
+    }
+    const record = {
+      schema: 'miakapp.home-key-record/1',
+      key_id: keyId,
+      home_id: homeId,
+      verifier,
+      verifier_key_version: this.#config.verifierKeyVersion,
+      label,
+      scopes: [...scopes],
+      status: 'active',
+      created_at: now,
+      created_by: createdBy,
+      revoked_at: null,
+      last_used_at: null,
+      last_issuance_id: null,
+    };
+    const commit = (): void => {
+      if (compacted !== undefined && compactedIndexRef !== undefined) {
         transaction.delete(compacted.snapshot.ref);
         transaction.delete(compactedIndexRef);
       }
-      const record = {
-        schema: 'miakapp.home-key-record/1',
-        key_id: keyId,
-        home_id: homeId,
-        verifier,
-        verifier_key_version: this.#config.verifierKeyVersion,
-        label,
-        scopes,
-        status: 'active',
-        created_at: now,
-        created_by: principal.userId,
-        revoked_at: null,
-        last_used_at: null,
-        last_issuance_id: null,
-      };
       transaction.create(keyRef, record);
       transaction.create(indexRef, {
         schema: 'miakapp.home-key-index/1',
@@ -490,9 +734,8 @@ export class ControlPlaneStore {
           : home.retainedKeyCount,
         updated_at: now,
       });
-      return record;
-    });
-    return keyMetadataFromData(result);
+    };
+    return Object.freeze({ existing: false, record, commit });
   }
 
   async listHomeKeys(principal: FirebasePrincipal, homeId: string): Promise<HomeKeyMetadata[]> {

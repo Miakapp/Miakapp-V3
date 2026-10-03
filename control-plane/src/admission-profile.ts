@@ -34,6 +34,16 @@ export const CONTROL_PLANE_ADMISSION_PROFILE: AdmissionProfile = Object.freeze({
     // actually hold: a crash loop behind one address, and one noisy release.
     'runtime.diagnostics.source': Object.freeze({ maximum: 60, windowMilliseconds: MINUTE }),
     'runtime.diagnostics.release': Object.freeze({ maximum: 240, windowMilliseconds: MINUTE }),
+    // Issuing a code mints nothing yet, but each one is a ten-minute path to a
+    // full Home Key, so an account gets a handful per window, not a stream.
+    'pairing.issue.actor': Object.freeze({ maximum: 12, windowMilliseconds: 10 * MINUTE }),
+    'pairing.issue.source': Object.freeze({ maximum: 30, windowMilliseconds: 10 * MINUTE }),
+    // Redemption is unauthenticated: the code is the credential. 125 bits make
+    // guessing hopeless on entropy alone; these bounds keep a guesser from
+    // turning that hopelessness into Firestore reads. A person who mistypes
+    // still has room for several attempts.
+    'pairing.redeem.source': Object.freeze({ maximum: 20, windowMilliseconds: 10 * MINUTE }),
+    'pairing.redeem.code': Object.freeze({ maximum: 5, windowMilliseconds: 10 * MINUTE }),
   }),
   auditRetentionMilliseconds: 7 * DAY,
   auditSlots: 4_096,
