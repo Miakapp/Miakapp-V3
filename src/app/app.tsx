@@ -578,6 +578,7 @@ export function App({
         onSwitchHome={switchHome}
         sandboxOrigin={sandboxOrigin}
         signIn={host.signIn}
+        signInStatus={snapshot.signInStatus}
         signOut={snapshot.authenticated ? host.signOut : undefined}
         stage={houseStage}
         />

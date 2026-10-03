@@ -92,6 +92,7 @@ class LiveTrustedHost implements TrustedHost {
   #signedIn: boolean;
   #userId: string | null;
   #authorizationEpoch = 0;
+  #signInStatus: 'idle' | 'pending' | 'failed' = 'idle';
   #status: BrowserClientStatus = 'idle';
   #state: LiveState = EMPTY_STATE;
   #stateStale = false;
@@ -155,6 +156,7 @@ class LiveTrustedHost implements TrustedHost {
       this.#userId = userId;
       this.#signedIn = userId !== null;
       ++this.#authorizationEpoch;
+      this.#signInStatus = 'idle';
       // Detach synchronously; an old stop() must not block or overwrite the
       // new account. A fresh provider cannot reuse a prior user's lease.
       void this.#disconnect();
@@ -173,11 +175,23 @@ class LiveTrustedHost implements TrustedHost {
   };
 
   readonly signIn = (): void => {
-    if (this.#disposed || this.#signedIn) return;
-    void this.#identity.signIn().catch(() => {
-      this.#record('Sign-in did not complete', 'The live home remains disconnected.', 'security');
+    if (this.#disposed || this.#signedIn || this.#signInStatus === 'pending') return;
+    const epoch = this.#authorizationEpoch;
+    this.#signInStatus = 'pending';
+    this.#publish();
+    // Keep the popup call in the click's synchronous stack for browser gesture
+    // requirements. A retired attempt cannot annotate the next identity.
+    void (async () => {
+      try {
+        await this.#identity.signIn();
+        if (this.#disposed || epoch !== this.#authorizationEpoch) return;
+        this.#signInStatus = 'idle';
+      } catch {
+        if (this.#disposed || epoch !== this.#authorizationEpoch) return;
+        this.#signInStatus = 'failed';
+      }
       this.#publish();
-    });
+    })();
   };
 
   readonly signOut = async (): Promise<void> => {
@@ -429,6 +443,7 @@ class LiveTrustedHost implements TrustedHost {
         ? 'Firebase identity, App Check, control plane, relay and Bun coordinator.'
         : 'Sign in with Google to open the trusted live path.',
       signInAvailable: !this.#signedIn,
+      signInStatus: this.#signInStatus,
     });
   }
 
