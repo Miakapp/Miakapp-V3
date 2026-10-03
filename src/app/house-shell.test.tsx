@@ -279,6 +279,45 @@ describe('house shell — consent before any house resource', () => {
     expect(consent.read(HOME_ID)).toBeUndefined();
   });
 
+  it.each([APP_ABI, COMPONENT_ABI])('stops %s after consent is removed in another tab', async (abi) => {
+    localStorage.clear();
+    const consent = createHouseConsentStore(localStorage);
+    consent.grant(HOME_ID);
+    const release = appRelease();
+    const coordinator = coordinatorFor({ ...release, pointer: { ...release.pointer, abi } });
+    const house = fakeMount();
+    const session = { lifecycle: 'active' as const, dispose: vi.fn(), interact: vi.fn(), publishState: vi.fn(), markStateStale: vi.fn() };
+    const mountRuntime = vi.fn(async () => session);
+    const mount = abi === APP_ABI ? house.mount : mountRuntime;
+    render(<App consentStore={consent} createComponentRelease={() => coordinator}
+      mountHouseApp={house.mount} mountRuntime={mountRuntime} readSandboxOrigin={() => SANDBOX_ORIGIN} />);
+    await waitFor(() => expect(mount).toHaveBeenCalledOnce());
+    act(() => {
+      localStorage.removeItem('miakapp.house-consent');
+      window.dispatchEvent(new StorageEvent('storage', { key: 'miakapp.house-consent', storageArea: localStorage }));
+    });
+    expect(abi === APP_ABI ? house.sessions[0]!.dispose : session.dispose).toHaveBeenCalledOnce();
+    expect(document.querySelector('iframe')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Ouvrir la maison' })).toBeVisible();
+    expect(coordinator.activate).toHaveBeenCalledOnce();
+  });
+
+  it('stops an open home when another tab clears browser storage', async () => {
+    localStorage.clear();
+    const consent = createHouseConsentStore(localStorage);
+    consent.grant(HOME_ID);
+    const house = fakeMount();
+    render(<App consentStore={consent} createComponentRelease={() => coordinatorFor()}
+      mountHouseApp={house.mount} readSandboxOrigin={() => SANDBOX_ORIGIN} />);
+    await waitFor(() => expect(house.mount).toHaveBeenCalledOnce());
+    act(() => {
+      localStorage.clear();
+      window.dispatchEvent(new StorageEvent('storage', { key: null, storageArea: localStorage }));
+    });
+    expect(house.sessions[0]!.dispose).toHaveBeenCalledOnce();
+    expect(screen.getByRole('button', { name: 'Ouvrir la maison' })).toBeVisible();
+  });
+
   it.each(['withdrawal', 'signout'] as const)('stops the semantic runtime on %s', async (reason) => {
     const user = userEvent.setup();
     const consent = createHouseConsentStore(memoryStorage());

@@ -17,7 +17,9 @@ export interface HouseConsentRecord {
 }
 
 export interface HouseConsentStore {
+  /** Stable snapshots, updated locally and by other tabs on this origin. */
   read(homeId: string): HouseConsentRecord | undefined;
+  subscribe(listener: () => void): () => void;
   grant(homeId: string): HouseConsentRecord;
   revoke(homeId: string): void;
 }
@@ -52,9 +54,26 @@ export function createHouseConsentStore(
   now: () => number = Date.now,
 ): HouseConsentStore {
   let memory: Stored = {};
+  let cachedRaw: string | null | undefined;
+  let cached: Stored = {};
+  let memoryOnly = storage === undefined;
+  const listeners = new Set<() => void>();
+  const notify = (): void => { listeners.forEach((listener) => listener()); };
+  const onStorage = (event: StorageEvent): void => {
+    if (memoryOnly || event.storageArea !== storage) return;
+    if (event.key !== STORAGE_KEY && event.key !== null) return;
+    // Read the current storage, not the event payload: queued events may be old.
+    notify();
+  };
   const load = (): Stored => {
     try {
-      return storage === undefined ? memory : parse(storage.getItem(STORAGE_KEY));
+      if (memoryOnly || storage === undefined) return memory;
+      const raw = storage.getItem(STORAGE_KEY);
+      if (raw !== cachedRaw) {
+        cachedRaw = raw;
+        cached = parse(raw);
+      }
+      return cached;
     } catch {
       return memory;
     }
@@ -62,12 +81,23 @@ export function createHouseConsentStore(
   const save = (value: Stored): void => {
     memory = value;
     try {
-      storage?.setItem(STORAGE_KEY, JSON.stringify(value));
+      if (!memoryOnly) storage?.setItem(STORAGE_KEY, JSON.stringify(value));
     } catch {
-      // Memory copy above already holds it for this page.
+      // A failed write must not resurrect the previous stored agreement on
+      // the next read. Stay in memory for this page, including after revoke.
+      memoryOnly = true;
     }
+    notify();
   };
   return {
+    subscribe(listener) {
+      if (listeners.size === 0 && typeof window !== 'undefined') window.addEventListener('storage', onStorage);
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+        if (listeners.size === 0 && typeof window !== 'undefined') window.removeEventListener('storage', onStorage);
+      };
+    },
     read(homeId) {
       const record = load()[homeId];
       return record !== undefined && record.version === HOUSE_CONSENT_VERSION ? record : undefined;
