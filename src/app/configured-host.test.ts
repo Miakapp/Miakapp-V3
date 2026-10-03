@@ -1,9 +1,9 @@
-import { GoogleAuthProvider, onAuthStateChanged, type User, type Auth } from 'firebase/auth';
+import { GoogleAuthProvider, onAuthStateChanged, signOut, type User, type Auth } from 'firebase/auth';
 import { describe, expect, it, vi } from 'vitest';
 
 import { FirebaseLiveIdentity, resolveRequestedHome, signInWithGoogle } from './configured-host';
 
-vi.mock('firebase/auth', async (original) => ({ ...await original<typeof import('firebase/auth')>(), onAuthStateChanged: vi.fn() }));
+vi.mock('firebase/auth', async (original) => ({ ...await original<typeof import('firebase/auth')>(), onAuthStateChanged: vi.fn(), signOut: vi.fn() }));
 
 describe('configured staging host', () => {
   it('notifies a direct UID change even while both accounts are signed in', () => {
@@ -77,4 +77,17 @@ describe('configured staging host', () => {
       }
     });
   });
+});
+
+
+it('signs out the shared Firebase identity and propagates errors', async () => {
+  vi.mocked(onAuthStateChanged).mockReturnValue(vi.fn());
+  const auth = { currentUser: { uid: 'synthetic-resident' } } as Auth;
+  const identity = new FirebaseLiveIdentity(auth, {} as never);
+  vi.mocked(signOut).mockResolvedValueOnce(undefined);
+  await identity.signOut();
+  expect(signOut).toHaveBeenCalledWith(auth);
+  vi.mocked(signOut).mockRejectedValueOnce(new Error('synthetic failure'));
+  await expect(identity.signOut()).rejects.toThrow('synthetic failure');
+  identity.dispose();
 });

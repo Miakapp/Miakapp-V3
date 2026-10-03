@@ -4,6 +4,7 @@ import {
   GoogleAuthProvider,
   onAuthStateChanged,
   signInWithPopup,
+  signOut,
   type Auth,
 } from 'firebase/auth';
 import {
@@ -259,6 +260,10 @@ export class FirebaseLiveIdentity implements LiveIdentity {
 
   readonly signIn = async (): Promise<void> => {
     await signInWithGoogle(this.#auth);
+  };
+
+  readonly signOut = async (): Promise<void> => {
+    await signOut(this.#auth);
   };
 
   readonly getFirebaseIdToken: LiveIdentity['getFirebaseIdToken'] = async ({ signal }) => {

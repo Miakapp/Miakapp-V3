@@ -32,6 +32,7 @@ export interface LiveIdentity {
   /** Notify for every UID transition, including signed-in A → signed-in B. */
   readonly subscribe: (listener: (signedIn: boolean) => void) => () => void;
   readonly signIn: () => Promise<void>;
+  readonly signOut: () => Promise<void>;
   readonly getFirebaseIdToken: (request: BrowserRelayCredentialRequest) => Promise<string>;
   readonly getAppCheckToken: (request: BrowserRelayCredentialRequest) => Promise<string>;
   readonly dispose: () => void;
@@ -177,6 +178,13 @@ class LiveTrustedHost implements TrustedHost {
       this.#record('Sign-in did not complete', 'The live home remains disconnected.', 'security');
       this.#publish();
     });
+  };
+
+  readonly signOut = async (): Promise<void> => {
+    if (this.#disposed || !this.#signedIn) return;
+    // Auth notification owns teardown, including every other signed-in tab.
+    // Propagate failure so the trusted shell never reports a false sign-out.
+    await this.#identity.signOut();
   };
 
   readonly interact = (interaction: SemanticInteraction): void => {
