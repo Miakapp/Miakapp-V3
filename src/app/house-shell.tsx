@@ -71,6 +71,7 @@ export interface HouseShellProps {
   readonly homeState: HomeState | undefined;
   readonly call: ((name: string, args: unknown, options: HouseCallOptions) => Promise<unknown>) | undefined;
   readonly signIn?: (() => void) | undefined;
+  readonly signInStatus?: 'idle' | 'pending' | 'failed' | undefined;
   readonly signOut?: (() => Promise<void>) | undefined;
   readonly onAcceptConsent: () => void;
   readonly onDeclineConsent: () => void;
@@ -768,14 +769,15 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
             <HomeAvatar home={home} size="lg" />
             <h1>{t('signInTitle', { home: home.name })}</h1>
             <p className="house-card__lede">{t('signInLede')}</p>
+            {props.signInStatus === 'failed' ? <p role="alert">{t('signInFailed')}</p> : null}
             <div className="house-card__actions">
               <button
                 className="house-button"
-                disabled={props.signIn === undefined}
+                disabled={props.signIn === undefined || props.signInStatus === 'pending'}
                 onClick={props.signIn}
                 type="button"
               >
-                {t('signInAction')}
+                {t(props.signInStatus === 'pending' ? 'signingIn' : 'signInAction')}
               </button>
             </div>
           </StagePanel>

@@ -438,6 +438,23 @@ describe('house shell — consent before any house resource', () => {
     expect(coordinator.activate).not.toHaveBeenCalled();
   });
 
+  it('shows trusted sign-in progress and a localized retry without fetching the house', () => {
+    const coordinator = coordinatorFor();
+    const consent = createHouseConsentStore(memoryStorage()); consent.grant(HOME_ID);
+    const props = { consentStore: consent, createComponentRelease: () => coordinator,
+      readSandboxOrigin: () => SANDBOX_ORIGIN };
+    const host = (signInStatus: 'pending' | 'failed') => ({
+      ...hostWith({ signInAvailable: true, authenticated: false, signInStatus }), signIn: vi.fn(),
+    });
+    const view = render(<App {...props} host={host('pending')} />);
+    expect(screen.getByRole('button', { name: 'Connexion…' })).toBeDisabled();
+    view.unmount();
+    render(<App {...props} host={host('failed')} />);
+    expect(screen.getByRole('alert')).toHaveTextContent('La connexion n’a pas abouti. Réessayez.');
+    expect(screen.getByRole('button', { name: 'Se connecter avec Google' })).toBeEnabled();
+    expect(coordinator.activate).not.toHaveBeenCalled();
+  });
+
   it('says, under the home’s public name, that nothing is published yet', async () => {
     const consent = createHouseConsentStore(memoryStorage());
     consent.grant(HOME_ID);

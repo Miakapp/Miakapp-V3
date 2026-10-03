@@ -60,6 +60,8 @@ const FR = {
   signInTitle: 'Connectez-vous pour ouvrir {home}',
   signInLede: 'Votre compte permet à Miakapp de vérifier que cette maison vous est ouverte.',
   signInAction: 'Se connecter avec Google',
+  signingIn: 'Connexion…',
+  signInFailed: 'La connexion n’a pas abouti. Réessayez.',
 
   emptyTitle: '{home} n’a pas encore d’interface',
   emptyLede: 'La personne qui s’occupe de cette maison ne l’a pas encore publiée.',
@@ -135,6 +137,8 @@ const EN: Record<HouseCopyKey, string> = {
   signInTitle: 'Sign in to open {home}',
   signInLede: 'Your account lets Miakapp check that this home is open to you.',
   signInAction: 'Sign in with Google',
+  signingIn: 'Signing in…',
+  signInFailed: 'Sign-in did not complete. Try again.',
 
   emptyTitle: '{home} has no interface yet',
   emptyLede: 'Whoever looks after this home has not published one yet.',
