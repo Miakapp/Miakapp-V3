@@ -460,6 +460,28 @@ describe('component runtime state delivery', () => {
       .map((envelope) => envelope.payload as Record<string, unknown>);
   }
 
+  it.each(['before-bind', 'before-worker'] as const)('buffers only the latest authorized state %s', async (timing) => {
+    const harness = createHarness();
+    const mounted = mount(harness, { policy: REQUIRES });
+    harness.announce();
+    const session = await mounted;
+    const broker = new BrokerDouble(harness.brokerPort());
+    if (timing === 'before-worker') { broker.send('runtime.bound', {}); await settle(); }
+    session.publishState({ 'global.temperature': 20 }, 2);
+    session.publishState({ 'global.temperature': 21, 'security.secret': 'synthetic' }, 3);
+    session.publishState({ 'global.temperature': 19 }, 2);
+    session.markStateStale(3, 'home_state_stale');
+    await settle();
+    expect(snapshots(broker)).toHaveLength(0);
+    expect(broker.kinds()).not.toContain('state.stale');
+    if (timing === 'before-bind') broker.send('runtime.bound', {});
+    broker.send('runtime.worker_ready', {});
+    await settle();
+    expect(snapshots(broker)).toEqual([{ revision: 3, values: { 'global.temperature': 21 } }]);
+    expect(broker.kinds().slice(-2)).toEqual(['state.snapshot', 'state.stale']);
+    session.dispose();
+  });
+
   it('hands the component only the state paths its grant covers', async () => {
     const { broker, session } = await bound();
 
@@ -486,6 +508,7 @@ describe('component runtime state delivery', () => {
     const session = await mounted;
     const broker = new BrokerDouble(harness.brokerPort());
     broker.send('runtime.bound', {});
+    broker.send('runtime.worker_ready', {});
     await settle();
 
     session.publishState({ 'global.temperature': 21 }, 4);
