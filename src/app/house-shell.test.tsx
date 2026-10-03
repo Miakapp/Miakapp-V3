@@ -7,7 +7,7 @@ import type {
   HouseAppRelease,
   HouseAppSession,
 } from '../../component-runtime/src/app-host';
-import { APP_ABI, POINTER_SCHEMA } from '../../component-runtime/src/contract';
+import { APP_ABI, COMPONENT_ABI, POINTER_SCHEMA } from '../../component-runtime/src/contract';
 import { App } from './app';
 import type { ActivatedRelease, ComponentReleaseCoordinator } from './component-release';
 import { NoPublishedRelease } from './component-release';
@@ -277,6 +277,61 @@ describe('house shell — consent before any house resource', () => {
     expect(document.querySelector('iframe')).toBeNull();
     expect(screen.getByRole('button', { name: 'Ouvrir la maison' })).toBeVisible();
     expect(consent.read(HOME_ID)).toBeUndefined();
+  });
+
+  it.each(['withdrawal', 'signout'] as const)('stops the semantic runtime on %s', async (reason) => {
+    const user = userEvent.setup();
+    const consent = createHouseConsentStore(memoryStorage());
+    consent.grant(HOME_ID);
+    const release = appRelease();
+    const coordinator = coordinatorFor({ ...release, pointer: { ...release.pointer, abi: COMPONENT_ABI } });
+    const session = { lifecycle: 'active' as const, dispose: vi.fn(), interact: vi.fn(), publishState: vi.fn(), markStateStale: vi.fn() };
+    const mountRuntime = vi.fn(async () => session);
+    const base = createDemoHost();
+    let snapshot = { ...base.getSnapshot(), signInAvailable: true, authenticated: true };
+    const listeners = new Set<() => void>();
+    const host = { ...base, getSnapshot: () => snapshot, subscribe: (listener: () => void) => {
+      listeners.add(listener); return () => { listeners.delete(listener); };
+    } };
+    render(<App host={host} consentStore={consent} createComponentRelease={() => coordinator}
+      mountRuntime={mountRuntime} readSandboxOrigin={() => SANDBOX_ORIGIN} />);
+    await waitFor(() => expect(mountRuntime).toHaveBeenCalledOnce());
+    if (reason === 'withdrawal') {
+      await user.click(screen.getByRole('button', { name: 'Réglages' }));
+      await user.click(screen.getByRole('button', { name: 'Retirer mon accord' }));
+    } else {
+      act(() => { snapshot = { ...snapshot, authenticated: false }; listeners.forEach((listener) => listener()); });
+    }
+    expect(session.dispose).toHaveBeenCalledOnce();
+    act(() => { snapshot = { ...snapshot, homeState: { revision: 99, stale: false, values: { 'zone.private': 42 } } }; listeners.forEach((listener) => listener()); });
+    expect(session.publishState).not.toHaveBeenCalled();
+    expect(screen.getByRole('banner', { name: 'Miakapp' })).toBeVisible();
+  });
+
+  it.each([APP_ABI, COMPONENT_ABI])('rechecks authorization before reopening %s', async (abi) => {
+    const user = userEvent.setup();
+    const consent = createHouseConsentStore(memoryStorage());
+    consent.grant(HOME_ID);
+    const release = appRelease();
+    const coordinator = coordinatorFor({ ...release, pointer: { ...release.pointer, abi } });
+    const house = fakeMount();
+    const session = { lifecycle: 'active' as const, dispose: vi.fn(), interact: vi.fn(), publishState: vi.fn(), markStateStale: vi.fn() };
+    const mountRuntime = vi.fn(async () => session);
+    const mount = abi === APP_ABI ? house.mount : mountRuntime;
+    render(<App consentStore={consent} createComponentRelease={() => coordinator}
+      mountHouseApp={house.mount} mountRuntime={mountRuntime} readSandboxOrigin={() => SANDBOX_ORIGIN} />);
+    await waitFor(() => expect(mount).toHaveBeenCalledOnce());
+    await user.click(screen.getByRole('button', { name: 'Réglages' }));
+    await user.click(screen.getByRole('button', { name: 'Retirer mon accord' }));
+    let rejectActivation!: (error: Error) => void;
+    coordinator.activate.mockImplementationOnce(() => new Promise((_resolve, reject) => { rejectActivation = reject; }));
+    await user.click(screen.getByRole('button', { name: 'Ouvrir la maison' }));
+    expect(coordinator.activate).toHaveBeenCalledTimes(2);
+    expect(mount).toHaveBeenCalledTimes(1);
+    expect(document.querySelector('iframe')).toBeNull();
+    await act(async () => { rejectActivation(new Error('access denied')); });
+    expect(screen.getByRole('heading', { name: 'L’interface de Horizon House n’est pas disponible' })).toBeVisible();
+    expect(mount).toHaveBeenCalledTimes(1);
   });
 
   it('asks a signed-out resident to sign in before requesting anything', () => {

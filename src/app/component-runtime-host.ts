@@ -214,13 +214,15 @@ export function mountComponentRuntime(
   let missedHeartbeats = 0;
   let readyListener: ((event: MessageEvent) => void) | undefined;
   let disposed = false;
-  // State may only follow `runtime.load`: the broker has no grant before it and
-  // answers a snapshot with an unhandled non-null assertion rather than a fault.
-  let loaded = false;
+  // The port and runtime.load precede guest readiness. Keep a bounded latest
+  // snapshot/staleness pair until the worker can actually receive them.
+  let workerReady = false;
+  let pendingState: { revision: number; values: Record<string, unknown> } | undefined;
+  let pendingStale: { revision: number; reason: string } | undefined;
   // The broker terminates on a revision that moves backward. Equal is allowed,
   // so a caller may safely republish the revision it last sent — which is what
   // happens when a new session mounts against state that has not changed.
-  let publishedStateRevision = 0;
+  let publishedStateRevision = options.stateRevision ?? 1;
 
   const cleanup = (): void => {
     if (heartbeat) clearInterval(heartbeat);
@@ -231,6 +233,8 @@ export function mountComponentRuntime(
     readyListener = undefined;
     port?.close();
     port = undefined;
+    pendingState = undefined;
+    pendingStale = undefined;
     frame?.remove();
     frame = undefined;
   };
@@ -291,8 +295,6 @@ export function mountComponentRuntime(
       theme: options.theme ?? 'system',
       artifact: bytes.buffer,
     }, [bytes.buffer]);
-    loaded = true;
-    publishedStateRevision = options.stateRevision ?? 1;
 
     heartbeat = setInterval(() => {
       if (!port || (lifecycle !== 'staging' && lifecycle !== 'active')) return;
@@ -329,7 +331,12 @@ export function mountComponentRuntime(
           load();
           break;
         case 'runtime.worker_ready':
+          workerReady = true;
           enter('staging');
+          if (pendingState !== undefined) send('state.snapshot', pendingState);
+          if (pendingStale !== undefined) send('state.stale', pendingStale);
+          pendingState = undefined;
+          pendingStale = undefined;
           break;
         case 'ui.render': {
           const revision = payload.render_revision;
@@ -397,17 +404,24 @@ export function mountComponentRuntime(
         });
       },
       publishState(values, revision) {
-        if (!loaded || disposed) return;
+        if (disposed) return;
         if (!Number.isSafeInteger(revision) || revision < publishedStateRevision) return;
         publishedStateRevision = revision;
-        send('state.snapshot', {
-          revision,
-          values: selectGrantedState(values, grant.state_read),
-        });
+        const snapshot = { revision, values: selectGrantedState(values, grant.state_read) };
+        if (!workerReady) {
+          pendingState = snapshot;
+          pendingStale = undefined;
+          return;
+        }
+        send('state.snapshot', snapshot);
       },
       markStateStale(revision, reason) {
-        if (!loaded || disposed) return;
+        if (disposed) return;
         if (!Number.isSafeInteger(revision) || revision < 1) return;
+        if (!workerReady) {
+          pendingStale = { revision, reason };
+          return;
+        }
         send('state.stale', { revision, reason });
       },
       dispose() {

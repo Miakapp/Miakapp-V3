@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
 import { APP_ABI, COMPONENT_ABI } from '../../component-runtime/src/contract';
 import {
@@ -92,21 +92,23 @@ function useComponentRelease(
   enabled: boolean,
   attempt: number,
 ): ComponentReleaseState {
-  // Each outcome remembers which attempt produced it, so a new attempt reads as
-  // `activating` until it settles, without resetting state inside the effect.
+  // Bind a result to one continuous authorization window. Withdrawal or
+  // sign-out invalidates it immediately; reopening must activate again, even
+  // if the retry counter and coordinator did not change.
+  const request = useMemo(() => ({ coordinator, enabled, attempt }), [coordinator, enabled, attempt]);
   const [outcome, setOutcome] = useState<
-    { readonly attempt: number; readonly state: ComponentReleaseState } | undefined
+    { readonly request: typeof request; readonly state: ComponentReleaseState } | undefined
   >(undefined);
 
   useEffect(() => {
-    if (coordinator === undefined || !enabled) return undefined;
+    if (request.coordinator === undefined || !request.enabled) return undefined;
 
     const controller = new AbortController();
-    void coordinator.activate(controller.signal).then(
+    void request.coordinator.activate(controller.signal).then(
       (activated) => {
         if (controller.signal.aborted) return;
         setOutcome({
-          attempt,
+          request,
           state: {
             status: 'active',
             release: activated.pointer.release,
@@ -118,7 +120,7 @@ function useComponentRelease(
       (error: unknown) => {
         if (controller.signal.aborted) return;
         setOutcome({
-          attempt,
+          request,
           state: error instanceof NoPublishedRelease
             ? { status: 'none', ...(error.homeName === undefined ? {} : { homeName: error.homeName }) }
             : { status: 'unavailable' },
@@ -127,10 +129,10 @@ function useComponentRelease(
     );
 
     return () => controller.abort();
-  }, [coordinator, enabled, attempt]);
+  }, [request]);
 
-  if (coordinator === undefined) return NO_COMPONENT_RELEASE;
-  if (outcome === undefined || outcome.attempt !== attempt) return ACTIVATING_RELEASE;
+  if (coordinator === undefined || !enabled) return NO_COMPONENT_RELEASE;
+  if (outcome === undefined || outcome.request !== request) return ACTIVATING_RELEASE;
   return outcome.state;
 }
 
@@ -176,7 +178,10 @@ function useComponentRuntime(
   const sessionRef = useRef<ComponentRuntimeSession | undefined>(undefined);
   const [session, setSession] = useState<ComponentRuntimeSession | undefined>(undefined);
   const [sandboxOrigin] = useState<string | undefined>(() => readSandboxOrigin?.());
-  const [outcome, setOutcome] = useState<RuntimeOutcome>(PENDING_RUNTIME);
+  const [outcome, setOutcome] = useState<{
+    readonly activation: ActivatedRelease;
+    readonly value: RuntimeOutcome;
+  } | undefined>(undefined);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -192,7 +197,7 @@ function useComponentRuntime(
     // classified code: `failure.code` may be the component's own text.
     const stopped = (code: string): void => {
       diagnostics?.report(code, activated.pointer.release);
-      setOutcome({ kind: 'failed', code: classifyRuntimeFailure(code) });
+      setOutcome({ activation: activated, value: { kind: 'failed', code: classifyRuntimeFailure(code) } });
     };
 
     const onLifecycle = (lifecycle: RuntimeLifecycle, failure?: RuntimeFailure): void => {
@@ -210,7 +215,7 @@ function useComponentRuntime(
         onLifecycle,
         onTree: (tree, revision) => {
           if (released) return;
-          setOutcome({ kind: 'tree', tree, revision });
+          setOutcome({ activation: activated, value: { kind: 'tree', tree, revision } });
         },
       },
     ).then(
@@ -235,6 +240,7 @@ function useComponentRuntime(
       released = true;
       sessionRef.current = undefined;
       setSession(undefined);
+      setOutcome(undefined);
       session?.dispose();
     };
   }, [activated, sandboxOrigin, diagnostics, mountRuntime, containerRef]);
@@ -244,7 +250,7 @@ function useComponentRuntime(
   // arrived first is not left reading an empty home until the next update —
   // which, for a quiet home, is a long time.
   useEffect(() => {
-    if (session === undefined || homeState === undefined) return;
+    if (session === undefined || session !== sessionRef.current || homeState === undefined) return;
     if (homeState.stale) {
       session.markStateStale(homeState.revision, 'home_state_stale');
       return;
@@ -257,13 +263,14 @@ function useComponentRuntime(
   }, []);
 
   const mounting = activated !== undefined && sandboxOrigin !== undefined;
+  const currentOutcome = outcome?.activation === activated ? outcome?.value ?? PENDING_RUNTIME : PENDING_RUNTIME;
   const state: ComponentRuntimeState = !mounting
     ? IDLE_RUNTIME
-    : outcome.kind === 'pending'
+    : currentOutcome.kind === 'pending'
       ? STARTING_RUNTIME
-      : outcome.kind === 'tree'
-        ? { status: 'active', tree: outcome.tree, revision: outcome.revision }
-        : { status: 'failed', code: outcome.code };
+      : currentOutcome.kind === 'tree'
+        ? { status: 'active', tree: currentOutcome.tree, revision: currentOutcome.revision }
+        : { status: 'failed', code: currentOutcome.code };
 
   return { state, interact };
 }
