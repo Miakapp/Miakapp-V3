@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { COMPONENT_ABI } from '../../component-runtime/src/contract';
+import { COMPONENT_ABI, type CapabilityRequirements } from '../../component-runtime/src/contract';
 import { App as ShellApp, type AppProps } from './app';
 import type { ActivatedRelease, ComponentReleaseCoordinator } from './component-release';
 import { createDemoHost } from './demo-host';
@@ -20,13 +20,21 @@ function agreedConsent(): HouseConsentStore {
   return store;
 }
 
+const NO_REQUIREMENTS: CapabilityRequirements = {
+  state_read: ['zone.*'],
+  event_subscribe: [],
+  event_publish: [],
+  call: [],
+  presentation: [],
+};
+
 function App(props: AppProps): React.JSX.Element {
   return <ShellApp consentStore={agreedConsent()} {...props} />;
 }
 
 function activatedRelease(release: string, fellBack: boolean): ActivatedRelease {
   return {
-    pointer: { release, abi: COMPONENT_ABI } as ActivatedRelease['pointer'],
+    pointer: { release, abi: COMPONENT_ABI, requires: NO_REQUIREMENTS } as ActivatedRelease['pointer'],
     artifact: {} as ActivatedRelease['artifact'],
     fellBack,
   };
@@ -59,23 +67,6 @@ describe('App', () => {
     expect(screen.getByText(/cannot inject HTML, CSS, URLs, or credentials/)).toBeVisible();
   });
 
-  it('does not show synthetic activity or settings in the real read-only home', () => {
-    const base = createDemoHost();
-    const snapshot: TrustedHostSnapshot = {
-      ...base.getSnapshot(),
-      readOnlyHome: true,
-      preview: false,
-      modeLabel: 'Lecture seule',
-    };
-    const host: TrustedHost = { ...base, getSnapshot: () => snapshot };
-    render(<App host={host} />);
-
-    expect(screen.getAllByRole('button', { name: 'Home' })).toHaveLength(2);
-    expect(screen.queryByRole('button', { name: 'Settings' })).not.toBeInTheDocument();
-    expect(screen.queryByText('Everything looks settled.')).not.toBeInTheDocument();
-    expect(screen.queryByText('Home agent')).not.toBeInTheDocument();
-  });
-
   it('disposes the trusted host when the React shell unmounts', () => {
     const host = createDemoHost();
     const dispose = vi.spyOn(host, 'dispose');
@@ -104,22 +95,21 @@ describe('App', () => {
     // While the home's interface is fetched and verified, the house shell says
     // which home is opening rather than showing the platform's own screen.
     expect(screen.getByRole('status')).toHaveTextContent('Opening Horizon House…');
-    await waitFor(() => {
-      expect(screen.getByText('Component 2026.09.15-1 · verified')).toBeVisible();
-    });
-    expect(activate).toHaveBeenCalledOnce();
+    await waitFor(() => expect(activate).toHaveBeenCalledOnce());
     expect(activate.mock.calls[0]?.[0]).toBeInstanceOf(AbortSignal);
   });
 
-  it('says so when the shell rendered the last known good component', async () => {
+  it('never shows release or runtime metadata to residents', async () => {
     const coordinator: ComponentReleaseCoordinator = {
       activate: async () => activatedRelease('2026.09.14-3', true),
     };
     render(<App createComponentRelease={() => coordinator} />);
 
-    await waitFor(() => {
-      expect(screen.getByText('Component 2026.09.14-3 · last known good')).toBeVisible();
-    });
+    expect(await screen.findByRole('alert')).toBeVisible();
+    const text = document.body.textContent ?? '';
+    for (const jargon of ['2026.09.14-3', 'last known good', 'Component', 'ABI', 'runtime']) {
+      expect(text).not.toContain(jargon);
+    }
   });
 
   it('degrades to a stated failure with a retry instead of a blank shell', async () => {
@@ -174,7 +164,7 @@ function runtimeTree(title: string): unknown {
 
 function releaseWithArtifact(bytes: Uint8Array): ActivatedRelease {
   return {
-    pointer: { release: '2026.09.15-runtime', abi: COMPONENT_ABI } as ActivatedRelease['pointer'],
+    pointer: { release: '2026.09.15-runtime', abi: COMPONENT_ABI, requires: NO_REQUIREMENTS } as ActivatedRelease['pointer'],
     artifact: { bytes } as unknown as ActivatedRelease['artifact'],
     fellBack: false,
   };
@@ -194,12 +184,13 @@ describe('App component runtime call site', () => {
       />,
     );
 
-    await waitFor(() => {
-      expect(screen.getByText(/Component 2026\.09\.15-runtime/)).toBeVisible();
-    });
+    // A verified component with nowhere to run is a stated failure in the
+    // house shell, not a platform screen pretending to be the home's.
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Miakapp’s isolated space is misconfigured; nothing was opened.',
+    );
     expect(mountRuntime).not.toHaveBeenCalled();
-    // The shell keeps rendering the trusted host's own tree.
-    expect(screen.getByText('3 lights on')).toBeVisible();
+    expect(screen.queryByText('3 lights on')).toBeNull();
   });
 
   it('never mounts the runtime when no release was verified', () => {
@@ -245,8 +236,8 @@ describe('App component runtime call site', () => {
     expect(passedRelease.pointer.release).toBe('2026.09.15-runtime');
     expect(passedOptions.sandboxOrigin).toBe(SANDBOX_ORIGIN);
     expect(passedOptions.container).toBe(screen.getByTestId('component-runtime-surface'));
-    expect(screen.getByText('Component runtime · revision 4')).toBeVisible();
-    // The runtime's tree replaces the host's, it does not render beside it.
+    // The runtime's tree is the home screen, inside the Miakapp shell.
+    expect(screen.getByRole('banner', { name: 'Miakapp' })).toBeVisible();
     expect(screen.queryByText('3 lights on')).toBeNull();
   });
 
@@ -279,7 +270,7 @@ describe('App component runtime call site', () => {
     expect(hostInteract).not.toHaveBeenCalled();
   });
 
-  it('falls back to the trusted host tree when the runtime dies', async () => {
+  it('replaces a dead runtime with the shell’s own failure screen', async () => {
     const session = { lifecycle: 'active' as const, interact: vi.fn(), dispose: vi.fn() };
     const mountRuntime = vi.fn(async (_release: never, options: never) => {
       const opts = options as unknown as {
@@ -302,12 +293,10 @@ describe('App component runtime call site', () => {
       />,
     );
 
-    await waitFor(() => {
-      expect(screen.getByText('Component runtime stopped · bridge_protocol_violation'))
-        .toBeVisible();
-    });
+    expect(await screen.findByRole('alert')).toHaveTextContent('It hit an error while starting.');
     expect(screen.queryByRole('heading', { level: 1, name: 'Runtime speaking' })).toBeNull();
-    expect(screen.getByText('3 lights on')).toBeVisible();
+    expect(screen.queryByText('3 lights on')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Restart' })).toBeEnabled();
   });
 
   it('keeps a component-authored failure code out of the shell chrome', async () => {
@@ -333,9 +322,7 @@ describe('App component runtime call site', () => {
       />,
     );
 
-    await waitFor(() => {
-      expect(screen.getByText('Component runtime stopped · unclassified')).toBeVisible();
-    });
+    expect(await screen.findByRole('alert')).toHaveTextContent('It hit an error while starting.');
     expect(screen.queryByText(/evil\.example/)).toBeNull();
   });
 
@@ -359,9 +346,9 @@ describe('App component runtime call site', () => {
       />,
     );
 
-    await waitFor(() => {
-      expect(screen.getByText('Component runtime stopped · ready_timeout')).toBeVisible();
-    });
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Miakapp’s isolated space cannot be reached right now.',
+    );
     await waitFor(() => {
       expect(fetchSpy).toHaveBeenCalledOnce();
     });
@@ -393,9 +380,9 @@ describe('App component runtime call site', () => {
       />,
     );
 
-    await waitFor(() => {
-      expect(screen.getByText('Component runtime stopped · mount_failed')).toBeVisible();
-    });
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Miakapp’s isolated space cannot be reached right now.',
+    );
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
   });
@@ -448,125 +435,6 @@ describe('App component runtime call site', () => {
     await waitFor(() => {
       expect(session.dispose).toHaveBeenCalledOnce();
     });
-  });
-});
-
-const SUBSTITUTED_SCREEN = /This is the home’s own screen/;
-
-describe('App home screen provenance', () => {
-  it('says whose screen this is while the component screen starts', async () => {
-    const session = { lifecycle: 'starting' as const, interact: vi.fn(), dispose: vi.fn() };
-    // A mount that resolves without ever producing a tree: the runtime is up,
-    // the component has not rendered yet.
-    const mountRuntime = vi.fn(async () => session);
-
-    render(
-      <App
-        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
-        mountRuntime={mountRuntime as never}
-        readSandboxOrigin={() => SANDBOX_ORIGIN}
-      />,
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText(
-        'This is the home’s own screen. The component screen is still starting.',
-      )).toBeVisible();
-    });
-    expect(screen.getByText('3 lights on')).toBeVisible();
-  });
-
-  it('names the substitution where it happened, not only in the footer', async () => {
-    const session = { lifecycle: 'active' as const, interact: vi.fn(), dispose: vi.fn() };
-    const mountRuntime = vi.fn(async (_release: never, options: never) => {
-      const opts = options as unknown as {
-        onTree: (t: unknown, r: number) => void;
-        onLifecycle: (l: string, f?: { code: string; message: string }) => void;
-      };
-      opts.onTree(runtimeTree('Runtime speaking'), 1);
-      opts.onLifecycle('failed', { code: 'bridge_protocol_violation', message: 'bad envelope' });
-      return session;
-    });
-
-    render(
-      <App
-        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
-        mountRuntime={mountRuntime as never}
-        readSandboxOrigin={() => SANDBOX_ORIGIN}
-      />,
-    );
-
-    const notice = await screen.findByText(
-      'This is the home’s own screen. The component screen stopped.',
-    );
-    // The substituted screen is the one it sits above: both screens are real and
-    // both answer, so proximity is what tells a person which controls these are.
-    const home = document.querySelector('.home-screen');
-    expect(home).not.toBeNull();
-    expect(home!.contains(notice)).toBe(true);
-    expect(home!.textContent).toContain('3 lights on');
-    expect(screen.getAllByText('bridge_protocol_violation').length).toBeGreaterThan(0);
-  });
-
-  it('keeps a component-authored failure code out of the notice', async () => {
-    const session = { lifecycle: 'active' as const, interact: vi.fn(), dispose: vi.fn() };
-    const mountRuntime = vi.fn(async (_release: never, options: never) => {
-      const opts = options as unknown as {
-        onLifecycle: (l: string, f?: { code: string; message: string }) => void;
-      };
-      opts.onLifecycle('failed', {
-        code: 'Reconnect your home at evil.example',
-        message: 'phishing',
-      });
-      return session;
-    });
-
-    render(
-      <App
-        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
-        mountRuntime={mountRuntime as never}
-        readSandboxOrigin={() => SANDBOX_ORIGIN}
-      />,
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText(SUBSTITUTED_SCREEN)).toBeVisible();
-    });
-    // The notice is the most legible line the shell owns; renting it to the
-    // component is how a sandboxed bundle would phish from trusted chrome.
-    expect(document.querySelector('.home-screen')!.textContent)
-      .not.toContain('evil.example');
-  });
-
-  it('stays silent when the component screen is the one on display', async () => {
-    const session = { lifecycle: 'active' as const, interact: vi.fn(), dispose: vi.fn() };
-    const mountRuntime = vi.fn(async (_release: never, options: never) => {
-      const opts = options as unknown as { onTree: (t: unknown, r: number) => void };
-      opts.onTree(runtimeTree('Runtime speaking'), 1);
-      return session;
-    });
-
-    render(
-      <App
-        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
-        mountRuntime={mountRuntime as never}
-        readSandboxOrigin={() => SANDBOX_ORIGIN}
-      />,
-    );
-
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { level: 1, name: 'Runtime speaking' })).toBeVisible();
-    });
-    expect(screen.queryByText(SUBSTITUTED_SCREEN)).toBeNull();
-  });
-
-  it('stays silent when the build expected no component screen', () => {
-    render(<App createComponentRelease={() => undefined} />);
-
-    // Nothing was substituted, so there is nothing to explain: the preview and
-    // every build without a sandbox origin read exactly as they did before.
-    expect(screen.queryByText(SUBSTITUTED_SCREEN)).toBeNull();
-    expect(screen.getByText('3 lights on')).toBeVisible();
   });
 });
 

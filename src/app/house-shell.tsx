@@ -22,9 +22,18 @@ import type { FavoriteHome, HouseFavoritesStore } from './house-favorites';
 import {
   failureKey,
   houseTranslator,
+  type HouseCopyKey,
   type HouseTranslate,
 } from './house-shell-copy';
-import type { HomeConnectionStatus, HomeState, HomeSummary, HouseCallOptions } from './host';
+import { platformGrantCeiling } from './grant-ceiling';
+import type {
+  HomeConnectionStatus,
+  HomeState,
+  HomeSummary,
+  HouseCallOptions,
+  SemanticInteraction,
+} from './host';
+import { SemanticRenderer } from './semantic-renderer';
 import { ChevronDownIcon, CloseIcon, SettingsIcon, SparkIcon, StarIcon } from './icons';
 import type { Locale } from './copy';
 
@@ -36,7 +45,20 @@ export type HouseStage =
   | { readonly kind: 'signin' }
   | { readonly kind: 'loading' }
   | { readonly kind: 'unavailable' }
-  | { readonly kind: 'app'; readonly release: ActivatedRelease };
+  | { readonly kind: 'empty' }
+  | { readonly kind: 'app'; readonly release: ActivatedRelease }
+  | { readonly kind: 'component'; readonly release: ActivatedRelease };
+
+/** The semantic runtime as the App drives it; the shell only draws it. */
+export type ComponentScreenState =
+  | { readonly status: 'idle' | 'starting' }
+  | { readonly status: 'active'; readonly tree: unknown; readonly revision: number }
+  | { readonly status: 'failed'; readonly code: string };
+
+export interface ComponentScreen {
+  readonly state: ComponentScreenState;
+  readonly interact: (interaction: SemanticInteraction) => void;
+}
 
 export interface HouseShellProps {
   readonly home: HomeSummary;
@@ -56,6 +78,7 @@ export interface HouseShellProps {
   readonly onRetry: () => void;
   readonly onSwitchHome: (homeId: string) => void;
   readonly mountHouseApp?: MountHouseApp;
+  readonly componentScreen?: ComponentScreen;
 }
 
 // ---------------------------------------------------------------------------
@@ -350,6 +373,7 @@ function HouseAppStage({
       {
         sandboxOrigin,
         container,
+        policy: platformGrantCeiling(release.pointer.requires),
         home: { id: home.id, name: home.name },
         title: current.t('frameTitle', { home: home.name }),
         locale: current.locale,
@@ -426,6 +450,65 @@ function HouseAppStage({
           </section>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/** Shell words for the runtime's classified codes; never the component's text. */
+function componentFailureKey(code: string): HouseCopyKey {
+  if (code === 'sandbox_missing') return 'failure_sandbox_origin_invalid';
+  if (code === 'ready_timeout' || code === 'mount_failed') return 'failure_sandbox_unreachable';
+  if (code.includes('unresponsive')) return 'failure_unresponsive';
+  return 'failure_boot_error';
+}
+
+/**
+ * A semantic component's screen: the tree comes back from the sandboxed
+ * runtime as data and is redrawn here with Miakapp's own controls.
+ */
+function ComponentStage({
+  home,
+  onRetry,
+  onSwitchAway,
+  screen,
+  t,
+}: {
+  readonly home: HomeSummary;
+  readonly onRetry: () => void;
+  readonly onSwitchAway: () => void;
+  readonly screen: ComponentScreen | undefined;
+  readonly t: HouseTranslate;
+}): React.JSX.Element {
+  const state = screen?.state ?? { status: 'idle' };
+  if (state.status === 'active') {
+    return (
+      <div className="house-stage__semantic">
+        <SemanticRenderer onInteraction={screen!.interact} tree={state.tree} />
+      </div>
+    );
+  }
+  if (state.status === 'failed') {
+    return (
+      <div className="house-stage__cover house-stage__cover--solid">
+        <section className="house-card house-card--alert" role="alert">
+          <HomeAvatar home={home} size="lg" />
+          <h1>{t('crashTitle', { home: home.name })}</h1>
+          <p className="house-card__lede">{t(componentFailureKey(state.code))}</p>
+          <div className="house-card__actions">
+            <button className="house-button" onClick={onRetry} type="button">{t('crashRetry')}</button>
+            <button className="house-button house-button--ghost" onClick={onSwitchAway} type="button">
+              {t('switchHome')}
+            </button>
+          </div>
+        </section>
+      </div>
+    );
+  }
+  return (
+    <div className="house-stage__cover" role="status">
+      <HomeAvatar home={home} size="lg" />
+      <span className="house-spinner" aria-hidden="true" />
+      <p>{t('loading', { home: home.name })}</p>
     </div>
   );
 }
@@ -658,6 +741,25 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
               </button>
             </div>
           </StagePanel>
+        ) : stage.kind === 'empty' ? (
+          <StagePanel>
+            <HomeAvatar home={home} size="lg" />
+            <h1>{t('emptyTitle', { home: home.name })}</h1>
+            <p className="house-card__lede">{t('emptyLede')}</p>
+            <div className="house-card__actions">
+              <button className="house-button house-button--ghost" onClick={openHomes} type="button">
+                {t('switchHome')}
+              </button>
+            </div>
+          </StagePanel>
+        ) : stage.kind === 'component' ? (
+          <ComponentStage
+            home={home}
+            onRetry={props.onRetry}
+            onSwitchAway={openHomes}
+            screen={props.componentScreen}
+            t={t}
+          />
         ) : stage.kind === 'loading' ? (
           <div className="house-stage__cover" role="status">
             <HomeAvatar home={home} size="lg" />

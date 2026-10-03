@@ -13,6 +13,7 @@ import {
   type RuntimeLifecycle,
 } from './component-runtime-host';
 import { createDemoHost } from './demo-host';
+import { platformGrantCeiling } from './grant-ceiling';
 import {
   createHouseConsentStore,
   type HouseConsentRecord,
@@ -74,7 +75,7 @@ type ComponentReleaseState =
   }
   | { readonly status: 'unavailable' }
   /** The home answered, and has published no interface of its own. */
-  | { readonly status: 'none' };
+  | { readonly status: 'none'; readonly homeName?: string };
 
 const NO_COMPONENT_RELEASE: ComponentReleaseState = Object.freeze({ status: 'absent' });
 const ACTIVATING_RELEASE: ComponentReleaseState = Object.freeze({ status: 'activating' });
@@ -118,7 +119,9 @@ function useComponentRelease(
         if (controller.signal.aborted) return;
         setOutcome({
           attempt,
-          state: { status: error instanceof NoPublishedRelease ? 'none' : 'unavailable' },
+          state: error instanceof NoPublishedRelease
+            ? { status: 'none', ...(error.homeName === undefined ? {} : { homeName: error.homeName }) }
+            : { status: 'unavailable' },
         });
       },
     );
@@ -129,18 +132,6 @@ function useComponentRelease(
   if (coordinator === undefined) return NO_COMPONENT_RELEASE;
   if (outcome === undefined || outcome.attempt !== attempt) return ACTIVATING_RELEASE;
   return outcome.state;
-}
-
-function componentReleaseLabel(state: ComponentReleaseState): string {
-  if (state.status === 'activating') return 'Verifying component release';
-  if (state.status === 'active') {
-    return state.fellBack
-      ? `Component ${state.release} · last known good`
-      : `Component ${state.release} · verified`;
-  }
-  if (state.status === 'unavailable') return 'Component release unavailable';
-  if (state.status === 'none') return 'No published interface';
-  return 'Semantic host · ABI 1';
 }
 
 type ComponentRuntimeState =
@@ -215,6 +206,7 @@ function useComponentRuntime(
       {
         sandboxOrigin,
         container,
+        policy: platformGrantCeiling(activated.pointer.requires),
         onLifecycle,
         onTree: (tree, revision) => {
           if (released) return;
@@ -276,57 +268,6 @@ function useComponentRuntime(
   return { state, interact };
 }
 
-function componentRuntimeLabel(state: ComponentRuntimeState): string | undefined {
-  if (state.status === 'starting') return 'Component runtime starting';
-  if (state.status === 'active') return `Component runtime · revision ${state.revision}`;
-  if (state.status === 'failed') return `Component runtime stopped · ${state.code}`;
-  return undefined;
-}
-
-/**
- * The runtime states in which the home view shows the trusted host's own screen
- * although the deployment expected a component screen. `idle` is excluded
- * because nothing was expected — the build declares no release or no sandbox
- * origin — and `active` because the component screen is the one on display.
- * Deriving the union by exclusion is what makes a new runtime state widen it
- * and break the term table below until the new state is named.
- */
-type SubstitutedScreenStatus = Exclude<ComponentRuntimeState['status'], 'active' | 'idle'>;
-
-/**
- * Host-owned sentence for each of those states. The footer already names the
- * runtime, but the substitution happens in the middle of the page: the
- * component's screen is replaced by the home's own screen, and both are real,
- * both answer, and both drive the same home through different controls. Nothing
- * looks broken, which is precisely why the region has to say whose screen it is
- * rather than leave the person to notice that the controls changed under them.
- */
-const SUBSTITUTED_SCREEN_TERMS: Record<SubstitutedScreenStatus, string> = {
-  starting: 'This is the home’s own screen. The component screen is still starting.',
-  failed: 'This is the home’s own screen. The component screen stopped.',
-};
-
-/**
- * Names the screen on display, or renders nothing when the component screen is
- * the one on display and when none was ever expected. The failure code comes
- * from `classifyRuntimeFailure`, so what reaches this notice is a host term and
- * never the component's own text.
- */
-function ScreenNotice({
-  state,
-}: {
-  readonly state: ComponentRuntimeState;
-}): React.JSX.Element | null {
-  if (state.status === 'active' || state.status === 'idle') return null;
-
-  return (
-    <p className="screen-notice" role="status">
-      <span>{SUBSTITUTED_SCREEN_TERMS[state.status]}</span>
-      {state.status === 'failed' ? <small>{state.code}</small> : null}
-    </p>
-  );
-}
-
 const NAV_ITEMS: ReadonlyArray<{
   view: HostView;
   label: string;
@@ -359,15 +300,13 @@ function ConnectionPill({ detail }: { readonly detail: string }): React.JSX.Elem
 function Navigation({
   view,
   onChange,
-  readOnlyHome = false,
 }: {
   readonly view: HostView;
   readonly onChange: (view: HostView) => void;
-  readonly readOnlyHome?: boolean;
 }): React.JSX.Element {
   return (
     <nav aria-label="Primary" className="primary-nav">
-      {NAV_ITEMS.filter((item) => !readOnlyHome || item.view === 'home').map((item) => {
+      {NAV_ITEMS.map((item) => {
         const Icon = item.icon;
         return (
           <button
@@ -499,15 +438,14 @@ function selectHouseStage(
   declined: boolean,
   needsSignIn: boolean,
   release: ComponentReleaseState,
-): HouseStage | undefined {
+): HouseStage {
   if (consent === undefined) return declined ? { kind: 'declined' } : { kind: 'consent' };
   if (needsSignIn) return { kind: 'signin' };
-  if (release.status === 'activating') return { kind: 'loading' };
+  if (release.status === 'activating' || release.status === 'absent') return { kind: 'loading' };
   if (release.status === 'unavailable') return { kind: 'unavailable' };
-  if (release.status === 'active' && release.activated.pointer.abi === APP_ABI) {
-    return { kind: 'app', release: release.activated };
-  }
-  return undefined;
+  if (release.status === 'none') return { kind: 'empty' };
+  if (release.activated.pointer.abi === APP_ABI) return { kind: 'app', release: release.activated };
+  return { kind: 'component', release: release.activated };
 }
 
 export function App({
@@ -565,24 +503,45 @@ export function App({
     snapshot.homeState,
   );
   const runtimeState = runtime.state;
-  const runtimeLabel = componentRuntimeLabel(runtimeState);
 
   useEffect(() => {
     if (providedHost !== undefined) return undefined;
     return () => host.dispose();
   }, [host, providedHost]);
 
-  const houseStage = houseMode
-    ? selectHouseStage(consent, declined, needsSignIn, componentRelease)
-    : undefined;
-  if (houseStage !== undefined) {
+  // The frame the semantic runtime computes in. It never shows; it is kept out
+  // of the flow rather than `display: none`, which browsers may treat as a
+  // reason not to load the document at all.
+  const runtimeSurface = (
+    <div
+      aria-hidden="true"
+      className="component-runtime-surface"
+      data-testid="component-runtime-surface"
+      ref={runtimeContainer}
+    />
+  );
+
+  if (houseMode) {
+    const houseStage = selectHouseStage(consent, declined, needsSignIn, componentRelease);
+    const homeName = componentRelease.status === 'active'
+      ? componentRelease.activated.homeName
+      : componentRelease.status === 'none' ? componentRelease.homeName : undefined;
     return (
-      <HouseShell
+      <>
+        <HouseShell
         call={host.call}
+        componentScreen={{
+          // A verified component with nowhere to run is a stated failure, not
+          // an endless loading screen.
+          state: activatedComponent !== undefined && sandboxOrigin === undefined
+            ? { status: 'failed', code: 'sandbox_missing' }
+            : runtimeState,
+          interact: runtime.interact,
+        }}
         connection={snapshot.connection}
         consent={consent}
         favorites={favoritesStore}
-        home={snapshot.activeHome}
+        home={homeName === undefined ? snapshot.activeHome : { ...snapshot.activeHome, name: homeName }}
         homeState={snapshot.homeState}
         homes={snapshot.homes}
         {...(mountHouseApp === undefined ? {} : { mountHouseApp })}
@@ -601,7 +560,9 @@ export function App({
         sandboxOrigin={sandboxOrigin}
         signIn={host.signIn}
         stage={houseStage}
-      />
+        />
+        {runtimeSurface}
+      </>
     );
   }
 
@@ -619,10 +580,10 @@ export function App({
           </span>
           <span className="home-picker__mode">{snapshot.modeLabel}</span>
         </div>
-        <Navigation onChange={setView} readOnlyHome={snapshot.readOnlyHome} view={view} />
+        <Navigation onChange={setView} view={view} />
         <div className="sidebar__footer">
           <ConnectionPill detail={snapshot.connectionDetail} />
-          <p>{snapshot.readOnlyHome ? 'Accès réservé à votre compte.' : <>Private by architecture.<br />Useful by intention.</>}</p>
+          <p>Private by architecture.<br />Useful by intention.</p>
         </div>
       </aside>
 
@@ -646,19 +607,11 @@ export function App({
         </div>
 
         {view === 'home' ? (
-          <div className={snapshot.readOnlyHome ? 'home-layout home-layout--single' : 'home-layout'}>
+          <div className="home-layout">
             <div className="home-screen">
-              <ScreenNotice state={runtimeState} />
-              {runtimeState.status === 'active' ? (
-                <SemanticRenderer
-                  onInteraction={runtime.interact}
-                  tree={runtimeState.tree}
-                />
-              ) : (
-                <SemanticRenderer onInteraction={host.interact} tree={snapshot.uiTree} />
-              )}
+              <SemanticRenderer onInteraction={host.interact} tree={snapshot.uiTree} />
             </div>
-            {!snapshot.readOnlyHome ? <aside className="activity-rail">
+            <aside className="activity-rail">
               <header>
                 <div>
                   <p className="eyebrow">Now & next</p>
@@ -680,7 +633,7 @@ export function App({
                   <p>“Everything looks settled. I’ll keep an eye on the rain.”</p>
                 </div>
               </div>
-            </aside> : null}
+            </aside>
           </div>
         ) : view === 'activity' ? (
           <ActivityView activity={snapshot.activity} />
@@ -690,24 +643,13 @@ export function App({
 
         <footer className="workspace__footer">
           <span>{snapshot.lastSynced}</span>
-          <span>{componentReleaseLabel(componentRelease)}</span>
-          {runtimeLabel === undefined ? null : <span>{runtimeLabel}</span>}
+          <span>Semantic host · ABI 1</span>
         </footer>
       </main>
 
-      {/*
-        The sandbox frame computes; it never shows. Kept out of the flow rather
-        than `display: none`, which browsers are free to treat as a reason not to
-        load the document at all.
-      */}
-      <div
-        aria-hidden="true"
-        className="component-runtime-surface"
-        data-testid="component-runtime-surface"
-        ref={runtimeContainer}
-      />
+      {runtimeSurface}
 
-      <div className="mobile-nav"><Navigation onChange={setView} readOnlyHome={snapshot.readOnlyHome} view={view} /></div>
+      <div className="mobile-nav"><Navigation onChange={setView} view={view} /></div>
     </div>
   );
 }

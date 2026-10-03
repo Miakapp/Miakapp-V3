@@ -3,7 +3,7 @@ import {
   COMPONENT_ABI,
   ContractViolation,
   LIMITS,
-  isCapabilityGranted,
+  isPatternCovered,
   isPlainRecord,
   selectGrantedState,
   validateEnvelope,
@@ -160,7 +160,7 @@ export function assertSandboxOrigin(value: string, hostOrigin: string): string {
 }
 
 function intersectList(required: readonly string[], allowed: readonly string[]): string[] {
-  return required.filter((entry) => isCapabilityGranted(allowed, entry));
+  return required.filter((entry) => isPatternCovered(allowed, entry));
 }
 
 /**

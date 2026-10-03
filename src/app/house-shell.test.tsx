@@ -298,19 +298,22 @@ describe('house shell — consent before any house resource', () => {
     expect(coordinator.activate).not.toHaveBeenCalled();
   });
 
-  it('shows the platform screen for a home that published no interface', async () => {
+  it('says, under the home’s public name, that nothing is published yet', async () => {
     const consent = createHouseConsentStore(memoryStorage());
     consent.grant(HOME_ID);
     render(
       <App
         consentStore={consent}
-        createComponentRelease={() => coordinatorFor(new NoPublishedRelease())}
+        createComponentRelease={() => coordinatorFor(new NoPublishedRelease('Chalet d’Annecy'))}
         favoritesStore={createHouseFavoritesStore(memoryStorage())}
         mountHouseApp={fakeMount().mount}
         readSandboxOrigin={() => SANDBOX_ORIGIN}
       />,
     );
-    expect(await screen.findByText('No published interface')).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Chalet d’Annecy n’a pas encore d’interface' })).toBeVisible();
+    expect(screen.getByRole('button', { name: /Menu Miakapp/u })).toHaveTextContent('Chalet d’Annecy');
+    // No platform-made home screen stands in for the home's own.
+    expect(screen.queryByText('3 lights on')).toBeNull();
   });
 });
 

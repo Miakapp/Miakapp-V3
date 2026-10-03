@@ -24,6 +24,7 @@ import {
   APP_ABI,
   ContractViolation,
   isCapabilityGranted,
+  isPatternCovered,
   measureStructuredValue,
   selectGrantedState,
   type CapabilityRequirements,
@@ -140,13 +141,12 @@ function isLoopback(hostname: string): boolean {
   return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
 }
 
-/** A wildcard survives only if the ceiling names the same wildcard. */
+/** A declared entry survives only if the ceiling covers all it would admit. */
 function narrow(declared: readonly string[], ceiling: readonly string[] | undefined): string[] {
   if (ceiling === undefined) return [...declared];
   return declared.filter((entry) => {
-    if (entry.endsWith('.*')) return ceiling.includes(entry);
     try {
-      return isCapabilityGranted(ceiling, entry);
+      return isPatternCovered(ceiling, entry);
     } catch {
       return false;
     }

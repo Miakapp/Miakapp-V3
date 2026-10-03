@@ -38,7 +38,6 @@ interface LiveConfiguration {
   readonly homeName: string;
   readonly homeDetail: string;
   readonly homeAccent: string;
-  readonly readOnlyHome: boolean;
   readonly componentRelease: ComponentReleaseConfiguration | undefined;
 }
 
@@ -165,22 +164,20 @@ export function resolveRequestedHome(
 
 function readLiveConfiguration(): LiveConfiguration | undefined {
   if (import.meta.env.VITE_MIAKAPP_MODE !== 'live') return undefined;
-  // A bounded owner canary, not a general home selector. The coordinator alone grants state.
-  const readOnlyHome = window.location.pathname === '/app'
-    && new URLSearchParams(window.location.search).get('home') === 'mathieu-home';
-  const home = readOnlyHome
-    ? undefined
-    : resolveRequestedHome(
-      window.location.pathname,
-      window.location.search,
-      {
-        id: required('VITE_MIAKAPP_HOME_ID'),
-        name: required('VITE_MIAKAPP_HOME_NAME'),
-        detail: required('VITE_MIAKAPP_HOME_DETAIL'),
-        accent: DEFAULT_ACCENT,
-      },
-      createHouseFavoritesStore().list(),
-    );
+  // Every home is opened the same way: its published interface, read through
+  // the resident route, inside the house shell. No home is special-cased here;
+  // what a resident may see or do is decided by that home's coordinator.
+  const home = resolveRequestedHome(
+    window.location.pathname,
+    window.location.search,
+    {
+      id: required('VITE_MIAKAPP_HOME_ID'),
+      name: required('VITE_MIAKAPP_HOME_NAME'),
+      detail: required('VITE_MIAKAPP_HOME_DETAIL'),
+      accent: DEFAULT_ACCENT,
+    },
+    createHouseFavoritesStore().list(),
+  );
   const exchangeEndpoint = required('VITE_MIAKAPP_CONTROL_PLANE_EXCHANGE_ENDPOINT');
   if (!exchangeEndpoint.startsWith('https://')) {
     throw new Error('The Miakapp control-plane exchange endpoint must use HTTPS');
@@ -196,11 +193,10 @@ function readLiveConfiguration(): LiveConfiguration | undefined {
     }),
     appCheckSiteKey: required('VITE_MIAKAPP_APP_CHECK_SITE_KEY'),
     exchangeEndpoint,
-    homeId: home?.id ?? 'mathieu-home',
-    homeName: home?.name ?? 'Maison de Mathieu',
-    homeDetail: home?.detail ?? 'États réels · lecture seule',
-    homeAccent: home?.accent ?? DEFAULT_ACCENT,
-    readOnlyHome,
+    homeId: home.id,
+    homeName: home.name,
+    homeDetail: home.detail,
+    homeAccent: home.accent,
     componentRelease: readComponentReleaseConfiguration(),
   });
 }
@@ -291,7 +287,7 @@ class FirebaseLiveIdentity implements LiveIdentity {
  */
 export function createConfiguredComponentRelease(): ComponentReleaseCoordinator | undefined {
   const configuration = readLiveConfiguration();
-  if (configuration === undefined || configuration.readOnlyHome) return undefined;
+  if (configuration === undefined) return undefined;
   const release = configuration.componentRelease;
   if (release === undefined) return undefined;
 
@@ -326,7 +322,6 @@ export function createConfiguredHost(): TrustedHost {
 
   return createLiveHost({
     exchangeEndpoint: configuration.exchangeEndpoint,
-    readOnlyHome: configuration.readOnlyHome,
     home: Object.freeze({
       id: configuration.homeId,
       name: configuration.homeName,
