@@ -8,10 +8,10 @@
  * in an English page. Adding a language means adding a member to `LOCALES` and
  * being unable to compile until every key is answered.
  *
- * Only the public surface lives here — landing, sign-in, new home. The signed-in
- * console is still English-only, and its semantic trees come from the home's own
- * coordinator rather than from this file, so translating it is a separate piece
- * of work with a separate owner.
+ * Only the public surface lives here — landing, sign-in, new home, agent
+ * pairing. The signed-in console is still English-only, and its semantic trees
+ * come from the home's own coordinator rather than from this file, so
+ * translating it is a separate piece of work with a separate owner.
  */
 
 export const LOCALES = ['fr', 'en'] as const;
@@ -105,6 +105,80 @@ const FR = {
     + 'maison, il vous enverra un lien — c’est à ce moment-là que vous créerez votre '
     + 'compte Miakapp. Rien à signer pour commencer à lire le guide.',
   onboardingHasHome: 'J’ai déjà une maison →',
+  // The sentence is translated; the commands inside it are not, because an
+  // agent runs them verbatim.
+  onboardingAgentPrompt:
+    'Installe la CLI `miakapp` via `npm i -g @miakapp/cli` puis fais `miakapp docs start` pour commencer.',
+
+  pairKicker: 'Appairer un agent',
+  pairTitle: 'Donnez à votre agent l’accès à votre maison.',
+  pairLede:
+    'Faites-le ici, dans votre propre navigateur : choisissez votre compte et la maison, '
+    + 'confirmez, puis transmettez le code à votre agent. Il ne voit jamais votre compte.',
+  pairUnavailableTitle: 'L’appairage n’est pas disponible ici.',
+  pairUnavailableBody:
+    'Cette version de démonstration n’est reliée à aucun service Miakapp. Ouvrez le lien '
+    + 'd’appairage que votre agent vous a donné sur le site Miakapp.',
+  pairLoading: 'Chargement…',
+  pairStepAccount: 'Compte',
+  pairStepHome: 'Maison',
+  pairStepConfirm: 'Confirmation',
+  pairStepCode: 'Code d’appairage',
+  pairAccountTitle: 'Choisissez le compte qui administre la maison.',
+  pairAccountBody: 'Google vous laissera choisir le compte. Rien n’est partagé avec votre agent.',
+  pairAccountCta: 'Choisir un compte Google',
+  pairSignedInAs: 'Connecté en tant que',
+  pairSwitchAccount: 'Utiliser un autre compte',
+  pairHomesTitle: 'Quelle maison votre agent doit-il gérer ?',
+  pairHomesEmpty: 'Ce compte n’administre encore aucune maison. Créez-la ci-dessous.',
+  pairHomesError: 'Impossible de charger vos maisons.',
+  pairRetry: 'Réessayer',
+  pairCreateToggle: 'Créer une nouvelle maison',
+  pairCreateName: 'Nom de la maison',
+  pairCreateId: 'Identifiant (définitif)',
+  pairCreateIdHint: 'Lettres minuscules, chiffres et tirets. Il ne pourra plus changer.',
+  pairCreateRelay: 'Relais (wss://…/ws)',
+  pairCreateAdvanced: 'Options avancées',
+  pairCreateSubmit: 'Créer la maison',
+  pairContinue: 'Continuer',
+  pairConfirmTitle: 'Accès complet à « {home} »',
+  pairConfirmIntro: 'Avec ce code, votre agent recevra sa propre clé pour cette maison. Elle lui permettra de :',
+  pairGrantCoordinator: 'faire fonctionner la maison : publier ses états et recevoir les actions demandées ;',
+  pairGrantCli: 'lire les états et appeler les fonctions de la maison, y compris celles qui pilotent des appareils ;',
+  pairGrantPush: 'envoyer des notifications aux personnes qui les ont autorisées pour cette maison ;',
+  pairGrantComponents: 'publier et activer l’interface des habitants.',
+  pairDenyTitle: 'Elle ne lui permettra pas de :',
+  pairDenyBody:
+    'gérer les clés, changer le relais, renommer ou supprimer la maison, ni accéder à vos autres '
+    + 'maisons ou à votre compte Google.',
+  pairConfirmCheck: 'Je donne à mon agent un accès complet à « {home} ».',
+  pairConfirmSubmit: 'Générer le code d’appairage',
+  pairBack: '← Changer de maison',
+  pairCodeTitle: 'Transmettez ce code à votre agent.',
+  pairCodeBody:
+    'Collez-le dans votre conversation avec l’agent. Il l’échangera une seule fois contre sa clé '
+    + 'avec la CLI Miakapp. Ne le donnez à personne d’autre.',
+  pairCodeCopy: 'Copier le code',
+  pairCodeCopied: 'Code copié',
+  pairCodeExpiresIn: 'Expire dans {time}',
+  pairCodeExpired: 'Ce code a expiré. Générez-en un nouveau.',
+  pairCodeAgain: 'Générer un nouveau code',
+  pairKeysTitle: 'Clés ayant accès à cette maison',
+  pairKeysEmpty: 'Aucune clé active.',
+  pairKeysCreated: 'créée le {date}',
+  pairKeysLastUsed: 'dernière utilisation le {date}',
+  pairKeysNeverUsed: 'jamais utilisée',
+  pairKeysRevoke: 'Révoquer',
+  pairKeysRevoked: 'Clé révoquée. Ses accès en cours expirent sous cinq minutes.',
+  pairErrorStale: 'Pour votre sécurité, confirmez à nouveau votre identité.',
+  pairErrorStaleCta: 'Confirmer mon identité',
+  pairErrorNotAdmin: 'Ce compte n’administre pas cette maison. Choisissez un autre compte.',
+  pairErrorHomeExists: 'Cet identifiant est déjà pris. Choisissez-en un autre.',
+  pairErrorHomeLimit: 'Limite atteinte pour ce compte.',
+  pairErrorRateLimited: 'Trop de tentatives. Patientez quelques minutes.',
+  pairErrorInvalid: 'Vérifiez les informations saisies.',
+  pairErrorUnavailable: 'Service momentanément indisponible. Réessayez.',
+  pairErrorSignedOut: 'Votre session a pris fin. Reconnectez-vous.',
 } as const;
 
 export type CopyKey = keyof typeof FR;
@@ -190,9 +264,86 @@ const EN: Record<CopyKey, string> = {
     + 'link — that is the moment you create your Miakapp account. Nothing to sign up for '
     + 'in order to start reading the guide.',
   onboardingHasHome: 'I already have a home →',
+  onboardingAgentPrompt:
+    'Install the `miakapp` CLI with `npm i -g @miakapp/cli`, then run `miakapp docs start` to begin.',
+
+  pairKicker: 'Pair an agent',
+  pairTitle: 'Give your agent access to your home.',
+  pairLede:
+    'Do it here, in your own browser: choose your account and the home, confirm, then hand '
+    + 'the code to your agent. It never sees your account.',
+  pairUnavailableTitle: 'Pairing is not available here.',
+  pairUnavailableBody:
+    'This preview is not connected to any Miakapp service. Open the pairing link your agent '
+    + 'gave you on the Miakapp site.',
+  pairLoading: 'Loading…',
+  pairStepAccount: 'Account',
+  pairStepHome: 'Home',
+  pairStepConfirm: 'Confirm',
+  pairStepCode: 'Pairing code',
+  pairAccountTitle: 'Choose the account that administers the home.',
+  pairAccountBody: 'Google will let you pick the account. Nothing is shared with your agent.',
+  pairAccountCta: 'Choose a Google account',
+  pairSignedInAs: 'Signed in as',
+  pairSwitchAccount: 'Use another account',
+  pairHomesTitle: 'Which home should your agent manage?',
+  pairHomesEmpty: 'This account does not administer any home yet. Create it below.',
+  pairHomesError: 'Your homes could not be loaded.',
+  pairRetry: 'Try again',
+  pairCreateToggle: 'Create a new home',
+  pairCreateName: 'Home name',
+  pairCreateId: 'Identifier (permanent)',
+  pairCreateIdHint: 'Lowercase letters, digits and hyphens. It cannot change later.',
+  pairCreateRelay: 'Relay (wss://…/ws)',
+  pairCreateAdvanced: 'Advanced options',
+  pairCreateSubmit: 'Create the home',
+  pairContinue: 'Continue',
+  pairConfirmTitle: 'Full access to “{home}”',
+  pairConfirmIntro: 'With this code, your agent receives its own key for this home. It will be able to:',
+  pairGrantCoordinator: 'run the home: publish its states and receive the actions people ask for;',
+  pairGrantCli: 'read states and call the home’s functions, including those that control devices;',
+  pairGrantPush: 'send notifications to people who allowed them for this home;',
+  pairGrantComponents: 'publish and activate the residents’ interface.',
+  pairDenyTitle: 'It will not be able to:',
+  pairDenyBody:
+    'manage keys, change the relay, rename or delete the home, or reach your other homes or '
+    + 'your Google account.',
+  pairConfirmCheck: 'I give my agent full access to “{home}”.',
+  pairConfirmSubmit: 'Generate the pairing code',
+  pairBack: '← Choose another home',
+  pairCodeTitle: 'Hand this code to your agent.',
+  pairCodeBody:
+    'Paste it into your conversation with the agent. It exchanges it once for its key with the '
+    + 'Miakapp CLI. Do not give it to anyone else.',
+  pairCodeCopy: 'Copy the code',
+  pairCodeCopied: 'Code copied',
+  pairCodeExpiresIn: 'Expires in {time}',
+  pairCodeExpired: 'This code has expired. Generate a new one.',
+  pairCodeAgain: 'Generate a new code',
+  pairKeysTitle: 'Keys with access to this home',
+  pairKeysEmpty: 'No active key.',
+  pairKeysCreated: 'created {date}',
+  pairKeysLastUsed: 'last used {date}',
+  pairKeysNeverUsed: 'never used',
+  pairKeysRevoke: 'Revoke',
+  pairKeysRevoked: 'Key revoked. Its current sessions expire within five minutes.',
+  pairErrorStale: 'For your security, confirm your identity again.',
+  pairErrorStaleCta: 'Confirm my identity',
+  pairErrorNotAdmin: 'This account does not administer this home. Choose another account.',
+  pairErrorHomeExists: 'This identifier is taken. Choose another one.',
+  pairErrorHomeLimit: 'This account has reached its limit.',
+  pairErrorRateLimited: 'Too many attempts. Wait a few minutes.',
+  pairErrorInvalid: 'Check the information you entered.',
+  pairErrorUnavailable: 'Service temporarily unavailable. Try again.',
+  pairErrorSignedOut: 'Your session ended. Sign in again.',
 };
 
 export const COPY: Record<Locale, Record<CopyKey, string>> = { fr: FR, en: EN };
+
+/** The prompt shown and copied is the visitor's language, never a fixed one. */
+export function agentStartPrompt(locale: Locale): string {
+  return COPY[locale].onboardingAgentPrompt;
+}
 
 const STORAGE_KEY = 'miakapp.locale';
 

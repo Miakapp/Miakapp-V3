@@ -41,6 +41,7 @@ const OPTIONAL_KEYS = [
   'VITE_MIAKAPP_COMPONENT_ARTIFACT_ORIGINS',
   'VITE_MIAKAPP_COMPONENT_POINTER_ENDPOINT',
   'VITE_MIAKAPP_COMPONENT_SANDBOX_ORIGIN',
+  'VITE_MIAKAPP_DEFAULT_RELAY_URL',
   'VITE_MIAKAPP_RUNTIME_DIAGNOSTICS_ENDPOINT',
 ] as const;
 
@@ -269,6 +270,27 @@ export function collectStagingEnvFaults(env: Readonly<Record<string, string>>): 
         diagnosticsEndpoint,
       );
       if (crossFault !== undefined) faults.push(crossFault);
+    }
+  }
+
+  const defaultRelay = present(env, 'VITE_MIAKAPP_DEFAULT_RELAY_URL');
+  if (defaultRelay !== undefined) {
+    // The control plane refuses any relay URL that is not a canonical wss://
+    // URL ending in /ws, so a looser value here would only surface as a failed
+    // home creation on /pair, in front of the person trying to pair.
+    let relay: URL | undefined;
+    try {
+      relay = new URL(defaultRelay);
+    } catch {
+      relay = undefined;
+    }
+    if (relay === undefined
+      || relay.protocol !== 'wss:'
+      || relay.href !== defaultRelay
+      || relay.search !== ''
+      || relay.hash !== ''
+      || !relay.pathname.endsWith('/ws')) {
+      faults.push(`VITE_MIAKAPP_DEFAULT_RELAY_URL must be a canonical wss:// URL ending in /ws: ${defaultRelay}`);
     }
   }
 

@@ -21,6 +21,8 @@ import {
 import { createDemoHost } from './demo-host';
 import type { TrustedHost } from './host';
 import { createLiveHost, type LiveIdentity } from './live-host';
+import type { PairingService } from './pairing-client';
+import { FirebasePairingService } from './pairing-firebase';
 
 interface ComponentReleaseConfiguration {
   readonly pointerEndpoint: string;
@@ -279,5 +281,37 @@ export function createConfiguredHost(): TrustedHost {
       accent: '#b8d9ff',
     }),
     identity,
+  });
+}
+
+/**
+ * The relay a home created from `/pair` is assigned unless its owner names
+ * another. Absent, the page still pairs existing homes and asks for a relay
+ * URL before it creates one, rather than inventing a destination.
+ */
+function readDefaultRelayUrl(): string | undefined {
+  const relay = optional('VITE_MIAKAPP_DEFAULT_RELAY_URL');
+  if (relay === undefined) return undefined;
+  if (!relay.startsWith('wss://') || !relay.endsWith('/ws')) {
+    throw new Error('The Miakapp default relay URL must be a wss:// URL ending in /ws');
+  }
+  return relay;
+}
+
+/**
+ * The pairing page talks to the same control plane the live host exchanges
+ * credentials with, so its origin is the exchange endpoint's: a separate key
+ * could only ever name a second, wrong control plane. A preview build has no
+ * control plane and gets no pairing service — the page says so instead of
+ * pretending to issue a code.
+ */
+export function createConfiguredPairingService(): PairingService | undefined {
+  const configuration = readLiveConfiguration();
+  if (configuration === undefined) return undefined;
+  const { auth } = liveRuntime(configuration);
+  return new FirebasePairingService({
+    auth,
+    controlPlaneOrigin: new URL(configuration.exchangeEndpoint).origin,
+    defaultRelayUrl: readDefaultRelayUrl(),
   });
 }
