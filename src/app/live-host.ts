@@ -400,6 +400,10 @@ class LiveTrustedHost implements TrustedHost {
     return !this.#disposed && generation === this.#actionGeneration;
   }
 
+  readonly getPreferencesScope = (): string | undefined => this.#userId === null
+    ? undefined
+    : `resident:${this.#userId}`;
+
   #buildSnapshot(): TrustedHostSnapshot {
     const connection = connectionFrom(this.#status);
     return Object.freeze({
