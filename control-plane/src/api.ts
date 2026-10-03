@@ -51,8 +51,8 @@ import {
   HOME_ID_PATTERN,
   IDENTIFIER_PATTERN,
   SHA256_PATTERN,
-  COMPONENT_ABI,
   PAIRING_ACCESS,
+  isReleaseAbi,
   type HomeKeyAccessScope,
   type AdmissionOperation,
   type AppCheckPrincipal,
@@ -283,11 +283,12 @@ function safeNonnegativeInteger(value: JsonValue | undefined): number {
 function componentUploadInput(body: { [key: string]: JsonValue }): ComponentUploadInput {
   assertExactKeys(body, ['release', 'abi', 'sha256', 'size', 'requires']);
   const size = safeNonnegativeInteger(body.size);
-  if (body.abi !== COMPONENT_ABI || size === 0) throw apiError('invalid_request');
+  const abi = body.abi;
+  if (!isReleaseAbi(abi) || size === 0) throw apiError('invalid_request');
   if (size > MAX_COMPONENT_ARTIFACT_BYTES) throw apiError('limit_exceeded');
   return Object.freeze({
     release: boundedText(body.release, 64),
-    abi: COMPONENT_ABI,
+    abi,
     sha256: digestValue(body.sha256),
     size,
     requires: validateComponentRequirements(body.requires),

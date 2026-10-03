@@ -6,6 +6,13 @@ export const IDENTIFIER_PATTERN = /^[A-Za-z0-9_-]{22}$/;
 export const HOME_KEY_PATTERN = /^mhk1_([A-Za-z0-9_-]{22})_([A-Za-z0-9_-]{43})$/;
 export const SHA256_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 export const COMPONENT_ABI = 'miakapp.component/1' as const;
+/** A whole-house application drawn in an isolated frame by the trusted shell. */
+export const APP_ABI = 'miakapp.app/1' as const;
+export type ReleaseAbi = typeof COMPONENT_ABI | typeof APP_ABI;
+
+export function isReleaseAbi(value: unknown): value is ReleaseAbi {
+  return value === COMPONENT_ABI || value === APP_ABI;
+}
 export const HOME_KEY_ACCESS_SCOPES = Object.freeze([
   'relay:coordinator',
   'relay:cli',
@@ -212,7 +219,7 @@ export interface ComponentRequirements {
 
 export interface ComponentUploadInput {
   readonly release: string;
-  readonly abi: typeof COMPONENT_ABI;
+  readonly abi: ReleaseAbi;
   readonly sha256: string;
   readonly size: number;
   readonly requires: ComponentRequirements;

@@ -199,16 +199,19 @@ function start(): void {
     document.documentElement.lang = api.locale;
     document.title = home.name;
 
+    // A classic script, because that is what the control plane admits: it parses
+    // every release as `sourceType: 'script'` and rejects `import()`. Bundle the
+    // house as an IIFE; anything a bundler can inline is allowed.
     const url = URL.createObjectURL(new Blob([bytes], { type: 'text/javascript' }));
     const script = document.createElement('script');
-    script.type = 'module';
+    script.async = false;
     script.src = url;
     script.addEventListener('error', () => crash('artifact_load'));
     script.addEventListener('load', () => {
       loaded = true;
       URL.revokeObjectURL(url);
       // One task later, so a house that renders synchronously at the end of
-      // its module has painted before the shell lifts its loading screen.
+      // its script has painted before the shell lifts its loading screen.
       setTimeout(ready, 0);
     });
     document.head.append(script);
