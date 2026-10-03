@@ -37,13 +37,20 @@ export function createRealHomeTree({ connected, stateStale, state }: RealHomeTre
       {
         id: 'temperature-grid',
         type: 'grid',
-        props: { columns: 2, gap: 'medium' },
+        props: { columns: 3, gap: 'medium' },
         children: [
           {
             id: 'salon', type: 'section', props: { heading: 'Salon' },
             children: [{
               id: 'salon-temperature', type: 'text',
               props: { text: current ? temperature(state, 'room.salon.temperature') : 'Indisponible', emphasis: 'strong' },
+            }],
+          },
+          {
+            id: 'entree', type: 'section', props: { heading: 'Entrée' },
+            children: [{
+              id: 'entree-temperature', type: 'text',
+              props: { text: current ? temperature(state, 'room.entree.temperature') : 'Indisponible', emphasis: 'strong' },
             }],
           },
           {
