@@ -660,3 +660,46 @@ describe('house shell — resident sign-out', () => {
     expect(signOut).toHaveBeenCalledOnce();
   });
 });
+
+describe('account-owned house favorites', () => {
+  it('replaces visible favorites on UID change and restores them only for their owner', async () => {
+    localStorage.clear();
+    const user = userEvent.setup();
+    const base = createDemoHost();
+    let scope: string | undefined = 'resident:a';
+    let snapshot = { ...base.getSnapshot(), preview: false, authenticated: true, authorizationEpoch: 0 };
+    const listeners = new Set<() => void>();
+    const host: TrustedHost = {
+      ...base,
+      getSnapshot: () => snapshot,
+      getPreferencesScope: () => scope,
+      subscribe: (listener) => { listeners.add(listener); return () => { listeners.delete(listener); }; },
+    };
+    const changeIdentity = (next: string | undefined): void => {
+      act(() => {
+        scope = next;
+        snapshot = { ...snapshot, authenticated: next !== undefined, authorizationEpoch: snapshot.authorizationEpoch + 1 };
+        listeners.forEach((listener) => listener());
+      });
+    };
+    createHouseFavoritesStore(localStorage, 'resident:a').add({ id: 'private-other-home', name: 'Resident A private home' });
+    const { unmount } = render(<App host={host} createComponentRelease={() => coordinatorFor()}
+      consentStore={createHouseConsentStore(memoryStorage())} />);
+    const star = (): HTMLElement => document.querySelector('.house-bar__actions button[aria-pressed]') as HTMLElement;
+    await user.click(star());
+    expect(star()).toHaveAttribute('aria-pressed', 'true');
+    await user.click(screen.getByRole('button', { name: /Menu Miakapp/u }));
+    expect(screen.getByText('Resident A private home')).toBeVisible();
+    changeIdentity('resident:b');
+    expect(star()).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByText('Resident A private home')).not.toBeInTheDocument();
+    changeIdentity(undefined);
+    expect(star()).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByText('Resident A private home')).not.toBeInTheDocument();
+    changeIdentity('resident:a');
+    expect(star()).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('Resident A private home')).toBeVisible();
+    unmount();
+    localStorage.clear();
+  });
+});

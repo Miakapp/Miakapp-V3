@@ -20,7 +20,7 @@ import {
   type ComponentReleaseCoordinator,
 } from './component-release';
 import { createDemoHost } from './demo-host';
-import { createHouseFavoritesStore, type FavoriteHome } from './house-favorites';
+import type { FavoriteHome } from './house-favorites';
 import type { TrustedHost } from './host';
 import { createLiveHost, type LiveIdentity } from './live-host';
 import type { PairingService } from './pairing-client';
@@ -177,7 +177,8 @@ function readLiveConfiguration(): LiveConfiguration | undefined {
       detail: required('VITE_MIAKAPP_HOME_DETAIL'),
       accent: DEFAULT_ACCENT,
     },
-    createHouseFavoritesStore().list(),
+    // Identity is not resolved here. Do not read ownerless browser preferences.
+    [],
   );
   const exchangeEndpoint = required('VITE_MIAKAPP_CONTROL_PLANE_EXCHANGE_ENDPOINT');
   if (!exchangeEndpoint.startsWith('https://')) {
