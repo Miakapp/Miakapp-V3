@@ -116,6 +116,7 @@ interface DiscoveryResponse {
   readonly push_audience: string;
   readonly components_audience: string;
   readonly runtime_diagnostics_endpoint: string;
+  readonly home_url_template: string;
 }
 
 interface ProfileCase {
@@ -332,6 +333,7 @@ describe('Firebase Emulator owner-to-access-token vertical slice', () => {
       push_audience: fixture.deployment.push_audience,
       components_audience: fixture.deployment.components_audience,
       runtime_diagnostics_endpoint: fixture.deployment.runtime_diagnostics_endpoint,
+      home_url_template: 'https://app.example.test/app?home={home_id}',
     });
 
     const jwks = await apiRequest('GET', '/.well-known/jwks.json');

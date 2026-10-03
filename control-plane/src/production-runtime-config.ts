@@ -54,6 +54,8 @@ export interface ProductionRuntimeConfig {
   readonly environment: ProductionEnvironment;
   readonly security: ProductionSecurityConfig;
   readonly allowedOrigins: readonly string[];
+  /** The trusted web origin resident links point at; one of `allowedOrigins`. */
+  readonly homeAppOrigin?: string;
   readonly appCheckAppId: string;
   readonly componentBucket: string;
   readonly serviceAccountEmail: string;
@@ -64,10 +66,16 @@ function fail(): never {
   throw new ProductionConfigurationError();
 }
 
-function record(value: unknown, keys: readonly string[]): Readonly<Record<string, unknown>> {
+function record(
+  value: unknown,
+  keys: readonly string[],
+  optional: readonly string[] = [],
+): Readonly<Record<string, unknown>> {
   if (value === null || Array.isArray(value) || typeof value !== 'object') fail();
   const actual = Object.keys(value);
-  if (actual.length !== keys.length || keys.some((key) => !Object.hasOwn(value, key))) fail();
+  const allowed = new Set([...keys, ...optional]);
+  if (keys.some((key) => !Object.hasOwn(value, key))
+    || actual.some((key) => !allowed.has(key))) fail();
   return value as Readonly<Record<string, unknown>>;
 }
 
@@ -144,7 +152,7 @@ export function parseProductionRuntimeConfig(input: unknown): ProductionRuntimeC
     'allowed_origins',
     'app_check_app_id',
     'component_bucket',
-  ]);
+  ], ['home_app_origin']);
   if (candidate.schema !== 'miakapp.production-runtime/1'
     && candidate.schema !== 'miakapp.production-runtime/2') fail();
   const security = parseProductionSecurityConfig(candidate.security);
@@ -158,11 +166,19 @@ export function parseProductionRuntimeConfig(input: unknown): ProductionRuntimeC
   if (typeof componentBucket !== 'string'
     || componentBucket !== COMPONENT_BUCKETS[security.environment]) fail();
   const allowedOrigins = origins(candidate.allowed_origins, security.environment);
+  // A resident link may only ever point at an origin the control plane already
+  // trusts for browser calls; it is never inferred from the issuer.
+  let homeAppOrigin: string | undefined;
+  if (candidate.home_app_origin !== undefined) {
+    homeAppOrigin = origin(candidate.home_app_origin, security.environment);
+    if (!allowedOrigins.includes(homeAppOrigin)) fail();
+  }
   return Object.freeze({
     schema: candidate.schema,
     environment: security.environment,
     security,
     allowedOrigins,
+    ...(homeAppOrigin === undefined ? {} : { homeAppOrigin }),
     appCheckAppId: appId(candidate.app_check_app_id),
     componentBucket,
     serviceAccountEmail: SERVICE_ACCOUNTS[security.environment],
@@ -213,6 +229,9 @@ export function createProductionDeploymentConfig(
     pushAudience: `${issuer}/v1/push`,
     componentsAudience: `${issuer}/v1/components`,
     runtimeDiagnosticsEndpoint: `${issuer}/v1/runtime-diagnostics`,
+    ...(runtime.homeAppOrigin === undefined
+      ? {}
+      : { homeUrlTemplate: `${runtime.homeAppOrigin}/app?home={home_id}` }),
     componentBucket: runtime.componentBucket,
     componentUploadBaseUrl: `${issuer}/v1/component-uploads`,
     componentArtifactBaseUrl: `${issuer}/v1/components`,

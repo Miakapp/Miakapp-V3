@@ -258,6 +258,27 @@ describe('production runtime configuration', () => {
       .toThrow(ProductionConfigurationError);
   });
 
+  test('derives the resident link only from a declared, already-trusted web origin', () => {
+    const plain = createProductionDeploymentConfig(parseProductionRuntimeConfig(candidate()), secrets());
+    expect(plain.homeUrlTemplate).toBeUndefined();
+
+    const value = candidate();
+    value.home_app_origin = 'https://app.staging.miakapp.com';
+    const deployment = createProductionDeploymentConfig(parseProductionRuntimeConfig(value), secrets());
+    expect(deployment.homeUrlTemplate).toBe('https://app.staging.miakapp.com/app?home={home_id}');
+
+    for (const origin of [
+      'https://other.staging.miakapp.com',
+      'http://app.staging.miakapp.com',
+      'https://app.staging.miakapp.com/app',
+      'https://app.miakapp.com',
+    ]) {
+      const refused = candidate();
+      refused.home_app_origin = origin;
+      expect(() => parseProductionRuntimeConfig(refused)).toThrow(ProductionConfigurationError);
+    }
+  });
+
   test('rejects unknown fields, unsafe origins, duplicate origins, and malformed app IDs', () => {
     const mutations: Array<(value: Record<string, any>) => void> = [
       (value) => { value.unreviewed = true; },
