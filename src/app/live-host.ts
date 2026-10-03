@@ -340,6 +340,7 @@ class LiveTrustedHost implements TrustedHost {
         }),
       activity: this.#activity,
       preview: false,
+      readOnlyHome: this.#readOnlyHome,
       modeLabel: this.#readOnlyHome ? 'Lecture seule' : 'Staging',
       noticeTitle: this.#readOnlyHome ? 'Maison de Mathieu'
         : this.#signedIn ? 'Live staging connection' : 'Connect to Miakapp staging',

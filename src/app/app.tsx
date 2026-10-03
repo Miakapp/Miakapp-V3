@@ -322,13 +322,15 @@ function ConnectionPill({ detail }: { readonly detail: string }): React.JSX.Elem
 function Navigation({
   view,
   onChange,
+  readOnlyHome = false,
 }: {
   readonly view: HostView;
   readonly onChange: (view: HostView) => void;
+  readonly readOnlyHome?: boolean;
 }): React.JSX.Element {
   return (
     <nav aria-label="Primary" className="primary-nav">
-      {NAV_ITEMS.map((item) => {
+      {NAV_ITEMS.filter((item) => !readOnlyHome || item.view === 'home').map((item) => {
         const Icon = item.icon;
         return (
           <button
@@ -497,10 +499,10 @@ export function App({
           </span>
           <span className="home-picker__mode">{snapshot.modeLabel}</span>
         </div>
-        <Navigation onChange={setView} view={view} />
+        <Navigation onChange={setView} readOnlyHome={snapshot.readOnlyHome} view={view} />
         <div className="sidebar__footer">
           <ConnectionPill detail={snapshot.connectionDetail} />
-          <p>Private by architecture.<br />Useful by intention.</p>
+          <p>{snapshot.readOnlyHome ? 'Accès réservé à votre compte.' : <>Private by architecture.<br />Useful by intention.</>}</p>
         </div>
       </aside>
 
@@ -524,7 +526,7 @@ export function App({
         </div>
 
         {view === 'home' ? (
-          <div className="home-layout">
+          <div className={snapshot.readOnlyHome ? 'home-layout home-layout--single' : 'home-layout'}>
             <div className="home-screen">
               <ScreenNotice state={runtimeState} />
               {runtimeState.status === 'active' ? (
@@ -536,7 +538,7 @@ export function App({
                 <SemanticRenderer onInteraction={host.interact} tree={snapshot.uiTree} />
               )}
             </div>
-            <aside className="activity-rail">
+            {!snapshot.readOnlyHome ? <aside className="activity-rail">
               <header>
                 <div>
                   <p className="eyebrow">Now & next</p>
@@ -558,7 +560,7 @@ export function App({
                   <p>“Everything looks settled. I’ll keep an eye on the rain.”</p>
                 </div>
               </div>
-            </aside>
+            </aside> : null}
           </div>
         ) : view === 'activity' ? (
           <ActivityView activity={snapshot.activity} />
@@ -585,7 +587,7 @@ export function App({
         ref={runtimeContainer}
       />
 
-      <div className="mobile-nav"><Navigation onChange={setView} view={view} /></div>
+      <div className="mobile-nav"><Navigation onChange={setView} readOnlyHome={snapshot.readOnlyHome} view={view} /></div>
     </div>
   );
 }
