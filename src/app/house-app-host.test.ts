@@ -97,6 +97,53 @@ afterEach(() => {
 });
 
 describe('mountHouseApp — the shell side of the frame boundary', () => {
+  it('does not create a frame for a previously cancelled mount', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const { container, options } = harness({ signal: controller.signal });
+    await expect(mountHouseApp(release(), options)).rejects.toMatchObject({ name: 'AbortError' });
+    expect(container.querySelector('iframe')).toBeNull();
+  });
+
+  it('cancels readiness immediately and ignores a late ready announcement', async () => {
+    const controller = new AbortController();
+    const { container, options, lifecycle } = harness({ signal: controller.signal });
+    const mounting = mountHouseApp(release(), options);
+    const frame = container.querySelector('iframe')!;
+    const frameWindow = frame.contentWindow!;
+    const post = vi.spyOn(frameWindow, 'postMessage');
+    controller.abort();
+    expect(container.querySelector('iframe')).toBeNull();
+    await expect(mounting).rejects.toMatchObject({ name: 'AbortError' });
+    window.dispatchEvent(new MessageEvent('message', { source: frameWindow, origin: 'null',
+      data: { type: 'miakapp.app.ready', runtime: '1', nonce: NONCE } }));
+    expect(post).not.toHaveBeenCalled();
+    expect(lifecycle).toEqual(['starting', 'disposed']);
+  });
+
+  it('aborting an active session stops its in-flight call and further state delivery', async () => {
+    const controller = new AbortController();
+    let callSignal: AbortSignal | undefined;
+    const call = vi.fn((_name, _args, opts) => {
+      callSignal = opts.signal;
+      return new Promise((resolve) => opts.signal.addEventListener('abort', () => resolve(null)));
+    });
+    const { container, options } = harness({ signal: controller.signal, call });
+    const mounting = mountHouseApp(release(), options);
+    const { port, received } = await bind(container.querySelector('iframe')!);
+    session = await mounting;
+    port!.postMessage({ v: 1, kind: 'call.start', payload: { id: 'c1', name: 'lighting.set', args: null, timeout_ms: 1000 } });
+    await flush();
+    expect(call).toHaveBeenCalledOnce();
+    controller.abort();
+    expect(callSignal?.aborted).toBe(true);
+    expect(session.lifecycle).toBe('disposed');
+    expect(container.querySelector('iframe')).toBeNull();
+    session.publishState({ values: { 'zone.light': false }, revision: 2, stale: false });
+    await flush();
+    expect(received.some(message => message.kind === 'state.snapshot' || message.kind === 'call.settled')).toBe(false);
+  });
+
   it('creates one confined, visible frame inside the stage it was given', async () => {
     const { container, options } = harness();
     const mounting = mountHouseApp(release(), options);
