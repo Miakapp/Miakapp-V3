@@ -20,7 +20,8 @@
           { "key": "Cache-Control", "value": "no-store, max-age=0" },
           { "key": "Cross-Origin-Resource-Policy", "value": "same-origin" },
           { "key": "Referrer-Policy", "value": "no-referrer" },
-          { "key": "X-Content-Type-Options", "value": "nosniff" }
+          { "key": "X-Content-Type-Options", "value": "nosniff" },
+          { "key": "Content-Security-Policy", "value": "frame-src https://miakapp-v4-sandbox.web.app/app.html https://miakapp-v4-sandbox.web.app/sandbox.html https://miakapp-v4-staging.firebaseapp.com/__/auth/iframe https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/ https://www.recaptcha.net/recaptcha/" }
         ]
       }
     ]
