@@ -2,14 +2,31 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { App } from './app';
+import { COMPONENT_ABI } from '../../component-runtime/src/contract';
+import { App as ShellApp, type AppProps } from './app';
 import type { ActivatedRelease, ComponentReleaseCoordinator } from './component-release';
 import { createDemoHost } from './demo-host';
 import type { HomeState, TrustedHost, TrustedHostSnapshot } from './host';
+import { createHouseConsentStore, type HouseConsentStore } from './house-consent';
+
+/**
+ * These cases exercise the semantic component path after the resident agreed
+ * to open the home's interface; the agreement itself is covered by
+ * `house-shell.test.tsx`.
+ */
+function agreedConsent(): HouseConsentStore {
+  const store = createHouseConsentStore(undefined);
+  store.grant('home_horizon');
+  return store;
+}
+
+function App(props: AppProps): React.JSX.Element {
+  return <ShellApp consentStore={agreedConsent()} {...props} />;
+}
 
 function activatedRelease(release: string, fellBack: boolean): ActivatedRelease {
   return {
-    pointer: { release } as ActivatedRelease['pointer'],
+    pointer: { release, abi: COMPONENT_ABI } as ActivatedRelease['pointer'],
     artifact: {} as ActivatedRelease['artifact'],
     fellBack,
   };
@@ -84,7 +101,9 @@ describe('App', () => {
     );
     render(<App createComponentRelease={() => ({ activate })} />);
 
-    expect(screen.getByText('Verifying component release')).toBeVisible();
+    // While the home's interface is fetched and verified, the house shell says
+    // which home is opening rather than showing the platform's own screen.
+    expect(screen.getByRole('status')).toHaveTextContent('Opening Horizon House…');
     await waitFor(() => {
       expect(screen.getByText('Component 2026.09.15-1 · verified')).toBeVisible();
     });
@@ -103,16 +122,18 @@ describe('App', () => {
     });
   });
 
-  it('degrades to a stated failure instead of a blank shell', async () => {
-    const coordinator: ComponentReleaseCoordinator = {
-      activate: async () => { throw new Error('pointer rejected'); },
-    };
-    render(<App createComponentRelease={() => coordinator} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Component release unavailable')).toBeVisible();
+  it('degrades to a stated failure with a retry instead of a blank shell', async () => {
+    const user = userEvent.setup();
+    const activate = vi.fn(async (): Promise<ActivatedRelease> => {
+      throw new Error('pointer rejected');
     });
-    expect(screen.getByText('3 lights on')).toBeVisible();
+    render(<App createComponentRelease={() => ({ activate })} />);
+
+    expect(await screen.findByRole('heading', { name: 'Horizon House’s interface is unavailable' })).toBeVisible();
+    // The Miakapp controls stay usable around the failure.
+    expect(screen.getByRole('button', { name: /Miakapp menu/u })).toBeEnabled();
+    await user.click(screen.getByRole('button', { name: 'Restart' }));
+    await waitFor(() => expect(activate).toHaveBeenCalledTimes(2));
   });
 
   it('abandons an in-flight activation when the shell unmounts', () => {
@@ -153,7 +174,7 @@ function runtimeTree(title: string): unknown {
 
 function releaseWithArtifact(bytes: Uint8Array): ActivatedRelease {
   return {
-    pointer: { release: '2026.09.15-runtime' } as ActivatedRelease['pointer'],
+    pointer: { release: '2026.09.15-runtime', abi: COMPONENT_ABI } as ActivatedRelease['pointer'],
     artifact: { bytes } as unknown as ActivatedRelease['artifact'],
     fellBack: false,
   };

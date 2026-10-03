@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
-import type { ActivatedRelease, ComponentReleaseCoordinator } from './component-release';
+import { APP_ABI, COMPONENT_ABI } from '../../component-runtime/src/contract';
+import {
+  NoPublishedRelease,
+  type ActivatedRelease,
+  type ComponentReleaseCoordinator,
+} from './component-release';
 import {
   mountComponentRuntime,
   type ComponentRuntimeSession,
@@ -8,6 +13,13 @@ import {
   type RuntimeLifecycle,
 } from './component-runtime-host';
 import { createDemoHost } from './demo-host';
+import {
+  createHouseConsentStore,
+  type HouseConsentRecord,
+  type HouseConsentStore,
+} from './house-consent';
+import { createHouseFavoritesStore, type HouseFavoritesStore } from './house-favorites';
+import { HouseShell, type HouseStage, type MountHouseApp } from './house-shell';
 import type {
   HomeActivity,
   HomeState,
@@ -39,6 +51,16 @@ export interface AppProps {
   readonly readSandboxOrigin?: () => string | undefined;
   readonly readDiagnosticsEndpoint?: () => string | undefined;
   readonly mountRuntime?: MountComponentRuntime;
+  /** Where the resident's agreement to open each home's own interface is kept. */
+  readonly consentStore?: HouseConsentStore;
+  readonly favoritesStore?: HouseFavoritesStore;
+  /** Opens another home. Defaults to a full navigation, which tears everything down. */
+  readonly switchHome?: (homeId: string) => void;
+  readonly mountHouseApp?: MountHouseApp;
+}
+
+function navigateToHome(homeId: string): void {
+  window.location.assign(`/app?home=${encodeURIComponent(homeId)}`);
 }
 
 type ComponentReleaseState =
@@ -50,49 +72,63 @@ type ComponentReleaseState =
     readonly fellBack: boolean;
     readonly activated: ActivatedRelease;
   }
-  | { readonly status: 'unavailable' };
+  | { readonly status: 'unavailable' }
+  /** The home answered, and has published no interface of its own. */
+  | { readonly status: 'none' };
 
 const NO_COMPONENT_RELEASE: ComponentReleaseState = Object.freeze({ status: 'absent' });
+const ACTIVATING_RELEASE: ComponentReleaseState = Object.freeze({ status: 'activating' });
 
 /**
- * Activates the verified component release once per shell mount. The artifact
- * is fetched, size- and digest-checked and recorded in the release ledger here;
- * executing it is the component runtime host's job, not the shell's.
+ * Activates the verified component release once per shell mount, and not before
+ * `enabled`: for a home whose interface needs the resident's agreement, nothing
+ * of that interface — pointer, artifact or frame — is requested until then.
+ * The artifact is fetched, size- and digest-checked and recorded in the release
+ * ledger here; executing it is the runtime host's job, not the shell's.
  */
 function useComponentRelease(
-  createComponentRelease: (() => ComponentReleaseCoordinator | undefined) | undefined,
+  coordinator: ComponentReleaseCoordinator | undefined,
+  enabled: boolean,
+  attempt: number,
 ): ComponentReleaseState {
-  const [coordinator] = useState<ComponentReleaseCoordinator | undefined>(
-    () => createComponentRelease?.(),
-  );
-  const [state, setState] = useState<ComponentReleaseState>(
-    () => (coordinator === undefined ? NO_COMPONENT_RELEASE : { status: 'activating' }),
-  );
+  // Each outcome remembers which attempt produced it, so a new attempt reads as
+  // `activating` until it settles, without resetting state inside the effect.
+  const [outcome, setOutcome] = useState<
+    { readonly attempt: number; readonly state: ComponentReleaseState } | undefined
+  >(undefined);
 
   useEffect(() => {
-    if (coordinator === undefined) return undefined;
+    if (coordinator === undefined || !enabled) return undefined;
 
     const controller = new AbortController();
     void coordinator.activate(controller.signal).then(
       (activated) => {
         if (controller.signal.aborted) return;
-        setState({
-          status: 'active',
-          release: activated.pointer.release,
-          fellBack: activated.fellBack,
-          activated,
+        setOutcome({
+          attempt,
+          state: {
+            status: 'active',
+            release: activated.pointer.release,
+            fellBack: activated.fellBack,
+            activated,
+          },
         });
       },
-      () => {
+      (error: unknown) => {
         if (controller.signal.aborted) return;
-        setState({ status: 'unavailable' });
+        setOutcome({
+          attempt,
+          state: { status: error instanceof NoPublishedRelease ? 'none' : 'unavailable' },
+        });
       },
     );
 
     return () => controller.abort();
-  }, [coordinator]);
+  }, [coordinator, enabled, attempt]);
 
-  return state;
+  if (coordinator === undefined) return NO_COMPONENT_RELEASE;
+  if (outcome === undefined || outcome.attempt !== attempt) return ACTIVATING_RELEASE;
+  return outcome.state;
 }
 
 function componentReleaseLabel(state: ComponentReleaseState): string {
@@ -103,6 +139,7 @@ function componentReleaseLabel(state: ComponentReleaseState): string {
       : `Component ${state.release} · verified`;
   }
   if (state.status === 'unavailable') return 'Component release unavailable';
+  if (state.status === 'none') return 'No published interface';
   return 'Semantic host · ABI 1';
 }
 
@@ -452,6 +489,27 @@ function SettingsView({ preview }: { readonly preview: boolean }): React.JSX.Ele
   );
 }
 
+/**
+ * Which house-shell screen a home with its own interface is on, or undefined
+ * when the platform's own screen applies: the home published nothing, or
+ * published a semantic component the platform draws itself.
+ */
+function selectHouseStage(
+  consent: HouseConsentRecord | undefined,
+  declined: boolean,
+  needsSignIn: boolean,
+  release: ComponentReleaseState,
+): HouseStage | undefined {
+  if (consent === undefined) return declined ? { kind: 'declined' } : { kind: 'consent' };
+  if (needsSignIn) return { kind: 'signin' };
+  if (release.status === 'activating') return { kind: 'loading' };
+  if (release.status === 'unavailable') return { kind: 'unavailable' };
+  if (release.status === 'active' && release.activated.pointer.abi === APP_ABI) {
+    return { kind: 'app', release: release.activated };
+  }
+  return undefined;
+}
+
 export function App({
   host: providedHost,
   createHost = createDemoHost,
@@ -459,18 +517,47 @@ export function App({
   readSandboxOrigin,
   readDiagnosticsEndpoint,
   mountRuntime = mountComponentRuntime,
+  consentStore: providedConsentStore,
+  favoritesStore: providedFavoritesStore,
+  switchHome = navigateToHome,
+  mountHouseApp,
 }: AppProps): React.JSX.Element {
   const [host] = useState<TrustedHost>(() => providedHost ?? createHost());
   const [view, setView] = useState<HostView>('home');
   const snapshot = useSyncExternalStore(host.subscribe, host.getSnapshot, host.getSnapshot);
-  const componentRelease = useComponentRelease(createComponentRelease);
+  // Creating the coordinator requests nothing; only `activate` does.
+  const [coordinator] = useState<ComponentReleaseCoordinator | undefined>(
+    () => createComponentRelease?.(),
+  );
+  const houseMode = coordinator !== undefined;
+  const [consentStore] = useState<HouseConsentStore>(() => providedConsentStore ?? createHouseConsentStore());
+  const [favoritesStore] = useState<HouseFavoritesStore>(
+    () => providedFavoritesStore ?? createHouseFavoritesStore(),
+  );
+  const homeId = snapshot.activeHome.id;
+  const [consent, setConsent] = useState<HouseConsentRecord | undefined>(
+    () => (houseMode ? consentStore.read(homeId) : undefined),
+  );
+  const [declined, setDeclined] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const needsSignIn = snapshot.signInAvailable && !snapshot.authenticated;
+  const componentRelease = useComponentRelease(
+    coordinator,
+    consent !== undefined && !needsSignIn,
+    attempt,
+  );
+  const activatedComponent = componentRelease.status === 'active'
+    && componentRelease.activated.pointer.abi === COMPONENT_ABI
+    ? componentRelease.activated
+    : undefined;
   const runtimeContainer = useRef<HTMLDivElement | null>(null);
   const [diagnostics] = useState<RuntimeDiagnostics | undefined>(() => {
     const endpoint = readDiagnosticsEndpoint?.();
     return endpoint === undefined ? undefined : createRuntimeDiagnostics({ endpoint });
   });
+  const [sandboxOrigin] = useState<string | undefined>(() => readSandboxOrigin?.());
   const runtime = useComponentRuntime(
-    componentRelease.status === 'active' ? componentRelease.activated : undefined,
+    activatedComponent,
     readSandboxOrigin,
     diagnostics,
     mountRuntime,
@@ -484,6 +571,39 @@ export function App({
     if (providedHost !== undefined) return undefined;
     return () => host.dispose();
   }, [host, providedHost]);
+
+  const houseStage = houseMode
+    ? selectHouseStage(consent, declined, needsSignIn, componentRelease)
+    : undefined;
+  if (houseStage !== undefined) {
+    return (
+      <HouseShell
+        call={host.call}
+        connection={snapshot.connection}
+        consent={consent}
+        favorites={favoritesStore}
+        home={snapshot.activeHome}
+        homeState={snapshot.homeState}
+        homes={snapshot.homes}
+        {...(mountHouseApp === undefined ? {} : { mountHouseApp })}
+        onAcceptConsent={() => {
+          setDeclined(false);
+          setConsent(consentStore.grant(homeId));
+        }}
+        onDeclineConsent={() => setDeclined(true)}
+        onReopen={() => setDeclined(false)}
+        onRetry={() => setAttempt((value) => value + 1)}
+        onRevokeConsent={() => {
+          consentStore.revoke(homeId);
+          setConsent(undefined);
+        }}
+        onSwitchHome={switchHome}
+        sandboxOrigin={sandboxOrigin}
+        signIn={host.signIn}
+        stage={houseStage}
+      />
+    );
+  }
 
   return (
     <div className="app-shell">

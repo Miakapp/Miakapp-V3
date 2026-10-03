@@ -16,6 +16,37 @@ import {
 
 const EMPTY_DIGESTS: ReadonlySet<string> = new Set<string>();
 
+/** The control plane's read envelope around the live pointer (RFC 0004 §13.2). */
+const POINTER_STATE_SCHEMA = 'miakapp.component-pointer-state/1';
+
+/**
+ * The home has published no interface of its own. Not a failure: the shell
+ * shows the home without one rather than an error.
+ */
+export class NoPublishedRelease extends Error {
+  constructor() {
+    super('the home has published no interface');
+    this.name = 'NoPublishedRelease';
+  }
+}
+
+/**
+ * The control plane answers `{ schema, generation, pointer }`, with a null
+ * pointer for a home that never published. The ledger validates a bare
+ * pointer, so the envelope is opened here — and only this exact envelope: any
+ * other shape is handed to the ledger untouched, to be rejected there.
+ */
+export function unwrapPointerState(value: unknown): unknown {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return value;
+  const record = value as Record<string, unknown>;
+  if (record.schema !== POINTER_STATE_SCHEMA) return value;
+  const keys = Object.keys(record).sort();
+  if (keys.length !== 3 || keys[0] !== 'generation' || keys[1] !== 'pointer' || keys[2] !== 'schema') {
+    return value;
+  }
+  return record.pointer;
+}
+
 /**
  * Reads the live component pointer for one home. The control-plane route is
  * RFC 0004 §13.2; the value is returned unvalidated because the release ledger
@@ -86,7 +117,7 @@ export function createControlPlanePointerReader(
     if (!response.ok) {
       throw new Error(`component pointer read returned HTTP ${response.status}`);
     }
-    return await response.json();
+    return unwrapPointerState(await response.json());
   };
 }
 
@@ -142,10 +173,9 @@ export function createComponentReleaseCoordinator(
   return {
     async activate(signal) {
       const ledgerInstance = releaseLedger();
-      const accepted = await ledgerInstance.accept(
-        await options.readPointer(signal),
-        quarantinedDigests,
-      );
+      const pointer = await options.readPointer(signal);
+      if (pointer === null) throw new NoPublishedRelease();
+      const accepted = await ledgerInstance.accept(pointer, quarantinedDigests);
       const candidate = accepted.highest_accepted;
 
       let artifact: LoadedArtifact;

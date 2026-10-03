@@ -19,6 +19,7 @@ import {
   type ComponentReleaseCoordinator,
 } from './component-release';
 import { createDemoHost } from './demo-host';
+import { createHouseFavoritesStore, type FavoriteHome } from './house-favorites';
 import type { TrustedHost } from './host';
 import { createLiveHost, type LiveIdentity } from './live-host';
 import type { PairingService } from './pairing-client';
@@ -36,6 +37,7 @@ interface LiveConfiguration {
   readonly homeId: string;
   readonly homeName: string;
   readonly homeDetail: string;
+  readonly homeAccent: string;
   readonly readOnlyHome: boolean;
   readonly componentRelease: ComponentReleaseConfiguration | undefined;
 }
@@ -124,11 +126,61 @@ export function readConfiguredDiagnosticsEndpoint(): string | undefined {
   return endpoint;
 }
 
+const CONTROL_PLANE_HOME_ID = /^[a-z][a-z0-9-]{1,61}[a-z0-9]$/u;
+const DEFAULT_ACCENT = '#b8d9ff';
+
+export interface RequestedHome {
+  readonly id: string;
+  readonly name: string;
+  readonly detail: string;
+  readonly accent: string;
+}
+
+/**
+ * Which home `/app?home=<id>` asks for. The house shell's switcher navigates
+ * here, so each home gets a fresh page: nothing of one home's session, state or
+ * frame survives into another's. The id is only a request — the control plane
+ * decides, per signed-in account, whether this home opens at all — and its name
+ * comes from the resident's own favorites, never from the URL.
+ */
+export function resolveRequestedHome(
+  pathname: string,
+  search: string,
+  fallback: RequestedHome,
+  favorites: readonly FavoriteHome[],
+): RequestedHome {
+  if (pathname !== '/app') return fallback;
+  const requested = new URLSearchParams(search).get('home');
+  if (requested === null || requested === fallback.id || !CONTROL_PLANE_HOME_ID.test(requested)) {
+    return fallback;
+  }
+  const favorite = favorites.find((home) => home.id === requested);
+  return Object.freeze({
+    id: requested,
+    name: favorite?.name ?? requested,
+    detail: '',
+    accent: favorite?.accent ?? DEFAULT_ACCENT,
+  });
+}
+
 function readLiveConfiguration(): LiveConfiguration | undefined {
   if (import.meta.env.VITE_MIAKAPP_MODE !== 'live') return undefined;
   // A bounded owner canary, not a general home selector. The coordinator alone grants state.
   const readOnlyHome = window.location.pathname === '/app'
     && new URLSearchParams(window.location.search).get('home') === 'mathieu-home';
+  const home = readOnlyHome
+    ? undefined
+    : resolveRequestedHome(
+      window.location.pathname,
+      window.location.search,
+      {
+        id: required('VITE_MIAKAPP_HOME_ID'),
+        name: required('VITE_MIAKAPP_HOME_NAME'),
+        detail: required('VITE_MIAKAPP_HOME_DETAIL'),
+        accent: DEFAULT_ACCENT,
+      },
+      createHouseFavoritesStore().list(),
+    );
   const exchangeEndpoint = required('VITE_MIAKAPP_CONTROL_PLANE_EXCHANGE_ENDPOINT');
   if (!exchangeEndpoint.startsWith('https://')) {
     throw new Error('The Miakapp control-plane exchange endpoint must use HTTPS');
@@ -144,9 +196,10 @@ function readLiveConfiguration(): LiveConfiguration | undefined {
     }),
     appCheckSiteKey: required('VITE_MIAKAPP_APP_CHECK_SITE_KEY'),
     exchangeEndpoint,
-    homeId: readOnlyHome ? 'mathieu-home' : required('VITE_MIAKAPP_HOME_ID'),
-    homeName: readOnlyHome ? 'Maison de Mathieu' : required('VITE_MIAKAPP_HOME_NAME'),
-    homeDetail: readOnlyHome ? 'États réels · lecture seule' : required('VITE_MIAKAPP_HOME_DETAIL'),
+    homeId: home?.id ?? 'mathieu-home',
+    homeName: home?.name ?? 'Maison de Mathieu',
+    homeDetail: home?.detail ?? 'États réels · lecture seule',
+    homeAccent: home?.accent ?? DEFAULT_ACCENT,
     readOnlyHome,
     componentRelease: readComponentReleaseConfiguration(),
   });
@@ -278,7 +331,7 @@ export function createConfiguredHost(): TrustedHost {
       id: configuration.homeId,
       name: configuration.homeName,
       detail: configuration.homeDetail,
-      accent: '#b8d9ff',
+      accent: configuration.homeAccent,
     }),
     identity,
   });

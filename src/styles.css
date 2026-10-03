@@ -2121,3 +2121,580 @@ svg {
   height: 0;
   border: 0;
 }
+
+/*
+ * House shell: the Miakapp bar and panels around a home's own interface.
+ *
+ * The bar is a sibling of the stage, never layered over it, so the home's frame
+ * box starts below it: nothing the home draws can reach the bar. Panels open
+ * over the stage from this document, where the home cannot reach either.
+ */
+.house-shell {
+  --house-bar-height: 52px;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.house-bar {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex: none;
+  gap: 10px;
+  align-items: center;
+  min-height: calc(var(--house-bar-height) + env(safe-area-inset-top));
+  padding: env(safe-area-inset-top) max(10px, env(safe-area-inset-right)) 0 max(10px, env(safe-area-inset-left));
+  background: var(--night);
+  color: #f6f5ef;
+}
+
+.house-bar__home {
+  display: inline-flex;
+  gap: 9px;
+  align-items: center;
+  min-width: 0;
+  max-width: min(420px, 62vw);
+  height: 40px;
+  padding: 0 10px 0 6px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.house-bar__home:hover,
+.house-bar__home[aria-expanded="true"] {
+  background: rgb(255 255 255 / 9%);
+}
+
+.house-bar__mark {
+  display: grid;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  place-items: center;
+  background: var(--acid);
+  color: var(--night);
+}
+
+.house-bar__mark svg {
+  width: 17px;
+  height: 17px;
+}
+
+.house-bar__name {
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.house-bar__chevron {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  opacity: 0.7;
+}
+
+.house-bar__status {
+  overflow: hidden;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 9%);
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.house-bar__status--unavailable {
+  background: rgb(255 141 107 / 22%);
+  color: #ffd2c4;
+}
+
+.house-bar__actions {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.house-icon-button {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 999px;
+  place-items: center;
+  background: transparent;
+}
+
+.house-icon-button svg {
+  width: 20px;
+  height: 20px;
+}
+
+.house-icon-button:hover,
+.house-icon-button[aria-expanded="true"] {
+  background: rgb(255 255 255 / 9%);
+}
+
+.house-icon-button[aria-pressed="true"] {
+  color: var(--acid);
+}
+
+.house-icon-button--quiet {
+  color: var(--muted);
+}
+
+.house-icon-button--quiet:hover {
+  background: rgb(23 26 22 / 6%);
+}
+
+.house-bar button:focus-visible {
+  outline-color: var(--acid);
+  outline-offset: 1px;
+}
+
+.house-avatar {
+  display: grid;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  place-items: center;
+  color: var(--night);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.house-avatar--lg {
+  width: 52px;
+  height: 52px;
+  font-size: 21px;
+}
+
+.house-panel {
+  position: absolute;
+  z-index: 4;
+  top: calc(var(--house-bar-height) + env(safe-area-inset-top) + 8px);
+  width: min(360px, calc(100vw - 20px));
+  max-height: calc(100dvh - var(--house-bar-height) - 24px);
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  box-shadow: 0 24px 60px rgb(20 23 19 / 22%);
+  color: var(--ink);
+}
+
+.house-panel--homes {
+  left: max(10px, env(safe-area-inset-left));
+}
+
+.house-panel--settings {
+  right: max(10px, env(safe-area-inset-right));
+}
+
+.house-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.house-panel__head h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.house-panel__hint {
+  margin: 12px 4px 2px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.house-homes {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.house-homes__item {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.house-homes__open {
+  display: flex;
+  flex: 1;
+  gap: 11px;
+  align-items: center;
+  min-width: 0;
+  min-height: 48px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 13px;
+  background: transparent;
+  text-align: left;
+}
+
+.house-homes__open > span:not(.house-avatar) {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.house-homes__open small {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.house-homes__open:hover,
+.house-homes__item.is-current .house-homes__open {
+  background: rgb(23 26 22 / 5%);
+}
+
+.house-homes__item.is-current .house-homes__open {
+  cursor: default;
+}
+
+.house-settings {
+  display: grid;
+  gap: 16px;
+}
+
+.house-segmented {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  margin: 0;
+  padding: 4px;
+  border: 0;
+  border-radius: 13px;
+  background: rgb(23 26 22 / 6%);
+}
+
+.house-segmented legend {
+  margin-bottom: 8px;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.house-segmented label {
+  position: relative;
+  padding: 9px 6px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  text-align: center;
+}
+
+.house-segmented label.is-active {
+  background: var(--panel);
+  box-shadow: 0 2px 8px rgb(20 23 19 / 10%);
+  font-weight: 650;
+}
+
+.house-segmented input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.house-segmented label:has(input:focus-visible) {
+  outline: 3px solid rgb(107 139 0 / 42%);
+  outline-offset: 2px;
+}
+
+.house-settings__section h3 {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+
+.house-settings__section p {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+.house-settings__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.house-stage {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.house-stage__app {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.house-stage__frame {
+  position: absolute;
+  inset: 0;
+}
+
+.house-stage__frame.is-hidden {
+  visibility: hidden;
+}
+
+.house-stage__frame iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #fff;
+}
+
+.house-stage__cover {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.house-stage__cover p {
+  margin: 0;
+  font-size: 15px;
+}
+
+.house-stage__cover--solid {
+  background: var(--paper);
+}
+
+.house-stage__cover .house-card {
+  color: var(--ink);
+  text-align: left;
+}
+
+.house-scrim {
+  display: none;
+}
+
+.house-spinner {
+  width: 26px;
+  height: 26px;
+  border: 3px solid rgb(23 26 22 / 12%);
+  border-top-color: var(--ink);
+  border-radius: 999px;
+  animation: house-spin 0.9s linear infinite;
+}
+
+@keyframes house-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.house-stage__center {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(16px, 4vw, 40px);
+}
+
+.house-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+  width: min(520px, 100%);
+  padding: clamp(22px, 4vw, 36px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.house-card h1 {
+  margin: 4px 0 0;
+  font-size: clamp(23px, 3.2vw, 30px);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.house-card__kicker {
+  margin: 6px 0 -6px;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.house-card__lede {
+  margin: 0;
+  color: #3f433c;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.house-card__subhead {
+  margin: 10px 0 0;
+  font-size: 14px;
+}
+
+.house-card .house-homes {
+  width: 100%;
+}
+
+.house-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.house-card__foot {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.house-card--alert {
+  border-color: rgb(255 141 107 / 45%);
+}
+
+.house-consent__points {
+  display: grid;
+  gap: 10px;
+  margin: 4px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.house-consent__points li {
+  position: relative;
+  padding-left: 26px;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.house-consent__points li::before {
+  position: absolute;
+  top: 0.38em;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--acid);
+  box-shadow: inset 0 0 0 3px var(--night);
+  content: "";
+}
+
+.house-button {
+  min-height: 46px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--night);
+  color: #fff;
+  font-weight: 650;
+}
+
+.house-button:hover {
+  background: #2a2f27;
+}
+
+.house-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.house-button--ghost {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--ink);
+}
+
+.house-button--ghost:hover {
+  background: rgb(23 26 22 / 5%);
+}
+
+.house-button--danger {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px rgb(196 70 38 / 40%);
+  color: #a33b1f;
+}
+
+.house-button--danger:hover {
+  background: rgb(255 141 107 / 14%);
+}
+
+@media (max-width: 620px) {
+  .house-shell {
+    --house-bar-height: 48px;
+  }
+
+  .house-bar__name {
+    font-size: 14px;
+  }
+
+  .house-bar__mark {
+    display: none;
+  }
+
+  .house-scrim {
+    position: fixed;
+    z-index: 4;
+    inset: 0;
+    display: block;
+    background: rgb(20 23 19 / 38%);
+  }
+
+  .house-panel {
+    position: fixed;
+    z-index: 5;
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: auto;
+    max-height: min(78dvh, 560px);
+    padding: 16px 16px max(16px, env(safe-area-inset-bottom));
+    border-radius: 22px 22px 0 0;
+  }
+
+  .house-card__actions {
+    width: 100%;
+  }
+
+  .house-card__actions .house-button {
+    flex: 1 1 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .house-spinner {
+    animation-duration: 3s;
+  }
+}
