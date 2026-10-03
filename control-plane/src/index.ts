@@ -5,6 +5,7 @@ import { getStorage } from 'firebase-admin/storage';
 import { onRequest } from 'firebase-functions/v2/https';
 
 import { createControlPlaneApp } from './api.js';
+import { FirebaseAdminAuthVerifier } from './auth.js';
 import { AdmissionController } from './admission.js';
 import { SyntheticAppCheckVerifier } from './app-check.js';
 import { loadEmulatorConfig } from './config.js';
@@ -42,7 +43,7 @@ const signer = new AccessTokenSigner(config);
 const app = createControlPlaneApp({
   admission,
   appCheck: new SyntheticAppCheckVerifier(config, SYSTEM_CLOCK),
-  auth,
+  auth: new FirebaseAdminAuthVerifier(auth),
   clock: SYSTEM_CLOCK,
   config,
   signer,

@@ -12,7 +12,7 @@ export interface FirebaseTokenVerifier {
 }
 
 export interface FirebaseAdminAuthClient {
-  verifyIdToken(token: string): Promise<DecodedIdToken>;
+  verifyIdToken(token: string, checkRevoked: boolean): Promise<DecodedIdToken>;
 }
 
 export class FirebaseTokenDependencyError extends Error {
@@ -39,6 +39,8 @@ function definitiveFirebaseTokenRejection(error: unknown): boolean {
   const code = firebaseErrorCode(error);
   if (code === 'auth/id-token-expired'
     || code === 'auth/id-token-revoked'
+    || code === 'auth/user-disabled'
+    || code === 'auth/user-not-found'
     || code === 'auth/invalid-id-token') {
     return true;
   }
@@ -57,7 +59,8 @@ export class FirebaseAdminAuthVerifier implements FirebaseTokenVerifier {
 
   async verifyIdToken(token: string): Promise<DecodedIdToken> {
     try {
-      return await this.#client.verifyIdToken(token);
+      // Signature validity alone survives account disablement and session revocation.
+      return await this.#client.verifyIdToken(token, true);
     } catch (error) {
       if (definitiveFirebaseTokenRejection(error)) throw error;
       throw new FirebaseTokenDependencyError();
