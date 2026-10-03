@@ -573,7 +573,7 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
   const t = useCallback<HouseTranslate>((key, values) => houseTranslator(locale)(key, values), [locale]);
   const [theme, setTheme] = useHouseTheme();
   const [panel, setPanel] = useState<Panel>(undefined);
-  const [favoriteList, setFavoriteList] = useState<readonly FavoriteHome[]>(() => favorites.list());
+  const favoriteList = useSyncExternalStore(favorites.subscribe, favorites.list, favorites.list);
   const [restartKey, setRestartKey] = useState(0);
   const homeButton = useRef<HTMLButtonElement | null>(null);
   const settingsButton = useRef<HTMLButtonElement | null>(null);
@@ -596,11 +596,10 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
 
   const isFavorite = favoriteList.some((entry) => entry.id === home.id);
   const toggleFavorite = (): void => {
-    setFavoriteList(isFavorite
-      ? favorites.remove(home.id)
-      : favorites.add({ id: home.id, name: home.name, accent: home.accent }));
+    if (isFavorite) favorites.remove(home.id);
+    else favorites.add({ id: home.id, name: home.name, accent: home.accent });
   };
-  const removeFavorite = (homeId: string): void => setFavoriteList(favorites.remove(homeId));
+  const removeFavorite = (homeId: string): void => { favorites.remove(homeId); };
   const listed = listHomes(home, homes, favoriteList);
   // Before consent and identity, no home connection has been attempted.
   const connectionObservable = !['consent', 'declined', 'signin'].includes(stage.kind);

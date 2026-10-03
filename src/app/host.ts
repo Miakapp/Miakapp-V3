@@ -79,6 +79,8 @@ export interface TrustedHost {
    * Absent on hosts that cannot reach a coordinator.
    */
   readonly call?: (name: string, args: unknown, options: HouseCallOptions) => Promise<unknown>;
+  /** Account-owned shell preferences only; never forwarded to a house runtime. */
+  readonly getPreferencesScope?: () => string | undefined;
   readonly signIn?: () => void;
   /** Signs out the trusted identity; never exposed to a house runtime. */
   readonly signOut?: () => Promise<void>;

@@ -480,8 +480,11 @@ export function App({
   );
   const houseMode = coordinator !== undefined;
   const [consentStore] = useState<HouseConsentStore>(() => providedConsentStore ?? createHouseConsentStore());
-  const [favoritesStore] = useState<HouseFavoritesStore>(
-    () => providedFavoritesStore ?? createHouseFavoritesStore(),
+  const preferenceScope = snapshot.preview ? 'preview'
+    : snapshot.authenticated ? host.getPreferencesScope?.() : undefined;
+  const favoritesStore = useMemo<HouseFavoritesStore>(
+    () => providedFavoritesStore ?? createHouseFavoritesStore(undefined, preferenceScope),
+    [providedFavoritesStore, preferenceScope],
   );
   const homeId = snapshot.activeHome.id;
   const readConsent = useCallback(
