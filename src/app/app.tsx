@@ -479,9 +479,12 @@ export function App({
     () => createComponentRelease?.(),
   );
   const houseMode = coordinator !== undefined;
-  const [consentStore] = useState<HouseConsentStore>(() => providedConsentStore ?? createHouseConsentStore());
   const preferenceScope = snapshot.preview ? 'preview'
     : snapshot.authenticated ? host.getPreferencesScope?.() : undefined;
+  const consentStore = useMemo<HouseConsentStore>(
+    () => providedConsentStore ?? createHouseConsentStore(undefined, undefined, preferenceScope),
+    [providedConsentStore, preferenceScope],
+  );
   const favoritesStore = useMemo<HouseFavoritesStore>(
     () => providedFavoritesStore ?? createHouseFavoritesStore(undefined, preferenceScope),
     [providedFavoritesStore, preferenceScope],
