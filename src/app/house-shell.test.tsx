@@ -459,3 +459,31 @@ describe('house shell — truthful connection status', () => {
     },
   );
 });
+
+
+describe('house shell — semantic resident language', () => {
+  it('follows the trusted page language for a nested semantic status and keeps the home title', async () => {
+    const home = createDemoHost().getSnapshot().activeHome;
+    render(<HouseShell
+      home={home} homes={[home]} connection="ready"
+      stage={{ kind: 'component', release: appRelease() }} consent={undefined}
+      favorites={createHouseFavoritesStore(memoryStorage())}
+      sandboxOrigin={undefined} homeState={undefined} call={undefined}
+      onAcceptConsent={vi.fn()} onDeclineConsent={vi.fn()} onReopen={vi.fn()}
+      onRevokeConsent={vi.fn()} onRetry={vi.fn()} onSwitchHome={vi.fn()}
+      componentScreen={{ interact: vi.fn(), state: { status: 'active', revision: 1, tree: {
+        id: 'home', type: 'screen', props: { title: 'Énergie' }, children: [{
+          id: 'group', type: 'section', props: { heading: 'Compteur' }, children: [{
+            id: 'status', type: 'status', props: { label: 'Relevé', state: 'stale' },
+          }],
+        }],
+      } } }}
+    />);
+    expect(screen.getByRole('status', { name: 'Relevé: À actualiser' })).toBeVisible();
+    expect(screen.getByRole('heading', { level: 1, name: 'Énergie' })).toBeVisible();
+    expect(screen.queryByText('Your living interface')).not.toBeInTheDocument();
+    act(() => { document.documentElement.lang = 'en'; });
+    await waitFor(() => expect(screen.getByRole('status', { name: 'Relevé: Out of date' })).toBeVisible());
+    expect(screen.getByRole('button', { name: /Miakapp menu/ })).toBeVisible();
+  });
+});
