@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 
 import { App, type AppProps } from './app';
 import {
+  agentStartPrompt,
   COPY,
   LOCALES,
   LOCALE_LABELS,
@@ -14,10 +15,10 @@ import {
 import { createDemoHost } from './demo-host';
 import type { TrustedHost } from './host';
 import { HomeIcon, LockIcon, SparkIcon } from './icons';
+import { PairPage } from './pair-page';
+import type { PairingService } from './pairing-client';
 
-export const AGENT_START_PROMPT = 'Installe la CLI `miakapp` via `npm i -g @miakapp/cli` puis fais `miakapp docs start` pour commencer.';
-
-type ProductRoute = 'landing' | 'login' | 'new-home' | 'console';
+type ProductRoute = 'landing' | 'login' | 'new-home' | 'pair' | 'console';
 type CopyState = 'idle' | 'copied' | 'failed';
 
 export interface ProductAppProps extends Omit<AppProps, 'host'> {
@@ -25,6 +26,8 @@ export interface ProductAppProps extends Omit<AppProps, 'host'> {
   readonly initialRoute?: ProductRoute;
   readonly writeClipboard?: (text: string) => Promise<void>;
   readonly initialLocale?: Locale;
+  /** Undefined in a preview build: `/pair` then explains that it cannot pair. */
+  readonly createPairingService?: () => PairingService | undefined;
 }
 
 /** Reads one string in the active language. Passed down rather than pulled from
@@ -34,6 +37,7 @@ export type Translate = (key: CopyKey) => string;
 function routeFromPath(pathname: string): ProductRoute {
   if (pathname === '/login') return 'login';
   if (pathname === '/new-home') return 'new-home';
+  if (pathname === '/pair') return 'pair';
   if (pathname === '/app') return 'console';
   return 'landing';
 }
@@ -41,6 +45,7 @@ function routeFromPath(pathname: string): ProductRoute {
 function pathFor(route: ProductRoute): string {
   if (route === 'login') return '/login';
   if (route === 'new-home') return '/new-home';
+  if (route === 'pair') return '/pair';
   if (route === 'console') return '/app';
   return '/';
 }
@@ -242,9 +247,9 @@ function NewHomePage({
             <div>
               <p className="product-kicker">{t('onboardingPromptKicker')}</p>
               <h2>{t('onboardingPromptTitle')}</h2>
-              {/* The prompt itself is never translated: it is a command an agent
-                  executes, and a translated command does not run. */}
-              <pre><code>{AGENT_START_PROMPT}</code></pre>
+              {/* The sentence follows the page's language; the commands inside
+                  it never do, because an agent runs them verbatim. */}
+              <pre><code>{t('onboardingAgentPrompt')}</code></pre>
               <button className="product-button" onClick={onCopy} type="button">
                 {copyState === 'copied' ? t('onboardingCopied') : t('onboardingCopy')}
               </button>
@@ -283,9 +288,11 @@ export function ProductApp({
   initialRoute,
   initialLocale,
   writeClipboard = async (text) => navigator.clipboard.writeText(text),
+  createPairingService,
   ...appProps
 }: ProductAppProps): React.JSX.Element {
   const [host] = useState<TrustedHost>(() => createHost());
+  const [pairing] = useState<PairingService | undefined>(() => createPairingService?.());
   const snapshot = useSyncExternalStore(host.subscribe, host.getSnapshot, host.getSnapshot);
   const [route, setRoute] = useState<ProductRoute>(
     () => initialRoute ?? routeFromPath(window.location.pathname),
@@ -331,18 +338,26 @@ export function ProductApp({
   }, [route, snapshot.authenticated]);
 
   useEffect(() => () => host.dispose(), [host]);
+  useEffect(() => () => pairing?.dispose(), [pairing]);
 
   const chrome = { locale, onLocaleChange: changeLocale, onNavigate: navigate, t };
 
   if (displayedRoute === 'console') return <App {...appProps} host={host} />;
   if (displayedRoute === 'login') return <LoginPage host={host} {...chrome} />;
+  if (displayedRoute === 'pair') {
+    return (
+      <ProductChrome {...chrome}>
+        <PairPage locale={locale} service={pairing} t={t} writeClipboard={writeClipboard} />
+      </ProductChrome>
+    );
+  }
   if (displayedRoute === 'new-home') {
     return (
       <NewHomePage
         copyState={copyState}
         onCopy={() => {
           setCopyState('idle');
-          void writeClipboard(AGENT_START_PROMPT).then(
+          void writeClipboard(agentStartPrompt(locale)).then(
             () => setCopyState('copied'),
             () => setCopyState('failed'),
           );

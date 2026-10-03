@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
-import type { ActivatedRelease, ComponentReleaseCoordinator } from './component-release';
+import { APP_ABI, COMPONENT_ABI } from '../../component-runtime/src/contract';
+import {
+  NoPublishedRelease,
+  type ActivatedRelease,
+  type ComponentReleaseCoordinator,
+} from './component-release';
 import {
   mountComponentRuntime,
   type ComponentRuntimeSession,
@@ -8,6 +13,14 @@ import {
   type RuntimeLifecycle,
 } from './component-runtime-host';
 import { createDemoHost } from './demo-host';
+import { platformGrantCeiling } from './grant-ceiling';
+import {
+  createHouseConsentStore,
+  type HouseConsentRecord,
+  type HouseConsentStore,
+} from './house-consent';
+import { createHouseFavoritesStore, type HouseFavoritesStore } from './house-favorites';
+import { HouseShell, type HouseStage, type MountHouseApp } from './house-shell';
 import type {
   HomeActivity,
   HomeState,
@@ -39,6 +52,16 @@ export interface AppProps {
   readonly readSandboxOrigin?: () => string | undefined;
   readonly readDiagnosticsEndpoint?: () => string | undefined;
   readonly mountRuntime?: MountComponentRuntime;
+  /** Where the resident's agreement to open each home's own interface is kept. */
+  readonly consentStore?: HouseConsentStore;
+  readonly favoritesStore?: HouseFavoritesStore;
+  /** Opens another home. Defaults to a full navigation, which tears everything down. */
+  readonly switchHome?: (homeId: string) => void;
+  readonly mountHouseApp?: MountHouseApp;
+}
+
+function navigateToHome(homeId: string): void {
+  window.location.assign(`/app?home=${encodeURIComponent(homeId)}`);
 }
 
 type ComponentReleaseState =
@@ -50,60 +73,65 @@ type ComponentReleaseState =
     readonly fellBack: boolean;
     readonly activated: ActivatedRelease;
   }
-  | { readonly status: 'unavailable' };
+  | { readonly status: 'unavailable' }
+  /** The home answered, and has published no interface of its own. */
+  | { readonly status: 'none'; readonly homeName?: string };
 
 const NO_COMPONENT_RELEASE: ComponentReleaseState = Object.freeze({ status: 'absent' });
+const ACTIVATING_RELEASE: ComponentReleaseState = Object.freeze({ status: 'activating' });
 
 /**
- * Activates the verified component release once per shell mount. The artifact
- * is fetched, size- and digest-checked and recorded in the release ledger here;
- * executing it is the component runtime host's job, not the shell's.
+ * Activates the verified component release once per shell mount, and not before
+ * `enabled`: for a home whose interface needs the resident's agreement, nothing
+ * of that interface — pointer, artifact or frame — is requested until then.
+ * The artifact is fetched, size- and digest-checked and recorded in the release
+ * ledger here; executing it is the runtime host's job, not the shell's.
  */
 function useComponentRelease(
-  createComponentRelease: (() => ComponentReleaseCoordinator | undefined) | undefined,
+  coordinator: ComponentReleaseCoordinator | undefined,
+  enabled: boolean,
+  attempt: number,
 ): ComponentReleaseState {
-  const [coordinator] = useState<ComponentReleaseCoordinator | undefined>(
-    () => createComponentRelease?.(),
-  );
-  const [state, setState] = useState<ComponentReleaseState>(
-    () => (coordinator === undefined ? NO_COMPONENT_RELEASE : { status: 'activating' }),
-  );
+  // Each outcome remembers which attempt produced it, so a new attempt reads as
+  // `activating` until it settles, without resetting state inside the effect.
+  const [outcome, setOutcome] = useState<
+    { readonly attempt: number; readonly state: ComponentReleaseState } | undefined
+  >(undefined);
 
   useEffect(() => {
-    if (coordinator === undefined) return undefined;
+    if (coordinator === undefined || !enabled) return undefined;
 
     const controller = new AbortController();
     void coordinator.activate(controller.signal).then(
       (activated) => {
         if (controller.signal.aborted) return;
-        setState({
-          status: 'active',
-          release: activated.pointer.release,
-          fellBack: activated.fellBack,
-          activated,
+        setOutcome({
+          attempt,
+          state: {
+            status: 'active',
+            release: activated.pointer.release,
+            fellBack: activated.fellBack,
+            activated,
+          },
         });
       },
-      () => {
+      (error: unknown) => {
         if (controller.signal.aborted) return;
-        setState({ status: 'unavailable' });
+        setOutcome({
+          attempt,
+          state: error instanceof NoPublishedRelease
+            ? { status: 'none', ...(error.homeName === undefined ? {} : { homeName: error.homeName }) }
+            : { status: 'unavailable' },
+        });
       },
     );
 
     return () => controller.abort();
-  }, [coordinator]);
+  }, [coordinator, enabled, attempt]);
 
-  return state;
-}
-
-function componentReleaseLabel(state: ComponentReleaseState): string {
-  if (state.status === 'activating') return 'Verifying component release';
-  if (state.status === 'active') {
-    return state.fellBack
-      ? `Component ${state.release} · last known good`
-      : `Component ${state.release} · verified`;
-  }
-  if (state.status === 'unavailable') return 'Component release unavailable';
-  return 'Semantic host · ABI 1';
+  if (coordinator === undefined) return NO_COMPONENT_RELEASE;
+  if (outcome === undefined || outcome.attempt !== attempt) return ACTIVATING_RELEASE;
+  return outcome.state;
 }
 
 type ComponentRuntimeState =
@@ -178,6 +206,7 @@ function useComponentRuntime(
       {
         sandboxOrigin,
         container,
+        policy: platformGrantCeiling(activated.pointer.requires),
         onLifecycle,
         onTree: (tree, revision) => {
           if (released) return;
@@ -239,57 +268,6 @@ function useComponentRuntime(
   return { state, interact };
 }
 
-function componentRuntimeLabel(state: ComponentRuntimeState): string | undefined {
-  if (state.status === 'starting') return 'Component runtime starting';
-  if (state.status === 'active') return `Component runtime · revision ${state.revision}`;
-  if (state.status === 'failed') return `Component runtime stopped · ${state.code}`;
-  return undefined;
-}
-
-/**
- * The runtime states in which the home view shows the trusted host's own screen
- * although the deployment expected a component screen. `idle` is excluded
- * because nothing was expected — the build declares no release or no sandbox
- * origin — and `active` because the component screen is the one on display.
- * Deriving the union by exclusion is what makes a new runtime state widen it
- * and break the term table below until the new state is named.
- */
-type SubstitutedScreenStatus = Exclude<ComponentRuntimeState['status'], 'active' | 'idle'>;
-
-/**
- * Host-owned sentence for each of those states. The footer already names the
- * runtime, but the substitution happens in the middle of the page: the
- * component's screen is replaced by the home's own screen, and both are real,
- * both answer, and both drive the same home through different controls. Nothing
- * looks broken, which is precisely why the region has to say whose screen it is
- * rather than leave the person to notice that the controls changed under them.
- */
-const SUBSTITUTED_SCREEN_TERMS: Record<SubstitutedScreenStatus, string> = {
-  starting: 'This is the home’s own screen. The component screen is still starting.',
-  failed: 'This is the home’s own screen. The component screen stopped.',
-};
-
-/**
- * Names the screen on display, or renders nothing when the component screen is
- * the one on display and when none was ever expected. The failure code comes
- * from `classifyRuntimeFailure`, so what reaches this notice is a host term and
- * never the component's own text.
- */
-function ScreenNotice({
-  state,
-}: {
-  readonly state: ComponentRuntimeState;
-}): React.JSX.Element | null {
-  if (state.status === 'active' || state.status === 'idle') return null;
-
-  return (
-    <p className="screen-notice" role="status">
-      <span>{SUBSTITUTED_SCREEN_TERMS[state.status]}</span>
-      {state.status === 'failed' ? <small>{state.code}</small> : null}
-    </p>
-  );
-}
-
 const NAV_ITEMS: ReadonlyArray<{
   view: HostView;
   label: string;
@@ -322,15 +300,13 @@ function ConnectionPill({ detail }: { readonly detail: string }): React.JSX.Elem
 function Navigation({
   view,
   onChange,
-  readOnlyHome = false,
 }: {
   readonly view: HostView;
   readonly onChange: (view: HostView) => void;
-  readonly readOnlyHome?: boolean;
 }): React.JSX.Element {
   return (
     <nav aria-label="Primary" className="primary-nav">
-      {NAV_ITEMS.filter((item) => !readOnlyHome || item.view === 'home').map((item) => {
+      {NAV_ITEMS.map((item) => {
         const Icon = item.icon;
         return (
           <button
@@ -452,6 +428,26 @@ function SettingsView({ preview }: { readonly preview: boolean }): React.JSX.Ele
   );
 }
 
+/**
+ * Which house-shell screen a home with its own interface is on, or undefined
+ * when the platform's own screen applies: the home published nothing, or
+ * published a semantic component the platform draws itself.
+ */
+function selectHouseStage(
+  consent: HouseConsentRecord | undefined,
+  declined: boolean,
+  needsSignIn: boolean,
+  release: ComponentReleaseState,
+): HouseStage {
+  if (consent === undefined) return declined ? { kind: 'declined' } : { kind: 'consent' };
+  if (needsSignIn) return { kind: 'signin' };
+  if (release.status === 'activating' || release.status === 'absent') return { kind: 'loading' };
+  if (release.status === 'unavailable') return { kind: 'unavailable' };
+  if (release.status === 'none') return { kind: 'empty' };
+  if (release.activated.pointer.abi === APP_ABI) return { kind: 'app', release: release.activated };
+  return { kind: 'component', release: release.activated };
+}
+
 export function App({
   host: providedHost,
   createHost = createDemoHost,
@@ -459,18 +455,47 @@ export function App({
   readSandboxOrigin,
   readDiagnosticsEndpoint,
   mountRuntime = mountComponentRuntime,
+  consentStore: providedConsentStore,
+  favoritesStore: providedFavoritesStore,
+  switchHome = navigateToHome,
+  mountHouseApp,
 }: AppProps): React.JSX.Element {
   const [host] = useState<TrustedHost>(() => providedHost ?? createHost());
   const [view, setView] = useState<HostView>('home');
   const snapshot = useSyncExternalStore(host.subscribe, host.getSnapshot, host.getSnapshot);
-  const componentRelease = useComponentRelease(createComponentRelease);
+  // Creating the coordinator requests nothing; only `activate` does.
+  const [coordinator] = useState<ComponentReleaseCoordinator | undefined>(
+    () => createComponentRelease?.(),
+  );
+  const houseMode = coordinator !== undefined;
+  const [consentStore] = useState<HouseConsentStore>(() => providedConsentStore ?? createHouseConsentStore());
+  const [favoritesStore] = useState<HouseFavoritesStore>(
+    () => providedFavoritesStore ?? createHouseFavoritesStore(),
+  );
+  const homeId = snapshot.activeHome.id;
+  const [consent, setConsent] = useState<HouseConsentRecord | undefined>(
+    () => (houseMode ? consentStore.read(homeId) : undefined),
+  );
+  const [declined, setDeclined] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const needsSignIn = snapshot.signInAvailable && !snapshot.authenticated;
+  const componentRelease = useComponentRelease(
+    coordinator,
+    consent !== undefined && !needsSignIn,
+    attempt,
+  );
+  const activatedComponent = componentRelease.status === 'active'
+    && componentRelease.activated.pointer.abi === COMPONENT_ABI
+    ? componentRelease.activated
+    : undefined;
   const runtimeContainer = useRef<HTMLDivElement | null>(null);
   const [diagnostics] = useState<RuntimeDiagnostics | undefined>(() => {
     const endpoint = readDiagnosticsEndpoint?.();
     return endpoint === undefined ? undefined : createRuntimeDiagnostics({ endpoint });
   });
+  const [sandboxOrigin] = useState<string | undefined>(() => readSandboxOrigin?.());
   const runtime = useComponentRuntime(
-    componentRelease.status === 'active' ? componentRelease.activated : undefined,
+    activatedComponent,
     readSandboxOrigin,
     diagnostics,
     mountRuntime,
@@ -478,12 +503,68 @@ export function App({
     snapshot.homeState,
   );
   const runtimeState = runtime.state;
-  const runtimeLabel = componentRuntimeLabel(runtimeState);
 
   useEffect(() => {
     if (providedHost !== undefined) return undefined;
     return () => host.dispose();
   }, [host, providedHost]);
+
+  // The frame the semantic runtime computes in. It never shows; it is kept out
+  // of the flow rather than `display: none`, which browsers may treat as a
+  // reason not to load the document at all.
+  const runtimeSurface = (
+    <div
+      aria-hidden="true"
+      className="component-runtime-surface"
+      data-testid="component-runtime-surface"
+      ref={runtimeContainer}
+    />
+  );
+
+  if (houseMode) {
+    const houseStage = selectHouseStage(consent, declined, needsSignIn, componentRelease);
+    const homeName = componentRelease.status === 'active'
+      ? componentRelease.activated.homeName
+      : componentRelease.status === 'none' ? componentRelease.homeName : undefined;
+    return (
+      <>
+        <HouseShell
+        call={host.call}
+        componentScreen={{
+          // A verified component with nowhere to run is a stated failure, not
+          // an endless loading screen.
+          state: activatedComponent !== undefined && sandboxOrigin === undefined
+            ? { status: 'failed', code: 'sandbox_missing' }
+            : runtimeState,
+          interact: runtime.interact,
+        }}
+        connection={snapshot.connection}
+        consent={consent}
+        favorites={favoritesStore}
+        home={homeName === undefined ? snapshot.activeHome : { ...snapshot.activeHome, name: homeName }}
+        homeState={snapshot.homeState}
+        homes={snapshot.homes}
+        {...(mountHouseApp === undefined ? {} : { mountHouseApp })}
+        onAcceptConsent={() => {
+          setDeclined(false);
+          setConsent(consentStore.grant(homeId));
+        }}
+        onDeclineConsent={() => setDeclined(true)}
+        onReopen={() => setDeclined(false)}
+        onRetry={() => setAttempt((value) => value + 1)}
+        onRevokeConsent={() => {
+          consentStore.revoke(homeId);
+          setConsent(undefined);
+        }}
+        onSwitchHome={switchHome}
+        sandboxOrigin={sandboxOrigin}
+        signIn={host.signIn}
+        stage={houseStage}
+        />
+        {runtimeSurface}
+      </>
+    );
+  }
 
   return (
     <div className="app-shell">
@@ -499,10 +580,10 @@ export function App({
           </span>
           <span className="home-picker__mode">{snapshot.modeLabel}</span>
         </div>
-        <Navigation onChange={setView} readOnlyHome={snapshot.readOnlyHome} view={view} />
+        <Navigation onChange={setView} view={view} />
         <div className="sidebar__footer">
           <ConnectionPill detail={snapshot.connectionDetail} />
-          <p>{snapshot.readOnlyHome ? 'Accès réservé à votre compte.' : <>Private by architecture.<br />Useful by intention.</>}</p>
+          <p>Private by architecture.<br />Useful by intention.</p>
         </div>
       </aside>
 
@@ -526,19 +607,11 @@ export function App({
         </div>
 
         {view === 'home' ? (
-          <div className={snapshot.readOnlyHome ? 'home-layout home-layout--single' : 'home-layout'}>
+          <div className="home-layout">
             <div className="home-screen">
-              <ScreenNotice state={runtimeState} />
-              {runtimeState.status === 'active' ? (
-                <SemanticRenderer
-                  onInteraction={runtime.interact}
-                  tree={runtimeState.tree}
-                />
-              ) : (
-                <SemanticRenderer onInteraction={host.interact} tree={snapshot.uiTree} />
-              )}
+              <SemanticRenderer onInteraction={host.interact} tree={snapshot.uiTree} />
             </div>
-            {!snapshot.readOnlyHome ? <aside className="activity-rail">
+            <aside className="activity-rail">
               <header>
                 <div>
                   <p className="eyebrow">Now & next</p>
@@ -560,7 +633,7 @@ export function App({
                   <p>“Everything looks settled. I’ll keep an eye on the rain.”</p>
                 </div>
               </div>
-            </aside> : null}
+            </aside>
           </div>
         ) : view === 'activity' ? (
           <ActivityView activity={snapshot.activity} />
@@ -570,24 +643,13 @@ export function App({
 
         <footer className="workspace__footer">
           <span>{snapshot.lastSynced}</span>
-          <span>{componentReleaseLabel(componentRelease)}</span>
-          {runtimeLabel === undefined ? null : <span>{runtimeLabel}</span>}
+          <span>Semantic host · ABI 1</span>
         </footer>
       </main>
 
-      {/*
-        The sandbox frame computes; it never shows. Kept out of the flow rather
-        than `display: none`, which browsers are free to treat as a reason not to
-        load the document at all.
-      */}
-      <div
-        aria-hidden="true"
-        className="component-runtime-surface"
-        data-testid="component-runtime-surface"
-        ref={runtimeContainer}
-      />
+      {runtimeSurface}
 
-      <div className="mobile-nav"><Navigation onChange={setView} readOnlyHome={snapshot.readOnlyHome} view={view} /></div>
+      <div className="mobile-nav"><Navigation onChange={setView} view={view} /></div>
     </div>
   );
 }

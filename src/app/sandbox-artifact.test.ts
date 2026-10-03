@@ -12,6 +12,7 @@ import {
   SandboxArtifactError,
   verifySandboxArtifact,
 } from '../../component-runtime/src/sandbox-artifact';
+import { buildAppDocument } from '../../component-runtime/src/app-document';
 
 const HOST_ORIGIN = 'https://app.miakapp.test';
 const SANDBOX_ORIGIN = 'https://sandbox.miakapp.test';
@@ -36,7 +37,7 @@ async function emit(brokerSource = BROKER): Promise<Artifact> {
   return { html: document.html, config: JSON.parse(JSON.stringify(config)) as unknown };
 }
 
-function verify(artifact: Artifact) {
+function verify(artifact: Artifact & { readonly appHtml?: string }) {
   return verifySandboxArtifact({
     ...artifact,
     sandboxOrigin: SANDBOX_ORIGIN,
@@ -170,5 +171,72 @@ describe('verifySandboxArtifact', () => {
     await expect(
       verify({ ...artifact, config: { hosting: { site: SITE, headers: [] } } }),
     ).rejects.toBeInstanceOf(SandboxArtifactError);
+  });
+});
+
+describe('verifySandboxArtifact with whole-house applications', () => {
+  const BOOTSTRAP = 'globalThis.__bootstrap = () => "app";';
+
+  async function emitWithApp(): Promise<Artifact & { appHtml: string }> {
+    const document = await buildSandboxDocument({
+      brokerSource: BROKER,
+      hostOrigin: HOST_ORIGIN,
+      sandboxOrigin: SANDBOX_ORIGIN,
+    });
+    const app = await buildAppDocument({
+      bootstrapSource: BOOTSTRAP,
+      hostOrigin: HOST_ORIGIN,
+      sandboxOrigin: SANDBOX_ORIGIN,
+    });
+    const config = buildSandboxHostingConfig({
+      site: SITE,
+      headers: document.headers,
+      documents: [{ path: app.path, headers: app.headers }],
+    });
+    return { html: document.html, appHtml: app.html, config: JSON.parse(JSON.stringify(config)) as unknown };
+  }
+
+  function editAppCsp(config: unknown, edit: (csp: string) => string): unknown {
+    const clone = JSON.parse(JSON.stringify(config)) as {
+      hosting: { headers: { source: string; headers: { key: string; value: string }[] }[] };
+    };
+    const rule = clone.hosting.headers.find((entry) => entry.source === '/app.html')!;
+    const csp = rule.headers.find((header) => header.key === 'Content-Security-Policy')!;
+    csp.value = edit(csp.value);
+    return clone;
+  }
+
+  it('verifies app.html from its served bytes', async () => {
+    const artifact = await emitWithApp();
+    const report = await verify(artifact);
+    expect(report.app?.scriptHash).toMatch(/=$/u);
+    expect(report.app?.documentDigest).toMatch(/^[0-9a-f]{64}$/u);
+  });
+
+  it('rejects app.html given a real origin, a network, or a different framer', async () => {
+    const artifact = await emitWithApp();
+    const weakened = [
+      (csp: string) => csp.replace('sandbox allow-scripts allow-forms', 'sandbox allow-scripts allow-forms allow-same-origin'),
+      (csp: string) => csp.replace("connect-src 'none'", 'connect-src *'),
+      (csp: string) => csp.replace(`frame-ancestors ${HOST_ORIGIN}`, 'frame-ancestors *'),
+      (csp: string) => csp.replace(" blob: 'unsafe-eval'", " blob: https: 'unsafe-eval'"),
+    ];
+    for (const edit of weakened) {
+      await expect(verify({ ...artifact, config: editAppCsp(artifact.config, edit) }))
+        .rejects.toBeInstanceOf(SandboxArtifactError);
+    }
+  });
+
+  it('rejects app.html deployed without its rule, or a rule without the document', async () => {
+    const artifact = await emitWithApp();
+    const plain = await emit();
+    await expect(verify({ ...plain, appHtml: artifact.appHtml })).rejects.toThrow(/together/u);
+    await expect(verify({ html: artifact.html, config: artifact.config })).rejects.toThrow(/together/u);
+  });
+
+  it('rejects a document edited after its hash was declared', async () => {
+    const artifact = await emitWithApp();
+    const appHtml = artifact.appHtml.replace(BOOTSTRAP, 'globalThis.__bootstrap = () => "attacker";');
+    await expect(verify({ ...artifact, appHtml })).rejects.toThrow(/script-src/u);
   });
 });

@@ -45,6 +45,11 @@ describe('Firebase deployment configuration', () => {
         fieldPath: 'expires_at',
         ttl: true,
         indexes: [],
+      }, {
+        collectionGroup: 'controlPairingCodes',
+        fieldPath: 'expires_at',
+        ttl: true,
+        indexes: [],
       }],
     });
   });

@@ -1,5 +1,13 @@
 export const POINTER_SCHEMA = 'miakapp.component-pointer/1' as const;
 export const COMPONENT_ABI = 'miakapp.component/1' as const;
+/**
+ * A whole-house application: the release is a document-owning program that runs
+ * in a visible, opaque-origin frame instead of a Worker that returns a semantic
+ * tree. Same pointer, same digest, same grant; a different execution surface.
+ * See `app-contract.ts`.
+ */
+export const APP_ABI = 'miakapp.app/1' as const;
+export type ReleaseAbi = typeof COMPONENT_ABI | typeof APP_ABI;
 export const BROKER_PROTOCOL = 1 as const;
 
 export const LIMITS = Object.freeze({
@@ -55,7 +63,7 @@ export interface ComponentPointerV1 {
   home_id: string;
   generation: number;
   release: string;
-  abi: typeof COMPONENT_ABI;
+  abi: ReleaseAbi;
   url: string;
   sha256: string;
   size: number;
@@ -275,6 +283,42 @@ export function isCapabilityGranted(patterns: readonly string[], resource: strin
   ));
 }
 
+/**
+ * Whether a requirement — an exact name or a `prefix.*` pattern — lies wholly
+ * inside a set of allowed patterns. A wildcard requirement is covered only by
+ * the same wildcard or a broader one; never by exact names, which could not
+ * cover the paths it would admit.
+ */
+export function isPatternCovered(allowed: readonly string[], requirement: string): boolean {
+  if (requirement.endsWith('.*')) {
+    const base = validateResourceName(requirement.slice(0, -2));
+    return allowed.some((pattern) => (
+      pattern === requirement
+      || (pattern.endsWith('.*') && base.startsWith(`${pattern.slice(0, -2)}.`))
+    ));
+  }
+  return isCapabilityGranted(allowed, requirement);
+}
+
+/**
+ * Keeps only the state paths a grant covers. Malformed paths are dropped rather
+ * than thrown: the guest never asked for them and cannot fix them.
+ */
+export function selectGrantedState(
+  values: Readonly<Record<string, unknown>>,
+  granted: readonly string[],
+): Record<string, unknown> {
+  const selected: Record<string, unknown> = {};
+  for (const [path, value] of Object.entries(values)) {
+    try {
+      if (isCapabilityGranted(granted, path)) selected[path] = value;
+    } catch {
+      // `isCapabilityGranted` rejects a malformed resource name.
+    }
+  }
+  return selected;
+}
+
 function validateRequirementList(value: unknown, label: string): string[] {
   const entries = denseArray(
     value,
@@ -369,7 +413,10 @@ function validatePointerValue(
   ], [], 'pointer');
 
   if (record.schema !== POINTER_SCHEMA) fail('pointer_invalid', 'unsupported pointer schema');
-  if (record.abi !== COMPONENT_ABI) fail('pointer_invalid', 'unsupported component ABI');
+  if (record.abi !== COMPONENT_ABI && record.abi !== APP_ABI) {
+    fail('pointer_invalid', 'unsupported component ABI');
+  }
+  const abi: ReleaseAbi = record.abi;
   const homeId = boundedString(record.home_id, 128, 'home_id');
   if (homeId !== context.expectedHomeId) fail('pointer_invalid', 'home_id does not match enrollment');
   const generation = safePositiveInteger(record.generation, 'generation');
@@ -388,7 +435,7 @@ function validatePointerValue(
     home_id: homeId,
     generation,
     release,
-    abi: COMPONENT_ABI,
+    abi,
     url,
     sha256,
     size,

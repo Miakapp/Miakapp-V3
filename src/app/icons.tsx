@@ -59,3 +59,33 @@ export function LockIcon(props: IconProps): React.JSX.Element {
     </IconFrame>
   );
 }
+
+export function StarIcon({ filled = false, ...props }: IconProps & { readonly filled?: boolean }): React.JSX.Element {
+  return (
+    <IconFrame {...props}>
+      <path
+        d="m12 3.6 2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8L12 3.6Z"
+        fill={filled ? 'currentColor' : 'none'}
+        stroke="currentColor"
+        strokeLinejoin="round"
+        strokeWidth="1.7"
+      />
+    </IconFrame>
+  );
+}
+
+export function ChevronDownIcon(props: IconProps): React.JSX.Element {
+  return (
+    <IconFrame {...props}>
+      <path d="m7 10 5 5 5-5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+    </IconFrame>
+  );
+}
+
+export function CloseIcon(props: IconProps): React.JSX.Element {
+  return (
+    <IconFrame {...props}>
+      <path d="M6.5 6.5 17.5 17.5M17.5 6.5 6.5 17.5" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+    </IconFrame>
+  );
+}

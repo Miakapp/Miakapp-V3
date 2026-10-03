@@ -3,8 +3,9 @@ import {
   COMPONENT_ABI,
   ContractViolation,
   LIMITS,
-  isCapabilityGranted,
+  isPatternCovered,
   isPlainRecord,
+  selectGrantedState,
   validateEnvelope,
   validateRequirements,
   type CapabilityRequirements,
@@ -109,25 +110,11 @@ export interface ComponentRuntimeSession {
 /**
  * Keeps only the paths the effective grant covers. `isCapabilityGranted` is the
  * contract's own matcher, so the host filters by exactly the rule the broker
- * enforces rather than a second implementation of prefix matching.
+ * enforces rather than a second implementation of prefix matching. Dropping a
+ * malformed path is the containing answer: the broker would reject it too, but
+ * by terminating the runtime — over a path this component never asked for.
  */
-export function selectGrantedState(
-  values: Readonly<Record<string, unknown>>,
-  granted: readonly string[],
-): Record<string, unknown> {
-  const selected: Record<string, unknown> = {};
-  for (const [path, value] of Object.entries(values)) {
-    try {
-      if (isCapabilityGranted(granted, path)) selected[path] = value;
-    } catch {
-      // `isCapabilityGranted` validates the resource name and throws on a
-      // malformed one. Dropping it is the containing answer: the broker would
-      // reject it too, but by terminating the runtime — over a path this
-      // component never asked for and cannot fix.
-    }
-  }
-  return selected;
-}
+export { selectGrantedState } from '../../component-runtime/src/contract';
 
 function randomId(bytes = 24): string {
   const value = crypto.getRandomValues(new Uint8Array(bytes));
@@ -173,7 +160,7 @@ export function assertSandboxOrigin(value: string, hostOrigin: string): string {
 }
 
 function intersectList(required: readonly string[], allowed: readonly string[]): string[] {
-  return required.filter((entry) => isCapabilityGranted(allowed, entry));
+  return required.filter((entry) => isPatternCovered(allowed, entry));
 }
 
 /**
@@ -198,6 +185,11 @@ export function mountComponentRuntime(
   release: ComponentRuntimeRelease,
   options: ComponentRuntimeHostOptions,
 ): Promise<ComponentRuntimeSession> {
+  // A whole-house application owns a document; handing it to the semantic
+  // broker would only fail later, inside the sandbox, with a vaguer code.
+  if (release.pointer.abi !== COMPONENT_ABI) {
+    return Promise.reject(new ContractViolation('abi_mismatch', 'release is not a semantic component'));
+  }
   const hostWindow = options.window ?? window;
   const hostDocument = hostWindow.document;
   const container = options.container ?? hostDocument.body;

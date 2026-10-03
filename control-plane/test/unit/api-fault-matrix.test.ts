@@ -34,6 +34,7 @@ import {
   type AdmissionBudget,
   type AppCheckPrincipal,
   type ComponentPublisherPrincipal,
+  type ComponentUploadInput,
   type ExchangeRequest,
   type FirebasePrincipal,
   type HomeKeyAccessGrant,
@@ -492,13 +493,19 @@ describe('control-plane API dependency fault matrix', () => {
       push_audience: CONFIG.pushAudience,
       components_audience: CONFIG.componentsAudience,
       runtime_diagnostics_endpoint: CONFIG.runtimeDiagnosticsEndpoint,
+      home_url_template: 'https://app.example.test/app?home={home_id}',
     });
+
+    // The resident link is the one location outside the issuer: it must be the
+    // trusted web origin the control plane already allows, never the issuer.
+    const template = new URL(document.home_url_template!.replace('{home_id}', HOME_ID));
+    expect(CONFIG.allowedOrigins.has(template.origin)).toBe(true);
 
     // The document is read by unauthenticated clients, so every advertised
     // location must be a canonical HTTPS URL under our own issuer: a relative
     // or foreign value here would redirect an operator's reports off-origin.
     for (const [key, value] of Object.entries(document)) {
-      if (key === 'schema' || key === 'issuer') continue;
+      if (key === 'schema' || key === 'issuer' || key === 'home_url_template') continue;
       expect(value.startsWith(`${CONFIG.issuer}/`)).toBe(true);
       expect(new URL(value).href).toBe(value);
     }
@@ -1002,5 +1009,172 @@ describe('control-plane API dependency fault matrix', () => {
     ]);
     expect(authorizationCalls).toBe(1);
     expect(transportCalls).toBe(1);
+  });
+});
+
+describe('component release ABIs', () => {
+  const requires = { state_read: [], event_subscribe: [], event_publish: [], call: [], presentation: [] };
+  const upload = (abi: string) => jsonRequest(
+    'POST',
+    `/v1/homes/${HOME_ID}/component-uploads`,
+    { release: 'house-1', abi, sha256: 'A'.repeat(43), size: ARTIFACT.byteLength, requires },
+    { Authorization: COMPONENT_AUTHORIZATION },
+  );
+
+  test('admits a whole-house application and passes its ABI through unchanged', async () => {
+    const received: ComponentUploadInput[] = [];
+    for (const abi of ['miakapp.app/1', 'miakapp.component/1']) {
+      const response = await request(dependencies({
+        componentStore: {
+          issueUpload: async (_principal: ComponentPublisherPrincipal, _homeId: string, input: ComponentUploadInput) => {
+            received.push(input);
+            return { upload_id: UPLOAD_ID };
+          },
+        },
+      }), upload(abi));
+      expect(response.status).toBe(201);
+    }
+    expect(received.map((input) => input.abi)).toEqual(['miakapp.app/1', 'miakapp.component/1']);
+  });
+
+  test('refuses an ABI the shell cannot run', async () => {
+    let calls = 0;
+    const response = await request(dependencies({
+      componentStore: {
+        issueUpload: async () => {
+          calls += 1;
+          return {};
+        },
+      },
+    }), upload('miakapp.app/2'));
+    expect(response.status).toBe(400);
+    expect(calls).toBe(0);
+  });
+});
+
+describe('resident home interface read', () => {
+  const POINTER = Object.freeze({
+    schema: 'miakapp.component-pointer/1',
+    home_id: HOME_ID,
+    generation: 3,
+    release: 'house-3',
+    abi: 'miakapp.app/1',
+    url: `https://control.example.test/v1/components/${'A'.repeat(43)}.js`,
+    sha256: 'A'.repeat(43),
+    size: 120,
+    requires: { state_read: ['room.*'], event_subscribe: [], event_publish: [], call: [], presentation: [] },
+  });
+
+  function userAuth(uid: string, authTime = NOW_SECONDS - 60) {
+    return Object.freeze({
+      verifyIdToken: async (token: string): Promise<DecodedIdToken> => {
+        if (token !== OWNER_TOKEN) throw new Error('Unexpected Firebase token');
+        return { ...decodedOwner(), sub: uid, uid, auth_time: authTime };
+      },
+    });
+  }
+
+  function interfaceRequest(headers: Readonly<Record<string, string>> = {}): RouterRequest {
+    return Object.freeze({
+      method: 'GET',
+      path: `/v1/homes/${HOME_ID}/interface`,
+      headers: { Authorization: OWNER_AUTHORIZATION, 'X-Firebase-AppCheck': APP_CHECK_TOKEN, ...headers },
+    });
+  }
+
+  function interfaceStore(calls: string[]) {
+    return {
+      readHomeInterface: async (homeId: string) => {
+        calls.push(homeId);
+        return { name: 'Synthetic Home', generation: 3, pointer: POINTER };
+      },
+    };
+  }
+
+  test('serves the owner and any other signed-in user the same pointer and trusted link, nothing more', async () => {
+    for (const auth of [userAuth('synthetic-owner'), userAuth('synthetic-guest'), userAuth('synthetic-outsider')]) {
+      const calls: string[] = [];
+      const response = await request(dependencies({ auth, componentStore: interfaceStore(calls) }), interfaceRequest());
+      expect(response.status).toBe(200);
+      expect(response.headers.get('cache-control')).toContain('no-store');
+      const body = JSON.parse(response.text) as Record<string, unknown>;
+      expect(Object.keys(body).sort()).toEqual(['generation', 'home_id', 'home_url', 'name', 'pointer', 'schema']);
+      expect(body).toEqual({
+        schema: 'miakapp.home-interface/1',
+        home_id: HOME_ID,
+        name: 'Synthetic Home',
+        home_url: `https://app.example.test/app?home=${HOME_ID}`,
+        generation: 3,
+        pointer: POINTER,
+      });
+      // The resident link is the shell, never the raw artifact.
+      expect(body.home_url).not.toContain('/v1/components/');
+      expect(calls).toEqual([HOME_ID]);
+      expectNoSecretLeak(response.text);
+    }
+  });
+
+  test('does not require a recent sign-in to read, while owner writes still do', async () => {
+    const stale = userAuth('synthetic-owner', NOW_SECONDS - 3_600);
+    const read = await request(dependencies({ auth: stale, componentStore: interfaceStore([]) }), interfaceRequest());
+    expect(read.status).toBe(200);
+
+    let keyWrites = 0;
+    const write = await request(dependencies({
+      auth: stale,
+      store: { createHomeKey: async () => { keyWrites += 1; return {}; } },
+    }), jsonRequest(
+      'POST',
+      `/v1/homes/${HOME_ID}/home-keys`,
+      { label: 'agent' },
+      { Authorization: OWNER_AUTHORIZATION },
+    ));
+    expect(write.status).toBe(401);
+    expect(JSON.parse(write.text).error.code).toBe('recent_authentication_required');
+    expect(keyWrites).toBe(0);
+  });
+
+  test('refuses a missing App Check, a revoked or invalid Firebase session, and an unknown home', async () => {
+    const calls: string[] = [];
+    const noAppCheck = await request(dependencies({ componentStore: interfaceStore(calls) }), Object.freeze({
+      method: 'GET',
+      path: `/v1/homes/${HOME_ID}/interface`,
+      headers: { Authorization: OWNER_AUTHORIZATION },
+    }));
+    expect(noAppCheck.status).toBe(401);
+
+    const revoked = Object.freeze({
+      verifyIdToken: async (): Promise<DecodedIdToken> => {
+        throw Object.assign(new Error('revoked'), { code: 'auth/id-token-revoked' });
+      },
+    });
+    const revokedResponse = await request(
+      dependencies({ auth: revoked, componentStore: interfaceStore(calls) }),
+      interfaceRequest(),
+    );
+    expect(revokedResponse.status).toBe(401);
+
+    const anonymous = await request(dependencies({ componentStore: interfaceStore(calls) }), Object.freeze({
+      method: 'GET',
+      path: `/v1/homes/${HOME_ID}/interface`,
+      headers: { 'X-Firebase-AppCheck': APP_CHECK_TOKEN },
+    }));
+    expect(anonymous.status).toBe(401);
+    expect(calls).toEqual([]);
+
+    const missing = await request(dependencies({
+      componentStore: { readHomeInterface: async () => { throw new ApiError('home_not_found'); } },
+    }), interfaceRequest());
+    expect(missing.status).toBe(404);
+  });
+
+  test('advertises the resident link template in discovery and never a component URL', async () => {
+    const response = await request(dependencies(), Object.freeze({
+      method: 'GET',
+      path: '/.well-known/miakapp-control-plane',
+      headers: {},
+    }));
+    const body = JSON.parse(response.text) as Record<string, string>;
+    expect(body.home_url_template).toBe('https://app.example.test/app?home={home_id}');
   });
 });

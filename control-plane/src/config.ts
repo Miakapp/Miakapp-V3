@@ -109,6 +109,7 @@ export function loadEmulatorConfig(
     pushAudience: fixture.deployment.push_audience,
     componentsAudience: fixture.deployment.components_audience,
     runtimeDiagnosticsEndpoint: fixture.deployment.runtime_diagnostics_endpoint,
+    homeUrlTemplate: 'https://app.example.test/app?home={home_id}',
     componentBucket,
     componentUploadBaseUrl: 'https://control.example.test/v1/component-uploads',
     componentArtifactBaseUrl: 'https://control.example.test/v1/components',
