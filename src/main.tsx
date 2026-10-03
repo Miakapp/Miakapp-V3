@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import {
   createConfiguredComponentRelease,
   createConfiguredHost,
+  createConfiguredPairingService,
   readConfiguredDiagnosticsEndpoint,
   readConfiguredSandboxOrigin,
 } from './app/configured-host';
@@ -17,6 +18,7 @@ createRoot(root).render(
   <ProductApp
     createComponentRelease={createConfiguredComponentRelease}
     createHost={createConfiguredHost}
+    createPairingService={createConfiguredPairingService}
     readDiagnosticsEndpoint={readConfiguredDiagnosticsEndpoint}
     readSandboxOrigin={readConfiguredSandboxOrigin}
   />,

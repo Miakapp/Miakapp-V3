@@ -4,8 +4,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createDemoHost } from './demo-host';
 import type { TrustedHost, TrustedHostSnapshot } from './host';
-import { COPY } from './copy';
-import { AGENT_START_PROMPT, ProductApp } from './product-app';
+import { agentStartPrompt, COPY } from './copy';
+import { ProductApp } from './product-app';
+
+const FR_PROMPT = agentStartPrompt('fr');
+const EN_PROMPT = agentStartPrompt('en');
 
 const fr = COPY.fr;
 const en = COPY.en;
@@ -82,7 +85,7 @@ describe('Miakapp product entry flow', () => {
       level: 1,
       name: fr.onboardingTitle,
     })).toBeVisible();
-    expect(screen.getByText(AGENT_START_PROMPT)).toBeVisible();
+    expect(screen.getByText(FR_PROMPT)).toBeVisible();
     expect(screen.getByRole('link', { name: /Utiliser dans molted\.cloud/u })).toBeVisible();
     expect(window.location.pathname).toBe('/new-home');
     expect(signIn).not.toHaveBeenCalled();
@@ -135,10 +138,10 @@ describe('Miakapp product entry flow', () => {
       />,
     );
 
-    expect(screen.getByText(AGENT_START_PROMPT)).toBeVisible();
+    expect(screen.getByText(FR_PROMPT)).toBeVisible();
     await user.click(screen.getByRole('button', { name: fr.onboardingCopy }));
 
-    expect(writeClipboard).toHaveBeenCalledWith(AGENT_START_PROMPT);
+    expect(writeClipboard).toHaveBeenCalledWith(FR_PROMPT);
     await waitFor(() => expect(screen.getByRole('button', { name: fr.onboardingCopied })).toBeVisible());
   });
 
@@ -160,7 +163,7 @@ describe('Miakapp product entry flow', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Copie impossible. Sélectionnez le prompt ci-dessus.',
     );
-    expect(screen.getByText(AGENT_START_PROMPT)).toBeVisible();
+    expect(screen.getByText(FR_PROMPT)).toBeVisible();
   });
 
   it('offers Molted as the recommended managed path', () => {
@@ -230,12 +233,24 @@ describe('Miakapp language', () => {
     expect(screen.getByRole('button', { name: /Français/u })).toBeVisible();
   });
 
-  it('never translates the prompt, because a translated command does not run', async () => {
+  it('shows and copies the prompt in the page language, with the commands left verbatim', async () => {
     const user = userEvent.setup();
-    render(<ProductApp initialLocale="fr" initialRoute="new-home" />);
+    const writeClipboard = vi.fn(async () => undefined);
+    render(<ProductApp initialLocale="fr" initialRoute="new-home" writeClipboard={writeClipboard} />);
 
-    expect(screen.getByText(AGENT_START_PROMPT)).toBeVisible();
+    expect(screen.getByText(FR_PROMPT)).toBeVisible();
     await user.click(screen.getByRole('button', { name: /English/u }));
-    expect(screen.getByText(AGENT_START_PROMPT)).toBeVisible();
+    expect(screen.getByText(EN_PROMPT)).toBeVisible();
+    expect(screen.queryByText(FR_PROMPT)).toBeNull();
+    expect(EN_PROMPT).not.toMatch(/Installe|puis|pour commencer/u);
+
+    await user.click(screen.getByRole('button', { name: en.onboardingCopy }));
+    expect(writeClipboard).toHaveBeenCalledWith(EN_PROMPT);
+
+    // An agent runs the commands, so both languages carry the very same ones.
+    for (const prompt of [FR_PROMPT, EN_PROMPT]) {
+      expect(prompt).toContain('`npm i -g @miakapp/cli`');
+      expect(prompt).toContain('`miakapp docs start`');
+    }
   });
 });
