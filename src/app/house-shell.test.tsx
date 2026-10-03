@@ -627,3 +627,36 @@ describe('house shell — semantic resident language', () => {
     expect(screen.getByRole('button', { name: /Miakapp menu/ })).toBeVisible();
   });
 });
+
+
+describe('house shell — resident sign-out', () => {
+  it('offers sign-out in the trusted settings before loading any house resource', async () => {
+    const user = userEvent.setup();
+    const signOut = vi.fn(async () => undefined);
+    const coordinator = coordinatorFor();
+    render(<App host={{ ...hostWith({ authenticated: true }), signOut }}
+      createComponentRelease={() => coordinator}
+      consentStore={createHouseConsentStore(memoryStorage())} />);
+    await user.click(screen.getByRole('button', { name: 'Réglages' }));
+    await user.click(screen.getByRole('button', { name: 'Se déconnecter' }));
+    expect(signOut).toHaveBeenCalledOnce();
+    expect(coordinator.activate).not.toHaveBeenCalled();
+  });
+
+  it('blocks duplicate sign-outs and reports a failure without claiming success', async () => {
+    const user = userEvent.setup();
+    let reject!: (reason: Error) => void;
+    const signOut = vi.fn(() => new Promise<void>((_done, fail) => { reject = fail; }));
+    render(<App host={{ ...hostWith({ authenticated: true }), signOut }}
+      createComponentRelease={() => coordinatorFor()}
+      consentStore={createHouseConsentStore(memoryStorage())} />);
+    await user.click(screen.getByRole('button', { name: 'Réglages' }));
+    await user.click(screen.getByRole('button', { name: 'Se déconnecter' }));
+    expect(screen.getByRole('button', { name: 'Déconnexion…' })).toBeDisabled();
+    await act(async () => { reject(new Error('synthetic sensitive error')); });
+    expect(screen.getByRole('alert')).toHaveTextContent('La déconnexion a échoué. Réessayez.');
+    expect(screen.queryByText('synthetic sensitive error')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Se déconnecter' })).toBeEnabled();
+    expect(signOut).toHaveBeenCalledOnce();
+  });
+});
