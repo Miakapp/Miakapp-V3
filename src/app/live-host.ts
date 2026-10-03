@@ -345,7 +345,7 @@ class LiveTrustedHost implements TrustedHost {
       noticeTitle: this.#readOnlyHome ? 'Maison de Mathieu'
         : this.#signedIn ? 'Live staging connection' : 'Connect to Miakapp staging',
       noticeDetail: this.#readOnlyHome
-        ? 'États du Salon et de la Mezzanine. Aucune commande physique disponible.'
+        ? 'États du Salon, de l’Entrée et de la Mezzanine. Aucune commande physique disponible.'
         : this.#signedIn
           ? 'Firebase identity, App Check, control plane, relay and Bun coordinator.'
           : 'Sign in with Google to open the trusted live path.',
