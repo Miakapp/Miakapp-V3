@@ -31,7 +31,7 @@ class FakePairing implements PairingService {
   readonly created: NewPairingHome[] = [];
   readonly revoked: string[] = [];
   readonly signIn = vi.fn(async () => {
-    this.account = { email: 'lea@example.test', name: 'Léa' };
+    this.account = { id: 'lea', email: 'lea@example.test', name: 'Léa' };
     this.#emit();
   });
   readonly signOut = vi.fn(async () => {
@@ -42,6 +42,11 @@ class FakePairing implements PairingService {
 
   constructor(defaultRelayUrl: string | null = 'wss://relay.example.test/ws') {
     this.defaultRelayUrl = defaultRelayUrl ?? undefined;
+  }
+
+  setAccount(account: PairingAccount): void {
+    this.account = account;
+    this.#emit();
   }
 
   #emit(): void {
@@ -159,7 +164,7 @@ describe('agent pairing page', () => {
     const user = userEvent.setup();
     const service = new FakePairing();
     service.homes = [];
-    service.account = { email: 'lea@example.test', name: null };
+    service.account = { id: 'lea', email: 'lea@example.test', name: null };
     renderPage(service, 'en');
 
     expect(await screen.findByText(en.pairHomesEmpty)).toBeVisible();
@@ -176,7 +181,7 @@ describe('agent pairing page', () => {
     const user = userEvent.setup();
     const service = new FakePairing(null);
     service.homes = [];
-    service.account = { email: 'lea@example.test', name: null };
+    service.account = { id: 'lea', email: 'lea@example.test', name: null };
     renderPage(service, 'en');
 
     await user.type(await screen.findByLabelText(en.pairCreateName), 'Chalet');
@@ -189,7 +194,7 @@ describe('agent pairing page', () => {
   it('re-confirms identity when the sign-in is too old, then finishes what was asked', async () => {
     const user = userEvent.setup();
     const service = new FakePairing();
-    service.account = { email: 'lea@example.test', name: null };
+    service.account = { id: 'lea', email: 'lea@example.test', name: null };
     service.issueFailures = [new PairingError('stale_sign_in')];
     renderPage(service, 'en');
 
@@ -205,10 +210,107 @@ describe('agent pairing page', () => {
     expect(service.issued).toEqual(['maison-lea']);
   });
 
+  it('does not retry a previous account’s grant after choosing a different account', async () => {
+    const user = userEvent.setup();
+    const service = new FakePairing();
+    service.account = { id: 'old', email: 'old@example.test', name: null };
+    service.issueFailures = [new PairingError('stale_sign_in')];
+    renderPage(service, 'en');
+    await user.click(await screen.findByRole('button', { name: /Maison de Léa/u }));
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: en.pairConfirmSubmit }));
+    await user.click(within(await screen.findByRole('alert')).getByRole('button', { name: en.pairErrorStaleCta }));
+    expect(await screen.findByRole('heading', { name: en.pairHomesTitle })).toBeVisible();
+    expect(service.issued).toEqual([]);
+    expect(screen.queryByText(CODE)).toBeNull();
+  });
+
+  it('resets consent for distinct account IDs even when their display email is the same', async () => {
+    const user = userEvent.setup();
+    const service = new FakePairing();
+    service.account = { id: 'old', email: null, name: 'Resident' };
+    renderPage(service, 'en');
+    await user.click(await screen.findByRole('button', { name: /Maison de Léa/u }));
+    await user.click(screen.getByRole('checkbox'));
+    act(() => service.setAccount({ id: 'new', email: null, name: 'Resident' }));
+    expect(await screen.findByRole('heading', { name: en.pairHomesTitle })).toBeVisible();
+    expect(screen.queryByRole('checkbox')).toBeNull();
+    expect(service.issued).toEqual([]);
+  });
+
+  it('does not display a delayed code for A under the name of home B', async () => {
+    const user = userEvent.setup();
+    const service = new FakePairing();
+    service.account = { id: 'lea', email: 'lea@example.test', name: null };
+    service.homes.push({ id: 'chalet-b', name: 'Chalet B', icon: 'house' });
+    let resolveCode!: (code: IssuedPairingCode) => void;
+    vi.spyOn(service, 'issueCode').mockReturnValue(new Promise((resolve) => { resolveCode = resolve; }));
+    renderPage(service, 'en');
+    await user.click(await screen.findByRole('button', { name: /Maison de Léa/u }));
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: en.pairConfirmSubmit }));
+    await user.click(screen.getByRole('button', { name: en.pairBack }));
+    await user.click(await screen.findByRole('button', { name: /Chalet B/u }));
+    await act(async () => resolveCode({ code: CODE, homeId: 'maison-lea', scopes: [], expiresAtMs: NOW + 600_000 }));
+    expect(screen.queryByText(CODE)).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Full access to “Chalet B”' })).toBeVisible();
+    expect(screen.getByRole('checkbox')).not.toBeChecked();
+  });
+
+  it('discards delayed key failures after returning to another home', async () => {
+    const user = userEvent.setup();
+    const service = new FakePairing();
+    service.account = { id: 'lea', email: 'lea@example.test', name: null };
+    service.homes.push({ id: 'chalet-b', name: 'Chalet B', icon: 'house' });
+    let rejectKeys!: (error: Error) => void;
+    vi.spyOn(service, 'listKeys').mockReturnValue(new Promise((_resolve, reject) => { rejectKeys = reject; }));
+    renderPage(service, 'en');
+    await user.click(await screen.findByRole('button', { name: /Maison de Léa/u }));
+    await user.click(screen.getByText(en.pairKeysTitle));
+    await user.click(screen.getByRole('button', { name: en.pairBack }));
+    await user.click(await screen.findByRole('button', { name: /Chalet B/u }));
+    await act(async () => rejectKeys(new PairingError('stale_sign_in')));
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Full access to “Chalet B”' })).toBeVisible();
+  });
+
+  it('does not replay an abandoned home’s action when a pending reauthentication finishes', async () => {
+    const user = userEvent.setup();
+    const service = new FakePairing();
+    service.account = { id: 'lea', email: 'lea@example.test', name: null };
+    service.homes.push({ id: 'chalet-b', name: 'Chalet B', icon: 'house' });
+    service.issueFailures = [new PairingError('stale_sign_in')];
+    let finishSignIn!: () => void;
+    service.signIn.mockImplementation(() => new Promise((resolve) => { finishSignIn = resolve; }));
+    renderPage(service, 'en');
+    await user.click(await screen.findByRole('button', { name: /Maison de Léa/u }));
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: en.pairConfirmSubmit }));
+    await user.click(within(await screen.findByRole('alert')).getByRole('button', { name: en.pairErrorStaleCta }));
+    await user.click(screen.getByRole('button', { name: en.pairBack }));
+    await user.click(await screen.findByRole('button', { name: /Chalet B/u }));
+    await act(async () => finishSignIn());
+    expect(service.issued).toEqual([]);
+    expect(screen.queryByText(CODE)).toBeNull();
+  });
+
+  it('rejects a pairing response naming a different home', async () => {
+    const user = userEvent.setup();
+    const service = new FakePairing();
+    service.account = { id: 'lea', email: 'lea@example.test', name: null };
+    vi.spyOn(service, 'issueCode').mockResolvedValue({ code: CODE, homeId: 'chalet-b', scopes: [], expiresAtMs: NOW + 600_000 });
+    renderPage(service, 'en');
+    await user.click(await screen.findByRole('button', { name: /Maison de Léa/u }));
+    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: en.pairConfirmSubmit }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(en.pairErrorUnavailable);
+    expect(screen.queryByText(CODE)).toBeNull();
+  });
+
   it('says plainly when the account is not the home’s admin', async () => {
     const user = userEvent.setup();
     const service = new FakePairing();
-    service.account = { email: 'guest@example.test', name: null };
+    service.account = { id: 'lea', email: 'guest@example.test', name: null };
     service.issueFailures = [new PairingError('not_admin')];
     renderPage(service, 'fr');
 
@@ -225,7 +327,7 @@ describe('agent pairing page', () => {
     const user = userEvent.setup();
     let now = NOW;
     const service = new FakePairing();
-    service.account = { email: 'lea@example.test', name: null };
+    service.account = { id: 'lea', email: 'lea@example.test', name: null };
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {
       renderPage(service, 'en', () => now);
@@ -248,7 +350,7 @@ describe('agent pairing page', () => {
   it('lists the home’s keys and revokes one', async () => {
     const user = userEvent.setup();
     const service = new FakePairing();
-    service.account = { email: 'lea@example.test', name: null };
+    service.account = { id: 'lea', email: 'lea@example.test', name: null };
     renderPage(service, 'en');
 
     await user.click(await screen.findByRole('button', { name: /Maison de Léa/u }));
@@ -262,7 +364,7 @@ describe('agent pairing page', () => {
   it('lets the person switch account and forgets the previous choice', async () => {
     const user = userEvent.setup();
     const service = new FakePairing();
-    service.account = { email: 'old@example.test', name: null };
+    service.account = { id: 'old', email: 'old@example.test', name: null };
     renderPage(service, 'en');
 
     await user.click(await screen.findByRole('button', { name: /Maison de Léa/u }));
