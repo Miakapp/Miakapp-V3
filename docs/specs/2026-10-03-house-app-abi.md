@@ -1,8 +1,9 @@
 # Whole-house applications — `miakapp.app/1`
 
-Status: implemented in the browser shell, sandbox site build and control plane
-(2026-10-03). Publishing still needs the CLI changes listed at the end, and the
-server-side gaps listed under "Not yet end to end".
+Status: implemented in the browser shell, sandbox site build, control plane and
+CLI (`app:` manifests, `@miakapp/app`, `templates/home/app`), with an executable
+two-house proof (`control-plane/test/e2e/run-two-house-cli.sh`). Remaining items
+are deployment steps and the browser limitations listed below.
 
 ## Why
 
@@ -97,28 +98,37 @@ also stops a house from navigating its frame elsewhere *before* any request
 leaves; without it the shell still detects the navigation and removes the
 frame, but only after the request.
 
-## Not yet end to end
+## Residents, membership and the resident link
 
-- The pointer read (`GET /v1/homes/{id}/component-pointer`) is owner-only and
-  requires a sign-in younger than 600 s. Residents cannot load a house UI, and
-  an owner sees "unavailable" ten minutes after signing in. Needs a
-  resident-readable pointer route (membership-checked, no recent-auth).
-- `POST /v1/user-relay-tokens:exchange` does not check membership in the
-  control plane. Cross-home isolation of *state and calls* therefore rests on
-  the relay/coordinator; it must be verified or added server-side.
-- The CLI (`miakapp publish`) still sends `miakapp.component/1`; it needs an
-  `app` project shape (see below).
+- The shell reads the live pointer through `GET /v1/homes/{id}/interface`
+  (RFC 0004 §13.5): any signed-in resident with App Check, no recent sign-in.
+  This is the audience the `components/{homeId}` rule already had; it is not
+  membership. Home data reaches a resident only through the relay, filtered by
+  the coordinator's per-user ACL (RFC 0001 §7.2), so an outsider sees an
+  interface with no data and cannot call anything but `miakapp.join`.
+- The bundle is therefore readable by any signed-in user who learns its digest:
+  it MUST contain no household data.
+- `home_url` is `<home_app_origin>/app?home=<id>`, advertised in discovery as
+  `home_url_template` only when the deployment declares `home_app_origin`, and
+  printed by `miakapp publish`/`status`. The artifact URL is never a link.
+- Every home opens the same way: consent, then its published interface (app or
+  component) in the house shell, or a "nothing published yet" screen. No home
+  is special-cased in the platform.
+
+## Browser limitations
+
 - Browsers without out-of-process frames (some mobile engines) run the house in
   the shell's process: a house stuck in an infinite loop freezes the tab and the
   watchdog cannot run. Desktop Chromium was verified to isolate it.
 - Opaque-origin frames have no persistent storage; a house that needs
   preferences must keep them in home state.
 
-## Required CLI / SDK changes (other repository)
+## CLI and SDK
 
-- `miakapp.yaml`: `app: { artifact, release, requires: { state_read, call } }`
-  (event and presentation lists empty), published with `abi: "miakapp.app/1"`.
-- A template `templates/home/app/` (IIFE bundle, `window.miakapp` types,
-  stale/pending/outcome-unknown handling) and an `@miakapp/app` type package.
-- `miakapp docs` / agent pack: present `app` as the default for a resident UI,
-  `component` for minimal semantic screens.
+- `miakapp.yaml` takes exactly one of `app:` (default, `miakapp.app/1`) or
+  `component:`. `app.requires` may declare only `state_read` and `call`.
+- `miakapp init` writes an `app:` section (`--kind component` for the old
+  shape); `templates/home/app` is a DOM house app built with
+  `bun build app/main.ts --format=iife --minify --outfile dist/app.js`.
+- `@miakapp/app` types `window.miakapp` (`connect`, `subscribe`, `paths`,
+  `call`, `callErrorCode`).
