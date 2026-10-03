@@ -143,6 +143,46 @@ function hostWith(identity: LiveIdentity, clients: BrowserClient[]) {
 }
 
 describe('live trusted host', () => {
+  it('retries a failed relay once with cleared state and a new authorization window', async () => {
+    const first = fakeClient(), second = fakeClient();
+    vi.mocked(first.start).mockRejectedValue(new Error('offline'));
+    const stopping = deferred<void>();
+    vi.mocked(first.stop).mockReturnValue(stopping.promise);
+    const host = hostWith(fakeIdentity(true), [first, second]);
+    await waitFor(() => expect(host.getSnapshot().connection).toBe('unavailable'));
+    first.emitState({ epoch: new Uint8Array(16), revision: 1, stale: false, values: { private: 21 } });
+    const epoch = host.getSnapshot().authorizationEpoch;
+    expect(host.reconnect).toBeTypeOf('function');
+    host.reconnect?.(); host.reconnect?.();
+    expect(first.stop).toHaveBeenCalledOnce();
+    expect(second.start).toHaveBeenCalledOnce();
+    expect(host.getSnapshot()).toMatchObject({ connection: 'connecting', authenticated: true });
+    expect(host.getSnapshot().authorizationEpoch).not.toBe(epoch);
+    expect(host.getSnapshot().homeState).toBeUndefined();
+    first.emitLifecycle({ previous: 'stopped', current: 'ready' });
+    first.emitState({ epoch: new Uint8Array(16), revision: 2, stale: false, values: { private: 99 } });
+    expect(host.getSnapshot().homeState).toBeUndefined();
+    expect(host.getSnapshot().connection).toBe('connecting');
+    second.emitLifecycle({ previous: 'connecting', current: 'ready' });
+    stopping.resolve(); await stopping.promise;
+    expect(host.getSnapshot().connection).toBe('ready');
+    expect(first.calls.start).not.toHaveBeenCalled();
+    expect(second.calls.start).not.toHaveBeenCalled();
+    host.dispose();
+  });
+
+  it('does not retry a ready, connecting, signed-out or disposed host', async () => {
+    const identity = fakeIdentity(true), client = fakeClient();
+    const host = hostWith(identity, [client]);
+    expect(host.reconnect).toBeTypeOf('function');
+    host.reconnect?.();
+    client.emitLifecycle({ previous: 'connecting', current: 'ready' });
+    host.reconnect?.();
+    identity.emit(false); host.reconnect?.();
+    host.dispose(); host.reconnect?.();
+    expect(client.start).toHaveBeenCalledOnce();
+  });
+
   it('drops the old relay and private state on a direct account switch', async () => {
     const identity = fakeIdentity(true);
     const first = fakeClient();
