@@ -197,6 +197,36 @@ describe('live trusted host', () => {
     host.dispose();
   });
 
+  it('exposes pending and retryable sign-in failure without opening duplicate popups', async () => {
+    const identity = fakeIdentity(false);
+    const first = deferred<void>();
+    vi.mocked(identity.signIn).mockImplementationOnce(() => first.promise);
+    const host = hostWith(identity, []);
+    host.signIn?.(); host.signIn?.();
+    expect(identity.signIn).toHaveBeenCalledOnce();
+    expect(host.getSnapshot()).toMatchObject({ signInStatus: 'pending', authenticated: false });
+    first.reject(new Error('private provider detail'));
+    await waitFor(() => expect(host.getSnapshot()).toMatchObject({ signInStatus: 'failed' }));
+    expect(JSON.stringify(host.getSnapshot())).not.toContain('private provider detail');
+    host.signIn?.();
+    await waitFor(() => expect(host.getSnapshot()).toMatchObject({ signInStatus: 'idle' }));
+    expect(identity.signIn).toHaveBeenCalledTimes(2);
+    host.dispose();
+  });
+
+  it('ignores a rejected old popup after an identity transition', async () => {
+    const identity = fakeIdentity(false);
+    const first = deferred<void>();
+    vi.mocked(identity.signIn).mockImplementationOnce(() => first.promise);
+    const host = hostWith(identity, [fakeClient()]);
+    host.signIn?.();
+    identity.emit(true); identity.emit(false);
+    first.reject(new Error('old popup'));
+    await new Promise(resolve => setTimeout(resolve, 0));
+    expect(host.getSnapshot()).toMatchObject({ signInStatus: 'idle', authenticated: false });
+    host.dispose();
+  });
+
   it('keeps relay creation behind an explicit Firebase sign-in', () => {
     const identity = fakeIdentity(false);
     const host = hostWith(identity, []);
