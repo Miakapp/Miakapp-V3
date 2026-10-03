@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createHouseConsentStore, HOUSE_CONSENT_VERSION } from './house-consent';
 
-const KEY = 'miakapp.house-consent';
+const KEY = 'miakapp.house-consent.v2:anonymous';
 afterEach(() => localStorage.clear());
 
 describe('observable house consent', () => {
@@ -74,3 +74,28 @@ describe('observable house consent', () => {
     expect(store.read('home-a')).toBeUndefined();
   });
 });
+
+ describe('resident agreement ownership', () => {
+  it('does not transfer an agreement to another identity or anonymous visitor', () => {
+    const a = createHouseConsentStore(localStorage, () => 17, 'account:a');
+    a.grant('home-a');
+    expect(createHouseConsentStore(localStorage, () => 18, 'account:b').read('home-a')).toBeUndefined();
+    expect(createHouseConsentStore(localStorage).read('home-a')).toBeUndefined();
+    expect(createHouseConsentStore(localStorage, () => 19, 'account:a').read('home-a')).toEqual({version: HOUSE_CONSENT_VERSION, grantedAt: 17});
+  });
+  it('leaves legacy ownerless consent untouched without assigning it', () => {
+    const old = JSON.stringify({'home-a': {version: HOUSE_CONSENT_VERSION, grantedAt: 17}});
+    localStorage.setItem('miakapp.house-consent', old);
+    expect(createHouseConsentStore(localStorage, () => 18, 'account:b').read('home-a')).toBeUndefined();
+    expect(localStorage.getItem('miakapp.house-consent')).toBe(old);
+  });
+  it('withdraws only the selected account and home', () => {
+    const a = createHouseConsentStore(localStorage, () => 17, 'account:a');
+    const b = createHouseConsentStore(localStorage, () => 18, 'account:b');
+    a.grant('home-a'); a.grant('home-b'); b.grant('home-a');
+    a.revoke('home-a');
+    expect(a.read('home-a')).toBeUndefined();
+    expect(a.read('home-b')).toBeDefined();
+    expect(b.read('home-a')).toBeDefined();
+  });
+ });
