@@ -230,6 +230,14 @@ authoritative. `home_id`, owner and timestamps cannot be supplied by the caller.
 All writes go through the control plane; public Firestore rules never permit a
 client to create or modify a directory home.
 
+`GET /v1/homes` takes no body and returns `200`
+`{ "schema":"miakapp.home-list/1", "homes":[<home>...] }`: the homes whose
+private record names the verified `sub` as owner, at most 16, ordered by
+`created_at` then `home_id`, each in the representation above. Version 1 has no
+platform-side membership, so this is the complete set of homes the account
+administers; it requires no recent authentication because it discloses only
+the caller's own directory entries.
+
 ## 6. Home Keys
 
 ### 6.1 Format and entropy
@@ -335,6 +343,102 @@ Creation wraps this as
 `{ "schema":"miakapp.home-key-list/1", "keys":[...] }`, ordered by
 `created_at` then `key_id`, with at most 64 entries. Deletion's uniform `204`
 avoids an owner-only existence oracle and makes revocation safely repeatable.
+
+### 6.6 Agent pairing
+
+Pairing lets an owner hand an agent a new Home Key without the agent ever
+holding the owner's account, and without the owner copying a 70-character key.
+The owner signs in in their own browser, chooses or creates a home, explicitly
+confirms full access to that home, and receives a short-lived code. The agent
+redeems the code through the CLI and receives a fresh Home Key.
+
+**Issuance.** `POST /v1/homes/{homeId}/pairing-codes` requires the owner's
+Firebase ID token with recent authentication (Section 5.1). The body is exactly:
+
+```json
+{ "access": "full_home", "confirmation": "grant-full-home-access:synthetic-home" }
+```
+
+`confirmation` MUST equal `grant-full-home-access:` followed by the path home
+ID. It is not a secret. It makes the grant an explicit statement bound to one
+home rather than a default. Ownership is checked transactionally (`not_home_owner`,
+`home_not_found`). Success is `201`:
+
+```json
+{
+  "schema": "miakapp.pairing-code/1",
+  "code": "MIAK-01234-56789-ABCDE-FGHJK-MNPQR",
+  "home_id": "synthetic-home",
+  "access": "full_home",
+  "scopes": ["relay:coordinator", "relay:cli", "push:send", "components:publish"],
+  "expires_at": "2026-10-03T10:10:00.000Z",
+  "redeem_endpoint": "https://control.example.test/v1/pairing/redeem"
+}
+```
+
+The code is 25 Crockford base32 characters (125 random bits), displayed with a
+`MIAK-` prefix in groups of five. It expires exactly ten minutes after issuance
+and is single-use. The registry stores it only as
+`controlPairingCodes/{HMAC-SHA-256(pepper[v], "miakapp.pairing-code/1\0" ‖ code)}`
+with the home, issuing UID, scopes, status, timestamps and, after redemption,
+the created key ID. Neither the code nor any reversible form of it is persisted.
+`expires_at` carries a Firestore TTL policy. Expiry is enforced by the
+redemption transaction, not by TTL deletion. A lookup made under one pepper
+version does not match after the current version rotates, so a code issued
+just before a rotation must be reissued. Its ten-minute lifetime bounds that
+effect.
+
+**Redemption.** `POST /v1/pairing/redeem` is the fixed CLI contract. It carries
+no `Authorization`, App Check header or cookie (any of them is `invalid_request`).
+The code is the only credential. The body is exactly
+`{ "code": string, "label": string }`. `label` follows the Home Key label rule
+(1–64 UTF-8 bytes, no control characters). `code` is normalized: surrounding
+whitespace is trimmed, case is ignored, hyphens and spaces are ignored, an
+optional `MIAK` prefix is accepted, and Crockford look-alikes map O→0 and I/L→1.
+The input is capped at 64 bytes. Success is `200` with `Cache-Control: no-store`
+and exactly:
+
+```json
+{
+  "home_key": "mhk1_AAAAAAAAAAAAAAAAAAAAAA_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  "home_id": "synthetic-home",
+  "key_id": "AAAAAAAAAAAAAAAAAAAAAA",
+  "issuer": "https://control.example.test"
+}
+```
+
+One Firestore transaction reads the code record, re-reads the home and requires
+that its owner is still the issuing UID, performs the Section 6.4 key-creation
+reads (registry reconciliation and compaction), then commits the new key, its
+index, the home counters and the code's `pending → redeemed` transition
+together. Concurrent redemptions therefore produce exactly one key. A failed key
+creation (for example `limit_exceeded`) leaves the code pending. The key's
+`created_by` is the issuing owner, its label is the agent's, and it appears in
+and is revoked through the ordinary Section 6.5 surface. A redemption whose
+commit landed but whose acknowledgement was lost is recognized on retry by its
+own freshly generated key ID and returns that same key. No other caller can
+match it.
+
+An unknown, malformed, expired, already redeemed or orphaned code (home deleted
+or owner changed) is the same `401 invalid_pairing_code`. A client MUST NOT
+retry a definitive rejection. After a lost response, the owner lists keys,
+revokes any unrecognized one and issues a new code.
+
+**Granted scope.** A paired key holds exactly the four version 1 Home Key scopes
+of Section 6.3. Through exchange it can run a coordinator, open CLI relay
+sessions (including calling the home's functions that drive devices), send push
+to destinations the home already holds grants for, and publish and activate
+components. It cannot list, create or revoke keys, change the relay, rename or
+delete the home, manage push grants, or act on any other home. Those remain
+Firebase-owner operations. "Admin" in the pairing flow means the owner of
+Section 5.1. No other role exists in version 1.
+
+**Admission.** Issuance charges the actor and source budgets after recent
+authentication. Redemption charges the source budget for every request with a
+well-formed body, before the code is judged. Malformed and wrong codes
+therefore cost the same. It then charges a per-code budget keyed by the HMAC
+lookup before any Firestore read of the code. With 125-bit codes, these bounds
+protect cost rather than entropy.
 
 ## 7. Access-token exchange
 
@@ -1105,6 +1209,8 @@ an executable local profile, not a portable production default:
 | component upload issue per home | 64 attempts / 60 s and 64 MiB / 1 h |
 | component delivery per upload / home | 8 attempts / 15 min; 64 attempts / 60 s and 64 MiB / 1 h |
 | component finalization / activation per home | 64 / 60 s; 64 / 60 s |
+| pairing-code issuance per Firebase UID / source | 12 / 10 min; 30 / 10 min |
+| pairing redemption per source / code lookup | 20 / 10 min; 5 / 10 min |
 
 Admission is a Firestore transaction over a fixed 65,536-slot bucket table,
 partitioned evenly by budget. A keyed fingerprint selects one slot inside its
@@ -1194,6 +1300,7 @@ Errors use the closed shape:
 | 401 | `invalid_access_token` | signature or token profile failed |
 | 401 | `invalid_destination_proof` | push challenge is absent, expired, replayed or identity-mismatched |
 | 401 | `invalid_upload_capability` | upload capability is absent, expired, replayed or mismatched |
+| 401 | `invalid_pairing_code` | pairing code is unknown, malformed, expired, already redeemed or orphaned |
 | 403 | `not_home_owner` | verified user does not own the home |
 | 403 | `insufficient_scope` | Home Key lacks the required scope |
 | 403 | `invalid_push_grant` | grant is unusable without exposing why |

@@ -17,6 +17,16 @@ The slice implements:
   metadata listing, retained-record compaction, and uniform revocation; and
 - scope-attenuated, audience-bound, five-minute access-token exchange.
 
+The agent-pairing slice ([RFC 0004 §6.6](../docs/rfcs/0004-platform-control-plane.md))
+adds the owner's home listing, recently authenticated issuance of ten-minute,
+single-use, HMAC-stored pairing codes bound to one explicitly confirmed home, and
+the unauthenticated `POST /v1/pairing/redeem` CLI contract. It atomically
+consumes a code into a fresh full-scope, revocable Home Key, re-checking
+ownership at redemption. Its Emulator corpus proves single-commit concurrent
+redemption, expiry, ownership re-checks, code survival on failed key creation,
+lost-acknowledgement replay, per-source and per-code throttling, revocation, and
+the absence of the code and key from every persisted document.
+
 The push vertical slice adds closed Firebase Installation ID (FID)
 challenge/completion schemas, strict synthetic App Check and push-access-token
 verification, a synthetic recording FCM transport, keyed FID fingerprints, the
