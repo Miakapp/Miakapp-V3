@@ -8,11 +8,13 @@ import {
   type BrowserRelayCredentialRequest,
 } from './miakapi-browser';
 
+import { HouseCallError } from '../../component-runtime/src/app-host';
 import { createRealHomeTree } from './real-home-tree';
 
 import type {
   HomeActivity,
   HomeConnectionStatus,
+  HouseCallOptions,
   HomeState,
   HomeSummary,
   SemanticInteraction,
@@ -222,6 +224,41 @@ class LiveTrustedHost implements TrustedHost {
       if (!this.#isCurrentAction(generation)) return;
       this.#publish();
     });
+  };
+
+  /**
+   * The home's own interface asks; the coordinator decides. Nothing here is
+   * retried: a call that may have reached the home is reported as such and left
+   * for the next state snapshot to settle.
+   */
+  readonly call = async (name: string, args: unknown, options: HouseCallOptions): Promise<unknown> => {
+    if (this.#disposed || this.#readOnlyHome) throw new HouseCallError('denied');
+    const client = this.#client;
+    if (client === undefined || this.#status !== 'ready' || this.#stateStale) {
+      throw new HouseCallError('unavailable');
+    }
+    let call: ReturnType<BrowserClient['calls']['start']>;
+    try {
+      call = client.calls.start({
+        function: name,
+        arguments: args ?? null,
+        timeoutMs: options.timeoutMs,
+        idempotencyKey: crypto.randomUUID(),
+        signal: options.signal,
+      });
+    } catch {
+      throw new HouseCallError('unavailable');
+    }
+    try {
+      return await call.result;
+    } catch (failure) {
+      const outcome = typeof failure === 'object' && failure !== null && 'outcome' in failure
+        ? failure.outcome
+        : undefined;
+      if (outcome === 'outcome_unknown') throw new HouseCallError('outcome_unknown');
+      if (options.signal.aborted) throw new HouseCallError('timeout');
+      throw new HouseCallError('failed');
+    }
   };
 
   readonly dispose = (): void => {

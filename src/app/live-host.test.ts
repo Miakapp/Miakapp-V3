@@ -330,3 +330,62 @@ describe('live trusted host', () => {
     host.dispose();
   });
 });
+
+describe('live trusted host — calls from a home’s own interface', () => {
+  const ready = (client: ReturnType<typeof fakeClient>, stale = false): void => {
+    client.emitLifecycle({ previous: 'synchronizing', current: 'ready' });
+    client.emitState({ epoch: new Uint8Array(16), revision: 1, stale, values: {} });
+  };
+  const options = () => ({ timeoutMs: 5_000, signal: new AbortController().signal });
+
+  it('forwards the named call once, with its arguments, and returns the coordinator result', async () => {
+    const client = fakeClient({
+      localId: 'call-1',
+      accepted: Promise.resolve(),
+      result: Promise.resolve({ applied: true }),
+      cancel: vi.fn(),
+    });
+    const host = hostWith(fakeIdentity(true), [client]);
+    ready(client);
+
+    await expect(host.call!('heating.set', { target: 20 }, options())).resolves.toEqual({ applied: true });
+    expect(client.calls.start).toHaveBeenCalledOnce();
+    expect(client.calls.start).toHaveBeenCalledWith(expect.objectContaining({
+      function: 'heating.set',
+      arguments: { target: 20 },
+      timeoutMs: 5_000,
+    }));
+    host.dispose();
+  });
+
+  it('refuses before dispatch when the home is stale, offline or read-only', async () => {
+    const staleClient = fakeClient();
+    const stale = hostWith(fakeIdentity(true), [staleClient]);
+    ready(staleClient, true);
+    await expect(stale.call!('heating.set', null, options())).rejects.toMatchObject({ code: 'unavailable' });
+
+    const offline = hostWith(fakeIdentity(false), []);
+    await expect(offline.call!('heating.set', null, options())).rejects.toMatchObject({ code: 'unavailable' });
+
+    const readOnlyClient = fakeClient();
+    const readOnly = hostWith(fakeIdentity(true), [readOnlyClient], true);
+    ready(readOnlyClient);
+    await expect(readOnly.call!('heating.set', null, options())).rejects.toMatchObject({ code: 'denied' });
+    expect(readOnlyClient.calls.start).not.toHaveBeenCalled();
+    for (const host of [stale, offline, readOnly]) host.dispose();
+  });
+
+  it('says the outcome is unknown instead of retrying or calling it failed', async () => {
+    const client = fakeClient({
+      localId: 'call-1',
+      accepted: Promise.resolve(),
+      result: Promise.reject(Object.assign(new Error('lost'), { outcome: 'outcome_unknown' })),
+      cancel: vi.fn(),
+    });
+    const host = hostWith(fakeIdentity(true), [client]);
+    ready(client);
+    await expect(host.call!('heating.set', null, options())).rejects.toMatchObject({ code: 'outcome_unknown' });
+    expect(client.calls.start).toHaveBeenCalledOnce();
+    host.dispose();
+  });
+});

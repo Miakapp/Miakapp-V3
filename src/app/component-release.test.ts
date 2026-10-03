@@ -15,8 +15,10 @@ import {
 } from '../../component-runtime/src/release-state';
 
 import {
+  NoPublishedRelease,
   createComponentReleaseCoordinator,
   createControlPlanePointerReader,
+  unwrapPointerState,
 } from './component-release';
 
 const HOME_ID = 'home-test';
@@ -280,5 +282,38 @@ describe('control plane pointer reader', () => {
     });
 
     await expect(read()).rejects.toThrow('HTTP 503');
+  });
+});
+
+describe('control plane pointer state', () => {
+  it('opens the read envelope the control plane actually serves', async () => {
+    const pointer = await pointerFor(4, 'export const a = 4;');
+    const fetch = vi.fn(async () => new Response(JSON.stringify({
+      schema: 'miakapp.component-pointer-state/1',
+      generation: 4,
+      pointer,
+    }), { status: 200 }));
+    const read = createControlPlanePointerReader({
+      endpoint: 'https://control.example',
+      homeId: HOME_ID,
+      authorize: async () => 'Bearer token-value',
+      fetch: fetch as unknown as typeof globalThis.fetch,
+    });
+    await expect(read()).resolves.toEqual(pointer);
+  });
+
+  it('leaves any other shape for the ledger to reject', () => {
+    const lookalike = { schema: 'miakapp.component-pointer-state/1', generation: 1, pointer: {}, extra: true };
+    expect(unwrapPointerState(lookalike)).toBe(lookalike);
+    expect(unwrapPointerState(null)).toBeNull();
+  });
+
+  it('says a home published nothing, rather than failing, when the pointer is null', async () => {
+    const coordinator = coordinatorFor(null, {
+      store: new MemoryStore(),
+      cache: new MemoryCache(),
+      fetch: vi.fn() as unknown as typeof globalThis.fetch,
+    });
+    await expect(coordinator.activate()).rejects.toBeInstanceOf(NoPublishedRelease);
   });
 });
