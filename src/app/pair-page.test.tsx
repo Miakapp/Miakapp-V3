@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -418,6 +418,7 @@ describe('agent pairing page', () => {
       expect(screen.queryByText(CODE)).toBeNull();
       expect(screen.getByRole('alert')).toHaveTextContent(en.pairCodeExpired);
     } finally {
+      cleanup();
       vi.useRealTimers();
     }
   });
