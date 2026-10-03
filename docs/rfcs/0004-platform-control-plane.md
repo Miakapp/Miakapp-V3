@@ -78,13 +78,23 @@ Every deployment publishes a bounded JSON document at
   "user_relay_exchange_endpoint": "https://control.example.test/v1/user-relay-tokens:exchange",
   "push_audience": "https://control.example.test/v1/push",
   "components_audience": "https://control.example.test/v1/components",
-  "runtime_diagnostics_endpoint": "https://control.example.test/v1/runtime-diagnostics"
+  "runtime_diagnostics_endpoint": "https://control.example.test/v1/runtime-diagnostics",
+  "home_url_template": "https://app.example.test/app?home={home_id}"
 }
 ```
 
 All seven URLs MUST be absolute HTTPS URLs without user information, query or
 fragment. `issuer` has no trailing slash. The other values are exact identifiers,
 not prefixes. The document has no unknown fields and is at most 4 KiB.
+
+`home_url_template` is optional and is the only member outside the issuer. It is
+present only when the deployment declares a `home_app_origin`, which MUST be one
+of its allowed browser origins, and is exactly
+`<home_app_origin>/app?home={home_id}`: the trusted Miakapp shell where
+residents open a home (Section 13.5). Clients substitute the Home ID and present
+the result as the home's link; they never present a component artifact URL as
+one. A client MUST validate the exact shape and MUST NOT accept another
+unknown member.
 
 Resource servers pin this deployment configuration. They MUST NOT follow an
 issuer, JWKS URL, resource URL, `jku`, `x5u` or other key location supplied by a
@@ -1152,6 +1162,44 @@ Finally `POST /v1/homes/{homeId}/component-releases:activate` accepts exactly:
 It derives every other pointer field from the finalized record and returns the
 exact RFC 0002 pointer. Finalization and activation require publisher authority
 again; possession of an upload capability alone grants neither operation.
+
+### 13.5 Resident interface read
+
+`GET /v1/homes/{homeId}/interface` lets a signed-in resident's browser open a
+home's published interface. It takes no body, query or idempotency key, and
+requires `Authorization: Bearer <Firebase-ID-token>` plus `X-Firebase-AppCheck`,
+verified exactly as for the user relay exchange (Section 11.1). It does **not**
+require recent authentication and does not check ownership: its audience is any
+authenticated application user, the same audience the `components/{homeId}`
+Firestore rule already admits, because pointers and artifacts are not
+confidentiality boundaries (RFC 0002 §4.1). It returns, under
+`Cache-Control: no-store`:
+
+```json
+{
+  "schema": "miakapp.home-interface/1",
+  "home_id": "home_01J...",
+  "name": "Public directory name",
+  "home_url": "https://app.example.test/app?home=home_01J...",
+  "generation": 42,
+  "pointer": { "schema": "miakapp.component-pointer/1", "...": "as in 13.2" }
+}
+```
+
+`pointer` and `generation` follow the pointer-state rules above (`null` and `0`
+before any activation); `name` is the public `homes/{homeId}` name; `home_url`
+is derived from the deployment template or is `null`. The response carries no
+owner identity, Home Key, relay URL or home state. An unknown home is
+`home_not_found`.
+
+This read is not membership. Home data reaches a resident only through the relay,
+where the coordinator's per-user state and event ACL is the only membership
+authority (RFC 0001 §7.2): a user outside every active coordinator ACL is
+unenrolled, sees no state and may call only `miakapp.join`, and a user token is
+bound to one signed Home ID. Owner and publisher operations — publication,
+activation, the publisher pointer read of Section 13.2, Home Keys, pairing — keep
+their own authorization and recent-authentication rules. Artifacts therefore
+MUST contain no household data; an interface reads it from state.
 
 ## 14. Quotas, admission and cost bounds
 

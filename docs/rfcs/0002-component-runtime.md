@@ -219,6 +219,26 @@ MUST fail closed; the implementation MUST NOT add `connect-src`, general
 
 ## 7. Component pointer and artifact
 
+### 7.0 Release ABIs
+
+The pointer's `abi` selects the execution surface. `miakapp.component/1` is the
+semantic component this RFC specifies. `miakapp.app/1` is a whole-house
+application: the same pointer, digest, publication, activation, rollback and
+anti-rollback rules, but the artifact is one classic-script bundle that owns a
+document in a visible opaque-origin frame (`/app.html` on the sandbox site)
+instead of returning a semantic tree. Its bridge, document policy and shell
+guarantees — consent before any interface load, a permanent Miakapp bar outside
+the frame, crash and hang replacement — are specified in
+[`../specs/2026-10-03-house-app-abi.md`](../specs/2026-10-03-house-app-abi.md).
+A host MUST route each release to the surface its ABI names and MUST refuse an
+ABI it does not implement.
+
+For both ABIs the effective grant is the release's declared requirements under
+the platform ceiling: declared state reads (exact or `prefix.*`), declared calls
+except protocol-reserved `miakapp.*` functions, and no events or media for
+`miakapp.app/1`. The ceiling never widens what the relay delivers, which is
+already the resident's coordinator-authorized view.
+
 ### 7.1 Pointer schema
 
 Firestore document `components/{homeID}` contains exactly one pointer:
