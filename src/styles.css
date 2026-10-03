@@ -2202,6 +2202,9 @@ svg {
 }
 
 .house-bar__status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   overflow: hidden;
   padding: 4px 10px;
   border-radius: 999px;
@@ -2209,6 +2212,22 @@ svg {
   font-size: 12.5px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.house-bar__status > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.house-bar__retry {
+  flex: none;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .house-bar__status--unavailable {
@@ -2653,6 +2672,18 @@ svg {
 @media (max-width: 620px) {
   .house-shell {
     --house-bar-height: 48px;
+  }
+
+  .house-bar__status {
+    flex: none;
+    flex-direction: column;
+    gap: 0;
+    padding: 2px 6px;
+    font-size: 11px;
+  }
+
+  .house-bar__retry {
+    padding: 2px 4px;
   }
 
   .house-bar__name {

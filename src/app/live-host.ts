@@ -194,6 +194,15 @@ class LiveTrustedHost implements TrustedHost {
     })();
   };
 
+  readonly reconnect = (): void => {
+    if (this.#disposed || !this.#signedIn || connectionFrom(this.#status) !== 'unavailable') return;
+    // Retire credentials, pending release loads and state before trying again.
+    // Detach synchronously: a slow stop must not block the replacement client.
+    ++this.#authorizationEpoch;
+    void this.#disconnect();
+    void this.#connect();
+  };
+
   readonly signOut = async (): Promise<void> => {
     if (this.#disposed || !this.#signedIn) return;
     // Auth notification owns teardown, including every other signed-in tab.
@@ -339,6 +348,8 @@ class LiveTrustedHost implements TrustedHost {
       credentialProvider: this.#createCredentialProvider(),
     });
     this.#client = client;
+    this.#status = 'connecting';
+    this.#publish();
     this.#removeClientListeners = [
       client.subscribe((event) => {
         if (this.#client !== client) return;

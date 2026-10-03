@@ -70,6 +70,7 @@ export interface HouseShellProps {
   readonly sandboxOrigin: string | undefined;
   readonly homeState: HomeState | undefined;
   readonly call: ((name: string, args: unknown, options: HouseCallOptions) => Promise<unknown>) | undefined;
+  readonly reconnect?: (() => void) | undefined;
   readonly signIn?: (() => void) | undefined;
   readonly signInStatus?: 'idle' | 'pending' | 'failed' | undefined;
   readonly signOut?: (() => Promise<void>) | undefined;
@@ -630,7 +631,13 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
           <ChevronDownIcon className="house-bar__chevron" />
         </button>
         {status === undefined ? null : (
-          <span className={`house-bar__status house-bar__status--${connection}`} role="status">{status}</span>
+          <span className={`house-bar__status house-bar__status--${connection}`} role="status">
+            <span>{status}</span>
+            {connection === 'unavailable' && props.reconnect !== undefined ? (
+              <button aria-label={t('connectionRetryLabel')} className="house-bar__retry"
+                onClick={props.reconnect} type="button">{t('connectionRetry')}</button>
+            ) : null}
+          </span>
         )}
         <div className="house-bar__actions">
           <button

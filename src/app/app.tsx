@@ -577,6 +577,7 @@ export function App({
         }}
         onSwitchHome={switchHome}
         sandboxOrigin={sandboxOrigin}
+        reconnect={snapshot.authenticated ? host.reconnect : undefined}
         signIn={host.signIn}
         signInStatus={snapshot.signInStatus}
         signOut={snapshot.authenticated ? host.signOut : undefined}
