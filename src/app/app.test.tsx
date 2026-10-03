@@ -42,6 +42,23 @@ describe('App', () => {
     expect(screen.getByText(/cannot inject HTML, CSS, URLs, or credentials/)).toBeVisible();
   });
 
+  it('does not show synthetic activity or settings in the real read-only home', () => {
+    const base = createDemoHost();
+    const snapshot: TrustedHostSnapshot = {
+      ...base.getSnapshot(),
+      readOnlyHome: true,
+      preview: false,
+      modeLabel: 'Lecture seule',
+    };
+    const host: TrustedHost = { ...base, getSnapshot: () => snapshot };
+    render(<App host={host} />);
+
+    expect(screen.getAllByRole('button', { name: 'Home' })).toHaveLength(2);
+    expect(screen.queryByRole('button', { name: 'Settings' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Everything looks settled.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Home agent')).not.toBeInTheDocument();
+  });
+
   it('disposes the trusted host when the React shell unmounts', () => {
     const host = createDemoHost();
     const dispose = vi.spyOn(host, 'dispose');
