@@ -8,6 +8,8 @@
  */
 
 export interface PairingAccount {
+  /** Stable authentication identity; display names/emails are not identifiers. */
+  readonly id: string;
   readonly email: string | null;
   readonly name: string | null;
 }
