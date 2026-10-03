@@ -55,6 +55,8 @@ export interface TrustedHostSnapshot {
   readonly noticeTitle: string;
   readonly noticeDetail: string;
   readonly signInAvailable: boolean;
+  /** Trusted popup lifecycle; never includes provider errors or identity details. */
+  readonly signInStatus?: 'idle' | 'pending' | 'failed';
 }
 
 export interface SemanticInteraction {
