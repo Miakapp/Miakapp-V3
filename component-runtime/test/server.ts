@@ -34,6 +34,21 @@ const releaseStateBundle = await bundle('src/release-state.ts');
 const appBootstrap = (await bundle('src/app-bootstrap.ts')).replace(/<\/script/giu, '<\\/script');
 const appBootstrapHash = createHash('sha256').update(appBootstrap).digest('base64');
 const appHarnessBundle = await bundle('test/app-harness.ts');
+// A framework-built house, bundled exactly as a release would be: one classic
+// IIFE with React and the house code inlined.
+const reactHouse = (await build({
+  absWorkingDir: root.pathname,
+  entryPoints: ['fixtures/house-react-app.tsx'],
+  bundle: true,
+  format: 'iife',
+  platform: 'browser',
+  target: ['es2022'],
+  jsx: 'automatic',
+  define: { 'process.env.NODE_ENV': '"production"' },
+  minify: true,
+  write: false,
+  legalComments: 'none',
+})).outputFiles[0]!.text;
 const appHtml = `<!doctype html>
 <html lang="en">
   <head><meta charset="utf-8"><title>Miakapp</title></head>
@@ -242,6 +257,9 @@ Bun.serve({
           'cache-control': 'no-store',
         },
       });
+    }
+    if (url.pathname === '/fixtures/house-react.js' && hostname === '127.0.0.1') {
+      return response(reactHouse, { headers: { 'content-type': 'text/javascript; charset=utf-8' } });
     }
     if (url.pathname === '/app-harness.js' && hostname === '127.0.0.1') {
       return response(appHarnessBundle, {

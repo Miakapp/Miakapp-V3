@@ -66,7 +66,7 @@ function start(): void {
   const parentWindow = window.parent;
   let post: ((message: unknown) => void) | undefined;
   let bound = false;
-  let loaded = false;
+  let installed = false;
   let readySent = false;
 
   const send = (kind: string, payload: Record<string, unknown> = {}): void => {
@@ -80,7 +80,7 @@ function start(): void {
   };
 
   const ready = (): void => {
-    if (readySent || !loaded) return;
+    if (readySent || !installed) return;
     readySent = true;
     send('app.ready');
   };
@@ -174,9 +174,22 @@ function start(): void {
     }
   }, true);
 
-  const load = async (payload: Record<string, unknown>): Promise<void> => {
-    const release = payload.release as { release: string; sha256: string; size: number };
+  // Everything the API exposes is taken from the load message synchronously,
+  // before the digest is awaited, so a state update that arrives during the
+  // await is applied on top of it rather than overwritten by it.
+  const accept = (payload: Record<string, unknown>): void => {
+    const release = payload.release as { release: string };
     const home = payload.home as { id: string; name: string };
+    grant = freezeDeep(payload.grant as typeof grant);
+    state = freezeDeep(payload.state as StateView);
+    theme = String(payload.theme);
+    api.release = release.release;
+    api.home = Object.freeze({ id: home.id, name: home.name });
+    api.locale = String(payload.locale);
+  };
+
+  const load = async (payload: Record<string, unknown>): Promise<void> => {
+    const release = payload.release as { sha256: string; size: number };
     const bytes = new Uint8Array(payload.artifact as ArrayBuffer);
     const digest = base64Url(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)));
     if (digest !== release.sha256 || bytes.byteLength !== release.size) {
@@ -184,20 +197,15 @@ function start(): void {
       return;
     }
 
-    grant = freezeDeep(payload.grant as typeof grant);
-    state = freezeDeep(payload.state as StateView);
-    theme = String(payload.theme);
-    api.release = release.release;
-    api.home = Object.freeze({ id: home.id, name: home.name });
-    api.locale = String(payload.locale);
     Object.defineProperty(window, 'miakapp', {
       value: Object.freeze(api),
       writable: false,
       configurable: false,
       enumerable: true,
     });
+    installed = true;
     document.documentElement.lang = api.locale;
-    document.title = home.name;
+    document.title = api.home.name;
 
     // A classic script, because that is what the control plane admits: it parses
     // every release as `sourceType: 'script'` and rejects `import()`. Bundle the
@@ -208,7 +216,6 @@ function start(): void {
     script.src = url;
     script.addEventListener('error', () => crash('artifact_load'));
     script.addEventListener('load', () => {
-      loaded = true;
       URL.revokeObjectURL(url);
       // One task later, so a house that renders synchronously at the end of
       // its script has painted before the shell lifts its loading screen.
@@ -224,6 +231,7 @@ function start(): void {
     switch (data.kind) {
       case 'app.load':
         if (api.release !== '') return;
+        accept(payload);
         void load(payload).catch(() => crash('artifact_load'));
         break;
       case 'state.snapshot':
