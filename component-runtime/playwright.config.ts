@@ -22,7 +22,8 @@ export default defineConfig({
     timeout: 30_000,
   },
   projects: [
-    { name: 'chromium', use: { browserName: 'chromium' } },
+    // Match desktop site isolation; headless Chromium needs the explicit flag.
+    { name: 'chromium', use: { browserName: 'chromium', launchOptions: { args: ['--site-per-process'] } } },
     { name: 'firefox', use: { browserName: 'firefox' } },
     { name: 'webkit', use: { browserName: 'webkit' } },
   ],

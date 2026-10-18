@@ -83,3 +83,22 @@ artifacts, use the exact production headers and attributes, connect to RFC 0001
 sessions, enforce publisher authorization, stage and atomically swap two
 releases, reconcile the full React design system, handle visibility/BFCache, and
 pass every conformance item in RFC 0002 Section 18.
+
+## House-application browser coverage
+
+The house-app corpus runs in Chromium, Firefox and WebKit: free DOM/framework
+rendering, granted calls, stale state, hostile egress/storage/fullscreen/overlay,
+boot crashes, navigation confinement and the shell keyboard shortcut. Browser
+profiles enable Chromium site-per-process; the Firefox hang test explicitly
+enables Fission in a separate browser (Playwright frame locators are unreliable
+under that profile). Ordinary fixtures use the production heartbeat interval;
+only the hang test shortens it.
+
+**Hang isolation remains browser-dependent.** A non-yielding house script also
+blocks the parent event loop in the tested Linux WebKit engine. Its watchdog
+cannot run and the menu does not respond. That single test is explicitly skipped
+for WebKit, not counted as passing. This is not a claim about a tested physical
+iPhone or Safari release: those remain unverified. Cross-origin/CSP isolation
+protects data and geometry but alone cannot guarantee CPU/process isolation. Do
+not advertise the permanent shell as unconditionally responsive to hostile code
+on every engine; permanent-shell acceptance remains open for this case.
