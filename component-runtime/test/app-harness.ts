@@ -2,6 +2,7 @@
 // shell: a menu it owns outside the frame, a stage the frame fills, and a call
 // function standing in for the coordinator.
 
+import { APP_LIMITS } from '../src/app-contract';
 import { mountHouseApp, type HouseAppSession } from '../src/app-host';
 import { sha256Base64Url } from '../src/artifact';
 import { APP_ABI, POINTER_SCHEMA, type CapabilityRequirements } from '../src/contract';
@@ -65,7 +66,7 @@ const house = {
         revision,
         stale: false,
       },
-      heartbeatMs: request.heartbeatMs ?? 400,
+      heartbeatMs: request.heartbeatMs ?? APP_LIMITS.heartbeatMs,
       call: async (name, args) => {
         calls.push({ name, args });
         const on = (args as { on?: unknown } | null)?.on === true;

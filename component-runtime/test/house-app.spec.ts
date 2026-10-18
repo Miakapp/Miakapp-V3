@@ -12,12 +12,6 @@ import { expect, test, type Page } from '@playwright/test';
 
 const hostUrl = 'http://127.0.0.1:4173/app-host.html';
 
-// Desktop Chrome runs a cross-site frame in its own process; Playwright's
-// headless shell does not unless asked. Without that, a spinning house blocks
-// the shell's own thread and nothing in the page can recover it — a browser
-// property recorded as a limitation, not something this code can fix.
-test.use({ launchOptions: { args: ['--site-per-process'] } });
-
 async function fixture(name: string): Promise<string> {
   return await readFile(new URL(`../fixtures/${name}`, import.meta.url), 'utf8');
 }
@@ -44,12 +38,6 @@ async function leakHits(page: Page): Promise<string[]> {
   const response = await page.request.get('http://127.0.0.1:4173/leak-hits');
   return await response.json() as string[];
 }
-
-test.beforeEach(({ browserName }) => {
-  // The corpus pins Chromium behaviour; Firefox and WebKit run the semantic
-  // runtime corpus but are not installed for the house-app frame here.
-  test.skip(browserName !== 'chromium', 'house-app corpus runs on Chromium');
-});
 
 test('a house draws its own interface and drives the home only through granted calls', async ({ page }) => {
   await open(page);
@@ -153,26 +141,63 @@ test('a house that fails while booting is replaced by the shell, which keeps wor
   await expect(page.locator('#shell-menu')).toHaveAttribute('data-presses', '1');
 });
 
-test('a house that hangs is detected and removed while the shell stays responsive', async ({ page }) => {
-  await open(page);
-  await mount(page, 'house-spin.mjs', { heartbeatMs: 300 });
-  await expect.poll(() => events(page)).toContain('active');
+test('a house that hangs is detected and removed while the shell stays responsive', async ({ page, browserName, playwright }) => {
+  // Linux WebKit runs these documents on one event loop: the shell watchdog
+  // cannot execute during a non-yielding app. Do not claim hang containment.
+  test.skip(browserName === 'webkit', 'WebKit lacks proven out-of-process frame hang isolation');
+  // Fission is required for Firefox CPU isolation. Keep this profile local:
+  // Playwright's Firefox frame locators do not support that profile reliably.
+  const isolatedBrowser = browserName === 'firefox'
+    ? await playwright.firefox.launch({ firefoxUserPrefs: { 'fission.autostart': true, 'fission.webContentIsolationStrategy': 1 } })
+    : undefined;
+  const isolatedPage = isolatedBrowser ? await isolatedBrowser.newPage() : page;
+  try {
+    await open(isolatedPage);
+    await mount(isolatedPage, 'house-spin.mjs', { heartbeatMs: 300 });
+    await expect.poll(() => events(isolatedPage)).toContain('active');
 
-  // The shell answers while the house spins.
-  await page.waitForTimeout(400);
-  await page.locator('#shell-menu').click();
-  await expect(page.locator('#shell-menu')).toHaveAttribute('data-presses', '1');
+    // The shell answers while the house spins.
+    await isolatedPage.waitForTimeout(400);
+    await isolatedPage.locator('#shell-menu').click();
+    await expect(isolatedPage.locator('#shell-menu')).toHaveAttribute('data-presses', '1');
 
-  await expect.poll(() => events(page), { timeout: 10_000 }).toContain('crashed:unresponsive');
-  await expect(page.locator('iframe.house-app-frame')).toHaveCount(0);
+    await expect.poll(() => events(isolatedPage), { timeout: 10_000 }).toContain('crashed:unresponsive');
+    await expect(isolatedPage.locator('iframe.house-app-frame')).toHaveCount(0);
+  } finally {
+    await isolatedBrowser?.close();
+  }
 });
 
 test('a house cannot replace itself with an unverified page or carry state out by navigating', async ({ page }) => {
   await open(page);
+  // Firefox refuses the navigation without loading a replacement document;
+  // Chromium/WebKit may emit a second load for their blocked document. Both
+  // are safe only if the parent policy blocked the request before any egress.
+  await page.evaluate(() => {
+    const violations: string[] = [];
+    (window as unknown as { navigationViolations: string[] }).navigationViolations = violations;
+    document.addEventListener('securitypolicyviolation', (event) => {
+      if (event.effectiveDirective === 'frame-src' && event.blockedURI.startsWith('http://127.0.0.1:4173/leak')) {
+        violations.push(event.blockedURI);
+      }
+    });
+  });
   await mount(page, 'house-navigate.mjs');
-  await expect.poll(() => events(page), { timeout: 10_000 }).toContain('crashed:navigated');
-  await expect(page.locator('iframe.house-app-frame')).toHaveCount(0);
+  await expect.poll(async () => {
+    if ((await events(page)).includes('crashed:navigated')) return true;
+    return await page.evaluate(() => (window as unknown as { navigationViolations: string[] }).navigationViolations.length > 0);
+  }, { timeout: 10_000 }).toBe(true);
+  if ((await events(page)).includes('crashed:navigated')) {
+    await expect(page.locator('iframe.house-app-frame')).toHaveCount(0);
+  } else {
+    // The original verified document remains; no unverified page is shown.
+    await expect(page.frameLocator('iframe.house-app-frame').locator('body')).toHaveText('leaving');
+    expect(page.frames().filter((frame) => frame.parentFrame() !== null).map((frame) => new URL(frame.url()).pathname)).toEqual(['/app.html']);
+  }
   expect(await leakHits(page)).toEqual([]);
+  expect(page.url()).toBe(hostUrl);
+  await page.locator('#shell-menu').click();
+  await expect(page.locator('#shell-menu')).toHaveAttribute('data-presses', '1');
 });
 
 test('the keyboard way back to the Miakapp menu works from inside the house', async ({ page }) => {
