@@ -29,15 +29,14 @@ const FR = {
   navSignIn: 'Se connecter',
   navCreate: 'Créer ma maison',
 
-  landingKicker: 'Le framework domotique de votre agent',
-  landingTitle: 'Votre agent de code construit votre domotique.',
+  landingKicker: 'Domotique autonome',
+  landingTitle: 'La maison connectée qui se construit toute seule.',
   landingLede:
-    'Miakapp donne à un agent de code tout ce qu’il faut pour lire votre installation, '
-    + 'écrire vos automatisations et construire votre interface. Vous décrivez ce que vous '
-    + 'voulez ; il l’implémente, le teste, et vous l’explique.',
+    'Dites ce dont vous avez besoin. Miakapp trouve vos appareils, écrit vos automatisations '
+    + 'et crée l’interface de chaque habitant. Plus vous y vivez, plus elle vous ressemble.',
   landingPrimaryCta: 'Créer ma maison',
   landingSecondaryCta: 'Voir la maison de démonstration',
-  landingProofLabel: 'Ce que votre agent prend en charge',
+  landingProofLabel: 'Ce que Miakapp prend en charge',
   landingProofOne: 'Vos appareils',
   landingProofTwo: 'Vos automatisations',
   landingProofThree: 'Votre interface',
@@ -50,30 +49,30 @@ const FR = {
   landingCardBattery: 'Batterie',
   landingCardLight: 'Éclairage du salon',
   landingCardVisualLabel: 'Aperçu d’une maison Miakapp',
-  landingAgentNote: 'Construit par votre agent',
+  landingAgentNote: 'Construit par Miakapp',
   landingAgentNoteDetail: 'Modifiable à tout moment',
 
   audiencesKicker: 'Pour trois maisons très différentes',
   audiencesTitle: 'Que vous ayez tout câblé vous-même ou jamais rien branché.',
   audienceTinkererTitle: 'Vous bricolez déjà',
   audienceTinkererBody:
-    'Vos automatisations vivent dans votre dépôt, écrites et testées par votre agent '
-    + 'au lieu d’être cliquées une par une. Allez plus loin, plus vite.',
+    'Gardez la main sur tout ce que vous avez construit. Miakapp écrit et teste vos '
+    + 'automatisations au lieu de vous les faire cliquer une par une. Allez plus loin, plus vite.',
   audienceCuriousTitle: 'Vous avez quelques appareils',
   audienceCuriousBody:
-    'Un Google Home et deux prises, c’est un point de départ, pas un plafond. Votre '
-    + 'agent relie ce que vous avez déjà et construit ce qui vous manque.',
+    'Un Google Home et deux prises, c’est un point de départ, pas un plafond. Miakapp '
+    + 'relie ce que vous avez déjà et construit ce qui vous manque.',
   audienceNewcomerTitle: 'Vous n’y avez jamais touché',
   audienceNewcomerBody:
-    'Vous n’avez pas à apprendre la domotique. Votre agent lit la maison, propose, '
+    'Vous n’avez pas à apprendre la domotique. Miakapp découvre la maison, propose, '
     + 'explique, et n’agit qu’avec votre accord.',
 
   principlesKicker: 'Pas une app domotique de plus',
   principlesTitle: 'Miakapp sépare ce qui doit rester stable de ce qui doit rester libre.',
   principleBaseTitle: 'Le socle protège',
   principleBaseBody: 'Identité, permissions, connexion et exécution restent dans un hôte de confiance.',
-  principleAgentTitle: 'L’agent construit',
-  principleAgentBody: 'Automatisations, pages et composants vivent dans votre dépôt et évoluent avec vous.',
+  principleAgentTitle: 'La maison se construit',
+  principleAgentBody: 'Automatisations, écrans et réglages naissent de vos demandes et évoluent avec vous.',
   principleHomeTitle: 'La maison répond',
   principleHomeBody: 'Les coordinateurs exposent les états et les actions. Ils ne décident jamais de l’interface.',
 
@@ -196,15 +195,14 @@ const EN: Record<CopyKey, string> = {
   navSignIn: 'Sign in',
   navCreate: 'Create my home',
 
-  landingKicker: 'The home-automation framework your agent builds with',
-  landingTitle: 'Your coding agent builds your smart home.',
+  landingKicker: 'Autonomous home automation',
+  landingTitle: 'The smart home that builds itself.',
   landingLede:
-    'Miakapp gives a coding agent everything it needs to read your installation, write '
-    + 'your automations and build your interface. You describe what you want; it '
-    + 'implements it, tests it, and explains it back to you.',
+    'Say what you need. Miakapp finds your devices, writes your automations and designs an '
+    + 'interface for everyone who lives there. The longer you live in it, the more it fits you.',
   landingPrimaryCta: 'Create my home',
   landingSecondaryCta: 'See the demo home',
-  landingProofLabel: 'What your agent takes on',
+  landingProofLabel: 'What Miakapp takes on',
   landingProofOne: 'Your devices',
   landingProofTwo: 'Your automations',
   landingProofThree: 'Your interface',
@@ -217,30 +215,30 @@ const EN: Record<CopyKey, string> = {
   landingCardBattery: 'Battery',
   landingCardLight: 'Living room lights',
   landingCardVisualLabel: 'Preview of a Miakapp home',
-  landingAgentNote: 'Built by your agent',
+  landingAgentNote: 'Built by Miakapp',
   landingAgentNoteDetail: 'Changeable at any time',
 
   audiencesKicker: 'For three very different houses',
   audiencesTitle: 'Whether you wired it all yourself or have never plugged anything in.',
   audienceTinkererTitle: 'You already tinker',
   audienceTinkererBody:
-    'Your automations live in your repository, written and tested by your agent instead '
-    + 'of clicked together one at a time. Go further, faster.',
+    'Keep full control of everything you have built. Miakapp writes and tests your '
+    + 'automations instead of making you click them together one at a time. Go further, faster.',
   audienceCuriousTitle: 'You have a few devices',
   audienceCuriousBody:
-    'A Google Home and two smart plugs is a starting point, not a ceiling. Your agent '
+    'A Google Home and two smart plugs is a starting point, not a ceiling. Miakapp '
     + 'connects what you already own and builds what you are missing.',
   audienceNewcomerTitle: 'You have never touched it',
   audienceNewcomerBody:
-    'You do not have to learn home automation. Your agent reads the house, proposes, '
+    'You do not have to learn home automation. Miakapp discovers the house, proposes, '
     + 'explains, and acts only with your consent.',
 
   principlesKicker: 'Not one more smart-home app',
   principlesTitle: 'Miakapp separates what must stay stable from what must stay yours.',
   principleBaseTitle: 'The platform protects',
   principleBaseBody: 'Identity, permissions, transport and execution stay inside a trusted host.',
-  principleAgentTitle: 'The agent builds',
-  principleAgentBody: 'Automations, pages and components live in your repository and change with you.',
+  principleAgentTitle: 'The home builds itself',
+  principleAgentBody: 'Automations, screens and settings come from what you ask for and change with you.',
   principleHomeTitle: 'The house answers',
   principleHomeBody: 'Coordinators expose state and actions. They never decide the interface.',
 
