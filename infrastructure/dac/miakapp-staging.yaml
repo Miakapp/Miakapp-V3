@@ -1,0 +1,213 @@
+# Miakapp V4 staging on the DAC cluster: control plane + relay.
+# Secrets are created out of band (see README.md); nothing secret lives here.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: miakapp-staging
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: control-plane-components
+  namespace: miakapp-staging
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: control-plane
+  namespace: miakapp-staging
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels: { app: control-plane }
+  template:
+    metadata:
+      labels: { app: control-plane }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      # The GHCR packages are private and the cluster has no pull credential,
+      # so the pod builds the public source at a pinned commit.
+      initContainers:
+        - name: fetch
+          image: busybox:1.37
+          command: [sh, -c, 'wget -qO- "https://codeload.github.com/Miakapp/Miakapp-V3/tar.gz/$COMMIT" | tar -xz -C /src --strip-components=2 "Miakapp-V3-$COMMIT/control-plane"']
+          env:
+            - { name: COMMIT, value: "69323a708bec9ecf82681ccc64da9e8eeeb0293b" }
+          volumeMounts:
+            - { name: app, mountPath: /src }
+        - name: build
+          image: oven/bun:1.2.23
+          workingDir: /src
+          command: [sh, -c, 'bun install --frozen-lockfile && bunx tsc -p tsconfig.build.json']
+          env:
+            - { name: HOME, value: /tmp }
+          resources:
+            limits: { memory: 1536Mi }
+          volumeMounts:
+            - { name: app, mountPath: /src }
+      containers:
+        - name: control-plane
+          image: node:22-slim
+          workingDir: /src
+          command: [node, lib/self-hosted-server.js]
+          ports:
+            - containerPort: 8080
+          env:
+            - name: MIAKAPP_RUNTIME_CONFIG_JSON
+              valueFrom:
+                configMapKeyRef: { name: control-plane-runtime, key: runtime-config.json }
+            - name: MIAKAPP_SERVICE_ACCOUNT_KEY_FILE
+              value: /var/run/miakapp/service-account/sa.json
+            - name: MIAKAPP_KEY_DIRECTORY
+              value: /var/run/miakapp/keys
+            - name: MIAKAPP_COMPONENT_STORAGE_DIRECTORY
+              value: /var/lib/miakapp/components
+          readinessProbe:
+            httpGet: { path: /.well-known/jwks.json, port: 8080 }
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 512Mi }
+          volumeMounts:
+            - { name: service-account, mountPath: /var/run/miakapp/service-account, readOnly: true }
+            - { name: keys, mountPath: /var/run/miakapp/keys, readOnly: true }
+            - { name: components, mountPath: /var/lib/miakapp/components }
+            - { name: app, mountPath: /src }
+      volumes:
+        - name: app
+          emptyDir: {}
+        - name: service-account
+          secret: { secretName: control-plane-service-account, defaultMode: 0400 }
+        - name: keys
+          secret: { secretName: control-plane-keys, defaultMode: 0400 }
+        - name: components
+          persistentVolumeClaim: { claimName: control-plane-components }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: control-plane
+  namespace: miakapp-staging
+spec:
+  selector: { app: control-plane }
+  ports:
+    - port: 80
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: relay
+  namespace: miakapp-staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: relay }
+  template:
+    metadata:
+      labels: { app: relay }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+      initContainers:
+        - name: build
+          image: golang:1.26.6-alpine
+          command: [sh, -c, 'mkdir -p /tmp/src && wget -qO- "https://codeload.github.com/Miakapp/Miakapp-Server/tar.gz/$COMMIT" | tar -xz -C /tmp/src --strip-components=1 && cd /tmp/src && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/miakapp-server ./cmd/miakapp-server']
+          env:
+            - { name: COMMIT, value: "dca95b69d6a862e1586e30114d89b7255621ecf4" }
+            - { name: HOME, value: /tmp }
+            - { name: GOCACHE, value: /tmp/gocache }
+            - { name: GOPATH, value: /tmp/go }
+          resources:
+            limits: { memory: 1Gi }
+          volumeMounts:
+            - { name: bin, mountPath: /out }
+      containers:
+        - name: relay
+          image: gcr.io/distroless/static-debian12:nonroot
+          command: [/out/miakapp-server]
+          ports:
+            - containerPort: 3000
+          env:
+            - { name: MIAKAPP_LISTEN_ADDRESS, value: ":3000" }
+            - { name: MIAKAPP_CONTROL_PLANE_ISSUER, value: "https://miakapp-api.dac.cclabs.cx" }
+            - { name: MIAKAPP_CONTROL_PLANE_JWKS_URL, value: "https://miakapp-api.dac.cclabs.cx/.well-known/jwks.json" }
+            - { name: MIAKAPP_RELAY_AUDIENCE, value: "wss://miakapp-relay.dac.cclabs.cx/ws" }
+            - { name: MIAKAPP_ALLOWED_ORIGINS, value: "https://miakapp-v4-staging.web.app" }
+            # Behind Traefik every client shares the ingress pod address, so
+            # the per-IP limits equal the global ones.
+            - { name: MIAKAPP_MAX_CONNECTIONS, value: "64" }
+            - { name: MIAKAPP_MAX_CONNECTIONS_PER_IP, value: "64" }
+            - { name: MIAKAPP_CONNECTION_ATTEMPTS_PER_MINUTE, value: "256" }
+            - { name: MIAKAPP_MAX_TRACKED_IPS, value: "64" }
+            - { name: MIAKAPP_MAX_HOMES, value: "16" }
+            - { name: MIAKAPP_PING_INTERVAL, value: "30s" }
+            - { name: MIAKAPP_PONG_TIMEOUT, value: "10s" }
+            - { name: MIAKAPP_HANDSHAKE_TIMEOUT, value: "5s" }
+            - { name: MIAKAPP_DECLARATION_TIMEOUT, value: "30s" }
+            - { name: MIAKAPP_WRITE_TIMEOUT, value: "5s" }
+            - { name: MIAKAPP_DISCONNECT_GRACE, value: "30s" }
+            - { name: MIAKAPP_SHUTDOWN_TIMEOUT, value: "10s" }
+            - { name: MIAKAPP_MAX_QUEUED_BYTES, value: "262144" }
+            - { name: MIAKAPP_MAX_AGGREGATE_QUEUED_BYTES, value: "4194304" }
+          readinessProbe:
+            tcpSocket: { port: 3000 }
+          resources:
+            requests: { cpu: 20m, memory: 32Mi }
+            limits: { memory: 256Mi }
+          volumeMounts:
+            - { name: bin, mountPath: /out, readOnly: true }
+      volumes:
+        - name: bin
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: relay
+  namespace: miakapp-staging
+spec:
+  selector: { app: relay }
+  ports:
+    - port: 80
+      targetPort: 3000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: miakapp-staging
+  namespace: miakapp-staging
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: [miakapp-api.dac.cclabs.cx]
+      secretName: miakapp-api-tls
+    - hosts: [miakapp-relay.dac.cclabs.cx]
+      secretName: miakapp-relay-tls
+  rules:
+    - host: miakapp-api.dac.cclabs.cx
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: control-plane, port: { number: 80 } } }
+    - host: miakapp-relay.dac.cclabs.cx
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: relay, port: { number: 80 } } }
