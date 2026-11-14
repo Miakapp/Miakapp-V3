@@ -22,6 +22,7 @@ import {
 import { createPreviewHost } from './preview-host';
 import type { FavoriteHome } from './house-favorites';
 import type { TrustedHost } from './host';
+import { createHouseSnapshotStore, readLastAccount, settleAccount } from './house-snapshot';
 import { createLiveHost, type LiveIdentity } from './live-host';
 import type { PairingService } from './pairing-client';
 import { FirebasePairingService } from './pairing-firebase';
@@ -233,9 +234,13 @@ export class FirebaseLiveIdentity implements LiveIdentity {
     this.#auth = auth;
     this.#appCheck = appCheck;
     this.#controlPlaneOrigin = controlPlaneOrigin;
-    this.#userId = auth.currentUser?.uid ?? null;
+    // Before Firebase reads its session back, trust the account this browser
+    // last settled on, so a repeat visit can draw that account's home at once.
+    // Firebase's answer corrects it, and a different answer wipes the snapshots.
+    this.#userId = auth.currentUser?.uid ?? readLastAccount() ?? null;
     this.#removeAuthListener = onAuthStateChanged(auth, (user) => {
       const userId = user?.uid ?? null;
+      settleAccount(userId);
       if (userId === this.#userId) return;
       this.#userId = userId;
       for (const listener of this.#listeners) listener(userId !== null);
@@ -274,6 +279,11 @@ export class FirebaseLiveIdentity implements LiveIdentity {
 
   readonly getFirebaseIdToken: LiveIdentity['getFirebaseIdToken'] = async ({ signal }) => {
     if (signal.aborted) throw signal.reason;
+    // A repeat visit asks before Firebase has read its session back.
+    if (this.#auth.currentUser === null) {
+      await this.#auth.authStateReady();
+      if (signal.aborted) throw signal.reason;
+    }
     const user = this.#auth.currentUser;
     if (user === null) throw new Error('The Firebase user is signed out');
     const token = await user.getIdToken(false);
@@ -345,6 +355,7 @@ export function createConfiguredHost(): TrustedHost {
       accent: configuration.homeAccent,
     }),
     identity,
+    snapshots: (userId) => createHouseSnapshotStore(`resident:${userId}`),
   });
 }
 

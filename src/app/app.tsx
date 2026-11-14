@@ -14,6 +14,7 @@ import {
 } from './house-consent';
 import { createHouseFavoritesStore, type HouseFavoritesStore } from './house-favorites';
 import { HouseShell, type HouseStage, type MountHouseApp } from './house-shell';
+import { createHouseSnapshotStore, markOpen, type HouseSnapshotStore } from './house-snapshot';
 import type { HomeSummary, TrustedHost } from './host';
 import type { PairingAccount, PairingService } from './pairing-client';
 
@@ -98,6 +99,8 @@ function useComponentRelease(
   enabled: boolean,
   attempt: number,
   authorizationEpoch: number,
+  homeId: string,
+  snapshots: HouseSnapshotStore | undefined,
 ): ComponentReleaseState {
   // Bind a result to one continuous authorization window. Withdrawal or
   // sign-out or account switch invalidates it immediately; reopening must activate again, even
@@ -111,36 +114,84 @@ function useComponentRelease(
     if (request.coordinator === undefined || !request.enabled) return undefined;
 
     const controller = new AbortController();
+    const active = (activated: ActivatedRelease): ComponentReleaseState => ({
+      status: 'active',
+      release: activated.pointer.release,
+      fellBack: activated.fellBack,
+      activated,
+    });
+    // Stale-while-revalidate: draw the last verified release from this
+    // browser's cache at once, while the pointer is read in the background.
+    let settled = false;
+    const cachedHome = snapshots?.read(homeId);
+    void request.coordinator.peek?.(controller.signal).then(
+      (peeked) => {
+        if (controller.signal.aborted || settled || peeked === undefined) return;
+        markOpen('app-cached');
+        setOutcome({
+          request,
+          state: active({
+            ...peeked,
+            ...(cachedHome?.homeName === undefined ? {} : { homeName: cachedHome.homeName }),
+            ...(cachedHome?.viewerIsOwner === true ? { viewerIsOwner: true } : {}),
+          }),
+        });
+      },
+      () => undefined,
+    );
     void request.coordinator.activate(controller.signal).then(
       (activated) => {
         if (controller.signal.aborted) return;
-        setOutcome({
-          request,
-          state: {
-            status: 'active',
-            release: activated.pointer.release,
-            fellBack: activated.fellBack,
-            activated,
-          },
+        settled = true;
+        markOpen('pointer');
+        snapshots?.write(homeId, {
+          ...(activated.homeName === undefined ? {} : { homeName: activated.homeName }),
+          viewerIsOwner: activated.viewerIsOwner === true,
+        });
+        setOutcome((previous) => {
+          // Same release already drawn from the cache: keep that frame running.
+          const shown = previous?.request === request && previous.state.status === 'active'
+            ? previous.state.activated
+            : undefined;
+          if (shown !== undefined && shown.pointer.sha256 === activated.pointer.sha256
+            && shown.homeName === activated.homeName
+            && (shown.viewerIsOwner === true) === (activated.viewerIsOwner === true)) {
+            return previous;
+          }
+          return { request, state: active(activated) };
         });
       },
       (error: unknown) => {
         if (controller.signal.aborted) return;
-        setOutcome({
-          request,
-          state: error instanceof NoPublishedRelease
-            ? {
-              status: 'none',
-              ...(error.homeName === undefined ? {} : { homeName: error.homeName }),
-              ...(error.viewerIsOwner ? { viewerIsOwner: true } : {}),
-            }
-            : { status: 'unavailable' },
+        settled = true;
+        if (error instanceof NoPublishedRelease) {
+          snapshots?.write(homeId, {
+            ...(error.homeName === undefined ? {} : { homeName: error.homeName }),
+            viewerIsOwner: error.viewerIsOwner,
+          });
+        }
+        setOutcome((previous) => {
+          // Unreachable home or control plane: keep the cached release drawn.
+          if (!(error instanceof NoPublishedRelease) && previous?.request === request
+            && previous.state.status === 'active') {
+            return previous;
+          }
+          return {
+            request,
+            state: error instanceof NoPublishedRelease
+              ? {
+                status: 'none',
+                ...(error.homeName === undefined ? {} : { homeName: error.homeName }),
+                ...(error.viewerIsOwner ? { viewerIsOwner: true } : {}),
+              }
+              : { status: 'unavailable' },
+          };
         });
       },
     );
 
     return () => controller.abort();
-  }, [request]);
+  }, [request, homeId, snapshots]);
 
   if (coordinator === undefined || !enabled) return NO_COMPONENT_RELEASE;
   if (outcome === undefined || outcome.request !== request) return ACTIVATING_RELEASE;
@@ -198,6 +249,12 @@ export function App({
     [providedFavoritesStore, preferenceScope],
   );
   const homeId = snapshot.activeHome.id;
+  const snapshotStore = useMemo<HouseSnapshotStore | undefined>(
+    () => preferenceScope === undefined || preferenceScope === 'preview'
+      ? undefined
+      : createHouseSnapshotStore(preferenceScope),
+    [preferenceScope],
+  );
   const readConsent = useCallback(() => consentStore.read(homeId), [consentStore, homeId]);
   const consent = useSyncExternalStore(consentStore.subscribe, readConsent, readConsent);
   const [declined, setDeclined] = useState(false);
@@ -208,6 +265,8 @@ export function App({
     !needsSignIn,
     attempt,
     snapshot.authorizationEpoch ?? 0,
+    homeId,
+    snapshotStore,
   );
   const { account, ownedHomes } = useAccount(snapshot.authenticated ? pairing : undefined);
   const [sandboxOrigin] = useState<string | undefined>(() => readSandboxOrigin?.());

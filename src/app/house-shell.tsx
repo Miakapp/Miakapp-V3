@@ -34,6 +34,7 @@ import type {
   HouseCallOptions,
   TrustedHost,
 } from './host';
+import { markOpen } from './house-snapshot';
 import { BarIcon, HomeIcon, StarIcon } from './icons';
 import type { Locale } from './copy';
 import type { PairingAccount } from './pairing-client';
@@ -393,6 +394,7 @@ function HouseAppStage({
         },
         onLifecycle: (next, code) => {
           if (released) return;
+          if (next === 'active') markOpen('app-active');
           setLifecycle(next);
           if (code !== undefined) setFailure(code);
         },

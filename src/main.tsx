@@ -6,6 +6,7 @@ import {
   createConfiguredPairingService,
   readConfiguredSandboxOrigin,
 } from './app/configured-host';
+import { markOpen } from './app/house-snapshot';
 import { ProductApp } from './app/product-app';
 import './styles.css';
 
@@ -17,6 +18,8 @@ if (window.matchMedia('(display-mode: standalone)').matches
   const deepLink = /[?&](oobCode|from=push)/.test(window.location.search);
   if (window.location.pathname !== '/' && !deepLink) window.location.replace('/');
 }
+
+markOpen('boot');
 
 const root = document.querySelector('#root');
 
