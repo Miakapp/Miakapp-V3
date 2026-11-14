@@ -2,6 +2,7 @@
 // HTML at / (English) and /fr (French) with its SEO tags, every other route
 // keeps the empty app shell (app.html) so /pair or /app never flash the landing.
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 
@@ -53,4 +54,4 @@ ${Object.values(PAGES).map((page) => `  <url>
   </url>`).join('\n')}
 </urlset>
 `);
-console.log('prerendered /, /fr, app.html and sitemap.xml');
+process.stdout.write('prerendered /, /fr, app.html and sitemap.xml\n');
