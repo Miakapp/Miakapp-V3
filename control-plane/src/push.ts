@@ -218,6 +218,11 @@ export class FirebaseFidPushTransport implements PushTransport {
     }
     await this.#send({
       fid: delivery.fid,
+      // Safari/iOS drops data-only web pushes: the challenge must be visible.
+      notification: {
+        title: 'Miakapp',
+        body: 'Notifications enabled on this device.',
+      },
       data: {
         schema: 'miakapp.push-challenge-delivery/1',
         challenge_id: delivery.challengeId,
