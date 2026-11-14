@@ -14,6 +14,8 @@ export interface PairingAccount {
   readonly id: string;
   readonly email: string | null;
   readonly name: string | null;
+  /** How this account can sign in, e.g. `google`, `github`, `email`. */
+  readonly methods?: readonly string[];
 }
 
 export interface PairingHome {

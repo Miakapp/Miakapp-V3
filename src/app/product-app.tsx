@@ -405,7 +405,7 @@ export function ProductApp({
 
   const chrome = { locale, onLocaleChange: changeLocale, onNavigate: navigate, t };
 
-  if (displayedRoute === 'console') return <App {...appProps} host={host} />;
+  if (displayedRoute === 'console') return <App {...appProps} host={host} {...(pairing === undefined ? {} : { pairing })} />;
   if (displayedRoute === 'login') return <LoginPage host={host} {...chrome} />;
   if (displayedRoute === 'pair') {
     return (

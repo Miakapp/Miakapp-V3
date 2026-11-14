@@ -14,7 +14,8 @@ import {
 } from './house-consent';
 import { createHouseFavoritesStore, type HouseFavoritesStore } from './house-favorites';
 import { HouseShell, type HouseStage, type MountHouseApp } from './house-shell';
-import type { TrustedHost } from './host';
+import type { HomeSummary, TrustedHost } from './host';
+import type { PairingAccount, PairingService } from './pairing-client';
 
 export interface AppProps {
   /** A host owned by a parent product shell; App will not dispose it. */
@@ -28,6 +29,41 @@ export interface AppProps {
   /** Opens another home. Defaults to a full navigation, which tears everything down. */
   readonly switchHome?: (homeId: string) => void;
   readonly mountHouseApp?: MountHouseApp;
+  /** The signed-in account and the homes it owns; absent in a preview build. */
+  readonly pairing?: PairingService;
+}
+
+const NO_ACCOUNT = (): PairingAccount | null | undefined => undefined;
+const NO_SUBSCRIPTION = (): (() => void) => () => undefined;
+
+/** The account behind this page and the homes it owns, for the Miakapp bar. */
+function useAccount(pairing: PairingService | undefined): {
+  readonly account: PairingAccount | null | undefined;
+  readonly ownedHomes: readonly HomeSummary[] | undefined;
+} {
+  const account = useSyncExternalStore(
+    pairing?.subscribe ?? NO_SUBSCRIPTION,
+    pairing?.getAccount ?? NO_ACCOUNT,
+    pairing?.getAccount ?? NO_ACCOUNT,
+  );
+  const accountId = account?.id;
+  const [owned, setOwned] = useState<{ readonly accountId: string; readonly homes: readonly HomeSummary[] }>();
+  useEffect(() => {
+    if (pairing === undefined || accountId === undefined) return undefined;
+    let current = true;
+    void pairing.listHomes().then(
+      (homes) => {
+        if (!current) return;
+        setOwned({
+          accountId,
+          homes: homes.map((home) => ({ id: home.id, name: home.name, detail: '', accent: '#b8d9ff' })),
+        });
+      },
+      () => undefined,
+    );
+    return () => { current = false; };
+  }, [pairing, accountId]);
+  return { account, ownedHomes: owned?.accountId === accountId ? owned?.homes : undefined };
 }
 
 function navigateToHome(homeId: string): void {
@@ -135,6 +171,7 @@ export function App({
   favoritesStore: providedFavoritesStore,
   switchHome = navigateToHome,
   mountHouseApp,
+  pairing,
 }: AppProps): React.JSX.Element {
   const [host] = useState<TrustedHost>(() => providedHost ?? createHost());
   const snapshot = useSyncExternalStore(host.subscribe, host.getSnapshot, host.getSnapshot);
@@ -164,6 +201,7 @@ export function App({
     attempt,
     snapshot.authorizationEpoch ?? 0,
   );
+  const { account, ownedHomes } = useAccount(snapshot.authenticated ? pairing : undefined);
   const [sandboxOrigin] = useState<string | undefined>(() => readSandboxOrigin?.());
 
   useEffect(() => {
@@ -187,7 +225,9 @@ export function App({
       favorites={favoritesStore}
       home={homeName === undefined ? snapshot.activeHome : { ...snapshot.activeHome, name: homeName }}
       homeState={snapshot.homeState}
-      homes={snapshot.homes}
+      homes={ownedHomes === undefined ? snapshot.homes : [...snapshot.homes, ...ownedHomes]}
+      account={account ?? undefined}
+      isOwner={ownedHomes?.some((owned) => owned.id === homeId) ?? false}
       {...(mountHouseApp === undefined ? {} : { mountHouseApp })}
       onAcceptConsent={() => {
         setDeclined(false);
