@@ -26,6 +26,13 @@ export interface FirebasePairingOptions {
  * ten-minute recent-authentication window the control plane requires before it
  * creates a home or issues a code.
  */
+function signInMethodName(providerId: string): string {
+  if (providerId === 'google.com') return 'google';
+  if (providerId === 'github.com') return 'github';
+  if (providerId === 'password' || providerId === 'emailLink') return 'email';
+  return providerId;
+}
+
 export class FirebasePairingService implements PairingService {
   readonly defaultRelayUrl: string | undefined;
   readonly issuer: string;
@@ -49,7 +56,12 @@ export class FirebasePairingService implements PairingService {
     this.#removeAuthListener = onAuthStateChanged(this.#auth, (user) => {
       this.#account = user === null
         ? null
-        : Object.freeze({ id: user.uid, email: user.email, name: user.displayName });
+        : Object.freeze({
+          id: user.uid,
+          email: user.email,
+          name: user.displayName,
+          methods: Object.freeze(user.providerData.map((entry) => signInMethodName(entry.providerId))),
+        });
       for (const listener of this.#listeners) listener();
     });
   }

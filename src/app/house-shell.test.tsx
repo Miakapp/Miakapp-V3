@@ -139,13 +139,13 @@ describe('house shell — consent before any house resource', () => {
     expect(screen.getByText(/créée et gérée par la personne qui s’en occupe/u)).toBeVisible();
 
     // The overlay is usable before consent: homes and personal settings.
-    await user.click(screen.getByRole('button', { name: /Menu Miakapp/u }));
-    expect(screen.getByRole('dialog', { name: 'Maisons' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Moi' }));
+    expect(screen.getByRole('dialog', { name: 'Moi' })).toBeVisible();
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Menu Miakapp/u })).toHaveFocus();
-    await user.click(screen.getByRole('button', { name: 'Réglages' }));
-    expect(screen.getByRole('dialog', { name: 'Réglages' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Moi' })).toHaveFocus();
+    await user.click(screen.getByRole('button', { name: 'Moi' }));
+    expect(screen.getByRole('dialog', { name: 'Moi' })).toBeVisible();
 
     // Zero house loads: no pointer read, no artifact, no frame, no request.
     await new Promise((resolve) => setTimeout(resolve, 20));
@@ -183,7 +183,7 @@ describe('house shell — consent before any house resource', () => {
     expect(options[0]!.container.closest('main.house-stage')).not.toBeNull();
     expect(options[0]!.container.closest('header')).toBeNull();
     const frame = document.querySelector('iframe')!;
-    expect(screen.getByRole('banner', { name: 'Miakapp' }).contains(frame)).toBe(false);
+    expect(screen.getByRole('navigation', { name: 'Miakapp' }).contains(frame)).toBe(false);
 
     // The agreement is kept for this home, at the current notice version.
     expect(JSON.parse(consentStorage.getItem('miakapp.house-consent.v2:anonymous')!)).toEqual({
@@ -270,7 +270,7 @@ describe('house shell — consent before any house resource', () => {
     );
     await waitFor(() => expect(mount).toHaveBeenCalledOnce());
 
-    await user.click(screen.getByRole('button', { name: 'Réglages' }));
+    await user.click(screen.getByRole('button', { name: 'Moi' }));
     await user.click(screen.getByRole('button', { name: 'Retirer mon accord' }));
 
     expect(sessions[0]!.dispose).toHaveBeenCalled();
@@ -327,7 +327,7 @@ describe('house shell — consent before any house resource', () => {
     render(<App consentStore={consent} createComponentRelease={() => coordinator}
       mountHouseApp={house.mount} readSandboxOrigin={() => SANDBOX_ORIGIN} />);
     await waitFor(() => expect(mount).toHaveBeenCalledOnce());
-    await user.click(screen.getByRole('button', { name: 'Réglages' }));
+    await user.click(screen.getByRole('button', { name: 'Moi' }));
     await user.click(screen.getByRole('button', { name: 'Retirer mon accord' }));
     let rejectActivation!: (error: Error) => void;
     coordinator.activate.mockImplementationOnce(() => new Promise((_resolve, reject) => { rejectActivation = reject; }));
@@ -365,7 +365,7 @@ describe('house shell — consent before any house resource', () => {
     expect(document.querySelector('iframe')).toBeNull();
     await act(async () => { rejectActivation(new Error('new account denied')); });
     expect(mount).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole('banner', { name: 'Miakapp' })).toBeVisible();
+    expect(screen.getByRole('navigation', { name: 'Miakapp' })).toBeVisible();
   });
 
   it('asks a signed-out resident to sign in before requesting anything', () => {
@@ -417,7 +417,8 @@ describe('house shell — consent before any house resource', () => {
       />,
     );
     expect(await screen.findByRole('heading', { name: 'Chalet d’Annecy n’a pas encore d’interface' })).toBeVisible();
-    expect(screen.getByRole('button', { name: /Menu Miakapp/u })).toHaveTextContent('Chalet d’Annecy');
+    expect(within(screen.getByRole('navigation', { name: 'Miakapp' })).getByRole('button', { name: 'Chalet d’Annecy' }))
+      .toHaveAttribute('aria-current', 'page');
     // No platform-made home screen stands in for the home's own.
     expect(screen.queryByText('3 lights on')).toBeNull();
   });
@@ -452,8 +453,8 @@ describe('house shell — around a running home', () => {
     expect(within(alert).getByRole('heading', { name: 'L’interface de Preview home s’est arrêtée' })).toBeVisible();
     expect(within(alert).getByText('Elle ne répondait plus.')).toBeVisible();
     // The overlay is still there and still answers.
-    await user.click(screen.getByRole('button', { name: /Menu Miakapp/u }));
-    expect(screen.getByRole('dialog', { name: 'Maisons' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Moi' }));
+    expect(screen.getByRole('dialog', { name: 'Moi' })).toBeVisible();
     await user.keyboard('{Escape}');
 
     await user.click(within(alert).getByRole('button', { name: 'Relancer' }));
@@ -490,24 +491,24 @@ describe('house shell — around a running home', () => {
       .rejects.toMatchObject({ code: 'unavailable' });
   });
 
-  it('moves focus to the Miakapp menu when the home asks for the way back', async () => {
+  it('moves focus to the Miakapp bar when the home asks for the way back', async () => {
     const { mount, options } = renderRunning();
     await waitFor(() => expect(mount).toHaveBeenCalledOnce());
     act(() => options[0]!.onFocusShell!());
-    expect(screen.getByRole('button', { name: /Menu Miakapp/u })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Preview home' })).toHaveFocus();
   });
 
   it('keeps favorites in the shell and lets the resident remove them', async () => {
     const user = userEvent.setup();
     const { favorites } = renderRunning();
+    await user.click(screen.getByRole('button', { name: 'Moi' }));
     const star = screen.getByRole('button', { name: 'Ajouter Preview home aux favoris' });
     expect(star).toHaveAttribute('aria-pressed', 'false');
     await user.click(star);
     expect(screen.getByRole('button', { name: 'Retirer Preview home des favoris' })).toHaveAttribute('aria-pressed', 'true');
     expect(favorites.list().map((home) => home.id)).toEqual([HOME_ID]);
 
-    await user.click(screen.getByRole('button', { name: /Menu Miakapp/u }));
-    const panel = screen.getByRole('dialog', { name: 'Maisons' });
+    const panel = screen.getByRole('dialog', { name: 'Moi' });
     await user.click(within(panel).getByRole('button', { name: 'Retirer Preview home des favoris' }));
     expect(favorites.list()).toEqual([]);
   });
@@ -516,7 +517,7 @@ describe('house shell — around a running home', () => {
     const user = userEvent.setup();
     const { mount, sessions } = renderRunning();
     await waitFor(() => expect(mount).toHaveBeenCalledOnce());
-    await user.click(screen.getByRole('button', { name: 'Réglages' }));
+    await user.click(screen.getByRole('button', { name: 'Moi' }));
     await user.click(screen.getByRole('radio', { name: 'Sombre' }));
     expect(sessions[0]!.setTheme).toHaveBeenLastCalledWith('dark');
   });
@@ -524,8 +525,8 @@ describe('house shell — around a running home', () => {
   it('closes a panel when focus moves into the home', async () => {
     const user = userEvent.setup();
     renderRunning();
-    await user.click(screen.getByRole('button', { name: 'Réglages' }));
-    expect(screen.getByRole('dialog', { name: 'Réglages' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Moi' }));
+    expect(screen.getByRole('dialog', { name: 'Moi' })).toBeVisible();
     act(() => {
       window.dispatchEvent(new Event('blur'));
     });
@@ -554,15 +555,54 @@ describe('house shell — truthful connection status', () => {
         onAcceptConsent={vi.fn()} onDeclineConsent={vi.fn()} onReopen={vi.fn()}
         onRevokeConsent={vi.fn()} onRetry={vi.fn()} onSwitchHome={vi.fn()}
       />);
-      const bar = within(screen.getByRole('banner', { name: 'Miakapp' }));
+      const bar = within(screen.getByRole('navigation', { name: 'Miakapp' }).parentElement!);
       if (['consent', 'declined', 'signin'].includes(kind)) {
         expect(bar.queryByText('Maison hors ligne')).not.toBeInTheDocument();
       } else {
         expect(bar.getByText('Maison hors ligne')).toBeVisible();
       }
-      expect(bar.getByRole('button', { name: 'Réglages' })).toBeVisible();
+      expect(bar.getByRole('button', { name: 'Moi' })).toBeVisible();
     },
   );
+});
+
+describe('house shell — the Miakapp bar', () => {
+  const renderBar = (isOwner: boolean): void => {
+    const home = createPreviewHost().getSnapshot().activeHome;
+    render(<HouseShell
+      home={home} homes={[home]} connection="ready"
+      stage={{ kind: 'empty' }} consent={undefined}
+      favorites={createHouseFavoritesStore(memoryStorage())}
+      sandboxOrigin={undefined} homeState={undefined} call={undefined}
+      onAcceptConsent={vi.fn()} onDeclineConsent={vi.fn()} onReopen={vi.fn()}
+      onRevokeConsent={vi.fn()} onRetry={vi.fn()} onSwitchHome={vi.fn()}
+      signOut={vi.fn(async () => undefined)}
+      account={{ id: 'uid', email: 'mathieu@example.com', name: 'Mathieu', methods: ['google', 'email'] }}
+      isOwner={isOwner}
+    />);
+  };
+
+  it('offers the home’s settings to its owner only', () => {
+    renderBar(true);
+    const bar = within(screen.getByRole('navigation', { name: 'Miakapp' }));
+    expect(bar.getByRole('link', { name: 'Réglages' })).toHaveAttribute('href', '/pair');
+  });
+
+  it('keeps the home’s settings away from a resident who does not own it', () => {
+    renderBar(false);
+    const bar = within(screen.getByRole('navigation', { name: 'Miakapp' }));
+    expect(bar.queryByRole('link', { name: 'Réglages' })).not.toBeInTheDocument();
+  });
+
+  it('shows the account and how it signs in on the profile sheet', async () => {
+    const user = userEvent.setup();
+    renderBar(false);
+    await user.click(screen.getByRole('button', { name: 'Moi' }));
+    const sheet = within(screen.getByRole('dialog', { name: 'Moi' }));
+    expect(sheet.getByText('mathieu@example.com')).toBeVisible();
+    expect(sheet.getByText(/Google · lien par e-mail/u)).toBeVisible();
+    expect(sheet.getByRole('heading', { name: 'Mes maisons' })).toBeVisible();
+  });
 });
 
 describe('house shell — resident sign-out', () => {
@@ -573,7 +613,7 @@ describe('house shell — resident sign-out', () => {
     render(<App host={{ ...hostWith({ authenticated: true }), signOut }}
       createComponentRelease={() => coordinator}
       consentStore={createHouseConsentStore(memoryStorage())} />);
-    await user.click(screen.getByRole('button', { name: 'Réglages' }));
+    await user.click(screen.getByRole('button', { name: 'Moi' }));
     await user.click(screen.getByRole('button', { name: 'Se déconnecter' }));
     expect(signOut).toHaveBeenCalledOnce();
     expect(coordinator.activate).not.toHaveBeenCalled();
@@ -586,7 +626,7 @@ describe('house shell — resident sign-out', () => {
     render(<App host={{ ...hostWith({ authenticated: true }), signOut }}
       createComponentRelease={() => coordinatorFor()}
       consentStore={createHouseConsentStore(memoryStorage())} />);
-    await user.click(screen.getByRole('button', { name: 'Réglages' }));
+    await user.click(screen.getByRole('button', { name: 'Moi' }));
     await user.click(screen.getByRole('button', { name: 'Se déconnecter' }));
     expect(screen.getByRole('button', { name: 'Déconnexion…' })).toBeDisabled();
     await act(async () => { reject(new Error('synthetic sensitive error')); });
@@ -621,10 +661,10 @@ describe('account-owned house favorites', () => {
     createHouseFavoritesStore(localStorage, 'resident:a').add({ id: 'private-other-home', name: 'Resident A private home' });
     const { unmount } = render(<App host={host} createComponentRelease={() => coordinatorFor()}
       consentStore={createHouseConsentStore(memoryStorage())} />);
-    const star = (): HTMLElement => document.querySelector('.house-bar__actions button[aria-pressed]') as HTMLElement;
+    const star = (): HTMLElement => document.querySelector('.house-homes__item.is-current button[aria-pressed]') as HTMLElement;
+    await user.click(screen.getByRole('button', { name: 'Moi' }));
     await user.click(star());
     expect(star()).toHaveAttribute('aria-pressed', 'true');
-    await user.click(screen.getByRole('button', { name: /Menu Miakapp/u }));
     expect(screen.getByText('Resident A private home')).toBeVisible();
     changeIdentity('resident:b');
     expect(star()).toHaveAttribute('aria-pressed', 'false');
