@@ -5,7 +5,6 @@ import {
   ProductionConfigurationError,
   parseProductionSecurityConfig,
 } from '../../src/production-config.js';
-import { STAGING_BROWSER_RELAY_EDGE_PROFILE } from '../../src/staging-browser-relay-edge-profile.js';
 
 const publicJwk = (() => {
   const exported = generateKeyPairSync('ed25519').publicKey.export({ format: 'jwk' });
@@ -181,26 +180,22 @@ describe('production security configuration', () => {
     }
   });
 
-  test('binds each environment to its reviewed access-token issuers', () => {
-    const edge = candidate();
-    edge.issuer = STAGING_BROWSER_RELAY_EDGE_PROFILE.issuer;
-    expect(parseProductionSecurityConfig(edge).issuer)
-      .toBe(STAGING_BROWSER_RELAY_EDGE_PROFILE.issuer);
-
-    expectInvalid((value) => { value.issuer = 'https://control.miakapp.com'; });
-
-    const production = candidate();
-    production.environment = 'production';
-    production.project_id = 'miakapp-v4';
-    production.issuer = 'https://control.staging.miakapp.com';
-    production.signing.key_version_name = production.signing.key_version_name
-      .replaceAll('miakapp-v4-staging', 'miakapp-v4');
-    for (const entry of Object.values(production.secret_manager.keyrings)) {
-      const typed = entry as ReturnType<typeof keyring>;
-      typed.versions[0]!.resource_name = typed.versions[0]!.resource_name
-        .replace('miakapp-v4-staging', 'miakapp-v4');
+  test('accepts the deployment own canonical HTTPS issuer and nothing looser', () => {
+    for (const issuer of ['https://api.miakapp.com', 'https://miakapp-api.dac.cclabs.cx']) {
+      const value = candidate();
+      value.issuer = issuer;
+      expect(parseProductionSecurityConfig(value).issuer).toBe(issuer);
     }
-    expect(() => parseProductionSecurityConfig(production)).toThrow(ProductionConfigurationError);
+    for (const issuer of [
+      'http://api.miakapp.com',
+      'https://api.miakapp.com/',
+      'https://api.miakapp.com/v1',
+      'https://api.miakapp.com?x=1',
+      'https://user@api.miakapp.com',
+      'https://control.example.test',
+    ]) {
+      expectInvalid((value) => { value.issuer = issuer; });
+    }
   });
 
   test('rejects unknown fields and embedded private signing material', () => {
@@ -265,7 +260,6 @@ describe('production security configuration', () => {
       'http://control.staging.miakapp.com',
       'https://control.staging.miakapp.com/',
       'https://control.example.test',
-      'https://other-control-plane-od.a.run.app',
       'https://user@control.staging.miakapp.com',
       'https://control.staging.miakapp.com?key=value',
     ]) {
