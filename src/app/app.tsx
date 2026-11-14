@@ -272,12 +272,30 @@ export function App({
   const { account, ownedHomes } = useAccount(snapshot.authenticated ? pairing : undefined);
   const [sandboxOrigin] = useState<string | undefined>(() => readSandboxOrigin?.());
 
+  // The status bar of an installed app takes the page's theme colour: match the
+  // home (night blue in dark mode) instead of the landing's paper.
+  useEffect(() => {
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    if (meta === null || typeof window.matchMedia !== 'function') return undefined;
+    const previous = meta.content;
+    const dark = window.matchMedia('(prefers-color-scheme: dark)');
+    const apply = (): void => { meta.content = dark.matches ? '#0a1024' : '#f3f0e8'; };
+    apply();
+    dark.addEventListener('change', apply);
+    return () => {
+      dark.removeEventListener('change', apply);
+      meta.content = previous;
+    };
+  }, []);
+
   // The app picked this home (last opened, or the build default) and it does
   // not open: go to one of the person's own homes instead of a dead end.
   useEffect(() => {
-    if (!homeWasPickedForThePerson() || componentRelease.status !== 'unavailable') return;
-    const own = ownedHomes?.find((home) => home.id !== homeId);
-    if (own !== undefined && !ownedHomes?.some((home) => home.id === homeId)) switchHome(own.id);
+    if (!homeWasPickedForThePerson() || ownedHomes === undefined || ownedHomes.length === 0) return;
+    if (ownedHomes.some((home) => home.id === homeId)) return;
+    // Not one of theirs: open it only if it does open (a home shared with them).
+    if (componentRelease.status !== 'unavailable' && componentRelease.status !== 'none') return;
+    switchHome((ownedHomes[0] as HomeSummary).id);
   }, [componentRelease.status, ownedHomes, homeId, switchHome]);
 
   useEffect(() => {

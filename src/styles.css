@@ -98,6 +98,15 @@ svg {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Behind a dark home (and under the status bar), the shell is night blue, not paper. */
+@media (prefers-color-scheme: dark) {
+  .house-shell,
+  html:has(.house-shell),
+  html:has(.house-shell) body {
+    background: #0a1024;
+  }
+}
+
 /* An app, not a page: nothing bounces or scrolls behind the shell. */
 html:has(.house-shell),
 html:has(.house-shell) body {
