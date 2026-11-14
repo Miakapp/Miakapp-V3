@@ -140,7 +140,9 @@ test('a house cannot replace itself with an unverified page or carry state out b
   // Either the navigation committed and the frame was removed, or the sandbox
   // blocked it and the verified release still answers on its private port.
   // In both cases nothing left the frame.
-  const ended = (await events(page)).includes('crashed:navigated');
+  const seen = await events(page);
+  const ended = seen.some((event) => event.startsWith('crashed:'));
+  if (ended) expect(seen).toContain('crashed:navigated');
   await expect(page.locator('iframe.house-app-frame')).toHaveCount(ended ? 0 : 1);
   expect(await leakHits(page)).toEqual([]);
 });
