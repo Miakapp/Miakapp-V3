@@ -3,6 +3,7 @@
     "site": "miakapp-v4-staging",
     "public": "dist",
     "trailingSlash": false,
+    "cleanUrls": true,
     "ignore": [
       "firebase.staging.json",
       "**/.*",
