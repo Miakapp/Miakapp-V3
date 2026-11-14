@@ -19,6 +19,7 @@ describe('staging shell frame navigation boundary', () => {
       'frame-src',
       'https://miakapp-v4-sandbox.web.app/app.html',
       'https://miakapp-v4-staging.firebaseapp.com/__/auth/iframe',
+      'https://www.miakapp.com/__/auth/iframe',
       'https://www.google.com/recaptcha/',
       'https://recaptcha.google.com/recaptcha/',
       'https://www.recaptcha.net/recaptcha/',
