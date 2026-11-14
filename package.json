@@ -11,6 +11,7 @@
     "dev": "vite --host 127.0.0.1",
     "serve": "bun run dev",
     "build": "tsc -b && vite build",
+    "prerender": "vite build --ssr src/prerender.tsx --outDir dist-ssr && node scripts/prerender.mjs dist dist-ssr/prerender.js",
     "preview": "vite preview --host 127.0.0.1",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc -b --pretty false",

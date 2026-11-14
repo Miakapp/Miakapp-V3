@@ -36,6 +36,11 @@ export interface ProductAppProps extends Omit<AppProps, 'host'> {
  *  a context, so every component that shows text says so in its signature. */
 export type Translate = (key: CopyKey) => string;
 
+/** The landing has one indexable address per language: `/` and `/fr`. */
+function localeFromPath(pathname: string): Locale | undefined {
+  return pathname === '/fr' || pathname.startsWith('/fr/') ? 'fr' : undefined;
+}
+
 function routeFromPath(pathname: string): ProductRoute {
   if (pathname === '/login') return 'login';
   if (pathname === '/new-home') return 'new-home';
@@ -44,12 +49,12 @@ function routeFromPath(pathname: string): ProductRoute {
   return 'landing';
 }
 
-function pathFor(route: ProductRoute): string {
+function pathFor(route: ProductRoute, locale: Locale): string {
   if (route === 'login') return '/login';
   if (route === 'new-home') return '/new-home';
   if (route === 'pair') return '/pair';
   if (route === 'console') return '/app';
-  return '/';
+  return locale === 'fr' ? '/fr' : '/';
 }
 
 function ProductBrand({ onNavigate }: { readonly onNavigate: () => void }): React.JSX.Element {
@@ -177,7 +182,7 @@ function LandingVisual({ t }: { readonly t: Translate }): React.JSX.Element {
   );
 }
 
-function LandingPage({ t, ...chrome }: PageProps): React.JSX.Element {
+export function LandingPage({ t, ...chrome }: PageProps): React.JSX.Element {
   const { onNavigate } = chrome;
   return (
     <ProductChrome t={t} {...chrome}>
@@ -363,6 +368,7 @@ export function ProductApp({
   const [copyState, setCopyState] = useState<CopyState>('idle');
   const [locale, setLocale] = useState<Locale>(() => (
     initialLocale
+    ?? localeFromPath(window.location.pathname)
     ?? resolveLocale(readStoredLocale(globalThis.localStorage), navigator.languages ?? [navigator.language])
   ));
 
@@ -371,6 +377,10 @@ export function ProductApp({
   const changeLocale = useCallback((next: Locale): void => {
     setLocale(next);
     writeStoredLocale(globalThis.localStorage, next);
+    // The landing's address names its language; keep the two in step.
+    if (routeFromPath(window.location.pathname) === 'landing') {
+      window.history.replaceState({}, '', pathFor('landing', next));
+    }
   }, []);
 
   // The document's own language is part of the page, not decoration: it is what
@@ -380,9 +390,9 @@ export function ProductApp({
   }, [locale]);
 
   const navigate = useCallback((next: ProductRoute): void => {
-    window.history.pushState({}, '', pathFor(next));
+    window.history.pushState({}, '', pathFor(next, locale));
     setRoute(next);
-  }, []);
+  }, [locale]);
 
   // Signing in is never a toll on the way somewhere else, so there is nowhere
   // to resume: whoever reaches `/login` asked for it, and what they asked for
@@ -397,8 +407,8 @@ export function ProductApp({
 
   useEffect(() => {
     if (route !== 'login' || !snapshot.authenticated) return;
-    window.history.replaceState({}, '', pathFor('console'));
-  }, [route, snapshot.authenticated]);
+    window.history.replaceState({}, '', pathFor('console', locale));
+  }, [route, snapshot.authenticated, locale]);
 
   useEffect(() => () => host.dispose(), [host]);
   useEffect(() => () => pairing?.dispose(), [pairing]);
