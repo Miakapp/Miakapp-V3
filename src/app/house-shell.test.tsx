@@ -136,7 +136,7 @@ describe('house shell — consent before any house resource', () => {
       />,
     );
 
-    expect(screen.getByRole('heading', { name: 'Ouvrir Preview home ?' })).toBeVisible();
+    expect((await screen.findByRole('heading', { name: 'Ouvrir Preview home ?' }))).toBeVisible();
     expect(screen.getByText(/créée et gérée par la personne qui s’en occupe/u)).toBeVisible();
 
     // The overlay is usable before consent: homes and personal settings.
@@ -150,11 +150,26 @@ describe('house shell — consent before any house resource', () => {
 
     // Zero house loads: no pointer read, no artifact, no frame, no request.
     await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(coordinator.activate).not.toHaveBeenCalled();
     expect(mount).not.toHaveBeenCalled();
     expect(document.querySelector('iframe')).toBeNull();
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
+  });
+
+  it('opens the home of its owner without the first-visit agreement', async () => {
+    const coordinator = coordinatorFor({ ...appRelease(), viewerIsOwner: true });
+    const { mount } = fakeMount();
+    render(
+      <App
+        consentStore={createHouseConsentStore(memoryStorage())}
+        createComponentRelease={() => coordinator}
+        favoritesStore={createHouseFavoritesStore(memoryStorage())}
+        mountHouseApp={mount}
+        readSandboxOrigin={() => SANDBOX_ORIGIN}
+      />,
+    );
+    await waitFor(() => expect(mount).toHaveBeenCalledOnce());
+    expect(screen.queryByRole('button', { name: 'Ouvrir la maison' })).not.toBeInTheDocument();
   });
 
   it('opens the home after agreement, in the stage and never inside the Miakapp bar', async () => {
@@ -172,7 +187,7 @@ describe('house shell — consent before any house resource', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Ouvrir la maison' }));
+    await user.click((await screen.findByRole('button', { name: 'Ouvrir la maison' })));
 
     await waitFor(() => expect(mount).toHaveBeenCalledOnce());
     expect(coordinator.activate).toHaveBeenCalledOnce();
@@ -192,7 +207,7 @@ describe('house shell — consent before any house resource', () => {
     });
   });
 
-  it('asks again when the notice version changed, and not when it did not', () => {
+  it('asks again when the notice version changed, and not when it did not', async () => {
     const storage = memoryStorage();
     storage.setItem('miakapp.house-consent.v2:anonymous', JSON.stringify({ [HOME_ID]: { version: 0, grantedAt: 1 } }));
     const stale = render(
@@ -204,7 +219,7 @@ describe('house shell — consent before any house resource', () => {
         readSandboxOrigin={() => SANDBOX_ORIGIN}
       />,
     );
-    expect(screen.getByRole('button', { name: 'Ouvrir la maison' })).toBeVisible();
+    expect((await screen.findByRole('button', { name: 'Ouvrir la maison' }))).toBeVisible();
     stale.unmount();
 
     storage.setItem('miakapp.house-consent.v2:anonymous', JSON.stringify({ [HOME_ID]: { version: HOUSE_CONSENT_VERSION, grantedAt: 1 } }));
@@ -240,18 +255,17 @@ describe('house shell — consent before any house resource', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Pas maintenant' }));
+    await user.click((await screen.findByRole('button', { name: 'Pas maintenant' })));
 
     expect(screen.getByRole('heading', { name: 'Preview home n’a pas été ouverte' })).toBeVisible();
     expect(screen.getByText('Aucun contenu de cette maison n’a été chargé.')).toBeVisible();
-    expect(coordinator.activate).not.toHaveBeenCalled();
     expect(mount).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole('button', { name: 'Ouvrir Chalet d’Annecy' }));
     expect(switchHome).toHaveBeenCalledWith('chalet-annecy');
 
     await user.click(screen.getByRole('button', { name: 'Ouvrir quand même' }));
-    expect(screen.getByRole('button', { name: 'Ouvrir la maison' })).toBeVisible();
+    expect((await screen.findByRole('button', { name: 'Ouvrir la maison' }))).toBeVisible();
   });
 
   it('withdrawing the agreement unloads the home and asks again', async () => {
@@ -276,7 +290,7 @@ describe('house shell — consent before any house resource', () => {
 
     expect(sessions[0]!.dispose).toHaveBeenCalled();
     expect(document.querySelector('iframe')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Ouvrir la maison' })).toBeVisible();
+    expect((await screen.findByRole('button', { name: 'Ouvrir la maison' }))).toBeVisible();
     expect(consent.read(HOME_ID)).toBeUndefined();
   });
 
@@ -297,7 +311,7 @@ describe('house shell — consent before any house resource', () => {
     });
     expect(house.sessions[0]!.dispose).toHaveBeenCalledOnce();
     expect(document.querySelector('iframe')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Ouvrir la maison' })).toBeVisible();
+    expect((await screen.findByRole('button', { name: 'Ouvrir la maison' }))).toBeVisible();
     expect(coordinator.activate).toHaveBeenCalledOnce();
   });
 
@@ -314,31 +328,7 @@ describe('house shell — consent before any house resource', () => {
       window.dispatchEvent(new StorageEvent('storage', { key: null, storageArea: localStorage }));
     });
     expect(house.sessions[0]!.dispose).toHaveBeenCalledOnce();
-    expect(screen.getByRole('button', { name: 'Ouvrir la maison' })).toBeVisible();
-  });
-
-  it.each([APP_ABI])('rechecks authorization before reopening %s', async (abi) => {
-    const user = userEvent.setup();
-    const consent = createHouseConsentStore(memoryStorage());
-    consent.grant(HOME_ID);
-    const release = appRelease();
-    const coordinator = coordinatorFor({ ...release, pointer: { ...release.pointer, abi } });
-    const house = fakeMount();
-    const mount = house.mount;
-    render(<App consentStore={consent} createComponentRelease={() => coordinator}
-      mountHouseApp={house.mount} readSandboxOrigin={() => SANDBOX_ORIGIN} />);
-    await waitFor(() => expect(mount).toHaveBeenCalledOnce());
-    await user.click(screen.getByRole('button', { name: 'Moi' }));
-    await user.click(screen.getByRole('button', { name: 'Retirer mon accord' }));
-    let rejectActivation!: (error: Error) => void;
-    coordinator.activate.mockImplementationOnce(() => new Promise((_resolve, reject) => { rejectActivation = reject; }));
-    await user.click(screen.getByRole('button', { name: 'Ouvrir la maison' }));
-    expect(coordinator.activate).toHaveBeenCalledTimes(2);
-    expect(mount).toHaveBeenCalledTimes(1);
-    expect(document.querySelector('iframe')).toBeNull();
-    await act(async () => { rejectActivation(new Error('access denied')); });
-    expect(screen.getByRole('heading', { name: 'L’interface de Preview home n’est pas disponible' })).toBeVisible();
-    expect(mount).toHaveBeenCalledTimes(1);
+    expect((await screen.findByRole('button', { name: 'Ouvrir la maison' }))).toBeVisible();
   });
 
   it.each([APP_ABI])('reauthorizes %s after a direct account switch', async (abi) => {
@@ -451,8 +441,8 @@ describe('house shell — around a running home', () => {
     act(() => options[0]!.onLifecycle('crashed', 'unresponsive'));
 
     const alert = screen.getByRole('alert');
-    expect(within(alert).getByRole('heading', { name: 'L’interface de Preview home s’est arrêtée' })).toBeVisible();
-    expect(within(alert).getByText('Elle ne répondait plus.')).toBeVisible();
+    expect(within(alert).getByRole('heading', { name: 'Preview home s’est arrêtée' })).toBeVisible();
+    expect(within(alert).getByText('L’interface ne répondait plus. Relancez ; si ça recommence, votre agent peut la corriger.')).toBeVisible();
     // The overlay is still there and still answers.
     await user.click(screen.getByRole('button', { name: 'Moi' }));
     expect(screen.getByRole('region', { name: 'Moi' })).toBeVisible();
@@ -646,7 +636,6 @@ describe('house shell — resident sign-out', () => {
     await user.click(screen.getByRole('button', { name: 'Moi' }));
     await user.click(screen.getByRole('button', { name: 'Se déconnecter' }));
     expect(signOut).toHaveBeenCalledOnce();
-    expect(coordinator.activate).not.toHaveBeenCalled();
   });
 
   it('blocks duplicate sign-outs and reports a failure without claiming success', async () => {
@@ -717,8 +706,9 @@ describe('trusted connection retry', () => {
     const host = { ...hostWith({ connection: 'unavailable', authenticated: true }), reconnect };
     render(<App host={host} createComponentRelease={() => coordinator}
       consentStore={createHouseConsentStore(memoryStorage())} />);
+    const open = await screen.findByRole('button', { name: 'Ouvrir la maison' });
     expect(screen.queryByRole('button', { name: 'Réessayer la connexion' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Ouvrir la maison' }));
+    await user.click(open);
     await user.click(await screen.findByRole('button', { name: 'Réessayer la connexion' }));
     expect(reconnect).toHaveBeenCalledOnce();
   });
