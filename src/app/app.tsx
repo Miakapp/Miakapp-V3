@@ -203,6 +203,7 @@ export function App({
       sandboxOrigin={sandboxOrigin}
       reconnect={snapshot.authenticated ? host.reconnect : undefined}
       signIn={host.signIn}
+      signInWith={host.signInWith}
       signInStatus={snapshot.signInStatus}
       signOut={snapshot.authenticated ? host.signOut : undefined}
       stage={houseStage}

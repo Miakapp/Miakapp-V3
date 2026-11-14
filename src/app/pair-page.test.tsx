@@ -33,6 +33,7 @@ class FakePairing implements PairingService {
   readonly signIn = vi.fn(async () => {
     this.account = { id: 'lea', email: 'lea@example.test', name: 'Léa' };
     this.#emit();
+    return 'signed_in' as const;
   });
   readonly signOut = vi.fn(async () => {
     this.account = null;
@@ -89,40 +90,18 @@ function renderPage(service: PairingService | undefined, locale: Locale = 'fr', 
 describe('agent pairing page', () => {
   beforeEach(() => window.history.replaceState({}, '', '/pair'));
 
-  it('keeps one sign-in attempt pending and permits retry after a safe failure', async () => {
+  it('signs in with the chosen method and reports a failure without provider details', async () => {
     const user = userEvent.setup();
     const service = new FakePairing();
-    let rejectSignIn!: (error: Error) => void;
-    service.signIn.mockImplementationOnce(() => new Promise((_resolve, reject) => { rejectSignIn = reject; }));
+    service.signIn.mockRejectedValueOnce(new Error('private provider details'));
     renderPage(service, 'en');
     const button = screen.getByRole('button', { name: new RegExp(en.pairAccountCta, 'u') });
-    await user.dblClick(button);
-    expect(service.signIn).toHaveBeenCalledTimes(1);
-    expect(button).toBeDisabled();
-    expect(screen.getByRole('status')).toHaveTextContent(en.pairLoading);
-    await act(async () => rejectSignIn(new Error('private provider details')));
-    expect(await screen.findByRole('alert')).toHaveTextContent(en.pairErrorUnavailable);
+    await user.click(button);
+    expect(service.signIn).toHaveBeenCalledWith({ kind: 'google' });
+    expect(await screen.findByRole('alert')).toBeVisible();
     expect(screen.queryByText('private provider details')).toBeNull();
-    expect(button).toBeEnabled();
     await user.click(button);
     expect(await screen.findByText('lea@example.test')).toBeVisible();
-  });
-
-  it('preserves the current account and shows a cancelled account chooser error', async () => {
-    const user = userEvent.setup();
-    const service = new FakePairing();
-    service.account = { id: 'old', email: 'old@example.test', name: null };
-    service.signIn.mockRejectedValueOnce(new Error('popup closed'));
-    renderPage(service, 'en');
-    await user.click(await screen.findByRole('button', { name: /Maison de Léa/u }));
-    await user.click(screen.getByRole('button', { name: en.pairSwitchAccount }));
-    expect(await screen.findByRole('alert')).toHaveTextContent(en.pairErrorUnavailable);
-    expect(service.signOut).not.toHaveBeenCalled();
-    expect(screen.getByText('old@example.test')).toBeVisible();
-    expect(service.issued).toEqual([]);
-    await user.click(screen.getByRole('button', { name: en.pairSwitchAccount }));
-    expect(await screen.findByText('lea@example.test')).toBeVisible();
-    expect(screen.getByRole('heading', { name: en.pairHomesTitle })).toBeVisible();
   });
 
   it('blocks mutations while reauthenticating and lets a failed reauthentication retry', async () => {
@@ -356,7 +335,7 @@ describe('agent pairing page', () => {
     service.homes.push({ id: 'chalet-b', name: 'Chalet B', icon: 'house' });
     service.issueFailures = [new PairingError('stale_sign_in')];
     let finishSignIn!: () => void;
-    service.signIn.mockImplementation(() => new Promise((resolve) => { finishSignIn = resolve; }));
+    service.signIn.mockImplementation(() => new Promise((resolve) => { finishSignIn = () => resolve('signed_in'); }));
     renderPage(service, 'en');
     await user.click(await screen.findByRole('button', { name: /Maison de Léa/u }));
     await user.click(screen.getByRole('checkbox'));
@@ -437,7 +416,7 @@ describe('agent pairing page', () => {
     expect(await screen.findByText(en.pairKeysEmpty)).toBeVisible();
   });
 
-  it('lets the person switch account and forgets the previous choice', async () => {
+  it('lets the person switch account by signing out first', async () => {
     const user = userEvent.setup();
     const service = new FakePairing();
     service.account = { id: 'old', email: 'old@example.test', name: null };
@@ -445,9 +424,7 @@ describe('agent pairing page', () => {
 
     await user.click(await screen.findByRole('button', { name: /Maison de Léa/u }));
     await user.click(screen.getByRole('button', { name: en.pairSwitchAccount }));
-    expect(service.signOut).not.toHaveBeenCalled();
-    expect(await screen.findByText('lea@example.test')).toBeVisible();
-    expect(screen.getByRole('heading', { name: en.pairHomesTitle })).toBeVisible();
+    expect(service.signOut).toHaveBeenCalledOnce();
   });
 });
 

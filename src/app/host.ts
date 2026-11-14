@@ -1,3 +1,5 @@
+import type { SignInMethod, SignInOutcome } from './sign-in';
+
 export type HomeConnectionStatus =
   | 'connecting'
   | 'ready'
@@ -60,6 +62,8 @@ export interface TrustedHost {
   /** Restarts a failed connection only; never replays house calls. */
   readonly reconnect?: () => void;
   readonly signIn?: () => void;
+  /** Google, GitHub or an emailed link; absent on hosts without accounts. */
+  readonly signInWith?: (method: SignInMethod) => Promise<SignInOutcome>;
   /** Signs out the trusted identity; never exposed to a house runtime. */
   readonly signOut?: () => Promise<void>;
   readonly dispose: () => void;
