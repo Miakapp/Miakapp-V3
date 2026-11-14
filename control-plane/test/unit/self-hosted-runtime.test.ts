@@ -11,7 +11,6 @@ import {
   createLocalKmsClient,
   createLocalSecretClient,
 } from '../../src/self-hosted-runtime.js';
-import { STAGING_SELF_HOSTED_DAC_PROFILE } from '../../src/staging-browser-relay-edge-profile.js';
 
 const PROJECT = 'miakapp-v4-staging';
 const SECRETS = ['home-key-pepper', 'component-hmac', 'push-hmac', 'audit-hmac', 'network-hmac'];
@@ -36,7 +35,7 @@ function securityDocument(x: string) {
     environment: 'staging',
     project_id: PROJECT,
     region: 'europe-west9',
-    issuer: STAGING_SELF_HOSTED_DAC_PROFILE.issuer,
+    issuer: 'https://api.miakapp.com',
     signing: {
       current_kid: 'dac-access-token-v3',
       versions: [{
@@ -82,7 +81,7 @@ describe('self-hosted security adapters', () => {
     const header = JSON.parse(Buffer.from(signed.token.split('.')[0] as string, 'base64url').toString());
     const payload = JSON.parse(Buffer.from(signed.token.split('.')[1] as string, 'base64url').toString());
     expect(header).toMatchObject({ alg: 'EdDSA', kid: 'dac-access-token-v3' });
-    expect(payload.iss).toBe(STAGING_SELF_HOSTED_DAC_PROFILE.issuer);
+    expect(payload.iss).toBe('https://api.miakapp.com');
   });
 
   test('a key that does not match the pinned public JWK is refused', async () => {

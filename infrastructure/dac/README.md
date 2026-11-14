@@ -8,7 +8,7 @@ Kubernetes cluster instead of Cloud Run.
 | Piece | Where |
 | --- | --- |
 | Web app, `/pair` | Firebase Hosting, `https://miakapp-v4-staging.web.app` (`scripts/deploy-staging.sh`) |
-| Control plane | `https://miakapp-api.dac.cclabs.cx`, `control-plane/src/self-hosted-server.ts` |
+| Control plane | `https://api.miakapp.com` (also `miakapp-api.dac.cclabs.cx`), `control-plane/src/self-hosted-server.ts` |
 | Relay | `wss://miakapp-relay.dac.cclabs.cx/ws`, `Miakapp-Server` |
 | Identity, data | Firebase project `miakapp-v4-staging` |
 
@@ -28,7 +28,7 @@ packages become public, switch to `ghcr.io/miakapp/miakapp-control-plane` and
   `miakapp-control-plane@miakapp-v4-staging.iam.gserviceaccount.com`.
 - ConfigMap `control-plane-runtime`: `runtime-config.json`, a
   `miakapp.production-runtime/2` document with issuer
-  `https://miakapp-api.dac.cclabs.cx` and the public JWK of the key above.
+  `https://api.miakapp.com` and the public JWK of the key above.
 
 The Home Key pepper changed with the move: Home Keys issued by the Cloud Run
 control plane no longer authenticate. Pair again through `/pair`.
@@ -40,6 +40,4 @@ control plane no longer authenticate. Pair again through `/pair`.
   ones for that reason.
 - Artifacts published before the move point at the Cloud Run origin and are
   refused by the web app; publish again.
-- The CLI's default issuer is `https://control.miakapp.com`. Staging needs
-  `miakapp pair --issuer https://miakapp-api.dac.cclabs.cx`, which `/pair`
-  prints.
+- The CLI's default issuer is `https://api.miakapp.com` (CLI 4.0.0).

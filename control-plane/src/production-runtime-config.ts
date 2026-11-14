@@ -6,11 +6,6 @@ import {
   type ProductionEnvironment,
   type ProductionSecurityConfig,
 } from './production-config.js';
-import {
-  STAGING_BROWSER_RELAY_EDGE_PROFILE,
-  stagingEdgeProfileForIssuer,
-  type StagingEdgeProfile,
-} from './staging-browser-relay-edge-profile.js';
 import type { DeploymentConfig } from './types.js';
 
 const MAXIMUM_ORIGINS = 8;
@@ -63,7 +58,6 @@ export interface ProductionRuntimeConfig {
   readonly appCheckAppId: string;
   readonly componentBucket: string;
   readonly serviceAccountEmail: string;
-  readonly networkProfile: 'canonical' | StagingEdgeProfile['id'];
 }
 
 function fail(): never {
@@ -105,23 +99,6 @@ function origin(value: unknown): string {
     fail();
   }
   return exactOrigin;
-}
-
-function networkProfile(
-  security: ProductionSecurityConfig,
-  allowedOrigins: readonly string[],
-): ProductionRuntimeConfig['networkProfile'] {
-  // Every edge profile shares the one web.app origin; the issuer selects which.
-  const profile = stagingEdgeProfileForIssuer(security.issuer);
-  const usesBrowserRelayOrigin = allowedOrigins.includes(
-    STAGING_BROWSER_RELAY_EDGE_PROFILE.allowedOrigin,
-  );
-  if ((profile !== undefined) !== usesBrowserRelayOrigin
-    || (profile !== undefined
-      && security.environment !== 'staging')) {
-    fail();
-  }
-  return profile?.id ?? 'canonical';
 }
 
 function origins(value: unknown): readonly string[] {
@@ -177,7 +154,6 @@ export function parseProductionRuntimeConfig(input: unknown): ProductionRuntimeC
     appCheckAppId: appId(candidate.app_check_app_id),
     componentBucket,
     serviceAccountEmail: SERVICE_ACCOUNTS[security.environment],
-    networkProfile: networkProfile(security, allowedOrigins),
   });
 }
 
