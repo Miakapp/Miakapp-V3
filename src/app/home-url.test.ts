@@ -14,7 +14,7 @@ describe('home addresses', () => {
   });
 
   it('writes /app/<id> and treats every home address as the app', () => {
-    expect(homePath('colmon')).toBe('/app/colmon');
+    expect(homePath('colmon')).toBe('/h/colmon');
     expect(isAppPath('/app')).toBe(true);
     expect(isAppPath('/h/colmon')).toBe(true);
     expect(isAppPath('/fr')).toBe(false);
@@ -23,6 +23,9 @@ describe('home addresses', () => {
   it('rewrites a legacy address in place and keeps its other parameters', () => {
     window.history.replaceState({}, '', '/app?home=colmon&from=push');
     canonicalizeHomeAddress(window.location, window.history);
-    expect(`${window.location.pathname}${window.location.search}`).toBe('/app/colmon?from=push');
+    expect(`${window.location.pathname}${window.location.search}`).toBe('/h/colmon?from=push');
+    window.history.replaceState({}, '', '/app/colmon');
+    canonicalizeHomeAddress(window.location, window.history);
+    expect(window.location.pathname).toBe('/h/colmon');
   });
 });

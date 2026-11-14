@@ -1,13 +1,13 @@
 /**
- * A home's address in the web app: `/app/<id>` today, `/h/<id>` once
- * miakapp.com serves V4. Both are read; `homePath` is the one Miakapp writes.
+ * A home's address in the web app: `/h/<id>` (miakapp.com/h/colmon). The
+ * earlier `/app/<id>` is still read; `homePath` is the one Miakapp writes.
  * The legacy `/app?home=<id>` still opens and is rewritten to the new form.
  */
 const HOME_ID = /^[a-z][a-z0-9-]{1,61}[a-z0-9]$/u;
 const HOME_PATH = /^\/(?:app|h)\/([^/]+)\/?$/u;
 
 export function homePath(homeId: string): string {
-  return `/app/${encodeURIComponent(homeId)}`;
+  return `/h/${encodeURIComponent(homeId)}`;
 }
 
 /** The home this address asks for, or null when it names none. */
@@ -24,8 +24,14 @@ export function isAppPath(pathname: string): boolean {
   return pathname === '/app' || HOME_PATH.test(pathname);
 }
 
-/** Rewrites a legacy `/app?home=<id>` address in place, keeping its other parameters. */
+/** Rewrites an older `/app?home=<id>` or `/app/<id>` address in place, keeping its other parameters. */
 export function canonicalizeHomeAddress(location: Location, history: History): void {
+  const pathId = /^\/app\/([^/]+)\/?$/u.exec(location.pathname)?.[1];
+  if (pathId !== undefined) {
+    const id = decodeURIComponent(pathId);
+    if (HOME_ID.test(id)) history.replaceState(history.state, '', `${homePath(id)}${location.search}${location.hash}`);
+    return;
+  }
   if (location.pathname !== '/app') return;
   const params = new URLSearchParams(location.search);
   const id = params.get('home');
