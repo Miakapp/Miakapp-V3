@@ -43,7 +43,7 @@ spec:
           image: busybox:1.37
           command: [sh, -c, 'wget -qO- "https://codeload.github.com/Miakapp/Miakapp-V3/tar.gz/$COMMIT" | tar -xz -C /src --strip-components=2 "Miakapp-V3-$COMMIT/control-plane"']
           env:
-            - { name: COMMIT, value: "65d7cec6a0a61aad10dbe0e55eedc50b02ca0239" }
+            - { name: COMMIT, value: "e6b6b9ba3c2d1e6049edf61a70ec486e6dfd1a48" }
           volumeMounts:
             - { name: app, mountPath: /src }
         - name: build
