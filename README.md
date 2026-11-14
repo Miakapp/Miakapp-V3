@@ -94,7 +94,7 @@ bills silently until somebody notices.
 bun run check:web
 ```
 
-This runs ESLint, TypeScript, Vitest, and a production Vite build. The protocol and infrastructure packages have their own checks exposed through the root `package.json`.
+This runs ESLint, TypeScript, Vitest, and a production Vite build. The protocol, runtime and control-plane packages have their own checks exposed through the root `package.json`.
 
 The root Firebase alias intentionally remains the untouched Miakapp V3
 production project for staging-policy verification. The fictional public
@@ -104,27 +104,10 @@ host only through the guarded staging script above; do not run a bare
 
 ## Repository map
 
-- `src/` — React trusted-host shell and closed semantic renderer
-- `component-runtime/` — component ABI, broker, and hostile browser corpus
+- `src/` — React web app: console, `/pair`, sandboxed host for agent-published apps
+- `component-runtime/` — app/component ABI, sandbox broker, artifact cache
 - `protocol/` — cross-language wire protocol
-- `coordinator-contract/` — coordinator SDK conformance contract
-- `control-plane/` — Firebase control-plane implementation and emulator slice
-- `control-plane-contract/` — shared control-plane contract
-- `synthetic-home/` — deterministic home fixture
-- `legacy/` — optional, installation-specific migration evidence; never a Miakapp 4 runtime dependency
-- `infrastructure/` — Terraform and staging safety gates
-- `docs/` — RFCs, operating guides, architecture, and roadmap
-
-See [`docs/README.md`](docs/README.md) for the documentation index and current implementation status.
-
-### Why there is a Node-RED corpus
-
-[`legacy/node-red-v3-characterization/`](legacy/node-red-v3-characterization/)
-executes the published MiakAPI v3 node under a real Node-RED runtime. It exists
-only to measure one legacy migration target and to keep those observations out
-of the generic Miakapp 4 contracts.
-
-Node-RED is **not** required, recommended, bundled, or exposed by Miakapp 4. A
-new home uses the coordinator SDK directly. The corpus is isolated under
-`legacy/` so its source-system vocabulary cannot be mistaken for product
-architecture.
+- `control-plane/` — control plane (auth, pairing, push, artifacts); deployed self-hosted
+- `control-plane-contract/` — shared control-plane fixtures
+- `infrastructure/dac/` — the running staging deployment
+- `docs/` — protocol RFCs and the house-app ABI spec

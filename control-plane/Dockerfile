@@ -1,5 +1,4 @@
-# Self-hosted control plane (see src/self-hosted-server.ts). The Cloud
-# Functions packaging in deployment/ is unchanged.
+# Self-hosted control plane (see src/self-hosted-server.ts).
 FROM oven/bun:1.2.23 AS build
 WORKDIR /app
 COPY package.json bun.lock ./

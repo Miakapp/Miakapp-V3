@@ -65,7 +65,6 @@ bun run test:unit
 bun run build
 node --check scripts/relay-integration-server.mjs
 node --check scripts/setup-relay-integration.mjs
-node deployment/check.mjs
 
 mkdir -p "$EMULATOR_CACHE_DIR"
 bunx firebase setup:emulators:firestore --non-interactive

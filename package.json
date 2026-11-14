@@ -20,12 +20,8 @@
     "check:web": "bun run lint && bun run typecheck && bun run test:web && bun run build",
     "test:protocol": "./protocol/check.sh",
     "test:runtime": "./component-runtime/check.sh",
-    "test:synthetic-home": "./synthetic-home/check.sh",
-    "test:coordinator-contract": "./coordinator-contract/check.sh",
     "test:control-plane-contract": "./control-plane-contract/check.sh",
-    "test:control-plane-emulator": "./control-plane/check.sh",
-    "test:legacy-node-red-v3": "./legacy/node-red-v3-characterization/check.sh",
-    "test:staging-manifest": "./infrastructure/staging/check.sh"
+    "test:control-plane-emulator": "./control-plane/check.sh"
   },
   "dependencies": {
     "firebase": "12.18.0",
