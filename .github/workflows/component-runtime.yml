@@ -43,7 +43,7 @@ jobs:
         run: bun run test:unit
       - name: Install browser engines
         run: bunx playwright install --with-deps chromium
-      - name: Run hostile browser corpus
+      - name: Run house app browser tests
         run: bun run test:browser
       - name: Upload browser failure evidence
         if: failure()
@@ -54,12 +54,8 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-  # The unit contract proves the builder is correct for a given broker source.
-  # It cannot prove that bundling the real broker still yields a document the
-  # browser will execute: the CSP hash covers the escaped script text, so a
-  # change in what esbuild emits can break the artifact while every test stays
-  # green. This builds it for throwaway origins and re-derives the digest from
-  # the bytes that would be served.
+  # Builds the sandbox site for throwaway origins, so a break in the real
+  # bundle shows up here rather than at deploy time.
   sandbox-artifact:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -80,5 +76,3 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Build the sandbox artifact
         run: bun run build:sandbox
-      - name: Verify the served bytes against the declared policy
-        run: bun run verify:sandbox

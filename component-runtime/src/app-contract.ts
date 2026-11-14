@@ -1,8 +1,7 @@
 // The `miakapp.app/1` bridge: what crosses the port between the trusted shell
 // and a whole-house application running in its opaque-origin frame.
 //
-// A `miakapp.component/1` release hands the shell a semantic tree and the shell
-// draws it. An app release draws itself — any DOM, CSS, layout, routing or
+// An app release draws itself — any DOM, CSS, layout, routing or
 // bundled library — inside a frame the shell sizes and owns. What it cannot do
 // is reach anything the shell did not hand it: the frame has no origin, no
 // network, no storage shared with anyone, and this port is its only way out.

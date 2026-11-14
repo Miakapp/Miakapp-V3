@@ -1,16 +1,15 @@
 // The deliverable `/app.html`: the document a whole-house application runs in.
 //
-// It sits beside `/sandbox.html` on the same dedicated sandbox site and follows
-// the same rule: the HTML and the headers it is only safe under are produced by
-// one function, because the confinement lives in the headers.
+// It is served from the dedicated sandbox site. The HTML and the headers it is
+// only safe under are produced by one function, because the confinement lives in
+// the headers.
 //
-// The policy differs from the semantic broker's on purpose. A house app owns a
-// document, so it may style it inline, draw from `data:`/`blob:` images and
-// fonts, run WebAssembly and evaluate code — none of which widens its authority,
-// since it already runs arbitrary script. What it keeps from the broker is what
-// actually bounds that authority: an opaque origin (no `allow-same-origin`), no
-// network of any kind, no navigation of anything but itself, no framing, no
-// popups, and no powerful features.
+// A house app owns a document, so it may style it inline, draw from
+// `data:`/`blob:` images and fonts, run WebAssembly and evaluate code — none of
+// which widens its authority, since it already runs arbitrary script. What
+// bounds that authority: an opaque origin (no `allow-same-origin`), no network
+// of any kind, no navigation of anything but itself, no framing, no popups, and
+// no powerful features.
 
 import { APP_DOCUMENT_PATH } from './app-contract';
 import { SANDBOX_DISABLED_FEATURES } from './security-profile';

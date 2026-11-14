@@ -1,17 +1,17 @@
 # Whole-house applications — `miakapp.app/1`
 
 Status: implemented in the browser shell, sandbox site build, control plane and
-CLI (`app:` manifests, `@miakapp/app`, `templates/home/app`), with an executable
-two-house proof (`control-plane/test/e2e/run-two-house-cli.sh`). Remaining items
-are deployment steps and the browser limitations listed below.
+CLI (`app:` manifests, `@miakapp/app`). Since 2026-11-14 it is the only
+interface model the shell draws: the semantic `miakapp.component/1` model (a
+tree Miakapp drew with its own controls, run by a hidden broker) was removed.
+The control plane still accepts that ABI on a pointer; the shell shows such a
+home as having no interface.
 
 ## Why
 
-`miakapp.component/1` lets a home describe a semantic tree that Miakapp draws
-with its own controls. That keeps a home inside a closed catalogue: it cannot
-choose its layout, styles, navigation or libraries. `miakapp.app/1` lets a home
-ship its own application instead, while the resident's account, other homes and
-the Miakapp controls stay out of its reach.
+A home owns its whole interface: layout, styles, navigation and libraries.
+`miakapp.app/1` lets a home ship its own application while the resident's
+account, other homes and the Miakapp controls stay out of its reach.
 
 ## What a house application is
 
@@ -87,10 +87,8 @@ still decides, per resident, whether each call is allowed.
 
 ## Building and deploying the sandbox site
 
-`bun run build:sandbox` now emits `app.html` beside `sandbox.html`, with one
-header rule each in the generated `firebase.json`; `bun run verify:sandbox`
-re-derives both script hashes from the served bytes and checks the app policy
-(opaque origin, closed network, framer).
+`bun run build:sandbox` emits `app.html` and the `firebase.json` carrying its
+header rule (opaque origin, closed network, framer).
 
 Recommended on the shell's own response headers: `frame-src <sandbox origin>`
 (plus whatever Firebase Auth and App Check frames need). Browser tests show it
