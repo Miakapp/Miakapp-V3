@@ -148,6 +148,10 @@ function validateFid(fid: string): void {
   if (!boundedTransportValue(fid, 4_096)) throw new PushTransportError();
 }
 
+function fcmMessage({ fid, ...rest }: FirebaseFidMessage): Record<string, unknown> {
+  return { token: fid, ...rest };
+}
+
 export class FirebaseFcmClient implements FirebaseMessagingClient {
   readonly #credential: Credential;
   readonly #endpoint: string;
@@ -182,7 +186,9 @@ export class FirebaseFcmClient implements FirebaseMessagingClient {
           Authorization: `Bearer ${credential.access_token}`,
           'Content-Type': 'application/json; charset=utf-8',
         },
-        body: JSON.stringify({ message }),
+        // The destination value is the FCM registration token the browser got
+        // from getToken(); installation-ID targeting does not reach Safari/iOS.
+        body: JSON.stringify({ message: fcmMessage(message) }),
         signal: AbortSignal.timeout(FCM_REQUEST_TIMEOUT_MILLISECONDS),
       });
       if (!response.ok || response.status < 200 || response.status > 299) {
