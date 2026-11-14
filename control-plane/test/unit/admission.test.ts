@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import type { Firestore } from 'firebase-admin/firestore';
 
 import { AdmissionController, auditOutcomeFor } from '../../src/admission.js';
-import { loadEmulatorConfig } from '../../src/config.js';
+import { loadEmulatorConfig } from '../fixture-config.js';
 import { ApiError } from '../../src/errors.js';
 import { ADMISSION_BUDGETS, SYSTEM_CLOCK, type DeploymentConfig } from '../../src/types.js';
 
