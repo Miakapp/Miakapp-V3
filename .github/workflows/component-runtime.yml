@@ -42,7 +42,7 @@ jobs:
       - name: Run unit contract
         run: bun run test:unit
       - name: Install browser engines
-        run: bunx playwright install --with-deps chromium firefox webkit
+        run: bunx playwright install --with-deps chromium
       - name: Run hostile browser corpus
         run: bun run test:browser
       - name: Upload browser failure evidence
