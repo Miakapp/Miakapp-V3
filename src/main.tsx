@@ -7,6 +7,7 @@ import {
   readConfiguredSandboxOrigin,
 } from './app/configured-host';
 import { markOpen } from './app/house-snapshot';
+import { canonicalizeHomeAddress } from './app/home-url';
 import { ProductApp } from './app/product-app';
 import './styles.css';
 
@@ -20,6 +21,9 @@ if (window.matchMedia('(display-mode: standalone)').matches
 }
 
 markOpen('boot');
+
+// Legacy `/app?home=<id>` links keep working and show the new `/app/<id>` address.
+canonicalizeHomeAddress(window.location, window.history);
 
 const root = document.querySelector('#root');
 

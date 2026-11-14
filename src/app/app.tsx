@@ -18,6 +18,7 @@ import { HouseShell, type HouseStage, type MountHouseApp } from './house-shell';
 import { createHouseSnapshotStore, markOpen, type HouseSnapshotStore } from './house-snapshot';
 import type { HomeSummary, TrustedHost } from './host';
 import type { PairingAccount, PairingService } from './pairing-client';
+import { homePath } from './home-url';
 
 export interface AppProps {
   /** A host owned by a parent product shell; App will not dispose it. */
@@ -69,7 +70,7 @@ function useAccount(pairing: PairingService | undefined): {
 }
 
 function navigateToHome(homeId: string): void {
-  window.location.assign(`/app?home=${encodeURIComponent(homeId)}`);
+  window.location.assign(homePath(homeId));
 }
 
 type ComponentReleaseState =
