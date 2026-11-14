@@ -10,7 +10,7 @@ Firestore stay on the free tier. The staging deployment is described in
 
 ## Check
 
-Requires Bun 1.2.23, Node.js 22.12+ and Java 21 (Firestore emulator).
+Requires Bun 1.2.23 and Node.js 22+.
 
 ```sh
 ./control-plane/check.sh

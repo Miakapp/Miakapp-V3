@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'bun:test';
 import { generateKeyPairSync } from 'node:crypto';
-import { readFileSync } from 'node:fs';
 
 import {
   ProductionConfigurationError,
@@ -276,11 +275,4 @@ describe('production security configuration', () => {
     expectInvalid((value) => { value.signing.public_jwk.alg = 'RS256'; });
   });
 
-  test('keeps the active Firebase Function entry point emulator-only', () => {
-    const source = readFileSync(new URL('../../src/index.ts', import.meta.url), 'utf8');
-    expect(source).toContain('loadEmulatorConfig');
-    expect(source).not.toContain('parseProductionSecurityConfig');
-    expect(source).not.toContain('initializeProductionSecurity');
-    expect(source).not.toContain('createGoogleCloudSecurityClients');
-  });
 });

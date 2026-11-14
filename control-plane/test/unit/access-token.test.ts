@@ -9,7 +9,7 @@ import {
   type ComponentAccessTokenVerifierConfig,
   type PushAccessTokenVerifierConfig,
 } from '../../src/access-token.js';
-import { loadEmulatorConfig } from '../../src/config.js';
+import { loadEmulatorConfig } from '../fixture-config.js';
 
 const NOW = 1_788_220_800;
 const CLOCK = Object.freeze({ now: () => NOW * 1_000 });
@@ -20,7 +20,7 @@ const ENVIRONMENT = {
 const config = loadEmulatorConfig(ENVIRONMENT);
 const baseHeader = Object.freeze({ alg: 'EdDSA', kid: config.signingPublicJwk.kid, typ: 'at+jwt' });
 const signingFixture = JSON.parse(readFileSync(
-  new URL('../../../control-plane-contract/fixtures/v1/access-tokens.json', import.meta.url),
+  new URL('../fixtures/access-tokens.json', import.meta.url),
   'utf8',
 )) as {
   readonly test_only_private_keys: {

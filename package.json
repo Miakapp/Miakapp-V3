@@ -20,8 +20,7 @@
     "check:web": "bun run lint && bun run typecheck && bun run test:web && bun run build",
     "test:protocol": "./protocol/check.sh",
     "test:runtime": "./component-runtime/check.sh",
-    "test:control-plane-contract": "./control-plane-contract/check.sh",
-    "test:control-plane-emulator": "./control-plane/check.sh"
+    "test:control-plane": "./control-plane/check.sh"
   },
   "dependencies": {
     "firebase": "12.18.0",

@@ -20,7 +20,7 @@ import {
 } from '../../src/app-check.js';
 import { FirebaseAdminAuthVerifier } from '../../src/auth.js';
 import type { ComponentActivationInput } from '../../src/component-store.js';
-import { loadEmulatorConfig } from '../../src/config.js';
+import { loadEmulatorConfig } from '../fixture-config.js';
 import { AccessTokenSigner } from '../../src/crypto.js';
 import { ApiError, type ApiErrorCode } from '../../src/errors.js';
 import {
@@ -51,7 +51,7 @@ const ENVIRONMENT: NodeJS.ProcessEnv = {
 const CONFIG = loadEmulatorConfig(ENVIRONMENT);
 const REAL_SIGNER = new AccessTokenSigner(CONFIG);
 const FIXTURE_URL = new URL(
-  '../../../control-plane-contract/fixtures/v1/access-tokens.json',
+  '../fixtures/access-tokens.json',
   import.meta.url,
 );
 

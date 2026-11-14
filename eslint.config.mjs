@@ -14,7 +14,6 @@ export default typescriptEslint.config(
       'src/app/vendor/**',
       'component-runtime/**',
       'control-plane/**',
-      'control-plane-contract/**',
       'protocol/**',
     ],
   },

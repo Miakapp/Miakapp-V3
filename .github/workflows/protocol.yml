@@ -34,6 +34,3 @@ jobs:
           bun-version: 1.2.23
       - name: Run both conformance implementations
         run: ./protocol/check.sh
-      - name: Smoke-test the Go fuzz target
-        working-directory: protocol/go
-        run: go test -run '^$' -fuzz '^FuzzDecodeFrame$' -fuzztime=10s

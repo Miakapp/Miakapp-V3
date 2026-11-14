@@ -1,11 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { createHmac, type JsonWebKey } from 'node:crypto';
 
-import { CONTROL_PLANE_ADMISSION_PROFILE } from './admission-profile.js';
-import type { EmulatorDeploymentConfig, SigningPublicJwk } from './types.js';
+import { CONTROL_PLANE_ADMISSION_PROFILE } from '../src/admission-profile.js';
+import type { EmulatorDeploymentConfig, SigningPublicJwk } from '../src/types.js';
 
 const EMULATOR_PROJECT = 'demo-miakapp-v4';
-const FIXTURE_URL = new URL('../../control-plane-contract/fixtures/v1/access-tokens.json', import.meta.url);
+const FIXTURE_URL = new URL('./fixtures/access-tokens.json', import.meta.url);
 
 interface SyntheticFixture {
   readonly provenance: {
