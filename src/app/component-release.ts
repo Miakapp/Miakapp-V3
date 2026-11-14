@@ -14,6 +14,8 @@ import {
   type ReleaseMetadataStore,
 } from '../../component-runtime/src/release-state';
 
+import { markOpen } from './house-snapshot';
+
 const EMPTY_DIGESTS: ReadonlySet<string> = new Set<string>();
 
 /** The control plane's read envelope around the live pointer (RFC 0004 §13.2). */
@@ -117,6 +119,11 @@ export interface ActivatedRelease {
 
 export interface ComponentReleaseCoordinator {
   activate(signal?: AbortSignal): Promise<ActivatedRelease>;
+  /**
+   * The last release this browser verified for the home, from its own cache,
+   * without touching the network; undefined when there is none.
+   */
+  peek?(signal?: AbortSignal): Promise<ActivatedRelease | undefined>;
 }
 
 export function createControlPlanePointerReader(
@@ -127,14 +134,16 @@ export function createControlPlanePointerReader(
   // sign-in. The publisher route stays for publishers.
   const url = `${base}/v1/homes/${options.homeId}/interface`;
   return async (signal) => {
-    const authorization = await options.authorize(signal);
+    // Both credentials are independent: fetch them together.
+    const [authorization, appCheck] = await Promise.all([
+      options.authorize(signal),
+      options.appCheckToken?.(signal),
+    ]);
     const headers: Record<string, string> = {
       accept: 'application/json',
       authorization,
     };
-    if (options.appCheckToken !== undefined) {
-      headers['x-firebase-appcheck'] = await options.appCheckToken(signal);
-    }
+    if (appCheck !== undefined) headers['x-firebase-appcheck'] = appCheck;
     const request: RequestInit = {
       method: 'GET',
       headers,
@@ -145,6 +154,7 @@ export function createControlPlanePointerReader(
       referrerPolicy: 'no-referrer',
     };
     if (signal) request.signal = signal;
+    markOpen('pointer-request');
     const response = await (options.fetch ?? globalThis.fetch)(url, request);
     if (!response.ok) {
       throw new Error(`component pointer read returned HTTP ${response.status}`);
@@ -202,7 +212,28 @@ export function createComponentReleaseCoordinator(
     });
   }
 
+  const offline: typeof globalThis.fetch = async () => {
+    throw new Error('peek reads the cache only');
+  };
+
   return {
+    async peek(signal) {
+      const known = (await releaseLedger().read())?.last_known_good;
+      if (known === undefined || quarantinedDigests.has(known.sha256)) return undefined;
+      const cached = artifactCache();
+      if (cached === undefined) return undefined;
+      const artifact = await loadVerifiedArtifact(known, {
+        allowedArtifactOrigins: options.allowedArtifactOrigins,
+        ...(options.allowedPathPrefixes === undefined
+          ? {}
+          : { allowedPathPrefixes: options.allowedPathPrefixes }),
+        cache: cached,
+        fetch: offline,
+        ...(signal === undefined ? {} : { signal }),
+      });
+      return { pointer: known, artifact, fellBack: false };
+    },
+
     async activate(signal) {
       const ledgerInstance = releaseLedger();
       const read = await options.readPointer(signal);

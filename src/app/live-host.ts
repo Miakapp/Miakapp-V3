@@ -18,6 +18,7 @@ import type {
   TrustedHost,
   TrustedHostSnapshot,
 } from './host';
+import { markOpen, staleStateFrom, type HouseSnapshotStore } from './house-snapshot';
 import type { SignInMethod, SignInOutcome } from './sign-in';
 
 export interface LiveIdentity {
@@ -39,7 +40,12 @@ export interface LiveHostOptions {
   readonly home: HomeSummary;
   readonly exchangeEndpoint: string;
   readonly identity: LiveIdentity;
+  /** Where the last values each account saw are kept; absent, nothing is cached. */
+  readonly snapshots?: (userId: string) => HouseSnapshotStore;
 }
+
+/** How often, at most, the live values are copied for the next visit. */
+const SNAPSHOT_WRITE_MS = 1_000;
 
 export interface LiveHostDependencies {
   readonly createClient?: BrowserClientFactory;
@@ -65,6 +71,8 @@ class LiveTrustedHost implements TrustedHost {
   readonly #createClient: BrowserClientFactory;
   readonly #createCredentialProvider: () => BrowserRelayCredentialProvider;
   readonly #removeIdentityListener: () => void;
+  readonly #snapshots: LiveHostOptions['snapshots'];
+  #snapshotTimer: ReturnType<typeof setTimeout> | undefined;
 
   #client: BrowserClient | undefined;
   #removeClientListeners: Array<() => void> = [];
@@ -89,6 +97,7 @@ class LiveTrustedHost implements TrustedHost {
     this.#home = options.home;
     this.#userId = options.identity.getUserId();
     this.#signedIn = this.#userId !== null;
+    this.#snapshots = options.snapshots;
     const createCredentialProvider = dependencies.createCredentialProvider
       ?? createControlPlaneBrowserRelayCredentialProvider;
     this.#createCredentialProvider = () => {
@@ -130,6 +139,7 @@ class LiveTrustedHost implements TrustedHost {
       this.#signedIn = userId !== null;
       ++this.#authorizationEpoch;
       this.#signInStatus = 'idle';
+      this.#cancelSnapshotWrite();
       // Detach synchronously; an old stop() must not block or overwrite the
       // new account. A fresh provider cannot reuse a prior user's lease.
       void this.#disconnect();
@@ -234,6 +244,7 @@ class LiveTrustedHost implements TrustedHost {
     this.#disposed = true;
     this.#connectionGeneration += 1;
     this.#removeIdentityListener();
+    this.#flushSnapshot();
     for (const remove of this.#removeClientListeners) remove();
     this.#removeClientListeners = [];
     this.#listeners.clear();
@@ -244,6 +255,11 @@ class LiveTrustedHost implements TrustedHost {
 
   async #connect(): Promise<void> {
     const generation = ++this.#connectionGeneration;
+    // Draw the last values this account saw, marked old, until the relay answers.
+    if (this.#homeState === undefined && this.#userId !== null) {
+      this.#homeState = staleStateFrom(this.#snapshots?.(this.#userId).read(this.#home.id));
+      if (this.#homeState !== undefined) markOpen('state-cached');
+    }
     const client = this.#createClient({
       homeId: this.#home.id,
       credentialProvider: this.#createCredentialProvider(),
@@ -255,16 +271,26 @@ class LiveTrustedHost implements TrustedHost {
       client.subscribe((event) => {
         if (this.#client !== client) return;
         this.#status = event.current;
+        if (event.current === 'ready') markOpen('relay-ready');
         this.#publish();
       }),
       client.state.subscribe((snapshot) => {
         if (this.#client !== client) return;
         this.#stateStale = snapshot.stale;
-        this.#homeState = Object.freeze({
-          values: snapshot.values,
-          revision: snapshot.revision,
-          stale: snapshot.stale,
-        });
+        // A session that has not synchronized yet knows less than the cache.
+        const unsynchronized = snapshot.stale && snapshot.revision === 0
+          && Object.keys(snapshot.values).length === 0;
+        this.#homeState = unsynchronized && this.#homeState !== undefined
+          ? Object.freeze({ ...this.#homeState, stale: true })
+          : Object.freeze({
+            values: snapshot.values,
+            revision: snapshot.revision,
+            stale: snapshot.stale,
+          });
+        if (!snapshot.stale) {
+          markOpen('state-live');
+          this.#scheduleSnapshotWrite();
+        }
         this.#publish();
       }),
     ];
@@ -293,6 +319,27 @@ class LiveTrustedHost implements TrustedHost {
     } catch {
       // The signed-out boundary is already closed by the missing credential source.
     }
+  }
+
+  #scheduleSnapshotWrite(): void {
+    if (this.#snapshotTimer !== undefined || this.#snapshots === undefined) return;
+    this.#snapshotTimer = setTimeout(() => {
+      this.#snapshotTimer = undefined;
+      this.#flushSnapshot();
+    }, SNAPSHOT_WRITE_MS);
+  }
+
+  #cancelSnapshotWrite(): void {
+    if (this.#snapshotTimer !== undefined) clearTimeout(this.#snapshotTimer);
+    this.#snapshotTimer = undefined;
+  }
+
+  /** Copies the current live values for this account's next visit. */
+  #flushSnapshot(): void {
+    this.#cancelSnapshotWrite();
+    const state = this.#homeState;
+    if (this.#userId === null || state === undefined || state.stale) return;
+    this.#snapshots?.(this.#userId).write(this.#home.id, { values: state.values });
   }
 
   readonly getPreferencesScope = (): string | undefined => this.#userId === null
