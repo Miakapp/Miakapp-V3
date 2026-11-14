@@ -27,7 +27,7 @@ import { createLiveHost, type LiveIdentity } from './live-host';
 import type { PairingService } from './pairing-client';
 import { FirebasePairingService } from './pairing-firebase';
 import { enablePush } from './push';
-import { completeEmailLinkSignIn, signInWith } from './sign-in';
+import { completeEmailLinkSignIn, completeRedirectSignIn, signInWith } from './sign-in';
 
 interface ComponentReleaseConfiguration {
   readonly pointerEndpoint: string;
@@ -218,6 +218,7 @@ function liveRuntime(configuration: LiveConfiguration): LiveRuntime {
   });
   liveRuntimes.set(app, runtime);
   void completeEmailLinkSignIn(runtime.auth).catch(() => undefined);
+  void completeRedirectSignIn(runtime.auth).catch(() => undefined);
   return runtime;
 }
 
