@@ -25,6 +25,7 @@ import type { TrustedHost } from './host';
 import { createLiveHost, type LiveIdentity } from './live-host';
 import type { PairingService } from './pairing-client';
 import { FirebasePairingService } from './pairing-firebase';
+import { completeEmailLinkSignIn, signInWith } from './sign-in';
 
 interface ComponentReleaseConfiguration {
   readonly pointerEndpoint: string;
@@ -214,6 +215,7 @@ function liveRuntime(configuration: LiveConfiguration): LiveRuntime {
     }),
   });
   liveRuntimes.set(app, runtime);
+  void completeEmailLinkSignIn(runtime.auth).catch(() => undefined);
   return runtime;
 }
 
@@ -248,6 +250,8 @@ export class FirebaseLiveIdentity implements LiveIdentity {
   readonly signIn = async (): Promise<void> => {
     await signInWithGoogle(this.#auth);
   };
+
+  readonly signInWith: LiveIdentity['signInWith'] = async (method) => await signInWith(this.#auth, method);
 
   readonly signOut = async (): Promise<void> => {
     await signOut(this.#auth);

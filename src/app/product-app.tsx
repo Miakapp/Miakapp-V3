@@ -18,6 +18,7 @@ import { ActivityIcon, HomeIcon, LockIcon, SparkIcon } from './icons';
 import './product.css';
 import { PairPage } from './pair-page';
 import type { PairingService } from './pairing-client';
+import { SignInChoices } from './sign-in-choices';
 
 type ProductRoute = 'landing' | 'login' | 'new-home' | 'pair' | 'console';
 type CopyState = 'idle' | 'copied' | 'failed';
@@ -270,9 +271,13 @@ function LoginPage({ host, t, ...chrome }: PageProps & { readonly host: TrustedH
           <p className="product-kicker">{t('loginKicker')}</p>
           <h1>{t('loginTitle')}</h1>
           <p>{t('loginLede')}</p>
-          <button className="google-button" disabled={host.signIn === undefined} onClick={host.signIn} type="button">
-            <span aria-hidden="true">G</span> {t('loginGoogle')}
-          </button>
+          {host.signInWith !== undefined ? (
+            <SignInChoices locale={chrome.locale} signIn={host.signInWith} />
+          ) : (
+            <button className="google-button" disabled={host.signIn === undefined} onClick={host.signIn} type="button">
+              <span aria-hidden="true">G</span> {t('loginGoogle')}
+            </button>
+          )}
           <small>{t('loginPrivacy')}</small>
           <button className="text-button" onClick={() => onNavigate('landing')} type="button">{t('loginBack')}</button>
         </section>

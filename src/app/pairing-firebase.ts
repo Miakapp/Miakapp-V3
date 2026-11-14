@@ -1,10 +1,4 @@
-import {
-  GoogleAuthProvider,
-  onAuthStateChanged,
-  signInWithPopup,
-  signOut,
-  type Auth,
-} from 'firebase/auth';
+import { onAuthStateChanged, signOut, type Auth } from 'firebase/auth';
 
 import {
   createPairingApi,
@@ -13,19 +7,20 @@ import {
   type PairingApi,
   type PairingService,
 } from './pairing-client';
+import { signInWith, type SignInMethod, type SignInOutcome } from './sign-in';
 
-type PopupSignIn = (auth: Auth, provider: GoogleAuthProvider) => Promise<unknown>;
+type SignIn = (auth: Auth, method: SignInMethod) => Promise<SignInOutcome>;
 
 export interface FirebasePairingOptions {
   readonly auth: Auth;
   readonly controlPlaneOrigin: string;
   readonly defaultRelayUrl: string | undefined;
-  readonly popupSignIn?: PopupSignIn;
+  readonly signInWith?: SignIn;
   readonly fetch?: typeof fetch;
 }
 
 /**
- * Pairing signs in through the person's own browser and always shows Google's
+ * Pairing signs in through the person's own browser and always shows the provider's
  * account chooser: the account that pairs is the one they pick, never one a
  * previous session happened to leave behind. A fresh sign-in also renews the
  * ten-minute recent-authentication window the control plane requires before it
@@ -37,7 +32,7 @@ export class FirebasePairingService implements PairingService {
   readonly #auth: Auth;
   readonly #api: PairingApi;
   readonly #listeners = new Set<() => void>();
-  readonly #popupSignIn: PopupSignIn;
+  readonly #signInWith: SignIn;
   readonly #removeAuthListener: () => void;
   #account: PairingAccount | null | undefined = undefined;
 
@@ -45,7 +40,7 @@ export class FirebasePairingService implements PairingService {
     this.#auth = options.auth;
     this.defaultRelayUrl = options.defaultRelayUrl;
     this.issuer = options.controlPlaneOrigin.replace(/\/+$/u, '');
-    this.#popupSignIn = options.popupSignIn ?? signInWithPopup;
+    this.#signInWith = options.signInWith ?? signInWith;
     this.#api = createPairingApi({
       controlPlaneOrigin: options.controlPlaneOrigin,
       fetch: options.fetch,
@@ -66,11 +61,16 @@ export class FirebasePairingService implements PairingService {
     return () => this.#listeners.delete(listener);
   };
 
-  readonly signIn = async (): Promise<void> => {
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: 'select_account' });
-    await this.#popupSignIn(this.#auth, provider);
-  };
+  readonly signIn = async (method?: SignInMethod): Promise<SignInOutcome> =>
+    await this.#signInWith(this.#auth, method ?? this.#currentMethod());
+
+  #currentMethod(): SignInMethod {
+    const user = this.#auth.currentUser;
+    const provider = user?.providerData[0]?.providerId;
+    if (provider === 'github.com') return { kind: 'github' };
+    if (provider === 'password' || provider === 'emailLink') return { kind: 'email', email: user!.email! };
+    return { kind: 'google' };
+  }
 
   readonly signOut = async (): Promise<void> => {
     await signOut(this.#auth);
