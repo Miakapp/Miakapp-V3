@@ -8,26 +8,11 @@
       "**/.*",
       "**/node_modules/**"
     ],
-    "rewrites": [
-      {
-        "source": "/",
-        "destination": "/landing.html"
-      },
-      {
-        "source": "**",
-        "destination": "/app.html"
-      }
-    ],
     "redirects": [
       {
-        "source": "/pair",
-        "destination": "https://www.miakapp.com/pair",
-        "type": 302
-      },
-      {
-        "source": "/pair/",
-        "destination": "https://www.miakapp.com/pair",
-        "type": 302
+        "regex": "^/(.*)$",
+        "destination": "https://www.miakapp.com/:1",
+        "type": 301
       }
     ]
   },
