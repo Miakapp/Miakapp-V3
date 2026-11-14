@@ -31,3 +31,24 @@ describe('content pages', () => {
   });
 
 });
+
+describe('device guides', () => {
+  it('cites only sources that exist, in both languages', async () => {
+    const { GUIDES } = await import('./guides');
+    for (const guide of Object.values(GUIDES)) {
+      for (const locale of LOCALES) {
+        const text = JSON.stringify(guide.copy[locale]);
+        for (const [, n] of text.matchAll(/\[(\d+)\]/g)) {
+          expect(Number(n)).toBeGreaterThanOrEqual(1);
+          expect(Number(n)).toBeLessThanOrEqual(guide.sources.length);
+        }
+      }
+    }
+  });
+
+  it('keeps drafts out of the published pages', async () => {
+    const { CONTENT_PAGES, publishedPages } = await import('./site');
+    const drafts = CONTENT_PAGES.filter((page) => page.draft).map((page) => page.id);
+    for (const page of publishedPages(false)) expect(drafts).not.toContain(page.id);
+  });
+});
