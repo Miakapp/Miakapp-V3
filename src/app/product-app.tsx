@@ -54,7 +54,7 @@ function pathFor(route: ProductRoute): string {
 function ProductBrand({ onNavigate }: { readonly onNavigate: () => void }): React.JSX.Element {
   return (
     <button className="product-brand" onClick={onNavigate} type="button">
-      <span className="product-brand__mark"><span className="brand-mark" /></span>
+      <img alt="" className="brand-mark product-brand__mark" src="/brand/miakapp.svg" />
       <span>miakapp</span>
     </button>
   );
@@ -157,7 +157,7 @@ function LandingVisual({ t }: { readonly t: Translate }): React.JSX.Element {
         </div>
       </div>
       <div className="glass landing-widget landing-widget--agent">
-        <span className="brand-mark" />
+        <img alt="" className="brand-mark" src="/brand/miakapp.svg" />
         <p>
           <strong>{t('landingAgentNote')}</strong> {t('landingAgentNoteDetail')}
           <small>{t('landingAgentNoteMeta')}</small>

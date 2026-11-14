@@ -3,7 +3,7 @@
    console keeps its own theme in styles.css. */
 
 .product-shell {
-  --lumiere-ink: #17181d;
+  --lumiere-ink: #0a1024;
   --lumiere-muted: #55575f;
   --lumiere-soft: #6a6c74;
   --lumiere-base: #f6f3ee;
@@ -11,7 +11,8 @@
   --lumiere-mint: #d6f5e3;
   --lumiere-lilac: #e3dcff;
   --lumiere-honey: #ffe9a8;
-  --lumiere-leaf: #8fd400;
+  --lumiere-gold: #ffa63b;
+  --lumiere-gold-light: #ffdd6e;
   --lumiere-accent: linear-gradient(100deg, #ff7a45 0%, #e0569b 45%, #7a5cff 100%);
 
   position: relative;
@@ -67,13 +68,11 @@
   background: linear-gradient(160deg, rgb(255 255 255 / 60%) 0%, transparent 38%);
 }
 
-/* The brand mark is the Miaki silhouette, so a new logo file restyles it
-   without touching this sheet. */
+/* « Minuit » app icon: gold Shiba on midnight blue. It already carries its
+   own rounded tile, so it is shown as is. */
 .brand-mark {
   display: block;
-  background: var(--lumiere-ink);
-  mask: url('/icons/logo.svg') center / 72% no-repeat;
-  -webkit-mask: url('/icons/logo.svg') center / 72% no-repeat;
+  filter: drop-shadow(0 6px 14px rgb(10 16 36 / 22%));
 }
 
 /* Header ------------------------------------------------------------------ */
@@ -103,11 +102,6 @@
 .product-brand__mark {
   width: 36px;
   height: 36px;
-  display: grid;
-  background: linear-gradient(135deg, rgb(255 255 255 / 85%), rgb(255 255 255 / 45%));
-  border: 1px solid rgb(255 255 255 / 85%);
-  border-radius: 11px;
-  box-shadow: inset 0 1px 0 #fff, 0 6px 16px rgb(80 60 40 / 12%);
 }
 
 .product-header nav {
@@ -176,12 +170,12 @@
   font-size: 15px;
   font-weight: 700;
   white-space: nowrap;
-  box-shadow: 0 10px 30px rgb(23 24 29 / 22%), inset 0 1px 0 rgb(255 255 255 / 20%);
+  box-shadow: 0 10px 30px rgb(10 16 36 / 22%), inset 0 1px 0 rgb(255 255 255 / 20%);
   transition: transform 160ms ease, box-shadow 160ms ease;
 }
 
 .product-button:hover {
-  box-shadow: 0 14px 36px rgb(23 24 29 / 28%), inset 0 1px 0 rgb(255 255 255 / 20%);
+  box-shadow: 0 14px 36px rgb(10 16 36 / 28%), inset 0 1px 0 rgb(255 255 255 / 20%);
   transform: translateY(-2px);
 }
 
@@ -218,7 +212,7 @@
   margin: 0;
   display: inline-flex;
   align-items: center;
-  color: #3a5a12;
+  color: #8a4a00;
   font-size: 12px;
   font-weight: 750;
   letter-spacing: 0.08em;
@@ -235,9 +229,9 @@
   height: 7px;
   margin-right: 8px;
   display: inline-block;
-  background: var(--lumiere-leaf);
+  background: var(--lumiere-gold);
   border-radius: 50%;
-  box-shadow: 0 0 0 4px rgb(143 212 0 / 20%);
+  box-shadow: 0 0 0 4px rgb(255 166 59 / 22%);
 }
 
 .text-button {
@@ -383,7 +377,7 @@
   width: 46px;
   height: 28px;
   flex: none;
-  background: linear-gradient(90deg, var(--lumiere-leaf), #5cc96b);
+  background: linear-gradient(90deg, var(--lumiere-gold-light), var(--lumiere-gold));
   border-radius: 999px;
 }
 
@@ -434,7 +428,6 @@
   width: 34px;
   height: 34px;
   flex: none;
-  border-radius: 11px;
 }
 
 .landing-widget--agent p {
@@ -546,9 +539,12 @@
   justify-content: space-between;
   gap: 30px;
   color: #fff;
-  background: linear-gradient(120deg, #17181d, #2a2340 60%, #3b2a4a);
+  background:
+    radial-gradient(60% 120% at 100% 0%, rgb(76 107 214 / 55%), transparent 60%),
+    radial-gradient(40% 90% at 85% 100%, rgb(255 166 59 / 28%), transparent 70%),
+    linear-gradient(180deg, #1d2b57, #0a1024);
   border-radius: 36px;
-  box-shadow: 0 30px 80px rgb(40 30 60 / 25%);
+  box-shadow: 0 30px 80px rgb(10 16 36 / 28%);
 }
 
 .landing-closing h2 {
