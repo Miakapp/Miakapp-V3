@@ -535,12 +535,14 @@ function PushSettings({ enablePush, t }: {
   readonly t: HouseTranslate;
 }): React.JSX.Element {
   const [status, setStatus] = useState<'idle' | 'pending' | 'done' | 'failed'>('idle');
+  const [detail, setDetail] = useState('');
   const enable = async (): Promise<void> => {
     setStatus('pending');
     try {
       await enablePush();
       setStatus('done');
-    } catch {
+    } catch (error) {
+      setDetail(error instanceof Error ? error.message : String(error));
       setStatus('failed');
     }
   };
@@ -552,7 +554,7 @@ function PushSettings({ enablePush, t }: {
         {t(status === 'pending' ? 'pushEnabling' : 'pushEnable')}
       </button>
     )}
-    {status === 'failed' ? <p role="alert">{t('pushFailed')}</p> : null}
+    {status === 'failed' ? <p role="alert">{t('pushFailed')} ({detail})</p> : null}
   </section>;
 }
 
