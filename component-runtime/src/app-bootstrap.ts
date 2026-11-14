@@ -225,10 +225,13 @@ function start(): void {
     installed = true;
     document.documentElement.lang = api.locale;
     document.title = api.home.name;
-    // An app, not a page: the home's document never rubber-bands, whatever it
-    // styles. Placed first so the home's own rules can still override it.
+    // An app, not a page: the home's document never rubber-bands and its text
+    // is not selectable (no selection handles on a long press), except where
+    // residents type. Placed first so the home's own rules can still override it.
     const base = document.createElement('style');
-    base.textContent = 'html,body{overscroll-behavior:none}';
+    base.textContent = 'html,body{overscroll-behavior:none;-webkit-user-select:none;user-select:none;'
+      + '-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}'
+      + 'input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:text}';
     document.head.prepend(base);
 
     // A classic script, because that is what the control plane admits: it parses
