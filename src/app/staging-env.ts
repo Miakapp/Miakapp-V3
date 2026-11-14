@@ -16,8 +16,7 @@
  * This module restates those rules as a pure function over an environment so
  * `scripts/deploy-staging.sh` can apply them before `vite build`. It is a
  * second reading of the same contract, not a new one: every rule below exists
- * because `configured-host.ts`, `component-runtime-host.ts` or
- * `component-runtime/src/artifact.ts` already enforces it somewhere the
+ * because `configured-host.ts` or `component-runtime/src/artifact.ts` already enforces it somewhere the
  * operator cannot watch.
  */
 

@@ -5,18 +5,17 @@ import { describe, expect, it, vi } from 'vitest';
 import { COMPONENT_ABI, type CapabilityRequirements } from '../../component-runtime/src/contract';
 import { App as ShellApp, type AppProps } from './app';
 import type { ActivatedRelease, ComponentReleaseCoordinator } from './component-release';
-import { createDemoHost } from './demo-host';
-import type { HomeState, TrustedHost, TrustedHostSnapshot } from './host';
+import { createPreviewHost } from './preview-host';
 import { createHouseConsentStore, type HouseConsentStore } from './house-consent';
 
 /**
- * These cases exercise the semantic component path after the resident agreed
+ * These cases exercise release activation after the resident agreed
  * to open the home's interface; the agreement itself is covered by
  * `house-shell.test.tsx`.
  */
 function agreedConsent(): HouseConsentStore {
   const store = createHouseConsentStore(undefined);
-  store.grant('home_horizon');
+  store.grant('home_preview');
   return store;
 }
 
@@ -41,46 +40,20 @@ function activatedRelease(release: string, fellBack: boolean): ActivatedRelease 
 }
 
 describe('App', () => {
-  it('makes preview boundaries explicit and updates local semantic state', async () => {
-    const user = userEvent.setup();
+  it('says a preview build has no home interface to open', () => {
     render(<App />);
 
-    const previewStatus = screen.getByRole('status', { name: 'Interactive product preview' });
-    expect(previewStatus).toHaveTextContent('Interactive product preview');
-    expect(previewStatus).toHaveTextContent('No cloud, relay, or home is connected.');
-    expect(screen.getByText('3 lights on')).toBeVisible();
-
-    await user.click(screen.getByRole('checkbox', { name: 'Kitchen' }));
-
-    expect(screen.getByText('4 lights on')).toBeVisible();
-  });
-
-  it('navigates to the privacy explanation without a router or network call', async () => {
-    const user = userEvent.setup();
-    render(<App />);
-
-    const settingsButtons = screen.getAllByRole('button', { name: 'Settings' });
-    await user.click(settingsButtons[0]!);
-
-    expect(screen.getByRole('heading', { level: 1, name: 'Connection & privacy' })).toBeVisible();
-    expect(screen.getByText('No cloud or home connection is active in this build.')).toBeVisible();
-    expect(screen.getByText(/cannot inject HTML, CSS, URLs, or credentials/)).toBeVisible();
+    expect(screen.getByRole('heading', { level: 1, name: 'Preview home has no interface yet' })).toBeVisible();
   });
 
   it('disposes the trusted host when the React shell unmounts', () => {
-    const host = createDemoHost();
+    const host = createPreviewHost();
     const dispose = vi.spyOn(host, 'dispose');
     const view = render(<App createHost={() => host} />);
 
     view.unmount();
 
     expect(dispose).toHaveBeenCalledOnce();
-  });
-
-  it('keeps the static host footer when no component release is configured', () => {
-    render(<App createComponentRelease={() => undefined} />);
-
-    expect(screen.getByText('Semantic host · ABI 1')).toBeVisible();
   });
 
   it('activates the verified component release from the render path', async () => {
@@ -94,22 +67,19 @@ describe('App', () => {
 
     // While the home's interface is fetched and verified, the house shell says
     // which home is opening rather than showing the platform's own screen.
-    expect(screen.getByRole('status')).toHaveTextContent('Opening Horizon House…');
+    expect(screen.getByRole('status')).toHaveTextContent('Opening Preview home…');
     await waitFor(() => expect(activate).toHaveBeenCalledOnce());
     expect(activate.mock.calls[0]?.[0]).toBeInstanceOf(AbortSignal);
   });
 
-  it('never shows release or runtime metadata to residents', async () => {
+  it('shows a semantic component release as no interface rather than drawing it', async () => {
     const coordinator: ComponentReleaseCoordinator = {
       activate: async () => activatedRelease('2026.09.14-3', true),
     };
     render(<App createComponentRelease={() => coordinator} />);
 
-    expect(await screen.findByRole('alert')).toBeVisible();
-    const text = document.body.textContent ?? '';
-    for (const jargon of ['2026.09.14-3', 'last known good', 'Component', 'ABI', 'runtime']) {
-      expect(text).not.toContain(jargon);
-    }
+    expect(await screen.findByRole('heading', { level: 1, name: 'Preview home has no interface yet' })).toBeVisible();
+    expect(document.body.textContent ?? '').not.toContain('2026.09.14-3');
   });
 
   it('degrades to a stated failure with a retry instead of a blank shell', async () => {
@@ -119,7 +89,7 @@ describe('App', () => {
     });
     render(<App createComponentRelease={() => ({ activate })} />);
 
-    expect(await screen.findByRole('heading', { name: 'Horizon House’s interface is unavailable' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Preview home’s interface is unavailable' })).toBeVisible();
     // The Miakapp controls stay usable around the failure.
     expect(screen.getByRole('button', { name: /Miakapp menu/u })).toBeEnabled();
     await user.click(screen.getByRole('button', { name: 'Restart' }));
@@ -142,394 +112,5 @@ describe('App', () => {
     expect(observed?.aborted).toBe(false);
     view.unmount();
     expect(observed?.aborted).toBe(true);
-  });
-});
-
-const SANDBOX_ORIGIN = 'https://sandbox.miakapp.test';
-
-function runtimeTree(title: string): unknown {
-  return {
-    id: 'runtime-screen',
-    type: 'screen',
-    props: { title },
-    children: [
-      {
-        id: 'runtime-action',
-        type: 'button',
-        props: { label: 'Run it', handler: 'runtime.action', variant: 'primary' },
-      },
-    ],
-  };
-}
-
-function releaseWithArtifact(bytes: Uint8Array): ActivatedRelease {
-  return {
-    pointer: { release: '2026.09.15-runtime', abi: COMPONENT_ABI, requires: NO_REQUIREMENTS } as ActivatedRelease['pointer'],
-    artifact: { bytes } as unknown as ActivatedRelease['artifact'],
-    fellBack: false,
-  };
-}
-
-function coordinatorFor(release: ActivatedRelease): ComponentReleaseCoordinator {
-  return { activate: async () => release };
-}
-
-describe('App component runtime call site', () => {
-  it('never mounts the runtime when the deployment declares no sandbox origin', async () => {
-    const mountRuntime = vi.fn();
-    render(
-      <App
-        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
-        mountRuntime={mountRuntime as never}
-      />,
-    );
-
-    // A verified component with nowhere to run is a stated failure in the
-    // house shell, not a platform screen pretending to be the home's.
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Miakapp’s isolated space is misconfigured; nothing was opened.',
-    );
-    expect(mountRuntime).not.toHaveBeenCalled();
-    expect(screen.queryByText('3 lights on')).toBeNull();
-  });
-
-  it('never mounts the runtime when no release was verified', () => {
-    const mountRuntime = vi.fn();
-    render(
-      <App
-        createComponentRelease={() => undefined}
-        mountRuntime={mountRuntime as never}
-        readSandboxOrigin={() => SANDBOX_ORIGIN}
-      />,
-    );
-
-    expect(mountRuntime).not.toHaveBeenCalled();
-    expect(screen.getByText('Semantic host · ABI 1')).toBeVisible();
-  });
-
-  it('runs the verified artifact in the declared sandbox and renders what it returns', async () => {
-    const bytes = new Uint8Array([7, 8, 9]);
-    const session = { lifecycle: 'active' as const, interact: vi.fn(), dispose: vi.fn() };
-    const mountRuntime = vi.fn(async (_release: never, options: never) => {
-      const opts = options as unknown as { onTree: (tree: unknown, revision: number) => void };
-      opts.onTree(runtimeTree('Runtime speaking'), 4);
-      return session;
-    });
-
-    render(
-      <App
-        createComponentRelease={() => coordinatorFor(releaseWithArtifact(bytes))}
-        mountRuntime={mountRuntime as never}
-        readSandboxOrigin={() => SANDBOX_ORIGIN}
-      />,
-    );
-
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { level: 1, name: 'Runtime speaking' })).toBeVisible();
-    });
-
-    const [passedRelease, passedOptions] = mountRuntime.mock.calls[0]! as unknown as [
-      { pointer: { release: string }; artifact: { bytes: Uint8Array } },
-      { sandboxOrigin: string; container: HTMLElement },
-    ];
-    expect(passedRelease.artifact.bytes).toBe(bytes);
-    expect(passedRelease.pointer.release).toBe('2026.09.15-runtime');
-    expect(passedOptions.sandboxOrigin).toBe(SANDBOX_ORIGIN);
-    expect(passedOptions.container).toBe(screen.getByTestId('component-runtime-surface'));
-    // The runtime's tree is the home screen, inside the Miakapp shell.
-    expect(screen.getByRole('banner', { name: 'Miakapp' })).toBeVisible();
-    expect(screen.queryByText('3 lights on')).toBeNull();
-  });
-
-  it('routes interactions on the runtime tree to the runtime, never to the trusted host', async () => {
-    const user = userEvent.setup();
-    const session = { lifecycle: 'active' as const, interact: vi.fn(), dispose: vi.fn() };
-    const host = createDemoHost();
-    const hostInteract = vi.spyOn(host, 'interact');
-    const mountRuntime = vi.fn(async (_release: never, options: never) => {
-      (options as unknown as { onTree: (t: unknown, r: number) => void })
-        .onTree(runtimeTree('Runtime speaking'), 1);
-      return session;
-    });
-
-    render(
-      <App
-        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
-        createHost={() => host}
-        mountRuntime={mountRuntime as never}
-        readSandboxOrigin={() => SANDBOX_ORIGIN}
-      />,
-    );
-
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Run it' })).toBeVisible();
-    });
-    await user.click(screen.getByRole('button', { name: 'Run it' }));
-
-    expect(session.interact).toHaveBeenCalledWith('runtime.action', 'press', undefined);
-    expect(hostInteract).not.toHaveBeenCalled();
-  });
-
-  it('replaces a dead runtime with the shell’s own failure screen', async () => {
-    const session = { lifecycle: 'active' as const, interact: vi.fn(), dispose: vi.fn() };
-    const mountRuntime = vi.fn(async (_release: never, options: never) => {
-      const opts = options as unknown as {
-        onTree: (t: unknown, r: number) => void;
-        onLifecycle: (l: string, f?: { code: string; message: string }) => void;
-      };
-      opts.onTree(runtimeTree('Runtime speaking'), 1);
-      opts.onLifecycle('failed', {
-        code: 'bridge_protocol_violation',
-        message: 'bad envelope',
-      });
-      return session;
-    });
-
-    render(
-      <App
-        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
-        mountRuntime={mountRuntime as never}
-        readSandboxOrigin={() => SANDBOX_ORIGIN}
-      />,
-    );
-
-    expect(await screen.findByRole('alert')).toHaveTextContent('It hit an error while starting.');
-    expect(screen.queryByRole('heading', { level: 1, name: 'Runtime speaking' })).toBeNull();
-    expect(screen.queryByText('3 lights on')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Restart' })).toBeEnabled();
-  });
-
-  it('keeps a component-authored failure code out of the shell chrome', async () => {
-    const session = { lifecycle: 'active' as const, interact: vi.fn(), dispose: vi.fn() };
-    const mountRuntime = vi.fn(async (_release: never, options: never) => {
-      const opts = options as unknown as {
-        onLifecycle: (l: string, f?: { code: string; message: string }) => void;
-      };
-      // `runtime.error` copies this straight off the bridge, so the component
-      // is choosing the text. Rendering it would rent it a line of trusted UI.
-      opts.onLifecycle('failed', {
-        code: 'Session expired — sign in again at evil.example',
-        message: 'phishing',
-      });
-      return session;
-    });
-
-    render(
-      <App
-        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
-        mountRuntime={mountRuntime as never}
-        readSandboxOrigin={() => SANDBOX_ORIGIN}
-      />,
-    );
-
-    expect(await screen.findByRole('alert')).toHaveTextContent('It hit an error while starting.');
-    expect(screen.queryByText(/evil\.example/)).toBeNull();
-  });
-
-  it('reports the failure that made the shell fall back', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch')
-      .mockResolvedValue(new Response(null, { status: 204 }));
-    const mountRuntime = vi.fn(async (_release: never, options: never) => {
-      const opts = options as unknown as {
-        onLifecycle: (l: string, f?: { code: string; message: string }) => void;
-      };
-      opts.onLifecycle('failed', { code: 'ready_timeout', message: 'no readiness' });
-      return { lifecycle: 'active' as const, interact: vi.fn(), dispose: vi.fn() };
-    });
-
-    render(
-      <App
-        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
-        mountRuntime={mountRuntime as never}
-        readDiagnosticsEndpoint={() => 'https://diagnostics.example/runtime'}
-        readSandboxOrigin={() => SANDBOX_ORIGIN}
-      />,
-    );
-
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Miakapp’s isolated space cannot be reached right now.',
-    );
-    await waitFor(() => {
-      expect(fetchSpy).toHaveBeenCalledOnce();
-    });
-
-    const [endpoint, init] = fetchSpy.mock.calls[0]! as [string, RequestInit];
-    expect(endpoint).toBe('https://diagnostics.example/runtime');
-    expect(init.keepalive).toBe(true);
-    expect(init.credentials).toBe('omit');
-    expect(JSON.parse(init.body as string)).toEqual({
-      schema: 'miakapp.runtime-diagnostics/1',
-      code: 'ready_timeout',
-      release: '2026.09.15-runtime',
-      at: expect.any(String),
-    });
-    fetchSpy.mockRestore();
-  });
-
-  it('stays silent when no diagnostics endpoint is declared', async () => {
-    const mountRuntime = vi.fn(async () => {
-      throw new Error('sandbox unreachable');
-    });
-    const fetchSpy = vi.spyOn(globalThis, 'fetch');
-
-    render(
-      <App
-        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
-        mountRuntime={mountRuntime as never}
-        readSandboxOrigin={() => SANDBOX_ORIGIN}
-      />,
-    );
-
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Miakapp’s isolated space cannot be reached right now.',
-    );
-    expect(fetchSpy).not.toHaveBeenCalled();
-    fetchSpy.mockRestore();
-  });
-
-  it('disposes the runtime session when the shell unmounts', async () => {
-    const session = { lifecycle: 'active' as const, interact: vi.fn(), dispose: vi.fn() };
-    const mountRuntime = vi.fn(async () => session);
-
-    const view = render(
-      <App
-        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
-        mountRuntime={mountRuntime as never}
-        readSandboxOrigin={() => SANDBOX_ORIGIN}
-      />,
-    );
-
-    await waitFor(() => {
-      expect(mountRuntime).toHaveBeenCalledOnce();
-    });
-    view.unmount();
-
-    expect(session.dispose).toHaveBeenCalledOnce();
-  });
-
-  it('disposes a mount that only lands after the shell unmounted', async () => {
-    const session = { lifecycle: 'active' as const, interact: vi.fn(), dispose: vi.fn() };
-    let settle: (() => void) | undefined;
-    const mountRuntime = vi.fn(async () => {
-      await new Promise<void>((resolve) => {
-        settle = resolve;
-      });
-      return session;
-    });
-
-    const view = render(
-      <App
-        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
-        mountRuntime={mountRuntime as never}
-        readSandboxOrigin={() => SANDBOX_ORIGIN}
-      />,
-    );
-
-    await waitFor(() => {
-      expect(settle).toBeDefined();
-    });
-    view.unmount();
-    settle!();
-
-    // An orphan frame and its port would otherwise stay alive with no owner.
-    await waitFor(() => {
-      expect(session.dispose).toHaveBeenCalledOnce();
-    });
-  });
-});
-
-describe('App home state delivery', () => {
-  function hostWith(homeState: HomeState | undefined): () => TrustedHost {
-    const base = createDemoHost();
-    const snapshot: TrustedHostSnapshot = {
-      ...base.getSnapshot(),
-      ...(homeState === undefined ? {} : { homeState }),
-    };
-    return () => ({
-      getSnapshot: () => snapshot,
-      subscribe: () => () => undefined,
-      interact: vi.fn(),
-      dispose: vi.fn(),
-    });
-  }
-
-  function runtimeSpy() {
-    const session = {
-      lifecycle: 'active' as const,
-      interact: vi.fn(),
-      dispose: vi.fn(),
-      publishState: vi.fn(),
-      markStateStale: vi.fn(),
-    };
-    const mountRuntime = vi.fn(async (_release: never, options: never) => {
-      const opts = options as unknown as { onTree: (t: unknown, r: number) => void };
-      opts.onTree(runtimeTree('Runtime speaking'), 1);
-      return session;
-    });
-    return { session, mountRuntime };
-  }
-
-  it('hands the running component the home state the shell holds', async () => {
-    const { session, mountRuntime } = runtimeSpy();
-
-    render(
-      <App
-        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
-        createHost={hostWith({
-          values: { 'zone.alpha.light.on': true },
-          revision: 12,
-          stale: false,
-        })}
-        mountRuntime={mountRuntime as never}
-        readSandboxOrigin={() => SANDBOX_ORIGIN}
-      />,
-    );
-
-    // Filtering to the grant is the runtime host's job; the shell's is to hand
-    // over what it has, once the session exists to receive it.
-    await waitFor(() => {
-      expect(session.publishState)
-        .toHaveBeenCalledWith({ 'zone.alpha.light.on': true }, 12);
-    });
-    expect(session.markStateStale).not.toHaveBeenCalled();
-  });
-
-  it('says the state is old rather than handing over an empty home', async () => {
-    const { session, mountRuntime } = runtimeSpy();
-
-    render(
-      <App
-        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
-        // The live host blanks its own values on staleness. Publishing those
-        // blanks would tell the component the home is freshly empty.
-        createHost={hostWith({ values: {}, revision: 12, stale: true })}
-        mountRuntime={mountRuntime as never}
-        readSandboxOrigin={() => SANDBOX_ORIGIN}
-      />,
-    );
-
-    await waitFor(() => {
-      expect(session.markStateStale).toHaveBeenCalledWith(12, 'home_state_stale');
-    });
-    expect(session.publishState).not.toHaveBeenCalled();
-  });
-
-  it('publishes nothing when the build has no live home', async () => {
-    const { session, mountRuntime } = runtimeSpy();
-
-    render(
-      <App
-        createComponentRelease={() => coordinatorFor(releaseWithArtifact(new Uint8Array([1])))}
-        createHost={hostWith(undefined)}
-        mountRuntime={mountRuntime as never}
-        readSandboxOrigin={() => SANDBOX_ORIGIN}
-      />,
-    );
-
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { level: 1, name: 'Runtime speaking' })).toBeVisible();
-    });
-    expect(session.publishState).not.toHaveBeenCalled();
-    expect(session.markStateStale).not.toHaveBeenCalled();
   });
 });

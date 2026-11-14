@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { build, type Rollup } from 'vite';
+import { build } from 'vite';
 import { describe, expect, it } from 'vitest';
 
 /**
@@ -19,11 +19,6 @@ const repositoryRoot = process.cwd();
  */
 const FORBIDDEN_MODULES: readonly { readonly path: string; readonly reason: string }[] = [
   {
-    path: 'component-runtime/src/host-harness.ts',
-    reason:
-      'it self-installs on import and plants a decoy Firebase token in window and localStorage',
-  },
-  {
     path: 'component-runtime/test/',
     reason: 'it is the sandbox harness server, which grants capabilities no deployment declares',
   },
@@ -34,26 +29,15 @@ const FORBIDDEN_MODULES: readonly { readonly path: string; readonly reason: stri
 ];
 
 /**
- * The decoy the harness writes. It is a plain string literal, so it survives
- * minification: if the harness ever reaches an emitted chunk, this marker is in
- * the bytes we serve, whatever the module graph says.
+ * `src/app/` legitimately imports value modules from `component-runtime/src/`,
+ * whose tests sit next door, so the boundary this guards is one autocomplete
+ * slip away from shipping. A grep would miss a transitive import; this walks the
+ * real production graph instead.
  */
-const HARNESS_DECOY_MARKER = 'firebase-secret-must-not-cross';
-
-/**
- * `src/app/` legitimately imports value modules that sit in the very same
- * directory as the harness (`contract.ts`, `artifact.ts`, `artifact-cache.ts`,
- * `release-state.ts`), so the boundary this guards is one autocomplete slip, or
- * one barrel re-export, away from shipping. A grep would miss a transitive
- * import; this walks the real production graph instead.
- */
-async function buildProductionGraph(): Promise<{
-  readonly moduleIds: readonly string[];
-  readonly code: string;
-}> {
+async function buildProductionGraph(): Promise<readonly string[]> {
   const moduleIds: string[] = [];
 
-  const result = await build({
+  await build({
     root: repositoryRoot,
     logLevel: 'silent',
     build: { write: false },
@@ -67,22 +51,14 @@ async function buildProductionGraph(): Promise<{
     ],
   });
 
-  const outputs: Rollup.RollupOutput[] = Array.isArray(result)
-    ? result
-    : [result as Rollup.RollupOutput];
-  const code = outputs
-    .flatMap((output) => output.output)
-    .map((chunk) => (chunk.type === 'chunk' ? chunk.code : String(chunk.source)))
-    .join('\n');
-
-  return { moduleIds, code };
+  return moduleIds;
 }
 
 describe('production module graph', () => {
   it('excludes every test-only module, and is not vacuously empty', async () => {
     expect(existsSync(join(repositoryRoot, 'index.html'))).toBe(true);
 
-    const { moduleIds, code } = await buildProductionGraph();
+    const moduleIds = await buildProductionGraph();
 
     // Without this, a build that resolved nothing would pass every assertion
     // below by producing nothing to assert against.
@@ -93,7 +69,5 @@ describe('production module graph', () => {
       const offenders = moduleIds.filter((id) => id.includes(path));
       expect(offenders, `${path} reached the production graph, and ${reason}`).toEqual([]);
     }
-
-    expect(code).not.toContain(HARNESS_DECOY_MARKER);
   }, 60_000);
 });

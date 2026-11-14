@@ -9,9 +9,8 @@
  * being unable to compile until every key is answered.
  *
  * Only the public surface lives here — landing, sign-in, new home, agent
- * pairing. The signed-in console is still English-only, and its semantic trees
- * come from the home's own coordinator rather than from this file, so
- * translating it is a separate piece of work with a separate owner.
+ * pairing. The house shell keeps its own words in `house-shell-copy.ts`, and a
+ * home's interface is the home's own to translate.
  */
 
 export const LOCALES = ['fr', 'en'] as const;
@@ -35,7 +34,7 @@ const FR = {
     'Dites ce dont vous avez besoin. Miakapp trouve vos appareils, écrit vos automatisations '
     + 'et crée l’interface de chaque habitant. Plus vous y vivez, plus elle vous ressemble.',
   landingPrimaryCta: 'Créer ma maison',
-  landingSecondaryCta: 'Voir la maison de démonstration',
+  landingSecondaryCta: 'J’ai déjà une maison',
   landingProofLabel: 'Ce que Miakapp prend en charge',
   landingProofOne: 'Vos appareils',
   landingProofTwo: 'Vos automatisations',
@@ -213,7 +212,7 @@ const EN: Record<CopyKey, string> = {
     'Say what you need. Miakapp finds your devices, writes your automations and designs an '
     + 'interface for everyone who lives there. The longer you live in it, the more it fits you.',
   landingPrimaryCta: 'Create my home',
-  landingSecondaryCta: 'See the demo home',
+  landingSecondaryCta: 'I already have a home',
   landingProofLabel: 'What Miakapp takes on',
   landingProofOne: 'Your devices',
   landingProofTwo: 'Your automations',

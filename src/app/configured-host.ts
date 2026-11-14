@@ -19,7 +19,7 @@ import {
   createControlPlanePointerReader,
   type ComponentReleaseCoordinator,
 } from './component-release';
-import { createDemoHost } from './demo-host';
+import { createPreviewHost } from './preview-host';
 import type { FavoriteHome } from './house-favorites';
 import type { TrustedHost } from './host';
 import { createLiveHost, type LiveIdentity } from './live-host';
@@ -110,20 +110,6 @@ export function readConfiguredSandboxOrigin(): string | undefined {
     throw new Error('The Miakapp component sandbox origin must use HTTPS');
   }
   return origin;
-}
-
-/**
- * Runtime failures are reported only where the deployment says to report them.
- * An undeclared endpoint means the shell stays as mute as it is today rather
- * than guessing a destination for data about a home.
- */
-export function readConfiguredDiagnosticsEndpoint(): string | undefined {
-  const endpoint = optional('VITE_MIAKAPP_RUNTIME_DIAGNOSTICS_ENDPOINT');
-  if (endpoint === undefined) return undefined;
-  if (!endpoint.startsWith('https://')) {
-    throw new Error('The Miakapp runtime diagnostics endpoint must use HTTPS');
-  }
-  return endpoint;
 }
 
 const CONTROL_PLANE_HOME_ID = /^[a-z][a-z0-9-]{1,61}[a-z0-9]$/u;
@@ -326,7 +312,7 @@ export function createConfiguredComponentRelease(): ComponentReleaseCoordinator 
 
 export function createConfiguredHost(): TrustedHost {
   const configuration = readLiveConfiguration();
-  if (configuration === undefined) return createDemoHost();
+  if (configuration === undefined) return createPreviewHost();
 
   const { auth, appCheck } = liveRuntime(configuration);
   const identity = new FirebaseLiveIdentity(auth, appCheck);
