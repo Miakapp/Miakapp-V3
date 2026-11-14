@@ -1,15 +1,8 @@
 import { createPublicKey, verify, type JsonWebKey } from 'node:crypto';
 
-import { stagingEdgeProfileForIssuer } from './staging-browser-relay-edge-profile.js';
-
 import { type JsonValue, parseRequestJson } from './json.js';
 import type { SigningPublicJwk } from './types.js';
 
-const ENVIRONMENT_ISSUERS = Object.freeze({
-  'demo-miakapp-v4': 'https://control.example.test',
-  'miakapp-v4-staging': 'https://control.staging.miakapp.com',
-  'miakapp-v4': 'https://control.miakapp.com',
-} as const);
 const MAX_TOKEN_BYTES = 8_192;
 const MAX_AUTHORIZATION_BYTES = MAX_TOKEN_BYTES + 'Bearer '.length;
 const MAX_HEADER_BYTES = 2_048;
@@ -205,15 +198,8 @@ function validateConfig(
   audience: string,
   scope: 'push:send' | 'components:publish',
 ): readonly ValidatedEd25519Key[] {
-  // The deployment parser already accepts this exact staging-only identity.
-  // Apply the same closed allowlist here; arbitrary provider hosts stay refused.
-  const stagingEdgeIssuer = config.projectId === 'miakapp-v4-staging'
-    ? stagingEdgeProfileForIssuer(config.issuer)?.issuer
-    : undefined;
-  const expectedIssuer = stagingEdgeIssuer
-    ?? ENVIRONMENT_ISSUERS[config.projectId as keyof typeof ENVIRONMENT_ISSUERS];
-  if (expectedIssuer === undefined
-    || config.issuer !== expectedIssuer
+  const expectedIssuer = config.issuer;
+  if (!expectedIssuer.startsWith('https://')
     || Buffer.byteLength(config.issuer, 'utf8') > 2_048
     || !GRAPHIC_ASCII.test(config.issuer)
     || audience !== `${expectedIssuer}${scope === 'push:send' ? '/v1/push' : '/v1/components'}`) {

@@ -142,8 +142,8 @@ spec:
             - containerPort: 3000
           env:
             - { name: MIAKAPP_LISTEN_ADDRESS, value: ":3000" }
-            - { name: MIAKAPP_CONTROL_PLANE_ISSUER, value: "https://miakapp-api.dac.cclabs.cx" }
-            - { name: MIAKAPP_CONTROL_PLANE_JWKS_URL, value: "https://miakapp-api.dac.cclabs.cx/.well-known/jwks.json" }
+            - { name: MIAKAPP_CONTROL_PLANE_ISSUER, value: "https://api.miakapp.com" }
+            - { name: MIAKAPP_CONTROL_PLANE_JWKS_URL, value: "https://api.miakapp.com/.well-known/jwks.json" }
             - { name: MIAKAPP_RELAY_AUDIENCE, value: "wss://miakapp-relay.dac.cclabs.cx/ws" }
             - { name: MIAKAPP_ALLOWED_ORIGINS, value: "https://miakapp-v4-staging.web.app" }
             # Behind Traefik every client shares the ingress pod address, so
@@ -211,3 +211,40 @@ spec:
           - path: /
             pathType: Prefix
             backend: { service: { name: relay, port: { number: 80 } } }
+---
+# api.miakapp.com is not on the cluster's DNS-01 zones: HTTP-01 through Traefik.
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: letsencrypt-http01
+  namespace: miakapp-staging
+spec:
+  acme:
+    email: admin@cclabs.cx
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: letsencrypt-http01-account
+    solvers:
+      - http01:
+          ingress:
+            ingressClassName: traefik
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: miakapp-api
+  namespace: miakapp-staging
+  annotations:
+    cert-manager.io/issuer: letsencrypt-http01
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: [api.miakapp.com]
+      secretName: api-miakapp-com-tls
+  rules:
+    - host: api.miakapp.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: control-plane, port: { number: 80 } } }

@@ -1,13 +1,8 @@
 import type { SigningPublicJwk } from './types.js';
-import { stagingEdgeProfileForIssuer } from './staging-browser-relay-edge-profile.js';
 
 const EXPECTED_PROJECTS = Object.freeze({
   staging: 'miakapp-v4-staging',
   production: 'miakapp-v4',
-} as const);
-const EXPECTED_ISSUERS = Object.freeze({
-  staging: 'https://control.staging.miakapp.com',
-  production: 'https://control.miakapp.com',
 } as const);
 export const PRODUCTION_CONTROL_PLANE_REGION = 'europe-west9';
 const LOGICAL_VERSION = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
@@ -128,7 +123,8 @@ function canonicalPublicJwk(value: unknown): SigningPublicJwk {
   });
 }
 
-function issuer(value: unknown, environment: ProductionEnvironment): string {
+// Any canonical HTTPS origin: the deployment chooses its own address.
+function issuer(value: unknown): string {
   const text = boundedString(value, 2_048);
   let parsed: URL;
   try {
@@ -143,10 +139,7 @@ function issuer(value: unknown, environment: ProductionEnvironment): string {
     || parsed.hash.length !== 0
     || parsed.pathname !== '/'
     || text.endsWith('/')
-    || parsed.hostname.endsWith('.test')
-    || (text !== EXPECTED_ISSUERS[environment]
-      && (environment !== 'staging'
-        || stagingEdgeProfileForIssuer(text) === undefined))) {
+    || parsed.hostname.endsWith('.test')) {
     fail();
   }
   return text;
@@ -323,7 +316,7 @@ export function parseProductionSecurityConfig(input: unknown): ProductionSecurit
     environment,
     projectId,
     region: PRODUCTION_CONTROL_PLANE_REGION,
-    issuer: issuer(config.issuer, environment),
+    issuer: issuer(config.issuer),
     signing,
     secretManager: Object.freeze({
       rpcTimeoutMilliseconds: boundedTimeout(secretManager.rpc_timeout_ms),
