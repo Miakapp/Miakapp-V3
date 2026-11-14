@@ -6,7 +6,6 @@ import { configuredSignInKinds, type SignInMethod, type SignInOutcome } from './
 const COPY = {
   fr: {
     google: 'Continuer avec Google',
-    github: 'Continuer avec GitHub',
     or: 'ou',
     emailLabel: 'Adresse e-mail',
     emailCta: 'Recevoir un lien de connexion',
@@ -15,7 +14,6 @@ const COPY = {
   },
   en: {
     google: 'Continue with Google',
-    github: 'Continue with GitHub',
     or: 'or',
     emailLabel: 'Email address',
     emailCta: 'Email me a sign-in link',
@@ -30,7 +28,7 @@ export interface SignInChoicesProps {
   readonly disabled?: boolean;
 }
 
-/** Google, GitHub and email-link sign-in, as configured for this deployment. */
+/** Google and email-link sign-in, as configured for this deployment. */
 export function SignInChoices({ locale, signIn, disabled = false }: SignInChoicesProps) {
   const t = COPY[locale];
   const kinds = configuredSignInKinds();
@@ -59,11 +57,6 @@ export function SignInChoices({ locale, signIn, disabled = false }: SignInChoice
       {kinds.includes('google') ? (
         <button className="house-button" disabled={off} onClick={() => run({ kind: 'google' })} type="button">
           {t.google}
-        </button>
-      ) : null}
-      {kinds.includes('github') ? (
-        <button className="house-button house-button--ghost" disabled={off} onClick={() => run({ kind: 'github' })} type="button">
-          {t.github}
         </button>
       ) : null}
       {kinds.includes('email') ? (
