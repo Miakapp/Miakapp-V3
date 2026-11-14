@@ -36,7 +36,7 @@ function nextChallenge(challengeId: string): Promise<string> {
       if (secret instanceof Error) reject(secret);
       else resolve(secret);
     };
-    const timer = window.setTimeout(() => finish(new Error('The push challenge did not arrive')), CHALLENGE_TIMEOUT_MILLISECONDS);
+    const timer = window.setTimeout(() => finish(new Error('no_test_push')), CHALLENGE_TIMEOUT_MILLISECONDS);
     const poll = window.setInterval(() => {
       void caches.match(`/push-challenge/${challengeId}`).then(async (response) => {
         if (response !== undefined) finish(await response.text());
@@ -59,8 +59,8 @@ function nextChallenge(challengeId: string): Promise<string> {
  * the home's agent notify it (`miakapp notify`).
  */
 export async function enablePush(setup: PushSetup, homeId: string): Promise<void> {
-  if (!pushSupported()) throw new Error('This browser cannot receive notifications');
-  if (await Notification.requestPermission() !== 'granted') throw new Error('Notifications were not allowed');
+  if (!pushSupported()) throw new Error('unsupported');
+  if (await Notification.requestPermission() !== 'granted') throw new Error('denied');
   const registration = await navigator.serviceWorker.register('/sw.js');
   await navigator.serviceWorker.ready;
   // Sent as the destination `fid` field; the control plane targets it as an FCM token.
@@ -82,7 +82,10 @@ export async function enablePush(setup: PushSetup, homeId: string): Promise<void
       body: JSON.stringify(body),
     });
     const parsed = await response.json() as Record<string, unknown>;
-    if (!response.ok) throw new Error(`Push setup failed: ${JSON.stringify(parsed.error ?? response.status)}`);
+    if (!response.ok) {
+      const code = (parsed.error as { code?: unknown } | undefined)?.code;
+      throw new Error(typeof code === 'string' ? code : `http_${response.status}`);
+    }
     return parsed;
   };
 
