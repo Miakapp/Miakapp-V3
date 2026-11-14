@@ -9,6 +9,7 @@ export default typescriptEslint.config(
     ignores: [
       '.context/**',
       'dist/**',
+      'dist-ssr/**',
       'node_modules/**',
       'public/**',
       'src/app/vendor/**',

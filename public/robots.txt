@@ -1,2 +1,5 @@
 User-agent: *
-Disallow:
+Disallow: /app
+Disallow: /pair
+
+Sitemap: https://www.miakapp.com/sitemap.xml

@@ -20,6 +20,8 @@ export GOOGLE_CLOUD_QUOTA_PROJECT="${project_id}"
 bun scripts/preflight-staging-env.ts staging
 
 bun run build --mode staging
+# Static, indexable landing (/ and /fr) and the app shell for every other route.
+bun run prerender
 firebase deploy \
   --config firebase.staging.json \
   --project "${project_id}" \
