@@ -123,6 +123,15 @@ test('a house that hangs is detected and removed while the shell stays responsiv
   await expect(page.locator('iframe.house-app-frame')).toHaveCount(0);
 });
 
+test('a house may move through its own pages with the History API', async ({ page }) => {
+  await open(page);
+  await mount(page, 'house-history.mjs');
+  await expect.poll(() => events(page)).toContain('active');
+  await page.waitForTimeout(3_500);
+  expect(await events(page)).not.toContain('crashed:navigated');
+  await expect(page.locator('iframe.house-app-frame')).toHaveCount(1);
+});
+
 test('a house cannot replace itself with an unverified page or carry state out by navigating', async ({ page }) => {
   await open(page);
   await mount(page, 'house-navigate.mjs');

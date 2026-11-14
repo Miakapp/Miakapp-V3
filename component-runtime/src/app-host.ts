@@ -34,6 +34,9 @@ import {
 
 const OPAQUE_ORIGIN = 'null';
 
+/** How long a frame that fired an extra `load` has to prove it is still the verified release. */
+const APP_NAVIGATION_PROBE_MS = 2_000;
+
 export const APP_FRAME_PERMISSIONS = "camera 'none'; microphone 'none'; geolocation 'none'; "
   + "display-capture 'none'; fullscreen 'none'; payment 'none'; usb 'none'; "
   + "serial 'none'; hid 'none'; bluetooth 'none'; clipboard-read 'none'; clipboard-write 'none'";
@@ -209,6 +212,8 @@ export function mountHouseApp(
   let nextProbe = 1;
   let missed = 0;
   let frameLoads = 0;
+  let navigationProbe: number | undefined;
+  let navigationTimer: ReturnType<typeof setTimeout> | undefined;
   let windowStart = 0;
   let windowCount = 0;
   let lastFocusRequest = 0;
@@ -224,6 +229,8 @@ export function mountHouseApp(
     if (frameTimer) clearTimeout(frameTimer);
     if (bootTimer) clearTimeout(bootTimer);
     if (heartbeat) clearInterval(heartbeat);
+    if (navigationTimer) clearTimeout(navigationTimer);
+    navigationTimer = undefined;
     frameTimer = undefined;
     bootTimer = undefined;
     heartbeat = undefined;
@@ -321,6 +328,12 @@ export function mountHouseApp(
           settle('crashed', message.reason);
           break;
         case 'app.pong':
+          if (message.challenge === navigationProbe) {
+            navigationProbe = undefined;
+            if (navigationTimer) clearTimeout(navigationTimer);
+            navigationTimer = undefined;
+            return;
+          }
           if (message.challenge !== pendingProbe) return;
           pendingProbe = undefined;
           missed = 0;
@@ -426,11 +439,26 @@ export function mountHouseApp(
     frame.setAttribute('allow', APP_FRAME_PERMISSIONS);
     frame.setAttribute('referrerpolicy', 'no-referrer');
     frame.setAttribute('loading', 'eager');
-    // A frame that loads a second document navigated away from the bootstrap.
-    // Whatever it shows now is not the verified release, so it goes.
+    // A frame that loads a second document navigated away from the bootstrap:
+    // whatever it shows now is not the verified release, so it goes. Some
+    // engines also fire `load` for same-document history moves (an app's own
+    // pushState/back navigation), so first ask the bootstrap over its private
+    // port: a new document cannot answer, the verified one can.
     frame.addEventListener('load', () => {
       frameLoads += 1;
-      if (frameLoads > 1) settle('crashed', 'navigated');
+      if (frameLoads === 1) return;
+      if (port === undefined) {
+        settle('crashed', 'navigated');
+        return;
+      }
+      const challenge = nextProbe;
+      nextProbe += 1;
+      navigationProbe = challenge;
+      if (navigationTimer) clearTimeout(navigationTimer);
+      navigationTimer = setTimeout(() => {
+        if (navigationProbe === challenge) settle('crashed', 'navigated');
+      }, APP_NAVIGATION_PROBE_MS);
+      send('app.ping', { challenge });
     });
     frame.src = `${sandboxOrigin}${APP_DOCUMENT_PATH}#nonce=${nonce}`;
 
