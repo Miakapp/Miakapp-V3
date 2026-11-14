@@ -777,6 +777,7 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
                       <a className="house-button house-button--ghost" href={props.homeSettingsHref ?? '/pair'}
                         rel="noopener" target="_blank">
                         {t('homeSettings')}
+                        <span aria-hidden="true">↗</span>
                       </a>
                     ) : null}
                     {consent === undefined ? null : (
