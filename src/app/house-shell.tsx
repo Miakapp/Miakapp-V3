@@ -36,7 +36,7 @@ import type {
 } from './host';
 import { markOpen } from './house-snapshot';
 import { BarIcon, HomeIcon, StarIcon } from './icons';
-import type { Locale } from './copy';
+import { LOCALE_LABELS, writeStoredLocale, type Locale } from './copy';
 import type { PairingAccount } from './pairing-client';
 import { SignInChoices } from './sign-in-choices';
 
@@ -591,15 +591,20 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
   const panelRef = useRef<HTMLElement | null>(null);
   const panelId = useId();
   const [barButtons, setBarButtons] = useBarButtons(home.id);
-  const [selected, setSelected] = useState<string | null>(
-    () => barButtons.find((button) => button.active)?.id ?? null,
-  );
+  // The interface always starts on its own home screen, whatever was selected
+  // when the buttons were cached; it marks another one active if it wants.
+  const [selected, setSelected] = useState<string | null>(null);
   const barSelect = useRef<((id: string | null) => void) | undefined>(undefined);
   const receiveBarButtons = useCallback((buttons: readonly AppBarButton[]) => {
     setBarButtons(buttons);
     setSelected((current) => buttons.find((button) => button.active)?.id
       ?? (buttons.some((button) => button.id === current) ? current : null));
   }, [setBarButtons]);
+  // A restarted interface starts on its own home screen: so does the bar.
+  const restart = (): void => {
+    setSelected(null);
+    setRestartKey((key) => key + 1);
+  };
   const select = (id: string | null): void => {
     setPanel(undefined);
     setSelected(id);
@@ -721,7 +726,7 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
             locale={locale}
             mount={props.mountHouseApp ?? mountHouseApp}
             onBarButtons={receiveBarButtons}
-            onRetry={() => setRestartKey((key) => key + 1)}
+            onRetry={restart}
             onSwitchAway={openHomes}
             release={stage.release}
             sandboxOrigin={props.sandboxOrigin}
@@ -757,6 +762,28 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
                 />
                 {listed.length < 2 ? <p className="house-panel__hint">{t('homesEmpty')}</p> : null}
               </section>
+              <section className="house-settings__section">
+                <h3>{t('languageSection')}</h3>
+                <div className="house-settings__actions">
+                  {(['fr', 'en'] as const).map((choice) => (
+                    <button
+                      aria-pressed={locale === choice}
+                      className={`house-button${locale === choice ? '' : ' house-button--ghost'}`}
+                      key={choice}
+                      onClick={() => {
+                        if (choice === locale) return;
+                        writeStoredLocale(safeLocalStorage() ?? undefined, choice);
+                        document.documentElement.lang = choice;
+                        // The home's interface reads the language when it starts.
+                        restart();
+                      }}
+                      type="button"
+                    >
+                      {LOCALE_LABELS[choice]}
+                    </button>
+                  ))}
+                </div>
+              </section>
               {props.enablePush === undefined ? null : <PushSettings enablePush={props.enablePush} t={t} />}
               {consent === undefined && stage.kind !== 'app' && props.isOwner !== true ? null : (
                 <section className="house-settings__section">
@@ -767,7 +794,7 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
                       <button
                         className="house-button house-button--ghost"
                         onClick={() => {
-                          setRestartKey((key) => key + 1);
+                          restart();
                           close();
                         }}
                         type="button"
