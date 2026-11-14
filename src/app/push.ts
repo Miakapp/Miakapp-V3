@@ -35,6 +35,8 @@ function nextChallenge(challengeId: string): Promise<string> {
       resolve(data.challenge_secret);
     }
     navigator.serviceWorker.addEventListener('message', listener);
+    // addEventListener alone leaves the client message queue closed (unlike onmessage).
+    navigator.serviceWorker.startMessages();
   });
 }
 
