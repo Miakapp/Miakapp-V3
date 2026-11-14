@@ -816,9 +816,13 @@ export class ControlPlaneStore {
     const { keyId } = parseHomeKey(homeKey);
     const issuedAt = Math.floor(this.#clock.now() / 1_000);
     const tokenId = randomIdentifier();
+    const touch: { lastUsed?: () => Promise<unknown> } = {};
     const grant = await this.#firestore.runTransaction((transaction) => (
-      this.#reserveGrant(transaction, homeKey, keyId, request, issuedAt, tokenId)
+      this.#reserveGrant(transaction, homeKey, keyId, request, issuedAt, tokenId, touch)
     ));
+    // Best effort, outside the transaction: a write refused (for instance by
+    // an exhausted quota) must never refuse the token itself.
+    void touch.lastUsed?.().catch(() => undefined);
     await beforeSigning(grant);
     const signed = await issuer.sign(grant);
     return Object.freeze({ grant, signed });
@@ -859,6 +863,7 @@ export class ControlPlaneStore {
     request: ExchangeRequest,
     issuedAt: number,
     tokenId: string,
+    touch: { lastUsed?: () => Promise<unknown> },
   ): Promise<HomeKeyAccessGrant> {
     const indexRef = this.#firestore.collection('homeKeyIndex').doc(keyId);
     const indexSnapshot = await transaction.get(indexRef);
@@ -901,7 +906,7 @@ export class ControlPlaneStore {
     const lastUsed = record.data.last_used_at;
     const lastUsedSeconds = lastUsed instanceof Timestamp ? lastUsed.seconds : 0;
     if (issuedAt - lastUsedSeconds >= 3_600) {
-      transaction.update(keyRef, {
+      touch.lastUsed = () => keyRef.update({
         last_used_at: Timestamp.fromMillis(issuedAt * 1_000),
         last_issuance_id: tokenId,
       });
