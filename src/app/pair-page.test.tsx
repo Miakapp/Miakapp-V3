@@ -73,6 +73,10 @@ class FakePairing implements PairingService {
     return { code: CODE, homeId, scopes: [], expiresAtMs: NOW + 600_000 };
   };
   readonly listKeys = async (): Promise<readonly PairingHomeKey[]> => [...this.keys];
+  readonly deleteHome = vi.fn(async (homeId: string): Promise<void> => {
+    this.homes = this.homes.filter((home) => home.id !== homeId);
+  });
+
   readonly revokeKey = async (_homeId: string, keyId: string): Promise<void> => {
     this.revoked.push(keyId);
     this.keys = this.keys.filter((key) => key.id !== keyId);
@@ -414,6 +418,19 @@ describe('agent pairing page', () => {
     expect(service.revoked).toEqual(['key-a']);
     expect(await screen.findByText(en.pairKeysRevoked)).toBeVisible();
     expect(await screen.findByText(en.pairKeysEmpty)).toBeVisible();
+  });
+
+  it('deletes a home after confirmation and returns to the list', async () => {
+    const user = userEvent.setup();
+    const service = new FakePairing();
+    service.account = { id: 'lea', email: 'lea@example.test', name: null };
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    renderPage(service, 'en');
+    await user.click(await screen.findByRole('button', { name: /Maison de Léa/u }));
+    await user.click(screen.getByRole('button', { name: en.pairDeleteHome }));
+    expect(service.deleteHome).toHaveBeenCalledWith('maison-lea');
+    expect(await screen.findByText(en.pairHomesEmpty)).toBeVisible();
+    confirm.mockRestore();
   });
 
   it('lets the person switch account by signing out first', async () => {

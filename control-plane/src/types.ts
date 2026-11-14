@@ -31,6 +31,7 @@ export type HomeKeyAccessScope = typeof HOME_KEY_ACCESS_SCOPES[number];
 export const ADMISSION_OPERATIONS = Object.freeze([
   'home.create',
   'home.patch',
+  'home.delete',
   'home_key.create',
   'home_key.revoke',
   'access.exchange',
