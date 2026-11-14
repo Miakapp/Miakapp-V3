@@ -49,6 +49,17 @@ interface LiveConfiguration {
 
 const LIVE_APP_NAME = 'miakapp-live-host';
 
+/** Product domains whose Hosting serves Firebase's /__/auth handler. */
+const PRODUCT_AUTH_DOMAINS = new Set(['miakapp.com', 'www.miakapp.com']);
+
+/**
+ * Sign-in goes through the domain the page is on, so a Google redirect (the
+ * Home Screen app) comes back to the same origin and its result is readable.
+ */
+export function authDomainFor(host: string, configured: string): string {
+  return PRODUCT_AUTH_DOMAINS.has(host) ? host : configured;
+}
+
 type GooglePopupSignIn = (
   auth: Auth,
   provider: GoogleAuthProvider,
@@ -212,7 +223,7 @@ function readLiveConfiguration(): LiveConfiguration | undefined {
     firebase: Object.freeze({
       apiKey: required('VITE_MIAKAPP_FIREBASE_API_KEY'),
       appId: required('VITE_MIAKAPP_FIREBASE_APP_ID'),
-      authDomain: required('VITE_MIAKAPP_FIREBASE_AUTH_DOMAIN'),
+      authDomain: authDomainFor(window.location.host, required('VITE_MIAKAPP_FIREBASE_AUTH_DOMAIN')),
       messagingSenderId: required('VITE_MIAKAPP_FIREBASE_MESSAGING_SENDER_ID'),
       projectId: required('VITE_MIAKAPP_FIREBASE_PROJECT_ID'),
       storageBucket: required('VITE_MIAKAPP_FIREBASE_STORAGE_BUCKET'),
