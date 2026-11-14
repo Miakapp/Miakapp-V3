@@ -225,6 +225,11 @@ function start(): void {
     installed = true;
     document.documentElement.lang = api.locale;
     document.title = api.home.name;
+    // An app, not a page: the home's document never rubber-bands, whatever it
+    // styles. Placed first so the home's own rules can still override it.
+    const base = document.createElement('style');
+    base.textContent = 'html,body{overscroll-behavior:none}';
+    document.head.prepend(base);
 
     // A classic script, because that is what the control plane admits: it parses
     // every release as `sourceType: 'script'` and rejects `import()`. Bundle the
