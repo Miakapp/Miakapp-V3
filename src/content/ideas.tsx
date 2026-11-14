@@ -212,19 +212,19 @@ const EN: IdeasCopy = {
       title: 'Energy and tariffs',
       ideas: [
         {
-          ask: 'On Tempo red days, preheat the house during the night’s off-peak hours, switch the water heater off until the evening, and tell me the day before how much it saves us.',
-          how: 'Tempo is a French tariff with 22 very expensive days a year, announced the day before by RTE, the grid operator. The agent fetches tomorrow’s colour, schedules the heating and a relay on the water heater, and computes the saving from your contract’s prices before sending the notification.',
+          ask: 'On my tariff’s peak-price days, preheat the house overnight at off-peak rates, switch the water heater off until the evening, and tell me the day before how much it saves us.',
+          how: 'Dynamic and time-of-use tariffs publish their prices ahead of time, often for the next day. The agent fetches them from your supplier or grid operator, schedules the heating and a relay on the water heater, and computes the saving from your contract’s prices before sending the notification.',
         },
         {
-          ask: 'Charge the car to 80% by 7:30 am: solar surplus first, then off-peak hours, and never on a red day.',
+          ask: 'Charge the car to 80% by 7:30 am: solar surplus first, then off-peak hours, and never during a price peak.',
           how: 'It reads the inverter’s output (often over Modbus TCP or a local API) and the home’s consumption, drives the charger (many speak OCPP) or the car’s API, and recomputes its plan with every cloud.',
         },
         {
           ask: 'Read the electricity meter live and show me every evening what the day cost, device by device, with the projected bill for the month.',
-          how: 'It has a small module plugged into the meter’s data output (the TIC port on a French Linky meter), adds plugs that measure consumption, then writes the Energy screen and the projection.',
+          how: 'It has a small module plugged into the smart meter’s local data port (many have one, such as the P1 port in the Netherlands and Belgium), adds plugs that measure consumption, then writes the Energy screen and the projection.',
         },
         {
-          ask: 'If the house goes over 6 kVA, cut the water heater first, then the bedroom radiators, before the main breaker trips.',
+          ask: 'If the house draws more than 6 kW, cut the water heater first, then the bedroom radiators, before the main breaker trips.',
           how: 'It reads the instantaneous power from the meter, sheds load in the order you chose and restores everything when the load drops.',
         },
       ],
