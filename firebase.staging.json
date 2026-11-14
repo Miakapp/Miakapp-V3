@@ -2,6 +2,7 @@
   "hosting": {
     "site": "miakapp-v4-staging",
     "public": "dist",
+    "trailingSlash": false,
     "ignore": [
       "firebase.staging.json",
       "**/.*",
