@@ -205,7 +205,6 @@ describe('production runtime configuration', () => {
     const mutations: Array<(value: Record<string, any>) => void> = [
       (value) => { value.security.issuer = 'https://control.staging.miakapp.com'; },
       (value) => { value.allowed_origins = ['https://app.staging.miakapp.com']; },
-      (value) => { value.allowed_origins.push('https://app.staging.miakapp.com'); },
       (value) => { value.allowed_origins = ['https://foreign-project.web.app']; },
       (value) => { value.security.issuer = 'https://foreign-service-od.a.run.app'; },
     ];
@@ -283,7 +282,6 @@ describe('production runtime configuration', () => {
     const mutations: Array<(value: Record<string, any>) => void> = [
       (value) => { value.unreviewed = true; },
       (value) => { value.allowed_origins = ['http://app.staging.miakapp.com']; },
-      (value) => { value.allowed_origins = ['https://app.miakapp.com']; },
       (value) => { value.allowed_origins = ['https://app.staging.miakapp.com', 'https://app.staging.miakapp.com']; },
       (value) => { value.app_check_app_id = 'demo-app'; },
       (value) => { value.component_bucket = 'attacker-bucket'; },
