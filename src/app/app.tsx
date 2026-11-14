@@ -204,6 +204,7 @@ export function App({
       reconnect={snapshot.authenticated ? host.reconnect : undefined}
       signIn={host.signIn}
       signInWith={host.signInWith}
+      enablePush={snapshot.authenticated ? host.enablePush : undefined}
       signInStatus={snapshot.signInStatus}
       signOut={snapshot.authenticated ? host.signOut : undefined}
       stage={houseStage}

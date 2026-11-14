@@ -64,6 +64,8 @@ export interface TrustedHost {
   readonly signIn?: () => void;
   /** Google, GitHub or an emailed link; absent on hosts without accounts. */
   readonly signInWith?: (method: SignInMethod) => Promise<SignInOutcome>;
+  /** Lets this home's agent notify this device. */
+  readonly enablePush?: () => Promise<void>;
   /** Signs out the trusted identity; never exposed to a house runtime. */
   readonly signOut?: () => Promise<void>;
   readonly dispose: () => void;

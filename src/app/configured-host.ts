@@ -25,6 +25,7 @@ import type { TrustedHost } from './host';
 import { createLiveHost, type LiveIdentity } from './live-host';
 import type { PairingService } from './pairing-client';
 import { FirebasePairingService } from './pairing-firebase';
+import { enablePush } from './push';
 import { completeEmailLinkSignIn, signInWith } from './sign-in';
 
 interface ComponentReleaseConfiguration {
@@ -226,9 +227,12 @@ export class FirebaseLiveIdentity implements LiveIdentity {
   readonly #removeAuthListener: () => void;
   #userId: string | null;
 
-  constructor(auth: Auth, appCheck: AppCheck) {
+  readonly #controlPlaneOrigin: string | undefined;
+
+  constructor(auth: Auth, appCheck: AppCheck, controlPlaneOrigin?: string) {
     this.#auth = auth;
     this.#appCheck = appCheck;
+    this.#controlPlaneOrigin = controlPlaneOrigin;
     this.#userId = auth.currentUser?.uid ?? null;
     this.#removeAuthListener = onAuthStateChanged(auth, (user) => {
       const userId = user?.uid ?? null;
@@ -252,6 +256,17 @@ export class FirebaseLiveIdentity implements LiveIdentity {
   };
 
   readonly signInWith: LiveIdentity['signInWith'] = async (method) => await signInWith(this.#auth, method);
+
+  get enablePush(): LiveIdentity['enablePush'] {
+    const controlPlaneOrigin = this.#controlPlaneOrigin;
+    if (controlPlaneOrigin === undefined) return undefined;
+    return async (homeId) => await enablePush({
+      app: this.#auth.app,
+      auth: this.#auth,
+      appCheck: this.#appCheck,
+      controlPlaneOrigin,
+    }, homeId);
+  }
 
   readonly signOut = async (): Promise<void> => {
     await signOut(this.#auth);
@@ -319,7 +334,7 @@ export function createConfiguredHost(): TrustedHost {
   if (configuration === undefined) return createPreviewHost();
 
   const { auth, appCheck } = liveRuntime(configuration);
-  const identity = new FirebaseLiveIdentity(auth, appCheck);
+  const identity = new FirebaseLiveIdentity(auth, appCheck, new URL(configuration.exchangeEndpoint).origin);
 
   return createLiveHost({
     exchangeEndpoint: configuration.exchangeEndpoint,

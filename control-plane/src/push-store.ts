@@ -840,6 +840,16 @@ export class PushStore {
     });
   }
 
+  /** Active grant IDs of the home the push credential belongs to. */
+  async activeGrantIds(principal: PushAccessPrincipal): Promise<string[]> {
+    const snapshot = await this.#firestore.collection('pushGrantIndex')
+      .where('home_id', '==', principal.homeId)
+      .where('status', '==', 'active')
+      .limit(MAX_RETAINED_GRANTS)
+      .get();
+    return snapshot.docs.map((document) => document.id);
+  }
+
   async authorizePush(
     principal: PushAccessPrincipal,
     grantId: string,

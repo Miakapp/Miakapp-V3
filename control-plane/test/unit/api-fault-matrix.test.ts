@@ -1000,6 +1000,7 @@ describe('control-plane API dependency fault matrix', () => {
     expect(parsed<{ readonly schema: string; readonly request_id: string }>(response)).toEqual({
       schema: 'miakapp.push-accepted/1',
       request_id: requestIdFor(admission),
+      delivered: 1,
     });
     expect(response.text.match(/miakapp\.push-accepted\/1/g)).toHaveLength(1);
     expectNoSecretLeak(response.text);
