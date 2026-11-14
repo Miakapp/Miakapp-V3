@@ -108,6 +108,5 @@ host only through the guarded staging script above; do not run a bare
 - `component-runtime/` — app/component ABI, sandbox broker, artifact cache
 - `protocol/` — cross-language wire protocol
 - `control-plane/` — control plane (auth, pairing, push, artifacts); deployed self-hosted
-- `control-plane-contract/` — shared control-plane fixtures
 - `infrastructure/dac/` — the running staging deployment
 - `docs/` — protocol RFCs and the house-app ABI spec

@@ -13,7 +13,7 @@ import type {
 } from '../../src/admission.js';
 import { createControlPlaneApp, type ApiDependencies } from '../../src/api.js';
 import { SyntheticAppCheckVerifier } from '../../src/app-check.js';
-import { loadEmulatorConfig } from '../../src/config.js';
+import { loadEmulatorConfig } from '../fixture-config.js';
 import { AccessTokenSigner } from '../../src/crypto.js';
 import { apiError, type ApiErrorCode } from '../../src/errors.js';
 import { normalizePairingCode, pairingCodeLookup } from '../../src/pairing-code.js';

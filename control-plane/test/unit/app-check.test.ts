@@ -10,7 +10,7 @@ import {
   type FirebaseAdminAppCheckClient,
   type SyntheticAppCheckVerifierConfig,
 } from '../../src/app-check.js';
-import { loadEmulatorConfig } from '../../src/config.js';
+import { loadEmulatorConfig } from '../fixture-config.js';
 
 const NOW = 1_788_220_800;
 const CLOCK = Object.freeze({ now: () => NOW * 1_000 });
@@ -19,7 +19,7 @@ const ENVIRONMENT = {
   GCLOUD_PROJECT: 'demo-miakapp-v4',
 } as NodeJS.ProcessEnv;
 const FIXTURE_URL = new URL(
-  '../../../control-plane-contract/fixtures/v1/access-tokens.json',
+  '../fixtures/access-tokens.json',
   import.meta.url,
 );
 
