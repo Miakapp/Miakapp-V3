@@ -3,4 +3,4 @@ Disallow: /app
 Disallow: /pair
 Disallow: /h/
 
-Sitemap: https://miakapp.com/sitemap.xml
+Sitemap: https://www.miakapp.com/sitemap.xml
