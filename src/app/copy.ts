@@ -166,6 +166,8 @@ const FR = {
   pairConfirmCheck: 'Je donne à mon agent un accès complet à « {home} ».',
   pairConfirmSubmit: 'Générer le code d’appairage',
   pairBack: '← Changer de maison',
+  pairDeleteHome: 'Supprimer cette maison',
+  pairDeleteConfirm: 'Supprimer « {home} » ? Ses clés et ses notifications seront supprimées aussi. C’est définitif.',
   pairCodeTitle: 'Transmettez ce code à votre agent.',
   pairCodeBody:
     'Copiez le message ci-dessous dans votre conversation avec l’agent. Il échangera ce code une seule '
@@ -342,6 +344,8 @@ const EN: Record<CopyKey, string> = {
   pairConfirmCheck: 'I give my agent full access to “{home}”.',
   pairConfirmSubmit: 'Generate the pairing code',
   pairBack: '← Choose another home',
+  pairDeleteHome: 'Delete this home',
+  pairDeleteConfirm: 'Delete “{home}”? Its keys and notifications go with it. This cannot be undone.',
   pairCodeTitle: 'Hand this code to your agent.',
   pairCodeBody:
     'Copy the message below into your conversation with the agent. It exchanges this code once for '

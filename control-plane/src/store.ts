@@ -752,6 +752,34 @@ export class ControlPlaneStore {
     });
   }
 
+  /** Deletes an owned home with everything stored under it (keys, codes, push grants). */
+  async deleteHome(principal: FirebasePrincipal, homeId: string): Promise<void> {
+    const publicRef = this.#firestore.collection('homes').doc(homeId);
+    const privateRef = this.#firestore.collection('controlHomes').doc(homeId);
+    const ownerRef = this.#firestore.collection('controlOwners').doc(principal.userId);
+    const now = Timestamp.fromMillis(this.#clock.now());
+    await this.#firestore.runTransaction(async (transaction) => {
+      const [privateSnapshot, ownerSnapshot] = await Promise.all([
+        transaction.get(privateRef),
+        transaction.get(ownerRef),
+      ]);
+      if (!privateSnapshot.exists || privateSnapshot.get('owner_uid') !== principal.userId) {
+        throw apiError('home_not_found');
+      }
+      const count = ownerSnapshot.exists ? safeCount(ownerSnapshot.get('owned_home_count')) : 1;
+      transaction.set(ownerRef, {
+        schema: 'miakapp.control-owner/1',
+        owner_uid: principal.userId,
+        owned_home_count: Math.max(0, count - 1),
+        updated_at: now,
+      });
+    });
+    const grants = await this.#firestore.collection('pushGrantIndex').where('home_id', '==', homeId).get();
+    await Promise.all(grants.docs.map((document) => document.ref.delete()));
+    await this.#firestore.recursiveDelete(privateRef);
+    await this.#firestore.recursiveDelete(publicRef);
+  }
+
   async revokeHomeKey(principal: FirebasePrincipal, homeId: string, keyId: string): Promise<void> {
     const homeRef = this.#firestore.collection('controlHomes').doc(homeId);
     const keyRef = homeRef.collection('homeKeys').doc(keyId);
