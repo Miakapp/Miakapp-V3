@@ -446,3 +446,117 @@ a.locale-switch__option {
   position: relative;
   z-index: 1;
 }
+
+/* Device guides: the routes, their hardware tables and the cited sources. */
+.content-routes {
+  margin-top: 32px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.content-routes article {
+  padding: 28px;
+  border-radius: 28px;
+}
+
+.content-routes article > * {
+  position: relative;
+  z-index: 1;
+}
+
+.content-routes article.is-recommended {
+  outline: 2px solid var(--lumiere-gold);
+}
+
+.content-routes h3 {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+.content-routes p {
+  margin: 12px 0 0;
+  color: var(--lumiere-muted);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.content-routes .content-route__verdict {
+  color: var(--lumiere-ink);
+  font-weight: 700;
+}
+
+.content-table {
+  width: 100%;
+  margin-top: 18px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.content-table th,
+.content-table td {
+  padding: 8px 0;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid rgb(10 16 36 / 8%);
+}
+
+.content-table td:last-child,
+.content-table th:last-child {
+  padding-left: 12px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.content-table thead th {
+  color: var(--lumiere-soft);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.content-table tfoot th {
+  border-bottom: 0;
+  font-weight: 800;
+}
+
+.content-page .content-cite {
+  margin-left: 1px;
+  font-size: 11px;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.content-sources {
+  max-width: 820px;
+  margin: 18px 0 0;
+  padding-left: 22px;
+  color: var(--lumiere-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.content-sources li {
+  scroll-margin-top: 20px;
+  overflow-wrap: anywhere;
+}
+
+.content-sources li:target {
+  background: rgb(255 166 59 / 18%);
+  border-radius: 6px;
+}
+
+.content-small {
+  color: var(--lumiere-soft) !important;
+  font-size: 13px !important;
+}
+
+/* Consecutive citations read 1, 2, 3 rather than 123. */
+.content-page sup + sup::before {
+  content: ',';
+  font-size: 11px;
+}
