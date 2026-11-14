@@ -613,11 +613,17 @@ html:has(.house-shell) body {
 .house-button {
   min-height: 46px;
   padding: 0 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   border: 0;
   border-radius: 999px;
   background: var(--night);
   color: #fff;
   font-weight: 650;
+  text-decoration: none;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
 }
 
 .house-button:hover {
