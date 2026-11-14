@@ -126,7 +126,7 @@ export async function buildAppDocument(input: AppDocumentInput): Promise<AppDocu
       { key: 'Permissions-Policy', value: appPermissionsPolicy() },
       { key: 'Referrer-Policy', value: 'no-referrer' },
       { key: 'X-Content-Type-Options', value: 'nosniff' },
-      { key: 'Cache-Control', value: 'no-store' },
+      { key: 'Cache-Control', value: 'no-cache' },
       { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
     ],
   };

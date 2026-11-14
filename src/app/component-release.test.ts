@@ -160,6 +160,30 @@ describe('component release coordinator', () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
+  it('peeks at the last verified release without a pointer read or a fetch', async () => {
+    const pointer = await pointerFor(7, 'export const a = 1;');
+    const store = new MemoryStore();
+    const cache = new MemoryCache();
+    const fetch = vi.fn(async () => artifactResponse('export const a = 1;'));
+    const options = { store, cache, fetch: fetch as unknown as typeof globalThis.fetch };
+
+    expect(await coordinatorFor(pointer, options).peek?.()).toBeUndefined();
+    await coordinatorFor(pointer, options).activate();
+    const readPointer = vi.fn(async () => pointer);
+    const peeked = await createComponentReleaseCoordinator({
+      homeId: HOME_ID,
+      allowedArtifactOrigins: new Set([ARTIFACT_ORIGIN]),
+      allowedPathPrefixes: ['/homes/'],
+      readPointer,
+      ...options,
+    }).peek?.();
+
+    expect(peeked?.pointer.sha256).toBe(pointer.sha256);
+    expect(peeked?.artifact.source).toBe('cache');
+    expect(readPointer).not.toHaveBeenCalled();
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
   it('refuses a pointer below the anti-rollback floor', async () => {
     const accepted = await pointerFor(9, 'export const a = 9;');
     const older = await pointerFor(8, 'export const a = 8;');
