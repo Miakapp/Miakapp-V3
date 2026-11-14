@@ -109,6 +109,8 @@ const FR = {
   onboardingMoltedTitle: 'Ou laissez Molted préparer l’agent',
   onboardingMoltedBody: 'Un espace prêt à l’emploi, sans terminal ni infrastructure à maintenir.',
   onboardingMoltedCta: 'Utiliser dans molted.cloud',
+  // The molted.studio dream that starts a molted.cloud agent on `miakapp docs start`.
+  onboardingMoltedUrl: 'https://www.molted.cloud/fr/new?dream=ai-agent-for-smart-home',
   onboardingAccountTitle: 'Le compte vient plus tard, et c’est voulu.',
   onboardingAccountBody:
     'Votre agent travaille d’abord. Quand il aura besoin d’émettre la clé de votre '
@@ -286,6 +288,7 @@ const EN: Record<CopyKey, string> = {
   onboardingMoltedTitle: 'Or let Molted set the agent up',
   onboardingMoltedBody: 'A ready-made workspace, with no terminal and no infrastructure to maintain.',
   onboardingMoltedCta: 'Use in molted.cloud',
+  onboardingMoltedUrl: 'https://www.molted.cloud/new?dream=ai-agent-for-smart-home',
   onboardingAccountTitle: 'The account comes later, and that is deliberate.',
   onboardingAccountBody:
     'Your agent works first. When it needs to issue your home’s key it will send you a '

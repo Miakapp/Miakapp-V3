@@ -167,7 +167,7 @@ describe('Miakapp product entry flow', () => {
     render(<ProductApp createHost={() => host} initialLocale="fr" initialRoute="new-home" />);
 
     const molted = screen.getByRole('link', { name: new RegExp(fr.onboardingMoltedCta, 'u') });
-    expect(molted).toHaveAttribute('href', 'https://molted.cloud');
+    expect(molted).toHaveAttribute('href', 'https://www.molted.cloud/fr/new?dream=ai-agent-for-smart-home');
     expect(screen.getByText('Recommandé')).toBeVisible();
   });
 

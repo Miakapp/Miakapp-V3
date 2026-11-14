@@ -325,7 +325,7 @@ function NewHomePage({
               <span className="recommended-pill">{t('onboardingRecommended')}</span>
               <h2>{t('onboardingMoltedTitle')}</h2>
               <p>{t('onboardingMoltedBody')}</p>
-              <a className="product-button product-button--dark" href="https://molted.cloud" rel="noreferrer" target="_blank">
+              <a className="product-button product-button--dark" href={t('onboardingMoltedUrl')} rel="noreferrer" target="_blank">
                 {t('onboardingMoltedCta')} <span aria-hidden="true">↗</span>
               </a>
             </div>
