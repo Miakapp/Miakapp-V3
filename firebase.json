@@ -21,12 +21,12 @@
     "redirects": [
       {
         "source": "/pair",
-        "destination": "https://miakapp-v4-staging.web.app/pair",
+        "destination": "https://www.miakapp.com/pair",
         "type": 302
       },
       {
         "source": "/pair/",
-        "destination": "https://miakapp-v4-staging.web.app/pair",
+        "destination": "https://www.miakapp.com/pair",
         "type": 302
       }
     ]
