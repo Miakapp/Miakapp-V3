@@ -91,7 +91,7 @@ describe('App', () => {
 
     expect(await screen.findByRole('heading', { name: 'Preview home’s interface is unavailable' })).toBeVisible();
     // The Miakapp controls stay usable around the failure.
-    expect(screen.getByRole('button', { name: /Miakapp menu/u })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Me' })).toBeEnabled();
     await user.click(screen.getByRole('button', { name: 'Restart' }));
     await waitFor(() => expect(activate).toHaveBeenCalledTimes(2));
   });
