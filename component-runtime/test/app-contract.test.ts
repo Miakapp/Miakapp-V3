@@ -35,8 +35,8 @@ describe('miakapp.app/1 bridge', () => {
   });
 
   test('accepts up to two bar buttons drawn from the closed icon set', () => {
-    const rooms = { id: 'rooms', label: '  Pièces ', icon: 'grid', active: true };
-    const energy = { id: 'energy', label: 'Énergie', icon: 'bolt', active: false };
+    const rooms = { id: 'rooms', label: '  Pièces ', icon: 'grid', active: true } as const;
+    const energy = { id: 'energy', label: 'Énergie', icon: 'bolt', active: false } as const;
     expect(parseAppFrameMessage(message('bar.buttons', { buttons: [rooms, energy] }))).toEqual({
       kind: 'bar.buttons',
       buttons: [{ ...rooms, label: 'Pièces' }, energy],
