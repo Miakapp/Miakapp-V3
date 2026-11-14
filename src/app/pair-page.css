@@ -47,8 +47,8 @@
 
 .pair-steps .is-current span {
   color: #fff;
-  background: #17181d;
-  border-color: #17181d;
+  background: #0a1024;
+  border-color: #0a1024;
 }
 
 .pair-steps .is-done span {
@@ -237,7 +237,7 @@
   display: block;
   color: #fff;
   text-align: center;
-  background: #17181d;
+  background: #0a1024;
   border-radius: var(--radius-md);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: clamp(16px, 3.6vw, 24px);
