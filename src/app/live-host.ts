@@ -28,6 +28,7 @@ export interface LiveIdentity {
   readonly subscribe: (listener: (signedIn: boolean) => void) => () => void;
   readonly signIn: () => Promise<void>;
   readonly signInWith?: (method: SignInMethod) => Promise<SignInOutcome>;
+  readonly enablePush?: (homeId: string) => Promise<void>;
   readonly signOut: () => Promise<void>;
   readonly getFirebaseIdToken: (request: BrowserRelayCredentialRequest) => Promise<string>;
   readonly getAppCheckToken: (request: BrowserRelayCredentialRequest) => Promise<string>;
@@ -147,6 +148,11 @@ class LiveTrustedHost implements TrustedHost {
 
   get signInWith(): TrustedHost['signInWith'] {
     return this.#identity.signInWith;
+  }
+
+  get enablePush(): TrustedHost['enablePush'] {
+    const enable = this.#identity.enablePush;
+    return enable === undefined ? undefined : async () => await enable(this.#home.id);
   }
 
   readonly signIn = (): void => {
