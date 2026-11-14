@@ -565,7 +565,13 @@ function PushSettings({ enablePush, t }: {
         {t(status === 'pending' ? 'pushEnabling' : 'pushEnable')}
       </button>
     )}
-    {status === 'failed' ? <p role="alert">{t(PUSH_ERRORS[detail] ?? 'pushFailed')}</p> : null}
+    {status === 'failed' ? (
+      <p role="alert">
+        {t(PUSH_ERRORS[detail] ?? 'pushFailed')}
+        {/* The raw code, small: enough for whoever helps to know what failed. */}
+        {PUSH_ERRORS[detail] === undefined && detail !== '' ? <small> ({detail})</small> : null}
+      </p>
+    ) : null}
   </section>;
 }
 

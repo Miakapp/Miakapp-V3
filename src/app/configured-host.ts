@@ -180,26 +180,26 @@ function homeWasRequested(): boolean {
 
 function readLiveConfiguration(): LiveConfiguration | undefined {
   if (import.meta.env.VITE_MIAKAPP_MODE !== 'live') return undefined;
+  // The installed app opens the homes at `/`, a browser tab at `/app`: either
+  // way, without a home in the address the app picks one for the person.
   const last = lastOpenedHome();
-  const picked = window.location.pathname === '/app' && !homeWasRequested();
+  const picked = !homeWasRequested();
   markHomePickedForThePerson(picked);
-  if (picked && last !== undefined) {
-    const url = new URL(window.location.href);
-    url.searchParams.set('home', last);
-    window.history.replaceState(window.history.state, '', url.href);
-  }
   // Every home is opened the same way: its published interface, read through
   // the resident route, inside the house shell. No home is special-cased here;
   // what a resident may see or do is decided by that home's coordinator.
   const home = resolveRequestedHome(
     window.location.pathname,
     window.location.search,
-    {
-      id: required('VITE_MIAKAPP_HOME_ID'),
-      name: required('VITE_MIAKAPP_HOME_NAME'),
-      detail: required('VITE_MIAKAPP_HOME_DETAIL'),
-      accent: DEFAULT_ACCENT,
-    },
+    last === undefined
+      ? {
+        id: required('VITE_MIAKAPP_HOME_ID'),
+        name: required('VITE_MIAKAPP_HOME_NAME'),
+        detail: required('VITE_MIAKAPP_HOME_DETAIL'),
+        accent: DEFAULT_ACCENT,
+      }
+      // Its real name arrives with its interface; the id stands in until then.
+      : { id: last, name: last, detail: '', accent: DEFAULT_ACCENT },
     // Identity is not resolved here. Do not read ownerless browser preferences.
     [],
   );
