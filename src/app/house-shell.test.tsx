@@ -141,12 +141,12 @@ describe('house shell — consent before any house resource', () => {
 
     // The overlay is usable before consent: homes and personal settings.
     await user.click(screen.getByRole('button', { name: 'Moi' }));
-    expect(screen.getByRole('dialog', { name: 'Moi' })).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Moi' })).toBeVisible();
     await user.keyboard('{Escape}');
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Moi' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Moi' })).toHaveFocus();
     await user.click(screen.getByRole('button', { name: 'Moi' }));
-    expect(screen.getByRole('dialog', { name: 'Moi' })).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Moi' })).toBeVisible();
 
     // Zero house loads: no pointer read, no artifact, no frame, no request.
     await new Promise((resolve) => setTimeout(resolve, 20));
@@ -455,7 +455,7 @@ describe('house shell — around a running home', () => {
     expect(within(alert).getByText('Elle ne répondait plus.')).toBeVisible();
     // The overlay is still there and still answers.
     await user.click(screen.getByRole('button', { name: 'Moi' }));
-    expect(screen.getByRole('dialog', { name: 'Moi' })).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Moi' })).toBeVisible();
     await user.keyboard('{Escape}');
 
     await user.click(within(alert).getByRole('button', { name: 'Relancer' }));
@@ -509,29 +509,9 @@ describe('house shell — around a running home', () => {
     expect(screen.getByRole('button', { name: 'Retirer Preview home des favoris' })).toHaveAttribute('aria-pressed', 'true');
     expect(favorites.list().map((home) => home.id)).toEqual([HOME_ID]);
 
-    const panel = screen.getByRole('dialog', { name: 'Moi' });
+    const panel = screen.getByRole('region', { name: 'Moi' });
     await user.click(within(panel).getByRole('button', { name: 'Retirer Preview home des favoris' }));
     expect(favorites.list()).toEqual([]);
-  });
-
-  it('hands the home a theme the resident picks in the shell', async () => {
-    const user = userEvent.setup();
-    const { mount, sessions } = renderRunning();
-    await waitFor(() => expect(mount).toHaveBeenCalledOnce());
-    await user.click(screen.getByRole('button', { name: 'Moi' }));
-    await user.click(screen.getByRole('radio', { name: 'Sombre' }));
-    expect(sessions[0]!.setTheme).toHaveBeenLastCalledWith('dark');
-  });
-
-  it('closes a panel when focus moves into the home', async () => {
-    const user = userEvent.setup();
-    renderRunning();
-    await user.click(screen.getByRole('button', { name: 'Moi' }));
-    expect(screen.getByRole('dialog', { name: 'Moi' })).toBeVisible();
-    act(() => {
-      window.dispatchEvent(new Event('blur'));
-    });
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('draws a fresh home with no buttons of its own', () => {
@@ -627,23 +607,28 @@ describe('house shell — the Miakapp bar', () => {
     />);
   };
 
-  it('offers the home’s settings to its owner only', () => {
+  it('offers the home’s management page to its owner only, apart from the app', async () => {
+    const user = userEvent.setup();
     renderBar(true);
-    const bar = within(screen.getByRole('navigation', { name: 'Miakapp' }));
-    expect(bar.getByRole('link', { name: 'Réglages' })).toHaveAttribute('href', '/pair');
+    await user.click(screen.getByRole('button', { name: 'Moi' }));
+    const link = within(screen.getByRole('region', { name: 'Moi' })).getByRole('link', { name: 'Gérer cette maison' });
+    expect(link).toHaveAttribute('href', '/pair');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(within(screen.getByRole('navigation', { name: 'Miakapp' })).queryByRole('link')).not.toBeInTheDocument();
   });
 
-  it('keeps the home’s settings away from a resident who does not own it', () => {
-    renderBar(false);
-    const bar = within(screen.getByRole('navigation', { name: 'Miakapp' }));
-    expect(bar.queryByRole('link', { name: 'Réglages' })).not.toBeInTheDocument();
-  });
-
-  it('shows the account and how it signs in on the profile sheet', async () => {
+  it('keeps the home’s management page away from a resident who does not own it', async () => {
     const user = userEvent.setup();
     renderBar(false);
     await user.click(screen.getByRole('button', { name: 'Moi' }));
-    const sheet = within(screen.getByRole('dialog', { name: 'Moi' }));
+    expect(screen.queryByRole('link', { name: 'Gérer cette maison' })).not.toBeInTheDocument();
+  });
+
+  it('shows the account and how it signs in on the profile page', async () => {
+    const user = userEvent.setup();
+    renderBar(false);
+    await user.click(screen.getByRole('button', { name: 'Moi' }));
+    const sheet = within(screen.getByRole('region', { name: 'Moi' }));
     expect(sheet.getByText('mathieu@example.com')).toBeVisible();
     expect(sheet.getByText(/Google · lien par e-mail/u)).toBeVisible();
     expect(sheet.getByRole('heading', { name: 'Mes maisons' })).toBeVisible();

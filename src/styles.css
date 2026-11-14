@@ -78,39 +78,76 @@ svg {
 }
 
 /*
- * House shell: the Miakapp bar and panels around a home's own interface.
+ * House shell: the Miakapp bar and the profile page around a home's own
+ * interface.
  *
- * The bar is a sibling of the stage, never layered over it, so the home's frame
- * box ends above it: nothing the home draws can reach the bar. Panels open
- * over the stage from this document, where the home cannot reach either.
+ * The home's frame fills the screen and the bar floats over its bottom edge.
+ * The bar belongs to this document, stacked above the frame, so nothing the
+ * home draws can cover or reach it; the home leaves that strip free.
  */
 .house-shell {
   --house-bar-height: 64px;
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  height: 100dvh;
+  /* What the dock covers at the bottom; the stage keeps its own words above it. */
+  --house-dock-space: calc(var(--house-bar-height) + 20px + env(safe-area-inset-bottom));
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
   background: var(--paper);
   color: var(--ink);
+  -webkit-tap-highlight-color: transparent;
 }
 
-/*
- * The dock sits below the stage, never over it: the home's frame ends where
- * the dock begins, so nothing the home draws can reach the bar. It always wears
- * the « Minuit » night blue, whatever theme the home picked.
- */
+/* An app, not a page: nothing bounces or scrolls behind the shell. */
+html:has(.house-shell),
+html:has(.house-shell) body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.house-profile {
+  position: absolute;
+  z-index: 5;
+  inset: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: max(20px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) calc(var(--house-dock-space) + 16px) max(16px, env(safe-area-inset-left));
+  background: var(--paper);
+  color: var(--ink);
+  outline: none;
+}
+
+.house-profile__inner {
+  width: min(100%, 520px);
+  margin: 0 auto;
+}
+
+.house-profile__title {
+  margin: 12px 0 20px;
+  font-size: 30px;
+  letter-spacing: -0.02em;
+}
+
+/* The dock is transparent: only the glass bar itself shows over the home. */
 .house-dock {
-  position: relative;
+  position: absolute;
   z-index: 6;
+  right: 0;
+  bottom: 0;
+  left: 0;
   display: grid;
-  flex: none;
   justify-items: center;
   gap: 6px;
   padding: 8px max(12px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
-  background:
-    radial-gradient(60% 140% at 50% 0%, rgb(76 107 214 / 38%) 0%, transparent 70%),
-    #0a1024;
   color: #f4f1e8;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.house-dock > * {
+  pointer-events: auto;
 }
 
 .house-bar {
@@ -123,10 +160,11 @@ svg {
   padding: 6px;
   border: 1px solid rgb(255 255 255 / 22%);
   border-radius: 999px;
-  background: linear-gradient(160deg, rgb(255 255 255 / 16%), rgb(255 255 255 / 7%));
-  box-shadow: 0 1px 0 rgb(255 255 255 / 12%) inset, 0 20px 50px -20px rgb(0 0 0 / 70%);
-  -webkit-backdrop-filter: blur(22px) saturate(1.4);
-  backdrop-filter: blur(22px) saturate(1.4);
+  /* Night-blue glass: readable over a light page as over a dark one. */
+  background: linear-gradient(160deg, rgb(30 46 110 / 74%), rgb(10 16 36 / 82%));
+  box-shadow: 0 1px 0 rgb(255 255 255 / 12%) inset, 0 18px 40px -16px rgb(0 0 0 / 55%);
+  -webkit-backdrop-filter: blur(22px) saturate(1.6);
+  backdrop-filter: blur(22px) saturate(1.6);
 }
 
 .house-bar__tab {
@@ -307,21 +345,6 @@ svg {
   font-size: 21px;
 }
 
-.house-panel {
-  position: absolute;
-  z-index: 5;
-  right: max(10px, env(safe-area-inset-right));
-  bottom: calc(var(--house-bar-height) + 26px + env(safe-area-inset-bottom));
-  width: min(380px, calc(100vw - 20px));
-  max-height: calc(100dvh - var(--house-bar-height) - 60px);
-  overflow: auto;
-  padding: 14px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  background: var(--panel);
-  box-shadow: 0 24px 60px rgb(20 23 19 / 22%);
-  color: var(--ink);
-}
 
 .house-panel__head {
   display: flex;
@@ -397,51 +420,6 @@ svg {
   gap: 16px;
 }
 
-.house-segmented {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
-  margin: 0;
-  padding: 4px;
-  border: 0;
-  border-radius: 13px;
-  background: rgb(23 26 22 / 6%);
-}
-
-.house-segmented legend {
-  margin-bottom: 8px;
-  padding: 0;
-  font-size: 13px;
-  font-weight: 650;
-}
-
-.house-segmented label {
-  position: relative;
-  padding: 9px 6px;
-  border-radius: 10px;
-  cursor: pointer;
-  font-size: 14px;
-  text-align: center;
-}
-
-.house-segmented label.is-active {
-  background: var(--panel);
-  box-shadow: 0 2px 8px rgb(20 23 19 / 10%);
-  font-weight: 650;
-}
-
-.house-segmented input {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.house-segmented label:has(input:focus-visible) {
-  outline: 3px solid rgb(107 139 0 / 42%);
-  outline-offset: 2px;
-}
-
 .house-settings__section h3 {
   margin: 0 0 6px;
   font-size: 13px;
@@ -461,11 +439,11 @@ svg {
 }
 
 .house-stage {
-  position: relative;
+  position: absolute;
+  inset: 0;
   display: flex;
-  flex: 1;
-  min-height: 0;
   overflow: auto;
+  overscroll-behavior: none;
 }
 
 .house-stage__app {
@@ -493,7 +471,7 @@ svg {
 
 .house-stage__cover {
   position: absolute;
-  inset: 0;
+  inset: 0 0 var(--house-dock-space);
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -518,9 +496,6 @@ svg {
   text-align: left;
 }
 
-.house-scrim {
-  display: none;
-}
 
 .house-spinner {
   width: 26px;
@@ -543,6 +518,7 @@ svg {
   align-items: center;
   justify-content: center;
   padding: clamp(16px, 4vw, 40px);
+  padding-bottom: calc(var(--house-dock-space) + 16px);
 }
 
 .house-card {
@@ -674,24 +650,6 @@ svg {
 }
 
 @media (max-width: 620px) {
-  .house-scrim {
-    position: fixed;
-    z-index: 4;
-    inset: 0;
-    display: block;
-    background: rgb(20 23 19 / 38%);
-  }
-
-  .house-panel {
-    position: fixed;
-    right: 8px;
-    left: 8px;
-    width: auto;
-    max-height: min(74dvh, 560px);
-    padding: 16px;
-    border-radius: 22px;
-  }
-
   .house-card__actions {
     width: 100%;
   }
