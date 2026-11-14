@@ -357,12 +357,12 @@ function grantCreation(body: { [key: string]: JsonValue }): string {
 }
 
 function pushNotification(body: { [key: string]: JsonValue }): {
-  readonly grantId: string;
+  readonly grantId: string | null;
   readonly notification: PushNotification;
 } {
-  assertExactKeys(body, ['grant_id', 'title', 'body'], ['tag']);
+  assertExactKeys(body, ['title', 'body'], ['grant_id', 'tag']);
   return Object.freeze({
-    grantId: identifierValue(body.grant_id),
+    grantId: body.grant_id === undefined ? null : identifierValue(body.grant_id),
     notification: Object.freeze({
       title: boundedSemanticText(body.title, 120),
       body: boundedSemanticText(body.body, 1_024),
@@ -816,25 +816,38 @@ async function routeRequest(
     ticket.identifyActor('access_token', principal.clientId);
     ticket.identifyHome(principal.homeId);
     const input = pushNotification(jsonBody(request));
-    ticket.identifySubject(input.grantId);
+    ticket.identifySubject(input.grantId ?? principal.homeId);
     await ticket.consume([
       { budget: 'push.send.key', subject: principal.clientId },
       { budget: 'push.send.home', subject: principal.homeId },
-      { budget: 'push.send.grant', subject: input.grantId },
     ]);
-    const destination = await dependencies.pushStore.authorizePush(principal, input.grantId);
-    await ticket.consume([
-      { budget: 'push.send.destination', subject: destination.destinationId },
-    ]);
-    await dependencies.pushTransport.sendSemanticNotification({
-      fid: destination.fid,
-      homeId: principal.homeId,
-      grantId: input.grantId,
-      title: input.notification.title,
-      body: input.notification.body,
-      tag: input.notification.tag,
-    });
-    sendJson(response, 202, { schema: 'miakapp.push-accepted/1', request_id: requestId });
+    // Without a grant ID the notification goes to every device enabled on the home.
+    const grantIds = input.grantId === null
+      ? await dependencies.pushStore.activeGrantIds(principal)
+      : [input.grantId];
+    let delivered = 0;
+    for (const grantId of grantIds) {
+      await ticket.consume([{ budget: 'push.send.grant', subject: grantId }]);
+      const destination = await dependencies.pushStore.authorizePush(principal, grantId);
+      await ticket.consume([
+        { budget: 'push.send.destination', subject: destination.destinationId },
+      ]);
+      try {
+        await dependencies.pushTransport.sendSemanticNotification({
+          fid: destination.fid,
+          homeId: principal.homeId,
+          grantId,
+          title: input.notification.title,
+          body: input.notification.body,
+          tag: input.notification.tag,
+        });
+        delivered += 1;
+      } catch (error) {
+        if (input.grantId !== null) throw error;
+      }
+    }
+    if (input.grantId === null && delivered === 0) throw apiError('invalid_push_grant');
+    sendJson(response, 202, { schema: 'miakapp.push-accepted/1', request_id: requestId, delivered });
     return;
   }
 

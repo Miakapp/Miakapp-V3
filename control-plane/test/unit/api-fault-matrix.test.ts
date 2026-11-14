@@ -997,9 +997,10 @@ describe('control-plane API dependency fault matrix', () => {
 
     expect(response.status).toBe(202);
     expect(response.headers.get('content-type')).toContain('application/json');
-    expect(parsed<{ readonly schema: string; readonly request_id: string }>(response)).toEqual({
+    expect(parsed<{ readonly schema: string; readonly request_id: string; readonly delivered: number }>(response)).toEqual({
       schema: 'miakapp.push-accepted/1',
       request_id: requestIdFor(admission),
+      delivered: 1,
     });
     expect(response.text.match(/miakapp\.push-accepted\/1/g)).toHaveLength(1);
     expectNoSecretLeak(response.text);

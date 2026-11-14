@@ -60,6 +60,7 @@ export interface HouseShellProps {
   readonly reconnect?: (() => void) | undefined;
   readonly signIn?: (() => void) | undefined;
   readonly signInWith?: TrustedHost['signInWith'];
+  readonly enablePush?: TrustedHost['enablePush'];
   readonly signInStatus?: 'idle' | 'pending' | 'failed' | undefined;
   readonly signOut?: (() => Promise<void>) | undefined;
   readonly onAcceptConsent: () => void;
@@ -487,6 +488,32 @@ function AccountSettings({ signOut, t }: {
   </section>;
 }
 
+function PushSettings({ enablePush, t }: {
+  readonly enablePush: () => Promise<void>;
+  readonly t: HouseTranslate;
+}): React.JSX.Element {
+  const [status, setStatus] = useState<'idle' | 'pending' | 'done' | 'failed'>('idle');
+  const enable = async (): Promise<void> => {
+    setStatus('pending');
+    try {
+      await enablePush();
+      setStatus('done');
+    } catch {
+      setStatus('failed');
+    }
+  };
+  return <section className="house-settings__section">
+    <h3>{t('pushSection')}</h3>
+    {status === 'done' ? <p role="status">{t('pushEnabled')}</p> : (
+      <button className="house-button house-button--ghost" disabled={status === 'pending'}
+        onClick={() => { void enable(); }} type="button">
+        {t(status === 'pending' ? 'pushEnabling' : 'pushEnable')}
+      </button>
+    )}
+    {status === 'failed' ? <p role="alert">{t('pushFailed')}</p> : null}
+  </section>;
+}
+
 export function HouseShell(props: HouseShellProps): React.JSX.Element {
   const {
     consent,
@@ -621,6 +648,7 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
           ) : (
             <div className="house-settings">
               {props.signOut === undefined ? null : <AccountSettings signOut={props.signOut} t={t} />}
+              {props.enablePush === undefined ? null : <PushSettings enablePush={props.enablePush} t={t} />}
               <fieldset className="house-segmented">
                 <legend>{t('themeLabel')}</legend>
                 {THEMES.map((option) => (

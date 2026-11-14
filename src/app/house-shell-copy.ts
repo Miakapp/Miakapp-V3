@@ -59,6 +59,11 @@ const FR = {
   declinedReopen: 'Ouvrir quand même',
   declinedOther: 'Vos autres maisons',
 
+  pushSection: 'Notifications',
+  pushEnable: 'Activer les notifications sur cet appareil',
+  pushEnabling: 'Activation…',
+  pushEnabled: 'Notifications activées : l’agent de cette maison peut vous prévenir ici.',
+  pushFailed: 'Impossible d’activer les notifications. Sur iPhone, ajoutez d’abord Miakapp à l’écran d’accueil.',
   signInTitle: 'Connectez-vous pour ouvrir {home}',
   signInLede: 'Votre compte permet à Miakapp de vérifier que cette maison vous est ouverte.',
   signInAction: 'Se connecter avec Google',
@@ -138,6 +143,11 @@ const EN: Record<HouseCopyKey, string> = {
   declinedReopen: 'Open it anyway',
   declinedOther: 'Your other homes',
 
+  pushSection: 'Notifications',
+  pushEnable: 'Turn on notifications on this device',
+  pushEnabling: 'Turning on…',
+  pushEnabled: 'Notifications on: this home’s agent can reach you here.',
+  pushFailed: 'Notifications could not be turned on. On iPhone, add Miakapp to the Home Screen first.',
   signInTitle: 'Sign in to open {home}',
   signInLede: 'Your account lets Miakapp check that this home is open to you.',
   signInAction: 'Sign in with Google',
