@@ -8,7 +8,9 @@ import { LandingPage } from './app/product-app';
 import { GuidesHubPage } from './content/guides-hub';
 import { HowItWorksPage } from './content/how-it-works';
 import { IdeasPage } from './content/ideas';
-import { CONTENT_PAGES, type ContentPageId } from './content/site';
+import { DeviceGuidePage, type DeviceGuide } from './content/device-guide';
+import { GUIDES } from './content/guides';
+import { publishedPages, type ContentPageId, type GuideId } from './content/site';
 
 export function renderLanding(locale: Locale): string {
   return renderToString(
@@ -25,17 +27,24 @@ export function landingCopy(locale: Locale): { readonly title: string; readonly 
   return { title: COPY[locale].landingTitle, description: COPY[locale].landingLede };
 }
 
-const CONTENT_RENDERERS: Record<ContentPageId, (props: { readonly locale: Locale }) => React.JSX.Element> = {
+type PageRenderer = (props: { readonly locale: Locale }) => React.JSX.Element;
+
+const PAGE_RENDERERS: Record<Exclude<ContentPageId, GuideId>, PageRenderer> = {
   'guides': GuidesHubPage,
   'how-it-works': HowItWorksPage,
   'ideas': IdeasPage,
 };
 
-export function contentPages(): typeof CONTENT_PAGES {
-  return CONTENT_PAGES;
+/** The pages this build publishes; drafts only when previewing them. */
+export function contentPages(): ReturnType<typeof publishedPages> {
+  return publishedPages();
 }
 
 export function renderContent(id: ContentPageId, locale: Locale): string {
-  const Page = CONTENT_RENDERERS[id];
+  if (id in GUIDES) {
+    const guide: DeviceGuide = GUIDES[id as GuideId];
+    return renderToString(<DeviceGuidePage guide={guide} locale={locale} />);
+  }
+  const Page = PAGE_RENDERERS[id as Exclude<ContentPageId, GuideId>];
   return renderToString(<Page locale={locale} />);
 }
