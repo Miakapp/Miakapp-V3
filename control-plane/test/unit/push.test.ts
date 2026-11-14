@@ -326,7 +326,7 @@ describe('FirebaseFcmClient', () => {
         Authorization: 'Bearer metadata-access-token',
         'Content-Type': 'application/json; charset=utf-8',
       },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message: { token: message.fid, data: message.data } }),
     });
     expect(calls[0]?.init.signal).toBeInstanceOf(AbortSignal);
   });
