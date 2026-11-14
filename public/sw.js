@@ -26,6 +26,9 @@ self.addEventListener('push', (event) => {
   const data = message.data || {};
   event.waitUntil((async () => {
     if (data.schema === 'miakapp.push-challenge-delivery/1') {
+      // The page may miss a postMessage (iOS): it also polls this cache entry.
+      const cache = await caches.open('miakapp-push');
+      await cache.put(`/push-challenge/${data.challenge_id}`, new Response(data.challenge_secret));
       const windows = await clients.matchAll({ type: 'window', includeUncontrolled: true });
       for (const client of windows) {
         client.postMessage({

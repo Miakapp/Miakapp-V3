@@ -19,20 +19,33 @@ export function pushSupported(): boolean {
     && 'Notification' in window;
 }
 
-/** Waits for the service worker to forward the challenge the control plane pushed. */
+/**
+ * Waits for the challenge the control plane pushed: the service worker posts it
+ * to the page and also stores it in a cache the page polls, since iOS can drop
+ * the message.
+ */
 function nextChallenge(challengeId: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    const timer = window.setTimeout(() => {
+    let done = false;
+    const finish = (secret: string | Error): void => {
+      if (done) return;
+      done = true;
+      window.clearTimeout(timer);
+      window.clearInterval(poll);
       navigator.serviceWorker.removeEventListener('message', listener);
-      reject(new Error('The push challenge did not arrive'));
-    }, CHALLENGE_TIMEOUT_MILLISECONDS);
+      if (secret instanceof Error) reject(secret);
+      else resolve(secret);
+    };
+    const timer = window.setTimeout(() => finish(new Error('The push challenge did not arrive')), CHALLENGE_TIMEOUT_MILLISECONDS);
+    const poll = window.setInterval(() => {
+      void caches.match(`/push-challenge/${challengeId}`).then(async (response) => {
+        if (response !== undefined) finish(await response.text());
+      });
+    }, 1_000);
     function listener(event: MessageEvent): void {
       const data = event.data as { type?: unknown; challenge_id?: unknown; challenge_secret?: unknown } | null;
       if (data?.type !== 'miakapp-push-challenge' || data.challenge_id !== challengeId) return;
-      if (typeof data.challenge_secret !== 'string') return;
-      window.clearTimeout(timer);
-      navigator.serviceWorker.removeEventListener('message', listener);
-      resolve(data.challenge_secret);
+      if (typeof data.challenge_secret === 'string') finish(data.challenge_secret);
     }
     navigator.serviceWorker.addEventListener('message', listener);
     // addEventListener alone leaves the client message queue closed (unlike onmessage).
