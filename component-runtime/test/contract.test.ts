@@ -6,9 +6,7 @@ import {
   POINTER_SCHEMA,
   isCapabilityGranted,
   measureStructuredValue,
-  validateEnvelope,
   validatePointer,
-  validateUiTree,
   type ComponentPointerV1,
 } from '../src/contract';
 import {
@@ -20,7 +18,6 @@ import {
   loadVerifiedArtifact,
   type ArtifactCache,
 } from '../src/artifact-cache';
-import { validateGuestProgram } from '../src/program';
 
 const artifactOrigin = 'https://artifacts.example';
 
@@ -55,39 +52,6 @@ function pointerContext() {
     minimumGeneration: 3,
     allowedArtifactOrigins: new Set([artifactOrigin]),
     allowedPathPrefixes: ['/homes/'],
-  };
-}
-
-function validTree() {
-  return {
-    id: 'home',
-    type: 'screen',
-    props: { title: 'My home' },
-    children: [
-      {
-        id: 'layout',
-        type: 'stack',
-        props: { gap: 'medium' },
-        children: [
-          { id: 'temperature', type: 'text', props: { text: '21.5 °C' } },
-          {
-            id: 'operation',
-            type: 'status',
-            props: { label: 'Lighting', state: 'outcome_unknown' },
-          },
-          {
-            id: 'toggle',
-            type: 'button',
-            props: { label: 'Toggle light', handler: 'toggle-light' },
-          },
-          {
-            id: 'camera',
-            type: 'media',
-            props: { label: 'Front door', handle: 'media.front_door' },
-          },
-        ],
-      },
-    ],
   };
 }
 
@@ -138,82 +102,9 @@ describe('component pointer', () => {
   });
 });
 
-describe('semantic UI tree', () => {
-  test('returns a normalized framework-neutral tree', () => {
-    const result = validateUiTree(validTree(), {
-      mediaHandles: new Set(['media.front_door']),
-    });
-    expect(result.type).toBe('screen');
-    expect(result.children?.[0]!.props).toEqual({
-      direction: 'vertical',
-      gap: 'medium',
-      align: 'stretch',
-    });
-  });
+describe('structured values', () => {
 
-  test('rejects raw HTML, URLs, duplicate IDs, and ungranted media', () => {
-    const htmlTree = validTree();
-    (htmlTree.children[0]!.children[0]!.props as Record<string, unknown>).html = '<img src=x>';
-    expect(() => validateUiTree(htmlTree, { mediaHandles: new Set(['media.front_door']) })).toThrow(/html/);
-
-    const urlTree = validTree();
-    (urlTree.children[0]!.children[0]!.props as Record<string, unknown>).href = 'https://attacker.example';
-    expect(() => validateUiTree(urlTree, { mediaHandles: new Set(['media.front_door']) })).toThrow(/href/);
-
-    const duplicateTree = validTree();
-    duplicateTree.children[0]!.children[1]!.id = 'temperature';
-    expect(() => validateUiTree(duplicateTree, { mediaHandles: new Set(['media.front_door']) })).toThrow(/Duplicate/);
-
-    expect(() => validateUiTree(validTree(), { mediaHandles: new Set() })).toThrow(/not granted/);
-  });
-
-  test('rejects excessive depth without recursive traversal', () => {
-    let current: Record<string, unknown> = {
-      id: 'leaf',
-      type: 'text',
-      props: { text: 'leaf' },
-    };
-    for (let depth = 0; depth < LIMITS.uiDepth + 1; depth += 1) {
-      current = {
-        id: `stack-${depth}`,
-        type: depth === LIMITS.uiDepth ? 'screen' : 'stack',
-        props: depth === LIMITS.uiDepth ? { title: 'Root' } : {},
-        children: [current],
-      };
-    }
-    expect(() => validateUiTree(current)).toThrow(/depth/);
-  });
-});
-
-describe('bridge envelope', () => {
-  const context = {
-    instance: 'A'.repeat(16),
-    epoch: 2,
-    expectedSeq: 1,
-    allowedKinds: new Set(['ui.render']),
-  };
-
-  test('accepts one exact contiguous envelope', () => {
-    expect(validateEnvelope({
-      v: 1,
-      instance: context.instance,
-      epoch: 2,
-      seq: 1,
-      kind: 'ui.render',
-      payload: { ok: true },
-    }, context)).toMatchObject({ seq: 1, kind: 'ui.render' });
-  });
-
-  test('rejects stale epochs, sequence gaps, unknown kinds, cycles, and large values', () => {
-    expect(() => validateEnvelope({
-      v: 1, instance: context.instance, epoch: 1, seq: 1, kind: 'ui.render', payload: {},
-    }, context)).toThrow(/epoch/);
-    expect(() => validateEnvelope({
-      v: 1, instance: context.instance, epoch: 2, seq: 2, kind: 'ui.render', payload: {},
-    }, context)).toThrow(/sequence/);
-    expect(() => validateEnvelope({
-      v: 1, instance: context.instance, epoch: 2, seq: 1, kind: 'unknown', payload: {},
-    }, context)).toThrow(/kind/);
+  test('rejects cycles and large values', () => {
     const cycle: Record<string, unknown> = {};
     cycle.self = cycle;
     expect(() => measureStructuredValue(cycle)).toThrow(/cycle/);
@@ -451,34 +342,5 @@ describe('verified artifact cache', () => {
       allowedArtifactOrigins: new Set([artifactOrigin]),
     })).resolves.toEqual({ bytes, sha256, source: 'network' });
     expect(failures).toHaveLength(2);
-  });
-});
-
-describe('guest program profile', () => {
-  test('accepts a self-contained classic Worker program', () => {
-    expect(() => validateGuestProgram(new TextEncoder().encode(
-      "self.onmessage = () => self.postMessage({ v: 1, kind: 'ui.render', payload: {} });",
-    ))).not.toThrow();
-    expect(() => validateGuestProgram(new TextEncoder().encode(
-      'const note = "//# sourceMappingURL=ordinary-string.js.map";',
-    ))).not.toThrow();
-  });
-
-  test.each([
-    ["import('https://attacker.example/module.mjs')", /dynamic import/],
-    ["import value from './chunk.mjs'", /classic Worker script/],
-    ['export default 1', /classic Worker script/],
-    ['//# sourceMappingURL=private.js.map', /source maps/],
-  ])('rejects forbidden program source', (source, expected) => {
-    expect(() => validateGuestProgram(new TextEncoder().encode(source))).toThrow(expected);
-  });
-
-  test('rejects malformed UTF-8 before Worker construction', () => {
-    expect(() => validateGuestProgram(Uint8Array.from([0xc3, 0x28]))).toThrow(/UTF-8/);
-  });
-
-  test('aborts token-dense input before constructing a full near-limit AST', () => {
-    expect(() => validateGuestProgram(new TextEncoder().encode(';'.repeat(LIMITS.artifactBytes))))
-      .toThrow(/token limit/);
   });
 });

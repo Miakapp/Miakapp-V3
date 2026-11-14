@@ -6,6 +6,10 @@
 - **Related:** [RFC 0001: Wire Protocol](./0001-wire-protocol.md)
 - **Reference harness:** architectural boundary subset; not a conforming
   production implementation
+- **2026-11-14:** the semantic broker, Worker guest and UI tree described here
+  were removed from the code. The pointer, artifact, capability and release
+  rules still apply, to `miakapp.app/1` releases
+  ([house app ABI](../specs/2026-10-03-house-app-abi.md)).
 
 ## 1. Abstract
 
