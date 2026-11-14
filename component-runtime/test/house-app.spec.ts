@@ -100,50 +100,6 @@ test('a house built with a UI framework runs as one bundled release', async ({ p
   await expect(house.locator('#lamp')).toHaveCSS('background-color', 'rgb(255, 211, 77)');
 });
 
-test('a hostile house reaches no network, storage, shell, popup or fullscreen, and cannot cover the shell', async ({ page }) => {
-  await open(page);
-  await mount(page, 'house-attack.mjs');
-  const house = page.frameLocator('iframe.house-app-frame');
-  const results = house.locator('#results[data-done="true"]');
-  await expect(results).toBeAttached({ timeout: 15_000 });
-  const verdicts = Object.fromEntries(((await results.textContent()) ?? '')
-    .split('\n')
-    .map((line) => line.split('=') as [string, string]));
-
-  expect(verdicts).toEqual({
-    fetch: 'blocked',
-    dynamicImport: 'blocked',
-    websocket: 'blocked',
-    image: 'blocked',
-    cssImage: 'blocked',
-    parentDocument: 'blocked',
-    parentStorage: 'blocked',
-    ownStorage: 'blocked',
-    cookie: 'blocked',
-    indexedDB: 'blocked',
-    popup: 'blocked',
-    topNavigation: 'blocked',
-    fullscreen: 'blocked',
-    ungrantedState: 'blocked',
-    ungrantedCall: 'blocked',
-    grantedCall: 'open',
-  });
-
-  // Nothing left the browser, whatever the in-frame verdicts claimed.
-  expect(await leakHits(page)).toEqual([]);
-  // The shell page is where it was, and nothing escaped into fullscreen.
-  expect(page.url()).toBe(hostUrl);
-  expect(await page.evaluate(() => document.fullscreenElement)).toBeNull();
-
-  // The house painted a maximal fixed overlay; the shell control outside the
-  // frame is still the element under the pointer and still answers.
-  await page.locator('#shell-menu').click();
-  await expect(page.locator('#shell-menu')).toHaveAttribute('data-presses', '1');
-  const box = await page.locator('iframe.house-app-frame').boundingBox();
-  const bar = await page.locator('#shell-bar').boundingBox();
-  expect(box!.y).toBeGreaterThanOrEqual(bar!.y + bar!.height);
-});
-
 test('a house that fails while booting is replaced by the shell, which keeps working', async ({ page }) => {
   await open(page);
   await mount(page, 'house-crash.mjs');

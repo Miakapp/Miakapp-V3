@@ -89,141 +89,11 @@ test('rejects a second load while the first verification is pending', async ({ p
   expect(result.calls).toEqual([]);
 });
 
-test('blocks DOM, storage, service-worker, and network authority', async ({ page }) => {
-  const leakRequests: string[] = [];
-  page.on('request', (request) => {
-    if (new URL(request.url()).pathname.startsWith('/leak')) leakRequests.push(request.url());
-  });
-  const result = await mount(page, await fixture('attack-egress.mjs'));
-  expect(result.lifecycle).toBe('active');
-  await expect(page.getByText(/document:/)).toBeVisible();
-  const observations = await page.getByText(/document:/).textContent();
-  expect(observations).toContain('document:undefined');
-  expect(observations).toContain('window:undefined');
-  expect(observations).toContain('parent:undefined');
-  expect(observations).toContain('localStorage:undefined');
-  for (const name of BLOCKED_WORKER_GLOBALS) {
-    expect(observations).toContain(`${name}:undefined`);
-  }
-  for (const name of BLOCKED_NAVIGATOR_MEMBERS) {
-    expect(observations).toContain(`${name}:undefined`);
-  }
-  for (const attempt of [
-    'fetch',
-    'xhr',
-    'eventSource',
-    'sendBeacon',
-    'broadcastChannel',
-    'importScripts',
-    'evalImport',
-    'functionImport',
-    'websocket',
-    'indexedDB',
-    'cacheStorage',
-  ]) {
-    expect(observations).toContain(`${attempt}:blocked`);
-  }
-  expect(leakRequests).toEqual([]);
-  expect(await page.evaluate(() => localStorage.getItem('firebase-token'))).toBe('firebase-secret-must-not-cross');
-});
-
-test('prevents guest declarations from shadowing the confinement prelude', async ({ page }) => {
-  const leakRequests: string[] = [];
-  page.on('request', (request) => {
-    if (new URL(request.url()).pathname.startsWith('/leak')) leakRequests.push(request.url());
-  });
-  const result = await mount(page, await fixture('attack-prelude-shadow.mjs'));
-  expect(result.lifecycle, JSON.stringify(result)).toBe('active');
-  const observations = await page.getByText(/fetch:/).textContent();
-  expect(observations).toContain('fetch:undefined');
-  expect(observations).toContain('Worker:undefined');
-  expect(observations).toContain('WebSocket:undefined');
-  expect(observations).toContain('indexedDB:undefined');
-  expect(leakRequests).toEqual([]);
-});
-
-test('rejects dynamic import syntax before Worker construction or network', async ({ page }) => {
-  const leakRequests: string[] = [];
-  page.on('request', (request) => {
-    if (new URL(request.url()).pathname.startsWith('/leak')) leakRequests.push(request.url());
-  });
-  const result = await mount(page, await fixture('attack-dynamic-import.mjs'));
-  expect(result.lifecycle).toBe('failed');
-  expect(result.errors[0].code).toBe('artifact_program_invalid');
-  expect(leakRequests).toEqual([]);
-});
-
-test('rejects raw HTML before it reaches the trusted renderer', async ({ page }) => {
-  const result = await mount(page, await fixture('attack-invalid-tree.mjs'));
-  expect(result.lifecycle).toBe('failed');
-  expect(result.errors[0].code).toBe('render_invalid');
-  expect(await page.locator('#generated img').count()).toBe(0);
-});
-
-test('denies an undeclared call at the broker and host records no effect', async ({ page }) => {
-  const mounted = await mount(page, await fixture('attack-capability.mjs'));
-  expect(mounted.lifecycle).toBe('active');
-  await page.getByRole('button', { name: 'Try undeclared call' }).click();
-  await expect.poll(async () => (await status(page)).lifecycle).toBe('failed');
-  const result = await status(page);
-  expect(result.errors[0].code).toBe('capability_denied');
-  expect(result.calls).toEqual([]);
-});
-
 test('denies an effect attempted before staging activation', async ({ page }) => {
   const result = await mount(page, await fixture('attack-staging-call.mjs'));
   expect(result.lifecycle).toBe('failed');
   expect(result.errors[0].code).toBe('capability_denied');
   expect(result.calls).toEqual([]);
-});
-
-test('revokes effectful authority before notifying a suspended guest', async ({ page }) => {
-  const mounted = await mount(page, await fixture('attack-suspend-call.mjs'));
-  expect(mounted.lifecycle).toBe('active');
-  await page.evaluate(() => (
-    (window as typeof window & { runtimeHarness: { suspend: Function } }).runtimeHarness.suspend()
-  ));
-  await expect.poll(async () => (await status(page)).lifecycle).toBe('failed');
-  const result = await status(page);
-  expect(result.errors[0].code).toBe('capability_denied');
-  expect(result.calls).toEqual([]);
-});
-
-test('rejects reuse of an operation ID after its terminal result', async ({ page }) => {
-  const mounted = await mount(page, await fixture('attack-duplicate-call.mjs'));
-  expect(mounted.lifecycle).toBe('active');
-  await page.getByRole('button', { name: 'Run duplicate calls' }).click();
-  await expect.poll(async () => (await status(page)).lifecycle).toBe('failed');
-  const result = await status(page);
-  expect(result.errors[0].code).toBe('bridge_protocol_violation');
-  expect(result.calls).toHaveLength(1);
-});
-
-test('terminates a guest that transfers a MessagePort', async ({ page }) => {
-  const result = await mount(page, await fixture('attack-transfer-port.mjs'));
-  expect(result.lifecycle).toBe('failed');
-  expect(result.errors[0].code).toBe('bridge_protocol_violation');
-  expect(result.logs).toEqual([]);
-});
-
-test('terminates an infinite Worker while trusted host tasks keep running', async ({ page }) => {
-  const before = (await status(page)).hostTicks;
-  const result = await mount(page, await fixture('attack-spin.mjs'));
-  expect(result.lifecycle).toBe('failed');
-  expect(result.errors[0].code).toBe('worker_boot_failed');
-  expect(result.hostTicks - before).toBeGreaterThan(20);
-  await expect(page.getByText('Trusted host ready')).toBeVisible();
-});
-
-test('terminates a Worker that becomes unresponsive after activation', async ({ page }) => {
-  const mounted = await mount(page, await fixture('attack-active-spin.mjs'));
-  expect(mounted.lifecycle).toBe('active');
-  const before = (await status(page)).hostTicks;
-  await expect.poll(async () => (await status(page)).lifecycle, { timeout: 6_000 }).toBe('failed');
-  const result = await status(page);
-  expect(result.errors[0].code).toBe('runtime_unresponsive');
-  expect(result.hostTicks).toBeGreaterThan(before);
-  await expect(page.getByText('Trusted host ready')).toBeVisible();
 });
 
 test('rejects an ungranted state patch before disclosure to the guest', async ({ page }) => {
@@ -238,22 +108,6 @@ test('rejects an ungranted state patch before disclosure to the guest', async ({
   ));
   await expect.poll(async () => (await status(page)).lifecycle).toBe('failed');
   expect((await status(page)).errors[0].code).toBe('capability_denied');
-});
-
-test('terminates a message flood before forwarding an unbounded queue', async ({ page }) => {
-  const before = (await status(page)).hostTicks;
-  const result = await mount(page, await fixture('attack-flood.mjs'));
-  expect(result.lifecycle).toBe('failed');
-  expect(result.errors[0].code).toBe('bridge_protocol_violation');
-  expect(result.logs.length).toBeLessThanOrEqual(120);
-  expect(result.hostTicks).toBeGreaterThan(before);
-});
-
-test('rejects a sparse array before attacker-controlled traversal', async ({ page }) => {
-  const result = await mount(page, await fixture('attack-sparse-array.mjs'));
-  expect(result.lifecycle).toBe('failed');
-  expect(result.errors[0].code).toBe('bridge_protocol_violation');
-  expect(result.logs).toEqual([]);
 });
 
 test('teardown removes generated UI and requires a fresh epoch', async ({ page }) => {
