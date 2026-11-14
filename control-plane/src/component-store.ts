@@ -748,6 +748,7 @@ export class ComponentStore {
    */
   async readHomeInterface(homeId: string): Promise<{
     readonly name: string;
+    readonly ownerUid: string;
     readonly generation: number;
     readonly pointer: ComponentPointerRepresentation | null;
   }> {
@@ -768,9 +769,10 @@ export class ComponentStore {
       || name.length > 128) {
       throw apiError('temporarily_unavailable');
     }
-    if (!pointerSnapshot.exists) return Object.freeze({ name, generation: 0, pointer: null });
+    const ownerUid = String(home.get('owner_uid'));
+    if (!pointerSnapshot.exists) return Object.freeze({ name, ownerUid, generation: 0, pointer: null });
     const pointer = this.#validatedPointer(pointerSnapshot, homeId);
-    return Object.freeze({ name, generation: pointer.generation, pointer });
+    return Object.freeze({ name, ownerUid, generation: pointer.generation, pointer });
   }
 
   async quarantineDigest(sha256: string): Promise<void> {

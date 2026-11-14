@@ -1087,19 +1087,20 @@ describe('resident home interface read', () => {
     return {
       readHomeInterface: async (homeId: string) => {
         calls.push(homeId);
-        return { name: 'Synthetic Home', generation: 3, pointer: POINTER };
+        return { name: 'Synthetic Home', ownerUid: 'synthetic-owner', generation: 3, pointer: POINTER };
       },
     };
   }
 
-  test('serves the owner and any other signed-in user the same pointer and trusted link, nothing more', async () => {
-    for (const auth of [userAuth('synthetic-owner'), userAuth('synthetic-guest'), userAuth('synthetic-outsider')]) {
+  test('serves every signed-in user the same pointer and link, and tells the owner they own it', async () => {
+    for (const [uid, owner] of [['synthetic-owner', true], ['synthetic-guest', false], ['synthetic-outsider', false]] as const) {
+      const auth = userAuth(uid);
       const calls: string[] = [];
       const response = await request(dependencies({ auth, componentStore: interfaceStore(calls) }), interfaceRequest());
       expect(response.status).toBe(200);
       expect(response.headers.get('cache-control')).toContain('no-store');
       const body = JSON.parse(response.text) as Record<string, unknown>;
-      expect(Object.keys(body).sort()).toEqual(['generation', 'home_id', 'home_url', 'name', 'pointer', 'schema']);
+      expect(Object.keys(body).sort()).toEqual(['generation', 'home_id', 'home_url', 'name', 'pointer', 'schema', 'viewer_is_owner']);
       expect(body).toEqual({
         schema: 'miakapp.home-interface/1',
         home_id: HOME_ID,
@@ -1107,6 +1108,7 @@ describe('resident home interface read', () => {
         home_url: `https://app.example.test/app?home=${HOME_ID}`,
         generation: 3,
         pointer: POINTER,
+        viewer_is_owner: owner,
       });
       // The resident link is the shell, never the raw artifact.
       expect(body.home_url).not.toContain('/v1/components/');
