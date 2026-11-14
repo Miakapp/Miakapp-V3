@@ -177,7 +177,7 @@ describe('FirestoreRecordingPushTransport', () => {
 });
 
 describe('FirebaseFidPushTransport', () => {
-  test('sends one exact data-only challenge to the verified FID', async () => {
+  test('sends one exact visible challenge to the verified destination', async () => {
     const calls: unknown[][] = [];
     const messaging: FirebaseMessagingClient = {
       async send(...args: [FirebaseFidMessage]) {
@@ -197,6 +197,7 @@ describe('FirebaseFidPushTransport', () => {
 
     expect(calls).toEqual([[{
       fid: 'registered-firebase-installation-id',
+      notification: { title: 'Miakapp', body: 'Notifications enabled on this device.' },
       data: {
         schema: 'miakapp.push-challenge-delivery/1',
         challenge_id: 'challenge-id',
