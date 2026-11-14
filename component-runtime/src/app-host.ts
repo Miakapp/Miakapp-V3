@@ -384,6 +384,8 @@ export function mountHouseApp(
     options.onLifecycle('loading');
     bootTimer = setTimeout(() => settle('crashed', 'boot_timeout'), options.bootMs ?? APP_LIMITS.bootMs);
     heartbeat = setInterval(() => {
+      // An extra frame load is being checked: that check decides.
+      if (navigationProbe !== undefined) return;
       if (pendingProbe !== undefined) {
         missed += 1;
         if (missed >= APP_LIMITS.missedHeartbeats) settle('crashed', 'unresponsive');
