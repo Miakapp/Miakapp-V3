@@ -1,9 +1,11 @@
 import {
+  getRedirectResult,
   GoogleAuthProvider,
   isSignInWithEmailLink,
   sendSignInLinkToEmail,
   signInWithEmailLink,
   signInWithPopup,
+  signInWithRedirect,
   type Auth,
 } from 'firebase/auth';
 
@@ -48,8 +50,26 @@ export async function signInWith(auth: Auth, method: SignInMethod): Promise<Sign
   }
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
+  if (isInstalledApp()) {
+    // An app added to the Home Screen cannot get a popup's result back (iOS
+    // opens it outside the app): leave for Google and come back signed in.
+    await signInWithRedirect(auth, provider);
+    return await new Promise<SignInOutcome>(() => undefined);
+  }
   await signInWithPopup(auth, provider);
   return 'signed_in';
+}
+
+/** Launched from the Home Screen (or as an installed app), not in a browser tab. */
+export function isInstalledApp(): boolean {
+  return typeof window.matchMedia === 'function'
+    && (window.matchMedia('(display-mode: standalone)').matches
+      || (navigator as Navigator & { standalone?: boolean }).standalone === true);
+}
+
+/** Finishes a Google sign-in that left the installed app for Google and came back. */
+export async function completeRedirectSignIn(auth: Auth): Promise<void> {
+  await getRedirectResult(auth);
 }
 
 /**
