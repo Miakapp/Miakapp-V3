@@ -1,7 +1,6 @@
 import type { FirebaseApp } from 'firebase/app';
 import { getToken as getAppCheckToken, type AppCheck } from 'firebase/app-check';
 import type { Auth } from 'firebase/auth';
-import { getId, getInstallations } from 'firebase/installations';
 import { getMessaging, getToken as getMessagingToken } from 'firebase/messaging';
 
 export interface PushSetup {
@@ -49,8 +48,8 @@ export async function enablePush(setup: PushSetup, homeId: string): Promise<void
   if (await Notification.requestPermission() !== 'granted') throw new Error('Notifications were not allowed');
   const registration = await navigator.serviceWorker.register('/sw.js');
   await navigator.serviceWorker.ready;
-  await getMessagingToken(getMessaging(setup.app), { serviceWorkerRegistration: registration });
-  const fid = await getId(getInstallations(setup.app));
+  // Sent as the destination `fid` field; the control plane targets it as an FCM token.
+  const fid = await getMessagingToken(getMessaging(setup.app), { serviceWorkerRegistration: registration });
 
   const user = setup.auth.currentUser;
   if (user === null) throw new Error('Sign in first');
