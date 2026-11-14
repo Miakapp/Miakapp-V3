@@ -259,5 +259,8 @@ export async function createSelfHostedControlPlane(
     // its identity explicitly, so the check runs against a clean environment.
     environment: Object.freeze({ GOOGLE_CLOUD_PROJECT: options.serviceAccount.project_id }),
     factories: createSelfHostedFactories(options),
+    // Firestore's free tier cannot pay ~8 writes per request for rate-limit
+    // budgets and an audit ring: the self-hosted control plane keeps neither.
+    recordAdmission: false,
   });
 }

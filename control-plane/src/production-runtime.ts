@@ -199,6 +199,8 @@ export async function createProductionControlPlane(
     readonly environment?: Readonly<Record<string, string | undefined>>;
     readonly factories?: ProductionRuntimeFactories;
     readonly clock?: Clock;
+    /** False: no Firestore admission budgets or audit ring (self-hosted default). */
+    readonly recordAdmission?: boolean;
   }> = {},
 ): Promise<ProductionControlPlane> {
   const runtime = atStage('runtime-config', () => parseProductionRuntimeConfig(input));
@@ -236,7 +238,9 @@ export async function createProductionControlPlane(
         bucketName: config.componentBucket,
       },
     );
-    const admission = new AdmissionController(firebase.firestore, config, clock);
+    const admission = new AdmissionController(firebase.firestore, config, clock, {
+      recorded: options.recordAdmission ?? true,
+    });
     const store = new ControlPlaneStore(firebase.firestore, config, clock);
     const pushStore = new PushStore(firebase.firestore, config, clock);
     const componentStore = new ComponentStore(firebase.firestore, componentStorage, config, clock);
