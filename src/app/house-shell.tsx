@@ -541,16 +541,30 @@ const PUSH_ERRORS: Readonly<Record<string, HouseCopyKey>> = {
   rate_limited: 'pushTooMany',
 };
 
-function PushSettings({ enablePush, t }: {
+/** This device turned notifications on for this account and home (and kept the permission). */
+function pushRememberedKey(homeId: string, accountId: string | undefined): string {
+  return `miakapp.push-enabled.${accountId ?? 'anonymous'}.${homeId}`;
+}
+
+function pushAlreadyEnabled(key: string): boolean {
+  const granted = typeof Notification !== 'undefined' && Notification.permission === 'granted';
+  return granted && safeLocalStorage()?.getItem(key) === '1';
+}
+
+function PushSettings({ enablePush, rememberKey, t }: {
   readonly enablePush: () => Promise<void>;
+  readonly rememberKey: string;
   readonly t: HouseTranslate;
 }): React.JSX.Element {
-  const [status, setStatus] = useState<'idle' | 'pending' | 'done' | 'failed'>('idle');
+  const [status, setStatus] = useState<'idle' | 'pending' | 'done' | 'failed'>(
+    () => (pushAlreadyEnabled(rememberKey) ? 'done' : 'idle'),
+  );
   const [detail, setDetail] = useState('');
   const enable = async (): Promise<void> => {
     setStatus('pending');
     try {
       await enablePush();
+      try { safeLocalStorage()?.setItem(rememberKey, '1'); } catch { /* private mode */ }
       setStatus('done');
     } catch (error) {
       setDetail(error instanceof Error ? error.message : String(error));
@@ -790,7 +804,9 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
                   ))}
                 </div>
               </section>
-              {props.enablePush === undefined ? null : <PushSettings enablePush={props.enablePush} t={t} />}
+              {props.enablePush === undefined ? null : (
+                <PushSettings enablePush={props.enablePush} rememberKey={pushRememberedKey(home.id, props.account?.id)} t={t} />
+              )}
               {consent === undefined && stage.kind !== 'app' && props.isOwner !== true ? null : (
                 <section className="house-settings__section">
                   <h3>{t('consentSection')}</h3>
@@ -800,8 +816,9 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
                       <button
                         className="house-button house-button--ghost"
                         onClick={() => {
-                          restart();
-                          close();
+                          // A full reload: the latest published release, a
+                          // fresh frame and a fresh connection, like reopening.
+                          window.location.reload();
                         }}
                         type="button"
                       >
