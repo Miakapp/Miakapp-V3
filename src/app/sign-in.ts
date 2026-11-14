@@ -1,5 +1,4 @@
 import {
-  GithubAuthProvider,
   GoogleAuthProvider,
   isSignInWithEmailLink,
   sendSignInLinkToEmail,
@@ -14,7 +13,6 @@ import {
  */
 export type SignInMethod =
   | { readonly kind: 'google' }
-  | { readonly kind: 'github' }
   | { readonly kind: 'email'; readonly email: string };
 
 export type SignInKind = SignInMethod['kind'];
@@ -22,7 +20,7 @@ export type SignInKind = SignInMethod['kind'];
 /** `link_sent`: the sign-in finishes when the person opens the emailed link. */
 export type SignInOutcome = 'signed_in' | 'link_sent';
 
-const ALL_KINDS: readonly SignInKind[] = ['google', 'github', 'email'];
+const ALL_KINDS: readonly SignInKind[] = ['google', 'email'];
 const EMAIL_KEY = 'miakapp.sign-in-email';
 
 /** The methods this deployment offers, from `VITE_MIAKAPP_SIGN_IN` (default: all). */
@@ -48,7 +46,7 @@ export async function signInWith(auth: Auth, method: SignInMethod): Promise<Sign
     storage()?.setItem(EMAIL_KEY, method.email);
     return 'link_sent';
   }
-  const provider = method.kind === 'google' ? new GoogleAuthProvider() : new GithubAuthProvider();
+  const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
   await signInWithPopup(auth, provider);
   return 'signed_in';
