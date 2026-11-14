@@ -50,7 +50,7 @@ origin the web app is served from:
 
 ```sh
 MIAKAPP_SANDBOX_ORIGIN=https://miakapp-v4-sandbox.web.app \
-MIAKAPP_HOST_ORIGIN="https://www.miakapp.com https://miakapp-v4-staging.web.app" \
+MIAKAPP_HOST_ORIGIN="https://miakapp.com https://www.miakapp.com https://miakapp-v4-staging.web.app" \
 MIAKAPP_SANDBOX_SITE=miakapp-v4-sandbox bun run build:sandbox
 firebase deploy --config dist-sandbox/firebase.json --project miakapp-v4-staging --only hosting:miakapp-v4-sandbox
 ```

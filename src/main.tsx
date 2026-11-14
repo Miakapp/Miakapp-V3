@@ -22,7 +22,7 @@ if (window.matchMedia('(display-mode: standalone)').matches
 
 markOpen('boot');
 
-// Legacy `/app?home=<id>` links keep working and show the new `/app/<id>` address.
+// Older `/app?home=<id>` and `/app/<id>` links keep working and show `/h/<id>`.
 canonicalizeHomeAddress(window.location, window.history);
 
 const root = document.querySelector('#root');

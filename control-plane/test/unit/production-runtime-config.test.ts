@@ -219,7 +219,7 @@ describe('production runtime configuration', () => {
     const value = candidate();
     value.home_app_origin = 'https://app.staging.miakapp.com';
     const deployment = createProductionDeploymentConfig(parseProductionRuntimeConfig(value), secrets());
-    expect(deployment.homeUrlTemplate).toBe('https://app.staging.miakapp.com/app/{home_id}');
+    expect(deployment.homeUrlTemplate).toBe('https://app.staging.miakapp.com/h/{home_id}');
 
     for (const origin of [
       'https://other.staging.miakapp.com',
