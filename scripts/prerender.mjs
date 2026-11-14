@@ -7,7 +7,7 @@
 // - every other route keeps the empty app shell (app.html) so /pair or /app
 //   never flash the landing.
 // Every page gets its canonical, hreflang and Open Graph tags, and the sitemap.
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 import { dirname, resolve } from 'node:path';
@@ -16,7 +16,9 @@ const ORIGIN = 'https://www.miakapp.com';
 const OG_LOCALE = { en: 'en_US', fr: 'fr_FR' };
 const dist = resolve(process.argv[2] ?? 'dist');
 const ssr = await import(pathToFileURL(resolve(process.argv[3] ?? 'dist-ssr/prerender.js')).href);
-const shell = readFileSync(`${dist}/index.html`, 'utf8');
+// The empty shell is saved as app.html on the first run; reading it back keeps a
+// second run from using an already prerendered index.html as its template.
+const shell = readFileSync(existsSync(`${dist}/app.html`) ? `${dist}/app.html` : `${dist}/index.html`, 'utf8');
 
 const escape = (text) => text.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 

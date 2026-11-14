@@ -1,7 +1,7 @@
 // Header and footer of the static content pages. They are plain links rather
 // than the app's buttons: the pages ship no script, and a crawler follows links.
 import { COPY, LOCALES, LOCALE_LABELS, type Locale } from '../app/copy';
-import { APP_LINKS, CONTENT_PAGES, contentPage, SOURCE_URL, type ContentPageId } from './site';
+import { APP_LINKS, contentPage, publishedPages, SOURCE_URL, type ContentPageId } from './site';
 
 const CHROME = {
   en: {
@@ -67,7 +67,7 @@ export function SiteFooter({ locale }: { readonly locale: Locale }): React.JSX.E
       </div>
       <nav aria-label={words.explore}>
         <strong>{words.explore}</strong>
-        {CONTENT_PAGES.map((page) => (
+        {publishedPages().filter((page) => page.kind === 'page').map((page) => (
           <a href={page.path[locale]} key={page.id}>{page.title[locale]}</a>
         ))}
       </nav>
