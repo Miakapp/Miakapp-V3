@@ -173,7 +173,7 @@ html:has(.house-shell) body {
   gap: 2px;
   justify-items: center;
   min-width: 0;
-  padding: 7px 12px;
+  padding: 7px 6px;
   border: 0;
   border-radius: 999px;
   background: transparent;
@@ -197,14 +197,9 @@ html:has(.house-shell) body {
   color: #f4f1e8;
 }
 
+/* The home's own buttons sit among Miakapp's as equals: same width, no divider. */
 .house-bar__home-buttons {
-  display: flex;
-  flex: 2 1 0;
-  gap: 2px;
-  min-width: 0;
-  padding: 0 4px;
-  border-right: 1px dashed rgb(255 255 255 / 14%);
-  border-left: 1px dashed rgb(255 255 255 / 14%);
+  display: contents;
 }
 
 .house-bar__label {
