@@ -145,7 +145,7 @@ spec:
             - { name: MIAKAPP_CONTROL_PLANE_ISSUER, value: "https://api.miakapp.com" }
             - { name: MIAKAPP_CONTROL_PLANE_JWKS_URL, value: "https://api.miakapp.com/.well-known/jwks.json" }
             - { name: MIAKAPP_RELAY_AUDIENCE, value: "wss://miakapp-relay.dac.cclabs.cx/ws" }
-            - { name: MIAKAPP_ALLOWED_ORIGINS, value: "https://miakapp-v4-staging.web.app" }
+            - { name: MIAKAPP_ALLOWED_ORIGINS, value: "https://www.miakapp.com,https://miakapp-v4-staging.web.app" }
             # Behind Traefik every client shares the ingress pod address, so
             # the per-IP limits equal the global ones.
             - { name: MIAKAPP_MAX_CONNECTIONS, value: "64" }
