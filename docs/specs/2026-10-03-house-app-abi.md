@@ -39,6 +39,22 @@ interface Miakapp {
   readonly theme: 'system' | 'light' | 'dark'; // resident's preference
   onThemeChange(listener: (theme: string) => void): () => void;
 
+  /** Up to two buttons of this home in the Miakapp bar, between the home tab
+   *  and "Me". Miakapp draws them and keeps the last list per home for the
+   *  next visit, so set them again on every start, from the resident, the
+   *  home's state or anything else. `[]` removes them. */
+  readonly bar: {
+    setButtons(buttons: readonly {
+      id: string;      // [a-z0-9-], at most 32 characters
+      label: string;   // at most 16 characters
+      icon: 'grid' | 'bolt' | 'light' | 'thermometer' | 'camera'
+        | 'lock' | 'list' | 'chart' | 'leaf' | 'star';
+      active?: boolean; // the screen shown now; at most one
+    }[]): void;
+    /** A tap: the button's id, or `null` for the home tab (the home's main screen). */
+    onSelect(listener: (id: string | null) => void): () => void;
+  };
+
   readonly state: {
     get(path: string): unknown;                // granted paths only
     values(): Readonly<Record<string, unknown>>;
@@ -73,8 +89,10 @@ still decides, per resident, whether each call is allowed.
   artifact, no frame. Agreement is stored per home and per notice version
   (`HOUSE_CONSENT_VERSION`); "Not now" loads nothing and offers the other homes;
   agreement can be withdrawn in settings.
-- **A permanent Miakapp bar** outside the frame: switch home, favorites,
-  personal settings (appearance, consent, restart). Available before consent,
+- **A permanent Miakapp bar** at the bottom, outside the frame: the home tab,
+  the home's own buttons (`miakapp.bar`), the home's settings for its owner,
+  and "Me" (account and sign-in methods, homes, favorites, notifications,
+  appearance, consent, restart). The home never draws a bar of its own. Available before consent,
   after refusal, while loading, after a crash or a hang. From inside the home,
   `Alt + Shift + M` moves focus to it.
 - **Isolation.** The frame is `sandbox="allow-scripts allow-forms"` from a

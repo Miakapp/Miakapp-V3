@@ -1,5 +1,7 @@
 import type { SVGProps } from 'react';
 
+import type { AppBarIcon } from '../../component-runtime/src/app-contract';
+
 type IconProps = SVGProps<SVGSVGElement>;
 
 function IconFrame({ children, ...props }: IconProps): React.JSX.Element {
@@ -86,6 +88,30 @@ export function CloseIcon(props: IconProps): React.JSX.Element {
   return (
     <IconFrame {...props}>
       <path d="M6.5 6.5 17.5 17.5M17.5 6.5 6.5 17.5" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+    </IconFrame>
+  );
+}
+
+const BAR_ICON_PATHS: Readonly<Record<AppBarIcon, readonly string[]>> = {
+  grid: ['M4 4h7v7H4z', 'M13 4h7v7h-7z', 'M4 13h7v7H4z', 'M13 13h7v7h-7z'],
+  bolt: ['M13 2.5 4.5 13.5H11l-1 8 8.5-11H12l1-8Z'],
+  light: ['M9 18h6', 'M10 21h4', 'M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.2h5c0-.9.4-1.7 1.1-2.2A6 6 0 0 0 12 3Z'],
+  thermometer: ['M10 4a2 2 0 1 1 4 0v10.3a4 4 0 1 1-4 0V4Z', 'M12 9v7'],
+  camera: ['M4 8h3.5L9 5.5h6L16.5 8H20v11H4V8Z', 'M12 16.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z'],
+  lock: ['M6 11h12v9H6z', 'M8.5 11V8a3.5 3.5 0 1 1 7 0v3'],
+  list: ['M9 6h11', 'M9 12h11', 'M9 18h11', 'M4.5 6h.01', 'M4.5 12h.01', 'M4.5 18h.01'],
+  chart: ['M4 20h16', 'M7 16v-5', 'M12 16V6', 'M17 16v-8'],
+  leaf: ['M5 19c0-8 5-13 14-14 0 9-5 14-13 14', 'M5 19 13 11'],
+  star: ['m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9L12 3.5Z'],
+};
+
+/** The closed set of icons a home may give its bar buttons. */
+export function BarIcon({ name, ...props }: IconProps & { readonly name: AppBarIcon }): React.JSX.Element {
+  return (
+    <IconFrame {...props}>
+      {BAR_ICON_PATHS[name].map((d) => (
+        <path d={d} key={d} stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7" />
+      ))}
     </IconFrame>
   );
 }

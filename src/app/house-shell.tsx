@@ -9,7 +9,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
 
-import type { AppTheme } from '../../component-runtime/src/app-contract';
+import { parseBarButtons, type AppBarButton, type AppTheme } from '../../component-runtime/src/app-contract';
 import {
   HouseCallError,
   mountHouseApp,
@@ -33,7 +33,7 @@ import type {
   HouseCallOptions,
   TrustedHost,
 } from './host';
-import { CloseIcon, HomeIcon, SettingsIcon, StarIcon } from './icons';
+import { BarIcon, CloseIcon, HomeIcon, SettingsIcon, StarIcon } from './icons';
 import type { Locale } from './copy';
 import type { PairingAccount } from './pairing-client';
 import { SignInChoices } from './sign-in-choices';
@@ -121,6 +121,35 @@ function useHouseTheme(): [AppTheme, (theme: AppTheme) => void] {
     }
   }, []);
   return [theme, change];
+}
+
+// ---------------------------------------------------------------------------
+// The home's own bar buttons, kept per home so the next visit shows them before
+// the home's interface has started and set them again.
+
+const BAR_KEY = 'miakapp.house-bar.';
+
+function readBarButtons(homeId: string): readonly AppBarButton[] {
+  try {
+    const raw = safeLocalStorage()?.getItem(BAR_KEY + homeId);
+    return raw == null ? [] : parseBarButtons(JSON.parse(raw));
+  } catch {
+    return [];
+  }
+}
+
+function useBarButtons(homeId: string): [readonly AppBarButton[], (buttons: readonly AppBarButton[]) => void] {
+  const [entry, setEntry] = useState(() => ({ homeId, buttons: readBarButtons(homeId) }));
+  const buttons = entry.homeId === homeId ? entry.buttons : readBarButtons(homeId);
+  const change = useCallback((next: readonly AppBarButton[]) => {
+    setEntry({ homeId, buttons: next });
+    try {
+      safeLocalStorage()?.setItem(BAR_KEY + homeId, JSON.stringify(next));
+    } catch {
+      // Shown for this visit only.
+    }
+  }, [homeId]);
+  return [buttons, change];
 }
 
 // ---------------------------------------------------------------------------
@@ -336,11 +365,13 @@ const PENDING_LIFECYCLES: ReadonlySet<HouseAppLifecycle> = new Set(['starting', 
  */
 function HouseAppStage({
   call,
+  barSelect,
   focusShell,
   home,
   homeState,
   locale,
   mount,
+  onBarButtons,
   onRetry,
   onSwitchAway,
   release,
@@ -349,7 +380,10 @@ function HouseAppStage({
   theme,
 }: {
   readonly call: HouseShellProps['call'];
+  /** Filled with the running session's way to tell the home a bar button was tapped. */
+  readonly barSelect: React.RefObject<((id: string | null) => void) | undefined>;
   readonly focusShell: () => void;
+  readonly onBarButtons: (buttons: readonly AppBarButton[]) => void;
   readonly home: HomeSummary;
   readonly homeState: HomeState | undefined;
   readonly locale: Locale;
@@ -368,9 +402,9 @@ function HouseAppStage({
     sandboxOrigin === undefined ? 'sandbox_origin_invalid' : undefined,
   );
   // The latest values the mount effect reads without re-mounting on change.
-  const latest = useRef({ call, focusShell, homeState, locale, theme, t });
+  const latest = useRef({ call, focusShell, homeState, locale, onBarButtons, theme, t });
   useEffect(() => {
-    latest.current = { call, focusShell, homeState, locale, theme, t };
+    latest.current = { call, focusShell, homeState, locale, onBarButtons, theme, t };
   });
 
   useEffect(() => {
@@ -406,6 +440,7 @@ function HouseAppStage({
           if (code !== undefined) setFailure(code);
         },
         onFocusShell: () => latest.current.focusShell(),
+        onBarButtons: (buttons) => latest.current.onBarButtons(buttons),
       },
     ).then(
       (session) => {
@@ -414,6 +449,7 @@ function HouseAppStage({
           return;
         }
         sessionRef.current = session;
+        barSelect.current = (id) => session.selectBarButton(id);
       },
       () => undefined,
     );
@@ -423,8 +459,9 @@ function HouseAppStage({
       controller.abort();
       sessionRef.current?.dispose();
       sessionRef.current = undefined;
+      barSelect.current = undefined;
     };
-  }, [home.id, home.name, mount, release, sandboxOrigin]);
+  }, [barSelect, home.id, home.name, mount, release, sandboxOrigin]);
 
   useEffect(() => {
     if (homeState === undefined) return;
@@ -584,6 +621,24 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
   const panelRef = useRef<HTMLDivElement | null>(null);
   const [triggers] = useState(() => [homeButton, profileButton] as const);
   const panelId = useId();
+  const [barButtons, setBarButtons] = useBarButtons(home.id);
+  const [selected, setSelected] = useState<string | null>(
+    () => barButtons.find((button) => button.active)?.id ?? null,
+  );
+  const barSelect = useRef<((id: string | null) => void) | undefined>(undefined);
+  const receiveBarButtons = useCallback((buttons: readonly AppBarButton[]) => {
+    setBarButtons(buttons);
+    setSelected((current) => buttons.find((button) => button.active)?.id
+      ?? (buttons.some((button) => button.id === current) ? current : null));
+  }, [setBarButtons]);
+  const select = (id: string | null): void => {
+    setPanel(undefined);
+    setSelected(id);
+    barSelect.current?.(id);
+  };
+  // Shown while the home's interface starts and runs, never before consent.
+  const homeButtons = stage.kind === 'app' || stage.kind === 'loading' ? barButtons : [];
+  const current = homeButtons.some((button) => button.id === selected) ? selected : null;
 
   const close = useCallback(() => {
     setPanel((open) => {
@@ -770,6 +825,7 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
           </StagePanel>
         ) : (
           <HouseAppStage
+            barSelect={barSelect}
             call={props.call}
             focusShell={focusShell}
             home={home}
@@ -777,6 +833,7 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
             key={restartKey}
             locale={locale}
             mount={props.mountHouseApp ?? mountHouseApp}
+            onBarButtons={receiveBarButtons}
             onRetry={() => setRestartKey((key) => key + 1)}
             onSwitchAway={openHomes}
             release={stage.release}
@@ -799,9 +856,9 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
         )}
         <nav aria-label={t('barLabel')} className="house-bar">
           <button
-            aria-current={panel === undefined ? 'page' : undefined}
+            aria-current={panel === undefined && current === null ? 'page' : undefined}
             className="house-bar__tab house-bar__tab--home"
-            onClick={() => setPanel(undefined)}
+            onClick={() => select(null)}
             ref={homeButton}
             title={home.name}
             type="button"
@@ -809,6 +866,22 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
             <HomeIcon />
             <span className="house-bar__label">{home.name}</span>
           </button>
+          {homeButtons.length === 0 ? null : (
+            <span className="house-bar__home-buttons">
+              {homeButtons.map((button) => (
+                <button
+                  aria-current={panel === undefined && current === button.id ? 'page' : undefined}
+                  className="house-bar__tab"
+                  key={button.id}
+                  onClick={() => select(button.id)}
+                  type="button"
+                >
+                  <BarIcon name={button.icon} />
+                  <span className="house-bar__label">{button.label}</span>
+                </button>
+              ))}
+            </span>
+          )}
           {props.isOwner === true ? (
             <a className="house-bar__tab" href={props.homeSettingsHref ?? '/pair'}>
               <SettingsIcon />

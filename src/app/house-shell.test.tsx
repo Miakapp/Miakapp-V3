@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 
@@ -85,6 +85,7 @@ function fakeMount(): FakeMount {
       frame,
       publishState: vi.fn<HouseAppSession['publishState']>(),
       setTheme: vi.fn<HouseAppSession['setTheme']>(),
+      selectBarButton: vi.fn<HouseAppSession['selectBarButton']>(),
       dispose: vi.fn<HouseAppSession['dispose']>(() => frame.remove()),
     };
     sessions.push(session);
@@ -533,6 +534,50 @@ describe('house shell — around a running home', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
+  it('draws a fresh home with no buttons of its own', () => {
+    localStorage.clear();
+    renderRunning();
+    expect(document.querySelector('.house-bar__home-buttons')).toBeNull();
+  });
+
+  it('draws the buttons the running home sets and tells it which one was tapped', async () => {
+    const user = userEvent.setup();
+    const { mount, options, sessions } = renderRunning();
+    await waitFor(() => expect(mount).toHaveBeenCalledOnce());
+    act(() => options[0]!.onBarButtons!([
+      { id: 'rooms', label: 'Pièces', icon: 'grid', active: false },
+      { id: 'energy', label: 'Énergie', icon: 'bolt', active: false },
+    ]));
+    const bar = within(screen.getByRole('navigation', { name: 'Miakapp' }));
+    await waitFor(() => expect(sessions[0]!.selectBarButton).toBeDefined());
+    await user.click(bar.getByRole('button', { name: 'Énergie' }));
+    expect(sessions[0]!.selectBarButton).toHaveBeenLastCalledWith('energy');
+    expect(bar.getByRole('button', { name: 'Énergie' })).toHaveAttribute('aria-current', 'page');
+    expect(bar.getByRole('button', { name: 'Preview home' })).not.toHaveAttribute('aria-current');
+    await user.click(bar.getByRole('button', { name: 'Preview home' }));
+    expect(sessions[0]!.selectBarButton).toHaveBeenLastCalledWith(null);
+  });
+
+  it('remembers them for the next visit and keeps them hidden before consent', async () => {
+    const first = renderRunning();
+    await waitFor(() => expect(first.mount).toHaveBeenCalledOnce());
+    act(() => first.options[0]!.onBarButtons!([{ id: 'rooms', label: 'Pièces', icon: 'grid', active: false }]));
+    cleanup();
+    renderRunning();
+    expect(within(screen.getByRole('navigation', { name: 'Miakapp' })).getByRole('button', { name: 'Pièces' }))
+      .toBeVisible();
+    cleanup();
+    const home = createPreviewHost().getSnapshot().activeHome;
+    render(<HouseShell
+      home={home} homes={[home]} connection="ready"
+      stage={{ kind: 'consent' }} consent={undefined}
+      favorites={createHouseFavoritesStore(memoryStorage())}
+      sandboxOrigin={undefined} homeState={undefined} call={undefined}
+      onAcceptConsent={vi.fn()} onDeclineConsent={vi.fn()} onReopen={vi.fn()}
+      onRevokeConsent={vi.fn()} onRetry={vi.fn()} onSwitchHome={vi.fn()}
+    />);
+    expect(screen.queryByRole('button', { name: 'Pièces' })).not.toBeInTheDocument();
+  });
   it('never shows the platform’s technical labels around a home’s interface', async () => {
     const { mount } = renderRunning();
     await waitFor(() => expect(mount).toHaveBeenCalledOnce());
