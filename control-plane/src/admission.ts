@@ -269,8 +269,15 @@ export class AdmissionController {
   readonly #firestore: Firestore;
   readonly #networkKey: Buffer;
   readonly #profile: AdmissionProfile;
+  readonly #recorded: boolean;
 
-  constructor(firestore: Firestore, config: DeploymentConfig, clock: Clock) {
+  /**
+   * `recorded: false` keeps the same tickets and call order but writes nothing:
+   * no Firestore budgets, no audit ring. Every request used to cost about eight
+   * document writes, which exhausted the free tier with two homes.
+   */
+  constructor(firestore: Firestore, config: DeploymentConfig, clock: Clock, options: { readonly recorded?: boolean } = {}) {
+    this.#recorded = options.recorded ?? true;
     this.#firestore = firestore;
     this.#config = config;
     this.#clock = clock;
@@ -286,6 +293,7 @@ export class AdmissionController {
     }
     const source = boundedString(input.source, 'Admission source');
     const eventId = randomIdentifier();
+    if (!this.#recorded) return new AdmissionTicket(this, 'unrecorded', eventId, input.operation, source);
     const network = this.#fingerprint('network', 'source', source);
     const charges = this.#normalizeCharges([
       { budget: 'audit.events', subject: 'global' },
@@ -346,6 +354,7 @@ export class AdmissionController {
 
   async consume(ticket: AdmissionTicket, charges: readonly AdmissionCharge[]): Promise<void> {
     ticket.assertActive(this);
+    if (!this.#recorded) return;
     const normalized = this.#normalizeCharges(charges);
     const eventId = ticket.eventId;
     const nowMilliseconds = this.#clock.now();
@@ -398,6 +407,10 @@ export class AdmissionController {
     }>,
   ): Promise<void> {
     ticket.assertActive(this);
+    if (!this.#recorded) {
+      ticket.markFinished();
+      return;
+    }
     if ((outcome === 'ok' && outcomeCode !== null)
       || (outcome !== 'ok' && outcomeCode === null)) {
       throw new TypeError('Audit outcome metadata is inconsistent');
