@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createDemoHost } from './demo-host';
+import { createPreviewHost } from './preview-host';
 import type { TrustedHost, TrustedHostSnapshot } from './host';
 import { agentStartPrompt, COPY } from './copy';
 import { ProductApp } from './product-app';
@@ -19,7 +19,7 @@ interface MutableHost {
 }
 
 function mutableLiveHost(authenticated = false): MutableHost {
-  const demo = createDemoHost();
+  const demo = createPreviewHost();
   const listeners = new Set<() => void>();
   let signedIn = authenticated;
   let snapshot: TrustedHostSnapshot;
@@ -30,8 +30,6 @@ function mutableLiveHost(authenticated = false): MutableHost {
       authenticated: signedIn,
       preview: false,
       signInAvailable: !signedIn,
-      modeLabel: 'Staging',
-      noticeTitle: signedIn ? 'Live staging connection' : 'Connect to Miakapp staging',
     };
   };
   rebuild();
@@ -50,7 +48,6 @@ function mutableLiveHost(authenticated = false): MutableHost {
         listeners.add(listener);
         return () => listeners.delete(listener);
       },
-      interact: demo.interact,
       signIn,
       dispose: demo.dispose,
     },
@@ -68,7 +65,6 @@ describe('Miakapp product entry flow', () => {
       name: fr.landingTitle,
     })).toBeVisible();
     expect(screen.getAllByRole('button', { name: fr.navCreate })).toHaveLength(2);
-    expect(screen.queryByText('3 lights on')).toBeNull();
   });
 
   it('hands a visitor the prompt without asking for an account first', async () => {
@@ -121,8 +117,8 @@ describe('Miakapp product entry flow', () => {
     await user.click(screen.getByRole('button', { name: fr.navSignIn }));
     await user.click(screen.getByRole('button', { name: fr.loginGoogle }));
 
-    await waitFor(() => expect(screen.getByText('3 lights on')).toBeVisible());
-    expect(window.location.pathname).toBe('/app');
+    await waitFor(() => expect(window.location.pathname).toBe('/app'));
+    expect(screen.getByRole('heading', { level: 1 })).toBeVisible();
   });
 
   it('copies the exact command that a coding agent can execute', async () => {
@@ -175,14 +171,14 @@ describe('Miakapp product entry flow', () => {
     expect(screen.getByText('Recommandé')).toBeVisible();
   });
 
-  it('keeps the existing interactive console available as the demo', async () => {
+  it('sends a resident who already has a home to sign in', async () => {
     const user = userEvent.setup();
     render(<ProductApp initialLocale="fr" />);
 
     await user.click(screen.getByRole('button', { name: fr.landingSecondaryCta }));
 
-    expect(screen.getByText('3 lights on')).toBeVisible();
-    expect(window.location.pathname).toBe('/app');
+    expect(screen.getByRole('button', { name: fr.loginGoogle })).toBeVisible();
+    expect(window.location.pathname).toBe('/login');
   });
 });
 

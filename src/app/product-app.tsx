@@ -12,7 +12,7 @@ import {
   type CopyKey,
   type Locale,
 } from './copy';
-import { createDemoHost } from './demo-host';
+import { createPreviewHost } from './preview-host';
 import type { TrustedHost } from './host';
 import { ActivityIcon, HomeIcon, LockIcon, SparkIcon } from './icons';
 import './product.css';
@@ -190,7 +190,7 @@ function LandingPage({ t, ...chrome }: PageProps): React.JSX.Element {
               <button className="product-button" onClick={() => onNavigate('new-home')} type="button">
                 {t('landingPrimaryCta')} <span aria-hidden="true">→</span>
               </button>
-              <button className="product-button product-button--glass" onClick={() => onNavigate('console')} type="button">
+              <button className="product-button product-button--glass" onClick={() => onNavigate('login')} type="button">
                 {t('landingSecondaryCta')}
               </button>
             </div>
@@ -342,7 +342,7 @@ function NewHomePage({
 }
 
 export function ProductApp({
-  createHost = createDemoHost,
+  createHost = createPreviewHost,
   initialRoute,
   initialLocale,
   writeClipboard = async (text) => navigator.clipboard.writeText(text),

@@ -11,19 +11,13 @@ import {
 import { HouseCallError } from '../../component-runtime/src/app-host';
 
 import type {
-  HomeActivity,
   HomeConnectionStatus,
   HouseCallOptions,
   HomeState,
   HomeSummary,
-  SemanticInteraction,
   TrustedHost,
   TrustedHostSnapshot,
 } from './host';
-import {
-  createLiveTree,
-  type LiveActionStatus,
-} from './live-tree';
 
 export interface LiveIdentity {
   readonly isSignedIn: () => boolean;
@@ -51,14 +45,6 @@ export interface LiveHostDependencies {
   ) => BrowserRelayCredentialProvider;
 }
 
-type LiveState = NonNullable<ReturnType<BrowserClient['state']['snapshot']>>['values'];
-
-const EMPTY_STATE: LiveState = Object.freeze({});
-const EMPTY_ACTIVITY: readonly HomeActivity[] = Object.freeze([]);
-const IDLE_ACTION: LiveActionStatus = Object.freeze({
-  detail: 'No light action in progress',
-  state: 'idle',
-});
 
 function connectionFrom(status: BrowserClientStatus): HomeConnectionStatus {
   if (status === 'ready') return 'ready';
@@ -67,16 +53,6 @@ function connectionFrom(status: BrowserClientStatus): HomeConnectionStatus {
     return 'connecting';
   }
   return 'unavailable';
-}
-
-function connectionDetail(status: BrowserClientStatus, signedIn: boolean): string {
-  if (!signedIn) return 'Sign in required';
-  if (status === 'ready') return 'Live relay connected';
-  if (status === 'reconnecting') return 'Reconnecting safely';
-  if (status === 'authenticating') return 'Authenticating relay';
-  if (status === 'synchronizing') return 'Synchronizing home';
-  if (status === 'connecting') return 'Connecting to relay';
-  return 'Live home unavailable';
 }
 
 class LiveTrustedHost implements TrustedHost {
@@ -94,19 +70,13 @@ class LiveTrustedHost implements TrustedHost {
   #authorizationEpoch = 0;
   #signInStatus: 'idle' | 'pending' | 'failed' = 'idle';
   #status: BrowserClientStatus = 'idle';
-  #state: LiveState = EMPTY_STATE;
   #stateStale = false;
   /**
-   * The home state as the relay reported it, kept beside `#state` because the
-   * two answer different questions. `#state` feeds this host's own tree, which
-   * blanks on staleness. `#homeState` is what a component receives, and a
-   * component is told the state is old rather than handed an empty home.
-   * Undefined until the client has delivered one snapshot.
+   * The home state as the relay reported it. The home's own interface is told
+   * the state is old rather than handed an empty home. Undefined until the
+   * client has delivered one snapshot.
    */
   #homeState: HomeState | undefined;
-  #activity: readonly HomeActivity[] = EMPTY_ACTIVITY;
-  #action: LiveActionStatus = IDLE_ACTION;
-  #actionGeneration = 0;
   #disposed = false;
   #connectionGeneration = 0;
   #snapshot: TrustedHostSnapshot;
@@ -160,7 +130,6 @@ class LiveTrustedHost implements TrustedHost {
       // Detach synchronously; an old stop() must not block or overwrite the
       // new account. A fresh provider cannot reuse a prior user's lease.
       void this.#disconnect();
-      this.#activity = EMPTY_ACTIVITY;
       if (this.#signedIn) void this.#connect();
       this.#publish();
     });
@@ -210,85 +179,6 @@ class LiveTrustedHost implements TrustedHost {
     await this.#identity.signOut();
   };
 
-  readonly interact = (interaction: SemanticInteraction): void => {
-    if (
-      this.#disposed
-      || this.#status !== 'ready'
-      || this.#stateStale
-      || this.#action.state === 'pending'
-      || this.#action.state === 'accepted'
-      || interaction.handler !== 'lighting.toggle'
-      || interaction.event !== 'press'
-    ) return;
-
-    const client = this.#client;
-    if (client === undefined) return;
-    const generation = ++this.#actionGeneration;
-    this.#action = Object.freeze({
-      detail: 'Waiting for coordinator acceptance',
-      state: 'pending',
-    });
-    this.#publish();
-
-    let call: ReturnType<BrowserClient['calls']['start']>;
-    try {
-      call = client.calls.start({
-        function: 'lighting.toggle',
-        arguments: null,
-        timeoutMs: 10_000,
-        idempotencyKey: crypto.randomUUID(),
-      });
-    } catch {
-      this.#action = Object.freeze({
-        detail: 'The call was not dispatched',
-        state: 'failed',
-      });
-      this.#record('Light action failed', 'The coordinator call could not start.', 'security');
-      this.#publish();
-      return;
-    }
-
-    void call.accepted.then(() => {
-      if (!this.#isCurrentAction(generation) || this.#action.state !== 'pending') return;
-      this.#action = Object.freeze({
-        detail: 'Coordinator accepted the action',
-        state: 'accepted',
-      });
-      this.#publish();
-    }).catch(() => undefined);
-
-    void call.result.then(() => {
-      if (!this.#isCurrentAction(generation)) return;
-      this.#action = Object.freeze({
-        detail: 'Coordinator confirmed the effect',
-        state: 'applied',
-      });
-      this.#record('Light toggled', 'The Bun coordinator confirmed the action.', 'home');
-    }).catch((failure: unknown) => {
-      if (!this.#isCurrentAction(generation)) return;
-      const outcomeUnknown = typeof failure === 'object'
-        && failure !== null
-        && 'outcome' in failure
-        && failure.outcome === 'outcome_unknown';
-      this.#action = Object.freeze({
-        detail: outcomeUnknown
-          ? 'The effect may have happened; it was not retried'
-          : 'The coordinator did not apply the action',
-        state: outcomeUnknown ? 'outcome_unknown' : 'failed',
-      });
-      this.#record(
-        outcomeUnknown ? 'Light state needs confirmation' : 'Light action failed',
-        outcomeUnknown
-          ? 'The effect may have happened; Miakapp did not retry it.'
-          : 'The coordinator did not apply the requested action.',
-        'security',
-      );
-    }).finally(() => {
-      if (!this.#isCurrentAction(generation)) return;
-      this.#publish();
-    });
-  };
-
   /**
    * The home's own interface asks; the coordinator decides. Nothing here is
    * retried: a call that may have reached the home is reported as such and left
@@ -331,7 +221,6 @@ class LiveTrustedHost implements TrustedHost {
     if (this.#disposed) return;
     this.#disposed = true;
     this.#connectionGeneration += 1;
-    this.#actionGeneration += 1;
     this.#removeIdentityListener();
     for (const remove of this.#removeClientListeners) remove();
     this.#removeClientListeners = [];
@@ -359,21 +248,11 @@ class LiveTrustedHost implements TrustedHost {
       client.state.subscribe((snapshot) => {
         if (this.#client !== client) return;
         this.#stateStale = snapshot.stale;
-        this.#state = snapshot.stale ? EMPTY_STATE : snapshot.values;
         this.#homeState = Object.freeze({
           values: snapshot.values,
           revision: snapshot.revision,
           stale: snapshot.stale,
         });
-        this.#publish();
-      }),
-      client.errors.subscribe((failure) => {
-        if (this.#client !== client) return;
-        this.#record(
-          failure.outcome === 'outcome_unknown' ? 'Action outcome unknown' : 'Live connection interrupted',
-          'The trusted host stopped short of guessing what happened.',
-          'security',
-        );
         this.#publish();
       }),
     ];
@@ -384,45 +263,24 @@ class LiveTrustedHost implements TrustedHost {
         return;
       }
       this.#status = 'stopped';
-      this.#record('Live home unavailable', 'The connection failed closed.', 'security');
       this.#publish();
     }
   }
 
   async #disconnect(): Promise<void> {
     ++this.#connectionGeneration;
-    ++this.#actionGeneration;
     const client = this.#client;
     this.#client = undefined;
     for (const remove of this.#removeClientListeners) remove();
     this.#removeClientListeners = [];
-    this.#state = EMPTY_STATE;
     this.#stateStale = false;
     this.#homeState = undefined;
-    this.#action = IDLE_ACTION;
     this.#status = 'idle';
     try {
       await client?.stop({ deadlineMs: 2_000 });
     } catch {
       // The signed-out boundary is already closed by the missing credential source.
     }
-  }
-
-  #record(title: string, detail: string, tone: HomeActivity['tone']): void {
-    this.#activity = Object.freeze([
-      Object.freeze({
-        id: `${Date.now()}-${this.#activity.length}`,
-        title,
-        detail,
-        time: 'Just now',
-        tone,
-      }),
-      ...this.#activity.slice(0, 7),
-    ]);
-  }
-
-  #isCurrentAction(generation: number): boolean {
-    return !this.#disposed && generation === this.#actionGeneration;
   }
 
   readonly getPreferencesScope = (): string | undefined => this.#userId === null
@@ -438,21 +296,7 @@ class LiveTrustedHost implements TrustedHost {
       activeHome: this.#home,
       homes: Object.freeze([this.#home]),
       connection,
-      connectionDetail: connectionDetail(this.#status, this.#signedIn),
-      lastSynced: connection === 'ready' ? 'Live state current' : 'No current live state',
-      uiTree: createLiveTree({
-        action: this.#action,
-        connected: connection === 'ready',
-        state: this.#state,
-        stateStale: this.#stateStale,
-      }),
-      activity: this.#activity,
       preview: false,
-      modeLabel: 'Staging',
-      noticeTitle: this.#signedIn ? 'Live staging connection' : 'Connect to Miakapp staging',
-      noticeDetail: this.#signedIn
-        ? 'Firebase identity, App Check, control plane, relay and Bun coordinator.'
-        : 'Sign in with Google to open the trusted live path.',
       signInAvailable: !this.#signedIn,
       signInStatus: this.#signInStatus,
     });

@@ -4,7 +4,6 @@ import {
   createConfiguredComponentRelease,
   createConfiguredHost,
   createConfiguredPairingService,
-  readConfiguredDiagnosticsEndpoint,
   readConfiguredSandboxOrigin,
 } from './app/configured-host';
 import { ProductApp } from './app/product-app';
@@ -19,7 +18,6 @@ createRoot(root).render(
     createComponentRelease={createConfiguredComponentRelease}
     createHost={createConfiguredHost}
     createPairingService={createConfiguredPairingService}
-    readDiagnosticsEndpoint={readConfiguredDiagnosticsEndpoint}
     readSandboxOrigin={readConfiguredSandboxOrigin}
   />,
 );

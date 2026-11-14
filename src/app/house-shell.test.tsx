@@ -7,19 +7,18 @@ import type {
   HouseAppRelease,
   HouseAppSession,
 } from '../../component-runtime/src/app-host';
-import { APP_ABI, COMPONENT_ABI, POINTER_SCHEMA } from '../../component-runtime/src/contract';
+import { APP_ABI, POINTER_SCHEMA } from '../../component-runtime/src/contract';
 import { App } from './app';
-import { mountComponentRuntime } from './component-runtime-host';
 import type { ActivatedRelease, ComponentReleaseCoordinator } from './component-release';
 import { NoPublishedRelease } from './component-release';
-import { createDemoHost } from './demo-host';
+import { createPreviewHost } from './preview-host';
 import type { HomeState, TrustedHost, TrustedHostSnapshot } from './host';
 import { createHouseConsentStore, HOUSE_CONSENT_VERSION } from './house-consent';
 import { createHouseFavoritesStore } from './house-favorites';
 import { HouseShell, type HouseStage, type MountHouseApp } from './house-shell';
 
 const SANDBOX_ORIGIN = 'https://sandbox.miakapp.test';
-const HOME_ID = 'home_horizon';
+const HOME_ID = 'home_preview';
 
 function memoryStorage(): Storage {
   const values = new Map<string, string>();
@@ -107,7 +106,7 @@ function coordinatorFor(release: ActivatedRelease | Error = appRelease()): {
 }
 
 function hostWith(patch: Partial<TrustedHostSnapshot> = {}, call?: TrustedHost['call']): TrustedHost {
-  const base = createDemoHost();
+  const base = createPreviewHost();
   const snapshot = { ...base.getSnapshot(), ...patch };
   return { ...base, getSnapshot: () => snapshot, ...(call === undefined ? {} : { call }) };
 }
@@ -136,7 +135,7 @@ describe('house shell — consent before any house resource', () => {
       />,
     );
 
-    expect(screen.getByRole('heading', { name: 'Ouvrir Horizon House ?' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Ouvrir Preview home ?' })).toBeVisible();
     expect(screen.getByText(/créée et gérée par la personne qui s’en occupe/u)).toBeVisible();
 
     // The overlay is usable before consent: homes and personal settings.
@@ -179,8 +178,8 @@ describe('house shell — consent before any house resource', () => {
     const [release, mountOptions] = mount.mock.calls[0] as [HouseAppRelease, HouseAppHostOptions];
     expect(release.pointer.abi).toBe(APP_ABI);
     expect(mountOptions.sandboxOrigin).toBe(SANDBOX_ORIGIN);
-    expect(mountOptions.home).toEqual({ id: HOME_ID, name: 'Horizon House' });
-    expect(mountOptions.title).toBe('Interface de Horizon House');
+    expect(mountOptions.home).toEqual({ id: HOME_ID, name: 'Preview home' });
+    expect(mountOptions.title).toBe('Interface de Preview home');
     expect(options[0]!.container.closest('main.house-stage')).not.toBeNull();
     expect(options[0]!.container.closest('header')).toBeNull();
     const frame = document.querySelector('iframe')!;
@@ -242,7 +241,7 @@ describe('house shell — consent before any house resource', () => {
 
     await user.click(screen.getByRole('button', { name: 'Pas maintenant' }));
 
-    expect(screen.getByRole('heading', { name: 'Horizon House n’a pas été ouverte' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Preview home n’a pas été ouverte' })).toBeVisible();
     expect(screen.getByText('Aucun contenu de cette maison n’a été chargé.')).toBeVisible();
     expect(coordinator.activate).not.toHaveBeenCalled();
     expect(mount).not.toHaveBeenCalled();
@@ -251,21 +250,6 @@ describe('house shell — consent before any house resource', () => {
     expect(switchHome).toHaveBeenCalledWith('chalet-annecy');
 
     await user.click(screen.getByRole('button', { name: 'Ouvrir quand même' }));
-    expect(screen.getByRole('button', { name: 'Ouvrir la maison' })).toBeVisible();
-  });
-
-  it('withdrawal removes a semantic frame still waiting for readiness immediately', async () => {
-    const consent = createHouseConsentStore(memoryStorage());
-    consent.grant(HOME_ID);
-    const release = appRelease();
-    const mountRuntime = vi.fn(mountComponentRuntime);
-    render(<App consentStore={consent}
-      createComponentRelease={() => coordinatorFor({ ...release, pointer: { ...release.pointer, abi: COMPONENT_ABI } })}
-      mountRuntime={mountRuntime} readSandboxOrigin={() => SANDBOX_ORIGIN} />);
-    await waitFor(() => expect(mountRuntime).toHaveBeenCalledOnce());
-    expect(document.querySelector('iframe')).not.toBeNull();
-    act(() => consent.revoke(HOME_ID));
-    expect(document.querySelector('iframe')).toBeNull();
     expect(screen.getByRole('button', { name: 'Ouvrir la maison' })).toBeVisible();
   });
 
@@ -295,24 +279,22 @@ describe('house shell — consent before any house resource', () => {
     expect(consent.read(HOME_ID)).toBeUndefined();
   });
 
-  it.each([APP_ABI, COMPONENT_ABI])('stops %s after consent is removed in another tab', async (abi) => {
+  it.each([APP_ABI])('stops %s after consent is removed in another tab', async (abi) => {
     localStorage.clear();
     const consent = createHouseConsentStore(localStorage);
     consent.grant(HOME_ID);
     const release = appRelease();
     const coordinator = coordinatorFor({ ...release, pointer: { ...release.pointer, abi } });
     const house = fakeMount();
-    const session = { lifecycle: 'active' as const, dispose: vi.fn(), interact: vi.fn(), publishState: vi.fn(), markStateStale: vi.fn() };
-    const mountRuntime = vi.fn(async () => session);
-    const mount = abi === APP_ABI ? house.mount : mountRuntime;
+    const mount = house.mount;
     render(<App consentStore={consent} createComponentRelease={() => coordinator}
-      mountHouseApp={house.mount} mountRuntime={mountRuntime} readSandboxOrigin={() => SANDBOX_ORIGIN} />);
+      mountHouseApp={house.mount} readSandboxOrigin={() => SANDBOX_ORIGIN} />);
     await waitFor(() => expect(mount).toHaveBeenCalledOnce());
     act(() => {
       localStorage.removeItem('miakapp.house-consent.v2:anonymous');
       window.dispatchEvent(new StorageEvent('storage', { key: 'miakapp.house-consent.v2:anonymous', storageArea: localStorage }));
     });
-    expect(abi === APP_ABI ? house.sessions[0]!.dispose : session.dispose).toHaveBeenCalledOnce();
+    expect(house.sessions[0]!.dispose).toHaveBeenCalledOnce();
     expect(document.querySelector('iframe')).toBeNull();
     expect(screen.getByRole('button', { name: 'Ouvrir la maison' })).toBeVisible();
     expect(coordinator.activate).toHaveBeenCalledOnce();
@@ -334,47 +316,16 @@ describe('house shell — consent before any house resource', () => {
     expect(screen.getByRole('button', { name: 'Ouvrir la maison' })).toBeVisible();
   });
 
-  it.each(['withdrawal', 'signout'] as const)('stops the semantic runtime on %s', async (reason) => {
-    const user = userEvent.setup();
-    const consent = createHouseConsentStore(memoryStorage());
-    consent.grant(HOME_ID);
-    const release = appRelease();
-    const coordinator = coordinatorFor({ ...release, pointer: { ...release.pointer, abi: COMPONENT_ABI } });
-    const session = { lifecycle: 'active' as const, dispose: vi.fn(), interact: vi.fn(), publishState: vi.fn(), markStateStale: vi.fn() };
-    const mountRuntime = vi.fn(async () => session);
-    const base = createDemoHost();
-    let snapshot = { ...base.getSnapshot(), signInAvailable: true, authenticated: true };
-    const listeners = new Set<() => void>();
-    const host = { ...base, getSnapshot: () => snapshot, subscribe: (listener: () => void) => {
-      listeners.add(listener); return () => { listeners.delete(listener); };
-    } };
-    render(<App host={host} consentStore={consent} createComponentRelease={() => coordinator}
-      mountRuntime={mountRuntime} readSandboxOrigin={() => SANDBOX_ORIGIN} />);
-    await waitFor(() => expect(mountRuntime).toHaveBeenCalledOnce());
-    if (reason === 'withdrawal') {
-      await user.click(screen.getByRole('button', { name: 'Réglages' }));
-      await user.click(screen.getByRole('button', { name: 'Retirer mon accord' }));
-    } else {
-      act(() => { snapshot = { ...snapshot, authenticated: false }; listeners.forEach((listener) => listener()); });
-    }
-    expect(session.dispose).toHaveBeenCalledOnce();
-    act(() => { snapshot = { ...snapshot, homeState: { revision: 99, stale: false, values: { 'zone.private': 42 } } }; listeners.forEach((listener) => listener()); });
-    expect(session.publishState).not.toHaveBeenCalled();
-    expect(screen.getByRole('banner', { name: 'Miakapp' })).toBeVisible();
-  });
-
-  it.each([APP_ABI, COMPONENT_ABI])('rechecks authorization before reopening %s', async (abi) => {
+  it.each([APP_ABI])('rechecks authorization before reopening %s', async (abi) => {
     const user = userEvent.setup();
     const consent = createHouseConsentStore(memoryStorage());
     consent.grant(HOME_ID);
     const release = appRelease();
     const coordinator = coordinatorFor({ ...release, pointer: { ...release.pointer, abi } });
     const house = fakeMount();
-    const session = { lifecycle: 'active' as const, dispose: vi.fn(), interact: vi.fn(), publishState: vi.fn(), markStateStale: vi.fn() };
-    const mountRuntime = vi.fn(async () => session);
-    const mount = abi === APP_ABI ? house.mount : mountRuntime;
+    const mount = house.mount;
     render(<App consentStore={consent} createComponentRelease={() => coordinator}
-      mountHouseApp={house.mount} mountRuntime={mountRuntime} readSandboxOrigin={() => SANDBOX_ORIGIN} />);
+      mountHouseApp={house.mount} readSandboxOrigin={() => SANDBOX_ORIGIN} />);
     await waitFor(() => expect(mount).toHaveBeenCalledOnce());
     await user.click(screen.getByRole('button', { name: 'Réglages' }));
     await user.click(screen.getByRole('button', { name: 'Retirer mon accord' }));
@@ -385,32 +336,30 @@ describe('house shell — consent before any house resource', () => {
     expect(mount).toHaveBeenCalledTimes(1);
     expect(document.querySelector('iframe')).toBeNull();
     await act(async () => { rejectActivation(new Error('access denied')); });
-    expect(screen.getByRole('heading', { name: 'L’interface de Horizon House n’est pas disponible' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'L’interface de Preview home n’est pas disponible' })).toBeVisible();
     expect(mount).toHaveBeenCalledTimes(1);
   });
 
-  it.each([APP_ABI, COMPONENT_ABI])('reauthorizes %s after a direct account switch', async (abi) => {
+  it.each([APP_ABI])('reauthorizes %s after a direct account switch', async (abi) => {
     const consent = createHouseConsentStore(memoryStorage());
     consent.grant(HOME_ID);
     const release = appRelease();
     const coordinator = coordinatorFor({ ...release, pointer: { ...release.pointer, abi } });
     const house = fakeMount();
-    const session = { lifecycle: 'active' as const, dispose: vi.fn(), interact: vi.fn(), publishState: vi.fn(), markStateStale: vi.fn() };
-    const mountRuntime = vi.fn(async () => session);
-    const mount = abi === APP_ABI ? house.mount : mountRuntime;
-    const base = createDemoHost();
+    const mount = house.mount;
+    const base = createPreviewHost();
     let snapshot = { ...base.getSnapshot(), authenticated: true, signInAvailable: false, authorizationEpoch: 1 };
     const listeners = new Set<() => void>();
     const host = { ...base, getSnapshot: () => snapshot, subscribe: (listener: () => void) => {
       listeners.add(listener); return () => { listeners.delete(listener); };
     } };
     render(<App host={host} consentStore={consent} createComponentRelease={() => coordinator}
-      mountHouseApp={house.mount} mountRuntime={mountRuntime} readSandboxOrigin={() => SANDBOX_ORIGIN} />);
+      mountHouseApp={house.mount} readSandboxOrigin={() => SANDBOX_ORIGIN} />);
     await waitFor(() => expect(mount).toHaveBeenCalledOnce());
     let rejectActivation!: (error: Error) => void;
     coordinator.activate.mockImplementationOnce(() => new Promise((_resolve, reject) => { rejectActivation = reject; }));
     act(() => { snapshot = { ...snapshot, authorizationEpoch: 2 }; listeners.forEach((listener) => listener()); });
-    expect(abi === APP_ABI ? house.sessions[0]!.dispose : session.dispose).toHaveBeenCalledOnce();
+    expect(house.sessions[0]!.dispose).toHaveBeenCalledOnce();
     expect(coordinator.activate).toHaveBeenCalledTimes(2);
     expect(mount).toHaveBeenCalledTimes(1);
     expect(document.querySelector('iframe')).toBeNull();
@@ -434,7 +383,7 @@ describe('house shell — consent before any house resource', () => {
         readSandboxOrigin={() => SANDBOX_ORIGIN}
       />,
     );
-    expect(screen.getByRole('heading', { name: 'Connectez-vous pour ouvrir Horizon House' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Connectez-vous pour ouvrir Preview home' })).toBeVisible();
     expect(coordinator.activate).not.toHaveBeenCalled();
   });
 
@@ -500,7 +449,7 @@ describe('house shell — around a running home', () => {
     act(() => options[0]!.onLifecycle('crashed', 'unresponsive'));
 
     const alert = screen.getByRole('alert');
-    expect(within(alert).getByRole('heading', { name: 'L’interface de Horizon House s’est arrêtée' })).toBeVisible();
+    expect(within(alert).getByRole('heading', { name: 'L’interface de Preview home s’est arrêtée' })).toBeVisible();
     expect(within(alert).getByText('Elle ne répondait plus.')).toBeVisible();
     // The overlay is still there and still answers.
     await user.click(screen.getByRole('button', { name: /Menu Miakapp/u }));
@@ -514,9 +463,9 @@ describe('house shell — around a running home', () => {
   it('hides the loading cover once the home is ready', async () => {
     const { mount, options } = renderRunning();
     await waitFor(() => expect(mount).toHaveBeenCalledOnce());
-    expect(screen.getByRole('status')).toHaveTextContent('Ouverture de Horizon House…');
+    expect(screen.getByRole('status')).toHaveTextContent('Ouverture de Preview home…');
     act(() => options[0]!.onLifecycle('active'));
-    expect(screen.queryByText('Ouverture de Horizon House…')).not.toBeInTheDocument();
+    expect(screen.queryByText('Ouverture de Preview home…')).not.toBeInTheDocument();
     expect(screen.getByTestId('house-frame-box')).not.toHaveClass('is-hidden');
   });
 
@@ -551,15 +500,15 @@ describe('house shell — around a running home', () => {
   it('keeps favorites in the shell and lets the resident remove them', async () => {
     const user = userEvent.setup();
     const { favorites } = renderRunning();
-    const star = screen.getByRole('button', { name: 'Ajouter Horizon House aux favoris' });
+    const star = screen.getByRole('button', { name: 'Ajouter Preview home aux favoris' });
     expect(star).toHaveAttribute('aria-pressed', 'false');
     await user.click(star);
-    expect(screen.getByRole('button', { name: 'Retirer Horizon House des favoris' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Retirer Preview home des favoris' })).toHaveAttribute('aria-pressed', 'true');
     expect(favorites.list().map((home) => home.id)).toEqual([HOME_ID]);
 
     await user.click(screen.getByRole('button', { name: /Menu Miakapp/u }));
     const panel = screen.getByRole('dialog', { name: 'Maisons' });
-    await user.click(within(panel).getByRole('button', { name: 'Retirer Horizon House des favoris' }));
+    await user.click(within(panel).getByRole('button', { name: 'Retirer Preview home des favoris' }));
     expect(favorites.list()).toEqual([]);
   });
 
@@ -593,11 +542,10 @@ describe('house shell — around a running home', () => {
   });
 });
 
-
 describe('house shell — truthful connection status', () => {
   it.each(['consent', 'declined', 'signin', 'loading', 'unavailable', 'empty'] as const)(
     'only reports an observed offline state in %s', (kind) => {
-      const home = createDemoHost().getSnapshot().activeHome;
+      const home = createPreviewHost().getSnapshot().activeHome;
       render(<HouseShell
         home={home} homes={[home]} connection="unavailable"
         stage={{ kind } as HouseStage} consent={undefined}
@@ -616,35 +564,6 @@ describe('house shell — truthful connection status', () => {
     },
   );
 });
-
-
-describe('house shell — semantic resident language', () => {
-  it('follows the trusted page language for a nested semantic status and keeps the home title', async () => {
-    const home = createDemoHost().getSnapshot().activeHome;
-    render(<HouseShell
-      home={home} homes={[home]} connection="ready"
-      stage={{ kind: 'component', release: appRelease() }} consent={undefined}
-      favorites={createHouseFavoritesStore(memoryStorage())}
-      sandboxOrigin={undefined} homeState={undefined} call={undefined}
-      onAcceptConsent={vi.fn()} onDeclineConsent={vi.fn()} onReopen={vi.fn()}
-      onRevokeConsent={vi.fn()} onRetry={vi.fn()} onSwitchHome={vi.fn()}
-      componentScreen={{ interact: vi.fn(), state: { status: 'active', revision: 1, tree: {
-        id: 'home', type: 'screen', props: { title: 'Énergie' }, children: [{
-          id: 'group', type: 'section', props: { heading: 'Compteur' }, children: [{
-            id: 'status', type: 'status', props: { label: 'Relevé', state: 'stale' },
-          }],
-        }],
-      } } }}
-    />);
-    expect(screen.getByRole('status', { name: 'Relevé: À actualiser' })).toBeVisible();
-    expect(screen.getByRole('heading', { level: 1, name: 'Énergie' })).toBeVisible();
-    expect(screen.queryByText('Your living interface')).not.toBeInTheDocument();
-    act(() => { document.documentElement.lang = 'en'; });
-    await waitFor(() => expect(screen.getByRole('status', { name: 'Relevé: Out of date' })).toBeVisible());
-    expect(screen.getByRole('button', { name: /Miakapp menu/ })).toBeVisible();
-  });
-});
-
 
 describe('house shell — resident sign-out', () => {
   it('offers sign-out in the trusted settings before loading any house resource', async () => {
@@ -682,7 +601,7 @@ describe('account-owned house favorites', () => {
   it('replaces visible favorites on UID change and restores them only for their owner', async () => {
     localStorage.clear();
     const user = userEvent.setup();
-    const base = createDemoHost();
+    const base = createPreviewHost();
     let scope: string | undefined = 'resident:a';
     let snapshot = { ...base.getSnapshot(), preview: false, authenticated: true, authorizationEpoch: 0 };
     const listeners = new Set<() => void>();
@@ -720,7 +639,6 @@ describe('account-owned house favorites', () => {
     localStorage.clear();
   });
 });
-
 
 describe('trusted connection retry', () => {
   it('offers relay retry only after consent, wired independently of UI reload', async () => {

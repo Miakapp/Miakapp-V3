@@ -1,85 +1,40 @@
-# Miakapp component-runtime contract
+# Miakapp house app runtime
 
-This directory is the executable architectural proof for
-[`RFC 0002`](../docs/rfcs/0002-component-runtime.md).
-
-## What the reference harness proves
-
-The authenticated host never executes home code. It transfers verified bytes to
-a fixed broker in a hidden cross-site iframe with an opaque sandbox origin and a
-deny-by-default CSP. The broker verifies and parses the bytes again, runs a fixed
-confinement prelude, and starts the guest in a separate lexical scope inside a
-classic Dedicated Worker. It
-retains the host capability port, validates and bounds guest messages, and
-forwards only a semantic UI tree or named operations. A prelude-owned watchdog
-can terminate a Worker whose event loop stops responding.
-The trusted host validates the tree again and renders native DOM controls without
-HTML, CSS, URL, or property-bag injection.
-
-The browser corpus runs the same broker and headers in Chromium, Firefox, and
-WebKit. It includes valid, tampered, declaration-shadowing, egress,
-invalid-tree, sparse-array, undeclared-capability, duplicate-load, lifecycle,
-message-flood, pre/post-activation infinite-loop bundles, and the trusted
-IndexedDB artifact cache. Tests observe
-actual probe requests; rejected promises or CSP console messages are not treated
-as sufficient evidence.
+A home's interface is a whole application (`miakapp.app/1`): one self-contained
+JavaScript file that owns its document. The shell runs it in a visible iframe
+served from a dedicated sandbox site, with an opaque origin and no network, and
+talks to it over one message port. See
+[`docs/specs/2026-10-03-house-app-abi.md`](../docs/specs/2026-10-03-house-app-abi.md).
 
 ## Layout
 
-- `src/contract.ts` defines the framework-neutral pointer, capability, envelope,
-  and semantic-tree validators.
-- `src/artifact.ts` implements bounded fetch and exact SHA-256 verification.
-- `src/artifact-cache.ts` keeps content-addressed trusted-host copies in
-  IndexedDB, returns defensive copies, and revalidates bytes before every use.
-- `src/runtime-broker.ts` is the fixed opaque broker used by the proof.
-- `src/host-harness.ts` is a trusted host and safe semantic renderer for tests.
-- `src/release-state.ts` keeps the anti-rollback floor and last-known-good
-  pointer in a transactional trusted-host ledger. It rejects same-generation
-  equivocation and exposes automatic fallback only while a candidate is still
-  effect-free.
-- `fixtures/` contains auditable home-bundle inputs, including hostile bundles.
-- `test/contract.test.ts` covers schemas, limits, and byte verification.
-- `test/runtime.spec.ts` exercises the real browser boundary.
-
-This remains an architectural boundary subset. The repository root now contains
-the first production-shaped React semantic renderer, but it uses an explicitly
-offline preview adapter and is not yet connected to this broker. The artifact
-loader now treats storage outages as cache misses, evicts corrupt entries, and
-never serves cached bytes without repeating size and digest verification.
-Firebase pointer delivery, generated-component SDK, dual-release activation,
-complete host lifecycle and full RFC conformance remain behind the accepted ABI
-and explicit exit gate.
+- `src/contract.ts` — the release pointer, capability requirements and bounded
+  structured values.
+- `src/artifact.ts`, `src/artifact-cache.ts` — bounded fetch, exact SHA-256
+  verification and the content-addressed IndexedDB copy.
+- `src/release-state.ts` — the anti-rollback floor and last-known-good pointer.
+- `src/app-contract.ts`, `src/app-document.ts`, `src/app-bootstrap.ts`,
+  `src/app-host.ts` — the frame protocol, the `/app.html` document and its
+  headers, the bootstrap that loads the release inside it, and the host half
+  the shell mounts.
+- `src/sandbox-document.ts`, `scripts/build-sandbox.ts` — the sandbox site build.
+- `fixtures/` — house apps used by the browser tests.
 
 ## Run
-
-Install Bun 1.2.23 and the pinned Playwright browsers once:
 
 ```sh
 cd component-runtime
 bun install --frozen-lockfile
-bunx playwright install chromium firefox webkit
-```
-
-Then run the complete contract:
-
-```sh
+bunx playwright install chromium
 ./check.sh
 ```
 
-Unit and browser checks can be run separately:
+## Deploy the sandbox site
 
 ```sh
-cd component-runtime
-bun run typecheck
-bun run test:unit
-bun run test:browser
+MIAKAPP_SANDBOX_ORIGIN=https://<sandbox-site> \
+MIAKAPP_HOST_ORIGIN=https://<shell-site> \
+MIAKAPP_SANDBOX_SITE=<firebase-hosting-site> \
+  bun run build:sandbox
+firebase deploy --only hosting --config dist-sandbox/firebase.json
 ```
-
-## Boundary
-
-Passing this harness demonstrates the selected browser primitives and the tested
-protocol subset. A production implementation still has to fetch real Firebase
-artifacts, use the exact production headers and attributes, connect to RFC 0001
-sessions, enforce publisher authorization, stage and atomically swap two
-releases, reconcile the full React design system, handle visibility/BFCache, and
-pass every conformance item in RFC 0002 Section 18.

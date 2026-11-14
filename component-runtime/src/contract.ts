@@ -2,44 +2,27 @@ export const POINTER_SCHEMA = 'miakapp.component-pointer/1' as const;
 export const COMPONENT_ABI = 'miakapp.component/1' as const;
 /**
  * A whole-house application: the release is a document-owning program that runs
- * in a visible, opaque-origin frame instead of a Worker that returns a semantic
- * tree. Same pointer, same digest, same grant; a different execution surface.
- * See `app-contract.ts`.
+ * in a visible, opaque-origin frame. See `app-contract.ts`. `miakapp.component/1`
+ * is still a valid pointer ABI for the control plane, but the shell no longer
+ * draws it.
  */
 export const APP_ABI = 'miakapp.app/1' as const;
 export type ReleaseAbi = typeof COMPONENT_ABI | typeof APP_ABI;
-export const BROKER_PROTOCOL = 1 as const;
 
 export const LIMITS = Object.freeze({
   artifactBytes: 2_097_152,
   envelopeBytes: 524_288,
-  uiNodes: 1_024,
-  uiDepth: 32,
-  uiTextBytes: 262_144,
-  textBytes: 8_192,
-  inputBytes: 16_384,
-  selectOptions: 100,
   structuredArrayItems: 4_096,
   structuredValues: 16_384,
   requirementEntries: 512,
   requirementListEntries: 256,
   outstandingCalls: 32,
-  callCredit: 32,
   callDeadlineMs: 300_000,
   guestMessagesPerSecond: 120,
-  rendersPerSecond: 30,
-  workerBootMs: 3_000,
-  firstRenderMs: 3_000,
-  workerHeartbeatMs: 1_000,
-  workerMissedHeartbeats: 3,
-  heartbeatMs: 5_000,
-  missedHeartbeats: 3,
 });
 
 const FORBIDDEN_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
 const CONTROL_CHARACTER = /\p{Cc}/u;
-const NODE_ID = /^[A-Za-z][A-Za-z0-9._:-]{0,63}$/;
-const INSTANCE_ID = /^[A-Za-z0-9_-]{16,128}$/;
 const SHA256_BASE64URL = /^[A-Za-z0-9_-]{43}$/;
 const UTF8 = new TextEncoder();
 
@@ -70,95 +53,11 @@ export interface ComponentPointerV1 {
   requires: CapabilityRequirements;
 }
 
-export type UiNodeType =
-  | 'screen'
-  | 'stack'
-  | 'grid'
-  | 'section'
-  | 'text'
-  | 'status'
-  | 'button'
-  | 'toggle'
-  | 'input'
-  | 'select'
-  | 'progress'
-  | 'media';
-
-/**
- * The closed status vocabulary a component may report. The trusted host renders
- * each of these as a distinct term, so this array is the single source the
- * renderer's term table is checked against: adding a state here without naming
- * it there is a type error rather than a status that renders as an unlabelled
- * dot.
- */
-export const STATUS_STATES = [
-  'idle',
-  'pending',
-  'accepted',
-  'applied',
-  'failed',
-  'stale',
-  'outcome_unknown',
-] as const;
-
-export type StatusState = (typeof STATUS_STATES)[number];
-
-/**
- * Node types whose props carry `pending`. A pending control is inert — the host
- * disables it — so every one of them owes the person an explanation of why it
- * stopped answering. Keeping the list here, and routing each parse through
- * `pendingProp`, is what makes a new pending-capable node widen this type and
- * so break the host's term table until the new control is named too.
- *
- * `input` and `select` are here because a submitted value waits exactly as a
- * press does: the home has been asked and has not answered. Without `pending`
- * the only way a component could freeze such a field was `disabled`, which the
- * host renders as "Unavailable" — the word for a control withheld, not for one
- * whose answer is still coming. A person told a field is unavailable stops
- * waiting for it.
- */
-export const PENDING_NODE_TYPES = ['button', 'toggle', 'input', 'select'] as const;
-
-export type PendingNodeType = (typeof PENDING_NODE_TYPES)[number];
-
-/**
- * Node types whose props carry `disabled`. `pending` says "not yet"; `disabled`
- * says "not by you, not now", and it is the weaker signal of the two because a
- * component can set it on a control that never moves again. The host owes the
- * same explanation here, and for the same reason: a control that stops
- * answering without a word reads as broken, not as withheld. Routing each parse
- * through `disabledProp` makes a new disable-capable node widen this type and
- * so break the host's term table until the new control is named too.
- */
-export const DISABLED_NODE_TYPES = ['button', 'toggle', 'input', 'select'] as const;
-
-export type DisabledNodeType = (typeof DISABLED_NODE_TYPES)[number];
-
-export interface UiNode {
-  id: string;
-  type: UiNodeType;
-  props: Record<string, unknown>;
-  children?: UiNode[];
-}
-
-export interface Envelope<T = unknown> {
-  v: typeof BROKER_PROTOCOL;
-  instance: string;
-  epoch: number;
-  seq: number;
-  kind: string;
-  payload: T;
-}
-
 export interface PointerValidationContext {
   expectedHomeId: string;
   minimumGeneration?: number;
   allowedArtifactOrigins: ReadonlySet<string>;
   allowedPathPrefixes?: readonly string[];
-}
-
-export interface UiValidationContext {
-  mediaHandles?: ReadonlySet<string>;
 }
 
 export class ContractViolation extends Error {
@@ -238,23 +137,11 @@ function boundedString(value: unknown, maxBytes: number, label: string): string 
   return value;
 }
 
-function optionalString(value: unknown, maxBytes: number, label: string): string | undefined {
-  if (value === undefined) return undefined;
-  return boundedString(value, maxBytes, label);
-}
-
 function safePositiveInteger(value: unknown, label: string): number {
   if (!Number.isSafeInteger(value) || (value as number) <= 0) {
     fail('invalid_integer', `${label} must be a positive safe integer`);
   }
   return value as number;
-}
-
-function finiteNumber(value: unknown, label: string): number {
-  if (typeof value !== 'number' || !Number.isFinite(value)) {
-    fail('invalid_number', `${label} must be finite`);
-  }
-  return value;
 }
 
 export function validateResourceName(value: unknown, label = 'resource'): string {
@@ -458,302 +345,6 @@ export function validatePointer(
   }
 }
 
-function enumValue<T extends string>(
-  value: unknown,
-  allowed: readonly T[],
-  label: string,
-): T {
-  if (typeof value !== 'string' || !allowed.includes(value as T)) {
-    fail('render_invalid', `${label} is not an allowed value`);
-  }
-  return value as T;
-}
-
-function optionalBoolean(value: unknown, label: string): boolean | undefined {
-  if (value === undefined) return undefined;
-  if (typeof value !== 'boolean') fail('render_invalid', `${label} must be boolean`);
-  return value;
-}
-
-function pendingProp(value: unknown, type: PendingNodeType): boolean {
-  return optionalBoolean(value, `${type}.props.pending`) ?? false;
-}
-
-function disabledProp(value: unknown, type: DisabledNodeType): boolean {
-  return optionalBoolean(value, `${type}.props.disabled`) ?? false;
-}
-
-interface TextBudget {
-  bytes: number;
-}
-
-function uiText(value: unknown, maxBytes: number, label: string, budget: TextBudget): string {
-  const text = boundedString(value, maxBytes, label);
-  budget.bytes += utf8Bytes(text);
-  if (budget.bytes > LIMITS.uiTextBytes) fail('render_invalid', 'aggregate UI text exceeds the limit');
-  return text;
-}
-
-function handlerId(value: unknown, label: string): string {
-  const id = boundedString(value, 64, label);
-  if (!NODE_ID.test(id)) fail('render_invalid', `${label} has an invalid format`);
-  return id;
-}
-
-function validateProps(
-  type: UiNodeType,
-  raw: unknown,
-  budget: TextBudget,
-  context: UiValidationContext,
-): Record<string, unknown> {
-  switch (type) {
-    case 'screen': {
-      const props = exactObject(raw, ['title'], [], 'screen.props');
-      return { title: uiText(props.title, LIMITS.textBytes, 'screen.props.title', budget) };
-    }
-    case 'stack': {
-      const props = exactObject(raw, [], ['direction', 'gap', 'align'], 'stack.props');
-      return {
-        direction: props.direction === undefined
-          ? 'vertical'
-          : enumValue(props.direction, ['vertical', 'horizontal'], 'stack.props.direction'),
-        gap: props.gap === undefined
-          ? 'medium'
-          : enumValue(props.gap, ['none', 'small', 'medium', 'large'], 'stack.props.gap'),
-        align: props.align === undefined
-          ? 'stretch'
-          : enumValue(props.align, ['start', 'center', 'end', 'stretch'], 'stack.props.align'),
-      };
-    }
-    case 'grid': {
-      const props = exactObject(raw, ['columns'], ['gap'], 'grid.props');
-      const columns = safePositiveInteger(props.columns, 'grid.props.columns');
-      if (columns > 6) fail('render_invalid', 'grid.props.columns exceeds 6');
-      return {
-        columns,
-        gap: props.gap === undefined
-          ? 'medium'
-          : enumValue(props.gap, ['none', 'small', 'medium', 'large'], 'grid.props.gap'),
-      };
-    }
-    case 'section': {
-      const props = exactObject(raw, ['heading'], ['description'], 'section.props');
-      const description = optionalString(props.description, LIMITS.textBytes, 'section.props.description');
-      if (description !== undefined) {
-        budget.bytes += utf8Bytes(description);
-        if (budget.bytes > LIMITS.uiTextBytes) fail('render_invalid', 'aggregate UI text exceeds the limit');
-      }
-      return {
-        heading: uiText(props.heading, LIMITS.textBytes, 'section.props.heading', budget),
-        ...(description === undefined ? {} : { description }),
-      };
-    }
-    case 'text': {
-      const props = exactObject(raw, ['text'], ['tone', 'emphasis'], 'text.props');
-      return {
-        text: uiText(props.text, LIMITS.textBytes, 'text.props.text', budget),
-        tone: props.tone === undefined
-          ? 'default'
-          : enumValue(props.tone, ['default', 'muted', 'positive', 'warning', 'critical'], 'text.props.tone'),
-        emphasis: props.emphasis === undefined
-          ? 'normal'
-          : enumValue(props.emphasis, ['normal', 'strong'], 'text.props.emphasis'),
-      };
-    }
-    case 'status': {
-      const props = exactObject(raw, ['label', 'state'], ['detail'], 'status.props');
-      const detail = optionalString(props.detail, LIMITS.textBytes, 'status.props.detail');
-      if (detail !== undefined) budget.bytes += utf8Bytes(detail);
-      if (budget.bytes > LIMITS.uiTextBytes) fail('render_invalid', 'aggregate UI text exceeds the limit');
-      return {
-        label: uiText(props.label, LIMITS.textBytes, 'status.props.label', budget),
-        state: enumValue(props.state, STATUS_STATES, 'status.props.state'),
-        ...(detail === undefined ? {} : { detail }),
-      };
-    }
-    case 'button': {
-      const props = exactObject(raw, ['label', 'handler'], ['variant', 'disabled', 'pending'], 'button.props');
-      return {
-        label: uiText(props.label, LIMITS.textBytes, 'button.props.label', budget),
-        handler: handlerId(props.handler, 'button.props.handler'),
-        variant: props.variant === undefined
-          ? 'primary'
-          : enumValue(props.variant, ['primary', 'secondary', 'danger'], 'button.props.variant'),
-        disabled: disabledProp(props.disabled, 'button'),
-        pending: pendingProp(props.pending, 'button'),
-      };
-    }
-    case 'toggle': {
-      const props = exactObject(raw, ['label', 'value', 'handler'], ['disabled', 'pending'], 'toggle.props');
-      if (typeof props.value !== 'boolean') fail('render_invalid', 'toggle.props.value must be boolean');
-      return {
-        label: uiText(props.label, LIMITS.textBytes, 'toggle.props.label', budget),
-        value: props.value,
-        handler: handlerId(props.handler, 'toggle.props.handler'),
-        disabled: disabledProp(props.disabled, 'toggle'),
-        pending: pendingProp(props.pending, 'toggle'),
-      };
-    }
-    case 'input': {
-      const props = exactObject(raw, ['label', 'value', 'handler'], ['input_type', 'max_length', 'disabled', 'pending'], 'input.props');
-      const value = typeof props.value === 'string' ? props.value : fail('render_invalid', 'input.props.value must be a string');
-      if (utf8Bytes(value) > LIMITS.inputBytes) fail('render_invalid', 'input.props.value exceeds the limit');
-      const maxLength = props.max_length === undefined
-        ? 1_024
-        : safePositiveInteger(props.max_length, 'input.props.max_length');
-      if (maxLength > 16_384) fail('render_invalid', 'input.props.max_length exceeds the limit');
-      return {
-        label: uiText(props.label, LIMITS.textBytes, 'input.props.label', budget),
-        value,
-        handler: handlerId(props.handler, 'input.props.handler'),
-        input_type: props.input_type === undefined
-          ? 'text'
-          : enumValue(props.input_type, ['text', 'number', 'email', 'search'], 'input.props.input_type'),
-        max_length: maxLength,
-        disabled: disabledProp(props.disabled, 'input'),
-        pending: pendingProp(props.pending, 'input'),
-      };
-    }
-    case 'select': {
-      const props = exactObject(raw, ['label', 'value', 'options', 'handler'], ['disabled', 'pending'], 'select.props');
-      const optionInputs = denseArray(
-        props.options,
-        LIMITS.selectOptions,
-        'select.props.options',
-        'render_invalid',
-      );
-      const seenValues = new Set<string>();
-      const options = optionInputs.map((option, index) => {
-        const record = exactObject(option, ['value', 'label'], [], `select.props.options[${index}]`);
-        const value = boundedString(record.value, 256, `select.props.options[${index}].value`);
-        if (seenValues.has(value)) fail('render_invalid', 'select option values must be unique');
-        seenValues.add(value);
-        return {
-          value,
-          label: uiText(record.label, LIMITS.textBytes, `select.props.options[${index}].label`, budget),
-        };
-      });
-      const value = boundedString(props.value, 256, 'select.props.value');
-      if (!seenValues.has(value)) fail('render_invalid', 'select.props.value must name an option');
-      return {
-        label: uiText(props.label, LIMITS.textBytes, 'select.props.label', budget),
-        value,
-        options,
-        handler: handlerId(props.handler, 'select.props.handler'),
-        disabled: disabledProp(props.disabled, 'select'),
-        pending: pendingProp(props.pending, 'select'),
-      };
-    }
-    case 'progress': {
-      const props = exactObject(raw, ['label', 'value'], [], 'progress.props');
-      const value = finiteNumber(props.value, 'progress.props.value');
-      if (value < 0 || value > 1) fail('render_invalid', 'progress.props.value must be between 0 and 1');
-      return {
-        label: uiText(props.label, LIMITS.textBytes, 'progress.props.label', budget),
-        value,
-      };
-    }
-    case 'media': {
-      const props = exactObject(raw, ['label', 'handle'], [], 'media.props');
-      const handle = validateResourceName(props.handle, 'media.props.handle');
-      if (!context.mediaHandles?.has(handle)) fail('capability_denied', `Media handle is not granted: ${handle}`);
-      return {
-        label: uiText(props.label, LIMITS.textBytes, 'media.props.label', budget),
-        handle,
-      };
-    }
-    default:
-      return fail('render_invalid', `Unknown node type: ${String(type)}`);
-  }
-}
-
-const CONTAINER_TYPES = new Set<UiNodeType>(['screen', 'stack', 'grid', 'section']);
-const NODE_TYPES = new Set<UiNodeType>([
-  'screen',
-  'stack',
-  'grid',
-  'section',
-  'text',
-  'status',
-  'button',
-  'toggle',
-  'input',
-  'select',
-  'progress',
-  'media',
-]);
-
-function validateUiTreeValue(value: unknown, context: UiValidationContext): UiNode {
-  interface PendingNode {
-    input: unknown;
-    depth: number;
-    assign: (node: UiNode) => void;
-  }
-
-  let root: UiNode | undefined;
-  const stack: PendingNode[] = [{ input: value, depth: 1, assign: (node) => { root = node; } }];
-  const seenObjects = new WeakSet<object>();
-  const seenIds = new Set<string>();
-  const budget: TextBudget = { bytes: 0 };
-  let nodeCount = 0;
-
-  while (stack.length > 0) {
-    const pending = stack.pop()!;
-    if (pending.depth > LIMITS.uiDepth) fail('render_invalid', 'UI tree exceeds the depth limit');
-    const record = exactObject(pending.input, ['id', 'type', 'props'], ['children'], 'node');
-    if (seenObjects.has(record)) fail('render_invalid', 'UI tree contains a cycle or reused node');
-    seenObjects.add(record);
-    nodeCount += 1;
-    if (nodeCount > LIMITS.uiNodes) fail('render_invalid', 'UI tree exceeds the node limit');
-
-    const id = handlerId(record.id, 'node.id');
-    if (seenIds.has(id)) fail('render_invalid', `Duplicate node ID: ${id}`);
-    seenIds.add(id);
-    if (typeof record.type !== 'string' || !NODE_TYPES.has(record.type as UiNodeType)) {
-      fail('render_invalid', `Unknown node type: ${String(record.type)}`);
-    }
-    const type = record.type as UiNodeType;
-    const node: UiNode = { id, type, props: validateProps(type, record.props, budget, context) };
-    pending.assign(node);
-
-    if (CONTAINER_TYPES.has(type)) {
-      const children = denseArray(
-        record.children ?? [],
-        LIMITS.uiNodes,
-        `${type}.children`,
-        'render_invalid',
-      );
-      if (seenObjects.has(children)) fail('render_invalid', 'UI tree reuses a children array');
-      seenObjects.add(children);
-      node.children = new Array<UiNode>(children.length);
-      for (let index = children.length - 1; index >= 0; index -= 1) {
-        stack.push({
-          input: children[index],
-          depth: pending.depth + 1,
-          assign: (child) => { node.children![index] = child; },
-        });
-      }
-    } else if (Object.hasOwn(record, 'children')) {
-      fail('render_invalid', `${type} cannot have children`);
-    }
-  }
-
-  if (!root || root.type !== 'screen') fail('render_invalid', 'UI root must be a screen');
-  return root;
-}
-
-export function validateUiTree(value: unknown, context: UiValidationContext = {}): UiNode {
-  try {
-    return validateUiTreeValue(value, context);
-  } catch (error) {
-    if (error instanceof ContractViolation) {
-      if (error.code === 'render_invalid' || error.code === 'capability_denied') throw error;
-      throw new ContractViolation('render_invalid', error.message);
-    }
-    throw error;
-  }
-}
-
 export interface MeasureOptions {
   maxBytes?: number;
   maxDepth?: number;
@@ -819,46 +410,4 @@ export function measureStructuredValue(value: unknown, options: MeasureOptions =
     if (bytes > maxBytes) fail('bridge_protocol_violation', 'structured value exceeds the byte limit');
   }
   return bytes;
-}
-
-export interface EnvelopeContext {
-  instance: string;
-  epoch: number;
-  expectedSeq: number;
-  allowedKinds: ReadonlySet<string>;
-  allowBinary?: boolean;
-  maxBytes?: number;
-}
-
-export function validateEnvelope(value: unknown, context: EnvelopeContext): Envelope {
-  const record = exactObject(value, ['v', 'instance', 'epoch', 'seq', 'kind', 'payload'], [], 'envelope');
-  if (record.v !== BROKER_PROTOCOL) fail('bridge_protocol_violation', 'unsupported broker protocol');
-  if (record.instance !== context.instance || typeof record.instance !== 'string'
-    || !INSTANCE_ID.test(record.instance)) {
-    fail('bridge_protocol_violation', 'instance does not match');
-  }
-  if (record.epoch !== context.epoch) fail('bridge_protocol_violation', 'epoch does not match');
-  if (record.seq !== context.expectedSeq) fail('bridge_protocol_violation', 'sequence is not contiguous');
-  if (typeof record.kind !== 'string' || !context.allowedKinds.has(record.kind)) {
-    fail('bridge_protocol_violation', `message kind is not allowed: ${String(record.kind)}`);
-  }
-  const measureOptions: MeasureOptions = {};
-  if (context.allowBinary !== undefined) measureOptions.allowBinary = context.allowBinary;
-  if (context.maxBytes !== undefined) measureOptions.maxBytes = context.maxBytes;
-  measureStructuredValue(record.payload, measureOptions);
-  return {
-    v: BROKER_PROTOCOL,
-    instance: record.instance,
-    epoch: record.epoch as number,
-    seq: record.seq as number,
-    kind: record.kind,
-    payload: record.payload,
-  };
-}
-
-export function assertInstanceId(value: unknown): string {
-  if (typeof value !== 'string' || !INSTANCE_ID.test(value)) {
-    fail('bridge_protocol_violation', 'invalid instance identifier');
-  }
-  return value;
 }
