@@ -60,8 +60,8 @@ export const CONTENT_PAGES: readonly ContentPageMeta[] = [
     path: { en: '/guides/velux-without-official-hub', fr: '/fr/guides/velux-sans-boitier-officiel' },
     title: { en: 'Velux without the official hub', fr: 'Velux sans le boîtier officiel' },
     description: {
-      en: 'Velux without the official hub: what the box actually does, the open hardware that replaces it and what it costs.',
-      fr: 'Velux sans le boîtier officiel : ce que fait vraiment la box, le matériel ouvert qui la remplace et ce que ça coûte.',
+      en: 'Control Velux INTEGRA roof windows directly by radio, without the official hub: a €25 board that speaks io-homecontrol, with real position and rain sensor.',
+      fr: 'Piloter ses fenêtres de toit Velux INTEGRA directement par radio, sans le boîtier officiel : une carte à 25 € qui parle io-homecontrol, position réelle et capteur de pluie compris.',
     },
     kind: 'guide',
     draft: true,
