@@ -1,0 +1,448 @@
+/* Static content pages (guides, how it works, ideas) and the footer they share
+   with the landing. Same « Lumière » glass as product.css, set for reading:
+   a narrower measure, real headings, links that look like links. */
+
+.product-header a {
+  text-decoration: none;
+}
+
+.product-header .product-brand {
+  color: var(--lumiere-ink);
+}
+
+.product-header__link {
+  padding: 10px 14px;
+  color: var(--lumiere-ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.product-header__link:hover {
+  opacity: 0.7;
+}
+
+a.locale-switch__option {
+  text-decoration: none;
+}
+
+.content-page {
+  width: min(1180px, calc(100% - 48px));
+  margin: 0 auto;
+  padding-bottom: 20px;
+}
+
+.content-hero {
+  max-width: 860px;
+  padding: 56px 0 10px;
+}
+
+.content-hero h1 {
+  margin: 22px 0 0;
+  font-size: clamp(40px, 4.6vw, 62px);
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+
+.content-hero h1 em {
+  font-style: normal;
+  color: transparent;
+  background: var(--lumiere-accent);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.content-lede {
+  max-width: 720px;
+  margin: 24px 0 0;
+  color: var(--lumiere-muted);
+  font-size: 18px;
+  line-height: 1.65;
+}
+
+.content-lede + .content-lede {
+  margin-top: 14px;
+}
+
+.content-section {
+  padding-top: 72px;
+}
+
+.content-section > h2 {
+  max-width: 760px;
+  margin: 0;
+  font-size: clamp(30px, 3.4vw, 42px);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.08;
+}
+
+.content-section > p,
+.content-section > .content-list {
+  max-width: 720px;
+  color: var(--lumiere-muted);
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.content-section > p {
+  margin: 16px 0 0;
+}
+
+.content-page a:not(.product-button, .content-card-link, .content-toc a, .content-closing__link) {
+  color: var(--lumiere-ink);
+  text-decoration: underline;
+  text-decoration-color: var(--lumiere-gold);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.content-page code {
+  padding: 1px 6px;
+  background: rgb(10 16 36 / 7%);
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88em;
+}
+
+.content-list {
+  margin: 18px 0 0;
+  padding-left: 20px;
+}
+
+.content-list li + li {
+  margin-top: 10px;
+}
+
+.content-list strong {
+  color: var(--lumiere-ink);
+}
+
+/* The path of a tap: four glass steps joined by an arrow. */
+.content-flow {
+  margin: 36px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  list-style: none;
+  counter-reset: flow;
+}
+
+.content-flow li {
+  padding: 22px;
+  border-radius: 24px;
+}
+
+.content-flow li + li::before {
+  content: '→';
+  position: absolute;
+  top: 50%;
+  left: -14px;
+  z-index: 2;
+  width: 14px;
+  color: var(--lumiere-gold);
+  font-weight: 800;
+  text-align: center;
+  transform: translateY(-50%);
+}
+
+.content-flow small {
+  color: #8a4a00;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.content-flow strong {
+  margin-top: 8px;
+  display: block;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.content-flow p {
+  margin: 8px 0 0;
+  color: var(--lumiere-muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.content-cards {
+  margin-top: 36px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.content-cards article,
+.content-card-link {
+  padding: 28px;
+  border-radius: 28px;
+}
+
+.content-cards h3,
+.content-card-link h2 {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+.content-cards p,
+.content-card-link p {
+  margin: 12px 0 0;
+  color: var(--lumiere-muted);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.content-cards strong {
+  color: var(--lumiere-ink);
+}
+
+.content-note {
+  padding: 12px 14px;
+  background: rgb(255 166 59 / 12%);
+  border-radius: 14px;
+  font-size: 14px !important;
+}
+
+.content-card-link {
+  display: block;
+  color: var(--lumiere-ink);
+  text-decoration: none;
+  transition: transform 160ms ease;
+}
+
+.content-card-link:hover {
+  transform: translateY(-3px);
+}
+
+.content-card-link > span {
+  margin-top: 18px;
+  display: inline-block;
+  font-weight: 750;
+}
+
+.content-badge {
+  margin-bottom: 14px;
+  padding: 4px 10px;
+  display: inline-block;
+  color: #8a4a00;
+  background: rgb(255 166 59 / 16%);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* A request said to the agent. */
+.content-ask {
+  margin: 0;
+  color: var(--lumiere-ink);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.45;
+}
+
+.content-section > .content-ask {
+  max-width: 720px;
+  margin: 18px 0;
+  padding: 18px 22px;
+  background: rgb(255 255 255 / 55%);
+  border-left: 4px solid var(--lumiere-gold);
+  border-radius: 14px;
+}
+
+.content-ideas {
+  margin-top: 28px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.content-ideas article {
+  padding: 26px;
+  border-radius: 26px;
+}
+
+.content-ideas article > p:not(.content-ask) {
+  margin: 14px 0 0;
+  color: var(--lumiere-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.content-ideas article > p strong {
+  color: #8a4a00;
+}
+
+.content-toc {
+  margin-top: 26px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.content-toc a {
+  padding: 8px 14px;
+  color: var(--lumiere-ink);
+  background: rgb(255 255 255 / 55%);
+  border: 1px solid rgb(255 255 255 / 80%);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.content-closing {
+  width: auto;
+  margin-top: 90px;
+  margin-bottom: 70px;
+}
+
+.content-closing__actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.content-page .content-closing__link {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+  color: #fff;
+  font-weight: 700;
+  text-decoration-color: var(--lumiere-gold);
+}
+
+/* Footer, shared with the landing. */
+.site-footer {
+  width: min(1180px, calc(100% - 48px));
+  margin: 0 auto;
+  padding: 40px 0 56px;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr));
+  gap: 30px;
+  border-top: 1px solid rgb(10 16 36 / 10%);
+}
+
+.site-footer__brand {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.site-footer__brand img {
+  width: 34px;
+  height: 34px;
+}
+
+.site-footer__brand p {
+  margin: 0;
+  color: var(--lumiere-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.site-footer__brand strong {
+  color: var(--lumiere-ink);
+  font-weight: 800;
+}
+
+.site-footer nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.site-footer nav strong {
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.site-footer a {
+  color: var(--lumiere-muted);
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.site-footer a:hover {
+  color: var(--lumiere-ink);
+}
+
+@media (max-width: 930px) {
+  .content-flow,
+  .content-cards,
+  .content-ideas {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .content-flow li + li::before {
+    content: '↓';
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .content-closing__actions {
+    flex-wrap: wrap;
+  }
+
+  .site-footer {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .site-footer__brand {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 620px) {
+  .content-page,
+  .site-footer {
+    width: calc(100% - 30px);
+  }
+
+  .product-header__link {
+    display: none;
+  }
+
+  .content-hero {
+    padding-top: 36px;
+  }
+
+  .content-hero h1 {
+    font-size: 38px;
+  }
+
+  .content-lede {
+    font-size: 16px;
+  }
+
+  .content-section {
+    padding-top: 56px;
+  }
+
+  .content-ask {
+    font-size: 16px;
+  }
+}
+
+/* Keep text above the glass sheen (.glass::after), which otherwise washes out
+   the first lines of a long card. */
+.content-flow li > *,
+.content-cards article > *,
+.content-ideas article > *,
+.content-card-link > * {
+  position: relative;
+  z-index: 1;
+}
