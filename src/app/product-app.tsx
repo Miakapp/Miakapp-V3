@@ -14,7 +14,8 @@ import {
 } from './copy';
 import { createDemoHost } from './demo-host';
 import type { TrustedHost } from './host';
-import { HomeIcon, LockIcon, SparkIcon } from './icons';
+import { ActivityIcon, HomeIcon, LockIcon, SparkIcon } from './icons';
+import './product.css';
 import { PairPage } from './pair-page';
 import type { PairingService } from './pairing-client';
 
@@ -53,9 +54,8 @@ function pathFor(route: ProductRoute): string {
 function ProductBrand({ onNavigate }: { readonly onNavigate: () => void }): React.JSX.Element {
   return (
     <button className="product-brand" onClick={onNavigate} type="button">
-      <span className="product-brand__mark"><SparkIcon /></span>
+      <span className="product-brand__mark"><span className="brand-mark" /></span>
       <span>miakapp</span>
-      <small>v4</small>
     </button>
   );
 }
@@ -105,6 +105,7 @@ function ProductChrome({
 }: ChromeProps): React.JSX.Element {
   return (
     <div className="product-shell">
+      <div className="product-shell__light" aria-hidden="true" />
       <header className="product-header">
         <ProductBrand onNavigate={() => onNavigate('landing')} />
         <nav aria-label="Miakapp">
@@ -122,6 +123,59 @@ function ProductChrome({
 
 type PageProps = Omit<ChromeProps, 'children'>;
 
+function LandingTitle({ t }: { readonly t: Translate }): React.JSX.Element {
+  const title = t('landingTitle');
+  const accent = t('landingTitleAccent');
+  const at = title.indexOf(accent);
+  if (at < 0) return <h1>{title}</h1>;
+  return (
+    <h1>
+      {title.slice(0, at)}<em>{accent}</em>{title.slice(at + accent.length)}
+    </h1>
+  );
+}
+
+const ENERGY_BARS = [30, 45, 38, 70, 92, 60, 48, 34];
+
+function LandingVisual({ t }: { readonly t: Translate }): React.JSX.Element {
+  return (
+    <div className="landing-visual" role="img" aria-label={t('landingCardVisualLabel')}>
+      <div className="glass landing-widget landing-widget--climate">
+        <small>{t('landingCardRoom')}</small>
+        <strong>21,5°</strong>
+        <span>{t('landingCardHeating')}</span>
+      </div>
+      <div className="glass landing-widget landing-widget--light">
+        <div><small>{t('landingCardLight')}</small><span className="landing-toggle" /></div>
+        <strong>{t('landingCardScene')}</strong>
+        <span>{t('landingCardLamps')}</span>
+      </div>
+      <div className="glass landing-widget landing-widget--energy">
+        <small>{t('landingCardEnergy')}</small>
+        <div className="landing-bars">
+          {ENERGY_BARS.map((height, index) => <span key={index} style={{ height: `${height}%` }} />)}
+        </div>
+      </div>
+      <div className="glass landing-widget landing-widget--agent">
+        <span className="brand-mark" />
+        <p>
+          <strong>{t('landingAgentNote')}</strong> {t('landingAgentNoteDetail')}
+          <small>{t('landingAgentNoteMeta')}</small>
+        </p>
+      </div>
+      <div className="glass landing-widget landing-widget--screen">
+        <small>{t('landingCardNewScreen')}</small>
+        <div>
+          <span>{t('landingCardChipKitchen')}</span>
+          <span>{t('landingCardChipShutters')}</span>
+          <span>{t('landingCardChipGarden')}</span>
+          <span>{t('landingCardChipAdd')}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function LandingPage({ t, ...chrome }: PageProps): React.JSX.Element {
   const { onNavigate } = chrome;
   return (
@@ -129,73 +183,77 @@ function LandingPage({ t, ...chrome }: PageProps): React.JSX.Element {
       <main className="landing-page">
         <section className="landing-hero">
           <div className="landing-hero__copy">
-            <p className="product-kicker"><span /> {t('landingKicker')}</p>
-            <h1>{t('landingTitle')}</h1>
+            <p className="product-kicker glass"><span /> {t('landingKicker')}</p>
+            <LandingTitle t={t} />
             <p className="landing-hero__lede">{t('landingLede')}</p>
             <div className="product-actions">
               <button className="product-button" onClick={() => onNavigate('new-home')} type="button">
                 {t('landingPrimaryCta')} <span aria-hidden="true">→</span>
               </button>
-              <button className="product-button product-button--ghost" onClick={() => onNavigate('console')} type="button">
+              <button className="product-button product-button--glass" onClick={() => onNavigate('console')} type="button">
                 {t('landingSecondaryCta')}
               </button>
             </div>
             <ul className="landing-proof" aria-label={t('landingProofLabel')}>
-              <li><span>01</span> {t('landingProofOne')}</li>
-              <li><span>02</span> {t('landingProofTwo')}</li>
-              <li><span>03</span> {t('landingProofThree')}</li>
+              <li className="glass">{t('landingProofOne')}</li>
+              <li className="glass">{t('landingProofTwo')}</li>
+              <li className="glass">{t('landingProofThree')}</li>
             </ul>
           </div>
-          <div className="landing-visual" aria-label={t('landingCardVisualLabel')}>
-            <div className="landing-visual__orb landing-visual__orb--one" />
-            <div className="landing-visual__orb landing-visual__orb--two" />
-            <article className="landing-home-card">
-              <header>
-                <span className="landing-home-card__icon"><HomeIcon /></span>
-                <div><strong>{t('landingCardHome')}</strong><small>{t('landingCardCalm')}</small></div>
-                <span className="landing-home-card__live">{t('landingCardLive')}</span>
-              </header>
-              <div className="landing-home-card__metric"><strong>19,5°</strong><span>{t('landingCardRoom')}</span></div>
-              <div className="landing-home-card__row">
-                <span><small>{t('landingCardEnergy')}</small><strong>350 W</strong></span>
-                <span><small>{t('landingCardBattery')}</small><strong>80 %</strong></span>
-              </div>
-              <div className="landing-home-card__control">
-                <span>{t('landingCardLight')}</span><span className="landing-toggle" />
-              </div>
+          <LandingVisual t={t} />
+        </section>
+        <section className="landing-section">
+          <p className="product-kicker glass"><span /> {t('socleKicker')}</p>
+          <h2>{t('socleTitle')}</h2>
+          <div className="landing-grid landing-grid--four">
+            <article className="glass">
+              <span className="landing-tile-icon landing-tile-icon--peach"><ActivityIcon /></span>
+              <strong>{t('socleHostingTitle')}</strong>
+              <p>{t('socleHostingBody')}</p>
             </article>
-            <p className="landing-agent-note">
-              <SparkIcon />
-              <span><strong>{t('landingAgentNote')}</strong><small>{t('landingAgentNoteDetail')}</small></span>
-            </p>
+            <article className="glass">
+              <span className="landing-tile-icon landing-tile-icon--mint"><LockIcon /></span>
+              <strong>{t('socleAuthTitle')}</strong>
+              <p>{t('socleAuthBody')}</p>
+            </article>
+            <article className="glass">
+              <span className="landing-tile-icon landing-tile-icon--lilac"><SparkIcon /></span>
+              <strong>{t('soclePushTitle')}</strong>
+              <p>{t('soclePushBody')}</p>
+            </article>
+            <article className="glass">
+              <span className="landing-tile-icon landing-tile-icon--honey"><HomeIcon /></span>
+              <strong>{t('socleLocalTitle')}</strong>
+              <p>{t('socleLocalBody')}</p>
+            </article>
           </div>
         </section>
-        <section className="landing-audiences">
-          <p className="product-kicker">{t('audiencesKicker')}</p>
+        <section className="landing-section">
+          <p className="product-kicker glass"><span /> {t('audiencesKicker')}</p>
           <h2>{t('audiencesTitle')}</h2>
-          <div>
-            <article>
+          <div className="landing-grid">
+            <article className="glass">
               <strong>{t('audienceTinkererTitle')}</strong>
               <p>{t('audienceTinkererBody')}</p>
             </article>
-            <article>
+            <article className="glass">
               <strong>{t('audienceCuriousTitle')}</strong>
               <p>{t('audienceCuriousBody')}</p>
             </article>
-            <article>
+            <article className="glass">
               <strong>{t('audienceNewcomerTitle')}</strong>
               <p>{t('audienceNewcomerBody')}</p>
             </article>
           </div>
         </section>
-        <section className="landing-principles">
-          <p className="product-kicker">{t('principlesKicker')}</p>
-          <h2>{t('principlesTitle')}</h2>
+        <section className="landing-closing">
           <div>
-            <article><strong>{t('principleBaseTitle')}</strong><p>{t('principleBaseBody')}</p></article>
-            <article><strong>{t('principleAgentTitle')}</strong><p>{t('principleAgentBody')}</p></article>
-            <article><strong>{t('principleHomeTitle')}</strong><p>{t('principleHomeBody')}</p></article>
+            <h2>{t('closingTitle')}</h2>
+            <p>{t('closingBody')}</p>
           </div>
+          <button className="product-button product-button--light" onClick={() => onNavigate('new-home')} type="button">
+            {t('closingCta')} <span aria-hidden="true">→</span>
+          </button>
         </section>
       </main>
     </ProductChrome>
