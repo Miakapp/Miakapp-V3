@@ -41,3 +41,17 @@ control plane no longer authenticate. Pair again through `/pair`.
 - Artifacts published before the move point at the Cloud Run origin and are
   refused by the web app; publish again.
 - The CLI's default issuer is `https://api.miakapp.com` (CLI 4.0.0).
+
+## House app sandbox
+
+The isolated frame that runs each home's app is served from the
+`miakapp-v4-sandbox` Hosting site. Its `frame-ancestors` must list every
+origin the web app is served from:
+
+```sh
+MIAKAPP_SANDBOX_ORIGIN=https://miakapp-v4-sandbox.web.app \
+MIAKAPP_HOST_ORIGIN="https://www.miakapp.com https://miakapp-v4-staging.web.app" \
+MIAKAPP_SANDBOX_SITE=miakapp-v4-sandbox bun run build:sandbox
+firebase deploy --config dist-sandbox/firebase.json --project miakapp-v4-staging --only hosting:miakapp-v4-sandbox
+```
+
