@@ -92,11 +92,16 @@ export function appPermissionsPolicy(): string {
 }
 
 export async function buildAppDocument(input: AppDocumentInput): Promise<AppDocument> {
-  const hostOrigin = assertDeployOrigin(input.hostOrigin, 'host origin');
+  // Several hosts may frame the app (the product domain and its web.app twin):
+  // separate them with spaces or commas.
+  const hostOrigins = input.hostOrigin.split(/[\s,]+/u).filter((origin) => origin !== '')
+    .map((origin) => assertDeployOrigin(origin, 'host origin'));
+  if (hostOrigins.length === 0) throw new SandboxDocumentError('host origin is required');
   const sandboxOrigin = assertDeployOrigin(input.sandboxOrigin, 'sandbox origin');
-  if (hostOrigin === sandboxOrigin) {
+  if (hostOrigins.includes(sandboxOrigin)) {
     throw new SandboxDocumentError('sandbox origin must differ from the host origin');
   }
+  const hostOrigin = hostOrigins.join(' ');
   if (input.bootstrapSource.trim() === '') {
     throw new SandboxDocumentError('app bootstrap source is empty');
   }
