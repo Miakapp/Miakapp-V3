@@ -658,7 +658,7 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
                 </label>
               ))}
             </fieldset>
-            <section className="house-settings__section">
+            {consent === undefined && stage.kind !== 'app' ? null : <section className="house-settings__section">
               <h3>{t('consentSection')}</h3>
               {consentDate === undefined ? null : <p>{t('consentGrantedOn', { date: consentDate })}</p>}
               <div className="house-settings__actions">
@@ -687,7 +687,7 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
                   </button>
                 )}
               </div>
-            </section>
+            </section>}
             <p className="house-panel__hint">{t('shortcutHint')}</p>
           </div>
         </div>
