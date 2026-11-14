@@ -16,6 +16,8 @@ import { createPreviewHost } from './preview-host';
 import type { TrustedHost } from './host';
 import { ActivityIcon, HomeIcon, LockIcon, SparkIcon } from './icons';
 import './product.css';
+import './content.css';
+import { SiteFooter } from '../content/site-chrome';
 import { PairPage } from './pair-page';
 import type { PairingService } from './pairing-client';
 import { SignInChoices } from './sign-in-choices';
@@ -262,6 +264,7 @@ export function LandingPage({ t, ...chrome }: PageProps): React.JSX.Element {
           </button>
         </section>
       </main>
+      <SiteFooter locale={chrome.locale} />
     </ProductChrome>
   );
 }
