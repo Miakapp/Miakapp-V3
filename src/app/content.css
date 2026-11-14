@@ -26,13 +26,15 @@ a.locale-switch__option {
 }
 
 .content-page {
-  width: min(1180px, calc(100% - 48px));
+  --content-read: 760px;
+  width: min(1080px, calc(100% - 48px));
   margin: 0 auto;
   padding-bottom: 20px;
 }
 
 .content-hero {
-  max-width: 860px;
+  max-width: var(--content-read);
+  margin-inline: auto;
   padding: 56px 0 10px;
 }
 
@@ -89,7 +91,7 @@ a.locale-switch__option {
   margin: 16px 0 0;
 }
 
-.content-page a:not(.product-button, .content-card-link, .content-toc a, .content-closing__link) {
+.content-page a:not(.product-button, .content-card-link, .content-toc a, .content-closing__link, .content-cite) {
   color: var(--lumiere-ink);
   text-decoration: underline;
   text-decoration-color: var(--lumiere-gold);
@@ -238,48 +240,6 @@ a.locale-switch__option {
   font-weight: 750;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-}
-
-/* A request said to the agent. */
-.content-ask {
-  margin: 0;
-  color: var(--lumiere-ink);
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.015em;
-  line-height: 1.45;
-}
-
-.content-section > .content-ask {
-  max-width: 720px;
-  margin: 18px 0;
-  padding: 18px 22px;
-  background: rgb(255 255 255 / 55%);
-  border-left: 4px solid var(--lumiere-gold);
-  border-radius: 14px;
-}
-
-.content-ideas {
-  margin-top: 28px;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.content-ideas article {
-  padding: 26px;
-  border-radius: 26px;
-}
-
-.content-ideas article > p:not(.content-ask) {
-  margin: 14px 0 0;
-  color: var(--lumiere-muted);
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.content-ideas article > p strong {
-  color: #8a4a00;
 }
 
 .content-toc {
@@ -441,7 +401,6 @@ a.locale-switch__option {
    the first lines of a long card. */
 .content-flow li > *,
 .content-cards article > *,
-.content-ideas article > *,
 .content-card-link > * {
   position: relative;
   z-index: 1;
@@ -559,4 +518,99 @@ a.locale-switch__option {
 .content-page sup + sup::before {
   content: ',';
   font-size: 11px;
+}
+
+/* Reading column: prose sits in one centred measure, grids use the full
+   width around it. */
+.content-section > h2,
+.content-section > p,
+.content-section > .content-list,
+.content-section > .content-chat,
+.content-section > .content-toc,
+.content-section > .content-sources {
+  max-width: var(--content-read);
+  margin-inline: auto;
+}
+
+.content-section > p,
+.content-section > .content-list {
+  max-width: var(--content-read);
+}
+
+/* Requests to the agent read as a conversation: your message on the right in
+   midnight blue, the agent's reply on the left under the Miakapp icon. */
+.content-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.content-section > .content-chat {
+  margin-top: 22px;
+  margin-bottom: 4px;
+}
+
+.content-ask {
+  width: fit-content;
+  max-width: min(560px, 88%);
+  margin: 0 0 0 auto;
+  padding: 13px 18px;
+  color: #fff;
+  background: linear-gradient(180deg, #1d2b57, #0a1024);
+  border-radius: 22px 22px 6px 22px;
+  box-shadow: 0 10px 26px rgb(10 16 36 / 18%);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.content-reply {
+  max-width: min(600px, 94%);
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.content-reply img {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 9px;
+}
+
+.content-reply p {
+  margin: 0;
+  padding: 13px 18px;
+  color: var(--lumiere-muted);
+  background: rgb(255 255 255 / 72%);
+  border: 1px solid rgb(255 255 255 / 90%);
+  border-radius: 22px 22px 22px 6px;
+  box-shadow: 0 10px 26px rgb(80 60 40 / 8%);
+  font-size: 14px;
+  line-height: 1.6;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.content-ideas {
+  margin-top: 30px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 40px;
+  row-gap: 34px;
+}
+
+.content-ideas .content-ask {
+  max-width: 92%;
+}
+
+.content-page .content-cite {
+  color: #8a4a00;
+  text-decoration: none;
+}
+
+@media (max-width: 930px) {
+  .content-ideas {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

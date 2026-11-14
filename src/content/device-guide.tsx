@@ -146,7 +146,9 @@ export function DeviceGuidePage({ guide, locale }: { readonly guide: DeviceGuide
 
       <section className="content-section">
         <h2>{copy.askTitle}</h2>
-        {copy.asks.map((ask) => <Ask key={ask} locale={locale}>{ask}</Ask>)}
+        <div className="content-chat">
+          {copy.asks.map((ask) => <Ask key={ask}>{ask}</Ask>)}
+        </div>
       </section>
 
       <section className="content-section">

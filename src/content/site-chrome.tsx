@@ -106,7 +106,18 @@ export function ContentShell({
   );
 }
 
-/** A request said to the agent, set apart so it reads as speech. */
-export function Ask({ children, locale }: { readonly children: React.ReactNode; readonly locale: Locale }): React.JSX.Element {
-  return <p className="content-ask">{locale === 'fr' ? <>«&nbsp;{children}&nbsp;»</> : <>“{children}”</>}</p>;
+/** A request said to the agent, drawn as the message you would send it. */
+export function Ask({ children }: { readonly children: React.ReactNode }): React.JSX.Element {
+  return <p className="content-ask">{children}</p>;
+}
+
+/** What the agent does about it, drawn as its reply. `label` names the reply
+ *  for screen readers, which do not see the avatar. */
+export function AgentReply({ children, label }: { readonly children: React.ReactNode; readonly label: string }): React.JSX.Element {
+  return (
+    <div className="content-reply">
+      <img alt="" src="/brand/miakapp.svg" />
+      <p><span className="visually-hidden">{label} : </span>{children}</p>
+    </div>
+  );
 }
