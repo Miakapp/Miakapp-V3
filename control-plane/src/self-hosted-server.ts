@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { createServer } from 'node:http';
+import { createServer, type IncomingMessage } from 'node:http';
 
 import { loadProductionRuntimeConfig } from './production-runtime-loader.js';
 import { createSelfHostedControlPlane } from './self-hosted-runtime.js';
@@ -30,8 +30,29 @@ const controlPlane = await createSelfHostedControlPlane(loaded.document, {
   storageDirectory: required('MIAKAPP_COMPONENT_STORAGE_DIRECTORY'),
 });
 
+// Cloud Functions hands the API a buffered `rawBody`; a bare Node server must
+// read it itself, or every request body looks empty.
+const MAX_BODY_BYTES = 4 * 1024 * 1024;
+
 const port = Number(process.env.PORT ?? 8080);
-const server = createServer(controlPlane.application);
+const server = createServer((request: IncomingMessage & { rawBody?: Buffer }, response) => {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  request.on('data', (chunk: Buffer) => {
+    size += chunk.byteLength;
+    if (size > MAX_BODY_BYTES) {
+      response.writeHead(413).end();
+      request.destroy();
+      return;
+    }
+    chunks.push(chunk);
+  });
+  request.on('end', () => {
+    if (size > MAX_BODY_BYTES) return;
+    request.rawBody = Buffer.concat(chunks);
+    controlPlane.application(request, response);
+  });
+});
 server.listen(port, () => {
   console.log(JSON.stringify({ event: 'miakapp_control_plane_listening', port, issuer: loaded.config.security.issuer }));
 });
