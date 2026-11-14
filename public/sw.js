@@ -57,6 +57,6 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const home = event.notification.data && event.notification.data.home;
-  const url = home ? `/app?home=${encodeURIComponent(home)}` : '/';
+  const url = home ? `/app?home=${encodeURIComponent(home)}&from=push` : '/';
   event.waitUntil(clients.openWindow(url));
 });
