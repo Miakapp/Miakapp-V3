@@ -1,7 +1,5 @@
 node_modules/
 package-lock.json
-!control-plane/deployment/package-lock.json
-!legacy/node-red-v3-characterization/package-lock.json
 /dist
 /dist-sandbox
 .env.local
@@ -9,8 +7,6 @@ package-lock.json
 .firebase
 component-runtime/test-results/
 component-runtime/playwright-report/
-synthetic-home/dist/
-coordinator-contract/dist/
 .terraform/
 *.tfstate
 *.tfstate.*

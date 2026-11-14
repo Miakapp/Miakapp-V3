@@ -3,7 +3,7 @@
 // rewriting the repository-wide dependency lock that historical evidence
 // intentionally seals.
 // @ts-expect-error The reviewed bundle is generated JavaScript with no sibling declarations.
-import * as miakapiBrowserImplementation from '../../infrastructure/staging/browser-relay-page/vendor/miakapi-browser-v4.mjs';
+import * as miakapiBrowserImplementation from './vendor/miakapi-browser-v4.mjs';
 
 export type BrowserClientStatus =
   | 'idle'
