@@ -120,6 +120,7 @@ function admissionOperation(request: Request): AdmissionOperation | null {
   const { method, path } = request;
   if (method === 'POST' && path === '/v1/homes') return 'home.create';
   if (method === 'PATCH' && /^\/v1\/homes\/[a-z][a-z0-9-]{1,61}[a-z0-9]$/.test(path)) return 'home.patch';
+  if (method === 'DELETE' && /^\/v1\/homes\/[a-z][a-z0-9-]{1,61}[a-z0-9]$/.test(path)) return 'home.delete';
   if (method === 'POST' && /^\/v1\/homes\/[a-z][a-z0-9-]{1,61}[a-z0-9]\/home-keys$/.test(path)) {
     return 'home_key.create';
   }
@@ -924,6 +925,19 @@ async function routeRequest(
   }
 
   const homeMatch = /^\/v1\/homes\/([a-z][a-z0-9-]{1,61}[a-z0-9])$/.exec(request.path);
+  if (homeMatch !== null && request.method === 'DELETE') {
+    const ticket = activeAdmission(admission, 'home.delete');
+    const principal = await ownerPrincipal(request, dependencies);
+    requireRecentAuthentication(principal, dependencies.clock.now());
+    identifyOwner(ticket, principal);
+    requireEmptyBody(request);
+    const id = pathHomeId(homeMatch[1] as string);
+    ticket.identifyHome(id);
+    ticket.identifySubject(id);
+    await dependencies.store.deleteHome(principal, id);
+    response.sendStatus(204);
+    return;
+  }
   if (homeMatch !== null && request.method === 'PATCH') {
     const ticket = activeAdmission(admission, 'home.patch');
     const principal = await ownerPrincipal(request, dependencies);

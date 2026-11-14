@@ -96,6 +96,8 @@ export class FirebasePairingService implements PairingService {
 
   readonly listKeys = (homeId: string): ReturnType<PairingApi['listKeys']> => this.#api.listKeys(homeId);
 
+  readonly deleteHome = (homeId: string): ReturnType<PairingApi['deleteHome']> => this.#api.deleteHome(homeId);
+
   readonly revokeKey = (homeId: string, keyId: string): ReturnType<PairingApi['revokeKey']> => (
     this.#api.revokeKey(homeId, keyId)
   );

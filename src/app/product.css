@@ -591,7 +591,8 @@
   margin: 0 auto 24px;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, #d8ffe8, #7ee0a8);
+  background: linear-gradient(160deg, #1d2b57, #0a1024);
+  color: #ffe48a;
   border-radius: 15px;
 }
 
