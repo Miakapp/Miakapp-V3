@@ -159,6 +159,16 @@ svg {
   color: #f4f1e8;
 }
 
+.house-bar__home-buttons {
+  display: flex;
+  flex: 2 1 0;
+  gap: 2px;
+  min-width: 0;
+  padding: 0 4px;
+  border-right: 1px dashed rgb(255 255 255 / 14%);
+  border-left: 1px dashed rgb(255 255 255 / 14%);
+}
+
 .house-bar__label {
   overflow: hidden;
   max-width: 100%;

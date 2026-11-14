@@ -49,7 +49,49 @@ export type AppFrameMessage =
     readonly args: unknown;
     readonly timeoutMs: number;
   }
-  | { readonly kind: 'shell.focus' };
+  | { readonly kind: 'shell.focus' }
+  | { readonly kind: 'bar.buttons'; readonly buttons: readonly AppBarButton[] };
+
+/**
+ * The few buttons a home adds to the Miakapp bar. Miakapp draws them: the home
+ * names them, picks an icon from a closed list, and hears which one was tapped.
+ */
+export interface AppBarButton {
+  readonly id: string;
+  readonly label: string;
+  readonly icon: AppBarIcon;
+  readonly active: boolean;
+}
+
+export const APP_BAR_ICONS = [
+  'grid', 'bolt', 'light', 'thermometer', 'camera', 'lock', 'list', 'chart', 'leaf', 'star',
+] as const;
+export type AppBarIcon = (typeof APP_BAR_ICONS)[number];
+
+export const APP_BAR_LIMITS = Object.freeze({ buttons: 2, labelLength: 16 });
+
+const BAR_BUTTON_ID = /^[a-z0-9][a-z0-9-]{0,31}$/u;
+
+/** Validates a list of bar buttons; throws `ContractViolation` otherwise. */
+export function parseBarButtons(value: unknown): AppBarButton[] {
+  if (!Array.isArray(value) || value.length > APP_BAR_LIMITS.buttons) violation('bar buttons are invalid');
+  const ids = new Set<string>();
+  const buttons = value.map((entry: unknown) => {
+    if (!isPlainRecord(entry)) violation('bar button must be a plain record');
+    exactKeys(entry, ['id', 'label', 'icon', 'active']);
+    const { id, label, icon, active } = entry;
+    if (typeof id !== 'string' || !BAR_BUTTON_ID.test(id) || ids.has(id)) violation('bar button id is invalid');
+    ids.add(id);
+    if (typeof label !== 'string') violation('bar button label is invalid');
+    const text = label.replace(/\s+/gu, ' ').trim();
+    if (text === '' || [...text].length > APP_BAR_LIMITS.labelLength) violation('bar button label is invalid');
+    if (!APP_BAR_ICONS.includes(icon as AppBarIcon)) violation('bar button icon is invalid');
+    if (typeof active !== 'boolean') violation('bar button active flag is invalid');
+    return Object.freeze({ id, label: text, icon: icon as AppBarIcon, active });
+  });
+  if (buttons.filter((button) => button.active).length > 1) violation('only one bar button can be active');
+  return buttons;
+}
 
 /**
  * Closed on purpose: a crash reason is shown by the shell, and the shell never
@@ -129,6 +171,9 @@ export function parseAppFrameMessage(value: unknown): AppFrameMessage {
     case 'shell.focus':
       exactKeys(payload, []);
       return { kind: 'shell.focus' };
+    case 'bar.buttons':
+      exactKeys(payload, ['buttons']);
+      return { kind: 'bar.buttons', buttons: parseBarButtons(payload.buttons) };
     case 'app.crash': {
       exactKeys(payload, ['reason']);
       const reason = payload.reason;

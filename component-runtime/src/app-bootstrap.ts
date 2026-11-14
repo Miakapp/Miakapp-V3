@@ -89,6 +89,7 @@ function start(): void {
   let theme = 'system';
   const stateListeners = new Set<Listener<StateView>>();
   const themeListeners = new Set<Listener<string>>();
+  const barListeners = new Set<Listener<string | null>>();
   const calls = new Map<string, PendingCall>();
   let nextCall = 1;
   let grant: { state_read: readonly string[]; call: readonly string[] } = { state_read: [], call: [] };
@@ -150,6 +151,24 @@ function start(): void {
         });
       });
     },
+    // The Miakapp bar: up to two buttons the shell draws for this home. The
+    // shell keeps the last list for the next visit, so call it on every start.
+    bar: Object.freeze({
+      setButtons: (buttons: readonly { id: string; label: string; icon: string; active?: boolean }[]): void => {
+        send('bar.buttons', {
+          buttons: Array.from(buttons, (button) => ({
+            id: String(button.id),
+            label: String(button.label),
+            icon: String(button.icon),
+            active: button.active === true,
+          })),
+        });
+      },
+      onSelect: (listener: Listener<string | null>): (() => void) => {
+        barListeners.add(listener);
+        return () => barListeners.delete(listener);
+      },
+    }),
     onThemeChange: (listener: Listener<string>): (() => void) => {
       themeListeners.add(listener);
       return () => themeListeners.delete(listener);
@@ -261,6 +280,9 @@ function start(): void {
         }
         break;
       }
+      case 'bar.select':
+        emit(barListeners, typeof payload.id === 'string' ? payload.id : null);
+        break;
       case 'app.ping':
         send('app.pong', { challenge: payload.challenge });
         break;

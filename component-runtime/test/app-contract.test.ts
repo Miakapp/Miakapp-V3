@@ -34,6 +34,34 @@ describe('miakapp.app/1 bridge', () => {
     for (const value of rejected) expect(() => parseAppFrameMessage(value)).toThrow();
   });
 
+  test('accepts up to two bar buttons drawn from the closed icon set', () => {
+    const rooms = { id: 'rooms', label: '  Pièces ', icon: 'grid', active: true } as const;
+    const energy = { id: 'energy', label: 'Énergie', icon: 'bolt', active: false } as const;
+    expect(parseAppFrameMessage(message('bar.buttons', { buttons: [rooms, energy] }))).toEqual({
+      kind: 'bar.buttons',
+      buttons: [{ ...rooms, label: 'Pièces' }, energy],
+    });
+    expect(parseAppFrameMessage(message('bar.buttons', { buttons: [] })))
+      .toEqual({ kind: 'bar.buttons', buttons: [] });
+  });
+
+  test('rejects bar buttons the shell could not draw safely', () => {
+    const button = { id: 'rooms', label: 'Pièces', icon: 'grid', active: false };
+    const rejected = [
+      [button, { ...button, id: 'b' }, { ...button, id: 'c' }],
+      [button, button],
+      [{ ...button, icon: 'https://example.com/logo.svg' }],
+      [{ ...button, label: 'A label far too long to fit' }],
+      [{ ...button, label: '   ' }],
+      [{ ...button, id: 'Rooms!' }],
+      [{ ...button, href: '/x' }],
+      [{ ...button, active: true }, { ...button, id: 'energy', active: true }],
+    ];
+    for (const buttons of rejected) {
+      expect(() => parseAppFrameMessage(message('bar.buttons', { buttons }))).toThrow();
+    }
+  });
+
   test('binds only the announcement carrying this mount nonce', () => {
     const nonce = 'n'.repeat(32);
     expect(isAppReadyAnnouncement({ type: 'miakapp.app.ready', runtime: '1', nonce }, nonce)).toBe(true);

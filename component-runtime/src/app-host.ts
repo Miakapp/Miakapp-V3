@@ -16,6 +16,7 @@ import {
   appShellMessage,
   isAppReadyAnnouncement,
   parseAppFrameMessage,
+  type AppBarButton,
   type AppCallError,
   type AppTheme,
 } from './app-contract';
@@ -92,6 +93,8 @@ export interface HouseAppHostOptions {
   readonly call: (name: string, args: unknown, options: { readonly timeoutMs: number; readonly signal: AbortSignal }) => Promise<unknown>;
   readonly onLifecycle: (lifecycle: HouseAppLifecycle, failure?: HouseAppFailureCode) => void;
   readonly onFocusShell?: () => void;
+  /** The buttons the home wants in the Miakapp bar, already validated. */
+  readonly onBarButtons?: (buttons: readonly AppBarButton[]) => void;
   readonly window?: Window;
   readonly frameReadyMs?: number;
   readonly bootMs?: number;
@@ -109,6 +112,8 @@ export interface HouseAppSession {
   readonly frame: HTMLIFrameElement;
   publishState(state: HouseAppState): void;
   setTheme(theme: AppTheme): void;
+  /** Tells the home which of its bar buttons was tapped; `null` is the home tab. */
+  selectBarButton(id: string | null): void;
   dispose(): void;
 }
 
@@ -324,6 +329,9 @@ export function mountHouseApp(
           if (lifecycle !== 'active' && lifecycle !== 'loading') return;
           startCall(message.id, message.name, message.args, message.timeoutMs);
           break;
+        case 'bar.buttons':
+          options.onBarButtons?.(message.buttons);
+          break;
         case 'shell.focus':
           // Rate-limited: a house cannot use it to keep yanking focus away.
           if (now - lastFocusRequest < 1_000) return;
@@ -402,6 +410,10 @@ export function mountHouseApp(
       },
       setTheme(theme) {
         send('app.theme', { theme });
+      },
+      selectBarButton(id) {
+        if (port === undefined || (lifecycle !== 'loading' && lifecycle !== 'active')) return;
+        send('bar.select', { id });
       },
       dispose() {
         settle('disposed');
