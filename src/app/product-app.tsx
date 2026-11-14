@@ -20,6 +20,7 @@ import './content.css';
 import { SiteFooter } from '../content/site-chrome';
 import { PairPage } from './pair-page';
 import type { PairingService } from './pairing-client';
+import { isAppPath } from './home-url';
 import { isInstalledApp } from './sign-in';
 import { SignInChoices } from './sign-in-choices';
 
@@ -48,7 +49,7 @@ function routeFromPath(pathname: string): ProductRoute {
   if (pathname === '/login') return 'login';
   if (pathname === '/new-home') return 'new-home';
   if (pathname === '/pair') return 'pair';
-  if (pathname === '/app') return 'console';
+  if (isAppPath(pathname)) return 'console';
   return 'landing';
 }
 
