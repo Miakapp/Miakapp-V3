@@ -7,6 +7,8 @@
  * sees, and it exists only to be shown once and copied.
  */
 
+import type { SignInMethod, SignInOutcome } from './sign-in';
+
 export interface PairingAccount {
   /** Stable authentication identity; display names/emails are not identifiers. */
   readonly id: string;
@@ -75,8 +77,11 @@ export interface PairingService {
   /** `undefined` while the session is still being restored. */
   getAccount(): PairingAccount | null | undefined;
   subscribe(listener: () => void): () => void;
-  /** Always offers the account chooser, so the person picks which account pairs. */
-  signIn(): Promise<void>;
+  /**
+   * Always offers the account chooser, so the person picks which account pairs.
+   * Without a method, signs in again the way the current account did.
+   */
+  signIn(method?: SignInMethod): Promise<SignInOutcome>;
   signOut(): Promise<void>;
   listHomes(): Promise<readonly PairingHome[]>;
   createHome(input: NewPairingHome): Promise<PairingHome>;

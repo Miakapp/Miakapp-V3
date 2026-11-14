@@ -18,6 +18,7 @@ import type {
   TrustedHost,
   TrustedHostSnapshot,
 } from './host';
+import type { SignInMethod, SignInOutcome } from './sign-in';
 
 export interface LiveIdentity {
   readonly isSignedIn: () => boolean;
@@ -26,6 +27,7 @@ export interface LiveIdentity {
   /** Notify for every UID transition, including signed-in A → signed-in B. */
   readonly subscribe: (listener: (signedIn: boolean) => void) => () => void;
   readonly signIn: () => Promise<void>;
+  readonly signInWith?: (method: SignInMethod) => Promise<SignInOutcome>;
   readonly signOut: () => Promise<void>;
   readonly getFirebaseIdToken: (request: BrowserRelayCredentialRequest) => Promise<string>;
   readonly getAppCheckToken: (request: BrowserRelayCredentialRequest) => Promise<string>;
@@ -142,6 +144,10 @@ class LiveTrustedHost implements TrustedHost {
     this.#listeners.add(listener);
     return () => this.#listeners.delete(listener);
   };
+
+  get signInWith(): TrustedHost['signInWith'] {
+    return this.#identity.signInWith;
+  }
 
   readonly signIn = (): void => {
     if (this.#disposed || this.#signedIn || this.#signInStatus === 'pending') return;

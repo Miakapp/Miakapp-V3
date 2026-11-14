@@ -700,3 +700,32 @@ svg {
   color: #f6f5ef;
   font-size: 14px;
 }
+
+.sign-in-choices {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  max-width: 360px;
+}
+
+.sign-in-choices__email {
+  display: grid;
+  gap: 10px;
+}
+
+.sign-in-choices__email input {
+  min-height: 46px;
+  padding: 0 18px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 70%);
+  color: var(--ink);
+  font: inherit;
+}
+
+.sign-in-choices__or {
+  margin: 2px 0;
+  text-align: center;
+  font-size: 13px;
+  opacity: 0.6;
+}
