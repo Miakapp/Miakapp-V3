@@ -1,6 +1,6 @@
 import type { Locale } from '../app/copy';
 import { APP_LINKS, contentPage } from './site';
-import { Ask, ContentShell, type ContentPageProps } from './site-chrome';
+import { AgentReply, Ask, ContentShell, type ContentPageProps } from './site-chrome';
 
 interface Idea {
   readonly ask: string;
@@ -380,7 +380,7 @@ export function IdeasPage({ locale }: ContentPageProps): React.JSX.Element {
       <section className="content-section">
         <h2>{copy.ruleTitle}</h2>
         <p>{copy.rule}</p>
-        <Ask locale={locale}>{copy.ruleExample}</Ask>
+        <div className="content-chat"><Ask>{copy.ruleExample}</Ask></div>
         <p>{copy.ruleAfter}</p>
         <nav className="content-toc" aria-label={copy.kicker}>
           {copy.themes.map((theme, index) => <a href={`#theme-${index + 1}`} key={theme.title}>{theme.title}</a>)}
@@ -392,9 +392,9 @@ export function IdeasPage({ locale }: ContentPageProps): React.JSX.Element {
           <h2>{theme.title}</h2>
           <div className="content-ideas">
             {theme.ideas.map((idea) => (
-              <article className="glass" key={idea.ask}>
-                <Ask locale={locale}>{idea.ask}</Ask>
-                <p><strong>{copy.agentLabel} · </strong>{idea.how}</p>
+              <article className="content-chat" key={idea.ask}>
+                <Ask>{idea.ask}</Ask>
+                <AgentReply label={copy.agentLabel}>{idea.how}</AgentReply>
               </article>
             ))}
           </div>
