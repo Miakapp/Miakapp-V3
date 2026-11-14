@@ -352,7 +352,7 @@ export interface DeploymentConfig {
   readonly componentsAudience: string;
   readonly runtimeDiagnosticsEndpoint: string;
   /**
-   * `https://<trusted web origin>/app?home={home_id}`, or undefined when the
+   * `https://<trusted web origin>/app/{home_id}`, or undefined when the
    * deployment names no home application origin. Never a component URL.
    */
   readonly homeUrlTemplate?: string;

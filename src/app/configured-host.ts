@@ -28,6 +28,7 @@ import type { PairingService } from './pairing-client';
 import { FirebasePairingService } from './pairing-firebase';
 import { enablePush } from './push';
 import { markHomePickedForThePerson } from './home-pick';
+import { requestedHomeId } from './home-url';
 import { completeEmailLinkSignIn, completeRedirectSignIn, signInWith } from './sign-in';
 
 interface ComponentReleaseConfiguration {
@@ -127,7 +128,7 @@ export interface RequestedHome {
 }
 
 /**
- * Which home `/app?home=<id>` asks for. The house shell's switcher navigates
+ * Which home `/app/<id>` (or the legacy `/app?home=<id>`) asks for. The house shell's switcher navigates
  * here, so each home gets a fresh page: nothing of one home's session, state or
  * frame survives into another's. The id is only a request — the control plane
  * decides, per signed-in account, whether this home opens at all — and its name
@@ -139,8 +140,7 @@ export function resolveRequestedHome(
   fallback: RequestedHome,
   favorites: readonly FavoriteHome[],
 ): RequestedHome {
-  if (pathname !== '/app') return fallback;
-  const requested = new URLSearchParams(search).get('home');
+  const requested = requestedHomeId(pathname, search);
   if (requested === null || requested === fallback.id || !CONTROL_PLANE_HOME_ID.test(requested)) {
     return fallback;
   }
@@ -174,7 +174,7 @@ function rememberOpenedHome(id: string): void {
 }
 
 function homeWasRequested(): boolean {
-  return new URLSearchParams(window.location.search).get('home') !== null;
+  return requestedHomeId(window.location.pathname, window.location.search) !== null;
 }
 
 

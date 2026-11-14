@@ -202,7 +202,7 @@ export function createProductionDeploymentConfig(
     runtimeDiagnosticsEndpoint: `${issuer}/v1/runtime-diagnostics`,
     ...(runtime.homeAppOrigin === undefined
       ? {}
-      : { homeUrlTemplate: `${runtime.homeAppOrigin}/app?home={home_id}` }),
+      : { homeUrlTemplate: `${runtime.homeAppOrigin}/app/{home_id}` }),
     componentBucket: runtime.componentBucket,
     componentUploadBaseUrl: `${issuer}/v1/component-uploads`,
     componentArtifactBaseUrl: `${issuer}/v1/components`,
