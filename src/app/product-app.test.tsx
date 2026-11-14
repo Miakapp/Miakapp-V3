@@ -220,6 +220,18 @@ describe('Miakapp language', () => {
     expect(document.documentElement.lang).toBe('fr');
   });
 
+  it('serves the French landing at /fr and keeps the address in step with the language', async () => {
+    const user = userEvent.setup();
+    window.history.replaceState({}, '', '/fr');
+    render(<ProductApp />);
+
+    expect(screen.getByRole('heading', { level: 1, name: fr.landingTitle })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: /English/u }));
+    expect(window.location.pathname).toBe('/');
+    await user.click(screen.getByRole('button', { name: /Français/u }));
+    expect(window.location.pathname).toBe('/fr');
+  });
+
   it('names each language in its own language, not in the current one', () => {
     render(<ProductApp initialLocale="fr" />);
 
