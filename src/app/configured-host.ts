@@ -27,6 +27,7 @@ import { createLiveHost, type LiveIdentity } from './live-host';
 import type { PairingService } from './pairing-client';
 import { FirebasePairingService } from './pairing-firebase';
 import { enablePush } from './push';
+import { markHomePickedForThePerson } from './home-pick';
 import { completeEmailLinkSignIn, completeRedirectSignIn, signInWith } from './sign-in';
 
 interface ComponentReleaseConfiguration {
@@ -152,8 +153,41 @@ export function resolveRequestedHome(
   });
 }
 
+const LAST_HOME_KEY = 'miakapp.last-home';
+
+/** The home this browser opened last, so `/app` alone reopens it. */
+function lastOpenedHome(): string | undefined {
+  try {
+    const id = window.localStorage.getItem(LAST_HOME_KEY);
+    return id !== null && CONTROL_PLANE_HOME_ID.test(id) ? id : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function rememberOpenedHome(id: string): void {
+  try {
+    window.localStorage.setItem(LAST_HOME_KEY, id);
+  } catch {
+    // Private mode: the next visit simply starts from the default.
+  }
+}
+
+function homeWasRequested(): boolean {
+  return new URLSearchParams(window.location.search).get('home') !== null;
+}
+
+
 function readLiveConfiguration(): LiveConfiguration | undefined {
   if (import.meta.env.VITE_MIAKAPP_MODE !== 'live') return undefined;
+  const last = lastOpenedHome();
+  const picked = window.location.pathname === '/app' && !homeWasRequested();
+  markHomePickedForThePerson(picked);
+  if (picked && last !== undefined) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('home', last);
+    window.history.replaceState(window.history.state, '', url.href);
+  }
   // Every home is opened the same way: its published interface, read through
   // the resident route, inside the house shell. No home is special-cased here;
   // what a resident may see or do is decided by that home's coordinator.
@@ -169,6 +203,7 @@ function readLiveConfiguration(): LiveConfiguration | undefined {
     // Identity is not resolved here. Do not read ownerless browser preferences.
     [],
   );
+  if (homeWasRequested()) rememberOpenedHome(home.id);
   const exchangeEndpoint = required('VITE_MIAKAPP_CONTROL_PLANE_EXCHANGE_ENDPOINT');
   if (!exchangeEndpoint.startsWith('https://')) {
     throw new Error('The Miakapp control-plane exchange endpoint must use HTTPS');

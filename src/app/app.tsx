@@ -13,6 +13,7 @@ import {
   type HouseConsentStore,
 } from './house-consent';
 import { createHouseFavoritesStore, type HouseFavoritesStore } from './house-favorites';
+import { homeWasPickedForThePerson } from './home-pick';
 import { HouseShell, type HouseStage, type MountHouseApp } from './house-shell';
 import { createHouseSnapshotStore, markOpen, type HouseSnapshotStore } from './house-snapshot';
 import type { HomeSummary, TrustedHost } from './host';
@@ -270,6 +271,14 @@ export function App({
   );
   const { account, ownedHomes } = useAccount(snapshot.authenticated ? pairing : undefined);
   const [sandboxOrigin] = useState<string | undefined>(() => readSandboxOrigin?.());
+
+  // The app picked this home (last opened, or the build default) and it does
+  // not open: go to one of the person's own homes instead of a dead end.
+  useEffect(() => {
+    if (!homeWasPickedForThePerson() || componentRelease.status !== 'unavailable') return;
+    const own = ownedHomes?.find((home) => home.id !== homeId);
+    if (own !== undefined && !ownedHomes?.some((home) => home.id === homeId)) switchHome(own.id);
+  }, [componentRelease.status, ownedHomes, homeId, switchHome]);
 
   useEffect(() => {
     if (providedHost !== undefined) return undefined;
