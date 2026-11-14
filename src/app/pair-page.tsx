@@ -330,6 +330,16 @@ function PairFlow({
     return () => window.clearInterval(timer);
   }, [issued, now]);
 
+  const deleteSelected = (home: PairingHome): void => {
+    if (!window.confirm(t('pairDeleteConfirm').replace('{home}', home.name))) return;
+    run(async () => {
+      await service.deleteHome(home.id);
+      setSelected(null);
+      setStep('home');
+      reloadHomes();
+    });
+  };
+
   const reloadHomes = (): void => {
     setHomes({ status: 'loading' });
     setHomesAttempt((attempt) => attempt + 1);
@@ -577,6 +587,9 @@ function PairFlow({
               <button className="text-button" onClick={() => { resetPending(); setStep('home'); }} type="button">{t('pairBack')}</button>
             </div>
             <KeyList key={selected.id} home={selected} locale={locale} onFailure={fail} service={service} t={t} />
+            <button className="text-button pair-delete-home" disabled={busy} onClick={() => deleteSelected(selected)} type="button">
+              {t('pairDeleteHome')}
+            </button>
           </div>
         ) : null}
 
@@ -633,6 +646,9 @@ function PairFlow({
               </>
             )}
             <KeyList key={selected.id} home={selected} locale={locale} onFailure={fail} service={service} t={t} />
+            <button className="text-button pair-delete-home" disabled={busy} onClick={() => deleteSelected(selected)} type="button">
+              {t('pairDeleteHome')}
+            </button>
           </div>
         ) : null}
       </section>

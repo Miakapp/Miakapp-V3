@@ -91,6 +91,8 @@ export interface PairingService {
   /** Active keys only: a revoked key is history, not access. */
   listKeys(homeId: string): Promise<readonly PairingHomeKey[]>;
   revokeKey(homeId: string, keyId: string): Promise<void>;
+  /** Deletes the home and every key, code and notification grant it has. */
+  deleteHome(homeId: string): Promise<void>;
   dispose(): void;
 }
 
@@ -103,7 +105,7 @@ export interface PairingApiOptions {
 
 export type PairingApi = Pick<
   PairingService,
-  'listHomes' | 'createHome' | 'issueCode' | 'listKeys' | 'revokeKey'
+  'listHomes' | 'createHome' | 'issueCode' | 'listKeys' | 'revokeKey' | 'deleteHome'
 >;
 
 export const HOME_ID_PATTERN = /^[a-z][a-z0-9-]{1,61}[a-z0-9]$/;
@@ -255,6 +257,10 @@ export function createPairingApi(options: PairingApiOptions): PairingApi {
         'DELETE',
         `/v1/homes/${encodeURIComponent(homeId)}/home-keys/${encodeURIComponent(keyId)}`,
       );
+    },
+
+    async deleteHome(homeId: string) {
+      await call('DELETE', `/v1/homes/${encodeURIComponent(homeId)}`);
     },
   });
 }
