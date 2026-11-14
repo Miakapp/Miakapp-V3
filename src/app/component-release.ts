@@ -24,7 +24,7 @@ const POINTER_STATE_SCHEMA = 'miakapp.component-pointer-state/1';
  * shows the home without one rather than an error.
  */
 export class NoPublishedRelease extends Error {
-  constructor(readonly homeName?: string) {
+  constructor(readonly homeName?: string, readonly viewerIsOwner = false) {
     super('the home has published no interface');
     this.name = 'NoPublishedRelease';
   }
@@ -42,6 +42,7 @@ export class HomeInterfaceRead {
   constructor(
     readonly pointer: unknown,
     readonly homeName: string,
+    readonly viewerIsOwner = false,
   ) {}
 }
 
@@ -63,9 +64,11 @@ export function unwrapPointerState(value: unknown): unknown {
   if (record.schema === POINTER_STATE_SCHEMA && hasExactKeys(record, ['generation', 'pointer', 'schema'])) {
     return record.pointer;
   }
-  if (record.schema === HOME_INTERFACE_SCHEMA && hasExactKeys(record, HOME_INTERFACE_KEYS)
+  const base = { ...record };
+  delete base.viewer_is_owner;
+  if (record.schema === HOME_INTERFACE_SCHEMA && hasExactKeys(base, HOME_INTERFACE_KEYS)
     && typeof record.name === 'string' && record.name.length > 0 && record.name.length <= 128) {
-    return new HomeInterfaceRead(record.pointer, record.name);
+    return new HomeInterfaceRead(record.pointer, record.name, record.viewer_is_owner === true);
   }
   return value;
 }
@@ -108,6 +111,8 @@ export interface ActivatedRelease {
   readonly fellBack: boolean;
   /** The home's public directory name, when the read carried it. */
   readonly homeName?: string;
+  /** The signed-in person owns this home: they need no first-visit agreement. */
+  readonly viewerIsOwner?: boolean;
 }
 
 export interface ComponentReleaseCoordinator {
@@ -202,9 +207,10 @@ export function createComponentReleaseCoordinator(
       const ledgerInstance = releaseLedger();
       const read = await options.readPointer(signal);
       const homeName = read instanceof HomeInterfaceRead ? read.homeName : undefined;
-      const named = homeName === undefined ? {} : { homeName };
+      const viewerIsOwner = read instanceof HomeInterfaceRead && read.viewerIsOwner;
+      const named = { ...(homeName === undefined ? {} : { homeName }), ...(viewerIsOwner ? { viewerIsOwner } : {}) };
       const pointer = read instanceof HomeInterfaceRead ? read.pointer : read;
-      if (pointer === null) throw new NoPublishedRelease(homeName);
+      if (pointer === null) throw new NoPublishedRelease(homeName, viewerIsOwner);
       const accepted = await ledgerInstance.accept(pointer, quarantinedDigests);
       const candidate = accepted.highest_accepted;
 

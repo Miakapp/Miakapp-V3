@@ -1066,7 +1066,7 @@ async function routeRequest(
     .exec(request.path);
   if (homeInterfaceMatch !== null && request.method === 'GET') {
     const id = pathHomeId(homeInterfaceMatch[1] as string);
-    await destinationPrincipals(request, dependencies);
+    const { owner } = await destinationPrincipals(request, dependencies);
     requireEmptyBody(request);
     const live = await dependencies.componentStore.readHomeInterface(id);
     response.set('Cache-Control', 'no-store');
@@ -1077,6 +1077,8 @@ async function routeRequest(
       home_url: homeUrl(dependencies.config, id),
       generation: live.generation,
       pointer: live.pointer,
+      // Read from the home record this route already loads: no extra lookup.
+      viewer_is_owner: live.ownerUid === owner.userId,
     });
     return;
   }

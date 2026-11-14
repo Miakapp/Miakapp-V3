@@ -89,7 +89,7 @@ describe('App', () => {
     });
     render(<App createComponentRelease={() => ({ activate })} />);
 
-    expect(await screen.findByRole('heading', { name: 'Preview home’s interface is unavailable' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Preview home can’t be opened right now' })).toBeVisible();
     // The Miakapp controls stay usable around the failure.
     expect(screen.getByRole('button', { name: 'Me' })).toBeEnabled();
     await user.click(screen.getByRole('button', { name: 'Restart' }));

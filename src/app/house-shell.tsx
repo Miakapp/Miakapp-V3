@@ -23,6 +23,7 @@ import type { FavoriteHome, HouseFavoritesStore } from './house-favorites';
 import {
   failureKey,
   houseTranslator,
+  type HouseCopyKey,
   type HouseTranslate,
 } from './house-shell-copy';
 import { platformGrantCeiling } from './grant-ceiling';
@@ -530,6 +531,14 @@ function methodLabel(method: string, t: HouseTranslate): string {
   return method;
 }
 
+const PUSH_ERRORS: Readonly<Record<string, HouseCopyKey>> = {
+  unsupported: 'pushFailed',
+  denied: 'pushDenied',
+  no_test_push: 'pushNoTestPush',
+  limit_exceeded: 'pushTooMany',
+  rate_limited: 'pushTooMany',
+};
+
 function PushSettings({ enablePush, t }: {
   readonly enablePush: () => Promise<void>;
   readonly t: HouseTranslate;
@@ -554,7 +563,7 @@ function PushSettings({ enablePush, t }: {
         {t(status === 'pending' ? 'pushEnabling' : 'pushEnable')}
       </button>
     )}
-    {status === 'failed' ? <p role="alert">{t('pushFailed')} ({detail})</p> : null}
+    {status === 'failed' ? <p role="alert">{t(PUSH_ERRORS[detail] ?? 'pushFailed')}</p> : null}
   </section>;
 }
 

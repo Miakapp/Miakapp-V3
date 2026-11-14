@@ -81,7 +81,7 @@ type ComponentReleaseState =
   }
   | { readonly status: 'unavailable' }
   /** The home answered, and has published no interface of its own. */
-  | { readonly status: 'none'; readonly homeName?: string };
+  | { readonly status: 'none'; readonly homeName?: string; readonly viewerIsOwner?: boolean };
 
 const NO_COMPONENT_RELEASE: ComponentReleaseState = Object.freeze({ status: 'absent' });
 const ACTIVATING_RELEASE: ComponentReleaseState = Object.freeze({ status: 'activating' });
@@ -129,7 +129,11 @@ function useComponentRelease(
         setOutcome({
           request,
           state: error instanceof NoPublishedRelease
-            ? { status: 'none', ...(error.homeName === undefined ? {} : { homeName: error.homeName }) }
+            ? {
+              status: 'none',
+              ...(error.homeName === undefined ? {} : { homeName: error.homeName }),
+              ...(error.viewerIsOwner ? { viewerIsOwner: true } : {}),
+            }
             : { status: 'unavailable' },
         });
       },
@@ -153,9 +157,13 @@ function selectHouseStage(
   needsSignIn: boolean,
   release: ComponentReleaseState,
 ): HouseStage {
-  if (consent === undefined) return declined ? { kind: 'declined' } : { kind: 'consent' };
+  // Signed in first: the home's answer says whether this person owns it, and an
+  // owner never sees the first-visit agreement, on any device.
   if (needsSignIn) return { kind: 'signin' };
   if (release.status === 'activating' || release.status === 'absent') return { kind: 'loading' };
+  const owner = (release.status === 'active' && release.activated.viewerIsOwner === true)
+    || (release.status === 'none' && release.viewerIsOwner === true);
+  if (consent === undefined && !owner) return declined ? { kind: 'declined' } : { kind: 'consent' };
   if (release.status === 'unavailable') return { kind: 'unavailable' };
   if (release.status === 'none') return { kind: 'empty' };
   if (release.activated.pointer.abi === APP_ABI) return { kind: 'app', release: release.activated };
@@ -197,7 +205,7 @@ export function App({
   const needsSignIn = snapshot.signInAvailable && !snapshot.authenticated;
   const componentRelease = useComponentRelease(
     coordinator,
-    consent !== undefined && !needsSignIn,
+    !needsSignIn,
     attempt,
     snapshot.authorizationEpoch ?? 0,
   );
