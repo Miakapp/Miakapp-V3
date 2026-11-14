@@ -20,6 +20,7 @@ import './content.css';
 import { SiteFooter } from '../content/site-chrome';
 import { PairPage } from './pair-page';
 import type { PairingService } from './pairing-client';
+import { isInstalledApp } from './sign-in';
 import { SignInChoices } from './sign-in-choices';
 
 type ProductRoute = 'landing' | 'login' | 'new-home' | 'pair' | 'console';
@@ -366,7 +367,13 @@ export function ProductApp({
   const [pairing] = useState<PairingService | undefined>(() => createPairingService?.());
   const snapshot = useSyncExternalStore(host.subscribe, host.getSnapshot, host.getSnapshot);
   const [route, setRoute] = useState<ProductRoute>(
-    () => initialRoute ?? routeFromPath(window.location.pathname),
+    () => {
+      if (initialRoute !== undefined) return initialRoute;
+      const fromPath = routeFromPath(window.location.pathname);
+      // Opened from the Home Screen, Miakapp is an app: it starts at the homes,
+      // not at the marketing page.
+      return fromPath === 'landing' && isInstalledApp() ? 'console' : fromPath;
+    },
   );
   const [copyState, setCopyState] = useState<CopyState>('idle');
   const [locale, setLocale] = useState<Locale>(() => (
