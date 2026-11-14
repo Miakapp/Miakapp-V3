@@ -12,7 +12,7 @@ import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
-const ORIGIN = 'https://miakapp.com';
+const ORIGIN = 'https://www.miakapp.com';
 const OG_LOCALE = { en: 'en_US', fr: 'fr_FR' };
 const dist = resolve(process.argv[2] ?? 'dist');
 const ssr = await import(pathToFileURL(resolve(process.argv[3] ?? 'dist-ssr/prerender.js')).href);
