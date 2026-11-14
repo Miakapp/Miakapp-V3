@@ -60,6 +60,7 @@ const FR = {
   declinedReopen: 'Ouvrir quand même',
   declinedOther: 'Vos autres maisons',
 
+  languageSection: 'Langue',
   pushSection: 'Notifications',
   pushEnable: 'Activer les notifications sur cet appareil',
   pushEnabling: 'Activation…',
@@ -148,6 +149,7 @@ const EN: Record<HouseCopyKey, string> = {
   declinedReopen: 'Open it anyway',
   declinedOther: 'Your other homes',
 
+  languageSection: 'Language',
   pushSection: 'Notifications',
   pushEnable: 'Turn on notifications on this device',
   pushEnabling: 'Turning on…',
