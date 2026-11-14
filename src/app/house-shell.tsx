@@ -1,7 +1,7 @@
 // The trusted shell around a home's own interface.
 //
-// Miakapp owns the tab bar at the bottom of the screen and the sheet it opens;
-// the home owns everything in the stage above. The bar is rendered by this
+// Miakapp owns the tab bar floating at the bottom of the screen and the profile
+// page it opens; the home owns everything in the stage beneath. The bar is rendered by this
 // document, outside the house frame, in every state — before consent, after a
 // refusal, while loading, after a crash — so going from the home to the
 // person's own profile (their homes, their account) is always one tap or one
@@ -33,7 +33,7 @@ import type {
   HouseCallOptions,
   TrustedHost,
 } from './host';
-import { BarIcon, CloseIcon, HomeIcon, SettingsIcon, StarIcon } from './icons';
+import { BarIcon, HomeIcon, StarIcon } from './icons';
 import type { Locale } from './copy';
 import type { PairingAccount } from './pairing-client';
 import { SignInChoices } from './sign-in-choices';
@@ -81,7 +81,7 @@ export interface HouseShellProps {
 }
 
 // ---------------------------------------------------------------------------
-// Locale and theme: the shell's own, never the home's.
+// Locale: the shell's own, never the home's.
 
 function readLocale(): Locale {
   return document.documentElement.lang.toLowerCase().startsWith('fr') ? 'fr' : 'en';
@@ -96,31 +96,6 @@ function subscribeLocale(listener: () => void): () => void {
 /** Follows the page language the product shell sets on `<html lang>`. */
 function useShellLocale(): Locale {
   return useSyncExternalStore(subscribeLocale, readLocale, readLocale);
-}
-
-const THEME_KEY = 'miakapp.house-theme';
-const THEMES: readonly AppTheme[] = ['system', 'light', 'dark'];
-
-function readTheme(): AppTheme {
-  try {
-    const value = safeLocalStorage()?.getItem(THEME_KEY);
-    return THEMES.includes(value as AppTheme) ? value as AppTheme : 'system';
-  } catch {
-    return 'system';
-  }
-}
-
-function useHouseTheme(): [AppTheme, (theme: AppTheme) => void] {
-  const [theme, setTheme] = useState<AppTheme>(readTheme);
-  const change = useCallback((next: AppTheme) => {
-    setTheme(next);
-    try {
-      safeLocalStorage()?.setItem(THEME_KEY, next);
-    } catch {
-      // The preference still applies for this page.
-    }
-  }, []);
-  return [theme, change];
 }
 
 // ---------------------------------------------------------------------------
@@ -157,40 +132,21 @@ function useBarButtons(homeId: string): [readonly AppBarButton[], (buttons: read
 
 type Panel = 'profile' | undefined;
 
-/**
- * Closes the open panel on Escape, on a press outside it, and when focus leaves
- * this document — which is what happens when the person taps into the home's
- * frame. Focus returns to the control that opened it.
- */
-function usePanelDismissal(
+/** Closes the profile page on Escape and moves focus into it when it opens. */
+function useProfileDismissal(
   panel: Panel,
   close: () => void,
-  panelRef: React.RefObject<HTMLDivElement | null>,
-  triggers: readonly React.RefObject<HTMLButtonElement | null>[],
+  panelRef: React.RefObject<HTMLElement | null>,
 ): void {
   useEffect(() => {
     if (panel === undefined) return undefined;
     const onKey = (event: KeyboardEvent): void => {
       if (event.key === 'Escape') close();
     };
-    const onPointer = (event: PointerEvent): void => {
-      const target = event.target as Node | null;
-      if (target === null) return;
-      if (panelRef.current?.contains(target)) return;
-      if (triggers.some((trigger) => trigger.current?.contains(target))) return;
-      close();
-    };
-    const onBlur = (): void => close();
     document.addEventListener('keydown', onKey);
-    document.addEventListener('pointerdown', onPointer);
-    window.addEventListener('blur', onBlur);
-    panelRef.current?.querySelector<HTMLElement>('button, [href]')?.focus();
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.removeEventListener('pointerdown', onPointer);
-      window.removeEventListener('blur', onBlur);
-    };
-  }, [panel, close, panelRef, triggers]);
+    panelRef.current?.focus();
+    return () => document.removeEventListener('keydown', onKey);
+  }, [panel, close, panelRef]);
 }
 
 function HomeAvatar({ home, size = 'md' }: { readonly home: Pick<HomeSummary, 'name' | 'accent'>; readonly size?: 'md' | 'lg' }): React.JSX.Element {
@@ -612,14 +568,14 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
   } = props;
   const locale = useShellLocale();
   const t = useCallback<HouseTranslate>((key, values) => houseTranslator(locale)(key, values), [locale]);
-  const [theme, setTheme] = useHouseTheme();
+  // The home follows the device; Miakapp offers no appearance setting of its own.
+  const theme: AppTheme = 'system';
   const [panel, setPanel] = useState<Panel>(undefined);
   const favoriteList = useSyncExternalStore(favorites.subscribe, favorites.list, favorites.list);
   const [restartKey, setRestartKey] = useState(0);
   const homeButton = useRef<HTMLButtonElement | null>(null);
   const profileButton = useRef<HTMLButtonElement | null>(null);
-  const panelRef = useRef<HTMLDivElement | null>(null);
-  const [triggers] = useState(() => [homeButton, profileButton] as const);
+  const panelRef = useRef<HTMLElement | null>(null);
   const panelId = useId();
   const [barButtons, setBarButtons] = useBarButtons(home.id);
   const [selected, setSelected] = useState<string | null>(
@@ -646,7 +602,7 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
       return undefined;
     });
   }, []);
-  usePanelDismissal(panel, close, panelRef, triggers);
+  useProfileDismissal(panel, close, panelRef);
 
   const focusShell = useCallback(() => {
     homeButton.current?.focus();
@@ -666,88 +622,6 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
 
   return (
     <div className="house-shell" data-stage={stage.kind}>
-      {panel === undefined ? null : <div aria-hidden="true" className="house-scrim" />}
-      {panel === undefined ? null : (
-        <div
-          aria-label={t('profileTitle')}
-          className="house-panel"
-          id={panelId}
-          ref={panelRef}
-          role="dialog"
-        >
-          <header className="house-panel__head">
-            <h2>{t('profileTitle')}</h2>
-            <button aria-label={t('close')} className="house-icon-button house-icon-button--quiet" onClick={close} type="button">
-              <CloseIcon />
-            </button>
-          </header>
-          <div className="house-settings">
-            {props.signOut === undefined ? null : (
-              <AccountSettings account={props.account} signOut={props.signOut} t={t} />
-            )}
-            <section className="house-settings__section">
-              <h3>{t('homesTitle')}</h3>
-              <HomesList
-                current={home}
-                homes={listed}
-                onAddFavorite={addFavorite}
-                onRemoveFavorite={removeFavorite}
-                onSwitch={onSwitchHome}
-                t={t}
-              />
-              {listed.length < 2 ? <p className="house-panel__hint">{t('homesEmpty')}</p> : null}
-            </section>
-            {props.enablePush === undefined ? null : <PushSettings enablePush={props.enablePush} t={t} />}
-            <fieldset className="house-segmented">
-              <legend>{t('themeLabel')}</legend>
-              {THEMES.map((option) => (
-                <label className={theme === option ? 'is-active' : undefined} key={option}>
-                  <input
-                    checked={theme === option}
-                    name="house-theme"
-                    onChange={() => setTheme(option)}
-                    type="radio"
-                    value={option}
-                  />
-                  {option === 'system' ? t('themeSystem') : option === 'light' ? t('themeLight') : t('themeDark')}
-                </label>
-              ))}
-            </fieldset>
-            {consent === undefined && stage.kind !== 'app' ? null : <section className="house-settings__section">
-              <h3>{t('consentSection')}</h3>
-              {consentDate === undefined ? null : <p>{t('consentGrantedOn', { date: consentDate })}</p>}
-              <div className="house-settings__actions">
-                {stage.kind === 'app' ? (
-                  <button
-                    className="house-button house-button--ghost"
-                    onClick={() => {
-                      setRestartKey((key) => key + 1);
-                      close();
-                    }}
-                    type="button"
-                  >
-                    {t('reload')}
-                  </button>
-                ) : null}
-                {consent === undefined ? null : (
-                  <button
-                    className="house-button house-button--danger"
-                    onClick={() => {
-                      setPanel(undefined);
-                      props.onRevokeConsent();
-                    }}
-                    type="button"
-                  >
-                    {t('consentRevoke')}
-                  </button>
-                )}
-              </div>
-            </section>}
-            <p className="house-panel__hint">{t('shortcutHint')}</p>
-          </div>
-        </div>
-      )}
-
       <main className="house-stage">
         {stage.kind === 'consent' ? (
           <ConsentStage home={home} onAccept={props.onAcceptConsent} onDecline={props.onDeclineConsent} t={t} />
@@ -844,6 +718,77 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
         )}
       </main>
 
+      {panel === undefined ? null : (
+        <section
+          aria-label={t('profileTitle')}
+          className="house-profile"
+          id={panelId}
+          ref={panelRef}
+          tabIndex={-1}
+        >
+          <div className="house-profile__inner">
+            <h1 className="house-profile__title">{t('profileTitle')}</h1>
+            <div className="house-settings">
+              {props.signOut === undefined ? null : (
+                <AccountSettings account={props.account} signOut={props.signOut} t={t} />
+              )}
+              <section className="house-settings__section">
+                <h3>{t('homesTitle')}</h3>
+                <HomesList
+                  current={home}
+                  homes={listed}
+                  onAddFavorite={addFavorite}
+                  onRemoveFavorite={removeFavorite}
+                  onSwitch={onSwitchHome}
+                  t={t}
+                />
+                {listed.length < 2 ? <p className="house-panel__hint">{t('homesEmpty')}</p> : null}
+              </section>
+              {props.enablePush === undefined ? null : <PushSettings enablePush={props.enablePush} t={t} />}
+              {consent === undefined && stage.kind !== 'app' && props.isOwner !== true ? null : (
+                <section className="house-settings__section">
+                  <h3>{t('consentSection')}</h3>
+                  {consentDate === undefined ? null : <p>{t('consentGrantedOn', { date: consentDate })}</p>}
+                  <div className="house-settings__actions">
+                    {stage.kind === 'app' ? (
+                      <button
+                        className="house-button house-button--ghost"
+                        onClick={() => {
+                          setRestartKey((key) => key + 1);
+                          close();
+                        }}
+                        type="button"
+                      >
+                        {t('reload')}
+                      </button>
+                    ) : null}
+                    {props.isOwner === true ? (
+                      <a className="house-button house-button--ghost" href={props.homeSettingsHref ?? '/pair'}
+                        rel="noopener" target="_blank">
+                        {t('homeSettings')}
+                      </a>
+                    ) : null}
+                    {consent === undefined ? null : (
+                      <button
+                        className="house-button house-button--danger"
+                        onClick={() => {
+                          setPanel(undefined);
+                          props.onRevokeConsent();
+                        }}
+                        type="button"
+                      >
+                        {t('consentRevoke')}
+                      </button>
+                    )}
+                  </div>
+                </section>
+              )}
+              <p className="house-panel__hint">{t('shortcutHint')}</p>
+            </div>
+          </div>
+        </section>
+      )}
+
       <div className="house-dock">
         {status === undefined ? null : (
           <span className={`house-bar__status house-bar__status--${connection}`} role="status">
@@ -882,17 +827,10 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
               ))}
             </span>
           )}
-          {props.isOwner === true ? (
-            <a className="house-bar__tab" href={props.homeSettingsHref ?? '/pair'}>
-              <SettingsIcon />
-              <span className="house-bar__label">{t('homeSettings')}</span>
-            </a>
-          ) : null}
           <button
             aria-controls={panel === 'profile' ? panelId : undefined}
             aria-current={panel === 'profile' ? 'page' : undefined}
             aria-expanded={panel === 'profile'}
-            aria-haspopup="dialog"
             className="house-bar__tab"
             onClick={openHomes}
             ref={profileButton}
