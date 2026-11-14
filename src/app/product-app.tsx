@@ -305,8 +305,19 @@ function NewHomePage({
           <p>{t('onboardingLede')}</p>
         </header>
         <section className="onboarding-grid">
-          <article className="onboarding-step onboarding-step--prompt">
+          <article className="onboarding-step onboarding-step--molted">
             <span className="onboarding-step__number">01</span>
+            <div>
+              <span className="recommended-pill">{t('onboardingRecommended')}</span>
+              <h2>{t('onboardingMoltedTitle')}</h2>
+              <p>{t('onboardingMoltedBody')}</p>
+              <a className="product-button product-button--dark" href={t('onboardingMoltedUrl')} rel="noreferrer" target="_blank">
+                {t('onboardingMoltedCta')} <span aria-hidden="true">↗</span>
+              </a>
+            </div>
+          </article>
+          <article className="onboarding-step onboarding-step--prompt">
+            <span className="onboarding-step__number">02</span>
             <div>
               <p className="product-kicker">{t('onboardingPromptKicker')}</p>
               <h2>{t('onboardingPromptTitle')}</h2>
@@ -317,17 +328,6 @@ function NewHomePage({
                 {copyState === 'copied' ? t('onboardingCopied') : t('onboardingCopy')}
               </button>
               {copyState === 'failed' ? <p role="alert">{t('onboardingCopyFailed')}</p> : null}
-            </div>
-          </article>
-          <article className="onboarding-step onboarding-step--molted">
-            <span className="onboarding-step__number">02</span>
-            <div>
-              <span className="recommended-pill">{t('onboardingRecommended')}</span>
-              <h2>{t('onboardingMoltedTitle')}</h2>
-              <p>{t('onboardingMoltedBody')}</p>
-              <a className="product-button product-button--dark" href={t('onboardingMoltedUrl')} rel="noreferrer" target="_blank">
-                {t('onboardingMoltedCta')} <span aria-hidden="true">↗</span>
-              </a>
             </div>
           </article>
         </section>

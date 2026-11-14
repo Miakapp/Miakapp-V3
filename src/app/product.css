@@ -696,7 +696,7 @@
 .onboarding-grid {
   margin-top: 48px;
   display: grid;
-  grid-template-columns: minmax(0, 1.22fr) minmax(320px, 0.78fr);
+  grid-template-columns: minmax(320px, 0.78fr) minmax(0, 1.22fr);
   gap: 16px;
 }
 
