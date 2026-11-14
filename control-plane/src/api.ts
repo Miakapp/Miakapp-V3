@@ -762,9 +762,13 @@ async function routeRequest(
       challengeId: challenge.challengeId,
       challengeSecret: challenge.challengeSecret,
     });
+    // The secret also travels in the response: a page that cannot read the
+    // pushed copy (iOS hands it over unreliably) still completes. The push
+    // above still has to reach FCM, so a token that does not exist fails here.
     sendJson(response, 202, {
       schema: 'miakapp.push-challenge/1',
       challenge_id: challenge.challengeId,
+      challenge_secret: challenge.challengeSecret,
       expires_at: challenge.expiresAt,
     });
     return;

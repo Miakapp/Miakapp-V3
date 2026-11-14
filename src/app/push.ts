@@ -91,7 +91,9 @@ export async function enablePush(setup: PushSetup, homeId: string): Promise<void
 
   const challenge = await call('POST', '/v1/push-destinations:challenge', { provider: 'fcm', fid });
   const challengeId = challenge.challenge_id as string;
-  const secret = await nextChallenge(challengeId);
+  const secret = typeof challenge.challenge_secret === 'string'
+    ? challenge.challenge_secret
+    : await nextChallenge(challengeId);
   const created = await call('POST', '/v1/push-destinations:complete', {}, {
     'Miakapp-Push-Proof': `${challengeId}.${secret}`,
   });
