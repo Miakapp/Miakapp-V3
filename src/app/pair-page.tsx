@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 import type { CopyKey, Locale } from './copy';
+import { SignInChoices } from './sign-in-choices';
 import { LockIcon } from './icons';
 import {
   HOME_ID_PATTERN,
@@ -432,9 +433,7 @@ function PairFlow({
           <div className="pair-section">
             <h2>{t('pairAccountTitle')}</h2>
             <p className="pair-muted">{t('pairAccountBody')}</p>
-            <button className="google-button" disabled={busy} onClick={() => run(service.signIn)} type="button">
-              <span aria-hidden="true">G</span> {t('pairAccountCta')}
-            </button>
+            <SignInChoices disabled={busy} locale={locale} signIn={service.signIn} />
           </div>
         ) : null}
 
@@ -444,7 +443,7 @@ function PairFlow({
             <button
               className="text-button"
               disabled={busy}
-              onClick={() => run(service.signIn)}
+              onClick={() => run(service.signOut)}
               type="button"
             >
               {t('pairSwitchAccount')}
