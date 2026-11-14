@@ -83,7 +83,7 @@ function record(
   return value as Readonly<Record<string, unknown>>;
 }
 
-function origin(value: unknown, environment: ProductionEnvironment): string {
+function origin(value: unknown): string {
   if (typeof value !== 'string'
     || value.length === 0
     || Buffer.byteLength(value, 'utf8') > 2_048
@@ -97,19 +97,11 @@ function origin(value: unknown, environment: ProductionEnvironment): string {
     return fail();
   }
   const exactOrigin = parsed.origin;
-  const stagingHost = parsed.hostname === 'staging.miakapp.com'
-    || parsed.hostname.endsWith('.staging.miakapp.com');
-  const stagingBrowserRelayOrigin = value === STAGING_BROWSER_RELAY_EDGE_PROFILE.allowedOrigin;
-  const productionHost = parsed.hostname === 'miakapp.com'
-    || parsed.hostname.endsWith('.miakapp.com');
   if (parsed.protocol !== 'https:'
     || value !== exactOrigin
     || parsed.username.length !== 0
     || parsed.password.length !== 0
-    || parsed.port.length !== 0
-    || (environment === 'staging'
-      ? !stagingHost && !stagingBrowserRelayOrigin
-      : !productionHost || stagingHost)) {
+    || parsed.port.length !== 0) {
     fail();
   }
   return exactOrigin;
@@ -126,17 +118,15 @@ function networkProfile(
   );
   if ((profile !== undefined) !== usesBrowserRelayOrigin
     || (profile !== undefined
-      && (security.environment !== 'staging'
-        || allowedOrigins.length !== 1
-        || allowedOrigins[0] !== profile.allowedOrigin))) {
+      && security.environment !== 'staging')) {
     fail();
   }
   return profile?.id ?? 'canonical';
 }
 
-function origins(value: unknown, environment: ProductionEnvironment): readonly string[] {
+function origins(value: unknown): readonly string[] {
   if (!Array.isArray(value) || value.length === 0 || value.length > MAXIMUM_ORIGINS) fail();
-  const parsed = value.map((entry) => origin(entry, environment));
+  const parsed = value.map((entry) => origin(entry));
   if (new Set(parsed).size !== parsed.length) fail();
   return Object.freeze(parsed);
 }
@@ -170,12 +160,12 @@ export function parseProductionRuntimeConfig(input: unknown): ProductionRuntimeC
   const componentBucket = candidate.component_bucket;
   if (typeof componentBucket !== 'string'
     || componentBucket !== COMPONENT_BUCKETS[security.environment]) fail();
-  const allowedOrigins = origins(candidate.allowed_origins, security.environment);
+  const allowedOrigins = origins(candidate.allowed_origins);
   // A resident link may only ever point at an origin the control plane already
   // trusts for browser calls; it is never inferred from the issuer.
   let homeAppOrigin: string | undefined;
   if (candidate.home_app_origin !== undefined) {
-    homeAppOrigin = origin(candidate.home_app_origin, security.environment);
+    homeAppOrigin = origin(candidate.home_app_origin);
     if (!allowedOrigins.includes(homeAppOrigin)) fail();
   }
   return Object.freeze({

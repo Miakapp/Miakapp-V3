@@ -28,7 +28,6 @@ export interface FirebasePairingOptions {
  */
 function signInMethodName(providerId: string): string {
   if (providerId === 'google.com') return 'google';
-  if (providerId === 'github.com') return 'github';
   if (providerId === 'password' || providerId === 'emailLink') return 'email';
   return providerId;
 }
@@ -79,7 +78,6 @@ export class FirebasePairingService implements PairingService {
   #currentMethod(): SignInMethod {
     const user = this.#auth.currentUser;
     const provider = user?.providerData[0]?.providerId;
-    if (provider === 'github.com') return { kind: 'github' };
     if (provider === 'password' || provider === 'emailLink') return { kind: 'email', email: user!.email! };
     return { kind: 'google' };
   }
