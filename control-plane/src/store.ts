@@ -896,10 +896,16 @@ export class ControlPlaneStore {
       relayUrl,
       scopes,
     );
-    transaction.update(keyRef, {
-      last_used_at: Timestamp.fromMillis(issuedAt * 1_000),
-      last_issuance_id: tokenId,
-    });
+    // "Last used" is shown to the owner; once an hour is precise enough and
+    // keeps token renewals (every few minutes per coordinator) write-free.
+    const lastUsed = record.data.last_used_at;
+    const lastUsedSeconds = lastUsed instanceof Timestamp ? lastUsed.seconds : 0;
+    if (issuedAt - lastUsedSeconds >= 3_600) {
+      transaction.update(keyRef, {
+        last_used_at: Timestamp.fromMillis(issuedAt * 1_000),
+        last_issuance_id: tokenId,
+      });
+    }
     return grant;
   }
 
