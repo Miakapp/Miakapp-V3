@@ -11,6 +11,8 @@ import type { HomeState } from './host';
 
 const SNAPSHOT_PREFIX = 'miakapp.house-snapshot.v1:';
 const LAST_ACCOUNT_KEY = 'miakapp.last-account.v1';
+/** A home's local coordinates and this account's local ticket (direct mode). */
+const DIRECT_PREFIX = 'miakapp.direct.v1:';
 /** A home whose state outgrows this is simply not kept: it opens the slow way. */
 const MAX_SNAPSHOT_BYTES = 512 * 1024;
 
@@ -40,11 +42,13 @@ export function readLastAccount(storage: Storage | undefined = safeLocalStorage(
 export function settleAccount(userId: string | null, storage: Storage | undefined = safeLocalStorage()): void {
   if (storage === undefined) return;
   try {
-    const keep = userId === null ? undefined : SNAPSHOT_PREFIX + encodeURIComponent(`resident:${userId}`);
+    const scope = userId === null ? undefined : encodeURIComponent(`resident:${userId}`);
     const stale: string[] = [];
     for (let index = 0; index < storage.length; index += 1) {
       const key = storage.key(index);
-      if (key !== null && key.startsWith(SNAPSHOT_PREFIX) && key !== keep) stale.push(key);
+      if (key === null) continue;
+      if (key.startsWith(SNAPSHOT_PREFIX) && key !== SNAPSHOT_PREFIX + scope) stale.push(key);
+      if (key.startsWith(DIRECT_PREFIX) && (scope === undefined || !key.startsWith(`${DIRECT_PREFIX}${scope}:`))) stale.push(key);
     }
     for (const key of stale) storage.removeItem(key);
     if (userId === null) storage.removeItem(LAST_ACCOUNT_KEY);
@@ -118,4 +122,40 @@ export function markOpen(name: string): void {
   } catch {
     // No Performance API: nothing to measure.
   }
+}
+
+export interface DirectStore {
+  load(): unknown;
+  save(value: unknown): void;
+}
+
+/**
+ * Where the client keeps how to reach a home's coordinator on the local
+ * network, and this account's local ticket for it. Same scope and same wipe
+ * as the snapshots: signing out or switching account removes it.
+ */
+export function createDirectStore(
+  userId: string,
+  homeId: string,
+  storage: Storage | undefined = safeLocalStorage(),
+): DirectStore {
+  const key = `${DIRECT_PREFIX}${encodeURIComponent(`resident:${userId}`)}:${encodeURIComponent(homeId)}`;
+  return {
+    load() {
+      try {
+        const raw = storage?.getItem(key);
+        return raw === null || raw === undefined ? undefined : JSON.parse(raw) as unknown;
+      } catch {
+        return undefined;
+      }
+    },
+    save(value) {
+      try {
+        if (value === undefined || value === null) storage?.removeItem(key);
+        else storage?.setItem(key, JSON.stringify(value));
+      } catch {
+        // Refused storage: the home is reached through the relay only.
+      }
+    },
+  };
 }

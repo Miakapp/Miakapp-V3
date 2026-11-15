@@ -35,6 +35,7 @@ export interface BrowserRelayCredentialProvider {
 interface BrowserClientOptions {
   readonly homeId: string;
   readonly credentialProvider: BrowserRelayCredentialProvider;
+  readonly direct?: { load(): unknown; save(value: unknown): void };
 }
 
 interface BrowserReadySession {
@@ -63,6 +64,7 @@ export interface BrowserStateSnapshot {
 
 export interface BrowserClient {
   readonly status: BrowserClientStatus;
+  readonly transport?: 'relay' | 'direct';
   readonly home: {
     snapshot(): unknown;
     subscribe(listener: (status: unknown) => void): () => void;
