@@ -36,7 +36,7 @@ export const GOOGLE_HOME_COMPARISON: Comparison = {
       tableTitle: 'Côte à côte',
       rows: [
         { criterion: 'Principe', them: 'Une application et un écosystème grand public, avec la voix au centre.', miakapp: 'Un socle minimal : votre agent écrit le code de la maison et de son interface.' },
-        { criterion: 'Appareils', them: 'Matter en local, appareils « Works with Google Home » via le cloud de leur fabricant [3][5].', miakapp: 'Ce que l’agent sait relier, y compris des appareils sans compatibilité officielle.' },
+        { criterion: 'Appareils', them: 'Matter en local, appareils « Works with Google Home » via le cloud de leur fabricant [3][5].', miakapp: 'Tout ce qui communique : l’agent écrit l’intégration qui manque, même sans compatibilité officielle.' },
         { criterion: 'Automatisations', them: 'Routines (déclencheurs, conditions, actions) et éditeur de scripts encore en préversion ; Google les déconseille pour la sécurité [6][7].', miakapp: 'Du code testé, avec des sources extérieures, de l’état et la logique qu’il faut.' },
         { criterion: 'Création par l’IA', them: '« Aide-moi à créer » avec Gemini, réservé à Premium et aux administrateurs adultes, disponible en français [8].', miakapp: 'L’agent écrit, publie et vérifie lui-même sur l’app réelle.' },
         { criterion: 'Interface', them: 'Favoris et Spaces dans l’application Google Home ; pas de tableau de bord personnalisé [11].', miakapp: 'Une application web sur mesure, différente pour chaque habitant si besoin.' },
@@ -50,7 +50,7 @@ export const GOOGLE_HOME_COMPARISON: Comparison = {
         'La simplicité : rien à installer chez soi au-delà des appareils et, pour Matter, d’un hub Google [3].',
         'La voix : Gemini pour la maison, en français [4].',
         'Le prix d’entrée : l’application et les routines de base sont gratuites [1].',
-        'L’écosystème : la plupart des appareils grand public sont compatibles, en Matter ou via le cloud de leur fabricant [3][5].',
+        'Le branchement immédiat : la plupart des appareils grand public s’ajoutent en quelques touches, en Matter ou via le cloud de leur fabricant [3][5].',
       ],
       miakappDifferentTitle: 'Là où Miakapp part d’une autre idée',
       miakappDifferent: [
@@ -81,7 +81,7 @@ export const GOOGLE_HOME_COMPARISON: Comparison = {
       tableTitle: 'Side by side',
       rows: [
         { criterion: 'Approach', them: 'A mainstream app and ecosystem, built around voice.', miakapp: 'A minimal foundation: your agent writes the code of the home and its interface.' },
-        { criterion: 'Devices', them: 'Matter locally, “Works with Google Home” devices through their maker’s cloud [3][5].', miakapp: 'Whatever the agent can connect, including devices with no official support.' },
+        { criterion: 'Devices', them: 'Matter locally, “Works with Google Home” devices through their maker’s cloud [3][5].', miakapp: 'Anything that communicates: the agent writes the missing integration, even with no official support.' },
         { criterion: 'Automations', them: 'Routines (starters, conditions, actions) and a script editor still in preview; Google advises against them for safety [6][7].', miakapp: 'Tested code, with outside sources, state and whatever logic it takes.' },
         { criterion: 'AI creation', them: '“Help me create” with Gemini, for Premium and adult admins only [8].', miakapp: 'The agent writes, publishes and checks the result in the real app itself.' },
         { criterion: 'Interface', them: 'Favorites and Spaces in the Google Home app; no custom dashboard [11].', miakapp: 'A custom web app, different for each person if needed.' },
@@ -95,7 +95,7 @@ export const GOOGLE_HOME_COMPARISON: Comparison = {
         'Simplicity: nothing to install at home beyond the devices and, for Matter, a Google hub [3].',
         'Voice: Gemini for Home [4].',
         'Entry price: the app and basic routines are free [1].',
-        'Ecosystem: most consumer devices are compatible, through Matter or their maker’s cloud [3][5].',
+        'Instant setup: most consumer devices are added in a few taps, through Matter or their maker’s cloud [3][5].',
       ],
       miakappDifferentTitle: 'Where Miakapp starts from a different idea',
       miakappDifferent: [
