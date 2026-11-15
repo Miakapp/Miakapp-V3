@@ -4,8 +4,8 @@
  *   notifications so it can prove this device receives pushes;
  * - a notification from a home's agent, shown as is.
  * It also retires the Miakapp V3 cache, and keeps the shell openable without
- * the internet: pages network first (cached copy when the network fails or
- * hangs), hashed assets cache first. With direct mode, a home then opens on the
+ * the internet: a page seen before opens from the cache at once and is
+ * refreshed in the background for the next opening; hashed assets cache first. With direct mode, a home then opens on the
  * local network with no cloud at all.
  */
 
@@ -75,20 +75,41 @@ function withTimeout(promise, ms) {
   });
 }
 
+/**
+ * Stores a fresh page, but only once the hashed assets it names are cached
+ * too: a page cached without its assets would not open offline.
+ */
+async function refresh(cache, request, url) {
+  const response = await fetch(request);
+  if (!response.ok || response.type !== 'basic') return response;
+  const html = await response.clone().text();
+  const assets = [...new Set(html.match(/\/assets\/[A-Za-z0-9._-]+/g) || [])];
+  const missing = [];
+  for (const path of assets) if (!(await cache.match(path))) missing.push(path);
+  await cache.addAll(missing);
+  await cache.put(url.pathname, response.clone());
+  return response;
+}
+
+/**
+ * A page this device has opened before is drawn at once from the cache, even
+ * when the network hangs; the fresh copy is fetched in the background and used
+ * at the next opening. A page never seen waits for the network (3 s at most if
+ * an older copy of the app can stand in).
+ */
 async function navigate(event, url) {
   const cache = await caches.open(SHELL_CACHE);
-  const network = fetch(event.request);
+  const cached = await cache.match(url.pathname);
+  const network = refresh(cache, event.request, url);
+  if (cached) {
+    event.waitUntil(network.catch(() => undefined));
+    return cached;
+  }
   try {
-    const response = await withTimeout(network, NAVIGATION_TIMEOUT_MS);
-    if (response.ok && response.type === 'basic') {
-      event.waitUntil(cache.put(url.pathname, response.clone()));
-    }
-    return response;
+    return await withTimeout(network, NAVIGATION_TIMEOUT_MS);
   } catch {
-    const cached = await cache.match(url.pathname)
-      || await cache.match('/app')
-      || await cache.match('/');
-    if (cached) return cached;
+    const fallback = await cache.match('/app') || await cache.match('/');
+    if (fallback) return fallback;
     return network;
   }
 }
