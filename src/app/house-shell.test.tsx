@@ -713,3 +713,25 @@ describe('trusted connection retry', () => {
     expect(reconnect).toHaveBeenCalledOnce();
   });
 });
+
+describe('house shell — a newcomer with no home', () => {
+  it('welcomes them with a way into a home, and shows nobody’s home', async () => {
+    const home = createPreviewHost().getSnapshot().activeHome;
+    const onSwitchHome = vi.fn();
+    render(<HouseShell
+      home={home} homes={[home]} connection="unavailable"
+      stage={{ kind: 'welcome' }} consent={undefined}
+      favorites={createHouseFavoritesStore(memoryStorage())}
+      sandboxOrigin={undefined} homeState={undefined} call={undefined}
+      onAcceptConsent={vi.fn()} onDeclineConsent={vi.fn()} onReopen={vi.fn()}
+      onRevokeConsent={vi.fn()} onRetry={vi.fn()} onSwitchHome={onSwitchHome}
+    />);
+    expect(screen.getByRole('heading', { name: 'Bienvenue sur Miakapp' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Créer la vôtre' })).toHaveAttribute('href', '/pair');
+    expect(screen.queryByText('Maison hors ligne')).not.toBeInTheDocument();
+    const field = screen.getAllByPlaceholderText('ma-maison ou miakapp.com/h/ma-maison')[0]!;
+    await userEvent.type(field, 'https://www.miakapp.com/h/ma-maison');
+    await userEvent.click(screen.getAllByRole('button', { name: 'Ouvrir' })[0]!);
+    expect(onSwitchHome).toHaveBeenCalledWith('ma-maison');
+  });
+});

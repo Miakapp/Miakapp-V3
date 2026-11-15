@@ -13,7 +13,7 @@ import {
   type HouseConsentStore,
 } from './house-consent';
 import { createHouseFavoritesStore, type HouseFavoritesStore } from './house-favorites';
-import { homeWasPickedForThePerson } from './home-pick';
+import { hasNoHomeYet, homeWasPickedForThePerson } from './home-pick';
 import { HouseShell, type HouseStage, type MountHouseApp } from './house-shell';
 import { createHouseSnapshotStore, markOpen, type HouseSnapshotStore } from './house-snapshot';
 import type { HomeSummary, TrustedHost } from './host';
@@ -306,9 +306,13 @@ export function App({
 
   // A build without a release coordinator (the offline preview) has no home
   // interface to open, so there is nothing to agree to either.
+  // Never opened a home and none asked for: a welcome, not the build default
+  // (an owner signed in is taken to their own home by the effect above).
   const houseStage: HouseStage = coordinator === undefined
     ? { kind: 'empty' }
-    : selectHouseStage(consent, declined, needsSignIn, componentRelease);
+    : hasNoHomeYet() && !(ownedHomes?.length)
+      ? { kind: 'welcome' }
+      : selectHouseStage(consent, declined, needsSignIn, componentRelease);
   const homeName = componentRelease.status === 'active'
     ? componentRelease.activated.homeName
     : componentRelease.status === 'none' ? componentRelease.homeName : undefined;
