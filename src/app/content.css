@@ -614,3 +614,48 @@ a.locale-switch__option {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Comparison table: three columns, the criterion as a row header. */
+.content-compare {
+  margin-top: 28px;
+  padding: 10px 26px;
+  border-radius: 26px;
+  overflow-x: auto;
+}
+
+.content-compare > * {
+  position: relative;
+  z-index: 1;
+}
+
+.content-compare .content-table {
+  min-width: 640px;
+  margin-top: 0;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.content-compare .content-table th,
+.content-compare .content-table td {
+  padding: 14px 16px 14px 0;
+  text-align: left;
+  white-space: normal;
+}
+
+.content-compare .content-table tbody th {
+  width: 22%;
+  font-weight: 750;
+}
+
+.content-compare .content-table td {
+  width: 39%;
+  color: var(--lumiere-muted);
+}
+
+.content-compare .content-table td:last-child {
+  color: var(--lumiere-ink);
+}
+
+.content-compare .content-table tbody tr:last-child > * {
+  border-bottom: 0;
+}

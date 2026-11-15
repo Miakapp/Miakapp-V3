@@ -79,7 +79,7 @@ function checkedMonth(month: string, locale: Locale): string {
 }
 
 /** Turns the [n] citations of a paragraph into links to the source list. */
-function Cited({ text }: { readonly text: string }): React.JSX.Element {
+export function Cited({ text }: { readonly text: string }): React.JSX.Element {
   const parts = text.split(/(\[\d+\])/);
   return (
     <>
