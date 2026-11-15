@@ -831,9 +831,14 @@ async function routeRequest(
       ? await dependencies.pushStore.activeGrantIds(principal)
       : [input.grantId];
     let delivered = 0;
+    // Turning notifications on again on the same phone registers it again: one
+    // notification per device token, not per grant.
+    const reached = new Set<string>();
     for (const grantId of grantIds) {
       await ticket.consume([{ budget: 'push.send.grant', subject: grantId }]);
       const destination = await dependencies.pushStore.authorizePush(principal, grantId);
+      if (reached.has(destination.fid)) continue;
+      reached.add(destination.fid);
       await ticket.consume([
         { budget: 'push.send.destination', subject: destination.destinationId },
       ]);
