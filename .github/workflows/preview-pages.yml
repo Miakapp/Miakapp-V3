@@ -41,7 +41,7 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Validate and build the preview
         env:
-          PUBLIC_BASE_PATH: /Miakapp-V3/
+          PUBLIC_BASE_PATH: /Miakapp/
         run: |
           bun run check:web
           test -f dist/index.html
