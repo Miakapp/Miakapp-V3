@@ -9,7 +9,8 @@
 import type { Locale } from '../app/copy';
 
 export type GuideId = 'guide-velux' | 'guide-toshiba-ac' | 'guide-somfy-rts';
-export type ContentPageId = 'guides' | 'how-it-works' | 'ideas' | GuideId;
+export type CompareId = 'compare-home-assistant' | 'compare-jeedom' | 'compare-homey' | 'compare-google-home';
+export type ContentPageId = 'guides' | 'how-it-works' | 'ideas' | GuideId | CompareId;
 
 export interface ContentPageMeta {
   readonly id: ContentPageId;
@@ -17,8 +18,8 @@ export interface ContentPageMeta {
   /** Shown in <title>, Open Graph and the footer; the page's own h1 may say more. */
   readonly title: Readonly<Record<Locale, string>>;
   readonly description: Readonly<Record<Locale, string>>;
-  /** Device guides are listed on the hub; plain pages in the footer. */
-  readonly kind: 'page' | 'guide';
+  /** Guides and comparisons are listed on the hub; plain pages in the footer. */
+  readonly kind: 'page' | 'guide' | 'compare';
   /** Not published yet: left out of the build, the sitemap and every link
    *  unless drafts are previewed. A guide is published once Mathieu approved it. */
   readonly draft?: boolean;
@@ -84,6 +85,50 @@ export const CONTENT_PAGES: readonly ContentPageMeta[] = [
       fr: 'Commander des volets et stores Somfy RTS sans box Somfy : un ESP32 et un module radio enregistrés comme une télécommande de plus.',
     },
     kind: 'guide',
+  },
+  {
+    id: 'compare-home-assistant',
+    path: { en: '/compare/home-assistant', fr: '/fr/comparatif/home-assistant' },
+    title: { en: 'Miakapp vs Home Assistant', fr: 'Miakapp ou Home Assistant' },
+    description: {
+      en: 'An honest comparison of Miakapp and Home Assistant: what Home Assistant does better, where Miakapp differs, and how to use both.',
+      fr: 'Comparatif honnête entre Miakapp et Home Assistant : ce que Home Assistant fait mieux, où Miakapp diffère, et comment utiliser les deux.',
+    },
+    kind: 'compare',
+    draft: true,
+  },
+  {
+    id: 'compare-jeedom',
+    path: { en: '/compare/jeedom', fr: '/fr/comparatif/jeedom' },
+    title: { en: 'Miakapp vs Jeedom', fr: 'Miakapp ou Jeedom' },
+    description: {
+      en: 'An honest comparison of Miakapp and Jeedom: plugins and scenarios against a home written by an agent, and how to use both.',
+      fr: 'Comparatif honnête entre Miakapp et Jeedom : plugins et scénarios face à une maison écrite par un agent, et comment utiliser les deux.',
+    },
+    kind: 'compare',
+    draft: true,
+  },
+  {
+    id: 'compare-homey',
+    path: { en: '/compare/homey', fr: '/fr/comparatif/homey' },
+    title: { en: 'Miakapp vs Homey', fr: 'Miakapp ou Homey' },
+    description: {
+      en: 'An honest comparison of Miakapp and Homey: an all-in-one box against a foundation an agent builds on, with prices.',
+      fr: 'Comparatif honnête entre Miakapp et Homey : une box tout-en-un face à un socle sur lequel un agent construit, prix compris.',
+    },
+    kind: 'compare',
+    draft: true,
+  },
+  {
+    id: 'compare-google-home',
+    path: { en: '/compare/google-home', fr: '/fr/comparatif/google-home' },
+    title: { en: 'Miakapp vs Google Home', fr: 'Miakapp ou Google Home' },
+    description: {
+      en: 'An honest comparison of Miakapp and Google Home: simple routines and voice against custom logic, rights and interface.',
+      fr: 'Comparatif honnête entre Miakapp et Google Home : routines simples et voix face à une logique, des droits et une interface sur mesure.',
+    },
+    kind: 'compare',
+    draft: true,
   },
 ];
 

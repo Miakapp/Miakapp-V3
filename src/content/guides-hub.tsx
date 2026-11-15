@@ -10,6 +10,7 @@ interface HubCopy {
   readonly nextTitle: string;
   readonly nextLede: string;
   readonly guidesTitle: string;
+  readonly compareTitle: string;
   readonly soon: string;
 }
 
@@ -20,8 +21,9 @@ const COPY: Record<Locale, HubCopy> = {
     lede: 'Miakapp est un socle : un agent de code y construit votre maison connectée, son interface et ses automatisations. Ces pages expliquent ce que fait le socle, ce que vous pouvez demander à l’agent, et comment se passer des boîtiers propriétaires hors de prix.',
     read: 'Lire',
     guidesTitle: 'Guides par appareil',
+    compareTitle: 'Comparatifs',
     nextTitle: 'Bientôt',
-    nextLede: 'Des guides par appareil, partant d’un problème que beaucoup connaissent, avec le matériel ouvert nécessaire, un ordre de prix et des sources vérifiées. Puis des comparatifs honnêtes avec les autres plateformes.',
+    nextLede: 'D’autres guides par appareil et des comparatifs honnêtes, toujours sourcés. Puis des histoires vraies de maisons construites avec Miakapp.',
     soon: 'Bientôt',
   },
   en: {
@@ -30,8 +32,9 @@ const COPY: Record<Locale, HubCopy> = {
     lede: 'Miakapp is a foundation: a coding agent builds your smart home on it, its interface and its automations. These pages explain what the foundation does, what you can ask the agent, and how to do without overpriced proprietary hubs.',
     read: 'Read',
     guidesTitle: 'Device guides',
+    compareTitle: 'Comparisons',
     nextTitle: 'Coming soon',
-    nextLede: 'Device guides that start from a problem many people know, with the open hardware it takes, a price range and checked sources. Then honest comparisons with other platforms.',
+    nextLede: 'More device guides and honest comparisons, always sourced. Then true stories of homes built with Miakapp.',
     soon: 'Soon',
   },
 };
@@ -50,7 +53,8 @@ export function GuidesHubPage({ locale }: ContentPageProps): React.JSX.Element {
   const copy = COPY[locale];
   const published = publishedPages();
   const guides = published.filter((page) => page.kind === 'guide');
-  const upcoming = CONTENT_PAGES.filter((page) => page.kind === 'guide' && !published.includes(page));
+  const comparisons = published.filter((page) => page.kind === 'compare');
+  const upcoming = CONTENT_PAGES.filter((page) => page.kind !== 'page' && !published.includes(page));
   return (
     <ContentShell id="guides" locale={locale}>
       <header className="content-hero">
@@ -72,6 +76,15 @@ export function GuidesHubPage({ locale }: ContentPageProps): React.JSX.Element {
           <h2>{copy.guidesTitle}</h2>
           <div className="content-cards content-cards--links">
             {guides.map((page) => <LinkCard key={page.id} locale={locale} page={page} read={copy.read} />)}
+          </div>
+        </section>
+      ) : null}
+
+      {comparisons.length > 0 ? (
+        <section className="content-section">
+          <h2>{copy.compareTitle}</h2>
+          <div className="content-cards content-cards--links">
+            {comparisons.map((page) => <LinkCard key={page.id} locale={locale} page={page} read={copy.read} />)}
           </div>
         </section>
       ) : null}
