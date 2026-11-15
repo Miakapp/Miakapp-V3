@@ -66,6 +66,9 @@ function connectionFrom(status: BrowserClientStatus): HomeConnectionStatus {
   return 'unavailable';
 }
 
+/** Hidden this long, a ready connection is still replaced on return: it may be a zombie. */
+const WAKE_AFTER_HIDDEN_MS = 10_000;
+
 class LiveTrustedHost implements TrustedHost {
   readonly #listeners = new Set<() => void>();
   readonly #identity: LiveIdentity;
@@ -84,6 +87,7 @@ class LiveTrustedHost implements TrustedHost {
   #authorizationEpoch = 0;
   #signInStatus: 'idle' | 'pending' | 'failed' = 'idle';
   #status: BrowserClientStatus = 'idle';
+  readonly #removeWakeListeners: () => void;
   #stateStale = false;
   /**
    * The home state as the relay reported it. The home's own interface is told
@@ -136,6 +140,7 @@ class LiveTrustedHost implements TrustedHost {
     };
     this.#createClient = dependencies.createClient ?? createBrowserClient;
     this.#snapshot = this.#buildSnapshot();
+    this.#removeWakeListeners = this.#listenForWake();
     this.#removeIdentityListener = this.#identity.subscribe(() => {
       const userId = this.#identity.getUserId();
       if (this.#disposed || userId === this.#userId) return;
@@ -188,6 +193,43 @@ class LiveTrustedHost implements TrustedHost {
       this.#publish();
     })();
   };
+
+  /**
+   * A phone coming back from sleep. Its socket may be dead without knowing it
+   * (closed while frozen, or a zombie the next ping would only notice in ~40 s),
+   * and the client may be sleeping out a long backoff: start a fresh connection
+   * now. The last values stay on screen, marked old, until it answers.
+   */
+  #listenForWake(): () => void {
+    if (typeof document === 'undefined' || typeof window === 'undefined') return () => undefined;
+    let hiddenAt = document.visibilityState === 'hidden' ? Date.now() : undefined;
+    const wake = (force: boolean): void => {
+      if (this.#disposed || !this.#signedIn || this.#client === undefined) return;
+      if (!force && this.#status === 'ready') return;
+      ++this.#authorizationEpoch;
+      void this.#disconnect();
+      void this.#connect();
+    };
+    const onVisibility = (): void => {
+      if (document.visibilityState === 'hidden') {
+        hiddenAt = Date.now();
+        return;
+      }
+      const away = hiddenAt === undefined ? 0 : Date.now() - hiddenAt;
+      hiddenAt = undefined;
+      wake(away >= WAKE_AFTER_HIDDEN_MS);
+    };
+    const onPageShow = (event: PageTransitionEvent): void => { if (event.persisted) wake(true); };
+    const onOnline = (): void => wake(false);
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pageshow', onPageShow);
+    window.addEventListener('online', onOnline);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pageshow', onPageShow);
+      window.removeEventListener('online', onOnline);
+    };
+  }
 
   readonly reconnect = (): void => {
     if (this.#disposed || !this.#signedIn || connectionFrom(this.#status) !== 'unavailable') return;
@@ -246,6 +288,7 @@ class LiveTrustedHost implements TrustedHost {
   readonly dispose = (): void => {
     if (this.#disposed) return;
     this.#disposed = true;
+    this.#removeWakeListeners();
     this.#connectionGeneration += 1;
     this.#removeIdentityListener();
     this.#flushSnapshot();
