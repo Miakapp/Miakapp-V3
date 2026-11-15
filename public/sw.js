@@ -3,8 +3,15 @@
  * - a device challenge (data only), forwarded to the page that is enabling
  *   notifications so it can prove this device receives pushes;
  * - a notification from a home's agent, shown as is.
- * It also retires the Miakapp V3 cache.
+ * It also retires the Miakapp V3 cache, and keeps the shell openable without
+ * the internet: pages network first (cached copy when the network fails or
+ * hangs), hashed assets cache first. With direct mode, a home then opens on the
+ * local network with no cloud at all.
  */
+
+const SHELL_CACHE = 'miakapp-shell-v1';
+const NAVIGATION_TIMEOUT_MS = 3000;
+const MAX_ASSETS = 80;
 self.addEventListener('install', (event) => {
   event.waitUntil(self.skipWaiting());
 });
@@ -59,4 +66,60 @@ self.addEventListener('notificationclick', (event) => {
   const home = event.notification.data && event.notification.data.home;
   const url = home ? `/h/${encodeURIComponent(home)}?from=push` : '/';
   event.waitUntil(clients.openWindow(url));
+});
+
+function withTimeout(promise, ms) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('timeout')), ms);
+    promise.then((value) => { clearTimeout(timer); resolve(value); }, (error) => { clearTimeout(timer); reject(error); });
+  });
+}
+
+async function navigate(event, url) {
+  const cache = await caches.open(SHELL_CACHE);
+  const network = fetch(event.request);
+  try {
+    const response = await withTimeout(network, NAVIGATION_TIMEOUT_MS);
+    if (response.ok && response.type === 'basic') {
+      event.waitUntil(cache.put(url.pathname, response.clone()));
+    }
+    return response;
+  } catch {
+    const cached = await cache.match(url.pathname)
+      || await cache.match('/app')
+      || await cache.match('/');
+    if (cached) return cached;
+    return network;
+  }
+}
+
+async function asset(event) {
+  const cache = await caches.open(SHELL_CACHE);
+  const cached = await cache.match(event.request);
+  if (cached) return cached;
+  const response = await fetch(event.request);
+  if (response.ok && response.type === 'basic') {
+    event.waitUntil((async () => {
+      await cache.put(event.request, response.clone());
+      const keys = await cache.keys();
+      const assets = keys.filter((request) => new URL(request.url).pathname.startsWith('/assets/'));
+      for (const old of assets.slice(0, Math.max(0, assets.length - MAX_ASSETS))) await cache.delete(old);
+    })());
+  }
+  return response;
+}
+
+self.addEventListener('fetch', (event) => {
+  const request = event.request;
+  if (request.method !== 'GET') return;
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin || url.pathname.startsWith('/__/')) return;
+  if (request.mode === 'navigate') {
+    event.respondWith(navigate(event, url));
+    return;
+  }
+  if (url.pathname.startsWith('/assets/') || /^\/(icons|brand)\//.test(url.pathname)
+    || url.pathname === '/manifest.webmanifest' || url.pathname === '/favicon.ico') {
+    event.respondWith(asset(event));
+  }
 });

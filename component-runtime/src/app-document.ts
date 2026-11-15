@@ -127,7 +127,8 @@ export async function buildAppDocument(input: AppDocumentInput): Promise<AppDocu
       { key: 'Referrer-Policy', value: 'no-referrer' },
       { key: 'X-Content-Type-Options', value: 'nosniff' },
       // Reused for five minutes, then revalidated: a repeat open skips the round trip.
-      { key: 'Cache-Control', value: 'max-age=300, stale-while-revalidate=86400' },
+      // Offline (direct mode), the last copy keeps serving for a month.
+      { key: 'Cache-Control', value: 'max-age=300, stale-while-revalidate=2592000' },
       { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
     ],
   };
