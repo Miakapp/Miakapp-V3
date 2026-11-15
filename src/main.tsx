@@ -22,6 +22,13 @@ if (window.matchMedia('(display-mode: standalone)').matches
 
 markOpen('boot');
 
+// The worker keeps the shell openable without the internet (and carries push).
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    void navigator.serviceWorker.register('/sw.js').catch(() => undefined);
+  }, { once: true });
+}
+
 // Older `/app?home=<id>` and `/app/<id>` links keep working and show `/h/<id>`.
 canonicalizeHomeAddress(window.location, window.history);
 
