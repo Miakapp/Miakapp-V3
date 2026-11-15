@@ -290,10 +290,18 @@ class LiveTrustedHost implements TrustedHost {
         // A session that has not synchronized yet knows less than the cache.
         const unsynchronized = snapshot.stale && snapshot.revision === 0
           && Object.keys(snapshot.values).length === 0;
+        // A coordinator out of reach (direct mode, no internet) keeps its last
+        // known values on screen, as during the relay's grace; the rest of the
+        // home stays live and usable.
+        const away = client.home.snapshot() as { coordinators?: readonly { status?: string }[] } | undefined;
+        const values = away?.coordinators?.some((entry) => entry.status === 'grace') === true
+          && this.#homeState !== undefined
+          ? { ...this.#homeState.values, ...snapshot.values }
+          : snapshot.values;
         this.#homeState = unsynchronized && this.#homeState !== undefined
           ? Object.freeze({ ...this.#homeState, stale: true })
           : Object.freeze({
-            values: snapshot.values,
+            values,
             revision: snapshot.revision,
             stale: snapshot.stale,
           });
