@@ -5,9 +5,10 @@ import {
   createConfiguredHost,
   createConfiguredPairingService,
   readConfiguredSandboxOrigin,
+  rememberOpenedHome,
 } from './app/configured-host';
 import { markOpen } from './app/house-snapshot';
-import { canonicalizeHomeAddress } from './app/home-url';
+import { canonicalizeHomeAddress, requestedHomeId } from './app/home-url';
 import { ProductApp } from './app/product-app';
 import './styles.css';
 
@@ -17,6 +18,11 @@ if (window.matchMedia('(display-mode: standalone)').matches
   && sessionStorage.getItem('miakapp.launched') === null) {
   sessionStorage.setItem('miakapp.launched', '1');
   const deepLink = /[?&](oobCode|from=push)/.test(window.location.search);
+  // Installed from a home's page: that home becomes the one `/` reopens. The
+  // installed app may not share the browser's storage (iOS), so without this
+  // its first launch lands on the default home instead.
+  const launchedHome = requestedHomeId(window.location.pathname, window.location.search);
+  if (launchedHome !== null && !deepLink) rememberOpenedHome(launchedHome);
   if (window.location.pathname !== '/' && !deepLink) window.location.replace('/');
 }
 

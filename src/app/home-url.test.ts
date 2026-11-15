@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { canonicalizeHomeAddress, homePath, isAppPath, requestedHomeId } from './home-url';
+import { canonicalizeHomeAddress, homeIdFromInput, homePath, isAppPath, requestedHomeId } from './home-url';
 
 describe('home addresses', () => {
   it('reads /app/<id>, /h/<id> and the legacy /app?home=<id>', () => {
@@ -27,5 +27,23 @@ describe('home addresses', () => {
     window.history.replaceState({}, '', '/app/colmon');
     canonicalizeHomeAddress(window.location, window.history);
     expect(window.location.pathname).toBe('/h/colmon');
+  });
+});
+
+describe('a home typed by hand', () => {
+  it('reads an id or any of its links', () => {
+    expect(homeIdFromInput('colmon')).toBe('colmon');
+    expect(homeIdFromInput('  Colmon ')).toBe('colmon');
+    expect(homeIdFromInput('miakapp.com/h/colmon')).toBe('colmon');
+    expect(homeIdFromInput('https://www.miakapp.com/h/colmon')).toBe('colmon');
+    expect(homeIdFromInput('https://www.miakapp.com/app/colmon')).toBe('colmon');
+    expect(homeIdFromInput('https://www.miakapp.com/app?home=colmon')).toBe('colmon');
+  });
+
+  it('refuses what names no home', () => {
+    expect(homeIdFromInput('')).toBeNull();
+    expect(homeIdFromInput('a')).toBeNull();
+    expect(homeIdFromInput('ma maison')).toBeNull();
+    expect(homeIdFromInput('https://www.miakapp.com/pair')).toBeNull();
   });
 });
