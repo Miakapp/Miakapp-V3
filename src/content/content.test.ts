@@ -23,10 +23,13 @@ describe('content pages', () => {
     }
   });
 
-  it('links every content page from the landing footer', () => {
+  it('links every page from the landing footer, and every guide from the hub', () => {
     for (const locale of LOCALES) {
-      const html = renderLanding(locale);
-      for (const page of contentPages()) expect(html).toContain(`href="${page.path[locale]}"`);
+      const landing = renderLanding(locale);
+      const hub = renderContent('guides', locale);
+      for (const page of contentPages()) {
+        expect(page.kind === 'page' ? landing : hub).toContain(`href="${page.path[locale]}"`);
+      }
     }
   });
 
