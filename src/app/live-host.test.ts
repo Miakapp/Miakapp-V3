@@ -163,6 +163,36 @@ describe('live trusted host', () => {
     expect(client.start).toHaveBeenCalledOnce();
   });
 
+  it('starts a fresh connection when the phone wakes, without waiting for a backoff', async () => {
+    const setVisibility = (state: 'hidden' | 'visible'): void => {
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state });
+      document.dispatchEvent(new Event('visibilitychange'));
+    };
+    const first = fakeClient(), second = fakeClient(), third = fakeClient();
+    const host = hostWith(fakeIdentity(true), [first, second, third]);
+    first.emitLifecycle({ previous: 'synchronizing', current: 'ready' });
+
+    // A short glance away keeps a ready connection.
+    setVisibility('hidden'); setVisibility('visible');
+    expect(second.start).not.toHaveBeenCalled();
+
+    // Back from sleep: the ready socket may be a zombie, so it is replaced.
+    const now = Date.now();
+    vi.spyOn(Date, 'now').mockReturnValue(now);
+    setVisibility('hidden');
+    vi.mocked(Date.now).mockReturnValue(now + 60_000);
+    setVisibility('visible');
+    expect(first.stop).toHaveBeenCalledOnce();
+    expect(second.start).toHaveBeenCalledOnce();
+
+    // Coming back online while reconnecting does not wait for the backoff either.
+    second.emitLifecycle({ previous: 'ready', current: 'reconnecting' });
+    window.dispatchEvent(new Event('online'));
+    expect(third.start).toHaveBeenCalledOnce();
+    vi.mocked(Date.now).mockRestore();
+    host.dispose();
+  });
+
   it('drops the old relay and private state on a direct account switch', async () => {
     const identity = fakeIdentity(true);
     const first = fakeClient();
