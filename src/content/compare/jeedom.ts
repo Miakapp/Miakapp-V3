@@ -37,7 +37,7 @@ export const JEEDOM_COMPARISON: Comparison = {
       rows: [
         { criterion: 'Principe', them: 'Une plateforme locale que vous configurez : plugins, scénarios, designs [1].', miakapp: 'Un socle minimal : votre agent écrit le code de la maison et de son interface.' },
         { criterion: 'Installation', them: 'Debian sur un serveur dédié ; Docker possible mais déconseillé ; ou une box Atlas ou Luna [4][5][7].', miakapp: 'Un Raspberry Pi ou un mini-PC qui fait tourner le coordinateur.' },
-        { criterion: 'Appareils', them: 'Des plugins du Market, gratuits ou payants : Z-Wave JS gratuit, Zigbee et EnOcean à 6 € [6].', miakapp: 'Ce que l’agent sait relier, y compris des appareils sans plugin.' },
+        { criterion: 'Appareils', them: 'Des plugins du Market, gratuits ou payants : Z-Wave JS gratuit, Zigbee et EnOcean à 6 € [6].', miakapp: 'Tout ce qui communique : l’agent écrit l’intégration qui manque, même sans plugin existant.' },
         { criterion: 'Automatisations', them: 'Un éditeur de scénarios graphique, avec un bloc de code en PHP [11].', miakapp: 'Du code TypeScript écrit et testé par l’agent.' },
         { criterion: 'Interface', them: 'Tableau de bord automatique et designs entièrement libres, longs à construire [12].', miakapp: 'Une application web sur mesure, écrite par l’agent, différente pour chaque habitant si besoin.' },
         { criterion: 'Droits des habitants', them: 'Utilisateurs limités avec des droits par équipement et par scénario [14].', miakapp: 'Des droits par habitant et par appareil, vérifiés par le coordinateur.' },
@@ -49,7 +49,7 @@ export const JEEDOM_COMPARISON: Comparison = {
       themBetter: [
         'Un produit français, avec une documentation et une communauté en français [1].',
         'Local et sans abonnement obligatoire [9].',
-        'Une couverture large, jusqu’aux protocoles professionnels, via le Market [6].',
+        'Des plugins prêts à l’emploi, jusqu’aux protocoles professionnels, via le Market [6].',
         'Des droits fins par équipement pour les utilisateurs limités, sans écrire de code [14].',
         'Pas besoin d’un agent ni d’un abonnement à une IA.',
       ],
@@ -82,7 +82,7 @@ export const JEEDOM_COMPARISON: Comparison = {
       rows: [
         { criterion: 'Approach', them: 'A local platform you configure: plugins, scenarios, designs [1].', miakapp: 'A minimal foundation: your agent writes the code of the home and its interface.' },
         { criterion: 'Installation', them: 'Debian on a dedicated server; Docker possible but not recommended; or an Atlas or Luna box [4][5][7].', miakapp: 'A Raspberry Pi or mini PC running the coordinator.' },
-        { criterion: 'Devices', them: 'Plugins from the Market, free or paid: Z-Wave JS free, Zigbee and EnOcean at €6 [6].', miakapp: 'Whatever the agent can connect, including devices with no plugin.' },
+        { criterion: 'Devices', them: 'Plugins from the Market, free or paid: Z-Wave JS free, Zigbee and EnOcean at €6 [6].', miakapp: 'Anything that communicates: the agent writes the missing integration, even with no existing plugin.' },
         { criterion: 'Automations', them: 'A graphical scenario editor, with a PHP code block [11].', miakapp: 'TypeScript code written and tested by the agent.' },
         { criterion: 'Interface', them: 'An automatic dashboard and fully free-form designs that take time to build [12].', miakapp: 'A custom web app written by the agent, different for each person if needed.' },
         { criterion: 'People’s rights', them: 'Limited users with rights per device and per scenario [14].', miakapp: 'Rights per person and per device, enforced by the coordinator.' },
@@ -94,7 +94,7 @@ export const JEEDOM_COMPARISON: Comparison = {
       themBetter: [
         'A French product, with documentation and a community in French [1].',
         'Local, with no mandatory subscription [9].',
-        'Broad coverage, all the way to professional protocols, through the Market [6].',
+        'Ready-made plugins, all the way to professional protocols, through the Market [6].',
         'Fine-grained per-device rights for limited users, with no code to write [14].',
         'No agent or AI subscription needed.',
       ],
