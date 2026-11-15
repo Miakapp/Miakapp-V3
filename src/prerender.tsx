@@ -9,8 +9,10 @@ import { GuidesHubPage } from './content/guides-hub';
 import { HowItWorksPage } from './content/how-it-works';
 import { IdeasPage } from './content/ideas';
 import { DeviceGuidePage, type DeviceGuide } from './content/device-guide';
+import { COMPARISONS } from './content/compare';
+import { ComparePage } from './content/compare-page';
 import { GUIDES } from './content/guides';
-import { publishedPages, type ContentPageId, type GuideId } from './content/site';
+import { publishedPages, type CompareId, type ContentPageId, type GuideId } from './content/site';
 
 export function renderLanding(locale: Locale): string {
   return renderToString(
@@ -29,7 +31,7 @@ export function landingCopy(locale: Locale): { readonly title: string; readonly 
 
 type PageRenderer = (props: { readonly locale: Locale }) => React.JSX.Element;
 
-const PAGE_RENDERERS: Record<Exclude<ContentPageId, GuideId>, PageRenderer> = {
+const PAGE_RENDERERS: Record<Exclude<ContentPageId, GuideId | CompareId>, PageRenderer> = {
   'guides': GuidesHubPage,
   'how-it-works': HowItWorksPage,
   'ideas': IdeasPage,
@@ -45,6 +47,9 @@ export function renderContent(id: ContentPageId, locale: Locale): string {
     const guide: DeviceGuide = GUIDES[id as GuideId];
     return renderToString(<DeviceGuidePage guide={guide} locale={locale} />);
   }
-  const Page = PAGE_RENDERERS[id as Exclude<ContentPageId, GuideId>];
+  if (id in COMPARISONS) {
+    return renderToString(<ComparePage comparison={COMPARISONS[id as CompareId]} locale={locale} />);
+  }
+  const Page = PAGE_RENDERERS[id as Exclude<ContentPageId, GuideId | CompareId>];
   return renderToString(<Page locale={locale} />);
 }

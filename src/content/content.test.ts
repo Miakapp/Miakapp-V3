@@ -38,7 +38,8 @@ describe('content pages', () => {
 describe('device guides', () => {
   it('cites only sources that exist, in both languages', async () => {
     const { GUIDES } = await import('./guides');
-    for (const guide of Object.values(GUIDES)) {
+    const { COMPARISONS } = await import('./compare');
+    for (const guide of [...Object.values(GUIDES), ...Object.values(COMPARISONS)]) {
       for (const locale of LOCALES) {
         const text = JSON.stringify(guide.copy[locale]);
         for (const [, n] of text.matchAll(/\[(\d+)\]/g)) {
