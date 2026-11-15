@@ -976,6 +976,30 @@ describe('control-plane API dependency fault matrix', () => {
     expect(createCalls).toBe(1);
   });
 
+  test('a phone registered several times on the home gets one notification', async () => {
+    const admission = new RecordingAdmission();
+    const sent: string[] = [];
+    const response = await request(dependencies({
+      admission,
+      pushStore: {
+        activeGrantIds: async () => ['grant-a', 'grant-b', 'grant-c'],
+        authorizePush: async (_principal: PushAccessPrincipal, grantId: string) => ({
+          destinationId: `destination-${grantId}`,
+          fid: grantId === 'grant-c' ? `${FID}-other` : FID,
+        }),
+      },
+      pushTransport: {
+        sendSemanticNotification: async (delivery: SemanticNotificationPushDelivery) => {
+          sent.push(delivery.fid);
+        },
+      },
+    }), jsonRequest('POST', '/v1/push', { title: 'Portail', body: 'Ouvert' }, { Authorization: PUSH_AUTHORIZATION }));
+
+    expect(response.status).toBe(202);
+    expect(parsed<{ readonly delivered: number }>(response).delivered).toBe(2);
+    expect(sent).toEqual([FID, `${FID}-other`]);
+  });
+
   test('keeps the success response when audit finish fails after send', async () => {
     const admission = new RecordingAdmission(null, dependencyFailure('admission.finish'));
     let authorizationCalls = 0;
