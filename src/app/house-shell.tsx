@@ -50,6 +50,7 @@ export type HouseStage =
   | { readonly kind: 'loading' }
   | { readonly kind: 'unavailable' }
   | { readonly kind: 'empty' }
+  | { readonly kind: 'welcome' }
   | { readonly kind: 'app'; readonly release: ActivatedRelease };
 
 export interface HouseShellProps {
@@ -696,9 +697,10 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
 
   const addFavorite = (): void => { favorites.add({ id: home.id, name: home.name, accent: home.accent }); };
   const removeFavorite = (homeId: string): void => { favorites.remove(homeId); };
-  const listed = listHomes(home, homes, favoriteList);
+  const listed = listHomes(home, homes, favoriteList)
+    .filter((listedHome) => stage.kind !== 'welcome' || listedHome.id !== home.id);
   // Before consent and identity, no home connection has been attempted.
-  const connectionObservable = !['consent', 'declined', 'signin'].includes(stage.kind);
+  const connectionObservable = !['consent', 'declined', 'signin', 'welcome'].includes(stage.kind);
   const status = connectionObservable ? connectionText(connection, t) : undefined;
   const openHomes = (): void => setPanel((open) => (open === 'profile' ? undefined : 'profile'));
 
@@ -711,6 +713,15 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
       <main className="house-stage">
         {stage.kind === 'consent' ? (
           <ConsentStage home={home} onAccept={props.onAcceptConsent} onDecline={props.onDeclineConsent} t={t} />
+        ) : stage.kind === 'welcome' ? (
+          <StagePanel>
+            <h1>{t('welcomeTitle')}</h1>
+            <p className="house-card__lede">{t('welcomeLede')}</p>
+            <OpenHomeForm onSwitch={onSwitchHome} t={t} />
+            <p className="house-panel__hint">
+              {t('welcomeCreate')} <a href="/pair">{t('welcomeCreateLink')}</a>
+            </p>
+          </StagePanel>
         ) : stage.kind === 'declined' ? (
           <StagePanel>
             <HomeAvatar home={home} size="lg" />
