@@ -27,7 +27,7 @@ import { createLiveHost, type LiveIdentity } from './live-host';
 import type { PairingService } from './pairing-client';
 import { FirebasePairingService } from './pairing-firebase';
 import { enablePush } from './push';
-import { markHomePickedForThePerson } from './home-pick';
+import { markHomePickedForThePerson, markNoHomeYet } from './home-pick';
 import { requestedHomeId } from './home-url';
 import { completeEmailLinkSignIn, completeRedirectSignIn, signInWith } from './sign-in';
 
@@ -196,6 +196,8 @@ function readLiveConfiguration(): LiveConfiguration | undefined {
   const last = lastOpenedHome();
   const picked = !homeWasRequested();
   markHomePickedForThePerson(picked);
+  // Nobody's home is shown to a newcomer: the build default only fills the slot.
+  markNoHomeYet(picked && last === undefined);
   // Every home is opened the same way: its published interface, read through
   // the resident route, inside the house shell. No home is special-cased here;
   // what a resident may see or do is decided by that home's coordinator.
