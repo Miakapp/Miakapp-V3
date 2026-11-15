@@ -112,4 +112,4 @@ export const APP_LINKS = {
   newHome: '/new-home',
 } as const;
 
-export const SOURCE_URL = 'https://github.com/Miakapp/Miakapp-V3';
+export const SOURCE_URL = 'https://github.com/Miakapp/Miakapp';
