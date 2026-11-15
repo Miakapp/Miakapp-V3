@@ -10,7 +10,7 @@ run in an isolated frame behind a consent screen and a permanent Miakapp bar; se
 It cannot reach the session, other homes or the Miakapp controls.
 
 The latest `main` preview is published at
-<https://miakapp.github.io/Miakapp-V3/>. It uses fictional local data and is safe
+<https://miakapp.github.io/Miakapp/>. It uses fictional local data and is safe
 to explore without an account or Home connection.
 
 ## Run the browser host

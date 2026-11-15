@@ -138,7 +138,7 @@ function French(): React.JSX.Element {
           <li><strong>Une machine allumée en permanence chez vous</strong> pour le coordinateur : un Raspberry Pi ou un mini-PC.</li>
           <li><strong>Un compte Miakapp</strong>, pour créer la maison et y inviter les habitants.</li>
         </ul>
-        <p>Le code de Miakapp est public : <a href={SOURCE_URL} rel="noopener">github.com/Miakapp/Miakapp-V3</a>.</p>
+        <p>Le code de Miakapp est public : <a href={SOURCE_URL} rel="noopener">github.com/Miakapp/Miakapp</a>.</p>
       </section>
 
       <section className="landing-closing content-closing">
@@ -275,7 +275,7 @@ function English(): React.JSX.Element {
           <li><strong>A machine that stays on at home</strong> for the coordinator: a Raspberry Pi or a mini PC.</li>
           <li><strong>A Miakapp account</strong>, to create the home and invite the people who live there.</li>
         </ul>
-        <p>Miakapp’s code is public: <a href={SOURCE_URL} rel="noopener">github.com/Miakapp/Miakapp-V3</a>.</p>
+        <p>Miakapp’s code is public: <a href={SOURCE_URL} rel="noopener">github.com/Miakapp/Miakapp</a>.</p>
       </section>
 
       <section className="landing-closing content-closing">
