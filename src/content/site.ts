@@ -64,7 +64,6 @@ export const CONTENT_PAGES: readonly ContentPageMeta[] = [
       fr: 'Piloter ses fenêtres de toit Velux INTEGRA directement par radio, sans le boîtier officiel : une carte à 25 € qui parle io-homecontrol, position réelle et capteur de pluie compris.',
     },
     kind: 'guide',
-    draft: true,
   },
   {
     id: 'guide-toshiba-ac',
@@ -75,7 +74,6 @@ export const CONTENT_PAGES: readonly ContentPageMeta[] = [
       fr: 'Piloter une clim Toshiba depuis votre téléphone sans l’adaptateur Wi-Fi officiel : infrarouge ou liaison directe avec l’unité, prix compris.',
     },
     kind: 'guide',
-    draft: true,
   },
   {
     id: 'guide-somfy-rts',
@@ -86,7 +84,6 @@ export const CONTENT_PAGES: readonly ContentPageMeta[] = [
       fr: 'Commander des volets et stores Somfy RTS sans box Somfy : un ESP32 et un module radio enregistrés comme une télécommande de plus.',
     },
     kind: 'guide',
-    draft: true,
   },
 ];
 
