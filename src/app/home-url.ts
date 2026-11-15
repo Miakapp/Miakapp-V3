@@ -40,3 +40,16 @@ export function canonicalizeHomeAddress(location: Location, history: History): v
   const query = params.toString();
   history.replaceState(history.state, '', `${homePath(id)}${query === '' ? '' : `?${query}`}${location.hash}`);
 }
+
+/** A home's id or link (`colmon`, `miakapp.com/h/colmon`), typed by hand, or null. */
+export function homeIdFromInput(raw: string): string | null {
+  const value = raw.trim().toLowerCase();
+  if (value === '') return null;
+  if (!value.includes('/')) return requestedHomeId(`/h/${value}`, '');
+  try {
+    const url = new URL(/^https?:\/\//u.test(value) ? value : `https://${value}`);
+    return requestedHomeId(url.pathname, url.search);
+  } catch {
+    return null;
+  }
+}

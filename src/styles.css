@@ -380,6 +380,35 @@ html:has(.house-shell) body {
   line-height: 1.45;
 }
 
+.house-open-home {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.house-open-home__row {
+  display: flex;
+  gap: 8px;
+}
+
+.house-open-home__row input {
+  flex: 1;
+  min-width: 0;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+}
+
+.house-open-home__error {
+  margin: 0 4px;
+  color: var(--danger, #e5484d);
+  font-size: 13px;
+}
+
 .house-homes {
   display: grid;
   gap: 4px;

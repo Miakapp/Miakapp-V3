@@ -176,7 +176,7 @@ function lastOpenedHome(): string | undefined {
   }
 }
 
-function rememberOpenedHome(id: string): void {
+export function rememberOpenedHome(id: string): void {
   try {
     window.localStorage.setItem(LAST_HOME_KEY, id);
   } catch {

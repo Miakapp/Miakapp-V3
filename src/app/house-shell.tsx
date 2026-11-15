@@ -34,6 +34,7 @@ import type {
   HouseCallOptions,
   TrustedHost,
 } from './host';
+import { homeIdFromInput } from './home-url';
 import { markOpen } from './house-snapshot';
 import { BarIcon, HomeIcon, StarIcon } from './icons';
 import { LOCALE_LABELS, writeStoredLocale, type Locale } from './copy';
@@ -258,6 +259,53 @@ function HomesList({
         );
       })}
     </ul>
+  );
+}
+
+function OpenHomeForm({
+  onSwitch,
+  t,
+}: {
+  readonly onSwitch: (homeId: string) => void;
+  readonly t: HouseTranslate;
+}): React.JSX.Element {
+  const [value, setValue] = useState('');
+  const [invalid, setInvalid] = useState(false);
+  const inputId = useId();
+  return (
+    <form
+      className="house-open-home"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const id = homeIdFromInput(value);
+        if (id === null) {
+          setInvalid(true);
+          return;
+        }
+        onSwitch(id);
+      }}
+    >
+      <label className="house-panel__hint" htmlFor={inputId}>{t('openHomeLabel')}</label>
+      <div className="house-open-home__row">
+        <input
+          aria-invalid={invalid ? 'true' : undefined}
+          autoCapitalize="none"
+          autoComplete="off"
+          autoCorrect="off"
+          enterKeyHint="go"
+          id={inputId}
+          onChange={(event) => {
+            setValue(event.target.value);
+            setInvalid(false);
+          }}
+          placeholder={t('openHomePlaceholder')}
+          spellCheck={false}
+          value={value}
+        />
+        <button className="house-button" disabled={value.trim() === ''} type="submit">{t('openHomeSubmit')}</button>
+      </div>
+      {invalid ? <p className="house-open-home__error" role="alert">{t('openHomeInvalid')}</p> : null}
+    </form>
   );
 }
 
@@ -781,6 +829,7 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
                   t={t}
                 />
                 {listed.length < 2 ? <p className="house-panel__hint">{t('homesEmpty')}</p> : null}
+                <OpenHomeForm onSwitch={onSwitchHome} t={t} />
               </section>
               <section className="house-settings__section">
                 <h3>{t('languageSection')}</h3>
