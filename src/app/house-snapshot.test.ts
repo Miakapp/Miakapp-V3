@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createHouseSnapshotStore, readLastAccount, settleAccount } from './house-snapshot';
+import { createDirectStore, createHouseSnapshotStore, readLastAccount, settleAccount } from './house-snapshot';
 import { createLiveHost, type LiveIdentity } from './live-host';
 import type { BrowserClient, BrowserStateSnapshot } from './miakapi-browser';
 
@@ -33,6 +33,22 @@ describe('house snapshots', () => {
     settleAccount(null, storage);
     expect(readLastAccount(storage)).toBeUndefined();
     expect(createHouseSnapshotStore('resident:a', storage).read('home-1')).toBeUndefined();
+  });
+
+  it('keeps direct coordinates per account and home, and wipes them like snapshots', () => {
+    const storage = memoryStorage();
+    createDirectStore('a', 'home-1', storage).save({ ticket: 't-a' });
+    createDirectStore('b', 'home-1', storage).save({ ticket: 't-b' });
+    expect(createDirectStore('a', 'home-1', storage).load()).toEqual({ ticket: 't-a' });
+    expect(createDirectStore('a', 'home-2', storage).load()).toBeUndefined();
+    settleAccount('a', storage);
+    expect(createDirectStore('a', 'home-1', storage).load()).toEqual({ ticket: 't-a' });
+    expect(createDirectStore('b', 'home-1', storage).load()).toBeUndefined();
+    createDirectStore('a', 'home-1', storage).save(undefined);
+    expect(createDirectStore('a', 'home-1', storage).load()).toBeUndefined();
+    createDirectStore('a', 'home-1', storage).save({ ticket: 't-a' });
+    settleAccount(null, storage);
+    expect(createDirectStore('a', 'home-1', storage).load()).toBeUndefined();
   });
 
   it("drops the previous account's snapshots on an account switch", () => {

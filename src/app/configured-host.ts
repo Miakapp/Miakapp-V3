@@ -22,7 +22,7 @@ import {
 import { createPreviewHost } from './preview-host';
 import type { FavoriteHome } from './house-favorites';
 import type { TrustedHost } from './host';
-import { createHouseSnapshotStore, readLastAccount, settleAccount } from './house-snapshot';
+import { createDirectStore, createHouseSnapshotStore, readLastAccount, settleAccount } from './house-snapshot';
 import { createLiveHost, type LiveIdentity } from './live-host';
 import type { PairingService } from './pairing-client';
 import { FirebasePairingService } from './pairing-firebase';
@@ -403,6 +403,7 @@ export function createConfiguredHost(): TrustedHost {
     }),
     identity,
     snapshots: (userId) => createHouseSnapshotStore(`resident:${userId}`),
+    directStores: (userId, homeId) => createDirectStore(userId, homeId),
   });
 }
 

@@ -18,7 +18,7 @@ import type {
   TrustedHost,
   TrustedHostSnapshot,
 } from './host';
-import { markOpen, staleStateFrom, type HouseSnapshotStore } from './house-snapshot';
+import { markOpen, staleStateFrom, type DirectStore, type HouseSnapshotStore } from './house-snapshot';
 import type { SignInMethod, SignInOutcome } from './sign-in';
 
 export interface LiveIdentity {
@@ -42,6 +42,8 @@ export interface LiveHostOptions {
   readonly identity: LiveIdentity;
   /** Where the last values each account saw are kept; absent, nothing is cached. */
   readonly snapshots?: (userId: string) => HouseSnapshotStore;
+  /** Per account and home: how to reach the home's coordinator on the local network. */
+  readonly directStores?: (userId: string, homeId: string) => DirectStore;
 }
 
 /** How often, at most, the live values are copied for the next visit. */
@@ -72,6 +74,7 @@ class LiveTrustedHost implements TrustedHost {
   readonly #createCredentialProvider: () => BrowserRelayCredentialProvider;
   readonly #removeIdentityListener: () => void;
   readonly #snapshots: LiveHostOptions['snapshots'];
+  readonly #directStores: LiveHostOptions['directStores'];
   #snapshotTimer: ReturnType<typeof setTimeout> | undefined;
 
   #client: BrowserClient | undefined;
@@ -98,6 +101,7 @@ class LiveTrustedHost implements TrustedHost {
     this.#userId = options.identity.getUserId();
     this.#signedIn = this.#userId !== null;
     this.#snapshots = options.snapshots;
+    this.#directStores = options.directStores;
     const createCredentialProvider = dependencies.createCredentialProvider
       ?? createControlPlaneBrowserRelayCredentialProvider;
     this.#createCredentialProvider = () => {
@@ -263,6 +267,9 @@ class LiveTrustedHost implements TrustedHost {
     const client = this.#createClient({
       homeId: this.#home.id,
       credentialProvider: this.#createCredentialProvider(),
+      ...(this.#userId === null || this.#directStores === undefined
+        ? {}
+        : { direct: this.#directStores(this.#userId, this.#home.id) }),
     });
     this.#client = client;
     this.#status = 'connecting';
@@ -271,7 +278,10 @@ class LiveTrustedHost implements TrustedHost {
       client.subscribe((event) => {
         if (this.#client !== client) return;
         this.#status = event.current;
-        if (event.current === 'ready') markOpen('relay-ready');
+        if (event.current === 'ready') {
+          markOpen('relay-ready');
+          if (client.transport === 'direct') markOpen('direct-ready');
+        }
         this.#publish();
       }),
       client.state.subscribe((snapshot) => {
