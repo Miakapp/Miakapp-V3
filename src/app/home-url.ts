@@ -1,54 +1,31 @@
-/**
- * A home's address in the web app: `/h/<id>` (miakapp.com/h/ma-maison). The
- * earlier `/app/<id>` is still read; `homePath` is the one Miakapp writes.
- * The legacy `/app?home=<id>` still opens and is rewritten to the new form.
- */
+/** A home's address in the web app: `/h/<id>` (www.miakapp.com/h/ma-maison). */
 const HOME_ID = /^[a-z][a-z0-9-]{1,61}[a-z0-9]$/u;
-const HOME_PATH = /^\/(?:app|h)\/([^/]+)\/?$/u;
+const HOME_PATH = /^\/h\/([^/]+)\/?$/u;
 
 export function homePath(homeId: string): string {
   return `/h/${encodeURIComponent(homeId)}`;
 }
 
 /** The home this address asks for, or null when it names none. */
-export function requestedHomeId(pathname: string, search: string): string | null {
+export function requestedHomeId(pathname: string): string | null {
   const match = HOME_PATH.exec(pathname);
-  const candidate = match?.[1] !== undefined
-    ? decodeURIComponent(match[1])
-    : pathname === '/app' ? new URLSearchParams(search).get('home') : null;
+  const candidate = match?.[1] === undefined ? null : decodeURIComponent(match[1]);
   return candidate !== null && HOME_ID.test(candidate) ? candidate : null;
 }
 
-/** Any address that opens the app itself rather than a product page. */
+/** Any address that opens the app itself rather than a product page (old `/app/…` links open it too). */
 export function isAppPath(pathname: string): boolean {
-  return pathname === '/app' || HOME_PATH.test(pathname);
-}
-
-/** Rewrites an older `/app?home=<id>` or `/app/<id>` address in place, keeping its other parameters. */
-export function canonicalizeHomeAddress(location: Location, history: History): void {
-  const pathId = /^\/app\/([^/]+)\/?$/u.exec(location.pathname)?.[1];
-  if (pathId !== undefined) {
-    const id = decodeURIComponent(pathId);
-    if (HOME_ID.test(id)) history.replaceState(history.state, '', `${homePath(id)}${location.search}${location.hash}`);
-    return;
-  }
-  if (location.pathname !== '/app') return;
-  const params = new URLSearchParams(location.search);
-  const id = params.get('home');
-  if (id === null || !HOME_ID.test(id)) return;
-  params.delete('home');
-  const query = params.toString();
-  history.replaceState(history.state, '', `${homePath(id)}${query === '' ? '' : `?${query}`}${location.hash}`);
+  return pathname === '/app' || pathname.startsWith('/app/') || HOME_PATH.test(pathname);
 }
 
 /** A home's id or link (`ma-maison`, `miakapp.com/h/ma-maison`), typed by hand, or null. */
 export function homeIdFromInput(raw: string): string | null {
   const value = raw.trim().toLowerCase();
   if (value === '') return null;
-  if (!value.includes('/')) return requestedHomeId(`/h/${value}`, '');
+  if (!value.includes('/')) return requestedHomeId(`/h/${value}`);
   try {
     const url = new URL(/^https?:\/\//u.test(value) ? value : `https://${value}`);
-    return requestedHomeId(url.pathname, url.search);
+    return requestedHomeId(url.pathname);
   } catch {
     return null;
   }
