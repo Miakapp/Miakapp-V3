@@ -26,6 +26,7 @@ import {
   validateComponentRequirements,
 } from './component-artifact.js';
 import { ComponentStore } from './component-store.js';
+import type { DocumentCache } from './document-cache.js';
 import { parseHomeKey, randomIdentifier } from './crypto.js';
 import { normalizePairingCode, pairingCodeLookup } from './pairing-code.js';
 import { ApiError, apiError } from './errors.js';
@@ -90,6 +91,21 @@ export interface ApiDependencies {
   readonly componentStore: ComponentStore;
   /** Defaults to a structured log line; deployments may route it elsewhere. */
   readonly runtimeDiagnostics?: RuntimeDiagnosticsSink;
+  /** Shared with the stores; cleared after every request that may write. */
+  readonly readCache?: DocumentCache;
+}
+
+/**
+ * Requests that never change a cached document. Everything else clears the
+ * read cache when it ends, whatever its outcome.
+ */
+function readOnlyRequest(request: Request): boolean {
+  if (request.method === 'GET' || request.method === 'HEAD' || request.method === 'OPTIONS') return true;
+  return request.method === 'POST' && (
+    request.path === '/v1/access-tokens:exchange'
+    || request.path === '/v1/user-relay-tokens:exchange'
+    || request.path === '/v1/runtime-diagnostics'
+  );
 }
 
 function setPrivateHeaders(response: Response): void {
@@ -1312,6 +1328,8 @@ export function createControlPlaneApp(dependencies: ApiDependencies): express.Ex
         }
       }
       if (!response.headersSent) sendError(response, requestId, responseError);
+    } finally {
+      if (!readOnlyRequest(request)) resolved.readCache?.clear();
     }
   });
   return app;
