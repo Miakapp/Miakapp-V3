@@ -9,6 +9,7 @@ import {
   type Transaction,
 } from 'firebase-admin/firestore';
 
+import { DocumentCache } from './document-cache.js';
 import { apiError, ApiError } from './errors.js';
 import {
   deriveHomeKeyVerifier,
@@ -291,6 +292,9 @@ export class ControlPlaneStore {
   readonly #firestore: Firestore;
   readonly #homeKeyGenerator: HomeKeyGenerator;
   readonly #pairingCodeGenerator: PairingCodeGenerator;
+  readonly #cache: DocumentCache;
+  /** When this process last wrote `last_used_at`, by key: cached records lag. */
+  readonly #lastTouched = new Map<string, number>();
 
   constructor(
     firestore: Firestore,
@@ -298,7 +302,9 @@ export class ControlPlaneStore {
     clock: Clock,
     homeKeyGenerator: HomeKeyGenerator = generateHomeKey,
     pairingCodeGenerator: PairingCodeGenerator = generatePairingCode,
+    options: Readonly<{ readonly cache?: DocumentCache }> = {},
   ) {
+    this.#cache = options.cache ?? DocumentCache.disabled();
     this.#firestore = firestore;
     this.#config = config;
     this.#clock = clock;
@@ -817,9 +823,9 @@ export class ControlPlaneStore {
     const issuedAt = Math.floor(this.#clock.now() / 1_000);
     const tokenId = randomIdentifier();
     const touch: { lastUsed?: () => Promise<unknown> } = {};
-    const grant = await this.#firestore.runTransaction((transaction) => (
-      this.#reserveGrant(transaction, homeKey, keyId, request, issuedAt, tokenId, touch)
-    ));
+    // Read-only: no transaction, so the cached records serve the renewals.
+    // Revocation and deletion go through this process, which clears the cache.
+    const grant = await this.#reserveGrant(homeKey, keyId, request, issuedAt, tokenId, touch);
     // Best effort, outside the transaction: a write refused (for instance by
     // an exhausted quota) must never refuse the token itself.
     void touch.lastUsed?.().catch(() => undefined);
@@ -835,7 +841,7 @@ export class ControlPlaneStore {
     beforeSigning: (grant: UserRelayAccessGrant) => Promise<void> = async () => undefined,
   ): Promise<UserRelayTokenExchange> {
     const issuedAt = Math.floor(this.#clock.now() / 1_000);
-    const snapshot = await this.#firestore.collection('controlHomes').doc(homeId).get();
+    const snapshot = await this.#cache.get(this.#firestore.collection('controlHomes').doc(homeId));
     const home = privateHomeRecord(snapshot);
     const grant: UserRelayAccessGrant = Object.freeze({
       subjectKind: 'firebase_user',
@@ -857,7 +863,6 @@ export class ControlPlaneStore {
   }
 
   async #reserveGrant(
-    transaction: Transaction,
     homeKey: string,
     keyId: string,
     request: ExchangeRequest,
@@ -866,15 +871,15 @@ export class ControlPlaneStore {
     touch: { lastUsed?: () => Promise<unknown> },
   ): Promise<HomeKeyAccessGrant> {
     const indexRef = this.#firestore.collection('homeKeyIndex').doc(keyId);
-    const indexSnapshot = await transaction.get(indexRef);
+    const indexSnapshot = await this.#cache.get(indexRef);
     if (!indexSnapshot.exists) throw apiError('invalid_home_key');
     const homeId = indexSnapshot.get('home_id');
     if (typeof homeId !== 'string' || !HOME_ID_PATTERN.test(homeId)) throw apiError('invalid_home_key');
     const homeRef = this.#firestore.collection('controlHomes').doc(homeId);
     const keyRef = homeRef.collection('homeKeys').doc(keyId);
     const [homeSnapshot, keySnapshot] = await Promise.all([
-      transaction.get(homeRef),
-      transaction.get(keyRef),
+      this.#cache.get(homeRef),
+      this.#cache.get(keyRef),
     ]);
     if (!homeSnapshot.exists || !keySnapshot.exists || indexSnapshot.get('status') !== 'active') {
       throw apiError('invalid_home_key');
@@ -904,8 +909,12 @@ export class ControlPlaneStore {
     // "Last used" is shown to the owner; once an hour is precise enough and
     // keeps token renewals (every few minutes per coordinator) write-free.
     const lastUsed = record.data.last_used_at;
-    const lastUsedSeconds = lastUsed instanceof Timestamp ? lastUsed.seconds : 0;
+    const lastUsedSeconds = Math.max(
+      lastUsed instanceof Timestamp ? lastUsed.seconds : 0,
+      this.#lastTouched.get(keyId) ?? 0,
+    );
     if (issuedAt - lastUsedSeconds >= 3_600) {
+      this.#lastTouched.set(keyId, issuedAt);
       touch.lastUsed = () => keyRef.update({
         last_used_at: Timestamp.fromMillis(issuedAt * 1_000),
         last_issuance_id: tokenId,

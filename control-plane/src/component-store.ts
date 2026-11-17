@@ -16,6 +16,7 @@ import {
 import { type ComponentObjectStorage } from './component-storage.js';
 import { apiError, ApiError } from './errors.js';
 import { randomIdentifier } from './crypto.js';
+import { DocumentCache } from './document-cache.js';
 import {
   isReleaseAbi,
   HOME_ID_PATTERN,
@@ -470,6 +471,7 @@ export class ComponentStore {
   readonly #artifactBaseUrl: string;
   readonly #clock: Clock;
   readonly #config: ComponentStoreConfig;
+  readonly #cache: DocumentCache;
   readonly #firestore: Firestore;
   readonly #identifierGenerator: ComponentIdentifierGenerator;
   readonly #secretGenerator: ComponentSecretGenerator;
@@ -483,7 +485,9 @@ export class ComponentStore {
     clock: Clock,
     identifierGenerator: ComponentIdentifierGenerator = randomIdentifier,
     secretGenerator: ComponentSecretGenerator = () => randomBytes(32).toString('base64url'),
+    options: Readonly<{ readonly cache?: DocumentCache }> = {},
   ) {
+    this.#cache = options.cache ?? DocumentCache.disabled();
     this.#firestore = firestore;
     this.#storage = storage;
     this.#config = config;
@@ -606,8 +610,8 @@ export class ComponentStore {
   async readPublishedArtifact(sha256: string): Promise<Uint8Array> {
     if (!canonicalBase64url(sha256, 32)) throw apiError('invalid_artifact');
     const publicUrl = this.#artifactUrl(sha256);
-    const publication = await this.#firestore.collection('componentArtifacts')
-      .doc(`${sha256}.js`).get();
+    const publication = await this.#cache.get(this.#firestore.collection('componentArtifacts')
+      .doc(`${sha256}.js`));
     if (!publication.exists) throw apiError('invalid_artifact');
     validateArtifactPublication(publication, sha256, publicUrl);
     const bytes = await this.#storage.readArtifact(sha256);
@@ -753,10 +757,12 @@ export class ComponentStore {
     readonly pointer: ComponentPointerRepresentation | null;
   }> {
     if (!HOME_ID_PATTERN.test(homeId)) throw apiError('invalid_request');
+    // Every open of the app reads these; activation, home changes and deletion
+    // go through this process and clear the cache.
     const [home, directory, pointerSnapshot] = await Promise.all([
-      this.#homeRef(homeId).get(),
-      this.#firestore.collection('homes').doc(homeId).get(),
-      this.#firestore.collection('components').doc(homeId).get(),
+      this.#cache.get(this.#homeRef(homeId)),
+      this.#cache.get(this.#firestore.collection('homes').doc(homeId)),
+      this.#cache.get(this.#firestore.collection('components').doc(homeId)),
     ]);
     if (!home.exists || !directory.exists) throw apiError('home_not_found');
     const name = directory.get('name');
