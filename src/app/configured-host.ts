@@ -139,7 +139,7 @@ export interface RequestedHome {
 }
 
 /**
- * Which home `/app/<id>` (or the legacy `/app?home=<id>`) asks for. The house shell's switcher navigates
+ * Which home `/h/<id>` asks for. The house shell's switcher navigates
  * here, so each home gets a fresh page: nothing of one home's session, state or
  * frame survives into another's. The id is only a request — the control plane
  * decides, per signed-in account, whether this home opens at all — and its name
@@ -147,11 +147,10 @@ export interface RequestedHome {
  */
 export function resolveRequestedHome(
   pathname: string,
-  search: string,
   fallback: RequestedHome,
   favorites: readonly FavoriteHome[],
 ): RequestedHome {
-  const requested = requestedHomeId(pathname, search);
+  const requested = requestedHomeId(pathname);
   if (requested === null || requested === fallback.id || !CONTROL_PLANE_HOME_ID.test(requested)) {
     return fallback;
   }
@@ -185,7 +184,7 @@ export function rememberOpenedHome(id: string): void {
 }
 
 function homeWasRequested(): boolean {
-  return requestedHomeId(window.location.pathname, window.location.search) !== null;
+  return requestedHomeId(window.location.pathname) !== null;
 }
 
 
@@ -203,7 +202,6 @@ function readLiveConfiguration(): LiveConfiguration | undefined {
   // what a resident may see or do is decided by that home's coordinator.
   const home = resolveRequestedHome(
     window.location.pathname,
-    window.location.search,
     last === undefined
       ? {
         id: required('VITE_MIAKAPP_HOME_ID'),
