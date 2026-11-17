@@ -413,3 +413,29 @@ describe('pairing-code redemption', () => {
     expect(response.text).not.toContain(HOME_KEY);
   });
 });
+
+describe('read cache invalidation', () => {
+  function counting() {
+    let clears = 0;
+    return { cache: { clear: () => { clears += 1; } }, clears: () => clears };
+  }
+
+  test('a read leaves the cache alone', async () => {
+    const spy = counting();
+    const deps = { ...dependencies(new FakeStore(), new RecordingAdmission()), readCache: spy.cache } as unknown as ApiDependencies;
+    const response = await call(deps, 'GET', '/v1/homes', { headers: OWNER });
+    expect(response.status).toBe(200);
+    expect(spy.clears()).toBe(0);
+  });
+
+  test('a mutation clears it, even when refused', async () => {
+    const spy = counting();
+    const deps = { ...dependencies(new FakeStore(), new RecordingAdmission()), readCache: spy.cache } as unknown as ApiDependencies;
+    const issued = await call(deps, 'POST', `/v1/homes/${HOME_ID}/pairing-codes`, { headers: OWNER, body: ISSUE_BODY });
+    expect(issued.status).toBe(201);
+    expect(spy.clears()).toBe(1);
+    const refused = await call(deps, 'POST', `/v1/homes/${HOME_ID}/pairing-codes`, { body: ISSUE_BODY });
+    expect(refused.status).toBe(401);
+    expect(spy.clears()).toBe(2);
+  });
+});

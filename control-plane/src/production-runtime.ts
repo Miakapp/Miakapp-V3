@@ -20,6 +20,7 @@ import {
   type ComponentStorageBucket,
 } from './component-storage.js';
 import { ComponentStore } from './component-store.js';
+import { DocumentCache } from './document-cache.js';
 import {
   initializeProductionSecurity,
   type KmsClient,
@@ -201,6 +202,11 @@ export async function createProductionControlPlane(
     readonly clock?: Clock;
     /** False: no Firestore admission budgets or audit ring (self-hosted default). */
     readonly recordAdmission?: boolean;
+    /**
+     * Lifetime of cached home, key and interface records (see DocumentCache).
+     * 0, the default, reads Firestore every time.
+     */
+    readonly readCacheTtlMs?: number;
   }> = {},
 ): Promise<ProductionControlPlane> {
   const runtime = atStage('runtime-config', () => parseProductionRuntimeConfig(input));
@@ -241,9 +247,20 @@ export async function createProductionControlPlane(
     const admission = new AdmissionController(firebase.firestore, config, clock, {
       recorded: options.recordAdmission ?? true,
     });
-    const store = new ControlPlaneStore(firebase.firestore, config, clock);
+    const readCache = new DocumentCache({ ttlMs: options.readCacheTtlMs ?? 0 });
+    const store = new ControlPlaneStore(firebase.firestore, config, clock, undefined, undefined, {
+      cache: readCache,
+    });
     const pushStore = new PushStore(firebase.firestore, config, clock);
-    const componentStore = new ComponentStore(firebase.firestore, componentStorage, config, clock);
+    const componentStore = new ComponentStore(
+      firebase.firestore,
+      componentStorage,
+      config,
+      clock,
+      undefined,
+      undefined,
+      { cache: readCache },
+    );
     const pushTransport = new FirebaseFidPushTransport(new FirebaseFcmClient(
       identity.firebaseCredential,
       {
@@ -266,6 +283,7 @@ export async function createProductionControlPlane(
       pushStore,
       pushTransport,
       componentStore,
+      readCache,
     });
     return { application, config };
   });

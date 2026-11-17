@@ -19,6 +19,7 @@ import { createSelfHostedControlPlane } from './self-hosted-runtime.js';
  *   MIAKAPP_KEY_DIRECTORY                signing keys and HMAC secrets, see self-hosted-runtime.ts
  *   MIAKAPP_COMPONENT_STORAGE_DIRECTORY  persistent volume for component uploads and artifacts
  *   PORT                                 default 8080
+ *   MIAKAPP_READ_CACHE_TTL_SECONDS       default 600, 0 to read Firestore every time
  *   MIAKAPP_READ_METER_PORT              default 9464, loopback only: GET /reads
  *                                        (kubectl port-forward), 0 to disable
  *
@@ -42,6 +43,9 @@ const controlPlane = await createSelfHostedControlPlane(loaded.document, {
   serviceAccount: JSON.parse(readFileSync(required('MIAKAPP_SERVICE_ACCOUNT_KEY_FILE'), 'utf8')),
   keyDirectory: required('MIAKAPP_KEY_DIRECTORY'),
   storageDirectory: required('MIAKAPP_COMPONENT_STORAGE_DIRECTORY'),
+  ...(process.env.MIAKAPP_READ_CACHE_TTL_SECONDS === undefined
+    ? {}
+    : { readCacheTtlMs: Number(process.env.MIAKAPP_READ_CACHE_TTL_SECONDS) * 1_000 }),
 });
 
 // Cloud Functions hands the API a buffered `rawBody`; a bare Node server must
