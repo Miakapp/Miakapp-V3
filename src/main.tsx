@@ -8,7 +8,7 @@ import {
   rememberOpenedHome,
 } from './app/configured-host';
 import { markOpen } from './app/house-snapshot';
-import { canonicalizeHomeAddress, requestedHomeId } from './app/home-url';
+import { requestedHomeId } from './app/home-url';
 import { ProductApp } from './app/product-app';
 import './styles.css';
 
@@ -21,7 +21,7 @@ if (window.matchMedia('(display-mode: standalone)').matches
   // Installed from a home's page: that home becomes the one `/` reopens. The
   // installed app may not share the browser's storage (iOS), so without this
   // its first launch lands on the default home instead.
-  const launchedHome = requestedHomeId(window.location.pathname, window.location.search);
+  const launchedHome = requestedHomeId(window.location.pathname);
   if (launchedHome !== null && !deepLink) rememberOpenedHome(launchedHome);
   if (window.location.pathname !== '/' && !deepLink) window.location.replace('/');
 }
@@ -34,9 +34,6 @@ if ('serviceWorker' in navigator) {
     void navigator.serviceWorker.register('/sw.js').catch(() => undefined);
   }, { once: true });
 }
-
-// Older `/app?home=<id>` and `/app/<id>` links keep working and show `/h/<id>`.
-canonicalizeHomeAddress(window.location, window.history);
 
 const root = document.querySelector('#root');
 
