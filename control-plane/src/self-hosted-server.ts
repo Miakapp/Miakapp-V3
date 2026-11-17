@@ -2,6 +2,13 @@ import { readFileSync } from 'node:fs';
 import { createServer, type IncomingMessage } from 'node:http';
 
 import { loadProductionRuntimeConfig } from './production-runtime-loader.js';
+import {
+  installFirestoreReadMeter,
+  meterRequest,
+  readMeterTotals,
+  routeName,
+  takeReadMeterWindow,
+} from './read-meter.js';
 import { createSelfHostedControlPlane } from './self-hosted-runtime.js';
 
 /**
@@ -12,6 +19,11 @@ import { createSelfHostedControlPlane } from './self-hosted-runtime.js';
  *   MIAKAPP_KEY_DIRECTORY                signing keys and HMAC secrets, see self-hosted-runtime.ts
  *   MIAKAPP_COMPONENT_STORAGE_DIRECTORY  persistent volume for component uploads and artifacts
  *   PORT                                 default 8080
+ *   MIAKAPP_READ_METER_PORT              default 9464, loopback only: GET /reads
+ *                                        (kubectl port-forward), 0 to disable
+ *
+ * Every 10 minutes a `miakapp_firestore_reads` log line gives the Firestore
+ * reads of the window by route and by collection.
  */
 
 function required(name: string): string {
@@ -22,6 +34,8 @@ function required(name: string): string {
   }
   return value;
 }
+
+installFirestoreReadMeter();
 
 const loaded = loadProductionRuntimeConfig('staging');
 const controlPlane = await createSelfHostedControlPlane(loaded.document, {
@@ -50,12 +64,33 @@ const server = createServer((request: IncomingMessage & { rawBody?: Buffer }, re
   request.on('end', () => {
     if (size > MAX_BODY_BYTES) return;
     request.rawBody = Buffer.concat(chunks);
-    controlPlane.application(request, response);
+    meterRequest(
+      routeName(request.method ?? 'GET', request.url ?? '/'),
+      () => controlPlane.application(request, response),
+    );
   });
 });
 server.listen(port, () => {
   console.log(JSON.stringify({ event: 'miakapp_control_plane_listening', port, issuer: loaded.config.security.issuer }));
 });
+const READ_LOG_INTERVAL_MS = 10 * 60 * 1_000;
+const readLog = setInterval(() => {
+  console.log(JSON.stringify({ event: 'miakapp_firestore_reads', ...takeReadMeterWindow() }));
+}, READ_LOG_INTERVAL_MS);
+readLog.unref();
+
+const meterPort = Number(process.env.MIAKAPP_READ_METER_PORT ?? 9464);
+if (meterPort > 0) {
+  createServer((request, response) => {
+    if (request.method !== 'GET' || request.url !== '/reads') {
+      response.writeHead(404).end();
+      return;
+    }
+    response.writeHead(200, { 'Content-Type': 'application/json' })
+      .end(JSON.stringify(readMeterTotals(), null, 2));
+  }).listen(meterPort, '127.0.0.1');
+}
+
 for (const signal of ['SIGTERM', 'SIGINT'] as const) {
   process.on(signal, () => server.close(() => process.exit(0)));
 }
