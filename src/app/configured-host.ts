@@ -30,6 +30,12 @@ import { enablePush } from './push';
 import { markHomePickedForThePerson, markNoHomeYet } from './home-pick';
 import { requestedHomeId } from './home-url';
 import { completeEmailLinkSignIn, completeRedirectSignIn, signInWith } from './sign-in';
+import {
+  instrumentTestHost,
+  MemoryReleaseStore,
+  readTestSession,
+  TestSessionIdentity,
+} from './test-session';
 
 interface ComponentReleaseConfiguration {
   readonly pointerEndpoint: string;
@@ -364,9 +370,11 @@ export function createConfiguredComponentRelease(): ComponentReleaseCoordinator 
   const release = configuration.componentRelease;
   if (release === undefined) return undefined;
 
-  const { auth, appCheck } = liveRuntime(configuration);
-  const identity = new FirebaseLiveIdentity(auth, appCheck);
   const homeId = configuration.homeId;
+  const test = readTestSession(homeId);
+  const identity: LiveIdentity = test === undefined
+    ? new FirebaseLiveIdentity(liveRuntime(configuration).auth, liveRuntime(configuration).appCheck)
+    : new TestSessionIdentity(test);
   const credentialRequest = (signal: AbortSignal | undefined) => Object.freeze({
     homeId,
     reason: 'initial' as const,
@@ -376,6 +384,8 @@ export function createConfiguredComponentRelease(): ComponentReleaseCoordinator 
   return createComponentReleaseCoordinator({
     homeId,
     allowedArtifactOrigins: release.allowedArtifactOrigins,
+    // A test session previews releases: it keeps no history of its own.
+    ...(test === undefined ? {} : { store: new MemoryReleaseStore() }),
     readPointer: createControlPlanePointerReader({
       endpoint: release.pointerEndpoint,
       homeId,
@@ -389,6 +399,21 @@ export function createConfiguredComponentRelease(): ComponentReleaseCoordinator 
 export function createConfiguredHost(): TrustedHost {
   const configuration = readLiveConfiguration();
   if (configuration === undefined) return createPreviewHost();
+
+  const test = readTestSession(configuration.homeId);
+  if (test !== undefined) {
+    return instrumentTestHost(createLiveHost({
+      exchangeEndpoint: configuration.exchangeEndpoint,
+      home: Object.freeze({
+        id: configuration.homeId,
+        name: configuration.homeName,
+        detail: configuration.homeDetail,
+        accent: configuration.homeAccent,
+      }),
+      identity: new TestSessionIdentity(test),
+      directStores: (userId, homeId) => createDirectStore(userId, homeId),
+    }), test);
+  }
 
   const { auth, appCheck } = liveRuntime(configuration);
   const identity = new FirebaseLiveIdentity(auth, appCheck, new URL(configuration.exchangeEndpoint).origin);
@@ -431,6 +456,8 @@ function readDefaultRelayUrl(): string | undefined {
 export function createConfiguredPairingService(): PairingService | undefined {
   const configuration = readLiveConfiguration();
   if (configuration === undefined) return undefined;
+  // A test session has no account: nothing to list, keep or pair.
+  if (readTestSession(configuration.homeId) !== undefined) return undefined;
   const { auth } = liveRuntime(configuration);
   return new FirebasePairingService({
     auth,

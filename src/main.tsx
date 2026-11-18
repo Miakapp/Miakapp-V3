@@ -9,13 +9,27 @@ import {
 } from './app/configured-host';
 import { markOpen } from './app/house-snapshot';
 import { captureHomeLink } from './app/home-link';
+import { createHouseConsentStore } from './app/house-consent';
+import { captureTestSession, readTestSession, showTestSession } from './app/test-session';
 import { requestedHomeId } from './app/home-url';
 import { ProductApp } from './app/product-app';
 import './styles.css';
 
+// A test session's ticket (`#miakapp-test=…`) is kept for this tab and taken
+// out of the address first, so it is never handed to the home's app.
+captureTestSession(window.location);
+
 // Before anything can rewrite the address: what a home's link carried
 // (`?invite=…`, `#…`) is handed to that home's app once it opens.
 captureHomeLink(window.location);
+
+const testHome = requestedHomeId(window.location.pathname);
+const testSession = testHome === null ? undefined : readTestSession(testHome);
+if (testSession !== undefined) {
+  // The agent opened its own home to check it: no first-visit question.
+  createHouseConsentStore(undefined, undefined, `resident:test:${testSession.role}`).grant(testSession.homeId);
+  showTestSession(testSession);
+}
 
 // A Home Screen launch starts at the front door, not the page that was open
 // when the app was added (iOS keeps that URL whatever the manifest says).

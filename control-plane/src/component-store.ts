@@ -781,6 +781,30 @@ export class ComponentStore {
     return Object.freeze({ name, ownerUid, generation: pointer.generation, pointer });
   }
 
+  /**
+   * A finalized release of this home, as a pointer, for a test session that
+   * previews it before (or without) activation. Nothing is written: the live
+   * pointer and every resident stay on the activated release.
+   */
+  async readTestReleasePointer(
+    homeId: string,
+    sha256: string,
+    generation: number,
+  ): Promise<ComponentPointerRepresentation> {
+    if (!HOME_ID_PATTERN.test(homeId) || !canonicalBase64url(sha256, 32)) throw apiError('invalid_artifact');
+    const releaseSnapshot = await this.#cache.get(this.#homeRef(homeId).collection('componentReleases').doc(sha256));
+    if (!releaseSnapshot.exists) throw apiError('invalid_artifact');
+    const release = validateRelease(releaseSnapshot, homeId);
+    this.#assertReleaseUrl(release);
+    return Object.freeze({
+      schema: POINTER_SCHEMA,
+      home_id: homeId,
+      generation: Math.max(1, generation),
+      ...release.input,
+      url: release.publicUrl,
+    });
+  }
+
   async quarantineDigest(sha256: string): Promise<void> {
     if (!canonicalBase64url(sha256, 32)) throw apiError('invalid_request');
     await this.#firestore.collection('componentQuarantine').doc(sha256).set({

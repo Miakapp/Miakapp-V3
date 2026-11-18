@@ -890,6 +890,44 @@ export class ControlPlaneStore {
     return Object.freeze({ grant, signed });
   }
 
+  /**
+   * Proves a Home Key may open test sessions: it must be able to run the
+   * coordinator (`relay:coordinator`), which already decides everything a test
+   * member may see. Read-only, like a token renewal.
+   */
+  async authorizeTestSessions(homeKey: string): Promise<{ readonly homeId: string; readonly keyId: string }> {
+    const { keyId } = parseHomeKey(homeKey);
+    const issuedAt = Math.floor(this.#clock.now() / 1_000);
+    const grant = await this.#reserveGrant(homeKey, keyId, {
+      purpose: 'relay',
+      role: 'coordinator',
+      coordinatorName: 'test-session',
+      reason: 'initial',
+    }, issuedAt, randomIdentifier(), {});
+    return Object.freeze({ homeId: grant.homeId, keyId });
+  }
+
+  /** A test session lives only as long as the Home Key that opened it. */
+  async assertTestKeyActive(homeId: string, keyId: string): Promise<void> {
+    const index = await this.#cache.get(this.#firestore.collection('homeKeyIndex').doc(keyId));
+    if (!index.exists || index.get('status') !== 'active' || index.get('home_id') !== homeId) {
+      throw apiError('invalid_access_token');
+    }
+  }
+
+  /** A relay token for the stand-in member `test:<role>` (no e-mail). */
+  async exchangeTestRelay(
+    homeId: string,
+    userId: string,
+    issuer: AccessTokenIssuer,
+  ): Promise<UserRelayTokenExchange> {
+    return await this.exchangeUserRelay(
+      { userId, verifiedEmail: null, authenticatedAt: 0, expiresAt: 0 },
+      homeId,
+      issuer,
+    );
+  }
+
   async exchangeUserRelay(
     principal: FirebasePrincipal,
     homeId: string,
