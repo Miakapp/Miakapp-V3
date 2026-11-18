@@ -111,7 +111,7 @@ export async function buildAppDocument(input: AppDocumentInput): Promise<AppDocu
 
   const html = `<!doctype html>
 <html lang="en">
-  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Miakapp</title></head>
+  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"><title>Miakapp</title></head>
   <body><script type="module">${script}</script></body>
 </html>
 `;
