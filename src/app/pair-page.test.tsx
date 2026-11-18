@@ -60,6 +60,9 @@ class FakePairing implements PairingService {
     return () => this.#listeners.delete(listener);
   };
   readonly listHomes = async (): Promise<readonly PairingHome[]> => [...this.homes];
+  readonly listMyHomes = async () => ({ owned: [...this.homes], joined: [] });
+  readonly addMyHome = async (): Promise<void> => undefined;
+  readonly removeMyHome = async (): Promise<void> => undefined;
   readonly createHome = async (input: NewPairingHome): Promise<PairingHome> => {
     this.created.push(input);
     const home = { id: input.id, name: input.name, icon: 'house' };

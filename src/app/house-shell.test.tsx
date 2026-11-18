@@ -493,14 +493,14 @@ describe('house shell — around a running home', () => {
     const user = userEvent.setup();
     const { favorites } = renderRunning();
     await user.click(screen.getByRole('button', { name: 'Moi' }));
-    const star = screen.getByRole('button', { name: 'Ajouter Preview home aux favoris' });
+    const star = screen.getByRole('button', { name: 'Garder Preview home dans mes maisons' });
     expect(star).toHaveAttribute('aria-pressed', 'false');
     await user.click(star);
-    expect(screen.getByRole('button', { name: 'Retirer Preview home des favoris' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Retirer Preview home de mes maisons' })).toHaveAttribute('aria-pressed', 'true');
     expect(favorites.list().map((home) => home.id)).toEqual([HOME_ID]);
 
     const panel = screen.getByRole('region', { name: 'Moi' });
-    await user.click(within(panel).getByRole('button', { name: 'Retirer Preview home des favoris' }));
+    await user.click(within(panel).getByRole('button', { name: 'Retirer Preview home de mes maisons' }));
     expect(favorites.list()).toEqual([]);
   });
 
