@@ -899,37 +899,40 @@ action; implementations may make that action part of an explicit settings flow.
 
 ### 12.3 Sending
 
-`POST /v1/push` accepts only a Miakapp push-profile token. Its body contains a
-grant ID and a bounded semantic notification:
+`POST /v1/push` accepts only a Miakapp push-profile token. Its body names the
+accounts to notify (Firebase UIDs, 1..50, each `[A-Za-z0-9_-]{1,128}`) and a
+bounded semantic notification:
 
 ```json
 {
-  "grant_id": "DDDDDDDDDDDDDDDDDDDDDD",
+  "to": ["synthetic-member-uid"],
   "title": "Synthetic alert",
   "body": "A synthetic sensor needs attention.",
   "tag": "sensor-alert"
 }
 ```
 
+Any signed-in account may turn notifications on for any home, so the platform
+never notifies "the whole home": the home (its coordinator, which decides who
+its members are) names the recipients, and an account it does not name receives
+nothing. There is no per-grant or home-wide form.
+
 `title` is 1..120 UTF-8 bytes, `body` is 1..1,024, and optional `tag` is 1..64;
-all reject control characters. Arbitrary URLs, destination addresses, UIDs, raw
-FCM options, HTML and unknown fields are forbidden. The platform constructs any
+all reject control characters. Arbitrary URLs, destination addresses, raw FCM
+options, HTML and unknown fields are forbidden. The platform constructs any
 click destination from the verified home ID. Version 1's exact HTML-free text
 grammar additionally rejects U+003C (`<`) and U+003E (`>`) in `title`, `body`
 and `tag`; consumers render all three as text, never markup.
 
-The Function requires all of:
-
-- valid `push:send` token for the push audience;
-- active grant whose `home_id` equals JWT `sub`;
-- unexpired destination still owned by the grant's user; and
-- rate and cost budget for key, home, grant and destination.
+The platform delivers to every active grant of the home owned by a named
+account, once per device token, within rate and cost budgets for key, home,
+grant and destination.
 
 Success is `202` with exactly
-`{ "schema":"miakapp.push-accepted/1", "request_id":"<22-char-id>" }`.
+`{ "schema":"miakapp.push-accepted/1", "request_id":"<22-char-id>", "delivered":<n> }`.
+`delivered` may be 0: the people named may not have turned notifications on.
 It means accepted by the platform push service, not displayed by the device.
-Invalid, revoked, expired or cross-home grants reveal no destination or user
-metadata.
+The response never reveals which named account was reached.
 
 ### 12.4 Push-grant HTTP surface
 
