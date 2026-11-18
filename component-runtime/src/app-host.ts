@@ -85,6 +85,8 @@ export interface HouseAppHostOptions {
   readonly title: string;
   readonly locale?: string;
   readonly theme?: AppTheme;
+  /** What the home's link carried (`?…`, `#…`), handed to the app as `miakapp.link`. */
+  readonly link?: { readonly params: Readonly<Record<string, string>>; readonly hash: string };
   /**
    * Optional deployment ceiling. The effective grant is the release's declared
    * requirements, narrowed by this when present. Residents' rights are still
@@ -370,6 +372,7 @@ export function mountHouseApp(
       home: { id: options.home.id, name: options.home.name },
       locale: options.locale ?? 'en',
       theme: options.theme ?? 'system',
+      link: { params: { ...(options.link?.params ?? {}) }, hash: options.link?.hash ?? '' },
       grant: { state_read: [...grant.state_read], call: [...grant.call] },
       state: initial === undefined
         ? { values: {}, revision: 0, stale: true }

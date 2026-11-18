@@ -34,6 +34,7 @@ import type {
   HouseCallOptions,
   TrustedHost,
 } from './host';
+import { homeLinkFor } from './home-link';
 import { homeIdFromInput } from './home-url';
 import { markOpen } from './house-snapshot';
 import { BarIcon, HomeIcon, StarIcon } from './icons';
@@ -434,6 +435,7 @@ function HouseAppStage({
         title: current.t('frameTitle', { home: home.name }),
         locale: current.locale,
         theme: current.theme,
+        link: homeLinkFor(home.id),
         ...(current.homeState === undefined ? {} : { initialState: current.homeState }),
         call: async (name, args, options) => {
           if (released) throw new HouseCallError('denied');

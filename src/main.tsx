@@ -8,9 +8,14 @@ import {
   rememberOpenedHome,
 } from './app/configured-host';
 import { markOpen } from './app/house-snapshot';
+import { captureHomeLink } from './app/home-link';
 import { requestedHomeId } from './app/home-url';
 import { ProductApp } from './app/product-app';
 import './styles.css';
+
+// Before anything can rewrite the address: what a home's link carried
+// (`?invite=…`, `#…`) is handed to that home's app once it opens.
+captureHomeLink(window.location);
 
 // A Home Screen launch starts at the front door, not the page that was open
 // when the app was added (iOS keeps that URL whatever the manifest says).
