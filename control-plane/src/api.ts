@@ -26,6 +26,14 @@ import {
   validateComponentRequirements,
 } from './component-artifact.js';
 import { ComponentStore } from './component-store.js';
+import {
+  issueTestTicket,
+  testPrincipalId,
+  testSessionRequest,
+  testTicketFromAuthorization,
+  verifyTestTicket,
+  type TestTicketClaims,
+} from './test-session.js';
 import type { DocumentCache } from './document-cache.js';
 import { parseHomeKey, randomIdentifier } from './crypto.js';
 import { normalizePairingCode, pairingCodeLookup } from './pairing-code.js';
@@ -145,6 +153,7 @@ function admissionOperation(request: Request): AdmissionOperation | null {
     return 'home_key.revoke';
   }
   if (method === 'POST' && path === '/v1/access-tokens:exchange') return 'access.exchange';
+  if (method === 'POST' && path === '/v1/test-sessions') return 'access.exchange';
   if (method === 'POST' && path === '/v1/user-relay-tokens:exchange') return 'user_relay.exchange';
   if (method === 'POST' && path === '/v1/push-destinations:challenge') return 'push.destination.challenge';
   if (method === 'POST' && path === '/v1/push-destinations:complete') return 'push.destination.register';
@@ -556,6 +565,23 @@ async function destinationPrincipals(request: Request, dependencies: ApiDependen
   const owner = await ownerPrincipal(request, dependencies);
   const appCheck = await appCheckPrincipal(request, dependencies);
   return Object.freeze({ owner, appCheck });
+}
+
+/**
+ * A test session's ticket, verified, and still backed by an active Home Key;
+ * undefined when the request carries an ordinary (Firebase) credential.
+ */
+async function testSessionPrincipal(
+  request: Request,
+  dependencies: ApiDependencies,
+  homeId: string,
+): Promise<TestTicketClaims | undefined> {
+  const ticket = testTicketFromAuthorization(request.headers.authorization);
+  if (ticket === undefined) return undefined;
+  const claims = verifyTestTicket(dependencies.config, ticket, dependencies.clock.now());
+  if (claims.home !== homeId) throw apiError('invalid_access_token');
+  await dependencies.store.assertTestKeyActive(claims.home, claims.key);
+  return claims;
 }
 
 function pushPrincipal(request: Request, dependencies: ApiDependencies) {
@@ -1128,9 +1154,14 @@ async function routeRequest(
     .exec(request.path);
   if (homeInterfaceMatch !== null && request.method === 'GET') {
     const id = pathHomeId(homeInterfaceMatch[1] as string);
-    const { owner } = await destinationPrincipals(request, dependencies);
+    const test = await testSessionPrincipal(request, dependencies, id);
+    const owner = test === undefined ? (await destinationPrincipals(request, dependencies)).owner : undefined;
     requireEmptyBody(request);
     const live = await dependencies.componentStore.readHomeInterface(id);
+    // A test session may preview a finalized release that is not live.
+    const pointer = test?.release == null
+      ? live.pointer
+      : await dependencies.componentStore.readTestReleasePointer(id, test.release, live.generation);
     response.set('Cache-Control', 'no-store');
     sendJson(response, 200, {
       schema: 'miakapp.home-interface/1',
@@ -1138,9 +1169,9 @@ async function routeRequest(
       name: live.name,
       home_url: homeUrl(dependencies.config, id),
       generation: live.generation,
-      pointer: live.pointer,
+      pointer,
       // Read from the home record this route already loads: no extra lookup.
-      viewer_is_owner: live.ownerUid === owner.userId,
+      viewer_is_owner: owner !== undefined && live.ownerUid === owner.userId,
     });
     return;
   }
@@ -1302,8 +1333,76 @@ async function routeRequest(
     return;
   }
 
+  if (request.path === '/v1/test-sessions' && request.method === 'POST') {
+    const ticket = activeAdmission(admission, 'access.exchange');
+    const authorization = request.headers.authorization;
+    if (typeof authorization !== 'string') throw apiError('invalid_home_key');
+    const homeKey = /^Bearer ([\x21-\x7e]+)$/.exec(authorization)?.[1];
+    if (homeKey === undefined) throw apiError('invalid_home_key');
+    const { keyId: sessionKeyId } = parseHomeKey(homeKey);
+    ticket.identifySubject(sessionKeyId);
+    await ticket.consume([
+      { budget: 'access.exchange.key', subject: sessionKeyId },
+    ], ['access.exchange.source']);
+    const input = testSessionRequest(jsonBody(request));
+    const { homeId } = await dependencies.store.authorizeTestSessions(homeKey);
+    ticket.identifyActor('home_key', sessionKeyId);
+    ticket.identifyHome(homeId);
+    const live = await dependencies.componentStore.readHomeInterface(homeId);
+    if (input.release !== null) {
+      await dependencies.componentStore.readTestReleasePointer(homeId, input.release, live.generation);
+    }
+    const issued = issueTestTicket(dependencies.config, {
+      homeId,
+      keyId: sessionKeyId,
+      role: input.role,
+      release: input.release,
+      minutes: input.minutes,
+      nowMs: dependencies.clock.now(),
+    });
+    const home = homeUrl(dependencies.config, homeId);
+    const fragment = `#miakapp-test=${issued.ticket}`;
+    sendJson(response, 201, {
+      schema: 'miakapp.test-session/1',
+      home_id: homeId,
+      role: input.role,
+      principal_id: testPrincipalId(input.role),
+      release: input.release,
+      expires_at_ms: issued.claims.exp * 1_000,
+      ticket: issued.ticket,
+      // Opens the home at phone size (390 × 844), as `test:<role>`.
+      url: home === null ? null : `${home}${fragment}`,
+    });
+    return;
+  }
+
   if (request.path === '/v1/user-relay-tokens:exchange' && request.method === 'POST') {
     const ticket = activeAdmission(admission, 'user_relay.exchange');
+    const testAuthorization = testTicketFromAuthorization(request.headers.authorization);
+    if (testAuthorization !== undefined) {
+      const exchange = userRelayExchangeRequest(jsonBody(request));
+      ticket.identifyHome(exchange.homeId);
+      const claims = await testSessionPrincipal(request, dependencies, exchange.homeId) as TestTicketClaims;
+      const userId = testPrincipalId(claims.role);
+      ticket.identifyActor('home_key', claims.key);
+      ticket.identifySubject(claims.key);
+      await ticket.consume([
+        { budget: 'user_relay.exchange.user', subject: `${claims.key}:${userId}` },
+      ], ['user_relay.exchange.source']);
+      const { grant, signed } = await dependencies.store.exchangeTestRelay(
+        exchange.homeId,
+        userId,
+        dependencies.signer,
+      );
+      sendJson(response, 200, {
+        schema: 'miakapp.user-relay-token/1',
+        access_token: signed.token,
+        token_type: 'Bearer',
+        expires_at_ms: Math.min(signed.expiresAtMs, claims.exp * 1_000),
+        relay_url: grant.audience,
+      });
+      return;
+    }
     const { owner: principal, appCheck } = await destinationPrincipals(request, dependencies);
     identifyOwner(ticket, principal);
     ticket.identifySubject(appCheck.appId);
