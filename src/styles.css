@@ -104,7 +104,7 @@ svg {
 .house-shell {
   --house-bar-height: 64px;
   /* What the dock covers at the bottom; the stage keeps its own words above it. */
-  --house-dock-space: calc(var(--house-bar-height) + 20px + env(safe-area-inset-bottom));
+  --house-dock-space: calc(var(--house-bar-height) + 14px + max(6px, calc(env(safe-area-inset-bottom) - 14px)));
   position: fixed;
   inset: 0;
   overflow: hidden;
@@ -164,7 +164,8 @@ html:has(.house-shell) body {
   display: grid;
   justify-items: center;
   gap: 6px;
-  padding: 8px max(12px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  /* Low, like a native tab bar: it sits partly over the home indicator's strip. */
+  padding: 8px max(12px, env(safe-area-inset-right)) max(6px, calc(env(safe-area-inset-bottom) - 14px)) max(12px, env(safe-area-inset-left));
   color: #f4f1e8;
   pointer-events: none;
   -webkit-user-select: none;
@@ -183,13 +184,20 @@ html:has(.house-shell) body {
   width: min(100%, 460px);
   min-height: var(--house-bar-height);
   padding: 6px;
-  border: 1px solid rgb(255 255 255 / 22%);
+  border: 1px solid rgb(255 255 255 / 28%);
   border-radius: 999px;
-  /* Night-blue glass: readable over a light page as over a dark one. */
-  background: linear-gradient(160deg, rgb(30 46 110 / 74%), rgb(10 16 36 / 82%));
-  box-shadow: 0 1px 0 rgb(255 255 255 / 12%) inset, 0 18px 40px -16px rgb(0 0 0 / 55%);
-  -webkit-backdrop-filter: blur(22px) saturate(1.6);
-  backdrop-filter: blur(22px) saturate(1.6);
+  /* Liquid glass: mostly the page behind, blurred and saturated, with a night-
+     blue tint just strong enough to keep the labels readable on light pages. */
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 14%), rgb(255 255 255 / 2%) 55%),
+    linear-gradient(160deg, rgb(30 46 110 / 42%), rgb(10 16 36 / 52%));
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 30%) inset,
+    0 -1px 0 rgb(255 255 255 / 6%) inset,
+    0 18px 40px -18px rgb(0 0 0 / 45%);
+  -webkit-backdrop-filter: blur(30px) saturate(1.9) brightness(0.92);
+  backdrop-filter: blur(30px) saturate(1.9) brightness(0.92);
+  text-shadow: 0 1px 2px rgb(0 0 0 / 35%);
 }
 
 .house-bar__tab {
