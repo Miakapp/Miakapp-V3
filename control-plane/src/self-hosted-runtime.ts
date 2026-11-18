@@ -55,16 +55,17 @@ export interface SelfHostedOptions {
   }>;
   readonly keyDirectory: string;
   readonly storageDirectory: string;
-  /** Default 10 minutes; see DocumentCache. */
+  /** Default 30 minutes; see DocumentCache. */
   readonly readCacheTtlMs?: number;
 }
 
 /**
- * Longer than a token renewal (~5 minutes), so that a coordinator's next
- * renewal is served from memory; changes made through the API are seen at
- * once, and only a manual Firestore edit waits for it.
+ * Several token renewals (~5 minutes each) long, so that a coordinator reads
+ * Firestore about twice an hour instead of twelve times; changes made through
+ * the API are seen at once, and only a manual Firestore edit (or relay-url.sh)
+ * waits for it, or for a pod restart.
  */
-export const SELF_HOSTED_READ_CACHE_TTL_MS = 10 * 60 * 1_000;
+export const SELF_HOSTED_READ_CACHE_TTL_MS = 30 * 60 * 1_000;
 
 function kmsFileName(resourceName: string): string {
   const match = /\/cryptoKeys\/([^/]+)\/cryptoKeyVersions\/([1-9][0-9]*)$/.exec(resourceName);
