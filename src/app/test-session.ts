@@ -111,8 +111,8 @@ export class TestSessionIdentity implements LiveIdentity {
     return this.#session.ticket;
   };
 
-  /** The control plane does not ask a test session for App Check. */
-  readonly getAppCheckToken: LiveIdentity['getAppCheckToken'] = async () => 'test-session';
+  /** The control plane does not check App Check for a test session; the client wants a token's shape. */
+  readonly getAppCheckToken: LiveIdentity['getAppCheckToken'] = async () => 'test.session.unchecked';
 
   readonly dispose = (): void => undefined;
 }
@@ -202,7 +202,13 @@ export function instrumentTestHost(host: TrustedHost, session: TestSession): Tru
 
 /** Phone size, and a mark beside it: this is a test session, as `test:<role>`. */
 export function showTestSession(session: TestSession): void {
-  document.documentElement.classList.add('miakapp-test');
+  const root = document.documentElement;
+  root.classList.add('miakapp-test');
+  const fit = (): void => {
+    root.style.setProperty('--miakapp-test-scale', String(Math.min(1, window.innerHeight / 844, window.innerWidth / 390)));
+  };
+  fit();
+  window.addEventListener('resize', fit);
   const badge = document.createElement('div');
   badge.className = 'miakapp-test-badge';
   badge.textContent = `Test session · test:${session.role}${session.release === null ? '' : ' · preview'}`;
