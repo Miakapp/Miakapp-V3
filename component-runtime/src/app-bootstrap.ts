@@ -24,6 +24,31 @@ interface PendingCall {
 }
 
 const NONCE = /^[A-Za-z0-9_-]{16,128}$/u;
+const SHARE_RESULTS = new Set(['shared', 'copied', 'cancelled', 'unavailable']);
+type ShareResult = 'shared' | 'copied' | 'cancelled' | 'unavailable';
+
+function shareField(value: unknown, max: number, name: string): string {
+  if (value === undefined || value === null) return '';
+  if (typeof value !== 'string') throw new TypeError(`miakapp.share: ${name} must be a string`);
+  if (value.length > max) throw new TypeError(`miakapp.share: ${name} is longer than ${max} characters`);
+  return value;
+}
+
+function shareUrl(value: unknown): string {
+  const url = shareField(value, 2_048, 'url');
+  if (url === '') return '';
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new TypeError('miakapp.share: url must be an absolute https:// URL');
+  }
+  if (parsed.protocol !== 'https:' || parsed.username !== '' || parsed.password !== '') {
+    throw new TypeError('miakapp.share: url must be an absolute https:// URL');
+  }
+  return parsed.href;
+}
+
 const CALL_ERRORS = new Set(['denied', 'unavailable', 'failed', 'outcome_unknown', 'timeout', 'busy']);
 
 class MiakappCallError extends Error {
@@ -91,7 +116,24 @@ function start(): void {
   const themeListeners = new Set<Listener<string>>();
   const barListeners = new Set<Listener<string | null>>();
   const calls = new Map<string, PendingCall>();
+  const shares = new Map<string, (result: ShareResult) => void>();
   let nextCall = 1;
+  let nextShare = 1;
+
+  // Sent only on the resident's own tap, which the shell checks again on its
+  // side; without one the answer is 'unavailable' and nothing opens.
+  const requestShare = (request: Record<string, unknown>): Promise<ShareResult> => {
+    const activation = (navigator as Navigator & { userActivation?: { isActive: boolean } }).userActivation;
+    if ((activation !== undefined && !activation.isActive) || !installed || post === undefined) {
+      return Promise.resolve('unavailable');
+    }
+    const id = `s${nextShare}`;
+    nextShare += 1;
+    return new Promise((resolve) => {
+      shares.set(id, resolve);
+      send('share.start', { id, request });
+    });
+  };
   let grant: { state_read: readonly string[]; call: readonly string[] } = { state_read: [], call: [] };
 
   const emit = <T>(listeners: Set<Listener<T>>, value: T): void => {
@@ -173,6 +215,24 @@ function start(): void {
         return () => barListeners.delete(listener);
       },
     }),
+    // The frame cannot open the share sheet or write the clipboard: Miakapp
+    // does it for the home, on a tap. Resolves 'shared', 'copied',
+    // 'cancelled' or 'unavailable' (then show the link so it can be copied).
+    share: (data: { title?: string; text?: string; url?: string } = {}): Promise<ShareResult> => {
+      const request = {
+        action: 'share',
+        title: shareField(data.title, 200, 'title'),
+        text: shareField(data.text, 2_000, 'text'),
+        url: shareUrl(data.url),
+      };
+      if (request.text === '' && request.url === '') throw new TypeError('miakapp.share: give a text or a url');
+      return requestShare(request);
+    },
+    copy: (text: string): Promise<'copied' | 'unavailable'> => {
+      const value = shareField(text, 4_096, 'text');
+      if (value === '') throw new TypeError('miakapp.copy: text is empty');
+      return requestShare({ action: 'copy', text: value }) as Promise<'copied' | 'unavailable'>;
+    },
     onThemeChange: (listener: Listener<string>): (() => void) => {
       themeListeners.add(listener);
       return () => themeListeners.delete(listener);
@@ -301,6 +361,14 @@ function start(): void {
           const code = String(payload.error);
           pending.reject(new MiakappCallError(CALL_ERRORS.has(code) ? code : 'failed'));
         }
+        break;
+      }
+      case 'share.settled': {
+        const settle = shares.get(String(payload.id));
+        if (settle === undefined) return;
+        shares.delete(String(payload.id));
+        const result = String(payload.result);
+        settle((SHARE_RESULTS.has(result) ? result : 'unavailable') as ShareResult);
         break;
       }
       case 'bar.select':

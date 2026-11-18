@@ -18,6 +18,8 @@ import {
   parseAppFrameMessage,
   type AppBarButton,
   type AppCallError,
+  type AppShareRequest,
+  type AppShareResult,
   type AppTheme,
 } from './app-contract';
 import { APP_SANDBOX_TOKENS } from './app-document';
@@ -100,6 +102,12 @@ export interface HouseAppHostOptions {
   readonly onFocusShell?: () => void;
   /** The buttons the home wants in the Miakapp bar, already validated. */
   readonly onBarButtons?: (buttons: readonly AppBarButton[]) => void;
+  /**
+   * Shares or copies for the home. Runs only while the shell window still has
+   * the transient activation of the resident's tap in the frame. Defaults to
+   * `shareFromShell` (Web Share, then the clipboard).
+   */
+  readonly share?: (request: AppShareRequest, hostWindow: Window) => Promise<AppShareResult>;
   readonly window?: Window;
   readonly frameReadyMs?: number;
   readonly bootMs?: number;
@@ -165,6 +173,64 @@ function narrow(declared: readonly string[], ceiling: readonly string[] | undefi
   });
 }
 
+/** Longest a share sheet may stay open before another request is accepted. */
+const SHARE_PENDING_MS = 120_000;
+
+/** Whether the shell still holds a fresh user gesture (browsers without the API: assume yes). */
+function hasTransientActivation(hostWindow: Window): boolean {
+  const activation = (hostWindow.navigator as Navigator & { userActivation?: { isActive: boolean } }).userActivation;
+  return activation === undefined || activation.isActive;
+}
+
+async function copyFromShell(hostWindow: Window, text: string): Promise<boolean> {
+  try {
+    if (hostWindow.navigator.clipboard?.writeText) {
+      await hostWindow.navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // Falls through to the legacy path below.
+  }
+  const doc = hostWindow.document;
+  const area = doc.createElement('textarea');
+  area.value = text;
+  area.setAttribute('readonly', '');
+  area.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none';
+  doc.body.append(area);
+  try {
+    area.select();
+    return doc.execCommand('copy');
+  } catch {
+    return false;
+  } finally {
+    area.remove();
+  }
+}
+
+/**
+ * The shell's default way to share for a home: the system share sheet when the
+ * browser has one, otherwise the clipboard (the link, or the text).
+ */
+export async function shareFromShell(request: AppShareRequest, hostWindow: Window): Promise<AppShareResult> {
+  if (request.action === 'copy') return (await copyFromShell(hostWindow, request.text)) ? 'copied' : 'unavailable';
+  const data: ShareData = {};
+  if (request.title !== '') data.title = request.title;
+  if (request.text !== '') data.text = request.text;
+  if (request.url !== '') data.url = request.url;
+  const nav = hostWindow.navigator;
+  if (typeof nav.share === 'function' && (typeof nav.canShare !== 'function' || nav.canShare(data))) {
+    try {
+      await nav.share(data);
+      return 'shared';
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') return 'cancelled';
+      // NotAllowedError and friends: the clipboard may still work.
+    }
+  }
+  const fallback = request.url !== '' ? request.url : request.text;
+  return (await copyFromShell(hostWindow, fallback)) ? 'copied' : 'unavailable';
+}
+
 function toCallError(error: unknown): AppCallError {
   if (error instanceof HouseCallError) return error.code;
   if (error instanceof DOMException && error.name === 'AbortError') return 'timeout';
@@ -221,6 +287,7 @@ export function mountHouseApp(
   let lastFocusRequest = 0;
   let publishedRevision = options.initialState?.revision ?? 0;
   const calls = new Map<string, AbortController>();
+  let sharePendingSince = 0;
 
   const frame = hostDocument.createElement('iframe');
 
@@ -302,6 +369,32 @@ export function mountHouseApp(
     ).finally(() => clearTimeout(timer));
   };
 
+  const startShare = (id: string, request: AppShareRequest): void => {
+    const answer = (result: AppShareResult): void => {
+      if (lifecycle === 'loading' || lifecycle === 'active') send('share.settled', { id, result });
+    };
+    const now = Date.now();
+    // One sheet at a time, and only on the resident's own tap: a home cannot
+    // open share sheets or write the clipboard by itself.
+    if (now - sharePendingSince < SHARE_PENDING_MS || !hasTransientActivation(hostWindow)) {
+      answer('unavailable');
+      return;
+    }
+    sharePendingSince = now;
+    let pending: Promise<AppShareResult>;
+    try {
+      pending = (options.share ?? shareFromShell)(request, hostWindow);
+    } catch (error) {
+      pending = Promise.reject(error);
+    }
+    void pending.then(
+      (result) => answer(result),
+      () => answer('unavailable'),
+    ).finally(() => {
+      sharePendingSince = 0;
+    });
+  };
+
   const onPortMessage = (event: MessageEvent): void => {
     if (lifecycle === 'crashed' || lifecycle === 'disposed') return;
     try {
@@ -346,6 +439,13 @@ export function mountHouseApp(
           break;
         case 'bar.buttons':
           options.onBarButtons?.(message.buttons);
+          break;
+        case 'share.start':
+          if (lifecycle !== 'active') {
+            send('share.settled', { id: message.id, result: 'unavailable' });
+            return;
+          }
+          startShare(message.id, message.request);
           break;
         case 'shell.focus':
           // Rate-limited: a house cannot use it to keep yanking focus away.

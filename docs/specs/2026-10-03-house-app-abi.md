@@ -69,6 +69,17 @@ interface Miakapp {
    *  Never retried by Miakapp: on outcome_unknown, wait for the next state. */
   call(name: string, args?: unknown, options?: { timeoutMs?: number }): Promise<unknown>;
 
+  /** Share sheet / clipboard, done by the shell (the frame can reach
+   *  neither). Call it straight from a tap handler: without the resident's
+   *  fresh tap the answer is 'unavailable' and nothing opens. One at a time.
+   *  title ≤ 200, text ≤ 2000, url ≤ 2048 and https only; copy ≤ 4096.
+   *  Without a share sheet the shell copies the url (or text). On
+   *  'unavailable', show the link so it can be copied by hand.
+   *  Absent on shells older than 2026-11-18: feature-detect it. */
+  share?(data: { title?: string; text?: string; url?: string }):
+    Promise<'shared' | 'copied' | 'cancelled' | 'unavailable'>;
+  copy?(text: string): Promise<'copied' | 'unavailable'>;
+
   /** Optional: lift the loading screen earlier. Otherwise it lifts once the
    *  script has run. */
   ready(): void;
