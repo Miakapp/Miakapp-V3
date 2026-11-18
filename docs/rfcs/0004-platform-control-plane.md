@@ -787,6 +787,16 @@ relay or platform API and expires within five minutes. This is credential
 attenuation, not end-to-end encryption: the selected relay still sees the user's
 Home traffic.
 
+### 11.4 « My homes »
+
+`GET /v1/homes` also returns `joined`: the homes the account chose to keep
+(public home representations, deleted homes left out, owned homes not
+repeated). `PUT /v1/me/homes/{homeId}` adds a home that exists, and
+`DELETE /v1/me/homes/{homeId}` removes one; both answer `204` and write only
+when the list changes (`controlUserHomes/{uid}`, at most 50). Only the account
+edits its list: no home or coordinator can put itself in someone's list. The
+web app adds a home when the account agrees to open it.
+
 ## 12. Push destinations and grants
 
 ### 12.1 Destination ownership

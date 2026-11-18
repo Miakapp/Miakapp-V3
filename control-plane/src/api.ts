@@ -913,8 +913,28 @@ async function routeRequest(
   if (request.path === '/v1/homes' && request.method === 'GET') {
     const principal = await ownerPrincipal(request, dependencies);
     requireEmptyBody(request);
-    const homes = await dependencies.store.listOwnedHomes(principal);
-    sendJson(response, 200, { schema: 'miakapp.home-list/1', homes });
+    const [homes, joined] = await Promise.all([
+      dependencies.store.listOwnedHomes(principal),
+      dependencies.store.listJoinedHomes(principal),
+    ]);
+    const owned = new Set(homes.map((home) => home.home_id));
+    sendJson(response, 200, {
+      schema: 'miakapp.home-list/1',
+      homes,
+      joined: joined.filter((home) => !owned.has(home.home_id)),
+    });
+    return;
+  }
+
+  // « My homes »: the account adds a home it opened, or removes one.
+  const myHomeMatch = /^\/v1\/me\/homes\/([a-z][a-z0-9-]{1,61}[a-z0-9])$/.exec(request.path);
+  if (myHomeMatch !== null && (request.method === 'PUT' || request.method === 'DELETE')) {
+    const principal = await ownerPrincipal(request, dependencies);
+    requireEmptyBody(request);
+    const id = pathHomeId(myHomeMatch[1] as string);
+    if (request.method === 'PUT') await dependencies.store.addJoinedHome(principal, id);
+    else await dependencies.store.removeJoinedHome(principal, id);
+    response.status(204).end();
     return;
   }
 

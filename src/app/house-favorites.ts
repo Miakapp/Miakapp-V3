@@ -128,3 +128,52 @@ export function createHouseFavoritesStore(
     },
   };
 }
+
+/** What « My homes » needs from the account (the control plane). */
+export interface AccountHomes {
+  addMyHome(homeId: string): Promise<void>;
+  removeMyHome(homeId: string): Promise<void>;
+}
+
+/**
+ * Makes the account's list (from the control plane) the local one. The first
+ * time on this device, homes kept only here are sent to the account instead
+ * of dropped (they predate the account list); afterwards a home missing from
+ * the account was removed elsewhere and goes here too.
+ */
+export function syncAccountHomes(
+  local: HouseFavoritesStore,
+  account: AccountHomes,
+  joined: readonly FavoriteHome[],
+  migratedKey: string,
+  storage: Pick<Storage, 'getItem' | 'setItem'> | undefined = safeLocalStorage(),
+): void {
+  const remote = new Set(joined.map((home) => home.id));
+  let migrated = false;
+  try { migrated = storage?.getItem(migratedKey) != null; } catch { /* storage blocked */ }
+  for (const home of local.list()) {
+    if (remote.has(home.id)) continue;
+    if (!migrated) void account.addMyHome(home.id).catch(() => undefined);
+    else local.remove(home.id);
+  }
+  try { storage?.setItem(migratedKey, '1'); } catch { /* storage blocked */ }
+  for (const home of joined) {
+    local.add({ id: home.id, name: home.name, ...(home.accent === undefined ? {} : { accent: home.accent }) });
+  }
+}
+
+/** The local list, with every change also made on the account. */
+export function accountBackedHomes(local: HouseFavoritesStore, account: AccountHomes): HouseFavoritesStore {
+  return {
+    list: local.list,
+    subscribe: local.subscribe,
+    add: (home) => {
+      void account.addMyHome(home.id).catch(() => undefined);
+      return local.add(home);
+    },
+    remove: (homeId) => {
+      void account.removeMyHome(homeId).catch(() => undefined);
+      return local.remove(homeId);
+    },
+  };
+}
