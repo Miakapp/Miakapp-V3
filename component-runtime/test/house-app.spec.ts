@@ -156,3 +156,11 @@ test('the keyboard way back to the Miakapp menu works from inside the house', as
   await page.keyboard.press('Alt+Shift+KeyM');
   await expect(page.locator('#shell-menu')).toBeFocused();
 });
+
+test('a house reads what its link carried, and nothing else', async ({ page }) => {
+  await open(page);
+  await mount(page, 'house-link.mjs', { link: { params: { invite: 'abc' }, hash: 'salon' } });
+  await expect.poll(() => events(page)).toEqual(['starting', 'loading', 'active']);
+  const frame = page.frameLocator('iframe.house-app-frame');
+  await expect(frame.locator('#link')).toHaveText('{"params":{"invite":"abc"},"hash":"salon"}');
+});
