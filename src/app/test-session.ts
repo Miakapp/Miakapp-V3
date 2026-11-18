@@ -155,7 +155,8 @@ export interface TestHook {
   readonly release: string | null;
   readonly expiresAtMs: number;
   readonly calls: TestCallRecord[];
-  hold: boolean;
+  /** true, or a test per function name: true holds the call. */
+  hold: boolean | ((name: string) => boolean);
 }
 
 declare global {
@@ -176,7 +177,7 @@ export function instrumentTestHost(host: TrustedHost, session: TestSession): Tru
     const record: TestCallRecord = { at: Date.now(), name, args, outcome: 'pending' };
     hook.calls.push(record);
     if (hook.calls.length > 500) hook.calls.splice(0, hook.calls.length - 500);
-    if (hook.hold) {
+    if (typeof hook.hold === 'function' ? hook.hold(name) : hook.hold) {
       record.outcome = 'held';
       // Never sent. The app sees the home as briefly unreachable.
       throw new HouseCallError('unavailable');
