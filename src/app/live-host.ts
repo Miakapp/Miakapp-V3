@@ -281,6 +281,12 @@ class LiveTrustedHost implements TrustedHost {
         : undefined;
       if (outcome === 'outcome_unknown') throw new HouseCallError('outcome_unknown');
       if (options.signal.aborted) throw new HouseCallError('timeout');
+      // The coordinator's own refusal (ApplicationCallError) keeps its sentence for the app.
+      const code = typeof failure === 'object' && failure !== null && 'code' in failure ? failure.code : undefined;
+      const message = failure instanceof Error ? failure.message : undefined;
+      if (typeof code === 'number' && code >= 2_000 && code <= 2_999 && typeof message === 'string' && message !== '' && message.length <= 256) {
+        throw new HouseCallError('failed', { code, message });
+      }
       throw new HouseCallError('failed');
     }
   };
