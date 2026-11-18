@@ -9,14 +9,15 @@ import type { CapabilityRequirements } from '../../component-runtime/src/contrac
  * ceiling keeps a release inside its own declaration — prefixes such as
  * `room.*`, `security.*`, `monitoring.*` or `admin.*` included — and away from
  * what the shell never brokers for a home: protocol-reserved `miakapp.*`
- * functions, events and media.
+ * functions (but `miakapp.join`, the visitors' door), events and media.
  */
 export function platformGrantCeiling(requires: CapabilityRequirements): CapabilityRequirements {
   return {
     state_read: [...requires.state_read],
     event_subscribe: [],
     event_publish: [],
-    call: requires.call.filter((name) => name !== 'miakapp.*' && !name.startsWith('miakapp.')),
+    // `miakapp.join` excepted: the one function a visitor may call (ask to join, redeem an invitation).
+    call: requires.call.filter((name) => name === 'miakapp.join' || (name !== 'miakapp.*' && !name.startsWith('miakapp.'))),
     presentation: [],
   };
 }
