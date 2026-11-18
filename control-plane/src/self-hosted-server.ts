@@ -19,7 +19,7 @@ import { createSelfHostedControlPlane } from './self-hosted-runtime.js';
  *   MIAKAPP_KEY_DIRECTORY                signing keys and HMAC secrets, see self-hosted-runtime.ts
  *   MIAKAPP_COMPONENT_STORAGE_DIRECTORY  persistent volume for component uploads and artifacts
  *   PORT                                 default 8080
- *   MIAKAPP_READ_CACHE_TTL_SECONDS       default 600, 0 to read Firestore every time
+ *   MIAKAPP_READ_CACHE_TTL_SECONDS       default 1800, 0 to read Firestore every time
  *   MIAKAPP_READ_METER_PORT              default 9464, loopback only: GET /reads
  *                                        (kubectl port-forward), 0 to disable
  *
