@@ -50,7 +50,58 @@ export type AppFrameMessage =
     readonly timeoutMs: number;
   }
   | { readonly kind: 'shell.focus' }
-  | { readonly kind: 'bar.buttons'; readonly buttons: readonly AppBarButton[] };
+  | { readonly kind: 'bar.buttons'; readonly buttons: readonly AppBarButton[] }
+  | { readonly kind: 'share.start'; readonly id: string; readonly request: AppShareRequest };
+
+/**
+ * What a home asks Miakapp to share or copy. The frame cannot reach
+ * `navigator.share` or the clipboard (its sandbox and Permissions-Policy deny
+ * both), so the shell does it, only while the resident's tap is still fresh.
+ */
+export type AppShareRequest =
+  | { readonly action: 'share'; readonly title: string; readonly text: string; readonly url: string }
+  | { readonly action: 'copy'; readonly text: string };
+
+/** Closed outcome vocabulary, mirrored by the bootstrap and the SDK. */
+export const APP_SHARE_RESULTS = ['shared', 'copied', 'cancelled', 'unavailable'] as const;
+export type AppShareResult = (typeof APP_SHARE_RESULTS)[number];
+
+export const APP_SHARE_LIMITS = Object.freeze({ title: 200, text: 2_000, url: 2_048, copy: 4_096 });
+
+function shareString(value: unknown, max: number, name: string): string {
+  if (typeof value !== 'string' || value.length > max) violation(`share ${name} is invalid`);
+  return value;
+}
+
+/** Only absolute HTTPS links leave the frame; '' means no link. */
+export function isShareableUrl(value: string): boolean {
+  if (value === '') return true;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && url.href.length <= APP_SHARE_LIMITS.url && url.username === '' && url.password === '';
+  } catch {
+    return false;
+  }
+}
+
+/** Validates a share or copy request; throws `ContractViolation` otherwise. */
+export function parseShareRequest(value: unknown): AppShareRequest {
+  if (!isPlainRecord(value)) violation('share request must be a plain record');
+  if (value.action === 'copy') {
+    exactKeys(value, ['action', 'text']);
+    const text = shareString(value.text, APP_SHARE_LIMITS.copy, 'text');
+    if (text === '') violation('copy text is empty');
+    return Object.freeze({ action: 'copy', text });
+  }
+  if (value.action !== 'share') violation('share action is invalid');
+  exactKeys(value, ['action', 'title', 'text', 'url']);
+  const title = shareString(value.title, APP_SHARE_LIMITS.title, 'title');
+  const text = shareString(value.text, APP_SHARE_LIMITS.text, 'text');
+  const url = shareString(value.url, APP_SHARE_LIMITS.url, 'url');
+  if (!isShareableUrl(url)) violation('share url must be https');
+  if (text === '' && url === '') violation('share needs a text or a url');
+  return Object.freeze({ action: 'share', title, text, url });
+}
 
 /**
  * The few buttons a home adds to the Miakapp bar. Miakapp draws them: the home
@@ -181,6 +232,11 @@ export function parseAppFrameMessage(value: unknown): AppFrameMessage {
     case 'bar.buttons':
       exactKeys(payload, ['buttons']);
       return { kind: 'bar.buttons', buttons: parseBarButtons(payload.buttons) };
+    case 'share.start': {
+      exactKeys(payload, ['id', 'request']);
+      if (typeof payload.id !== 'string' || !CALL_ID.test(payload.id)) violation('share id is invalid');
+      return { kind: 'share.start', id: payload.id, request: parseShareRequest(payload.request) };
+    }
     case 'app.crash': {
       exactKeys(payload, ['reason']);
       const reason = payload.reason;

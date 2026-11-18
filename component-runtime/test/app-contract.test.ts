@@ -77,6 +77,33 @@ describe('miakapp.app/1 bridge', () => {
   });
 });
 
+describe('share and copy', () => {
+  const share = (request: Record<string, unknown>) => message('share.start', { id: 's1', request });
+
+  test('accepts an https link, a text, or a copy', () => {
+    expect(parseAppFrameMessage(share({ action: 'share', title: 'Maison', text: '', url: 'https://www.miakapp.com/h/colmon?invite=abc' })))
+      .toEqual({ kind: 'share.start', id: 's1', request: { action: 'share', title: 'Maison', text: '', url: 'https://www.miakapp.com/h/colmon?invite=abc' } });
+    expect(parseAppFrameMessage(share({ action: 'copy', text: 'abc' })))
+      .toEqual({ kind: 'share.start', id: 's1', request: { action: 'copy', text: 'abc' } });
+  });
+
+  test('refuses other schemes, oversized fields and empty requests', () => {
+    const rejected = [
+      { action: 'share', title: '', text: '', url: 'http://example.com' },
+      { action: 'share', title: '', text: '', url: 'javascript:alert(1)' },
+      { action: 'share', title: '', text: '', url: 'https://user:pw@example.com' },
+      { action: 'share', title: '', text: '', url: '' },
+      { action: 'share', title: 'x'.repeat(201), text: 'a', url: '' },
+      { action: 'share', title: '', text: 'x'.repeat(2_001), url: '' },
+      { action: 'share', title: '', text: 'a', url: '', extra: 1 },
+      { action: 'copy', text: '' },
+      { action: 'copy', text: 'x'.repeat(4_097) },
+      { action: 'print', text: 'a' },
+    ];
+    for (const request of rejected) expect(() => parseAppFrameMessage(share(request))).toThrow();
+  });
+});
+
 describe('release pointers', () => {
   const base = {
     schema: POINTER_SCHEMA,
