@@ -33,6 +33,11 @@ if (window.matchMedia('(display-mode: standalone)').matches
 
 markOpen('boot');
 
+// Safari's own pinch gestures, which touch-action alone does not stop on iOS.
+for (const gesture of ['gesturestart', 'gesturechange', 'gestureend']) {
+  document.addEventListener(gesture, (event) => event.preventDefault(), { passive: false });
+}
+
 // The worker keeps the shell openable without the internet (and carries push).
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
