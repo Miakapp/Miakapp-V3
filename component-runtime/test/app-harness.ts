@@ -9,6 +9,7 @@ import { APP_ABI, POINTER_SCHEMA, type CapabilityRequirements } from '../src/con
 interface MountRequest {
   readonly requires?: Partial<CapabilityRequirements>;
   readonly heartbeatMs?: number;
+  readonly link?: { readonly params: Readonly<Record<string, string>>; readonly hash: string };
 }
 
 const events: string[] = [];
@@ -56,6 +57,7 @@ const house = {
       home: { id: 'test-home', name: 'Maison test' },
       title: 'Interface de Maison test',
       locale: 'fr',
+      ...(request.link === undefined ? {} : { link: request.link }),
       initialState: {
         values: {
           'zone.living.light.on': false,

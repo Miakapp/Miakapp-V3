@@ -112,6 +112,9 @@ function start(): void {
     abi: 'miakapp.app/1',
     release: '',
     home: { id: '', name: '' },
+    // What the home's link carried (`/h/<id>?invite=…#…`): the app decides
+    // what to do with it, for example send the invite to its coordinator.
+    link: Object.freeze({ params: Object.freeze({}), hash: '' }) as { readonly params: Readonly<Record<string, string>>; readonly hash: string },
     locale: 'en',
     get theme(): string {
       return theme;
@@ -206,6 +209,12 @@ function start(): void {
     api.release = release.release;
     api.home = Object.freeze({ id: home.id, name: home.name });
     api.locale = String(payload.locale);
+    const link = (payload.link ?? {}) as { params?: Record<string, unknown>; hash?: unknown };
+    const params: Record<string, string> = {};
+    for (const [key, value] of Object.entries(link.params ?? {})) {
+      if (typeof value === 'string') params[key] = value;
+    }
+    api.link = Object.freeze({ params: Object.freeze(params), hash: typeof link.hash === 'string' ? link.hash : '' });
   };
 
   const load = async (payload: Record<string, unknown>): Promise<void> => {
