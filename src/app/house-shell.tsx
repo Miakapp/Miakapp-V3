@@ -940,12 +940,18 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
               {homeButtons.map((button) => (
                 <button
                   aria-current={panel === undefined && current === button.id ? 'page' : undefined}
+                  aria-label={button.badge > 0 ? `${button.label} (${button.badge})` : undefined}
                   className="house-bar__tab"
                   key={button.id}
                   onClick={() => select(button.id)}
                   type="button"
                 >
-                  <BarIcon name={button.icon} />
+                  <span className="house-bar__icon">
+                    <BarIcon name={button.icon} />
+                    {button.badge > 0 ? (
+                      <span aria-hidden="true" className="house-bar__badge">{button.badge > 99 ? '99+' : button.badge}</span>
+                    ) : null}
+                  </span>
                   <span className="house-bar__label">{button.label}</span>
                 </button>
               ))}

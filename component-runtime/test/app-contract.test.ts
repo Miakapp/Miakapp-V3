@@ -39,8 +39,11 @@ describe('miakapp.app/1 bridge', () => {
     const energy = { id: 'energy', label: 'Énergie', icon: 'bolt', active: false } as const;
     expect(parseAppFrameMessage(message('bar.buttons', { buttons: [rooms, energy] }))).toEqual({
       kind: 'bar.buttons',
-      buttons: [{ ...rooms, label: 'Pièces' }, energy],
+      buttons: [{ ...rooms, label: 'Pièces', badge: 0 }, { ...energy, badge: 0 }],
     });
+    const members = { id: 'members', label: 'Membres', icon: 'people', active: false, badge: 3 } as const;
+    expect(parseAppFrameMessage(message('bar.buttons', { buttons: [members] })))
+      .toEqual({ kind: 'bar.buttons', buttons: [members] });
     expect(parseAppFrameMessage(message('bar.buttons', { buttons: [] })))
       .toEqual({ kind: 'bar.buttons', buttons: [] });
   });
@@ -56,6 +59,10 @@ describe('miakapp.app/1 bridge', () => {
       [{ ...button, id: 'Rooms!' }],
       [{ ...button, href: '/x' }],
       [{ ...button, active: true }, { ...button, id: 'energy', active: true }],
+      [{ ...button, badge: -1 }],
+      [{ ...button, badge: 1.5 }],
+      [{ ...button, badge: 1000 }],
+      [{ ...button, badge: '3' }],
     ];
     for (const buttons of rejected) {
       expect(() => parseAppFrameMessage(message('bar.buttons', { buttons }))).toThrow();
