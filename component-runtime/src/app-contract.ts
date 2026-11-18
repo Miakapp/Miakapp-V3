@@ -61,14 +61,17 @@ export interface AppBarButton {
   readonly label: string;
   readonly icon: AppBarIcon;
   readonly active: boolean;
+  /** A count drawn on the button (e.g. requests waiting); 0 or absent shows none. */
+  readonly badge: number;
 }
 
 export const APP_BAR_ICONS = [
   'grid', 'bolt', 'light', 'thermometer', 'camera', 'lock', 'list', 'chart', 'leaf', 'star',
+  'people', 'bell',
 ] as const;
 export type AppBarIcon = (typeof APP_BAR_ICONS)[number];
 
-export const APP_BAR_LIMITS = Object.freeze({ buttons: 2, labelLength: 16 });
+export const APP_BAR_LIMITS = Object.freeze({ buttons: 2, labelLength: 16, badge: 999 });
 
 const BAR_BUTTON_ID = /^[a-z0-9][a-z0-9-]{0,31}$/u;
 
@@ -78,8 +81,12 @@ export function parseBarButtons(value: unknown): AppBarButton[] {
   const ids = new Set<string>();
   const buttons = value.map((entry: unknown) => {
     if (!isPlainRecord(entry)) violation('bar button must be a plain record');
-    exactKeys(entry, ['id', 'label', 'icon', 'active']);
+    exactKeys(entry, Object.hasOwn(entry, 'badge') ? ['id', 'label', 'icon', 'active', 'badge'] : ['id', 'label', 'icon', 'active']);
     const { id, label, icon, active } = entry;
+    const badge = entry.badge ?? 0;
+    if (typeof badge !== 'number' || !Number.isInteger(badge) || badge < 0 || badge > APP_BAR_LIMITS.badge) {
+      violation('bar button badge is invalid');
+    }
     if (typeof id !== 'string' || !BAR_BUTTON_ID.test(id) || ids.has(id)) violation('bar button id is invalid');
     ids.add(id);
     if (typeof label !== 'string') violation('bar button label is invalid');
@@ -87,7 +94,7 @@ export function parseBarButtons(value: unknown): AppBarButton[] {
     if (text === '' || [...text].length > APP_BAR_LIMITS.labelLength) violation('bar button label is invalid');
     if (!APP_BAR_ICONS.includes(icon as AppBarIcon)) violation('bar button icon is invalid');
     if (typeof active !== 'boolean') violation('bar button active flag is invalid');
-    return Object.freeze({ id, label: text, icon: icon as AppBarIcon, active });
+    return Object.freeze({ id, label: text, icon: icon as AppBarIcon, active, badge });
   });
   if (buttons.filter((button) => button.active).length > 1) violation('only one bar button can be active');
   return buttons;

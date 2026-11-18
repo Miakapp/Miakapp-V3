@@ -154,13 +154,14 @@ function start(): void {
     // The Miakapp bar: up to two buttons the shell draws for this home. The
     // shell keeps the last list for the next visit, so call it on every start.
     bar: Object.freeze({
-      setButtons: (buttons: readonly { id: string; label: string; icon: string; active?: boolean }[]): void => {
+      setButtons: (buttons: readonly { id: string; label: string; icon: string; active?: boolean; badge?: number }[]): void => {
         send('bar.buttons', {
           buttons: Array.from(buttons, (button) => ({
             id: String(button.id),
             label: String(button.label),
             icon: String(button.icon),
             active: button.active === true,
+            badge: button.badge === undefined ? 0 : Number(button.badge),
           })),
         });
       },

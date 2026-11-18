@@ -103,6 +103,8 @@ const BAR_ICON_PATHS: Readonly<Record<AppBarIcon, readonly string[]>> = {
   chart: ['M4 20h16', 'M7 16v-5', 'M12 16V6', 'M17 16v-8'],
   leaf: ['M5 19c0-8 5-13 14-14 0 9-5 14-13 14', 'M5 19 13 11'],
   star: ['m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9L12 3.5Z'],
+  people: ['M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z', 'M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6', 'M16 4.3a3.5 3.5 0 0 1 0 6.4', 'M18 14.4c1.8.8 3 2.6 3 4.6'],
+  bell: ['M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15L6 16Z', 'M10 20.5a2 2 0 0 0 4 0'],
 };
 
 /** The closed set of icons a home may give its bar buttons. */

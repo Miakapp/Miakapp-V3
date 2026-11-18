@@ -217,6 +217,30 @@ html:has(.house-shell) body {
   color: #f4f1e8;
 }
 
+.house-bar__icon {
+  position: relative;
+  display: inline-grid;
+}
+
+/* A count the home puts on its button (requests waiting…). */
+.house-bar__badge {
+  position: absolute;
+  top: -5px;
+  left: calc(100% - 9px);
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border: 2px solid rgb(14 22 52);
+  border-radius: 999px;
+  background: #e5484d;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 13px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
 /* The home's own buttons sit among Miakapp's as equals: same width, no divider. */
 .house-bar__home-buttons {
   display: contents;
