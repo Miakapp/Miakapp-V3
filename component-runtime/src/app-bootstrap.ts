@@ -114,7 +114,7 @@ function start(): void {
     home: { id: '', name: '' },
     // What the home's link carried (`/h/<id>?invite=…#…`): the app decides
     // what to do with it, for example send the invite to its coordinator.
-    link: Object.freeze({ params: Object.freeze({}) as Readonly<Record<string, string>>, hash: '' }),
+    link: Object.freeze({ params: Object.freeze({}), hash: '' }) as { readonly params: Readonly<Record<string, string>>; readonly hash: string },
     locale: 'en',
     get theme(): string {
       return theme;
