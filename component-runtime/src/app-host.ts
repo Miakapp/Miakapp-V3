@@ -61,13 +61,21 @@ export type HouseAppFailureCode =
   | 'navigated'
   | 'protocol_violation';
 
+/** A coordinator's own refusal: its code (2000-2999) and the sentence it gave. */
+export interface HouseRefusal {
+  readonly code: number;
+  readonly message: string;
+}
+
 export class HouseCallError extends Error {
   readonly code: AppCallError;
+  readonly refusal: HouseRefusal | undefined;
 
-  constructor(code: AppCallError) {
+  constructor(code: AppCallError, refusal?: HouseRefusal) {
     super(`house call failed: ${code}`);
     this.name = 'HouseCallError';
     this.code = code;
+    this.refusal = refusal;
   }
 }
 
@@ -325,7 +333,7 @@ export function mountHouseApp(
     port?.postMessage(appShellMessage(kind, payload), transfer);
   };
 
-  const settleCall = (id: string, outcome: { ok: true; value: unknown } | { ok: false; error: AppCallError }): void => {
+  const settleCall = (id: string, outcome: { ok: true; value: unknown } | { ok: false; error: AppCallError; refusal?: HouseRefusal }): void => {
     if (!calls.has(id)) return;
     calls.delete(id);
     if (outcome.ok) {
@@ -337,7 +345,10 @@ export function mountHouseApp(
       }
       send('call.settled', { id, ok: true, value: outcome.value ?? null });
     } else {
-      send('call.settled', { id, ok: false, error: outcome.error });
+      // The app may tell the resident why the home said no; nothing else of the failure crosses.
+      send('call.settled', outcome.refusal === undefined
+        ? { id, ok: false, error: outcome.error }
+        : { id, ok: false, error: outcome.error, homeCode: outcome.refusal.code, message: outcome.refusal.message });
     }
   };
 
@@ -362,10 +373,11 @@ export function mountHouseApp(
     }
     void pending.then(
       (value) => settleCall(id, { ok: true, value }),
-      (error: unknown) => settleCall(id, {
-        ok: false,
-        error: controller.signal.aborted ? 'timeout' : toCallError(error),
-      }),
+      (error: unknown) => settleCall(id, controller.signal.aborted
+        ? { ok: false, error: 'timeout' }
+        : error instanceof HouseCallError && error.refusal !== undefined
+          ? { ok: false, error: toCallError(error), refusal: error.refusal }
+          : { ok: false, error: toCallError(error) }),
     ).finally(() => clearTimeout(timer));
   };
 

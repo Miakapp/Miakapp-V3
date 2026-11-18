@@ -53,11 +53,14 @@ const CALL_ERRORS = new Set(['denied', 'unavailable', 'failed', 'outcome_unknown
 
 class MiakappCallError extends Error {
   readonly code: string;
+  /** The coordinator's own refusal code (2000-2999), when it said no itself. */
+  readonly homeCode: number | undefined;
 
-  constructor(code: string) {
-    super(`The home did not complete the call (${code})`);
+  constructor(code: string, refusal?: { homeCode: number; message: string }) {
+    super(refusal?.message ?? `The home did not complete the call (${code})`);
     this.name = 'MiakappCallError';
     this.code = code;
+    this.homeCode = refusal?.homeCode;
   }
 }
 
@@ -359,7 +362,13 @@ function start(): void {
         if (payload.ok === true) pending.resolve(freezeDeep(payload.value));
         else {
           const code = String(payload.error);
-          pending.reject(new MiakappCallError(CALL_ERRORS.has(code) ? code : 'failed'));
+          const homeCode = payload.homeCode;
+          const message = payload.message;
+          const refusal = typeof homeCode === 'number' && homeCode >= 2_000 && homeCode <= 2_999
+            && typeof message === 'string' && message !== '' && message.length <= 256
+            ? { homeCode, message }
+            : undefined;
+          pending.reject(new MiakappCallError(CALL_ERRORS.has(code) ? code : 'failed', refusal));
         }
         break;
       }
