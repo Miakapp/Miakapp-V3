@@ -373,13 +373,27 @@ function grantCreation(body: { [key: string]: JsonValue }): string {
   return identifierValue(body.destination_id);
 }
 
+const MAX_PUSH_RECIPIENTS = 50;
+
+function pushRecipients(value: JsonValue | undefined): ReadonlySet<string> {
+  if (!Array.isArray(value) || value.length === 0 || value.length > MAX_PUSH_RECIPIENTS) {
+    throw apiError('invalid_request');
+  }
+  const recipients = new Set<string>();
+  for (const entry of value) {
+    if (typeof entry !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(entry)) throw apiError('invalid_request');
+    recipients.add(entry);
+  }
+  return recipients;
+}
+
 function pushNotification(body: { [key: string]: JsonValue }): {
-  readonly grantId: string | null;
+  readonly recipients: ReadonlySet<string>;
   readonly notification: PushNotification;
 } {
-  assertExactKeys(body, ['title', 'body'], ['grant_id', 'tag']);
+  assertExactKeys(body, ['to', 'title', 'body'], ['tag']);
   return Object.freeze({
-    grantId: body.grant_id === undefined ? null : identifierValue(body.grant_id),
+    recipients: pushRecipients(body.to),
     notification: Object.freeze({
       title: boundedSemanticText(body.title, 120),
       body: boundedSemanticText(body.body, 1_024),
@@ -837,16 +851,16 @@ async function routeRequest(
     ticket.identifyActor('access_token', principal.clientId);
     ticket.identifyHome(principal.homeId);
     const input = pushNotification(jsonBody(request));
-    ticket.identifySubject(input.grantId ?? principal.homeId);
+    ticket.identifySubject(principal.homeId);
     await ticket.consume([
       { budget: 'push.send.key', subject: principal.clientId },
       { budget: 'push.send.home', subject: principal.homeId },
     ]);
-    // Without a grant ID the notification goes to every device enabled on the home.
-    const grantIds = input.grantId === null
-      ? await dependencies.pushStore.activeGrantIds(principal)
-      : [input.grantId];
+    // Only the accounts the home names, on the devices where they turned the
+    // home's notifications on. Someone who is not named gets nothing.
+    const grantIds = await dependencies.pushStore.activeGrantIds(principal, input.recipients);
     let delivered = 0;
+    let failure: unknown = null;
     // Turning notifications on again on the same phone registers it again: one
     // notification per device token, not per grant.
     const reached = new Set<string>();
@@ -869,10 +883,13 @@ async function routeRequest(
         });
         delivered += 1;
       } catch (error) {
-        if (input.grantId !== null) throw error;
+        // One dead device does not stop the others.
+        failure = error;
       }
     }
-    if (input.grantId === null && delivered === 0) throw apiError('invalid_push_grant');
+    if (delivered === 0 && failure !== null) throw failure;
+    // Nobody reached is an answer, not an error: the people named may simply
+    // not have turned notifications on.
     sendJson(response, 202, { schema: 'miakapp.push-accepted/1', request_id: requestId, delivered });
     return;
   }

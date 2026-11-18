@@ -841,13 +841,20 @@ export class PushStore {
   }
 
   /** Active grant IDs of the home the push credential belongs to. */
-  async activeGrantIds(principal: PushAccessPrincipal): Promise<string[]> {
+  /**
+   * The home's active grants that belong to one of `recipients`. Turning
+   * notifications on for a home is open to any signed-in account, so the home
+   * names who it is writing to: an account it does not name gets nothing.
+   */
+  async activeGrantIds(principal: PushAccessPrincipal, recipients: ReadonlySet<string>): Promise<string[]> {
     const snapshot = await this.#firestore.collection('pushGrantIndex')
       .where('home_id', '==', principal.homeId)
       .where('status', '==', 'active')
       .limit(MAX_RETAINED_GRANTS)
       .get();
-    return snapshot.docs.map((document) => document.id);
+    return snapshot.docs
+      .filter((document) => recipients.has(String(document.get('owner_uid'))))
+      .map((document) => document.id);
   }
 
   async authorizePush(

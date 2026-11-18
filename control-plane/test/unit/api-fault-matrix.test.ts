@@ -128,6 +128,7 @@ const CLIENT_ID = identifier(4);
 const CHALLENGE_ID = identifier(5);
 const CHALLENGE_SECRET = secret(6);
 const GRANT_ID = identifier(7);
+const PUSH_RECIPIENT = 'synthetic-member-uid';
 const DESTINATION_ID = identifier(8);
 const UPLOAD_ID = identifier(9);
 const UPLOAD_TOKEN = secret(10);
@@ -372,7 +373,7 @@ function homeKeyCreateRequest(): RouterRequest {
 
 function pushRequest(): RouterRequest {
   return jsonRequest('POST', '/v1/push', {
-    grant_id: GRANT_ID,
+    to: [PUSH_RECIPIENT],
     title: 'Synthetic title',
     body: 'Synthetic body',
   }, { Authorization: PUSH_AUTHORIZATION });
@@ -827,6 +828,7 @@ describe('control-plane API dependency fault matrix', () => {
     const response = await request(dependencies({
       admission,
       pushStore: {
+        activeGrantIds: async () => [GRANT_ID],
         authorizePush: async (_principal: PushAccessPrincipal, grantId: string) => {
           authorizationCalls += 1;
           order.push('authorize');
@@ -976,6 +978,34 @@ describe('control-plane API dependency fault matrix', () => {
     expect(createCalls).toBe(1);
   });
 
+  test('notifies only the accounts the home names', async () => {
+    const asked: string[][] = [];
+    const response = await request(dependencies({
+      pushStore: {
+        activeGrantIds: async (_principal: PushAccessPrincipal, recipients: ReadonlySet<string>) => {
+          asked.push([...recipients]);
+          return [];
+        },
+      },
+    }), jsonRequest('POST', '/v1/push', { to: ['a', 'b', 'a'], title: 'Portail', body: 'Ouvert' }, { Authorization: PUSH_AUTHORIZATION }));
+
+    expect(response.status).toBe(202);
+    expect(parsed<{ readonly delivered: number }>(response).delivered).toBe(0);
+    expect(asked).toEqual([['a', 'b']]);
+  });
+
+  test('refuses a notification that names nobody', async () => {
+    for (const body of [
+      { title: 'Portail', body: 'Ouvert' },
+      { to: [], title: 'Portail', body: 'Ouvert' },
+      { to: ['a/b'], title: 'Portail', body: 'Ouvert' },
+      { to: ['a'], grant_id: GRANT_ID, title: 'Portail', body: 'Ouvert' },
+    ]) {
+      const response = await request(dependencies(), jsonRequest('POST', '/v1/push', body, { Authorization: PUSH_AUTHORIZATION }));
+      expect(response.status).toBe(400);
+    }
+  });
+
   test('a phone registered several times on the home gets one notification', async () => {
     const admission = new RecordingAdmission();
     const sent: string[] = [];
@@ -993,7 +1023,7 @@ describe('control-plane API dependency fault matrix', () => {
           sent.push(delivery.fid);
         },
       },
-    }), jsonRequest('POST', '/v1/push', { title: 'Portail', body: 'Ouvert' }, { Authorization: PUSH_AUTHORIZATION }));
+    }), jsonRequest('POST', '/v1/push', { to: [PUSH_RECIPIENT], title: 'Portail', body: 'Ouvert' }, { Authorization: PUSH_AUTHORIZATION }));
 
     expect(response.status).toBe(202);
     expect(parsed<{ readonly delivered: number }>(response).delivered).toBe(2);
@@ -1007,6 +1037,7 @@ describe('control-plane API dependency fault matrix', () => {
     const response = await request(dependencies({
       admission,
       pushStore: {
+        activeGrantIds: async () => [GRANT_ID],
         authorizePush: async () => {
           authorizationCalls += 1;
           return { destinationId: DESTINATION_ID, fid: FID };
