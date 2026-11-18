@@ -515,8 +515,8 @@ describe('house shell — around a running home', () => {
     const { mount, options, sessions } = renderRunning();
     await waitFor(() => expect(mount).toHaveBeenCalledOnce());
     act(() => options[0]!.onBarButtons!([
-      { id: 'rooms', label: 'Pièces', icon: 'grid', active: false },
-      { id: 'energy', label: 'Énergie', icon: 'bolt', active: false },
+      { id: 'rooms', label: 'Pièces', icon: 'grid', active: false, badge: 0 },
+      { id: 'energy', label: 'Énergie', icon: 'bolt', active: false, badge: 0 },
     ]));
     const bar = within(screen.getByRole('navigation', { name: 'Miakapp' }));
     await waitFor(() => expect(sessions[0]!.selectBarButton).toBeDefined());
@@ -528,10 +528,26 @@ describe('house shell — around a running home', () => {
     expect(sessions[0]!.selectBarButton).toHaveBeenLastCalledWith(null);
   });
 
+  it('draws the count a home puts on its button, and none at zero', async () => {
+    const { mount, options } = renderRunning();
+    await waitFor(() => expect(mount).toHaveBeenCalledOnce());
+    act(() => options[0]!.onBarButtons!([
+      { id: 'members', label: 'Membres', icon: 'people', active: false, badge: 3 },
+      { id: 'rooms', label: 'Pièces', icon: 'grid', active: false, badge: 0 },
+    ]));
+    const bar = within(screen.getByRole('navigation', { name: 'Miakapp' }));
+    expect(bar.getByRole('button', { name: 'Membres (3)' })).toBeVisible();
+    expect(document.querySelectorAll('.house-bar__badge')).toHaveLength(1);
+    act(() => options[0]!.onBarButtons!([
+      { id: 'members', label: 'Membres', icon: 'people', active: false, badge: 120 },
+    ]));
+    expect(document.querySelector('.house-bar__badge')?.textContent).toBe('99+');
+  });
+
   it('remembers them for the next visit and keeps them hidden before consent', async () => {
     const first = renderRunning();
     await waitFor(() => expect(first.mount).toHaveBeenCalledOnce());
-    act(() => first.options[0]!.onBarButtons!([{ id: 'rooms', label: 'Pièces', icon: 'grid', active: false }]));
+    act(() => first.options[0]!.onBarButtons!([{ id: 'rooms', label: 'Pièces', icon: 'grid', active: false, badge: 0 }]));
     cleanup();
     renderRunning();
     expect(within(screen.getByRole('navigation', { name: 'Miakapp' })).getByRole('button', { name: 'Pièces' }))
