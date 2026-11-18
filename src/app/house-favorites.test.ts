@@ -1,5 +1,5 @@
-import { beforeEach, expect, it, vi } from 'vitest';
-import { createHouseFavoritesStore } from './house-favorites';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { accountBackedHomes, createHouseFavoritesStore, syncAccountHomes } from './house-favorites';
 
 const home = { id: 'private-home', name: 'Private resident home' };
 beforeEach(() => localStorage.clear());
@@ -52,4 +52,40 @@ it('notifies mounted stores in this document and reads current cross-tab storage
   listener.mockClear();
   sibling.add(home);
   expect(listener).not.toHaveBeenCalled();
+});
+
+describe('« My homes » on the account', () => {
+  const account = () => ({
+    added: [] as string[],
+    removed: [] as string[],
+    async addMyHome(id: string) { this.added.push(id); },
+    async removeMyHome(id: string) { this.removed.push(id); },
+  });
+
+  it('sends homes kept on this device to the account once, then follows the account', () => {
+    const storage = new Map<string, string>();
+    const kv = { getItem: (k: string) => storage.get(k) ?? null, setItem: (k: string, v: string) => { storage.set(k, v); } };
+    const local = createHouseFavoritesStore(kv, 'acct');
+    local.add({ id: 'old-home', name: 'Old' });
+    const remote = account();
+    syncAccountHomes(local, remote, [{ id: 'friends', name: 'Friends' }], 'migrated', kv);
+    expect(remote.added).toEqual(['old-home']);
+    expect(local.list().map((home) => home.id).sort()).toEqual(['friends', 'old-home']);
+
+    // Later the account no longer lists old-home: removed on another device.
+    syncAccountHomes(local, remote, [{ id: 'friends', name: 'Friends' }], 'migrated', kv);
+    expect(local.list().map((home) => home.id)).toEqual(['friends']);
+    expect(remote.added).toEqual(['old-home']);
+  });
+
+  it('makes every change on the account too', () => {
+    const local = createHouseFavoritesStore(undefined, 'acct2');
+    const remote = account();
+    const homes = accountBackedHomes(local, remote);
+    homes.add({ id: 'ma-maison', name: 'Maison' });
+    homes.remove('ma-maison');
+    expect(remote.added).toEqual(['ma-maison']);
+    expect(remote.removed).toEqual(['ma-maison']);
+    expect(homes.list()).toEqual([]);
+  });
 });

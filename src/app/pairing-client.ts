@@ -86,6 +86,11 @@ export interface PairingService {
   signIn(method?: SignInMethod): Promise<SignInOutcome>;
   signOut(): Promise<void>;
   listHomes(): Promise<readonly PairingHome[]>;
+  /** « My homes »: the account's own homes and the ones it chose to keep. */
+  listMyHomes(): Promise<{ readonly owned: readonly PairingHome[]; readonly joined: readonly PairingHome[] }>;
+  /** Keeps a home the account opened in its list (no-op when already there). */
+  addMyHome(homeId: string): Promise<void>;
+  removeMyHome(homeId: string): Promise<void>;
   createHome(input: NewPairingHome): Promise<PairingHome>;
   issueCode(homeId: string): Promise<IssuedPairingCode>;
   /** Active keys only: a revoked key is history, not access. */
@@ -105,7 +110,8 @@ export interface PairingApiOptions {
 
 export type PairingApi = Pick<
   PairingService,
-  'listHomes' | 'createHome' | 'issueCode' | 'listKeys' | 'revokeKey' | 'deleteHome'
+  'listHomes' | 'listMyHomes' | 'addMyHome' | 'removeMyHome' | 'createHome' | 'issueCode' | 'listKeys'
+  | 'revokeKey' | 'deleteHome'
 >;
 
 export const HOME_ID_PATTERN = /^[a-z][a-z0-9-]{1,61}[a-z0-9]$/;
@@ -160,7 +166,7 @@ export function createPairingApi(options: PairingApiOptions): PairingApi {
   const fetchImpl = options.fetch ?? globalThis.fetch.bind(globalThis);
   const origin = options.controlPlaneOrigin.replace(/\/+$/, '');
 
-  async function call(method: 'GET' | 'POST' | 'DELETE', path: string, body?: unknown): Promise<unknown> {
+  async function call(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown): Promise<unknown> {
     const token = await options.getIdToken();
     if (token === null) throw new PairingError('signed_out');
     let response: Response;
@@ -200,6 +206,25 @@ export function createPairingApi(options: PairingApiOptions): PairingApi {
         throw new PairingError('unavailable');
       }
       return Object.freeze(body.homes.map(home));
+    },
+
+    async listMyHomes() {
+      const body = record(await call('GET', '/v1/homes'));
+      if (body.schema !== 'miakapp.home-list/1' || !Array.isArray(body.homes)) {
+        throw new PairingError('unavailable');
+      }
+      const joined = Array.isArray(body.joined) ? body.joined : [];
+      return Object.freeze({ owned: Object.freeze(body.homes.map(home)), joined: Object.freeze(joined.map(home)) });
+    },
+
+    async addMyHome(homeId: string) {
+      if (!HOME_ID_PATTERN.test(homeId)) throw new PairingError('invalid_input');
+      await call('PUT', `/v1/me/homes/${encodeURIComponent(homeId)}`);
+    },
+
+    async removeMyHome(homeId: string) {
+      if (!HOME_ID_PATTERN.test(homeId)) throw new PairingError('invalid_input');
+      await call('DELETE', `/v1/me/homes/${encodeURIComponent(homeId)}`);
     },
 
     async createHome(input: NewPairingHome) {

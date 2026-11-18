@@ -88,6 +88,12 @@ export class FirebasePairingService implements PairingService {
 
   readonly listHomes = (): ReturnType<PairingApi['listHomes']> => this.#api.listHomes();
 
+  readonly listMyHomes = (): ReturnType<PairingApi['listMyHomes']> => this.#api.listMyHomes();
+
+  readonly addMyHome = (homeId: string): ReturnType<PairingApi['addMyHome']> => this.#api.addMyHome(homeId);
+
+  readonly removeMyHome = (homeId: string): ReturnType<PairingApi['removeMyHome']> => this.#api.removeMyHome(homeId);
+
   readonly createHome = (input: NewPairingHome): ReturnType<PairingApi['createHome']> => (
     this.#api.createHome(input)
   );

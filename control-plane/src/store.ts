@@ -50,6 +50,8 @@ import {
 } from './types.js';
 
 const MAX_OWNED_HOMES = 16;
+/** Homes an account keeps in « My homes » besides its own. */
+const MAX_JOINED_HOMES = 50;
 const MAX_ACTIVE_HOME_KEYS = 64;
 const MAX_RETAINED_HOME_KEYS = 64;
 const MAX_RELAY_URL_BYTES = 2_048;
@@ -340,6 +342,60 @@ export class ControlPlaneStore {
       left.created_at.localeCompare(right.created_at) || left.home_id.localeCompare(right.home_id)
     ));
     return Object.freeze(homes) as HomeRepresentation[];
+  }
+
+  /**
+   * The homes an account chose to keep in « My homes » (it opened them and
+   * agreed to), besides its own. Chosen by the account only: no home can put
+   * itself in someone's list. Homes since deleted are left out.
+   */
+  async listJoinedHomes(principal: FirebasePrincipal): Promise<HomeRepresentation[]> {
+    const ids = await this.#joinedHomeIds(principal.userId);
+    if (ids.length === 0) return [];
+    const snapshots = await Promise.all(ids.map((id) => this.#cache.get(this.#firestore.collection('homes').doc(id))));
+    const homes: HomeRepresentation[] = [];
+    for (const snapshot of snapshots) {
+      const data = snapshot.data();
+      if (!snapshot.exists || data === undefined || data.home_id !== snapshot.id) continue;
+      homes.push(homeRepresentation(data));
+    }
+    return Object.freeze(homes) as HomeRepresentation[];
+  }
+
+  /** Adds a home to the account's list; writes only when it was not there. */
+  async addJoinedHome(principal: FirebasePrincipal, homeId: string): Promise<void> {
+    const home = await this.#cache.get(this.#firestore.collection('homes').doc(homeId));
+    if (!home.exists) throw apiError('home_not_found');
+    const ids = await this.#joinedHomeIds(principal.userId);
+    if (ids.includes(homeId)) return;
+    if (ids.length >= MAX_JOINED_HOMES) throw apiError('invalid_request');
+    await this.#userHomesRef(principal.userId).set({
+      schema: 'miakapp.user-homes/1',
+      home_ids: [...ids, homeId],
+      updated_at: Timestamp.fromMillis(this.#clock.now()),
+    });
+  }
+
+  /** Removes a home from the account's list; writes only when it was there. */
+  async removeJoinedHome(principal: FirebasePrincipal, homeId: string): Promise<void> {
+    const ids = await this.#joinedHomeIds(principal.userId);
+    if (!ids.includes(homeId)) return;
+    await this.#userHomesRef(principal.userId).set({
+      schema: 'miakapp.user-homes/1',
+      home_ids: ids.filter((id) => id !== homeId),
+      updated_at: Timestamp.fromMillis(this.#clock.now()),
+    });
+  }
+
+  #userHomesRef(userId: string): DocumentReference {
+    return this.#firestore.collection('controlUserHomes').doc(userId);
+  }
+
+  async #joinedHomeIds(userId: string): Promise<string[]> {
+    const snapshot = await this.#cache.get(this.#userHomesRef(userId));
+    const ids = snapshot.exists ? snapshot.get('home_ids') : [];
+    if (!Array.isArray(ids)) return [];
+    return ids.filter((id): id is string => typeof id === 'string' && HOME_ID_PATTERN.test(id)).slice(0, MAX_JOINED_HOMES);
   }
 
   /**

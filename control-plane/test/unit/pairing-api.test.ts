@@ -129,6 +129,28 @@ class FakeStore {
     }];
   }
 
+  joinedIds: string[] = [HOME_ID, 'friends-home'];
+
+  async listJoinedHomes(principal: FirebasePrincipal): Promise<HomeRepresentation[]> {
+    expect(principal.userId).toBe('synthetic-owner');
+    return this.joinedIds.map((id) => ({
+      home_id: id,
+      name: `Home ${id}`,
+      icon: 'house',
+      relay_url: 'wss://relay.example.test/ws',
+      created_at: '2026-08-31T12:00:00.000Z',
+      updated_at: '2026-08-31T12:00:00.000Z',
+    }));
+  }
+
+  async addJoinedHome(_principal: FirebasePrincipal, homeId: string): Promise<void> {
+    if (!this.joinedIds.includes(homeId)) this.joinedIds.push(homeId);
+  }
+
+  async removeJoinedHome(_principal: FirebasePrincipal, homeId: string): Promise<void> {
+    this.joinedIds = this.joinedIds.filter((id) => id !== homeId);
+  }
+
   async issuePairingCode(principal: FirebasePrincipal, homeId: string): Promise<PairingCodeRepresentation> {
     this.issued.push({ principal, homeId });
     return {
@@ -229,7 +251,20 @@ describe('owner home listing', () => {
     expect(JSON.parse(response.text)).toEqual({
       schema: 'miakapp.home-list/1',
       homes: [expect.objectContaining({ home_id: HOME_ID })],
+      joined: [expect.objectContaining({ home_id: 'friends-home' })],
     });
+  });
+
+  test('the account adds and removes homes in its own list, nobody else', async () => {
+    const store = new FakeStore();
+    const deps = dependencies(store, new RecordingAdmission());
+    expect((await call(deps, 'PUT', '/v1/me/homes/new-home', { headers: OWNER })).status).toBe(204);
+    expect(store.joinedIds).toContain('new-home');
+    expect((await call(deps, 'DELETE', '/v1/me/homes/friends-home', { headers: OWNER })).status).toBe(204);
+    expect(store.joinedIds).not.toContain('friends-home');
+    expect((await call(deps, 'PUT', '/v1/me/homes/new-home')).status).toBe(401);
+    expect((await call(deps, 'PUT', '/v1/me/homes/Bad_Id', { headers: OWNER })).status).toBeGreaterThanOrEqual(400);
+    expect(store.joinedIds).not.toContain('Bad_Id');
   });
 
   test('requires a Firebase identity', async () => {

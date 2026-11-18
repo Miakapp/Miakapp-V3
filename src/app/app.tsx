@@ -12,7 +12,12 @@ import {
   type HouseConsentRecord,
   type HouseConsentStore,
 } from './house-consent';
-import { createHouseFavoritesStore, type HouseFavoritesStore } from './house-favorites';
+import {
+  accountBackedHomes,
+  createHouseFavoritesStore,
+  syncAccountHomes,
+  type HouseFavoritesStore,
+} from './house-favorites';
 import { hasNoHomeYet, homeWasPickedForThePerson } from './home-pick';
 import { HouseShell, type HouseStage, type MountHouseApp } from './house-shell';
 import { createHouseSnapshotStore, markOpen, type HouseSnapshotStore } from './house-snapshot';
@@ -39,10 +44,11 @@ export interface AppProps {
 const NO_ACCOUNT = (): PairingAccount | null | undefined => undefined;
 const NO_SUBSCRIPTION = (): (() => void) => () => undefined;
 
-/** The account behind this page and the homes it owns, for the Miakapp bar. */
+/** The account behind this page, the homes it owns and the ones it keeps. */
 function useAccount(pairing: PairingService | undefined): {
   readonly account: PairingAccount | null | undefined;
   readonly ownedHomes: readonly HomeSummary[] | undefined;
+  readonly joinedHomes: readonly HomeSummary[] | undefined;
 } {
   const account = useSyncExternalStore(
     pairing?.subscribe ?? NO_SUBSCRIPTION,
@@ -50,23 +56,46 @@ function useAccount(pairing: PairingService | undefined): {
     pairing?.getAccount ?? NO_ACCOUNT,
   );
   const accountId = account?.id;
-  const [owned, setOwned] = useState<{ readonly accountId: string; readonly homes: readonly HomeSummary[] }>();
+  const [lists, setLists] = useState<{
+    readonly accountId: string;
+    readonly owned: readonly HomeSummary[];
+    readonly joined: readonly HomeSummary[];
+  }>();
   useEffect(() => {
     if (pairing === undefined || accountId === undefined) return undefined;
     let current = true;
-    void pairing.listHomes().then(
-      (homes) => {
+    const summary = (home: { id: string; name: string }): HomeSummary => (
+      { id: home.id, name: home.name, detail: '', accent: '#b8d9ff' }
+    );
+    void pairing.listMyHomes().then(
+      ({ owned, joined }) => {
         if (!current) return;
-        setOwned({
-          accountId,
-          homes: homes.map((home) => ({ id: home.id, name: home.name, detail: '', accent: '#b8d9ff' })),
-        });
+        setLists({ accountId, owned: owned.map(summary), joined: joined.map(summary) });
       },
       () => undefined,
     );
     return () => { current = false; };
   }, [pairing, accountId]);
-  return { account, ownedHomes: owned?.accountId === accountId ? owned?.homes : undefined };
+  const mine = lists?.accountId === accountId ? lists : undefined;
+  return { account, ownedHomes: mine?.owned, joinedHomes: mine?.joined };
+}
+
+/**
+ * « My homes » lives on the account (the control plane), so the installed app
+ * finds it on every device; the local list only shows it instantly. Once the
+ * account's list is known it replaces the local one, after the homes kept on
+ * this device alone were sent to the account (once).
+ */
+function useAccountHomes(
+  local: HouseFavoritesStore,
+  pairing: PairingService | undefined,
+  joined: readonly HomeSummary[] | undefined,
+): HouseFavoritesStore {
+  useEffect(() => {
+    if (pairing === undefined || joined === undefined) return;
+    syncAccountHomes(local, pairing, joined, `miakapp.my-homes-migrated.v1:${pairing.getAccount()?.id ?? ''}`);
+  }, [local, pairing, joined]);
+  return useMemo(() => (pairing === undefined ? local : accountBackedHomes(local, pairing)), [local, pairing]);
 }
 
 function navigateToHome(homeId: string): void {
@@ -246,7 +275,7 @@ export function App({
     () => providedConsentStore ?? createHouseConsentStore(undefined, undefined, preferenceScope),
     [providedConsentStore, preferenceScope],
   );
-  const favoritesStore = useMemo<HouseFavoritesStore>(
+  const localFavoritesStore = useMemo<HouseFavoritesStore>(
     () => providedFavoritesStore ?? createHouseFavoritesStore(undefined, preferenceScope),
     [providedFavoritesStore, preferenceScope],
   );
@@ -270,7 +299,9 @@ export function App({
     homeId,
     snapshotStore,
   );
-  const { account, ownedHomes } = useAccount(snapshot.authenticated ? pairing : undefined);
+  const accountPairing = snapshot.authenticated ? pairing : undefined;
+  const { account, ownedHomes, joinedHomes } = useAccount(accountPairing);
+  const favoritesStore = useAccountHomes(localFavoritesStore, accountPairing, joinedHomes);
   const [sandboxOrigin] = useState<string | undefined>(() => readSandboxOrigin?.());
 
   // The status bar of an installed app takes the page's theme colour: match the
@@ -298,6 +329,16 @@ export function App({
     if (componentRelease.status !== 'unavailable' && componentRelease.status !== 'none') return;
     switchHome((ownedHomes[0] as HomeSummary).id);
   }, [componentRelease.status, ownedHomes, homeId, switchHome]);
+
+  // A home agreed to before « My homes » lived on the account: keep it there
+  // the first time it opens (one write, never again once it is listed).
+  useEffect(() => {
+    if (accountPairing === undefined || joinedHomes === undefined || ownedHomes === undefined) return;
+    if (consent === undefined || componentRelease.status !== 'active') return;
+    if (ownedHomes.some((home) => home.id === homeId) || joinedHomes.some((home) => home.id === homeId)) return;
+    if (favoritesStore.list().some((home) => home.id === homeId)) return;
+    favoritesStore.add({ id: homeId, name: componentRelease.activated.homeName ?? snapshot.activeHome.name, accent: snapshot.activeHome.accent });
+  }, [accountPairing, joinedHomes, ownedHomes, consent, componentRelease, homeId, favoritesStore, snapshot.activeHome]);
 
   useEffect(() => {
     if (providedHost !== undefined) return undefined;
@@ -331,6 +372,11 @@ export function App({
       onAcceptConsent={() => {
         setDeclined(false);
         consentStore.grant(homeId);
+        // Agreeing to open a home someone else runs keeps it in « My homes ».
+        if (!(ownedHomes?.some((owned) => owned.id === homeId) ?? false)) {
+          const opened = snapshot.activeHome;
+          favoritesStore.add({ id: opened.id, name: homeName ?? opened.name, accent: opened.accent });
+        }
       }}
       onDeclineConsent={() => setDeclined(true)}
       onReopen={() => setDeclined(false)}
