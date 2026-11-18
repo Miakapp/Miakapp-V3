@@ -239,10 +239,15 @@ function start(): void {
     // is not selectable (no selection handles on a long press), except where
     // residents type. Placed first so the home's own rules can still override it.
     const base = document.createElement('style');
-    base.textContent = 'html,body{overscroll-behavior:none;-webkit-user-select:none;user-select:none;'
+    base.textContent = 'html{touch-action:pan-x pan-y}'
+      + 'html,body{overscroll-behavior:none;-webkit-user-select:none;user-select:none;'
       + '-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}'
       + 'input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:text}';
     document.head.prepend(base);
+    // No zoom inside the home either: Safari's pinch gestures ignore touch-action.
+    for (const gesture of ['gesturestart', 'gesturechange', 'gestureend']) {
+      document.addEventListener(gesture, (event) => event.preventDefault(), { passive: false });
+    }
 
     // A classic script, because that is what the control plane admits: it parses
     // every release as `sourceType: 'script'` and rejects `import()`. Bundle the
