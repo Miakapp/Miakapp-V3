@@ -51,7 +51,8 @@ export type HouseStage =
   | { readonly kind: 'loading' }
   | { readonly kind: 'unavailable' }
   | { readonly kind: 'empty' }
-  | { readonly kind: 'welcome' }
+  /** No home in the address and none remembered; `signIn` while nobody is signed in. */
+  | { readonly kind: 'welcome'; readonly signIn?: boolean }
   | { readonly kind: 'app'; readonly release: ActivatedRelease };
 
 export interface HouseShellProps {
@@ -718,7 +719,20 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
         ) : stage.kind === 'welcome' ? (
           <StagePanel>
             <h1>{t('welcomeTitle')}</h1>
-            <p className="house-card__lede">{t('welcomeLede')}</p>
+            {stage.signIn === true && props.signInWith !== undefined ? (
+              <>
+                {/* Signed out: the account brings the person's homes back; an id is the fallback. */}
+                <p className="house-card__lede">{t('welcomeSignIn')}</p>
+                <SignInChoices locale={locale} signIn={props.signInWith} />
+                <p className="house-panel__hint">{t('welcomeOrOpen')}</p>
+              </>
+            ) : listed.length > 0 ? (
+              <>
+                <h2 className="house-card__subhead">{t('homesTitle')}</h2>
+                <HomesList current={home} homes={listed} onRemoveFavorite={removeFavorite} onSwitch={onSwitchHome} t={t} />
+                <p className="house-panel__hint">{t('openHomeLabel')}</p>
+              </>
+            ) : <p className="house-card__lede">{t('welcomeLede')}</p>}
             <OpenHomeForm onSwitch={onSwitchHome} t={t} />
             <p className="house-panel__hint">
               {t('welcomeCreate')} <a href="/pair">{t('welcomeCreateLink')}</a>
