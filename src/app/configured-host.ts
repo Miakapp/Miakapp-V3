@@ -274,6 +274,22 @@ function liveRuntime(configuration: LiveConfiguration): LiveRuntime {
   return runtime;
 }
 
+/**
+ * The Firebase session lives in IndexedDB, which the browser may clear on its
+ * own (Safari: storage pressure, or 7 days of use without opening the site).
+ * Asking for persistent storage keeps it from being evicted where the browser
+ * agrees (an installed Home Screen app, an engaged site); elsewhere it is a no-op.
+ */
+function requestPersistentStorage(): void {
+  try {
+    const storage = typeof navigator === 'undefined' ? undefined : navigator.storage;
+    if (storage?.persist === undefined) return;
+    void storage.persisted().then((done) => (done ? true : storage.persist())).catch(() => undefined);
+  } catch {
+    // Not offered here: the session stays as durable as the browser makes it.
+  }
+}
+
 export class FirebaseLiveIdentity implements LiveIdentity {
   readonly #auth: Auth;
   readonly #appCheck: AppCheck;
@@ -294,6 +310,7 @@ export class FirebaseLiveIdentity implements LiveIdentity {
     this.#removeAuthListener = onAuthStateChanged(auth, (user) => {
       const userId = user?.uid ?? null;
       settleAccount(userId);
+      if (userId !== null) requestPersistentStorage();
       if (userId === this.#userId) return;
       this.#userId = userId;
       for (const listener of this.#listeners) listener(userId !== null);
