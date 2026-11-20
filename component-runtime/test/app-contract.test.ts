@@ -81,8 +81,8 @@ describe('share and copy', () => {
   const share = (request: Record<string, unknown>) => message('share.start', { id: 's1', request });
 
   test('accepts an https link, a text, or a copy', () => {
-    expect(parseAppFrameMessage(share({ action: 'share', title: 'Maison', text: '', url: 'https://www.miakapp.com/h/colmon?invite=abc' })))
-      .toEqual({ kind: 'share.start', id: 's1', request: { action: 'share', title: 'Maison', text: '', url: 'https://www.miakapp.com/h/colmon?invite=abc' } });
+    expect(parseAppFrameMessage(share({ action: 'share', title: 'Maison', text: '', url: 'https://www.miakapp.com/h/ma-maison?invite=abc' })))
+      .toEqual({ kind: 'share.start', id: 's1', request: { action: 'share', title: 'Maison', text: '', url: 'https://www.miakapp.com/h/ma-maison?invite=abc' } });
     expect(parseAppFrameMessage(share({ action: 'copy', text: 'abc' })))
       .toEqual({ kind: 'share.start', id: 's1', request: { action: 'copy', text: 'abc' } });
   });

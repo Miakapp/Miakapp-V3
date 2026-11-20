@@ -33,7 +33,7 @@ describe('document cache', () => {
   test('serves a document from memory until it expires', async () => {
     let now = 1_000;
     const cache = new DocumentCache({ ttlMs: 600_000, now: () => now });
-    const doc = reference('controlHomes/colmon');
+    const doc = reference('controlHomes/ma-maison');
     doc.write();
     await cache.get(doc.ref);
     await cache.get(doc.ref);
@@ -67,7 +67,7 @@ describe('document cache', () => {
 
   test('a read in flight during a clear does not fill the cache', async () => {
     const cache = new DocumentCache({ ttlMs: 60_000 });
-    const doc = reference('components/colmon');
+    const doc = reference('components/ma-maison');
     doc.write();
     doc.hold();
     const stale = cache.get(doc.ref);
@@ -81,14 +81,14 @@ describe('document cache', () => {
 
   test('shares one read between concurrent callers', async () => {
     const cache = new DocumentCache({ ttlMs: 60_000 });
-    const doc = reference('homes/colmon');
+    const doc = reference('homes/ma-maison');
     await Promise.all([cache.get(doc.ref), cache.get(doc.ref), cache.get(doc.ref)]);
     expect(doc.reads()).toBe(1);
   });
 
   test('disabled, it reads every time', async () => {
     const cache = DocumentCache.disabled();
-    const doc = reference('homes/colmon');
+    const doc = reference('homes/ma-maison');
     await cache.get(doc.ref);
     await cache.get(doc.ref);
     expect(doc.reads()).toBe(2);

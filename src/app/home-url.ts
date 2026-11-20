@@ -1,4 +1,4 @@
-/** A home's address in the web app: `/h/<id>` (www.miakapp.com/h/colmon). */
+/** A home's address in the web app: `/h/<id>` (www.miakapp.com/h/ma-maison). */
 const HOME_ID = /^[a-z][a-z0-9-]{1,61}[a-z0-9]$/u;
 const HOME_PATH = /^\/h\/([^/]+)\/?$/u;
 
@@ -18,7 +18,7 @@ export function isAppPath(pathname: string): boolean {
   return pathname === '/app' || pathname.startsWith('/app/') || HOME_PATH.test(pathname);
 }
 
-/** A home's id or link (`colmon`, `miakapp.com/h/colmon`), typed by hand, or null. */
+/** A home's id or link (`ma-maison`, `miakapp.com/h/ma-maison`), typed by hand, or null. */
 export function homeIdFromInput(raw: string): string | null {
   const value = raw.trim().toLowerCase();
   if (value === '') return null;
