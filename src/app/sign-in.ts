@@ -44,6 +44,8 @@ export async function signInWith(auth: Auth, method: SignInMethod): Promise<Sign
   if (method.kind === 'email') {
     const url = new URL(window.location.href);
     url.hash = '';
+    // The emailed link speaks the phone's language, not English by default.
+    auth.useDeviceLanguage();
     await sendSignInLinkToEmail(auth, method.email, { url: url.href, handleCodeInApp: true });
     storage()?.setItem(EMAIL_KEY, method.email);
     return 'link_sent';
