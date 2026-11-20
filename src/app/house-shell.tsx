@@ -731,10 +731,15 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
                 <HomesList current={home} homes={listed} onRemoveFavorite={removeFavorite} onSwitch={onSwitchHome} t={t} />
               </>
             ) : <p className="house-card__lede">{t('welcomeLede')}</p>}
-            <OpenHomeForm onSwitch={onSwitchHome} t={t} />
-            <p className="house-panel__hint">
-              {t('welcomeCreate')} <a href="/pair">{t('welcomeCreateLink')}</a>
-            </p>
+            {/* Signed out, sign-in is the only step: the rest waits behind it. */}
+            {stage.signIn === true && props.signInWith !== undefined ? null : (
+              <>
+                <OpenHomeForm onSwitch={onSwitchHome} t={t} />
+                <p className="house-panel__hint">
+                  {t('welcomeCreate')} <a href="/pair">{t('welcomeCreateLink')}</a>
+                </p>
+              </>
+            )}
           </StagePanel>
         ) : stage.kind === 'declined' ? (
           <StagePanel>

@@ -776,6 +776,11 @@ html:has(.house-shell) body {
   margin-inline: auto;
 }
 
+/* On the welcome card, sign-in lines up with the text above it. */
+.house-shell[data-stage="welcome"] .sign-in-choices {
+  margin-inline: 0;
+}
+
 .sign-in-choices__google {
   min-height: 50px;
   display: inline-flex;
