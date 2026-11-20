@@ -4,29 +4,29 @@ import { homeIdFromInput, homePath, isAppPath, requestedHomeId } from './home-ur
 
 describe('home addresses', () => {
   it('reads /h/<id> only', () => {
-    expect(requestedHomeId('/h/colmon')).toBe('colmon');
-    expect(requestedHomeId('/h/colmon/')).toBe('colmon');
-    expect(requestedHomeId('/app/colmon')).toBeNull();
+    expect(requestedHomeId('/h/ma-maison')).toBe('ma-maison');
+    expect(requestedHomeId('/h/ma-maison/')).toBe('ma-maison');
+    expect(requestedHomeId('/app/ma-maison')).toBeNull();
     expect(requestedHomeId('/app')).toBeNull();
     expect(requestedHomeId('/h/Not_A_Home')).toBeNull();
     expect(requestedHomeId('/pair')).toBeNull();
   });
 
   it('writes /h/<id> and treats /app and every home address as the app', () => {
-    expect(homePath('colmon')).toBe('/h/colmon');
+    expect(homePath('ma-maison')).toBe('/h/ma-maison');
     expect(isAppPath('/app')).toBe(true);
-    expect(isAppPath('/h/colmon')).toBe(true);
-    expect(isAppPath('/app/colmon')).toBe(true);
+    expect(isAppPath('/h/ma-maison')).toBe(true);
+    expect(isAppPath('/app/ma-maison')).toBe(true);
     expect(isAppPath('/fr')).toBe(false);
   });
 });
 
 describe('a home typed by hand', () => {
   it('reads an id or any of its links', () => {
-    expect(homeIdFromInput('colmon')).toBe('colmon');
-    expect(homeIdFromInput('  Colmon ')).toBe('colmon');
-    expect(homeIdFromInput('miakapp.com/h/colmon')).toBe('colmon');
-    expect(homeIdFromInput('https://www.miakapp.com/h/colmon')).toBe('colmon');
+    expect(homeIdFromInput('ma-maison')).toBe('ma-maison');
+    expect(homeIdFromInput('  Ma-Maison ')).toBe('ma-maison');
+    expect(homeIdFromInput('miakapp.com/h/ma-maison')).toBe('ma-maison');
+    expect(homeIdFromInput('https://www.miakapp.com/h/ma-maison')).toBe('ma-maison');
   });
 
   it('refuses what names no home', () => {

@@ -24,11 +24,11 @@ const firestore = new Firestore({ projectId: 'meter-test' });
 
 describe('read meter', () => {
   test('names routes without identifiers', () => {
-    expect(routeName('GET', '/v1/homes/colmon/interface')).toBe('GET /v1/homes/:home/interface');
+    expect(routeName('GET', '/v1/homes/ma-maison/interface')).toBe('GET /v1/homes/:home/interface');
     expect(routeName('POST', '/v1/access-tokens:exchange')).toBe('POST /v1/access-tokens:exchange');
-    expect(routeName('DELETE', '/v1/homes/colmon/home-keys/AAAAAAAAAAAAAAAAAAAAAA'))
+    expect(routeName('DELETE', '/v1/homes/ma-maison/home-keys/AAAAAAAAAAAAAAAAAAAAAA'))
       .toBe('DELETE /v1/homes/:home/home-keys/:id');
-    expect(routeName('POST', '/v1/homes/colmon/component-uploads/AAAAAAAAAAAAAAAAAAAAAA:finalize'))
+    expect(routeName('POST', '/v1/homes/ma-maison/component-uploads/AAAAAAAAAAAAAAAAAAAAAA:finalize'))
       .toBe('POST /v1/homes/:home/component-uploads/:id:finalize');
     expect(routeName('GET', `/v1/components/${'a'.repeat(43)}.js`)).toBe('GET /v1/components/:sha.js');
   });
@@ -36,17 +36,17 @@ describe('read meter', () => {
   test('counts billed reads by route and collection', async () => {
     resetReadMeter();
     await meterRequest('GET /v1/homes/:home/interface', async () => {
-      await firestore.collection('controlHomes').doc('colmon').get();
+      await firestore.collection('controlHomes').doc('ma-maison').get();
       await firestore.getAll(firestore.collection('homes').doc('a'), firestore.collection('homes').doc('b'));
       await firestore.collection('controlHomes').where('owner_uid', '==', 'u').get();
     });
     await meterRequest('POST /v1/access-tokens:exchange', async () => {
       const transaction = Object.create(Transaction.prototype) as Transaction;
-      await transaction.get(firestore.collection('controlHomes').doc('colmon').collection('homeKeys').doc('k'));
+      await transaction.get(firestore.collection('controlHomes').doc('ma-maison').collection('homeKeys').doc('k'));
       // An empty query still costs one read.
       await transaction.get(firestore.collection('homeKeyIndex').limit(5));
     });
-    await firestore.collection('components').doc('colmon').get();
+    await firestore.collection('components').doc('ma-maison').get();
 
     const totals = readMeterTotals();
     expect(totals.reads).toBe(1 + 2 + 3 + 1 + 1 + 1);

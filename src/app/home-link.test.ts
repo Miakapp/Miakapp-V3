@@ -5,14 +5,14 @@ describe('home links', () => {
   beforeEach(() => sessionStorage.clear());
 
   it('keeps what a home link carried for that home, Miakapp\'s own parameters excluded', () => {
-    captureHomeLink({ pathname: '/h/colmon', search: '?invite=abc&from=push&oobCode=x&invite=2', hash: '#salon' });
-    expect(homeLinkFor('colmon')).toEqual({ params: { invite: 'abc' }, hash: 'salon' });
+    captureHomeLink({ pathname: '/h/ma-maison', search: '?invite=abc&from=push&oobCode=x&invite=2', hash: '#salon' });
+    expect(homeLinkFor('ma-maison')).toEqual({ params: { invite: 'abc' }, hash: 'salon' });
     expect(homeLinkFor('other')).toEqual({ params: {}, hash: '' });
   });
 
   it('ignores addresses that name no home and links that carry nothing', () => {
     captureHomeLink({ pathname: '/', search: '?invite=abc', hash: '' });
-    captureHomeLink({ pathname: '/h/colmon', search: '', hash: '' });
+    captureHomeLink({ pathname: '/h/ma-maison', search: '', hash: '' });
     expect(sessionStorage.length).toBe(0);
   });
 
@@ -23,7 +23,7 @@ describe('home links', () => {
   });
 
   it('survives a corrupt stored value', () => {
-    sessionStorage.setItem('miakapp.home-link.v1:colmon', '{');
-    expect(homeLinkFor('colmon')).toEqual({ params: {}, hash: '' });
+    sessionStorage.setItem('miakapp.home-link.v1:ma-maison', '{');
+    expect(homeLinkFor('ma-maison')).toEqual({ params: {}, hash: '' });
   });
 });

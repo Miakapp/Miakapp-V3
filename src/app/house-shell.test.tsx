@@ -745,9 +745,9 @@ describe('house shell — a newcomer with no home', () => {
     expect(screen.getByRole('heading', { name: 'Bienvenue sur Miakapp' })).toBeVisible();
     expect(screen.getByRole('link', { name: 'Créer la vôtre' })).toHaveAttribute('href', '/pair');
     expect(screen.queryByText('Maison hors ligne')).not.toBeInTheDocument();
-    const field = screen.getAllByPlaceholderText('colmon ou miakapp.com/h/colmon')[0]!;
-    await userEvent.type(field, 'https://www.miakapp.com/h/colmon');
+    const field = screen.getAllByPlaceholderText('ma-maison ou miakapp.com/h/ma-maison')[0]!;
+    await userEvent.type(field, 'https://www.miakapp.com/h/ma-maison');
     await userEvent.click(screen.getAllByRole('button', { name: 'Ouvrir' })[0]!);
-    expect(onSwitchHome).toHaveBeenCalledWith('colmon');
+    expect(onSwitchHome).toHaveBeenCalledWith('ma-maison');
   });
 });

@@ -13,14 +13,14 @@ const keys = {
   homeKeyPepperForVersion: (version: string) => (version === '1' ? pepper : undefined),
 };
 const now = 1_800_000_000_000;
-const base = { homeId: 'colmon', keyId: 'A'.repeat(22), role: 'member', release: null, minutes: 30, nowMs: now };
+const base = { homeId: 'ma-maison', keyId: 'A'.repeat(22), role: 'member', release: null, minutes: 30, nowMs: now };
 
 describe('test session tickets', () => {
   test('round-trip: home, key, role and expiry come back', () => {
     const { ticket } = issueTestTicket(keys, base);
     expect(testTicketFromAuthorization(`Bearer ${ticket}`)).toBe(ticket);
     const claims = verifyTestTicket(keys, ticket, now + 60_000);
-    expect(claims).toMatchObject({ home: 'colmon', key: 'A'.repeat(22), role: 'member', release: null });
+    expect(claims).toMatchObject({ home: 'ma-maison', key: 'A'.repeat(22), role: 'member', release: null });
     expect(claims.exp - claims.iat).toBe(1_800);
   });
 
