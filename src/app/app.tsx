@@ -330,6 +330,14 @@ export function App({
     switchHome((ownedHomes[0] as HomeSummary).id);
   }, [componentRelease.status, ownedHomes, homeId, switchHome]);
 
+  // Nothing remembered on this device (a new phone, storage wiped by the
+  // browser) and the account is a member of exactly one home: open it.
+  useEffect(() => {
+    if (!hasNoHomeYet() || ownedHomes === undefined || joinedHomes === undefined) return;
+    if (ownedHomes.length > 0 || joinedHomes.length !== 1) return;
+    switchHome((joinedHomes[0] as HomeSummary).id);
+  }, [ownedHomes, joinedHomes, switchHome]);
+
   // A home agreed to before « My homes » lived on the account: keep it there
   // the first time it opens (one write, never again once it is listed).
   useEffect(() => {
@@ -352,7 +360,7 @@ export function App({
   const houseStage: HouseStage = coordinator === undefined
     ? { kind: 'empty' }
     : hasNoHomeYet() && !(ownedHomes?.length)
-      ? { kind: 'welcome' }
+      ? { kind: 'welcome', signIn: needsSignIn }
       : selectHouseStage(consent, declined, needsSignIn, componentRelease);
   const homeName = componentRelease.status === 'active'
     ? componentRelease.activated.homeName

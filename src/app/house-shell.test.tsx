@@ -750,4 +750,42 @@ describe('house shell — a newcomer with no home', () => {
     await userEvent.click(screen.getAllByRole('button', { name: 'Ouvrir' })[0]!);
     expect(onSwitchHome).toHaveBeenCalledWith('ma-maison');
   });
+
+  it('asks a signed-out visitor to sign in first, the id field staying secondary', async () => {
+    const home = createPreviewHost().getSnapshot().activeHome;
+    const signInWith = vi.fn(async () => 'signed_in' as const);
+    render(<HouseShell
+      home={home} homes={[home]} connection="unavailable"
+      stage={{ kind: 'welcome', signIn: true }} consent={undefined}
+      favorites={createHouseFavoritesStore(memoryStorage())}
+      sandboxOrigin={undefined} homeState={undefined} call={undefined}
+      signInWith={signInWith}
+      onAcceptConsent={vi.fn()} onDeclineConsent={vi.fn()} onReopen={vi.fn()}
+      onRevokeConsent={vi.fn()} onRetry={vi.fn()} onSwitchHome={vi.fn()}
+    />);
+    expect(screen.getByText('Connectez-vous pour retrouver vos maisons.')).toBeVisible();
+    const google = screen.getByRole('button', { name: /Continuer avec Google/ });
+    const field = screen.getAllByPlaceholderText('ma-maison ou miakapp.com/h/ma-maison')[0]!;
+    // Sign-in comes before the id field in the page.
+    expect(google.compareDocumentPosition(field) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await userEvent.click(google);
+    expect(signInWith).toHaveBeenCalledWith({ kind: 'google' });
+  });
+
+  it('lists a signed-in person’s homes instead of the bare picker', async () => {
+    const home = createPreviewHost().getSnapshot().activeHome;
+    const onSwitchHome = vi.fn();
+    const mine = { id: 'family-home', name: 'Family home', detail: '', accent: '#b8d9ff' };
+    render(<HouseShell
+      home={home} homes={[home, mine]} connection="unavailable"
+      stage={{ kind: 'welcome', signIn: false }} consent={undefined}
+      favorites={createHouseFavoritesStore(memoryStorage())}
+      sandboxOrigin={undefined} homeState={undefined} call={undefined}
+      onAcceptConsent={vi.fn()} onDeclineConsent={vi.fn()} onReopen={vi.fn()}
+      onRevokeConsent={vi.fn()} onRetry={vi.fn()} onSwitchHome={onSwitchHome}
+    />);
+    expect(screen.getByRole('heading', { name: 'Mes maisons' })).toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: 'Ouvrir Family home' }));
+    expect(onSwitchHome).toHaveBeenCalledWith('family-home');
+  });
 });
