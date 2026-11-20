@@ -724,13 +724,11 @@ export function HouseShell(props: HouseShellProps): React.JSX.Element {
                 {/* Signed out: the account brings the person's homes back; an id is the fallback. */}
                 <p className="house-card__lede">{t('welcomeSignIn')}</p>
                 <SignInChoices locale={locale} signIn={props.signInWith} />
-                <p className="house-panel__hint">{t('welcomeOrOpen')}</p>
               </>
             ) : listed.length > 0 ? (
               <>
                 <h2 className="house-card__subhead">{t('homesTitle')}</h2>
                 <HomesList current={home} homes={listed} onRemoveFavorite={removeFavorite} onSwitch={onSwitchHome} t={t} />
-                <p className="house-panel__hint">{t('openHomeLabel')}</p>
               </>
             ) : <p className="house-card__lede">{t('welcomeLede')}</p>}
             <OpenHomeForm onSwitch={onSwitchHome} t={t} />
