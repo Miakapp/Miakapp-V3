@@ -24,7 +24,7 @@ describe('home addresses', () => {
 describe('a home typed by hand', () => {
   it('reads an id or any of its links', () => {
     expect(homeIdFromInput('ma-maison')).toBe('ma-maison');
-    expect(homeIdFromInput('  Maison ')).toBe('ma-maison');
+    expect(homeIdFromInput('  Ma-Maison ')).toBe('ma-maison');
     expect(homeIdFromInput('miakapp.com/h/ma-maison')).toBe('ma-maison');
     expect(homeIdFromInput('https://www.miakapp.com/h/ma-maison')).toBe('ma-maison');
   });

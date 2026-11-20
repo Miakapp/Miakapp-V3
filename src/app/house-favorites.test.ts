@@ -82,7 +82,7 @@ describe('« My homes » on the account', () => {
     const local = createHouseFavoritesStore(undefined, 'acct2');
     const remote = account();
     const homes = accountBackedHomes(local, remote);
-    homes.add({ id: 'ma-maison', name: 'Maison' });
+    homes.add({ id: 'ma-maison', name: 'Ma maison' });
     homes.remove('ma-maison');
     expect(remote.added).toEqual(['ma-maison']);
     expect(remote.removed).toEqual(['ma-maison']);
