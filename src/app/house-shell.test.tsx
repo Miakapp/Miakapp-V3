@@ -751,7 +751,7 @@ describe('house shell — a newcomer with no home', () => {
     expect(onSwitchHome).toHaveBeenCalledWith('ma-maison');
   });
 
-  it('asks a signed-out visitor to sign in first, the id field staying secondary', async () => {
+  it('asks a signed-out visitor to sign in, and only that', async () => {
     const home = createPreviewHost().getSnapshot().activeHome;
     const signInWith = vi.fn(async () => 'signed_in' as const);
     render(<HouseShell
@@ -765,9 +765,9 @@ describe('house shell — a newcomer with no home', () => {
     />);
     expect(screen.getByText('Connectez-vous pour retrouver vos maisons.')).toBeVisible();
     const google = screen.getByRole('button', { name: /Continuer avec Google/ });
-    const field = screen.getAllByPlaceholderText('ma-maison ou miakapp.com/h/ma-maison')[0]!;
-    // Sign-in comes before the id field in the page.
-    expect(google.compareDocumentPosition(field) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // The id field and "create yours" wait until the person is signed in.
+    expect(screen.queryByPlaceholderText('ma-maison ou miakapp.com/h/ma-maison')).toBeNull();
+    expect(screen.queryByText('Créer la vôtre')).toBeNull();
     await userEvent.click(google);
     expect(signInWith).toHaveBeenCalledWith({ kind: 'google' });
   });
